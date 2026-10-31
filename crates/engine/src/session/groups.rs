@@ -119,6 +119,7 @@ impl Session {
         }
     }
 
+    /// Applies a [`TrackPatch`] to this track alone; [`Session::update_track_linked`] takes its group along.
     pub fn update_track(&mut self, id: Id, patch: TrackPatch) {
         let solo_changed = patch.solo.is_some();
         let recording = self.rec_punch.is_some();

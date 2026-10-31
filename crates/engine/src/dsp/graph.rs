@@ -16,6 +16,7 @@ use crate::model::{Id, Project};
 /// The most tasks a graph can have; a larger project just plays serially.
 pub const MAX_TASKS: usize = 1024;
 
+/// Why a graph can't be built.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GraphError {
     TooBig(usize),
@@ -35,6 +36,8 @@ impl std::fmt::Display for GraphError {
     }
 }
 
+/// Which strips wait for which, in the order the serial loop plays them. Built off the audio thread
+/// and handed over whole; running it allocates nothing.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct TaskGraph {
     ids: Vec<Id>,

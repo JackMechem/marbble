@@ -6,6 +6,7 @@
 use parking_lot::RwLock;
 use serde::Serialize;
 
+/// A key a plug-in's editor window didn't use, in the terms of the frontend's `KeyboardEvent`.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct KeyInfo {

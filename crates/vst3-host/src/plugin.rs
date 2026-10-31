@@ -1,5 +1,9 @@
 //! Instantiating a VST3 plugin and splitting it into an audio-thread half (`PluginProcessor`) and
 //! a UI-thread half (`PluginController`).
+//!
+//! This file holds the types. `instantiate.rs` makes the two halves, `processor.rs` and `controller.rs`
+//! are their code, and `multi_out.rs` handles output buses past the main one. The engine moves the
+//! processor to the audio thread, and the session keeps the controller on the main thread.
 
 // C enums are i32 in the MSVC bindings and u32 elsewhere, so a cast that converts on one
 // platform is a no-op on the other.
@@ -51,12 +55,14 @@ pub struct BusLayout {
     pub channels: usize,
 }
 
+/// A three-byte MIDI message and the sample it lands on in the block (`offset`).
 #[derive(Debug, Clone, Copy)]
 pub struct MidiEvent {
     pub offset: u32,
     pub data: [u8; 3],
 }
 
+/// The transport as a plug-in sees it for one block, filled into its `ProcessContext`.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct TransportInfo {
     pub playing: bool,
@@ -83,6 +89,7 @@ pub struct ParamInfo {
     pub steps: i32,
 }
 
+/// A plug-in's saved state, from `getState`: the component's and the controller's own blobs.
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct PluginState {
     pub component: Vec<u8>,

@@ -11,6 +11,8 @@ pub const PEAK_BUCKET: usize = 256;
 /// closest zoom still reads a separate value for every pixel.
 pub const WAVE_BUCKET: usize = 32;
 
+/// An audio file held in memory, one `Vec` per channel. Regions share it through an `Arc`, and the
+/// audio thread reads it.
 pub struct Clip {
     pub path: PathBuf,
     pub sample_rate: u32,

@@ -103,6 +103,7 @@ impl TakeFolder {
         self.takes.iter().filter(|t| self.comp.iter().any(|s| s.take == t.id)).map(|t| t.id).collect()
     }
 
+    /// Removes a take, and takes its comp pieces with it.
     pub fn remove_take(&mut self, id: Id) {
         self.takes.retain(|t| t.id != id);
         self.normalize();

@@ -5,6 +5,7 @@
 
 use super::*;
 
+/// A MIDI note, in frames from its region's start.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Note {
     /// Offset from the region start, in samples.
@@ -84,6 +85,7 @@ pub struct CcEvent {
     pub value: u16,
 }
 
+/// What a region plays.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum RegionContent {
@@ -110,6 +112,8 @@ pub enum RegionContent {
     },
 }
 
+/// A stretch of content on a track's timeline: frames, as everything saved is. Its loop extends it past
+/// `length` to `loop_end`. See [`Region::end`].
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Region {
     pub id: Id,
@@ -154,6 +158,7 @@ impl Region {
         }
     }
 
+    /// Whether it has looped repetitions past its own length.
     pub fn is_looped(&self) -> bool {
         self.end() > self.start + self.length
     }

@@ -177,6 +177,8 @@ impl Bank {
     }
 }
 
+/// Fermata Sampler's real-time half, the instance in the slot: its sample map arrives whole through
+/// `Instrument::swap_data`, built off the audio thread.
 pub struct Sampler {
     rate: f32,
     values: Vec<f32>,

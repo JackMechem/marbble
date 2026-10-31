@@ -1,4 +1,8 @@
 //! The project document: everything that gets saved and mirrored to the UI.
+//!
+//! The types are in `project.rs`, `track.rs`, `region.rs`, `take_folder.rs` and `automation.rs`, all
+//! re-exported from here. `src/api.ts` mirrors them. Only `crate::session` edits a document; the engine
+//! never sees one, only what the session makes from it.
 
 use std::collections::{HashMap, HashSet};
 
@@ -25,6 +29,7 @@ mod routing_tests;
 #[cfg(test)]
 mod tests;
 
+/// Ids of tracks, regions, clips and plug-in instances, unique within a project (`Project::alloc_id`).
 pub type Id = u64;
 
 /// Track id reserved for the Stereo Out channel strip.

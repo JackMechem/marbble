@@ -1,3 +1,5 @@
+//! macOS only: `CFBundle` handling for loading plug-in bundles, and dyld's error messages.
+
 use std::ffi::c_void;
 use std::path::{Path, PathBuf};
 

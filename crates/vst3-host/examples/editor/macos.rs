@@ -1,5 +1,5 @@
-// The macOS implementation of the editor example: an NSApplication whose events are pumped by
-// hand, with the controller's idle() between them.
+//! The macOS implementation of the editor example: an NSApplication whose events are pumped by
+//! hand, with the controller's idle() between them.
 use std::time::{Duration, Instant};
 
 use objc2::MainThreadMarker;

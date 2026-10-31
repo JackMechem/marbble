@@ -7,6 +7,7 @@ use std::process::Command;
 
 use serde::Serialize;
 
+/// The sound server's volume for a recording device, which can quietly lower what gets recorded.
 #[derive(Debug, Clone, Serialize)]
 pub struct InputLevel {
     /// Human-readable device name.

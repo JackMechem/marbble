@@ -5,6 +5,8 @@
 
 use super::*;
 
+/// What a track is. Folder and Summing are the two kinds of stack; only Audio and Instrument hold
+/// regions of their own.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TrackKind {
@@ -50,6 +52,7 @@ impl InputSel {
     }
 }
 
+/// A plug-in in an insert or instrument slot, with its state saved as base64.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PluginSlot {
     /// Instance id, unique within the project.
@@ -76,6 +79,7 @@ pub struct PluginSlot {
     pub sidechain_pre: bool,
 }
 
+/// The shape of a Channel EQ band.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum BandKind {
@@ -86,6 +90,7 @@ pub enum BandKind {
     HighCut,
 }
 
+/// One band of the Channel EQ, in plain units.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct EqBand {
     pub kind: BandKind,
@@ -144,6 +149,8 @@ impl ChannelEq {
     }
 }
 
+/// A track and its channel strip. Saved. Stacks hang off `parent`, and the order of `Project::tracks`
+/// is the order on screen.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Track {
     pub id: Id,

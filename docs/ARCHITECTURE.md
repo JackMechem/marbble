@@ -47,7 +47,7 @@ The engine is split into two halves that never share mutable data directly:
 
 ```mermaid
 flowchart LR
-  UI["React UI<br/>(src/)"] -- "invoke(cmd, args)" --> CMD["Tauri commands<br/>(src-tauri/src/commands.rs)"]
+  UI["React UI<br/>(src/)"] -- "invoke(cmd, args)" --> CMD["Tauri commands<br/>(src-tauri/src/commands/)"]
   CMD -- "lock" --> S["Session<br/>(project, clips, controllers, undo)"]
   S -- "Cmd (rtrb ring)" --> E["Engine::process<br/>(audio thread)"]
   E -- "Garbage (rtrb ring)" --> S
@@ -135,7 +135,7 @@ Failures on the audio thread are contained rather than fatal:
   new errors into a tick `warning` (a toast), at most every 5 s. The panic message goes to the
   log.
 - **Bad plug-in output.** After every instrument, insert and Stereo Out plug-in, `contain()`
-  in `dsp.rs` silences NaNs and clamps anything beyond ±1000 (+60 dBFS), so one unstable
+  in `dsp/track.rs` silences NaNs and clamps anything beyond ±1000 (+60 dBFS), so one unstable
   plug-in can't poison the filters after it or reach the device. `check_output` records the
   plug-in's uid in `EngineStatus::bad_audio_uid`, counts `bad_audio`, and resets a built-in
   effect so it recovers. `Session::bad_audio_warning` names the plug-in and track in a toast,
@@ -162,7 +162,7 @@ Every user edit is one Tauri command and one undo step. Taking "move a region" a
 sequenceDiagram
   participant UI as React component
   participant API as api.ts act()
-  participant C as commands.rs move_region
+  participant C as commands/regions.rs move_region
   participant S as Session
   participant E as Engine (audio thread)
   UI->>API: act("move_region", { id, start, track })
@@ -210,7 +210,7 @@ The pieces:
 
 ## 5. The project model
 
-`crates/engine/src/model.rs` holds the saved document. `src/api.ts` mirrors it in TypeScript.
+`crates/engine/src/model.rs` and `model/` hold the saved document. `src/api.ts` mirrors it in TypeScript.
 Every field added after the first release has `#[serde(default)]`, so older projects load.
 
 ### Ids
@@ -266,7 +266,7 @@ VCA levels can't be automated: automation lanes belong to tracks, and a VCA has 
 
 ### Routing and loop prevention
 
-`session/routing.rs` and `model.rs`:
+`session/routing.rs` and `model/project.rs`:
 
 - `Track::output`: `None` is the default route (the nearest summing stack the track sits in,
   else Stereo Out), `Some(MASTER_ID)` forces Stereo Out (skipping the stack), `Some(aux)` plays
@@ -326,7 +326,7 @@ Times are in samples at the project rate.
 
 ### Take folders and comps
 
-`TakeFolder { takes, comp, comps, current, offset }` (types in `model.rs`, logic in
+`TakeFolder { takes, comp, comps, current, offset }` (types in `model/take_folder.rs`, logic in
 `takes.rs`, session edits in `session/takes.rs`; the folder menu's labels in `src/comps.ts`):
 
 - Everything inside a folder is in **take time**: frames from the start of the recorded
@@ -648,7 +648,7 @@ independent strips play at the same time, on a small pool of real-time threads w
 callback working too. Its output is bit for bit the serial loop's, so nothing else in the program
 has to know. With the setting at 1 there is no pool: `process_block` runs the plain serial loop.
 
-**One strip, two kinds of route.** `run_strip` in `dsp.rs` is one strip's whole block, and the serial
+**One strip, two kinds of route.** `run_strip` in `dsp/strip.rs` is one strip's whole block, and the serial
 loop and the workers run that same code. They differ only in `Routes`, how a strip reaches other
 strips. The serial `Direct` writes straight into later strips' `sum_l`/`sum_r` and the bus. On the
 pool, in `dsp/parallel.rs`, nothing writes across strips: `Deferred` leaves a strip's output in its
@@ -1032,7 +1032,7 @@ runs at startup only when there is no cache; otherwise only from Rescan.
 
 ### Instantiation
 
-`plugin.rs::instantiate`:
+`plugin/instantiate.rs`:
 
 1. Create the component and `initialize` it with the host context.
 2. If the component is also an `IEditController`, use it; otherwise create the controller class,
@@ -1491,7 +1491,7 @@ events, converting ticks through the file's own map. The UI is
   choice index). Ids are stable forever, because projects and automation lanes store them.
 - Shared building blocks: `fx/biquad.rs` (an f64 RBJ biquad), `fx/dyn_common.rs` (smoothing,
   gain computers, side-chain filter, saturators, true-peak estimation for the Compressor and
-  Limiter), the delay line and note values in `fx/delay.rs`, which the Reverb and the
+  Limiter), the delay line and note values in `fx/delay/primitives.rs`, which the Reverb and the
   modulation effects reuse, `fx/lfo.rs` (LFO, smoother, feedback guard) and `fx/oversample.rs`
   (4× half-band oversampling for the distortion effects, with a fixed latency they report).
 - **Linear Phase EQ** (`fx/linear_phase_eq.rs`, `fx/fir.rs`): the Channel EQ's bands
@@ -2044,9 +2044,23 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 
 | File | Contents |
 |---|---|
-| `lib.rs` | Module list; re-exports `Session` and `vst3_host`. |
-| `model.rs` | The project document (serde): tracks, regions, take folders, markers, punch, EQ, sends, automation, groups, freeze info. Tree and routing helpers: `normalize_tree`, `process_order`, `output_of`, `feeds`, `reaches`, `prune_routes`. |
-| `dsp.rs` | The real-time graph: `Engine`, `TrackDsp`, `RegionDsp`, `TrackParams`, `Cmd`, `Garbage`, `EngineStatus`, meters, the click. |
+| `lib.rs` | Module list by theme; re-exports `Session` and `vst3_host`. |
+| `model.rs` | The project document (serde), everything saved: ids, slot counts, default colours, and the re-exports of `model/`. |
+| `model/track.rs` | `Track`, `TrackKind`, `InputSel`, `PluginSlot`, `ChannelEq`, sends, freeze info, track alternatives, `Group`, `Vca`. |
+| `model/region.rs` | `Region`, `RegionContent`, `Note`, `CcEvent` and the arithmetic of looped regions. |
+| `model/take_folder.rs` | `TakeFolder`, `Take`, `Comp`, `CompSegment`. |
+| `model/automation.rs` | `AutoParam`, `AutoPoint`, `AutoLane`, `AutoMode`. |
+| `model/project.rs` | `Project`, markers, punch, master, cycle. Tree and routing helpers: `normalize_tree`, `process_order`, `output_of`, `feeds`, `reaches`, `prune_routes`. |
+| `dsp.rs` | The real-time graph's front page: `MAX_BLOCK` and the other limits, `Engine` and `Engine::new`. |
+| `dsp/process.rs` | `Engine::process` and `process_block`: the block loop, serial or on the pool, the master and the output. |
+| `dsp/strip.rs` | `run_strip`: one strip's whole block, on the serial loop or a worker. |
+| `dsp/apply.rs` | `Engine::apply`: what each `Cmd` does, and finding strips and inserts, silencing, flushing and chasing. |
+| `dsp/cmd.rs` | `Cmd` and `Garbage`. |
+| `dsp/track.rs` | `TrackDsp`, `InsertDsp`, `Plugin`, `RegionDsp`, `TrackParams`, and containing a plug-in's bad output. |
+| `dsp/block.rs` | What a block shares: `Scratch`, `BlockCtx`, `Outlets`, `Routes` and `Direct`; the mixing functions (`play_audio`, `mix_send`). |
+| `dsp/status.rs` | `Meter`, `EngineStatus`, `BlockLoad` (the CPU meter). |
+| `dsp/click.rs` | `ClickParams`, the click and the count-in. |
+| `dsp/tests.rs` | Unit tests on a small rig (`rig()`). |
 | `dsp/offline.rs` | `Engine::render` and `Isolate`: offline rendering of the full mix or one track. |
 | `dsp/graph.rs` | `TaskGraph`: which strips wait for which, built from the project off the audio thread. |
 | `dsp/pool.rs` | `Pool`: the worker threads, running a graph's tasks with no lock or queue. Knows nothing of audio. |
@@ -2056,8 +2070,9 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `dsp/builtin.rs` | `BuiltinDsp` (a built-in effect in an insert slot), `FxShared`, parameter normalization. |
 | `dsp/auto.rs` | Automation past a track's own strip: folder stacks' volume and mute (`FoldState`) and Stereo Out's lanes. |
 | `fx/mod.rs` | The `Effect` trait, `EffectInfo`, `ParamSpec`, the registry and factory presets. |
-| `fx/compressor.rs`, `limiter.rs`, `gate.rs`, `deesser.rs` | Compressor (five circuits), Limiter, Noise Gate, De-Esser. |
-| `fx/reverb.rs`, `delay.rs` | Reverb (Dattorro plate and a 16-line FDN) and Delay (Stereo, Ping-Pong, Tape, Digital). |
+| `fx/compressor/`, `limiter.rs`, `gate.rs`, `deesser.rs` | Compressor (five circuits: `mod.rs`, `params.rs`, `curve.rs`, `tests.rs`), Limiter, Noise Gate, De-Esser. |
+| `fx/reverb/` | Reverb: the effect (`mod.rs`), `params.rs`, all-passes and the decay filter (`parts.rs`), the 16-line FDN (`fdn.rs`), the Dattorro plate (`plate.rs`), `tests.rs`. |
+| `fx/delay/` | Delay (Stereo, Ping-Pong, Tape, Digital): `mod.rs`, `params.rs`, `tests.rs`, and `primitives.rs` (`Line`, `Biquad`, `Osc`, `flush`, note values), which other effects share. |
 | `fx/tuner.rs`, `loudness.rs` | Tuner (McLeod pitch method) and Loudness Meter (BS.1770 / EBU R128). |
 | `fx/chorus.rs`, `flanger.rs`, `phaser.rs`, `tremolo.rs` | Modulation: Chorus and Flanger (one swept delay, `ModDelay`, in `chorus.rs`), Phaser (all-pass chain), Tremolo (synced to the song position). |
 | `fx/overdrive.rs`, `distortion.rs`, `gain.rs` | Overdrive and Distortion (`DriveCore` in `distortion.rs`: 4× oversampled waveshaper, compensated drive, tone, mix), Gain (a smoothed 2×2 channel matrix). |
@@ -2067,7 +2082,16 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `presets.rs` | Factory presets of the Channel EQ, user preset files. |
 | `strip_settings.rs` | `StripSetting` and the saved channel strip setting files. |
 | `tempo.rs` | `TempoMap`: samples to beats and bars and back, tempo ramps, signatures, grid. |
-| `session.rs` | `Session`: engine plumbing, `track_params`, `regions_dsp`, building tracks, undo (`checkpoint`, `undo`, `redo`, `restore`), transport and recording, track and region edits, import, plug-in slots, `idle`, `tick`, new/save/open. |
+| `session.rs` | `Session`, `Tick`, `TrackPatch`, the module list and `Session::new`. |
+| `session/engine_sync.rs` | Engine plumbing: `send`, `track_params`, `regions_dsp`, `build_track`, `rebuild_graph`, `sync_globals`, `sync_tracks`. |
+| `session/undo.rs` | `checkpoint`, `undo`, `redo`, `restore`. |
+| `session/transport.rs` | Play, stop, locate, record, placing a finished recording; cycle, tempo, signature, metronome. |
+| `session/tracks.rs` | Adding, deleting, duplicating and moving tracks; stacks. |
+| `session/groups.rs` | Groups and `update_track`, the Channel EQ, the analyzer's target, the selected track. |
+| `session/regions.rs` | Region edits and audio import. |
+| `session/plugins.rs` | Insert slots: loading, removing, bypassing, editors, the plug-in list. |
+| `session/periodic.rs` | `idle` and `tick`, and the warnings the tick carries. |
+| `session/files.rs` | New, save and open. |
 | `session/routing.rs` | Auxes, sends and outputs; feedback-loop checks. |
 | `session/threads.rs` | Processing Threads: starting and stopping the workers, sending the task graph (`sync_parallel`). |
 | `session/multi_out.rs` | Multi-output instruments: the instruments' outputs for the UI, `add_output_aux`, `sync_output_buses` (called from `update_pdc`), what Freeze and Bounce in Place refuse. The design notes are at its top. |
@@ -2147,7 +2171,11 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `lib.rs` | Public API: `instantiate`, `PluginProcessor`, `PluginController`, `PluginState`, `ParamInfo`, `MidiEvent`, `TransportInfo`, `Gesture`. |
 | `module.rs` | Loading bundles and talking to the plug-in factory; `PluginDescriptor`. |
 | `scan.rs` | Finding VST3 bundles on disk. |
-| `plugin.rs` | Instantiation and the split into an audio-thread processor and a main-thread controller. |
+| `plugin.rs` | The types of a plug-in instance: `PluginProcessor`, `PluginController`, `MidiEvent`, `TransportInfo`, `PluginState`. |
+| `plugin/instantiate.rs` | Instantiation and the split into an audio-thread processor and a main-thread controller. |
+| `plugin/processor.rs` | The audio-thread half: `process`. |
+| `plugin/controller.rs` | The main-thread half: parameters, state, editor. |
+| `plugin/multi_out.rs` | Output buses past the main one, and activating them while playing. |
 | `process.rs` | Preallocated audio-thread COM objects: parameter change queues and event lists. |
 | `host.rs` | Host-side COM objects: IHostApplication, IComponentHandler, messages and attribute lists. |
 | `stream.rs` | In-memory IBStream for state save and restore. |
@@ -2163,7 +2191,8 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | File | Contents |
 |---|---|
 | `main.rs` | Startup (scan subprocess mode, `GDK_BACKEND`, plug-in cache, settings, CLI project path), the tick thread, the idle timer, MIDI refresh, autosave, command registration. |
-| `commands.rs` | Every Tauri command, the `Snapshot`, and the `edit` / `try_edit` / `edit_made` wrappers. |
+| `commands.rs` | The `Snapshot`, the `edit` / `try_edit` / `edit_made` wrappers, `get_state`, `undo`, `redo`. |
+| `commands/*.rs` | Every other Tauri command, by what it acts on: `transport`, `tracks`, `regions`, `arrangement`, `takes`, `plugins`, `automation`, `project`, `bounce`, `settings`, `sampler`. All are reachable as `commands::<name>`. |
 | `menu.rs` | The native menu bar. |
 | `settings.rs` | `settings.json`: `Settings`, `UiPrefs`, `PluginPrefs`, tolerant parsing. |
 | `recent.rs` | `recent.json` and the Project Chooser's recent list. |

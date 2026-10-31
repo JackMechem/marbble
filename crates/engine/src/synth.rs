@@ -22,6 +22,7 @@ struct Voice {
     age: u64,
 }
 
+/// Fermata Synth: a small polyphonic synth. Old projects depend on its every sample, so it doesn't change.
 pub struct BasicSynth {
     sr: f32,
     voices: [Voice; VOICES],

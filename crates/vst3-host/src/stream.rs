@@ -7,6 +7,7 @@ use vst3::Steinberg::IBStream_::IStreamSeekMode_::*;
 use vst3::Steinberg::*;
 use vst3::{Class, ComPtr, ComWrapper};
 
+/// `IBStream` over a byte vector, for saving and restoring plug-in state.
 pub struct MemoryStream {
     inner: Mutex<(Vec<u8>, usize)>,
 }

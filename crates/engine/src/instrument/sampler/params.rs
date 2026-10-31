@@ -5,6 +5,7 @@
 use crate::fx::{FactoryPreset, ParamKind, ParamSpec, Unit};
 use crate::instrument::Section;
 
+/// Parameter ids. Projects, automation lanes and presets refer to them: add new ones, never renumber.
 pub mod param {
     pub const VOLUME: u32 = 0;
     pub const TUNE: u32 = 1;

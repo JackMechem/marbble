@@ -41,6 +41,7 @@ impl Session {
         self.midi_target_id().and_then(|id| self.project.track(id)).map(|t| t.name.clone())
     }
 
+    /// Connects MIDI ports that have appeared since the last call. Runs every 3 s in the app.
     pub fn refresh_midi(&mut self) {
         self.midi.refresh();
     }
@@ -49,6 +50,7 @@ impl Session {
         self.midi.connected()
     }
 
+    /// Builds the [`Tick`], taking what has accumulated since the last one. The `ui-tick` thread calls this.
     pub fn tick(&mut self) -> Tick {
         self.check_overload();
         // Keep the newest FFT_SIZE analyzer samples.

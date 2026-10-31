@@ -7,6 +7,7 @@
 
 use super::*;
 
+/// What an insert or instrument slot runs: a VST3's processor, or a built-in.
 pub enum Plugin {
     Vst(Box<PluginProcessor>),
     /// A built-in instrument (see `crate::instrument`).
@@ -74,6 +75,7 @@ impl Plugin {
     }
 }
 
+/// A plug-in in a slot, with its uid, bypass state and the side-chain key it reads.
 pub struct InsertDsp {
     pub uid: Id,
     pub bypass: bool,
@@ -110,6 +112,8 @@ pub enum VstGate {
     Open(u32),
 }
 
+/// A region as the engine plays it: positions in frames, with its clip or notes shared by `Arc`. The
+/// session makes these from the document (`regions_dsp`), expanding loops, comps and patterns.
 pub enum RegionDsp {
     Audio {
         start: i64,
@@ -126,6 +130,8 @@ pub enum RegionDsp {
     Midi { start: i64, length: i64, notes: Arc<Vec<Note>>, cc: Arc<Vec<CcEvent>> },
 }
 
+/// A strip's parameters that change without rebuilding it, in plain values. Small and `Copy`, so a fader
+/// drag is one small `Cmd`.
 #[derive(Debug, Clone, Copy)]
 pub struct TrackParams {
     pub volume: f32,
@@ -169,6 +175,8 @@ pub struct SendParams {
     pub pre_fader: bool,
 }
 
+/// One strip on the audio thread: everything it plays and the buffers it plays into, all allocated up
+/// front. See `strip.rs` for a block's work and `track_off.rs` for switching it off.
 pub struct TrackDsp {
     pub id: Id,
     pub kind: TrackKind,

@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 use crate::dsp::{Engine, EngineStatus};
 use std::sync::atomic::Ordering;
 
+/// One input or output device of a host, as Settings › Audio lists it.
 #[derive(Debug, Clone, Serialize)]
 pub struct DeviceInfo {
     pub id: String,
@@ -24,12 +25,14 @@ pub struct DeviceInfo {
     pub is_default: bool,
 }
 
+/// An audio host (ALSA, PipeWire, JACK, WASAPI...) and how many devices it offers.
 #[derive(Debug, Clone, Serialize)]
 pub struct HostInfo {
     pub name: String,
     pub devices: usize,
 }
 
+/// What [`list_devices`] found: every host, and the devices of the chosen one.
 #[derive(Debug, Clone, Serialize)]
 pub struct DeviceList {
     pub host: String,
@@ -38,6 +41,8 @@ pub struct DeviceList {
     pub outputs: Vec<DeviceInfo>,
 }
 
+/// What to open: host, devices, rate and buffer size, and the engine options that go with them.
+/// Saved in `settings.json`, so new fields need a default.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AudioConfig {
     pub host: Option<String>,
@@ -88,6 +93,7 @@ impl AudioConfig {
     }
 }
 
+/// What actually opened, which may differ from what was asked, or why nothing did.
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct AudioStatus {
     pub running: bool,
@@ -194,6 +200,8 @@ fn worth_listing(id: &str, input: bool) -> bool {
     true
 }
 
+/// Enumerates hosts and the devices of `host` (or the default). Slow enough on some systems that its
+/// Tauri command is async.
 pub fn list_devices(host: Option<&str>) -> DeviceList {
     let host = pick_host(host);
     let def_in = host.default_input_device().map(|d| device_id(&d)).unwrap_or_default();
@@ -277,6 +285,7 @@ fn choose_config(d: &Device, input: bool, rate: u32, buffer: u32) -> Result<(Str
     Ok((StreamConfig { channels: best.channels(), sample_rate: rate, buffer_size }, best.sample_format()))
 }
 
+/// The running streams. They live on the `audio-io` thread; dropping this stops them and joins it.
 pub struct AudioIo {
     stop: Option<std::sync::mpsc::Sender<()>>,
     thread: Option<JoinHandle<()>>,
@@ -454,6 +463,8 @@ pub(crate) fn survive_slow_blocks() {
     }
 }
 
+/// Opens the devices on a new `audio-io` thread that calls `Engine::process` for each buffer, and
+/// returns once they are open or have failed. `AudioStatus` says which; on failure there is no `AudioIo`.
 pub fn start(engine: Arc<Mutex<Engine>>, cfg: &AudioConfig) -> (Option<AudioIo>, AudioStatus) {
     survive_slow_blocks();
     if cfg.output.as_deref() == Some(NULL_OUTPUT) && host_by_name("ALSA").is_none() {

@@ -159,6 +159,7 @@ impl VelocityCurve {
     }
 }
 
+/// Settings › General. All of these are saved in `settings.json`, so new fields need a default.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct GeneralPrefs {
@@ -182,6 +183,7 @@ impl Default for GeneralPrefs {
     }
 }
 
+/// Settings › Recording.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct RecordingPrefs {
@@ -229,6 +231,7 @@ impl Default for RecordingPrefs {
     }
 }
 
+/// Settings › MIDI.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct MidiPrefs {
@@ -252,6 +255,7 @@ impl Default for MidiPrefs {
     }
 }
 
+/// Settings › Editing.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct EditingPrefs {
@@ -299,6 +303,7 @@ pub enum PdcMode {
     Off,
 }
 
+/// Settings › Audio's latency options.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct LatencyPrefs {

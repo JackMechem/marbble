@@ -7,6 +7,7 @@ use crate::model::{BandKind, ChannelEq};
 /// Enough sections for eight bands with both cuts at 48 dB/oct.
 pub const MAX_SECTIONS: usize = 16;
 
+/// One biquad's coefficients, in f64.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Section {
     b0: f64,
@@ -16,6 +17,7 @@ pub struct Section {
     a2: f64,
 }
 
+/// A Channel EQ's filters, computed off the audio thread and sent over; `EqState` holds the running state.
 #[derive(Debug, Clone, Copy)]
 pub struct EqCoeffs {
     pub active: bool,

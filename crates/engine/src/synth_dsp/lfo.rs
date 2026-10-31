@@ -8,6 +8,7 @@
 use super::analog::Rng;
 use crate::fx::FxContext;
 
+/// An LFO's shape.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LfoWave {
     Sine,
@@ -27,6 +28,7 @@ pub enum LfoRate {
     PerBeat(f64),
 }
 
+/// A low-frequency oscillator, free-running or locked to the song position.
 #[derive(Debug, Clone, Copy)]
 pub struct Lfo {
     phase: f64,

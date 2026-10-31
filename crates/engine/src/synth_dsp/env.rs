@@ -42,6 +42,7 @@ impl EnvShape {
     }
 }
 
+/// Where an envelope is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum EnvStage {
     #[default]

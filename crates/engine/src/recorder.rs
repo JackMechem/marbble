@@ -118,6 +118,7 @@ pub struct ActiveTake {
     pub bits: u16,
 }
 
+/// A take the recorder has closed: its file, where it starts on the timeline and the samples.
 pub struct FinishedTake {
     pub path: PathBuf,
     pub start: i64,
@@ -126,6 +127,7 @@ pub struct FinishedTake {
     pub error: Option<String>,
 }
 
+/// What the UI draws of a take still being recorded.
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct TakePreview {
     pub track: Id,
@@ -136,6 +138,8 @@ pub struct TakePreview {
     pub peaks: Vec<f32>,
 }
 
+/// Writes record-enabled tracks to WAV files. A thread of its own drains each take's ring every
+/// 10 ms, so the audio thread never touches the disk.
 #[derive(Clone)]
 pub struct Recorder {
     takes: Arc<Mutex<HashMap<Id, Take>>>,
@@ -158,6 +162,7 @@ impl Recorder {
         Recorder { takes }
     }
 
+    /// Opens a take's file and starts draining for `track`. Returns the ring's producer, for the engine.
     pub fn begin(&self, track: Id, path: PathBuf, channels: usize, sample_rate: u32, start: i64, depth: BitDepth) -> anyhow::Result<rtrb::Producer<f32>> {
         if let Some(dir) = path.parent() {
             std::fs::create_dir_all(dir)?;
@@ -228,6 +233,7 @@ impl Recorder {
         (!msgs.is_empty()).then(|| msgs.join("\n"))
     }
 
+    /// Drains and closes every take, and returns them. Called when recording stops.
     pub fn finish_all(&self) -> Vec<(Id, FinishedTake)> {
         let mut out = Vec::new();
         let mut finished = Vec::new();

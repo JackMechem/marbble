@@ -41,6 +41,7 @@ pub const MAX_BPM: f64 = 990.0;
 /// Slack for float noise when a position sits on a bar or grid line (in bars or steps).
 const EPS: f64 = 1e-9;
 
+/// A tempo within the range the app supports; anything not finite becomes the default.
 pub fn clamp_bpm(bpm: f64) -> f64 {
     if bpm.is_finite() {
         bpm.clamp(MIN_BPM, MAX_BPM)
@@ -160,6 +161,7 @@ pub struct GridPoint {
 }
 
 impl GridPoint {
+    /// Whether this grid point falls on the bar line.
     pub fn downbeat(&self) -> bool {
         self.sub == 0
     }
@@ -270,6 +272,7 @@ impl TempoMap {
         TempoMap::new(sample_rate, &[], &[], bpm, (num, den))
     }
 
+    /// The map a project's tempo and signature tracks describe.
     pub fn from_project(p: &Project) -> TempoMap {
         TempoMap::new(p.sample_rate as f64, &p.tempo_map, &p.signatures, p.tempo, (p.sig_num, p.sig_den))
     }

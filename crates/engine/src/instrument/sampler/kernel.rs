@@ -31,12 +31,14 @@ pub const MAX_TAPS: usize = 512;
 /// reads out of bounds.
 pub const GUARD: usize = MAX_TAPS / 2 + 2;
 
+/// One kernel's table, precomputed for each fractional position (see the module's header).
 pub struct Bank {
     pub taps: usize,
     /// `(PHASES + 1) * taps` values.
     table: Box<[f32]>,
 }
 
+/// All the banks, a quarter octave apart.
 pub struct Kernels {
     banks: Vec<Bank>,
 }

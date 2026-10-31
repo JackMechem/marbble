@@ -94,6 +94,7 @@ pub struct ThreadChoices {
     pub max: u32,
 }
 
+/// What Settings › Audio › Processing Threads offers on this machine.
 pub fn choices(t: &Topology) -> ThreadChoices {
     ThreadChoices { automatic: automatic(t) as u32, max: t.logical.clamp(1, MANUAL_MAX) as u32 }
 }

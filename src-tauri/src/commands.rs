@@ -1,5 +1,11 @@
 //! Tauri commands. Synchronous commands run on the main thread, which is where VST3 wants its
 //! controllers and editors to live.
+//!
+//! This file holds what every command shares: the [`Snapshot`] the frontend gets back, and `edit`,
+//! `try_edit` and `edit_made`, which take the undo checkpoint around a change. The commands are in the
+//! modules below, by what they act on, and all are reachable as `commands::<name>`, which is how
+//! `main.rs` registers them. A new command also goes in that list; `tests/tauriCommands.test.ts` checks
+//! the frontend's calls against both.
 
 use std::path::PathBuf;
 

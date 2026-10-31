@@ -571,6 +571,8 @@ impl Session {
         id
     }
 
+    /// Copies or converts an audio file into the project and puts a region for it on an audio track at
+    /// `start`. Returns the region's id.
     pub fn import_audio(&mut self, path: &Path, track: Id, start: i64) -> Result<Id> {
         self.check_unfrozen(&[track])?;
         match self.project.track(track) {

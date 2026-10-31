@@ -6,6 +6,7 @@
 
 use super::*;
 
+/// A stereo level meter the audio thread writes and the tick reads and resets, in atomics.
 #[derive(Default)]
 pub struct Meter {
     l: AtomicU32,
@@ -28,6 +29,8 @@ impl Meter {
     }
 }
 
+/// Everything the audio thread reports, in atomics: position, meters, load, and counts of what went
+/// wrong. Shared with the session, which reads it for the tick and to pace itself (`cmds_done`).
 pub struct EngineStatus {
     pub pos: AtomicI64,
     pub playing: AtomicBool,

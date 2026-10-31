@@ -31,6 +31,7 @@ impl Session {
         self.engine_rate
     }
 
+    /// Closes and reopens the device with the current config.
     pub fn restart_audio(&mut self) {
         self.audio = None;
         let (io, status) = audio_io::start(self.engine.clone(), &self.audio_config);
@@ -55,6 +56,7 @@ impl Session {
         }
     }
 
+    /// Takes a new config, reopening the device only if the devices changed.
     pub fn set_audio_config(&mut self, cfg: AudioConfig) {
         let reopen = !cfg.same_devices(&self.audio_config) || self.audio.is_none();
         self.graph_dirty |= cfg.processing_threads != self.audio_config.processing_threads;
@@ -80,6 +82,7 @@ impl Session {
         (us as f64 * sr / 1e6 + ring + manual + pdc).round() as i64
     }
 
+    /// The input and output latency the device last reported, and the compensation recordings get.
     pub fn latency(&self) -> Latency {
         let sr = self.sample_rate().max(1.0);
         Latency {

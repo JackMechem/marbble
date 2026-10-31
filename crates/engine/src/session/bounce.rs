@@ -61,6 +61,7 @@ pub enum BipSource {
     Delete,
 }
 
+/// The Bounce in Place dialog's choices.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(default)]
 pub struct BipOptions {

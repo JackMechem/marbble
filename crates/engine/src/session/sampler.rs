@@ -73,6 +73,7 @@ pub struct ZoneView {
     pub error: Option<String>,
 }
 
+/// All Fermata Sampler's panel draws for a track.
 #[derive(Debug, Clone, Serialize)]
 pub struct SamplerView {
     pub zones: Vec<ZoneView>,

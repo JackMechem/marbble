@@ -3,6 +3,7 @@
 use crate::fx::{ParamKind, ParamSpec, Unit};
 use crate::instrument::Section;
 
+/// Parameter ids. Projects, automation lanes and presets refer to them: add new ones, never renumber.
 pub mod param {
     pub const RANGE1: u32 = 0;
     pub const WAVE1: u32 = 1;

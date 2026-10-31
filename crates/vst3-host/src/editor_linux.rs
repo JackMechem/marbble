@@ -55,6 +55,7 @@ impl Window {
     }
 }
 
+/// `IPlugFrame` and the run-loop bridge: the host's side of an open editor.
 pub struct PlugFrame {
     window: Arc<Window>,
     view: Mutex<Option<ComPtr<IPlugView>>>,
@@ -177,6 +178,7 @@ fn install_x_error_handlers() {
     }
 }
 
+/// An open plug-in editor in an X11 window of its own.
 pub struct Editor {
     view: ComPtr<IPlugView>,
     frame: ComWrapper<PlugFrame>,

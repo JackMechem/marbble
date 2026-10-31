@@ -106,6 +106,7 @@ pub fn hz_to_note(hz: f32) -> f32 {
     69.0 + 12.0 * (hz.max(1.0) / 440.0).log2()
 }
 
+/// One sounding sample, with its position and envelopes.
 pub struct Voice {
     pub active: bool,
     /// The allocator's voice this one sounds for; None once stolen.

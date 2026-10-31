@@ -202,6 +202,7 @@ pub(super) fn db_to_gain(db: f32) -> f32 {
     }
 }
 
+/// The gain of a fader at `db`, with -96 dB and below silent.
 pub fn volume_gain(db: f32) -> f32 {
     db_to_gain(db)
 }

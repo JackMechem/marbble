@@ -56,6 +56,7 @@ impl Session {
         Ok(uid)
     }
 
+    /// Empties an insert slot, or with `slot` of `usize::MAX` the instrument slot. Refused on a frozen track.
     pub fn remove_plugin(&mut self, track: Id, slot: usize) {
         if self.is_frozen(track) {
             return;
@@ -86,6 +87,7 @@ impl Session {
         self.update_pdc();
     }
 
+    /// Opens a VST3's own editor, and starts watching it for edits to undo (see `vst_undo.rs`).
     pub fn open_editor(&mut self, uid: Id, title: &str) -> Result<()> {
         let c = self.controllers.get_mut(&uid).ok_or_else(|| anyhow!("this plug-in has no editor"))?;
         c.open_editor(title).map_err(|e| anyhow!(e))?;

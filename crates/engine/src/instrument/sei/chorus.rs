@@ -45,6 +45,7 @@ impl TwoPole {
     }
 }
 
+/// Fermata Sei's built-in bucket-brigade chorus.
 pub struct Chorus {
     sr: f32,
     seed: u64,

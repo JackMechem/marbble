@@ -171,6 +171,8 @@ impl Shared {
     }
 }
 
+/// The worker threads that run a [`TaskGraph`]'s tasks alongside the caller, with no lock or queue. It
+/// knows nothing of audio.
 pub struct Pool {
     shared: Arc<Shared>,
     joins: Vec<JoinHandle<()>>,

@@ -15,6 +15,7 @@ use crate::util::{copy_utf16, utf16_ptr};
 
 pub const HOST_NAME: &str = "Fermata";
 
+/// `IHostApplication`: what a plug-in gets as its host context.
 pub struct HostApp;
 
 impl Class for HostApp {
@@ -151,6 +152,7 @@ enum Attr {
     Bin(Vec<u8>),
 }
 
+/// `IAttributeList`: the attributes of a [`HostMessage`].
 #[derive(Default)]
 pub struct HostAttributeList {
     values: Mutex<HashMap<String, Attr>>,
@@ -253,6 +255,7 @@ impl IAttributeListTrait for HostAttributeList {
     }
 }
 
+/// `IMessage`: what a plug-in's component and controller send each other through the host.
 pub struct HostMessage {
     id: Mutex<CString>,
     attrs: ComWrapper<HostAttributeList>,

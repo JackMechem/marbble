@@ -26,6 +26,7 @@ pub enum Priority {
     High,
 }
 
+/// How an instrument plays notes: voices of their own, or a single line.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum VoiceMode {
     Poly,

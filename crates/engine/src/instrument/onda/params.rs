@@ -5,6 +5,7 @@ use crate::fx::{ParamSpec, Unit};
 use crate::instrument::common::{choice, cont, percent, ten, time_ms, toggle};
 use crate::instrument::Section;
 
+/// Parameter ids. Projects, automation lanes and presets refer to them: add new ones, never renumber.
 pub mod param {
     pub const A_ON: u32 = 0;
     pub const A_TABLE: u32 = 1;

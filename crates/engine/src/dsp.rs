@@ -1,6 +1,11 @@
 //! The real-time mixing graph. Everything in `Engine::process` runs on the audio thread and must
 //! not block or allocate; structural changes arrive as `Cmd`s and replaced objects are shipped
 //! back as `Garbage` to be dropped elsewhere.
+//!
+//! This file holds [`Engine`] and how it's made. A block runs through `process.rs`, which plays each
+//! strip with `strip.rs` (on the worker pool through `parallel.rs` and `pool.rs`, when `graph.rs` has a
+//! graph); `apply.rs` handles commands; `track.rs` holds a strip's state and `block.rs` what a block
+//! shares. `offline.rs` renders without a device. `crate::session` is the other side of every message.
 
 use std::sync::atomic::{AtomicBool, AtomicI64, AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
@@ -56,6 +61,9 @@ const MAX_TOUCHED: usize = 16;
 /// Plug-in lanes per track whose last sent value is remembered (later ones resend every block).
 const MAX_AUTO_SENT: usize = 64;
 
+/// The real-time graph: every strip, the transport, the master and the click. Lives behind a mutex that
+/// the audio callback only `try_lock`s, and the session reaches it through [`Cmd`]s. `process.rs` is the
+/// block loop and `apply.rs` the command handling.
 pub struct Engine {
     pub sample_rate: f64,
     // Boxed so a strip arrives in a `Cmd`, and goes back as `Garbage`, by moving a pointer, and

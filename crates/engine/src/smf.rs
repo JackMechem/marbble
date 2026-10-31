@@ -10,6 +10,7 @@ use crate::model::CcKind;
 /// Ticks per quarter note in files Fermata writes.
 pub const PPQ: u16 = 960;
 
+/// A note in a MIDI file, in the file's ticks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SmfNote {
     pub start: u64,
@@ -18,6 +19,7 @@ pub struct SmfNote {
     pub velocity: u8,
 }
 
+/// A controller, pitch bend or aftertouch event in a MIDI file, in the file's ticks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SmfCc {
     pub start: u64,
@@ -35,6 +37,7 @@ pub struct SmfTrack {
     pub cc: Vec<SmfCc>,
 }
 
+/// A Standard MIDI File: its tracks and the tempo and signature changes.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SmfFile {
     /// Ticks per quarter note.

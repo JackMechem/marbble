@@ -1,3 +1,5 @@
+//! String conversions for VST3's C strings and UTF-16, and hex ids.
+
 use vst3::Steinberg::char8;
 use vst3::Steinberg::Vst::TChar;
 

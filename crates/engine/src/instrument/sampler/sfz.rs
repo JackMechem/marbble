@@ -27,6 +27,7 @@ pub struct SfzRegion {
     pub zone: Zone,
 }
 
+/// What an SFZ file comes to, including what couldn't be used and why.
 #[derive(Debug, Default)]
 pub struct SfzFile {
     pub regions: Vec<SfzRegion>,

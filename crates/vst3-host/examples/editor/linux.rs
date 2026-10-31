@@ -1,4 +1,4 @@
-// The Linux implementation of the editor example (X11 embedding).
+//! The Linux implementation of the editor example (X11 embedding).
 use std::cell::RefCell;
 use std::time::{Duration, Instant};
 

@@ -53,6 +53,7 @@ impl Punch {
     }
 }
 
+/// The Stereo Out strip's document, the strip with [`MASTER_ID`](super::MASTER_ID).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Master {
     pub volume_db: f32,
@@ -70,6 +71,7 @@ pub struct Master {
     pub auto_lanes: Vec<AutoParam>,
 }
 
+/// The cycle range between the locators, in frames.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Cycle {
     pub enabled: bool,
@@ -77,6 +79,7 @@ pub struct Cycle {
     pub end: i64,
 }
 
+/// An audio file the project uses, relative to the project folder.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClipRef {
     pub id: Id,
@@ -84,6 +87,8 @@ pub struct ClipRef {
     pub path: String,
 }
 
+/// The whole document: what `project.json` holds and what the undo history snapshots. New fields go at
+/// the end with `#[serde(default)]` so older projects still open, and `src/api.ts` mirrors them.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Project {
     pub name: String,
@@ -177,6 +182,7 @@ impl Project {
         }
     }
 
+    /// A new id. Ids are never reused within a project.
     pub fn alloc_id(&mut self) -> Id {
         let id = self.next_id;
         self.next_id += 1;
@@ -215,6 +221,7 @@ impl Project {
         self.track(id).is_some_and(|t| t.off) || self.ancestors(id).iter().any(|a| self.track(*a).is_some_and(|t| t.off))
     }
 
+    /// The stacks `id` sits in, innermost first.
     pub fn ancestors(&self, id: Id) -> Vec<Id> {
         let mut out = Vec::new();
         let mut cur = self.track(id).and_then(|t| t.parent);

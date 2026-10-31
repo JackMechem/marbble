@@ -43,6 +43,7 @@ pub const MAX_BLOCK: usize = 1024;
 /// How many meter values an effect can report to its panel each block.
 pub const MAX_METERS: usize = 16;
 
+/// How the panel shows a parameter's value. Values themselves are always in plain units.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Unit {
     None,
@@ -60,6 +61,7 @@ pub enum Unit {
     Degrees,
 }
 
+/// What sort of control a parameter is.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ParamKind {
     Continuous,

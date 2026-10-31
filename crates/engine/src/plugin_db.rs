@@ -12,6 +12,8 @@ use vst3_host::PluginDescriptor;
 
 pub const SCAN_ARG: &str = "--scan-vst3";
 
+/// Fermata's config folder: `$XDG_CONFIG_HOME/fermata` (usually `~/.config/fermata`), and
+/// `%APPDATA%\fermata` on Windows.
 pub fn config_dir() -> PathBuf {
     let base = std::env::var_os("XDG_CONFIG_HOME")
         .map(PathBuf::from)
@@ -25,6 +27,7 @@ fn cache_path() -> PathBuf {
     config_dir().join("plugins.json")
 }
 
+/// The plug-in list from the last scan, or None when there is no readable cache.
 pub fn load_cache() -> Option<Vec<PluginDescriptor>> {
     let text = std::fs::read_to_string(cache_path()).ok()?;
     serde_json::from_str(&text).ok()
@@ -144,6 +147,7 @@ pub fn search_paths(extra: &[PathBuf]) -> Vec<PathBuf> {
     paths
 }
 
+/// Scans the standard folders, each bundle in a child process running `exe --scan-vst3`. See [`scan_with`].
 pub fn scan_all(exe: &Path) -> Vec<PluginDescriptor> {
     scan_with(exe, &[])
 }

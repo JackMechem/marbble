@@ -5,6 +5,7 @@
 use super::*;
 
 impl Session {
+    /// Adds a track of a kind, named and coloured by its kind, at `index` (or the end). Returns its id.
     pub fn add_track(&mut self, kind: TrackKind, input: InputSel, instrument: Option<String>, index: Option<usize>) -> Result<Id> {
         let id = self.project.alloc_id();
         let count = self.project.tracks.iter().filter(|t| t.kind == kind).count() + 1;
@@ -141,6 +142,8 @@ impl Session {
         self.move_tracks(ids, &[]);
     }
 
+    /// Reorders tracks to the order of `ids`, and sets new stack parents where that makes no loop. Auxes
+    /// stay out of stacks.
     pub fn move_tracks(&mut self, ids: Vec<Id>, parents: &[(Id, Option<Id>)]) {
         self.project.tracks.sort_by_key(|t| ids.iter().position(|&i| i == t.id).unwrap_or(usize::MAX));
         for &(id, parent) in parents {

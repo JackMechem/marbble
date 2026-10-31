@@ -1,3 +1,8 @@
+//! The application: startup, the threads and timers that drive the session (`ui-tick`, the idle
+//! timer, MIDI refresh, autosave), and the list of commands registered with Tauri. The commands
+//! themselves are in `commands/`, and `session` in the engine crate does the work. Also the
+//! `--scan-vst3` mode, in which a child process scans one bundle (see `plugin_db`).
+
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod commands;

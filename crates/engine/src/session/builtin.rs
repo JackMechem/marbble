@@ -51,6 +51,7 @@ pub struct BuiltinParam {
     pub log: bool,
 }
 
+/// [`ParamKind`](crate::fx::ParamKind) in the form the frontend reads.
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum BuiltinKind {

@@ -26,6 +26,7 @@ impl Session {
         self.rec_punch.is_some()
     }
 
+    /// Plays from the playhead. Does nothing if it is playing already.
     pub fn play(&mut self) {
         if self.is_playing() {
             return;
@@ -36,6 +37,8 @@ impl Session {
         self.auto_play_started(from);
     }
 
+    /// Stops, placing any recording in the project. A second Stop returns to the left locator with Cycle
+    /// on, otherwise to the start.
     pub fn stop(&mut self) {
         if !self.is_playing() && self.rec_punch.is_none() {
             // A second Stop returns to the left locator with Cycle on, otherwise the start.
@@ -61,6 +64,7 @@ impl Session {
         }
     }
 
+    /// Moves the playhead, which [`Session::position`] reports at once, ahead of the engine.
     pub fn locate(&mut self, pos: i64) {
         let from = self.position();
         self.send(Cmd::Locate(pos.max(0)));
@@ -68,6 +72,8 @@ impl Session {
         self.auto_jumped(from, pos.max(0));
     }
 
+    /// Starts recording on the armed tracks: at the playhead, or with Cycle on from the left locator. A
+    /// stopped transport first takes the count-in or pre-roll. [`Session::stop`] finishes it.
     pub fn record(&mut self) -> Result<()> {
         if self.rec_punch.is_some() {
             return Ok(());
@@ -277,6 +283,7 @@ impl Session {
         self.dirty = true;
     }
 
+    /// Sets the locators in either order. A cycle of no length is off.
     pub fn set_cycle(&mut self, enabled: bool, start: i64, end: i64) {
         let (start, end) = (start.min(end).max(0), start.max(end).max(0));
         self.project.cycle = Cycle { enabled: enabled && end > start, start, end };

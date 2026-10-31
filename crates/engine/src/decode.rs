@@ -9,6 +9,7 @@ pub mod gapless;
 /// File extensions the importer accepts.
 pub const AUDIO_EXTENSIONS: &[&str] = &["wav", "wave", "aif", "aiff", "aifc", "flac", "mp3", "ogg", "oga", "m4a", "mp4", "aac", "caf"];
 
+/// Whether a path's extension is one the decoders take. It doesn't open the file.
 pub fn is_audio_file(path: &Path) -> bool {
     path.extension()
         .and_then(|e| e.to_str())
@@ -16,6 +17,7 @@ pub fn is_audio_file(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
+/// An audio file decoded to float, before it is resampled to the project rate.
 pub struct Decoded {
     pub sample_rate: u32,
     /// Up to two channels: stereo is the widest layout tracks play back.

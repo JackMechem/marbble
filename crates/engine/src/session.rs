@@ -3,6 +3,11 @@
 //!
 //! Methods that touch plugin controllers (instantiation, editors, `idle`) must be called on the
 //! UI/main thread.
+//!
+//! This file holds [`Session`], [`Tick`] and `Session::new`. Each module in `session/` adds to the one
+//! `impl Session`: `engine_sync.rs` is the wire to `crate::dsp`, `undo.rs` the history, `transport.rs`,
+//! `tracks.rs`, `regions.rs`, `plugins.rs`, `periodic.rs` and `files.rs` the basics, and the rest one
+//! feature each. Pure logic those call is in the crate's root modules, where it can be tested alone.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -109,6 +114,7 @@ mod held_notes;
 #[cfg(test)]
 mod instrument_tests;
 
+/// A partial edit of a track, as the frontend sends it: fields left out don't change.
 #[derive(Debug, Default, Clone, Deserialize)]
 pub struct TrackPatch {
     pub name: Option<String>,
@@ -124,6 +130,8 @@ pub struct TrackPatch {
     pub off: Option<bool>,
 }
 
+/// Everything the UI redraws from about 30 times a second, built by [`Session::tick`] and emitted as
+/// the `tick` event.
 #[derive(Debug, Clone, Serialize)]
 pub struct Tick {
     pub pos: i64,
@@ -160,6 +168,7 @@ pub struct Tick {
     pub midi_in: Vec<[u8; 3]>,
 }
 
+/// The latencies the status line and Settings › Audio show.
 #[derive(Debug, Clone, Copy, Serialize)]
 pub struct Latency {
     pub input_ms: f32,
@@ -168,6 +177,10 @@ pub struct Latency {
     pub compensation_ms: f32,
 }
 
+/// The non-real-time controller, and the only way in for edits: it owns the document, loaded clips,
+/// plug-in controllers, undo history and recorder, and turns edits into [`Cmd`]s for the engine. The app
+/// keeps it behind a mutex. Its methods are spread over the modules of `session/`, one per feature.
+/// Those that touch plug-in controllers must run on the main thread.
 pub struct Session {
     pub project: Project,
     pub dir: PathBuf,

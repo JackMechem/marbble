@@ -11,6 +11,7 @@ Contents:
 - [Build and run](#build-and-run)
 - [Tests](#tests)
 - [Debugging](#debugging)
+- [Where things live](#where-things-live)
 - [Conventions](#conventions)
 - [The frontend: where things live](#the-frontend-where-things-live)
 - [Recipes](#recipes)
@@ -107,8 +108,8 @@ same CPU headroom for audio as a release build.
 ### Rust unit tests
 
 `cargo test -p daw-engine --lib` runs the engine's unit tests. They need no audio device.
-They cover, among others: loops and real copies, routing order and loop pruning (`model.rs`);
-the click's levels, accent, divisions and delay compensation (`dsp.rs`); delay line taps and the
+They cover, among others: loops and real copies, routing order and loop pruning (`model/tests.rs`, `model/routing_tests.rs`);
+the click's levels, accent, divisions and delay compensation (`dsp/tests.rs`); delay line taps and the
 PDC solver; take folder comping, crossfades and recording plans (`takes.rs`); fade curves,
 crossfade gain sums and placement (`fades.rs`, `session/crossfades.rs`); automation
 evaluation and thinning; Channel EQ filters; resampling; transient detection; Standard MIDI
@@ -357,7 +358,7 @@ instead and enforce rules that would otherwise only fail in the running app.
   load and the session stopped the transport (`EngineStatus::overloads`). The CPU meter in the control
   bar shows how close you are: `Tick.cpu` is the average, `cpu_peak` the worst recent block and
   `late_blocks` the blocks over 100%, a single one of which is a dropout but no overload
-  (`BlockLoad` in `dsp.rs`). All of them are one thread's load, so they won't match a system
+  (`BlockLoad` in `dsp/status.rs`). All of them are one thread's load, so they won't match a system
   monitor. `fx_bench --release` times the built-in effects; the audio
   thread runs with flush-to-zero, so denormals are not the cause.
 - **Plug-ins**: `cargo run -p vst3-host --example probe -- <name>` loads and runs plug-ins
@@ -373,6 +374,26 @@ instead and enforce rules that would otherwise only fail in the running app.
 - **Never test with your real projects folder**: headless checks write into the scratch
   directory you pass; keep it away from `~/Music/Fermata`.
 
+## Where things live
+
+[ARCHITECTURE.md › Module map](ARCHITECTURE.md#15-module-map) lists every file. In short:
+
+| You want to change | Look in |
+|---|---|
+| What is saved | `crates/engine/src/model/` (`Project`, `Track`, `Region`...), `src/api.ts` mirrors it |
+| What an edit does | `crates/engine/src/session/`: one module per feature, all `impl Session` |
+| What the UI can call | `src-tauri/src/commands/`, one module per area; shared wrappers in `commands.rs`; registered in `main.rs` |
+| What plays, on the audio thread | `crates/engine/src/dsp/`: `process.rs` (the block), `strip.rs` (a strip), `apply.rs` (commands) |
+| How state reaches the audio thread | `session/engine_sync.rs` and `session/undo.rs` send, `dsp/cmd.rs` defines, `dsp/apply.rs` receives |
+| A built-in effect | `crates/engine/src/fx/`; contract in `fx/mod.rs` |
+| A built-in instrument | `crates/engine/src/instrument/`; contract in `instrument/mod.rs`; parts in `synth_dsp/` |
+| Hosting VST3s | `crates/vst3-host/src/`; `plugin/processor.rs` and `plugin/controller.rs` are the two halves |
+| Pure logic with its own tests | Single files at the root of `crates/engine/src` (`takes.rs`, `tempo.rs`, `fades.rs`...), listed by theme in `lib.rs` |
+
+A file that grows past about 1000 lines is a hint to split it by responsibility: types stay in the
+parent module (`dsp.rs`, `session.rs`) where children can reach their private fields, and the code
+moves into children that start with `use super::*`. Tests move to a `tests.rs` of their own.
+
 ## Conventions
 
 These keep the code maintainable and the merges clean.
@@ -381,17 +402,22 @@ These keep the code maintainable and the merges clean.
   nothing waits on another thread: use `rtrb` rings and atomics, not channels or mutexes. New
   engine state arrives as a `Cmd` and replaced objects leave as `Garbage`. See
   [ARCHITECTURE.md › Real-time rules](ARCHITECTURE.md#3-real-time-rules).
-- **Model compatibility.** Every new field in `model.rs` or `prefs.rs` gets `#[serde(default)]`
+- **Model compatibility.** Every new field in `model/` or `prefs.rs` gets `#[serde(default)]`
   (or a struct-level `#[serde(default)]`), and optional fields usually also
   `skip_serializing_if = "Option::is_none"`, so older projects and settings files still load.
 - **Struct literals.** Every `Region { .. }` literal needs `loop_end`, `takes`, `params` and
   `pattern`, every `RegionContent::Audio { .. }` needs `fade_shape`, every `RegionDsp::Audio`
   needs `laws`, and every `Note` needs `muted`. Tests and examples build these by hand, so
   `Default::default()` (or `None`) is usually what they want.
-- **Every platform.** `cargo clippy --workspace --all-targets` is clean on Linux, Windows and
-  macOS; keep it that way, and keep platform-specific code behind `cfg`. VST3 enum casts stay
-  explicit: the C enums are `i32` in the MSVC bindings, so a cast that clippy calls a no-op on
-  Linux is needed on Windows.
+- **Clippy.** `cargo clippy --workspace --all-targets -- -D warnings` is clean on Linux, and CI
+  keeps it so. It isn't run on Windows or macOS, where CI only compiles, so `cfg` code may have
+  warnings of its own. A narrow `#[allow]` with a one-line reason is right where a lint
+  would make DSP or tables worse. CI lints on a pinned toolchain (`LINT_TOOLCHAIN` in `ci.yml`) so a
+  new Rust release can't turn it red with no code change; to move to a newer one, bump it there and
+  fix what it reports in the same commit.
+- **Every platform.** Keep platform-specific code behind `cfg`. VST3 enum casts stay explicit: the
+  C enums are `i32` in the MSVC bindings, so a cast that clippy calls a no-op on Linux is needed on
+  Windows.
 - **Undo.** Every user edit goes through a checkpointed command (`edit`, `try_edit`,
   `edit_made`). Performance switches (mute, solo, on/off, arm, monitor) and transport are not undoable.
   Anything you send to the engine must also be handled in `restore()`, `build_track()` and
@@ -403,10 +429,9 @@ These keep the code maintainable and the merges clean.
   Struct fields keep their serde (snake_case) names.
 - **Where things go.** Substantial new code goes into a new module (`session/<feature>.rs`,
   `src/<feature>.ts`, `src/components/<Feature>.tsx`) and is wired in with small edits. New
-  struct fields go at the end of the struct, new commands at the end of `commands.rs` and of the
-  `invoke_handler` list in `main.rs`, new CSS at the end of its area's file in
-  `src/styles/` (a new area: a new file imported at the end of `src/styles/index.css`), new menu
-  items next to related ones.
+  struct fields go at the end of the struct, new commands at the end of the fitting `commands/<area>.rs` and of the
+  `invoke_handler` list in `main.rs`, new CSS at the end of `styles.css`, new menu items next
+  to related ones.
 - **Comments.** Public items get doc comments. Comments explain *why*, not what. Keep the
   Logic Pro reference in mind: behaviour and labels follow Logic unless there is a reason not
   to, and the reason goes in a comment.
@@ -465,7 +490,7 @@ itself can become a folder of the same name with the old path re-exporting it, a
 
 Example: a per-project "Notes" field (it exists as `Project::notes`).
 
-1. `crates/engine/src/model.rs`: add the field at the end of `Project` with
+1. `crates/engine/src/model/project.rs`: add the field at the end of `Project` with
    `#[serde(default)]`, and initialise it in `Project::new`.
 2. `src/api.ts`: add it to the `Project` interface.
 3. Add a `Session` method that changes it and sets `self.dirty = true` (in the most fitting
@@ -482,7 +507,8 @@ Example: a per-project "Notes" field (it exists as `Project::notes`).
 1. **Session.** Write the edit as a method on `Session`. It changes `self.project`, sends what
    the engine needs (`push_regions`, `Cmd::Params` via `push_all_params`, `sync_tracks` for
    structural changes) and sets `self.dirty = true`. Return `Result` if it can fail.
-2. **Command.** At the end of `src-tauri/src/commands.rs`:
+2. **Command.** At the end of the fitting `src-tauri/src/commands/<area>.rs` (add a module in
+   `commands.rs` if none fits, with `mod <area>; pub use <area>::*;`):
 
    ```rust
    /// Sets the project notes (Project Settings).
@@ -505,20 +531,20 @@ Example: a per-project "Notes" field (it exists as `Project::notes`).
 
 ### Add an engine `Cmd`
 
-1. Add the variant at the end of `enum Cmd` in `crates/engine/src/dsp.rs`, with a doc comment.
+1. Add the variant at the end of `enum Cmd` in `crates/engine/src/dsp/cmd.rs`, with a doc comment.
    Prefer small `Copy` payloads; anything allocated is built by the session and moved in
    (`Box`, `Arc`).
-2. Handle it in `Engine::apply`. If it replaces an allocated object, send the old one back
+2. Handle it in `Engine::apply` (`dsp/apply.rs`). If it replaces an allocated object, send the old one back
    with `self.discard(Garbage::...)` (add a `Garbage` variant if needed). Never drop
    allocations on the audio thread.
-3. Use the new state in `process_block` without allocating. Preallocate buffers in
-   `TrackDsp::new` or `Engine::new`.
+3. Use the new state in `process_block` (`dsp/process.rs`) or `run_strip` (`dsp/strip.rs`) without
+   allocating. Preallocate buffers in `TrackDsp::new` (`dsp/track.rs`) or `Engine::new` (`dsp.rs`).
 4. Send it from the session with `self.send(Cmd::...)`.
 5. Make it survive everything that rebuilds or diffs the graph: `build_track()` (new tracks
-   and project load), `sync_globals()` (global values, called after load and undo),
-   `restore()` (undo and redo), and, if offline renders must save and restore it,
+   and project load) and `sync_globals()` (global values, called after load and undo) in
+   `session/engine_sync.rs`, `restore()` (undo and redo) in `session/undo.rs`, and, if offline renders must save and restore it,
    `Engine::render` in `dsp/offline.rs`.
-6. Add a unit test in `dsp.rs` (see the `rig()` helper) or a headless example.
+6. Add a unit test in `dsp/tests.rs` (see the `rig()` helper) or a headless example.
 
 ### Add a key command
 
@@ -573,46 +599,37 @@ Then:
 
 See [ARCHITECTURE.md › Built-in effects and presets](ARCHITECTURE.md#13-built-in-effects-and-presets).
 
-1. `crates/engine/src/fx/<name>.rs`: a struct implementing `Effect`, allocating everything in
-   its constructor; `PARAMS` (new ids only, never renumbered), meter names, `PRESETS`, and
+1. `crates/engine/src/fx/<name>.rs` (or a folder, as `fx/reverb/` is, when it's big): a struct
+   implementing `Effect`, allocating everything in its constructor; `PARAMS` (new ids only, never renumbered), meter names, `PRESETS`, and
    `pub fn info() -> EffectInfo` with the id `builtin:<name>` and a category.
 2. List it in `fx::registry()` and `fx::factory_presets()` in `fx/mod.rs`.
 3. Unit tests in the module: silence stays clean, the reported latency is the real one, the
    presets set real parameters within range, and it stays stable at extreme settings (see
-   `limiter.rs` and `reverb.rs`).
+   `limiter.rs` and `reverb/tests.rs`).
 4. A panel, if the generic one isn't enough: `src/components/fx/<Name>.tsx`, built from
    `common.tsx`, registered in `FX_PANELS` in `src/fx.ts`. Call the panel props' `touch(id, on)`
    around every drag so Touch and Latch automation record it.
 5. Run `fx_check` (it covers every registry entry) and
    `cargo run --release -q -p daw-engine --example fx_bench` to check the cost per block.
 
-### Add a panel
+### Add a built-in instrument
 
-There are four kinds, from least to most wiring. New CSS goes in `src/styles/` (see
-[Conventions](#conventions)); use the theme variables.
+The contract is at the top of `crates/engine/src/instrument/mod.rs`: the same real-time rules as an
+effect, the same bits after a `reset`, parameter ids stable forever. `instrument/uno/` is a small
+complete model and `tre/` a larger one.
 
-**A sheet.** Build it on `Sheet` from `components/Dialogs.tsx`, which registers its keys with
-`useSheetKeys` (`tests/sheetKeys.test.ts` fails on a sheet that doesn't). A flag or a `state.dialog`
-value in `store.ts` shows it, and `App.tsx` renders it next to the others.
-
-**A Settings pane.** A file in `components/settingsPanes/` exporting a component that takes
-`{ close }`, ending in `Foot`, and an entry in `tabs` in `SettingsWindow` (`Settings.tsx`) with an
-id added to `SettingsTab` in `store.ts`.
-
-**A built-in effect's or instrument's panel.** `components/fx/<Name>.tsx` exporting a component
-that takes `FxPanelProps`: `info` and `values` to read, `set` and `touch` to change a parameter,
-`meters` to draw (start from `fx/Gain.tsx`; `fx/common.tsx` has the controls). Register it by plug-in
-id in `FX_PANELS` (`src/fx.ts`). That is all: `fx/FxPanel.tsx` shows it docked, floating or in its
-own window, with the header controls. Without an entry an effect gets the generic panel, and an
-instrument the sectioned one from its spec.
-
-**A pane in the bottom section.**
-
-1. Add it to `BottomPane` in `store.ts`, and show it with `setState({ bottom: "<pane>" })`
-   from a key command, a menu item or `EditorTabs`.
-2. Render it in the layout in `App.tsx`, next to `s.bottom === "steps"`.
-3. To let it detach, register it in `panelKinds.tsx` with `bottomPanel("<pane>", { title, render,
-   size, own: ownBottom("<pane>") })`, and put `<DetachButton panel="<pane>" />` in its bar.
+1. `crates/engine/src/instrument/<name>/`: `mod.rs` with a struct implementing `Instrument` and
+   `pub fn info() -> InstrumentInfo` with the id `builtin:<name>`; `params.rs` and `presets.rs`.
+2. List it in `instrument::registry()` in `instrument/mod.rs`, with a `pub mod`. Nothing else is
+   needed: menus, the panel (from `sections`), presets, automation, MIDI learn, freezing and saving
+   all work from the registry entry.
+3. `tests.rs`, built on `instrument/test_kit.rs`, for what `tre/tests.rs` measures and what's
+   specific to the model. `tests/builtinInstruments.test.ts` keeps trademarks out of each model's
+   panel and presets; add the model there, with the names to keep out.
+4. To have the real-time checks cover it, add it to `MODELS` in
+   `crates/engine/examples/common/all_features.rs`. Run `instrument_check`, `rt_alloc_check` and
+   `parallel_check`, and `cargo run --release -q -p daw-engine --example instrument_bench` for the
+   cost per block.
 
 ### Add a theme colour
 

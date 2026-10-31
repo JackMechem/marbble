@@ -11,6 +11,7 @@ const MAX_POINTS: usize = 64;
 const MAX_QUEUES: usize = 256;
 const MAX_EVENTS: usize = 1024;
 
+/// One parameter's changes within a block, preallocated. The audio thread fills it, the plug-in reads it.
 pub struct ParamValueQueue {
     id: Cell<ParamID>,
     points: UnsafeCell<Vec<(i32, f64)>>,
@@ -70,6 +71,7 @@ impl IParamValueQueueTrait for ParamValueQueue {
     }
 }
 
+/// `IParameterChanges`: a block's parameter queues, preallocated, so nothing allocates on the audio thread.
 pub struct ParameterChanges {
     queues: Vec<ComWrapper<ParamValueQueue>>,
     ptrs: Vec<*mut IParamValueQueue>,
@@ -166,6 +168,7 @@ impl IParameterChangesTrait for ParameterChanges {
     }
 }
 
+/// `IEventList`: a block's note and other events, preallocated like [`ParameterChanges`].
 pub struct EventList {
     events: UnsafeCell<Vec<Event>>,
 }

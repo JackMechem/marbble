@@ -3,6 +3,7 @@
 
 use std::f64::consts::{FRAC_1_SQRT_2, TAU};
 
+/// A second-order filter in f64, the effects' shared one.
 #[derive(Debug, Clone, Copy)]
 pub struct Biquad {
     b0: f64,

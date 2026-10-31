@@ -7,6 +7,8 @@ use super::*;
 
 // By value on purpose: commands sit inside the preallocated ring, so sending and applying one
 // allocates nothing, and there is no box for the audio thread to free.
+/// An edit on its way to the audio thread, applied at the start of the next block by `Engine::apply`.
+/// Whatever it carries is built, and allocated, on the sender's thread.
 #[allow(clippy::large_enum_variant)]
 pub enum Cmd {
     Play { from: i64 },
@@ -77,6 +79,7 @@ pub enum Cmd {
     ParallelTest(ParallelTest),
 }
 
+/// What a [`Cmd`] replaced, going back to the session's thread so it is freed there.
 pub enum Garbage {
     Track(Box<TrackDsp>),
     Insert(InsertDsp),

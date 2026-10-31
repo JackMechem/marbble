@@ -56,6 +56,7 @@ fn is_linear(c: &f32) -> bool {
     *c == 0.0
 }
 
+/// One parameter's automation points on a track, sorted by position.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AutoLane {
     pub param: AutoParam,
