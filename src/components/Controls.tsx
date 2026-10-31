@@ -1,3 +1,4 @@
+// The shared controls: fader, knob, slider, level and gain-reduction meters, and the `useDrag` they use.
 import { useEffect, useRef } from "react";
 import type { Id } from "../api";
 import { gainReduction, meterLevels, peakHold, tickSeq, useStore } from "../store";

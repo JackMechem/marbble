@@ -1,3 +1,5 @@
+// The themes: a map of CSS variables and canvas colours for each, and `applyTheme`. Flat, Midnight, Light
+// and High Contrast spread the previous theme's maps, so a new variable only needs a value in Studio.
 import { setState } from "./store";
 import { theme, type CanvasTheme } from "./theme";
 

@@ -1,3 +1,4 @@
+// The bottom editor pane: picks the Piano Roll or the Audio Track Editor for the selection.
 import type { Region, Track } from "../api";
 import { useStore } from "../store";
 import { AudioEditor } from "./AudioEditor";

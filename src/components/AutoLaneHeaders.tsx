@@ -1,3 +1,4 @@
+// The headers of a track's extra automation lanes and of the Output track.
 import { act, MASTER_ID, type AutoParam, type Track } from "../api";
 import { closeLane, outputTrack, paramLabel, paramMenu, useAutomation, VOLUME } from "../automation";
 import { Icon } from "../icons";

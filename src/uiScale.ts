@@ -1,3 +1,4 @@
+// The interface size: applying and stepping the zoom, and the pixel ratio canvases draw at.
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { getState, setState } from "./store";
 

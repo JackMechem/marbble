@@ -1,3 +1,4 @@
+// The channel strip's Sends section and Output slot.
 import { invoke } from "@tauri-apps/api/core";
 // The channel strip's Sends section and Output slot, laid out like Logic's.
 import { useRef, useState } from "react";

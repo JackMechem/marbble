@@ -1,3 +1,4 @@
+// The track headers: buttons, names, volume, reordering and resizing.
 import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import { act, api, canRecord, isStack, type Group, type Id, type Track } from "../api";
 import { Icon } from "../icons";

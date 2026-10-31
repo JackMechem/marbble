@@ -1,3 +1,6 @@
+// The global UI store (`getState`, `setState`, `useStore`) and, kept outside React state, the tick channel
+// from the engine (`pushTick`, `onTick`, the meter maps, `liveTakes`). Selectors must return the same value
+// while nothing changed; see docs/ARCHITECTURE.md § The frontend.
 import { useSyncExternalStore } from "react";
 import type { AutoParam, ChannelEq, Id, PluginDesc, PluginSlot, Region, Snapshot, Tick } from "./api";
 import type { StripSetting } from "./stripSettings";

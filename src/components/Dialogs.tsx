@@ -1,3 +1,5 @@
+// The `Sheet` frame dialogs are built on, New Tracks, the Settings window with its Audio and Appearance
+// panes (the rest are in settingsPanes/), Group Settings and the input level warning.
 import { useEffect, useRef, useState } from "react";
 import { threadOptions, type ThreadChoices } from "../threads";
 import { useSheetKeys } from "../sheetKeys";

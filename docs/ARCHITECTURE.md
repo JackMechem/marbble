@@ -976,7 +976,7 @@ Interface-only state lives in the webview's `localStorage`:
 | `fermata.trackHeights:<project path>` | `layout.ts` | `{ base, heights, output }` for one project (`output`: the Output track shown). |
 | `fermata.bounce` | `components/Bounce.tsx` | Tail, format, resolution, sample rate and normalize of the bounce and export dialogs. |
 | `fermata.bounce-in-place` | `components/Bounce.tsx` | Bounce in Place options. |
-| `fermata.pianoRoll` | `components/PianoRoll.tsx` | Piano Roll view and Time Quantize settings. |
+| `fermata.pianoRoll` | `components/pianoRollEditor/prefs.ts` | Piano Roll view and Time Quantize settings. |
 | `fermata.eventList` | `components/EventList.tsx` | Event List filters, the type + adds, Catch and MIDI Out. |
 | `fermata.stripSilence` | `components/StripSilence.tsx` | The Strip Silence sheet's last settings. |
 | `fermata.showOverview` | `components/Overview.tsx` | Whether the overview strip replaces the scroll bar. |
@@ -1318,8 +1318,8 @@ allows, which the headless examples rely on.
 
 ### Canvas views
 
-The tracks area (`Arrange.tsx`), ruler, Piano Roll, Audio Track Editor and meters are canvas
-drawings. The common pattern:
+The tracks area (`Arrange.tsx`, drawing in `components/tracksCanvas/draw.ts`), ruler, Piano Roll,
+Audio Track Editor and meters are canvas drawings. The common pattern:
 
 - Draw functions read the store with `getState()` and the canvas theme from `src/theme.ts`
   (a mutable object that `applyTheme` overwrites), and subscribe to `themeId` so they redraw on
@@ -2198,7 +2198,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `dnd.ts` | Dropping files from the desktop or the Browser into the tracks area. |
 | `routing.ts` | Send and output menus, New Aux. |
 | `multiOut.ts` | An instrument's next free output and what an aux on an output shows as its input; pure, tested. |
-| `automation.ts` | Automation lanes in the tracks area: values, scales, drawing, editing, point selection. |
+| `automation.ts`, `automation/` | Automation lanes in the tracks area. `automation.ts` re-exports `automation/params.ts` (labels, each strip's parameters, the scale, Stereo Out as a track; pure, tested), `values.ts` (reads that need the store), `menus.ts` (parameter and mode menus, extra lanes), `useAutomation.ts` (a fader following its lane) and `canvas.ts` (drawing, editing, point selection). |
 | `autoLanes.ts` | The extra lanes under a track, the Output track's lanes and automation curves (mirrors `automation::shape`); pure, tested. |
 | `laneFollow.ts` | The shown automation lane following a plug-in moved to another track; pure, tested. |
 | `moveAutomation.ts` | Move Automation with Regions: the Ask setting's question before a move. |
@@ -2226,7 +2226,10 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `musicalMove.ts` | Region moves and nudges in bars and beats through the tempo map; pure, tested. |
 | `regionGain.ts`, `regionGainDrag.ts` | The Tracks area's region gain handle: geometry and arithmetic (pure, tested), and drawing and dragging it. |
 | `zeroCrossings.ts` | The Snap Edits to Zero Crossings toggle and its menu item. |
+| `pianoRollModel.ts` | The Piano Roll's lanes and tools, the note area's mapping, what a point hits, grid sums in musical time; pure, tested. |
 | `pianoRollDraw.ts` | Piano Roll canvas drawing. |
+| `regionDraw.ts` | Drawing a region on a canvas (body, name bar, waveform or notes, fades, loops), for the Tracks area and the Audio Track Editor; the crossfade handle drag in progress. |
+| `regionGrab.ts` | What a press on a region in the Tracks area grabs; pure, tested. |
 | `eventList.ts` | The Event List's positions, lengths, typed values and edits; pure, tested. |
 | `noteSelect.ts` | Edit › Select on notes and events while the Piano Roll or the Event List has focus; pure, tested. |
 | `stepInput.ts` | Step Input: step lengths through the tempo map, the chord/advance state machine (Rest, Back, Chord, Sustain, Quantize) and the region edits it makes; pure, tested. Also the hook Musical Typing reports its notes through. |
@@ -2234,11 +2237,20 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `midiFiles.ts` | MIDI file import and export entry points. |
 | `audioEdit.ts` | Audio Track Editor state and operations: range selection, zoom, transients, keys. |
 | `audioRange.ts` | The Audio Track Editor's range arithmetic; pure, tested. |
+| `audioEditorModel.ts` | The Audio Track Editor's layout constants, zoom range and what a press grabs; pure, tested. |
 | `overview.ts` | The Tracks area overview strip's mapping: time and tracks to strip pixels, the visible-area box, edge-drag zoom; pure, tested. |
 | `fx.ts` | Built-in effect descriptions (`FxInfo`, `FxParamSpec`) and `FX_PANELS`. |
 | `fxFormat.ts` | Built-in effect value formatting and control mapping; pure, tested. |
 | `fxHost.ts` | Built-in effect registry and panel windows, the plug-in and Channel EQ clipboards (store fields, shared between windows), the slot right-click menu. |
 | `fxDock.ts`, `fxDockState.ts` | Plug-in panels docked, floating or in separate windows: the pure transitions (tested), and applying them to the store with the floating panels' saved sizes. |
+| `compressorModel.ts`, `dynScale.ts` | The Compressor's parameter ids, circuits and curve (mirrors `compressor.rs`), and the dynamics panels' value formatting and knob maths; pure, tested. |
+| `settingsText.ts` | The words Settings and the Recovery sheet show: MIDI messages, plug-in types, what crashed work left; pure, tested. |
+| `instLayout.ts` | How an instrument panel lays out its sections, chosen apart for docked and floating; pure, tested. |
+| `samplerMap.ts`, `samplerDrop.ts` | Fermata Sampler's zones, note names and the sums behind its map (pure, tested); files going into it from its panel or a drop. |
+| `sideChain.ts` | The key sources a side-chain menu offers; pure, tested. |
+| `threads.ts` | Settings › Audio › Processing Threads; pure, tested. |
+| `trackOff.ts` | Whether a track is off through its stacks, as `Project::is_off` has it; pure, tested. |
+| `keyRepeat.ts` | Which key commands run again while their key is held; pure, tested. |
 | `fxShapes.ts` | The curves the modulation, distortion and Gain panels draw, mirroring the engine; pure, tested. |
 | `linearPhaseEq.ts` | The Linear Phase EQ's parameters as Channel EQ settings, so its panel reuses the EQ editor; pure, tested. |
 | `stripSettings.ts` | The channel strip Setting menu: the strip clipboard (a store field), Reset, saving and loading; resetting clip indicators. |
@@ -2270,7 +2282,8 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `LevelSlider.tsx` | A track header's volume slider with the level meter as its groove. |
 | `TrackAlternatives.tsx` | The Track Alternatives pop-up in a track header. |
 | `AutoLaneHeaders.tsx` | The headers of a track's extra automation lanes. |
-| `Arrange.tsx` | The tracks-area canvas: regions, fades, loops, take rows, automation, drag and drop. |
+| `Arrange.tsx` | The tracks-area canvas: refs, viewport, playhead and recording previews. |
+| `tracksCanvas/` | Its parts: `draw.ts` (lanes, grid, regions, take rows, automation, drop target), `pointer.ts` (presses, drags, marquee, swipes, menus, hover), `drag.ts` (the drag in progress and where it lands). |
 | `TrackTools.tsx` | The Left-click and Command-click Tool pop-ups and the tools' icons. |
 | `Panels.tsx` | Inspector, Mixer, Library, Browser. |
 | `FadeRows.tsx`, `RegionParamRows.tsx` | The Region inspector's fade rows and playback parameter rows. |
@@ -2284,15 +2297,18 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `Menu.tsx` | In-window menus. |
 | `Splitter.tsx` | Pane dividers and saved pane sizes. |
 | `Editor.tsx` | Bottom editor pane: picks the Piano Roll or the Audio Track Editor. |
-| `PianoRoll.tsx` | The Piano Roll. |
+| `PianoRoll.tsx` | The Piano Roll: refs, working list, effects, panes. |
+| `pianoRollEditor/` | Its parts: `core.ts` (view and grid on the live values, drawing, sending edits, sound, help tag), `commands.ts` (zoom, clipboards, edits), `menus.ts`, `keys.ts` (keys and `pianoRollMenu`), `noteGestures.ts`, `laneGestures.ts`, `wheel.ts`, `prefs.ts` (saved view and tool), `PianoRollBar.tsx`, `QuantizePanel.tsx`, `ToolIcon.tsx`. |
 | `EventList.tsx` | The Event List (bottom pane "list", D), a virtualised table; the Piano Roll / Event List tabs. Shares the note selection with the Piano Roll through the store's `midiSelection`. |
-| `AudioEditor.tsx` | The Audio Track Editor. |
+| `AudioEditor.tsx` | The Audio Track Editor: refs, zoom, scrolling, effects, the local bar. |
+| `audioTrackEditor/` | Its parts: `draw.ts` (lane, clip marks, transients, ruler, dB scale), `pointer.ts` (presses, drags, hover, menus), `InfoStrip.tsx`, `GainField.tsx`. |
 | `AutomationHeader.tsx` | The automation mode pop-up. |
 | `MusicalTyping.tsx` | Musical Typing window. |
 | `StepInput.tsx` | The Step Input Keyboard: feeds `stepInput.ts` from its keyboard, MIDI inputs (`Tick::midi_in`) and Musical Typing, and sends the edits in order. |
 | `StepSequencer.tsx` | The Step Sequencer (bottom pane "steps"): the step grid, row headers, edit modes, Learn; edits ahead of the snapshot while they are on their way. |
 | `Dialogs.tsx` | New Tracks, the Settings window frame, Group Settings, the input level warning. |
-| `Settings.tsx` | Settings panes, Project Settings, the Recovery sheet. |
+| `Settings.tsx` | The Settings window. |
+| `settingsPanes/` | One file per pane (`GeneralPane.tsx`, `RecordingPane.tsx`, `MetronomePane.tsx`, `MidiPane.tsx`, `EditingPane.tsx`, `PluginsPane.tsx`, `KeysPane.tsx`), `ProjectSettings.tsx`, `RecoverySheet.tsx`, and `parts.tsx` with what they share. |
 | `ProjectChooser.tsx` | Project Chooser. |
 | `Bounce.tsx` | Bounce, Export and Bounce in Place dialogs. |
 | `MarkerList.tsx` | Marker List. |
@@ -2309,6 +2325,8 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `fx/common.tsx` | Shared panel controls: knobs, toggles, choices, meters, the side-chain pop-up. |
 | `fx/Presets.tsx` | The preset pop-up (built-in effects, instruments and Channel EQ). |
 | `fx/Instrument.tsx` | The panel a built-in instrument gets from its spec: sections and a small keyboard (`pianoKeys.ts`, pure, tested). |
+| `fx/Sampler.tsx` | Fermata Sampler's panel: zone map, waveform handles, keyboard. |
+| `fx/dynControls.tsx`, `fx/TransferGraph.tsx` | The dynamics panels' knob, choices, section, level bar and GR meters; the Compressor's transfer curve. |
 | `fx/Compressor.tsx`, `Limiter.tsx`, `Gate.tsx`, `DeEsser.tsx`, `Reverb.tsx`, `Delay.tsx`, `Tuner.tsx`, `Loudness.tsx`, `Gain.tsx`, `LinearPhaseEq.tsx` | Each effect's panel. |
 | `fx/Modulation.tsx`, `Distortion.tsx` | The Chorus, Flanger, Phaser and Tremolo panels; the Distortion and Overdrive panels. |
 | `DetachedWindow.tsx` | The root of a detached panel's window. |

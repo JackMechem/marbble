@@ -1,3 +1,4 @@
+// The control bar: view buttons, transport, LCD, mode buttons, master volume and the CPU meter.
 import { useEffect, useRef, useState } from "react";
 import { act } from "../api";
 import { Icon } from "../icons";

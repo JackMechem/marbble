@@ -1,3 +1,6 @@
+// The TypeScript mirror of the engine's saved document and snapshot (crates/engine/src/model.rs; field
+// names are its serde names), and the way to Tauri: `act` runs a command that returns a Snapshot and
+// puts it in the store, `actMade` the same for one that reports what it made, `call` anything else.
 import { invoke } from "@tauri-apps/api/core";
 import { setState } from "./store";
 import type { SigEvent, TempoEvent } from "./tempo";

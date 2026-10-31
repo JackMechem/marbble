@@ -1,3 +1,4 @@
+// A track header's automation controls: the mode pop-up, the parameter pop-up and the + for another lane.
 import type { Track } from "../api";
 import { addLane, MODE_LABELS, modeMenu, paramLabel, paramMenu, VOLUME } from "../automation";
 import { Icon } from "../icons";

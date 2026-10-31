@@ -1,3 +1,4 @@
+// Plug-in slot menus: built-in effects and instruments and VST3s, grouped by category.
 import { BUILTIN_SYNTH, type PluginDesc } from "./api";
 import type { MenuItem } from "./components/Menu";
 import type { FxInfo, InstInfo } from "./fx";

@@ -1,3 +1,4 @@
+// Transport commands on the current state: cycle, Autopunch and locating.
 import { act } from "./api";
 import { currentTick, getState } from "./store";
 import { barFloor, barsFrom } from "./time";

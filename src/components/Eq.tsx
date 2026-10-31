@@ -1,3 +1,4 @@
+// The Channel EQ: the thumbnail on a channel strip and the editor, in a window or an effect panel.
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { call, EQ_SLOT, MASTER_ID, type ChannelEq, type EqBand, type Id, type Project } from "../api";
 import { BAND_COLORS, bandSections, defaultEq, eqSections, formatFreq, isFlat, responseDb } from "../eqMath";

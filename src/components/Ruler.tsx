@@ -1,3 +1,4 @@
+// The Tracks area's ruler: cycle strip, bar numbers, Autopunch strip and marker lane.
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { act } from "../api";
 import { getState, useStore } from "../store";

@@ -12,6 +12,7 @@ Contents:
 - [Tests](#tests)
 - [Debugging](#debugging)
 - [Conventions](#conventions)
+- [The frontend: where things live](#the-frontend-where-things-live)
 - [Recipes](#recipes)
 - [Packaging](#packaging)
 - [Versioning and releases](#versioning-and-releases)
@@ -312,6 +313,13 @@ instead and enforce rules that would otherwise only fail in the running app.
 | `storeSelectors.test.ts` | Guard: no `useStore`, `useEd` or `useSettings` selector builds a new array or object on each call (which re-renders forever and blanks the window). |
 | `commands.test.ts` | Guard: every key command and native menu item is handled, and no two key commands share a default key. |
 | `tauriCommands.test.ts` | Guard: every Tauri command the frontend calls is registered, and each call passes its required arguments in camelCase and nothing else. |
+| `pianoRollModel.test.ts` | The Piano Roll's lanes, what a point hits, and its grid sums in musical time. |
+| `regionGrab.test.ts` | What a press on a region in the Tracks area grabs: the loop tool, trims and fades. |
+| `audioEditorModel.test.ts` | The Audio Track Editor's layout, zoom range and what a press grabs. |
+| `automationParams.test.ts` | Automation parameters: labels, each strip's list, Stereo Out as a track, the lane's scale. |
+| `settingsText.test.ts` | The MIDI monitor's wording, plug-in types and the Recovery sheet's texts. |
+| `compressorModel.test.ts` | The transfer curve's copy of `static_reduction` for each circuit. |
+| `dynScale.test.ts` | The dynamics panels' value formatting and knob maths. |
 | `styles.test.ts` | Guard: `src/styles/index.css` imports every stylesheet exactly once with the tokens first, no other file imports CSS, and each file's braces balance. |
 | `browserDialogs.test.ts` | Guard: no `window.prompt`, `confirm` or `alert` in `src/` (macOS's web view doesn't implement them; use `askName` or the dialog plug-in). |
 
@@ -396,9 +404,9 @@ These keep the code maintainable and the merges clean.
 - **Where things go.** Substantial new code goes into a new module (`session/<feature>.rs`,
   `src/<feature>.ts`, `src/components/<Feature>.tsx`) and is wired in with small edits. New
   struct fields go at the end of the struct, new commands at the end of `commands.rs` and of the
-  `invoke_handler` list in `main.rs`, new CSS at the end of its area's file in `src/styles/` (a new area: a new file imported at the
-  end of `src/styles/index.css`), new menu items next
-  to related ones.
+  `invoke_handler` list in `main.rs`, new CSS at the end of its area's file in
+  `src/styles/` (a new area: a new file imported at the end of `src/styles/index.css`), new menu
+  items next to related ones.
 - **Comments.** Public items get doc comments. Comments explain *why*, not what. Keep the
   Logic Pro reference in mind: behaviour and labels follow Logic unless there is a reason not
   to, and the reason goes in a comment.
@@ -406,6 +414,50 @@ These keep the code maintainable and the merges clean.
   `Menu.tsx`). Follow the Logic-like visual language; don't introduce a new look.
 - **Formatting.** `rustfmt` for Rust (long lines are accepted in this codebase); TypeScript is
   strict with no unused locals or parameters.
+
+## The frontend: where things live
+
+[ARCHITECTURE.md § The frontend](ARCHITECTURE.md#11-the-frontend) has how it works, and its
+[source map](ARCHITECTURE.md#src-frontend) lists every file. In short:
+
+| Where | What |
+|---|---|
+| `src/*.ts` | Feature modules, flat. A feature usually has a pure model (`samplerMap.ts`, `stepSeq.ts`, `regionGrab.ts`) and a module doing the store and Tauri work beside it. |
+| `src/automation.ts`, `src/automation/` | Automation, in several files behind one set of imports. |
+| `src/components/*.tsx` | One file for each pane, window or sheet. |
+| `src/components/fx/` | Effect and instrument panels and their shared controls (`common.tsx`, `dynControls.tsx`). |
+| `src/components/pianoRollEditor/`, `tracksCanvas/`, `audioTrackEditor/` | The parts of `PianoRoll.tsx`, `Arrange.tsx` and `AudioEditor.tsx`: drawing, pointer, keys and menus. |
+| `src/components/settingsPanes/` | One file per Settings pane, and what they share in `parts.tsx`. |
+| `src/styles/` | The stylesheet, one file per area. `index.css` imports them, and its order is the cascade. |
+| `tests/*.test.ts` | One test per pure module, and the guard tests that read the sources. |
+
+**A module with no screen in it stays testable.** Node loads it directly, so it can't import
+Tauri or React at run time. Its own relative imports carry the extension (`from "./midiEdit.ts"`,
+which Vite and TypeScript accept too), `import type` can stay as it is, and it can't use syntax
+Node has to transform, such as a TypeScript `enum` (use a `const` object). The test imports it
+from `../src/<module>.ts`.
+
+**A canvas editor is a component and its parts.** `PianoRoll.tsx`, `Arrange.tsx` and
+`AudioEditor.tsx` own the refs and the effects and lay out the panes; drawing and event handling
+are functions in their folder that take those refs (`tracksPointer`, `noteGestures`, `editorDrawer`).
+The rules that keep this safe:
+
+- Hooks stay in the component, so hook order and dependency arrays can be read in one place. The
+  parts hold no state and call no hooks, and being rebuilt on each render costs what the closures
+  always did.
+- Imperative code reads current values through refs (`live.current`), never from a closure over
+  a render's values. A value it does take from the render, such as `showAutomation`, is passed
+  in on each render, and an effect with `[]` must not capture one.
+- A drag adds `mousemove` and `mouseup` listeners on `window` when it starts and removes them on
+  release (`dragWith` in the Piano Roll), so it keeps working when the pointer leaves the canvas.
+
+**Keep a folder's name different from its component's by more than case** (`settingsPanes/`
+beside `Settings.tsx`, not `settings/`): Windows and macOS file systems ignore case.
+
+**Flat modules stay where they are unless there's a reason.** `App.tsx` imports most of them,
+and a move touches it, the tests, these docs and any branch in flight. A file that outgrows
+itself can become a folder of the same name with the old path re-exporting it, as
+`automation.ts` did, and importers don't change.
 
 ## Recipes
 
@@ -509,9 +561,10 @@ Decide where it belongs:
 Then:
 
 1. Mirror the field in `src/prefs.ts` (`Prefs` or `UiPrefs`).
-2. Add the control to the right pane in `src/components/Settings.tsx`, using the `Form.tsx`
-   controls, and change it with `updateSettings((s) => ({ ...s, prefs: { ... } }))`. That calls
-   `set_settings`, which writes `settings.json` and calls `Session::set_prefs`.
+2. Add the control to the right pane in `src/components/settingsPanes/`, using the `Form.tsx`
+   controls, and change it with `setPrefs` or `setUi` from `settingsPanes/parts.tsx`, which go
+   through `updateSettings`. That calls `set_settings`, which writes `settings.json` and calls
+   `Session::set_prefs`.
 3. Apply it in `Session::set_prefs` (`session/options.rs`) if the engine must react (send a
    `Cmd`, call `update_pdc`, ...), or read `self.prefs` where it is used.
 4. Add a case to the tests in `prefs.rs` or `settings.rs` if parsing could be affected.
@@ -532,6 +585,34 @@ See [ARCHITECTURE.md › Built-in effects and presets](ARCHITECTURE.md#13-built-
    around every drag so Touch and Latch automation record it.
 5. Run `fx_check` (it covers every registry entry) and
    `cargo run --release -q -p daw-engine --example fx_bench` to check the cost per block.
+
+### Add a panel
+
+There are four kinds, from least to most wiring. New CSS goes in `src/styles/` (see
+[Conventions](#conventions)); use the theme variables.
+
+**A sheet.** Build it on `Sheet` from `components/Dialogs.tsx`, which registers its keys with
+`useSheetKeys` (`tests/sheetKeys.test.ts` fails on a sheet that doesn't). A flag or a `state.dialog`
+value in `store.ts` shows it, and `App.tsx` renders it next to the others.
+
+**A Settings pane.** A file in `components/settingsPanes/` exporting a component that takes
+`{ close }`, ending in `Foot`, and an entry in `tabs` in `SettingsWindow` (`Settings.tsx`) with an
+id added to `SettingsTab` in `store.ts`.
+
+**A built-in effect's or instrument's panel.** `components/fx/<Name>.tsx` exporting a component
+that takes `FxPanelProps`: `info` and `values` to read, `set` and `touch` to change a parameter,
+`meters` to draw (start from `fx/Gain.tsx`; `fx/common.tsx` has the controls). Register it by plug-in
+id in `FX_PANELS` (`src/fx.ts`). That is all: `fx/FxPanel.tsx` shows it docked, floating or in its
+own window, with the header controls. Without an entry an effect gets the generic panel, and an
+instrument the sectioned one from its spec.
+
+**A pane in the bottom section.**
+
+1. Add it to `BottomPane` in `store.ts`, and show it with `setState({ bottom: "<pane>" })`
+   from a key command, a menu item or `EditorTabs`.
+2. Render it in the layout in `App.tsx`, next to `s.bottom === "steps"`.
+3. To let it detach, register it in `panelKinds.tsx` with `bottomPanel("<pane>", { title, render,
+   size, own: ownBottom("<pane>") })`, and put `<DetachButton panel="<pane>" />` in its bar.
 
 ### Add a theme colour
 

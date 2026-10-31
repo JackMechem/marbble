@@ -1,3 +1,4 @@
+// The side and bottom panes that aren't editors: Inspector, Mixer, Library and Browser.
 import { useEffect, useMemo, useState } from "react";
 import { act, BUILTIN_SYNTH, call, INSTRUMENT_SLOT, isStack, type Region, type Track } from "../api";
 import { Icon } from "../icons";

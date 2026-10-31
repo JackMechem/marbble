@@ -1,3 +1,5 @@
+// The Tracks area's frame: its local menu bar (Edit, Functions, View), snap, zoom and height controls,
+// around the ruler, headers and canvas.
 import * as ops from "../ops";
 import { Icon } from "../icons";
 import { getState, setState, useStore, type Snap } from "../store";

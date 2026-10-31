@@ -1,3 +1,5 @@
+// The frontend's entry point: every window loads this and renders `App`, or just a panel's
+// `DetachedWindow`. Key handling, theme and size are set up first so the first paint is right.
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";

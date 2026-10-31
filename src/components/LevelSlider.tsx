@@ -1,3 +1,4 @@
+// A track header's volume slider, with the track's level meter as its groove.
 import { useMemo, useRef } from "react";
 import type { Id } from "../api";
 import { useStore } from "../store";

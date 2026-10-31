@@ -1,3 +1,4 @@
+// The Marker List sheet.
 import { useEffect, useState } from "react";
 import { act, type Marker } from "../api";
 import { keyHint } from "../keymap";

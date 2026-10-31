@@ -1,3 +1,5 @@
+// Track heights and positions: `trackLayout` turns heights, stacks, take rows and automation lanes into
+// each track's top, `indexAt` finds a track from y, and heights are kept per project in localStorage.
 import type { Id, Track } from "./api";
 import { getState, setState, useStore } from "./store";
 import { takeRowsHeight } from "./takes";

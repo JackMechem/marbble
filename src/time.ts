@@ -1,3 +1,4 @@
+// Samples to bars and beats and back (1-based, like Logic's LCD), snapping, and the fader's dB taper.
 import type { Project } from "./api";
 import { tempoMap, type Bbt } from "./tempo.ts";
 

@@ -1,3 +1,5 @@
+// In-window menus (right-click, local and slot menus): `openMenu`, `openMenuAt` and the `MenuHost` that
+// draws whichever is open. ops.ts and the editors build the items.
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Icon } from "../icons";
 

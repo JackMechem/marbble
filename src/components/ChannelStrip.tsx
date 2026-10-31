@@ -1,3 +1,4 @@
+// A mixer channel strip, and the plug-in slot it shows for each insert.
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { act, actMade, api, canRecord, INSTRUMENT_SLOT, isStack, MASTER_ID, type Id, type InputSel, type PluginSlot, type Track } from "../api";
 import { Icon } from "../icons";
