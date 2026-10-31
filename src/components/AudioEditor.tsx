@@ -12,7 +12,8 @@ import { formatDb, formatTime, lengthBbt as lengthAt, PEAK_BUCKET, samplesPerBea
 import { forEachGridLine, tempoMap } from "../tempo";
 import { pixelRatio } from "../uiScale";
 import { ensureWave, waveCache, type Wave } from "../waveform";
-import { drawRegion, FADE_ZONE, regionCrossfades, setCrossfadeDrag } from "./Arrange";
+import { drawRegion, regionCrossfades, setCrossfadeDrag } from "../regionDraw";
+import { FADE_ZONE } from "../regionBar";
 import { draggedFadeOut, fadeHandles } from "../fades";
 import { openMenu, openMenuAt, type MenuItem } from "./Menu";
 import { fmt } from "../keymap";

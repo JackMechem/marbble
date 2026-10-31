@@ -25,6 +25,9 @@ export function regionBar(h: number): RegionBar {
   return { bar, font: slim ? 10 : 11, bodyTop: bar + gap, bodyH: Math.max(0, h - bar - 2 * gap) };
 }
 
+/** Height of the band at the top of an audio region's body where its fade handles are. */
+export const FADE_ZONE = 14;
+
 /** Fade-handle band at the top of a region body (`zone` is its full size, used on tall
  *  regions): at most half the body, so the lower half still trims the region's edges. */
 export function fadeZone(bodyH: number, zone: number): number {
