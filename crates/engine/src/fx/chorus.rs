@@ -43,6 +43,7 @@ static PARAMS: [ParamSpec; 5] = [
 /// it moving.
 pub(crate) static LFO_METER: [&str; 1] = ["LFO"];
 
+#[rustfmt::skip] // One row per preset's values: split per value, these tables run to thousands of lines.
 pub const PRESETS: &[FactoryPreset] = &[
     FactoryPreset { name: "Classic Chorus", values: &[(RATE, 0.8), (INTENSITY, 0.5), (DELAY, 12.0), (SPREAD, 0.5), (MIX, 0.5)] },
     FactoryPreset { name: "Subtle Width", values: &[(RATE, 0.35), (INTENSITY, 0.25), (DELAY, 18.0), (SPREAD, 1.0), (MIX, 0.35)] },

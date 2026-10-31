@@ -89,6 +89,7 @@ pub const SECTIONS: &[Section] = &[
 ];
 
 /// Factory presets shape what's mapped: they change these parameters and leave the zones alone.
+#[rustfmt::skip] // One row per preset's values: split per value, these tables run to thousands of lines.
 pub const PRESETS: &[FactoryPreset] = &[
     FactoryPreset { name: "Slow Pad", values: &[(A_ATTACK, 600.0), (A_RELEASE, 1500.0)] },
     FactoryPreset { name: "Short Pluck", values: &[(A_DECAY, 260.0), (A_SUSTAIN, 0.0), (A_RELEASE, 120.0)] },

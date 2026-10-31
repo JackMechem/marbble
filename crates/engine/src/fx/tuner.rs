@@ -95,6 +95,7 @@ static METERS: [&str; 5] = ["frequency", "note", "cents", "confidence", "level"]
 
 /// Factory presets. Each lists only what it changes from the defaults (A4 = 440 Hz, Needle,
 /// sharps, no transpose, gate at -60 dB, output on).
+#[rustfmt::skip] // One row per preset's values: split per value, these tables run to thousands of lines.
 pub const PRESETS: &[FactoryPreset] = &[
     FactoryPreset { name: "Guitar (A440)", values: &[(REFERENCE, 440.0)] },
     // A lower gate holds a decaying low string longer.

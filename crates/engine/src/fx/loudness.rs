@@ -98,6 +98,7 @@ const CUSTOM: f32 = TARGETS.len() as f32;
 
 /// Factory presets, one per delivery target. Each lists only what it changes from the defaults
 /// (EBU R128 target, EBU +9 scale, Auto-Reset on).
+#[rustfmt::skip] // One row per preset's values: split per value, these tables run to thousands of lines.
 pub const PRESETS: &[FactoryPreset] = &[
     FactoryPreset { name: "EBU R128 (−23 LUFS)", values: &[(TARGET, 0.0)] },
     FactoryPreset { name: "Spotify / YouTube (−14)", values: &[(TARGET, 2.0), (SCALE, 1.0)] },

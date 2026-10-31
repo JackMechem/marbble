@@ -46,6 +46,7 @@ static PARAMS: [ParamSpec; 6] = [
 ];
 
 /// Mono: 0 Off, 1 L+R, 2 Left, 3 Right.
+#[rustfmt::skip] // One row per preset's values: split per value, these tables run to thousands of lines.
 pub const PRESETS: &[FactoryPreset] = &[
     FactoryPreset { name: "Unity", values: &[] },
     FactoryPreset { name: "Mono Check", values: &[(MONO, 1.0)] },

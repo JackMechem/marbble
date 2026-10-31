@@ -56,6 +56,7 @@ static METERS: [&str; 3] = ["Input", "Key", "Reduction"];
 
 /// Starting points for common gating jobs. The key filters aim the detector at the instrument
 /// so bleed from the rest of the kit doesn't open the gate.
+#[rustfmt::skip] // One row per preset's values: split per value, these tables run to thousands of lines.
 pub const PRESETS: &[FactoryPreset] = &[
     FactoryPreset {
         name: "Tight Kick",

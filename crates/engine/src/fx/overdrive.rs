@@ -25,6 +25,7 @@ const fn spec(id: u32, name: &'static str, min: f32, max: f32, default: f32, uni
 
 static PARAMS: [ParamSpec; 3] = [spec(DRIVE, "Drive", 0.0, 40.0, 12.0, Unit::Db, false), spec(TONE, "Tone", 500.0, 20000.0, 5000.0, Unit::Hz, true), spec(OUTPUT, "Output", -24.0, 12.0, 0.0, Unit::Db, false)];
 
+#[rustfmt::skip] // One row per preset's values: split per value, these tables run to thousands of lines.
 pub const PRESETS: &[FactoryPreset] = &[
     FactoryPreset { name: "Edge of Breakup", values: &[(DRIVE, 6.0), (TONE, 7000.0), (OUTPUT, 0.0)] },
     FactoryPreset { name: "Classic Overdrive", values: &[(DRIVE, 14.0), (TONE, 4500.0), (OUTPUT, 0.0)] },

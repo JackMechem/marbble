@@ -124,6 +124,7 @@ static PARAMS: [ParamSpec; 34] = [
     ParamSpec { id: QUALITY, name: "Quality", min: 0.0, max: 2.0, default: 1.0, unit: Unit::None, kind: ParamKind::Choice(QUALITIES), log: false },
 ];
 
+#[rustfmt::skip] // One row per preset's values: split per value, these tables run to thousands of lines.
 pub const PRESETS: &[FactoryPreset] = &[
     FactoryPreset { name: "Flat", values: &[] },
     FactoryPreset { name: "Gentle Mastering Lift", values: &[(gain(1), 1.0), (freq(4), 3000.0), (gain(4), 1.0), (q(4), 0.8), (freq(6), 12000.0), (gain(6), 1.5)] },

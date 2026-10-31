@@ -90,6 +90,7 @@ pub(super) static PARAMS: [ParamSpec; 22] = [
 
 /// Factory presets. Modes: 0 Stereo, 1 Ping-Pong, 2 Tape, 3 Digital. Note indices follow
 /// [`NOTE_LABELS`] (6 = 1/4, 9 = 1/8, 10 = 1/8 dotted, 11 = 1/8 triplet, 14 = 1/16 triplet).
+#[rustfmt::skip] // One row per preset's values: split per value, these tables run to thousands of lines.
 pub const PRESETS: &[FactoryPreset] = &[
     FactoryPreset {
         name: "Quarter Note",

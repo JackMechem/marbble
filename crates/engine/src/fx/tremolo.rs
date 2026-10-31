@@ -42,6 +42,7 @@ static PARAMS: [ParamSpec; 7] = [
 
 /// Note indices follow [`NOTE_LABELS`] (6 = 1/4, 9 = 1/8, 11 = 1/8 triplet, 12 = 1/16).
 /// Waveforms: 0 Sine, 1 Triangle, 2 Square.
+#[rustfmt::skip] // One row per preset's values: split per value, these tables run to thousands of lines.
 pub const PRESETS: &[FactoryPreset] = &[
     FactoryPreset { name: "Eighth Notes", values: &[(SYNC, 1.0), (NOTE, 9.0), (DEPTH, 0.5), (WAVEFORM, 0.0)] },
     FactoryPreset { name: "Vintage Amp", values: &[(SYNC, 0.0), (RATE, 5.5), (DEPTH, 0.45), (WAVEFORM, 1.0)] },

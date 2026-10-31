@@ -19,6 +19,7 @@ const HP_BASS: f32 = 0.0;
 const HP2: f32 = 2.0;
 const HP3: f32 = 3.0;
 
+#[rustfmt::skip] // One row per preset's values: split per value, these tables run to thousands of lines.
 pub const PRESETS: &[FactoryPreset] = &[
     FactoryPreset {
         name: "Velvet Strings",

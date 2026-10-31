@@ -83,6 +83,7 @@ pub(super) static PARAMS: [ParamSpec; 19] = [
 ];
 
 /// Factory presets. Room types: 0 Plate, 1 Room, 2 Hall, 3 Chamber, 4 Cathedral, 5 Ambience.
+#[rustfmt::skip] // One row per preset's values: split per value, these tables run to thousands of lines.
 pub const PRESETS: &[FactoryPreset] = &[
     FactoryPreset {
         name: "Vocal Plate",

@@ -49,6 +49,7 @@ static PARAMS: [ParamSpec; 7] = [
 ];
 
 /// Stages: 0 = 4, 1 = 6, 2 = 8, 3 = 12.
+#[rustfmt::skip] // One row per preset's values: split per value, these tables run to thousands of lines.
 pub const PRESETS: &[FactoryPreset] = &[
     FactoryPreset { name: "Classic Four-Stage", values: &[(RATE, 0.5), (DEPTH, 0.7), (FREQUENCY, 700.0), (STAGES, 0.0), (FEEDBACK, 0.3), (MIX, 0.5)] },
     FactoryPreset { name: "Slow Swirl", values: &[(RATE, 0.12), (DEPTH, 0.9), (FREQUENCY, 900.0), (STAGES, 1.0), (FEEDBACK, 0.5), (SPREAD, 1.0), (MIX, 0.5)] },

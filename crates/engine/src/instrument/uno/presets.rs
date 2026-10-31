@@ -7,6 +7,7 @@ use crate::fx::FactoryPreset;
 const SAW: f32 = 0.0;
 const SQUARE: f32 = 1.0;
 
+#[rustfmt::skip] // One row per preset's values: split per value, these tables run to thousands of lines.
 pub const PRESETS: &[FactoryPreset] = &[
     FactoryPreset { name: "Round Bottom", values: &[(WAVE, SAW), (CUTOFF, 280.0), (RESONANCE, 2.0), (ENV_MOD, 2.5), (DECAY, 700.0), (ACCENT, 4.0), (VOLUME, 8.0)] },
     FactoryPreset { name: "Rubbery Pluck", values: &[(WAVE, SAW), (CUTOFF, 380.0), (RESONANCE, 5.5), (ENV_MOD, 5.5), (DECAY, 260.0), (ACCENT, 6.0)] },

@@ -35,6 +35,7 @@ static PARAMS: [ParamSpec; 6] = [
     spec(MIX, "Mix", 0.0, 1.0, 0.5, Unit::Percent, false),
 ];
 
+#[rustfmt::skip] // One row per preset's values: split per value, these tables run to thousands of lines.
 pub const PRESETS: &[FactoryPreset] = &[
     FactoryPreset { name: "Classic Flange", values: &[(RATE, 0.25), (INTENSITY, 0.7), (DELAY, 1.0), (FEEDBACK, 0.5), (SPREAD, 0.5), (MIX, 0.5)] },
     FactoryPreset { name: "Jet Plane", values: &[(RATE, 0.12), (INTENSITY, 1.0), (DELAY, 0.4), (FEEDBACK, 0.85), (SPREAD, 0.25), (MIX, 0.5)] },

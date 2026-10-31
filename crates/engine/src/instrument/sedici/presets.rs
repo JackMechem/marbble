@@ -4,6 +4,7 @@
 use super::params::param::*;
 use crate::fx::FactoryPreset;
 
+#[rustfmt::skip] // One row per preset's values: split per value, these tables run to thousands of lines.
 pub const PRESETS: &[FactoryPreset] = &[
     FactoryPreset {
         name: "Tine Keys",

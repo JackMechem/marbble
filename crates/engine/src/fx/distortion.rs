@@ -48,6 +48,7 @@ static PARAMS: [ParamSpec; 5] = [
 ];
 
 /// Types: 0 Soft, 1 Hard, 2 Tube, 3 Fuzz.
+#[rustfmt::skip] // One row per preset's values: split per value, these tables run to thousands of lines.
 pub const PRESETS: &[FactoryPreset] = &[
     FactoryPreset { name: "Warm Saturation", values: &[(DRIVE, 8.0), (TONE, 12000.0), (TYPE, 2.0), (OUTPUT, 0.0), (MIX, 1.0)] },
     FactoryPreset { name: "Crunch", values: &[(DRIVE, 22.0), (TONE, 5000.0), (TYPE, 0.0), (OUTPUT, -2.0), (MIX, 1.0)] },

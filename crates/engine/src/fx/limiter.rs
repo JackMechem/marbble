@@ -62,6 +62,7 @@ static PARAMS: [ParamSpec; NPARAMS] = [
 ];
 
 /// Factory presets. Each lists only what it changes from the defaults.
+#[rustfmt::skip] // One row per preset's values: split per value, these tables run to thousands of lines.
 pub const PRESETS: &[FactoryPreset] = {
     use param::*;
     &[

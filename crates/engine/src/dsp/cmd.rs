@@ -10,6 +10,7 @@ use super::*;
 /// An edit on its way to the audio thread, applied at the start of the next block by `Engine::apply`.
 /// Whatever it carries is built, and allocated, on the sender's thread.
 #[allow(clippy::large_enum_variant)]
+#[rustfmt::skip] // Rustfmt would stretch every struct variant over several lines.
 pub enum Cmd {
     Play { from: i64 },
     Record { from: i64, punch: i64 },

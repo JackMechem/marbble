@@ -44,6 +44,7 @@ static PARAMS: [ParamSpec; 6] = [
 static METERS: [&str; 2] = ["Reduction", "Sibilance"];
 
 /// Starting points: sibilance sits higher in most female voices than in male ones.
+#[rustfmt::skip] // One row per preset's values: split per value, these tables run to thousands of lines.
 pub const PRESETS: &[FactoryPreset] = &[
     FactoryPreset { name: "Female Vocal", values: &[(FREQUENCY, 7500.0), (THRESHOLD, -28.0), (RANGE, 8.0), (MODE, 0.0), (SMOOTHING, 25.0)] },
     FactoryPreset { name: "Male Vocal", values: &[(FREQUENCY, 5500.0), (THRESHOLD, -28.0), (RANGE, 8.0), (MODE, 0.0), (SMOOTHING, 30.0)] },

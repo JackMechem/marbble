@@ -23,6 +23,7 @@ const W3_REV: f32 = 2.0;
 const W3_SAW: f32 = 3.0;
 const W3_SQUARE: f32 = 4.0;
 
+#[rustfmt::skip] // One row per preset's values: split per value, these tables run to thousands of lines.
 pub const PRESETS: &[FactoryPreset] = &[
     FactoryPreset {
         name: "Round Foundation",

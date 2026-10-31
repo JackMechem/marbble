@@ -1,0 +1,4 @@
+# Long lines are accepted in this codebase: a call or a table row reads best on one line when it
+# fits. 160 columns keeps 99% of the existing lines; the heuristics let every construct use all of it.
+max_width = 160
+use_small_heuristics = "Max"
