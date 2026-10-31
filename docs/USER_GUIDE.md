@@ -1852,8 +1852,8 @@ above Fermata's windows like Logic's and hide while another app is in front.
 
 Fermata's own effects load in any Audio FX slot like a plug-in: **Compressor**, **Limiter**,
 **Noise Gate** and **De-Esser** (Dynamics), **Reverb**, **Delay**, **Chorus**, **Flanger**,
-**Phaser** and **Tremolo** (Modulation), **Overdrive** and **Distortion** (Distortion), **Gain**
-(Utility), and **Tuner** and **Loudness Meter** (Metering). They are listed first, by category,
+**Phaser** and **Tremolo** (Modulation), **Overdrive** and **Distortion** (Distortion), **Linear
+Phase EQ** (EQ), **Gain** (Utility), and **Tuner** and **Loudness Meter** (Metering). They are listed first, by category,
 in the slot menu and the Library.
 
 - **The panel:** click the effect's name in its slot to open its panel; click again, press Esc
