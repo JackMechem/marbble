@@ -3,8 +3,11 @@
 A digital audio workstation modelled on Logic Pro's workflow and layout. The audio engine and
 VST3 host are written in Rust; the interface is Tauri 2 with React and TypeScript.
 
-Fermata is in alpha. It is developed and tested on Linux; the Windows and macOS builds are
-early and less tested (see [Platform support](#platform-support)).
+Fermata is in alpha. It is developed and tested on Linux; the Windows and macOS builds pass their
+headless checks on a stand-in device but haven't been run on a real machine yet (see
+[Platform support](#platform-support)).
+
+**Website, User Guide and developer docs:** <https://jackmechem.github.io/fermata/>
 
 ## Features
 
@@ -23,7 +26,7 @@ early and less tested (see [Platform support](#platform-support)).
   Transpose, Velocity, Dynamics, Gate Time, Delay); Logic's arranging commands (Select, Section
   Between Locators, Trim, Move, Strip Silence, Name and Color); Snap Edits to Zero Crossings.
 - **Tracks and arrangement:** track stacks (folder and summing), groups, hidden tracks, Track
-  Freeze, track alternatives; markers with their own lengths, an Arrangement track whose
+  Freeze, Track On/Off, track alternatives; markers with their own lengths, an Arrangement track whose
   sections move and copy with their content, and an overview of the whole project.
 - **Editors:** a Piano Roll with eight tools, Time Quantize with strength and swing, scale
   quantize, humanize, note-length functions and a velocity / controller lane with curved
@@ -39,9 +42,29 @@ early and less tested (see [Platform support](#platform-support)).
   and Stereo Out (Output track) automation, and automation that can move with its regions.
 - **MIDI Learn:** assign a controller's knobs, faders and buttons to mixer controls, plug-in
   parameters and the transport (Learn Assignment, Controller Assignments window).
-- **Plug-ins:** VST3 instruments and effects, scanned out of process; Fermata Synth built in.
-  Copy and paste plug-ins (VST3 state included) and Channel EQ settings between strips and
-  projects; drag plug-ins to reorder them or move them to another strip (Alt copies).
+- **Plug-ins:** VST3 instruments and effects, scanned out of process, with side-chain inputs,
+  multi-output instruments, and undo for a knob moved in a plug-in's own window. Copy and paste
+  plug-ins (VST3 state included) and Channel EQ settings between strips and projects; drag
+  plug-ins to reorder them or move them to another strip (Alt copies).
+- **Built-in synths:** six models with panels, factory presets, automation, MIDI learn, undo,
+  Freeze and Bounce. Under Vintage Synths, modelled on the documented behaviour of real instruments
+  (no affiliation, and none has been compared with the hardware): **Fermata Tre** (three oscillators
+  into a transistor ladder, after the Minimoog Model D), **Sei** (six voices with a stereo chorus,
+  after the Juno-106 family), **Cinque** (five voices with Poly Mod, after the Prophet-5), **Uno**
+  (diode ladder, accent and slide, after the TB-303) and **Sedici** (six-operator FM with 32
+  algorithms, after the DX7). Under Modern Synths, **Onda**, two wavetable oscillators with eight
+  modulation slots. The simple Fermata Synth stays the default on new instrument tracks. Panels
+  open in the bottom section with their sections in one row, or in a grid (Row and Grid, beside
+  the panel's keyboard).
+- **Fermata Sampler:** make instruments from your own sounds. Drop files on it (several map
+  themselves by the note in their names), record straight in from an audio input, or convert an
+  audio region, whole or sliced at its transients. Zones across keys and velocities, loops with
+  crossfades, one-shot, reverse, velocity layers, round robin, an amp envelope, a filter with
+  envelope, an LFO and glide. A subset of SFZ loads, and instruments save with their samples. Samples
+  are copied into the project and held in memory, up to 4 GB.
+- **Multi-core processing:** independent tracks play at the same time on a small pool of real-time
+  threads, sample for sample the same as on one (Settings › Audio › Processing Threads; Automatic
+  stays on one thread on Windows and macOS for now). Track Off frees what a muted track keeps using.
 - **Built-in effects:** Compressor (five modelled circuits), Limiter, Noise Gate, De-Esser,
   Reverb, Delay, Chorus, Flanger, Phaser, Tremolo, Overdrive, Distortion, Linear Phase EQ,
   Gain, Tuner and Loudness Meter, in any Audio FX slot with Logic-style panels (docked,
@@ -92,17 +115,20 @@ On NixOS or with Nix, use the flake instead (below).
 
 | | Linux | Windows | macOS |
 |---|---|---|---|
-| Status | Main platform, tested | Early, less tested | Early, less tested |
+| Status | Main platform, tested | Early, not yet run on a real machine | Early, not yet run on a real machine |
 | Packages | AppImage, .deb, .rpm from stable releases (x86_64, aarch64); Nix flake | NSIS installer (x64) | .dmg (Apple Silicon, Intel) |
 | Audio drivers | PipeWire, PulseAudio, JACK, ALSA | WASAPI | Core Audio |
 | MIDI input | Yes | Yes | Yes |
 | VST3 instruments and effects | Yes | Yes | Yes |
 | VST3 editor windows | Yes (X11; through XWayland on Wayland) | Not yet | Yes |
-| Built-in effects, Fermata Synth | Yes | Yes | Yes |
+| Built-in effects and instruments | Yes | Yes | Yes |
+| Multi-core processing | Yes | One thread for now | One thread for now |
 | Input level check | Yes (PipeWire, PulseAudio) | No | No |
 
 On Windows, VST3 plug-ins still load, play, save their state and can be automated; only their
-own editor window is missing.
+own editor window is missing. The Windows and macOS columns say what's built: both cross-check, lint
+and pass the engine tests and headless checks on a silent stand-in device, but none of it has been
+tried on real hardware yet ([TODO.md](TODO.md) lists what to try).
 
 ## Build from source
 
@@ -138,12 +164,13 @@ for Windows and macOS, tests and packaging.
 
 | Document | For |
 |---|---|
-| [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Using Fermata: recording, editing, mixing, exporting, every setting and key command, troubleshooting. |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the code works: threads, real-time rules, the project model, the engine graph, undo, persistence, the VST3 host, the frontend, and a map of every source file. |
+| [Website](https://jackmechem.github.io/fermata/) | The three documents below as a searchable site, built from them by [site/](site/) (`cd site && npm ci && npm run build`). |
+| [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Using Fermata: recording, instruments, editing, mixing, exporting, every setting and key command, troubleshooting. |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the code works: threads, real-time rules, the project model, the engine graph, undo, persistence, the VST3 host, the frontend, built-in effects and instruments, and a map of every source file. |
 | [docs/DEVELOPING.md](docs/DEVELOPING.md) | Building, testing, debugging, conventions, and recipes for common changes. |
 | [docs/logic-reference.md](docs/logic-reference.md) | The Logic Pro research behind the layout and behaviour. |
 | [LOGIC_FEATURES.md](LOGIC_FEATURES.md) | The feature scope: every Logic Pro feature by stage, with Fermata's status. |
-| [TODO.md](TODO.md) | The roadmap, in stages. |
+| [TODO.md](TODO.md) | What's still open, by topic, and the roadmap in stages. |
 | [CHANGELOG.md](CHANGELOG.md) | What changed in each release. |
 
 ## Status and known limitations
@@ -156,7 +183,9 @@ main limitations:
   natively on Wayland.
 - VST3 only (no CLAP, AU or VST2). On Windows and macOS only the system's default audio driver
   is available (no ASIO).
-- The release builds are unsigned (see [Install](#install)).
+- The release builds are unsigned (see [Install](#install)), and the Windows and macOS builds
+  haven't been run on real hardware.
+- The synth models haven't been tuned by ear or compared with the instruments they follow.
 - Regions stay at fixed times when the tempo changes (Move MIDI Regions with Tempo keeps MIDI
   on its bars).
 - No Score editor, Flex Time or Flex Pitch, and no control surface protocols such as Mackie
