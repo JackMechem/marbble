@@ -87,7 +87,8 @@ fn main() {
     // Four bars of C3 on every beat; the mod wheel at 10, 90 from bar 2 beat 2, 70 from bar 4.
     let r = s.create_midi_region(inst, 0, 4 * bar).unwrap();
     let old: Vec<Note> = (0..16).map(|i| Note { start: i * beat, length: beat / 2, pitch: 60, velocity: 100, muted: false }).collect();
-    let old_cc = vec![CcEvent { start: 0, kind: MOD, value: 10 }, CcEvent { start: bar + beat, kind: MOD, value: 90 }, CcEvent { start: 3 * bar, kind: MOD, value: 70 }];
+    let old_cc =
+        vec![CcEvent { start: 0, kind: MOD, value: 10 }, CcEvent { start: bar + beat, kind: MOD, value: 90 }, CcEvent { start: 3 * bar, kind: MOD, value: 70 }];
     s.set_midi_content(vec![MidiContent { region: r, notes: old.clone(), cc: old_cc, start: None, length: None }]);
     let in_bar2 = |n: &Note| n.start >= bar && n.start < 2 * bar;
     let ours = |n: &Note| n.pitch == 72;

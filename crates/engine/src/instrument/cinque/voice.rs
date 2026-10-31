@@ -223,7 +223,13 @@ impl Voice {
         let sum = a * f.mix_a + b * f.mix_b + n * (f.noise + NOISE_FLOOR);
         let driven = tanh_fast(sum);
 
-        let cut = f.cutoff_note + (note - FILTER_REF_NOTE) * patch.kbd + fe * f.env_st + self.vel_st + f.wm_filter + pm * f.pm_filter * PM_FILTER_ST + self.drift_st[2];
+        let cut = f.cutoff_note
+            + (note - FILTER_REF_NOTE) * patch.kbd
+            + fe * f.env_st
+            + self.vel_st
+            + f.wm_filter
+            + pm * f.pm_filter * PM_FILTER_ST
+            + self.drift_st[2];
         self.filter.set(cutoff_g(note_hz(cut.clamp(-24.0, 150.0)), patch.rate), f.k);
         let y = self.filter.tick(driven);
 

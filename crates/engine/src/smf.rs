@@ -356,12 +356,7 @@ mod tests {
                         SmfCc { start: 1900, kind: CcKind::Controller(64), value: 0 },
                     ],
                 },
-                SmfTrack {
-                    name: "Bass".into(),
-                    channel: 1,
-                    notes: vec![SmfNote { start: 480, length: 240, pitch: 36, velocity: 127 }],
-                    cc: vec![],
-                },
+                SmfTrack { name: "Bass".into(), channel: 1, notes: vec![SmfNote { start: 480, length: 240, pitch: 36, velocity: 127 }], cc: vec![] },
             ],
             tempos: Vec::new(),
             signatures: Vec::new(),
@@ -424,7 +419,10 @@ mod tests {
         assert_eq!(f.ppq, 96);
         assert_eq!(f.tracks.len(), 2);
         assert_eq!(f.tracks[0].name, "Song (Ch 1)");
-        assert_eq!(f.tracks[0].notes, vec![SmfNote { start: 0, length: 96, pitch: 60, velocity: 100 }, SmfNote { start: 0, length: 96, pitch: 64, velocity: 90 }]);
+        assert_eq!(
+            f.tracks[0].notes,
+            vec![SmfNote { start: 0, length: 96, pitch: 60, velocity: 100 }, SmfNote { start: 0, length: 96, pitch: 64, velocity: 90 }]
+        );
         assert_eq!(f.tracks[1].channel, 1);
         assert_eq!(f.tracks[1].notes, vec![SmfNote { start: 96, length: 96, pitch: 40, velocity: 70 }]);
         assert_eq!(f.tracks[1].cc, vec![SmfCc { start: 144, kind: CcKind::Controller(1), value: 99 }]);

@@ -199,13 +199,5 @@ pub const METERS: &[&str] = &["Input", "Output", "Gain Reduction", "Level"];
 
 /// The registry entry.
 pub fn info() -> EffectInfo {
-    EffectInfo {
-        id: ID,
-        name: "Compressor",
-        category: "Dynamics",
-        params: &PARAMS,
-        meters: METERS,
-        sidechain: true,
-        new: |sr| Box::new(Compressor::new(sr)),
-    }
+    EffectInfo { id: ID, name: "Compressor", category: "Dynamics", params: &PARAMS, meters: METERS, sidechain: true, new: |sr| Box::new(Compressor::new(sr)) }
 }

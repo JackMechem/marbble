@@ -74,7 +74,8 @@ pub mod param {
 use param::*;
 
 pub const MOD_SOURCES: &[&str] = &["Off", "Env 2", "Env 3", "LFO 1", "LFO 2", "Velocity", "Key", "Wheel", "Aftertouch"];
-pub const MOD_DESTS: &[&str] = &["Off", "A Position", "B Position", "A Pitch", "B Pitch", "A Level", "B Level", "Cutoff", "Resonance", "Unison Detune", "FM Amount", "Pan"];
+pub const MOD_DESTS: &[&str] =
+    &["Off", "A Position", "B Position", "A Pitch", "B Pitch", "A Level", "B Level", "Cutoff", "Resonance", "Unison Detune", "FM Amount", "Pan"];
 pub const FILTERS: &[&str] = &["Low 12", "Low 24", "Band 12", "High 12", "Notch", "Ladder 24", "Diode"];
 pub const LFO_WAVES: &[&str] = &["Sine", "Triangle", "Saw", "Square", "Random"];
 pub const LFO_SYNCS: &[&str] = &["Free", "4 bars", "2 bars", "1 bar", "1/2", "1/4", "1/8", "1/16", "1/8 T", "1/16 T"];

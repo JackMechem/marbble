@@ -29,7 +29,8 @@ pub const QUANTIZE_VALUES: [u16; 13] = [1, 2, 4, 8, 16, 32, 64, 3, 6, 12, 24, 48
 
 /// Dynamics values (the ratio × 100, 0 = Fixed) and how much each scales a velocity's
 /// distance from 64: 3:1 compresses it to a third, 0.5:1 expands it to double.
-pub const DYNAMICS: [(u16, f64); 10] = [(0, 0.0), (300, 1.0 / 3.0), (200, 0.5), (150, 2.0 / 3.0), (125, 0.8), (100, 1.0), (80, 1.25), (67, 1.5), (50, 2.0), (33, 3.0)];
+pub const DYNAMICS: [(u16, f64); 10] =
+    [(0, 0.0), (300, 1.0 / 3.0), (200, 0.5), (150, 2.0 / 3.0), (125, 0.8), (100, 1.0), (80, 1.25), (67, 1.5), (50, 2.0), (33, 3.0)];
 
 pub const TRANSPOSE_RANGE: (i16, i16) = (-96, 96);
 pub const VELOCITY_RANGE: (i16, i16) = (-99, 127);
@@ -543,7 +544,11 @@ mod tests {
         let ps = match r.params.is_default() {
             true => {
                 let RegionContent::Midi { notes, .. } = &r.content else { unreachable!() };
-                let mut v: Vec<_> = notes.iter().filter(|n| !n.muted && n.start >= 0 && n.start < r.length).map(|n| (r.start + n.start, r.start + (n.start + n.length).min(r.length), n.pitch, n.velocity)).collect();
+                let mut v: Vec<_> = notes
+                    .iter()
+                    .filter(|n| !n.muted && n.start >= 0 && n.start < r.length)
+                    .map(|n| (r.start + n.start, r.start + (n.start + n.length).min(r.length), n.pitch, n.velocity))
+                    .collect();
                 v.sort();
                 return v;
             }

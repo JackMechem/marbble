@@ -118,7 +118,10 @@ fn main() {
     s.move_plugin(a, 0, b, 0, false).unwrap();
     settle(&mut s);
     let bn = names(&s, b);
-    check(&format!("a move to another strip makes room there ({:?})", &bn[..3]), bn[..3] == ["Compressor", "Delay", "Compressor"] && uids(&s, b)[1..3] == b_ids[..2]);
+    check(
+        &format!("a move to another strip makes room there ({:?})", &bn[..3]),
+        bn[..3] == ["Compressor", "Delay", "Compressor"] && uids(&s, b)[1..3] == b_ids[..2],
+    );
     check("and leaves the source slot empty", uids(&s, a)[0].is_none() && uids(&s, a)[1] == ids[1]);
     let moved_comp = s.project.track(b).unwrap().inserts[0].clone().unwrap();
     let orig = s.project.track(b).unwrap().inserts[2].clone().unwrap();
@@ -134,7 +137,10 @@ fn main() {
     // A copy onto the same strip.
     s.move_plugin(a, 0, a, 0, true).unwrap();
     settle(&mut s);
-    check(&format!("a copy on the same strip goes in at the drop slot ({:?})", &names(&s, a)[..3]), names(&s, a)[..3] == ["Compressor", "Compressor", "Delay"] && uids(&s, a)[1] == ids[0]);
+    check(
+        &format!("a copy on the same strip goes in at the drop slot ({:?})", &names(&s, a)[..3]),
+        names(&s, a)[..3] == ["Compressor", "Compressor", "Delay"] && uids(&s, a)[1] == ids[0],
+    );
 
     // A full strip has no room.
     let c = s.add_track(TrackKind::Audio, InputSel::None, None, None).unwrap();
@@ -180,10 +186,13 @@ fn main() {
 /// The plug-in lanes of a track, as (instance, parameter, points).
 fn plugin_lanes(s: &Session, track: Id) -> Vec<(Id, u32, Vec<AutoPoint>)> {
     let lanes: &[AutoLane] = &s.project.track(track).unwrap().automation;
-    lanes.iter().filter_map(|l| match l.param {
-        AutoParam::Plugin { uid, param, .. } => Some((uid, param, l.points.clone())),
-        _ => None,
-    }).collect()
+    lanes
+        .iter()
+        .filter_map(|l| match l.param {
+            AutoParam::Plugin { uid, param, .. } => Some((uid, param, l.points.clone())),
+            _ => None,
+        })
+        .collect()
 }
 
 /// A compressor's Make Up automated on one track, then the compressor dragged to another.
@@ -225,7 +234,10 @@ fn automation_follows(s: &mut Session, tone: &str, len: i64, scratch: &std::path
 
     s.undo();
     settle(s);
-    check("undo puts the lane back on the old track, on the old instance", plugin_lanes(s, d) == vec![(comp, makeup, points.clone())] && plugin_lanes(s, e).is_empty());
+    check(
+        "undo puts the lane back on the old track, on the old instance",
+        plugin_lanes(s, d) == vec![(comp, makeup, points.clone())] && plugin_lanes(s, e).is_empty(),
+    );
     check("where it drives the compressor again", diff(&render(s, len, d), &driven) < 1e-4 && diff(&render(s, len, e), &dry) < 1e-5);
     s.redo();
     settle(s);
@@ -241,9 +253,21 @@ fn automation_follows(s: &mut Session, tone: &str, len: i64, scratch: &std::path
     // Stereo Out has automation too: the lane goes along there.
     s.checkpoint("Move Plug-in", None, true);
     s.move_plugin(e, 0, MASTER_ID, 2, false).unwrap();
-    let on_master: Vec<Id> = s.project.master.automation.iter().filter_map(|l| match l.param { AutoParam::Plugin { uid, .. } => Some(uid), _ => None }).collect();
+    let on_master: Vec<Id> = s
+        .project
+        .master
+        .automation
+        .iter()
+        .filter_map(|l| match l.param {
+            AutoParam::Plugin { uid, .. } => Some(uid),
+            _ => None,
+        })
+        .collect();
     let master_uid = uids(s, MASTER_ID)[2];
-    check("a move to Stereo Out takes the lane along", plugin_lanes(s, e).is_empty() && uids(s, e)[0].is_none() && master_uid.is_some() && on_master == vec![master_uid.unwrap()]);
+    check(
+        "a move to Stereo Out takes the lane along",
+        plugin_lanes(s, e).is_empty() && uids(s, e)[0].is_none() && master_uid.is_some() && on_master == vec![master_uid.unwrap()],
+    );
     s.undo();
     settle(s);
 
@@ -255,5 +279,8 @@ fn automation_follows(s: &mut Session, tone: &str, len: i64, scratch: &std::path
     t.open(&path).unwrap();
     settle(&mut t);
     let reloaded = render(&mut t, len, e);
-    check(&format!("a reloaded project keeps the moved lane and plays it (diff {:.2e})", diff(&reloaded, &driven)), plugin_lanes(&t, e) == vec![(uids(&t, e)[0].unwrap(), makeup, points)] && diff(&reloaded, &driven) < 1e-4);
+    check(
+        &format!("a reloaded project keeps the moved lane and plays it (diff {:.2e})", diff(&reloaded, &driven)),
+        plugin_lanes(&t, e) == vec![(uids(&t, e)[0].unwrap(), makeup, points)] && diff(&reloaded, &driven) < 1e-4,
+    );
 }

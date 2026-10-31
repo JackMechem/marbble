@@ -119,9 +119,6 @@ impl Session {
     pub fn missing_plugins(&self) -> Vec<&PluginSlot> {
         let p = &self.project;
         let tracks = p.tracks.iter().filter(|t| t.frozen.is_none()).flat_map(|t| t.instrument.iter().chain(t.inserts.iter().flatten()));
-        tracks
-            .chain(p.master.inserts.iter().flatten())
-            .filter(|s| !builtin::is_builtin(&s.plugin_id) && !self.controllers.contains_key(&s.uid))
-            .collect()
+        tracks.chain(p.master.inserts.iter().flatten()).filter(|s| !builtin::is_builtin(&s.plugin_id) && !self.controllers.contains_key(&s.uid)).collect()
     }
 }

@@ -467,7 +467,27 @@ impl Instrument for Tre {
         *slot = value;
         // A mixer knob's value also goes through its switch, so both read `values`.
         self.smooth_target(id, value);
-        if !matches!(id, LEVEL1 | LEVEL2 | LEVEL3 | NOISE | FEEDBACK | CUTOFF | EMPHASIS | CONTOUR | TUNE | TUNE2 | TUNE3 | MOD_MIX | MOD_AMOUNT | VOLUME | DRIFT | TOUCH_MOD | FILTER_MOD | OSC_MOD) {
+        if !matches!(
+            id,
+            LEVEL1
+                | LEVEL2
+                | LEVEL3
+                | NOISE
+                | FEEDBACK
+                | CUTOFF
+                | EMPHASIS
+                | CONTOUR
+                | TUNE
+                | TUNE2
+                | TUNE3
+                | MOD_MIX
+                | MOD_AMOUNT
+                | VOLUME
+                | DRIFT
+                | TOUCH_MOD
+                | FILTER_MOD
+                | OSC_MOD
+        ) {
             self.dirty = true;
         }
     }

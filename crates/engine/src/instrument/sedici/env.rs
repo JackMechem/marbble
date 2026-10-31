@@ -140,7 +140,8 @@ pub fn velocity_scale(velocity: f32, sens: i32) -> i32 {
 
 /// The keyboard level scaling's exponential curve, by distance in thirds of an octave (a published
 /// table, from the same reverse engineering).
-const EXP_CURVE: [i32; 33] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 14, 16, 19, 23, 27, 33, 39, 47, 56, 66, 80, 94, 110, 126, 142, 158, 174, 190, 206, 222, 238, 250];
+const EXP_CURVE: [i32; 33] =
+    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 14, 16, 19, 23, 27, 33, 39, 47, 56, 66, 80, 94, 110, 126, 142, 158, 174, 190, 206, 222, 238, 250];
 
 fn scale_curve(group: i32, depth: i32, curve: i32) -> i32 {
     let scale = if curve == 0 || curve == 3 {

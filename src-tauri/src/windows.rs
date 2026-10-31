@@ -6,7 +6,10 @@
 
 use serde::Deserialize;
 use tauri::window::Color;
-use tauri::{AppHandle, Emitter, EventTarget, LogicalPosition, LogicalSize, Manager, PhysicalPosition, PhysicalSize, Runtime, State, WebviewUrl, WebviewWindowBuilder, Window, WindowEvent};
+use tauri::{
+    AppHandle, Emitter, EventTarget, LogicalPosition, LogicalSize, Manager, PhysicalPosition, PhysicalSize, Runtime, State, WebviewUrl, WebviewWindowBuilder,
+    Window, WindowEvent,
+};
 
 use crate::{commands, AppState};
 
@@ -105,10 +108,7 @@ pub fn broadcast_snapshot(webview: tauri::Webview, state: State<AppState>) -> Re
     let json = serde_json::to_string(&snap).map_err(|e| e.to_string())?;
     // The windows listen for it on their own label (`getCurrentWebviewWindow().listen`), so a
     // filter on the target reaches exactly the other windows.
-    webview
-        .app_handle()
-        .emit_str_filter(SYNC_EVENT, json, |t| matches!(t, EventTarget::WebviewWindow { label } if *label != from))
-        .map_err(|e| e.to_string())
+    webview.app_handle().emit_str_filter(SYNC_EVENT, json, |t| matches!(t, EventTarget::WebviewWindow { label } if *label != from)).map_err(|e| e.to_string())
 }
 
 /// Sends a native menu item to the focused panel window, which handles what belongs to its

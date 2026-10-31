@@ -303,14 +303,12 @@ mod tests {
         s.revert_to_backup(&old.file).unwrap();
         assert_eq!(s.project.tempo, 100.0);
         assert!(!s.dirty && s.saved);
-        let tempos: Vec<f64> = s
-            .backups()
-            .iter()
-            .map(|b| serde_json::from_slice::<Project>(&std::fs::read(s.dir.join(&b.file)).unwrap()).unwrap().tempo)
-            .collect();
+        let tempos: Vec<f64> =
+            s.backups().iter().map(|b| serde_json::from_slice::<Project>(&std::fs::read(s.dir.join(&b.file)).unwrap()).unwrap().tempo).collect();
         assert!(tempos.contains(&120.0) && tempos.contains(&110.0), "{tempos:?}");
         // Back to the state before the revert.
-        let undo = s.backups().into_iter().find(|b| serde_json::from_slice::<Project>(&std::fs::read(s.dir.join(&b.file)).unwrap()).unwrap().tempo == 120.0).unwrap();
+        let undo =
+            s.backups().into_iter().find(|b| serde_json::from_slice::<Project>(&std::fs::read(s.dir.join(&b.file)).unwrap()).unwrap().tempo == 120.0).unwrap();
         s.revert_to_backup(&undo.file).unwrap();
         assert_eq!(s.project.tempo, 120.0);
         // Only listed backups can be reverted to.

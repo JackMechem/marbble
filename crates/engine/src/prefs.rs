@@ -207,12 +207,20 @@ pub struct RecordingPrefs {
 impl RecordingPrefs {
     /// What an overlapping audio recording does, with the Replace button applied.
     pub fn audio_mode(&self) -> AudioOverlap {
-        if self.replace { AudioOverlap::Replace } else { self.audio_overlap }
+        if self.replace {
+            AudioOverlap::Replace
+        } else {
+            self.audio_overlap
+        }
     }
 
     /// What an overlapping MIDI recording does, with the Replace button applied.
     pub fn midi_mode(&self) -> MidiOverlap {
-        if self.replace { MidiOverlap::Replace } else { self.midi_overlap }
+        if self.replace {
+            MidiOverlap::Replace
+        } else {
+            self.midi_overlap
+        }
     }
 }
 
@@ -276,7 +284,12 @@ pub struct EditingPrefs {
 
 impl Default for EditingPrefs {
     fn default() -> Self {
-        EditingPrefs { fade_ms: 0.0, move_automation: MoveAutomation::Never, crossfade_ms: crate::fades::DEFAULT_XFADE_MS as f32, crossfade_curve: crate::fades::DEFAULT_CURVE }
+        EditingPrefs {
+            fade_ms: 0.0,
+            move_automation: MoveAutomation::Never,
+            crossfade_ms: crate::fades::DEFAULT_XFADE_MS as f32,
+            crossfade_curve: crate::fades::DEFAULT_CURVE,
+        }
     }
 }
 
@@ -351,10 +364,7 @@ mod tests {
 
     #[test]
     fn partial_json_keeps_other_defaults() {
-        let p: Prefs = serde_json::from_str(
-            r#"{"recording":{"bit_depth":"int24","count_in_bars":2},"click":{"sound":"woodblock"},"unknown":1}"#,
-        )
-        .unwrap();
+        let p: Prefs = serde_json::from_str(r#"{"recording":{"bit_depth":"int24","count_in_bars":2},"click":{"sound":"woodblock"},"unknown":1}"#).unwrap();
         assert_eq!(p.recording.bit_depth, BitDepth::Int24);
         assert_eq!(p.recording.count_in_bars, 2);
         assert_eq!(p.recording.audio_overlap, AudioOverlap::OnTop);

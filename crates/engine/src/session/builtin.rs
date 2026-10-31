@@ -205,7 +205,11 @@ impl Session {
         let insert = tracks.chain(std::iter::once((MASTER_ID, &p.master.inserts))).find_map(|(id, ins)| {
             ins.iter().enumerate().find_map(|(k, s)| s.as_ref().filter(|s| s.uid == uid && fx::find(&s.plugin_id).is_some()).map(|s| (id, k, s)))
         });
-        insert.or_else(|| p.tracks.iter().find_map(|t| t.instrument.as_ref().filter(|s| s.uid == uid && instrument::find(&s.plugin_id).is_some()).map(|s| (t.id, usize::MAX, s))))
+        insert.or_else(|| {
+            p.tracks
+                .iter()
+                .find_map(|t| t.instrument.as_ref().filter(|s| s.uid == uid && instrument::find(&s.plugin_id).is_some()).map(|s| (t.id, usize::MAX, s)))
+        })
     }
 
     /// Sets a built-in effect's or instrument's parameter (plain units, clamped to its range).
@@ -411,8 +415,14 @@ impl Session {
     pub(super) fn resync_builtins(&mut self, track: Id) {
         let reads = matches!(self.auto_mode_of(track), Some(AutoMode::Read | AutoMode::Touch | AutoMode::Latch));
         let m = &self.project.master;
-        let Some((automation, inserts)) = (if track == MASTER_ID { Some((&m.automation, &m.inserts)) } else { self.project.track(track).map(|t| (&t.automation, &t.inserts)) }) else { return };
-        let driven = |uid: Id, id: u32| reads && automation.iter().any(|l| !l.points.is_empty() && matches!(l.param, AutoParam::Plugin { uid: u, param, .. } if u == uid && param == id));
+        let Some((automation, inserts)) =
+            (if track == MASTER_ID { Some((&m.automation, &m.inserts)) } else { self.project.track(track).map(|t| (&t.automation, &t.inserts)) })
+        else {
+            return;
+        };
+        let driven = |uid: Id, id: u32| {
+            reads && automation.iter().any(|l| !l.points.is_empty() && matches!(l.param, AutoParam::Plugin { uid: u, param, .. } if u == uid && param == id))
+        };
         let mut cmds = Vec::new();
         let instrument = if track == MASTER_ID { None } else { self.project.track(track).and_then(|t| t.instrument.as_ref()) };
         for s in inserts.iter().flatten().chain(instrument) {

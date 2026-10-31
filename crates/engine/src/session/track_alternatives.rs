@@ -31,10 +31,7 @@ pub fn names(t: &Track) -> Vec<String> {
 /// The next free name in Logic's sequence: A, B, C … Z, then A2, B2 …
 fn next_name(taken: &[String]) -> String {
     let free = |n: &String| !taken.iter().any(|t| t.eq_ignore_ascii_case(n));
-    (1..)
-        .flat_map(|round: u32| ('A'..='Z').map(move |c| if round == 1 { c.to_string() } else { format!("{c}{round}") }))
-        .find(free)
-        .unwrap()
+    (1..).flat_map(|round: u32| ('A'..='Z').map(move |c| if round == 1 { c.to_string() } else { format!("{c}{round}") })).find(free).unwrap()
 }
 
 impl Session {

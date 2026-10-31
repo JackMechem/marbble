@@ -26,12 +26,8 @@ pub fn cc_from(cc: &[CcEvent], cut: i64) -> Vec<CcEvent> {
     for c in cc.iter().filter(|c| c.start < cut) {
         last[c.kind.index()] = Some(*c);
     }
-    let mut out: Vec<CcEvent> = last
-        .iter()
-        .flatten()
-        .filter(|e| !cc.iter().any(|c| c.start == cut && c.kind == e.kind))
-        .map(|e| CcEvent { start: 0, ..*e })
-        .collect();
+    let mut out: Vec<CcEvent> =
+        last.iter().flatten().filter(|e| !cc.iter().any(|c| c.start == cut && c.kind == e.kind)).map(|e| CcEvent { start: 0, ..*e }).collect();
     out.extend(cc.iter().filter(|c| c.start >= cut).map(|c| CcEvent { start: c.start - cut, ..*c }));
     out.sort_by_key(|c| c.start);
     out

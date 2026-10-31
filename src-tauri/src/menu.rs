@@ -246,7 +246,14 @@ pub struct BackupItem {
     label: String,
 }
 
-fn fill_project_menus<R: Runtime>(app: &AppHandle<R>, alternatives: &Submenu<R>, revert: &Submenu<R>, names: &[String], active: &str, backups: &[BackupItem]) -> tauri::Result<()> {
+fn fill_project_menus<R: Runtime>(
+    app: &AppHandle<R>,
+    alternatives: &Submenu<R>,
+    revert: &Submenu<R>,
+    names: &[String],
+    active: &str,
+    backups: &[BackupItem],
+) -> tauri::Result<()> {
     for it in alternatives.items()? {
         alternatives.remove(&it)?;
     }

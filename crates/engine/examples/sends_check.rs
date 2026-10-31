@@ -51,7 +51,10 @@ fn main() {
     s.set_cycle(true, 0, 48000);
     let x = s.create_aux(None).unwrap();
     let xt = s.project.track(x).unwrap();
-    ok &= check(&format!("new aux is named after its bus ({}, bus {})", xt.name, xt.bus), xt.name == "Aux 1" && xt.bus == 1 && s.project.tracks.last().map(|t| t.id) == Some(x));
+    ok &= check(
+        &format!("new aux is named after its bus ({}, bus {})", xt.name, xt.bus),
+        xt.name == "Aux 1" && xt.bus == 1 && s.project.tracks.last().map(|t| t.id) == Some(x),
+    );
 
     let (lv, _) = levels(&mut s, &[a, x]);
     ok &= check(&format!("an aux without sends is silent (aux={:.4})", lv[1]), lv[1] < 1e-4);
@@ -74,7 +77,10 @@ fn main() {
     ok &= check(&format!("post-fader send follows the fader down (aux={:.4})", lv[1]), lv[1] < 1e-4);
     s.set_send(a, 0, send(true)).unwrap();
     let (lv, master) = levels(&mut s, &[a, x]);
-    ok &= check(&format!("pre-fader send delivers with the fader at -inf (track={:.4} aux={:.3} out={master:.3})", lv[0], lv[1]), lv[0] < 1e-4 && lv[1] > 0.01 && master > 0.01);
+    ok &= check(
+        &format!("pre-fader send delivers with the fader at -inf (track={:.4} aux={:.3} out={master:.3})", lv[0], lv[1]),
+        lv[0] < 1e-4 && lv[1] > 0.01 && master > 0.01,
+    );
 
     // Muting the aux silences what arrives there (b is muted so only the aux could sound).
     patch(&mut s, b, TrackPatch { mute: Some(true), ..Default::default() });
@@ -88,11 +94,15 @@ fn main() {
     // Solo: soloing the source keeps its aux audible; soloing the aux keeps its source.
     patch(&mut s, a, TrackPatch { solo: Some(true), ..Default::default() });
     let (lv, _) = levels(&mut s, &[a, b, x]);
-    ok &= check(&format!("soloing a track keeps its aux audible (a={:.3} b={:.4} aux={:.3})", lv[0], lv[1], lv[2]), lv[0] > 0.01 && lv[1] < 1e-4 && lv[2] > 0.01);
+    ok &=
+        check(&format!("soloing a track keeps its aux audible (a={:.3} b={:.4} aux={:.3})", lv[0], lv[1], lv[2]), lv[0] > 0.01 && lv[1] < 1e-4 && lv[2] > 0.01);
     patch(&mut s, a, TrackPatch { solo: Some(false), ..Default::default() });
     patch(&mut s, x, TrackPatch { solo: Some(true), ..Default::default() });
     let (lv, _) = levels(&mut s, &[a, b, x]);
-    ok &= check(&format!("soloing an aux keeps its sources audible (a={:.3} b={:.4} aux={:.3})", lv[0], lv[1], lv[2]), lv[0] > 0.01 && lv[1] < 1e-4 && lv[2] > 0.01);
+    ok &= check(
+        &format!("soloing an aux keeps its sources audible (a={:.3} b={:.4} aux={:.3})", lv[0], lv[1], lv[2]),
+        lv[0] > 0.01 && lv[1] < 1e-4 && lv[2] > 0.01,
+    );
     patch(&mut s, x, TrackPatch { solo: Some(false), ..Default::default() });
 
     // Output routing: b plays only through the aux.
@@ -121,7 +131,10 @@ fn main() {
     let back = s.set_send(y, 0, Some(TrackSend { bus: x, level_db: 0.0, pre_fader: false, muted: false }));
     ok &= check(&format!("a send that closes a loop is refused ({:?})", back.as_ref().err().map(|e| e.to_string())), back.is_err());
     ok &= check("an output that closes a loop is refused", s.set_output(y, Some(x)).is_err());
-    ok &= check("an aux can't feed itself", s.set_output(x, Some(x)).is_err() && s.set_send(x, 1, Some(TrackSend { bus: x, level_db: 0.0, pre_fader: false, muted: false })).is_err());
+    ok &= check(
+        "an aux can't feed itself",
+        s.set_output(x, Some(x)).is_err() && s.set_send(x, 1, Some(TrackSend { bus: x, level_db: 0.0, pre_fader: false, muted: false })).is_err(),
+    );
     ok &= check("sends only go to auxes", s.set_send(a, 0, Some(TrackSend { bus: b, level_db: 0.0, pre_fader: false, muted: false })).is_err());
     let order = s.project.process_order();
     let pos = |id| order.iter().position(|&i| i == id).unwrap();
@@ -138,7 +151,10 @@ fn main() {
     // Delete Unused Tracks keeps auxes that something feeds.
     let lone = s.create_aux(None).unwrap();
     let n = s.delete_unused_tracks();
-    ok &= check(&format!("delete unused keeps fed auxes ({n} deleted)"), n == 1 && s.project.track(lone).is_none() && s.project.track(x).is_some() && s.project.track(y).is_some());
+    ok &= check(
+        &format!("delete unused keeps fed auxes ({n} deleted)"),
+        n == 1 && s.project.track(lone).is_none() && s.project.track(x).is_some() && s.project.track(y).is_some(),
+    );
 
     // Save and reopen: the graph is rebuilt with its routing.
     let saved = s.save(Some(std::path::PathBuf::from(&scratch).join("SendsReload.fermata"))).unwrap();
@@ -158,7 +174,10 @@ fn main() {
     s.undo();
     let ta = s.project.track(a).unwrap();
     let tb = s.project.track(b).unwrap();
-    ok &= check("undo restores sends and outputs", ta.sends[2].map(|s| s.bus) == Some(x) && tb.output == Some(x) && s.project.track(x).unwrap().sends[0].map(|s| s.bus) == Some(y));
+    ok &= check(
+        "undo restores sends and outputs",
+        ta.sends[2].map(|s| s.bus) == Some(x) && tb.output == Some(x) && s.project.track(x).unwrap().sends[0].map(|s| s.bus) == Some(y),
+    );
     let (lv, _) = levels(&mut s, &[x, y]);
     ok &= check(&format!("restored routing plays (aux={:.3} chained aux={:.3})", lv[0], lv[1]), lv[0] > 0.01 && lv[1] > 0.01);
 

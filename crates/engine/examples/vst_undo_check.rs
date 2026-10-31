@@ -108,16 +108,25 @@ fn the_basics(r: &mut Rig, name: &str, param: &str) {
     s.drive_vst_handler(uid, Gesture::End(id));
     pump(s, 200);
     let want = format!("{name}: {param}");
-    check(&format!("{name}: it's one step, labelled {:?}, read once, project dirty", s.undo_label().unwrap_or_default()), s.undo_depths().0 == steps + 1 && s.undo_label().as_deref() == Some(want.as_str()) && s.vst_state_reads(uid) == reads + 1 && s.dirty);
+    check(
+        &format!("{name}: it's one step, labelled {:?}, read once, project dirty", s.undo_label().unwrap_or_default()),
+        s.undo_depths().0 == steps + 1 && s.undo_label().as_deref() == Some(want.as_str()) && s.vst_state_reads(uid) == reads + 1 && s.dirty,
+    );
     let state1 = saved(s, track);
     let l1 = level(s, len);
-    check(&format!("{name}: the edit reached the plug-in ({l0:.2} -> {l1:.2} dB)"), near(s.vst_param(uid, id), v1) && state1 != state0 && (!r.audible || (l1 - l0).abs() > 1.0));
+    check(
+        &format!("{name}: the edit reached the plug-in ({l0:.2} -> {l1:.2} dB)"),
+        near(s.vst_param(uid, id), v1) && state1 != state0 && (!r.audible || (l1 - l0).abs() > 1.0),
+    );
 
     let s = &mut r.s;
     s.undo();
     pump(s, 50);
     let l = level(s, len);
-    check(&format!("{name}: undo puts back the parameter, the saved state and the sound ({l:.2} dB)"), near(s.vst_param(uid, id), v0) && saved(s, track) == state0 && (l - l0).abs() < 0.05);
+    check(
+        &format!("{name}: undo puts back the parameter, the saved state and the sound ({l:.2} dB)"),
+        near(s.vst_param(uid, id), v0) && saved(s, track) == state0 && (l - l0).abs() < 0.05,
+    );
     check(&format!("{name}: undo itself makes no step"), s.undo_depths() == (steps, 1));
 
     // Whatever an editor answers to the restore.
@@ -185,7 +194,10 @@ fn no_gestures(r: &mut Rig, name: &str) {
     s.edit_vst_param(uid, id, v1);
     s.drive_vst_params_restarted(uid);
     pump(s, 500);
-    check(&format!("{name}: restartComponent(kParamValuesChanged) is one step, {:?}", s.undo_label().unwrap_or_default()), s.undo_depths().0 == steps + 1 && s.undo_label().is_some_and(|l| l.ends_with("Parameters")));
+    check(
+        &format!("{name}: restartComponent(kParamValuesChanged) is one step, {:?}", s.undo_label().unwrap_or_default()),
+        s.undo_depths().0 == steps + 1 && s.undo_label().is_some_and(|l| l.ends_with("Parameters")),
+    );
     s.undo();
     check(&format!("{name}: undo takes the preset back"), near(s.vst_param(uid, id), v0));
     pump(s, 400);
@@ -315,7 +327,15 @@ fn states(r: &mut Rig, name: &str) {
 fn automation(r: &mut Rig, name: &str) {
     let (track, uid, id, v0, v1) = (r.track, r.uid, r.param, r.v0, r.v1);
     let s = &mut r.s;
-    let lane = |s: &Session| s.project.track(track).unwrap().automation.iter().find(|l| matches!(l.param, AutoParam::Plugin { param, .. } if param == id)).map_or(0, |l| l.points.len());
+    let lane = |s: &Session| {
+        s.project
+            .track(track)
+            .unwrap()
+            .automation
+            .iter()
+            .find(|l| matches!(l.param, AutoParam::Plugin { param, .. } if param == id))
+            .map_or(0, |l| l.points.len())
+    };
     let steps = s.undo_depths().0;
     s.set_auto_mode(track, AutoMode::Touch);
     s.locate(0);
@@ -324,11 +344,17 @@ fn automation(r: &mut Rig, name: &str) {
     drag(s, uid, id, v0, v1);
     pump(s, 300);
     // The pass's own step comes as the gesture ends.
-    check(&format!("{name}: in Touch, playing, a drag makes no step of its own, only the pass's {:?}", s.undo_label().unwrap_or_default()), s.undo_depths().0 <= steps + 1 && !s.undo_label().is_some_and(|l| l.starts_with(name)));
+    check(
+        &format!("{name}: in Touch, playing, a drag makes no step of its own, only the pass's {:?}", s.undo_label().unwrap_or_default()),
+        s.undo_depths().0 <= steps + 1 && !s.undo_label().is_some_and(|l| l.starts_with(name)),
+    );
     s.stop();
     pump(s, 200);
     let written = lane(s);
-    check(&format!("{name}: it's written to the lane as before ({written} points), one step {:?}", s.undo_label().unwrap_or_default()), written >= 2 && s.undo_depths().0 == steps + 1 && !s.undo_label().is_some_and(|l| l.starts_with(name)));
+    check(
+        &format!("{name}: it's written to the lane as before ({written} points), one step {:?}", s.undo_label().unwrap_or_default()),
+        written >= 2 && s.undo_depths().0 == steps + 1 && !s.undo_label().is_some_and(|l| l.starts_with(name)),
+    );
     s.undo();
     check(&format!("{name}: undo removes the pass"), lane(s) == 0);
     s.set_auto_mode(track, AutoMode::Read);
@@ -405,7 +431,17 @@ fn live(r: &mut Rig, name: &str) {
 
 /// What `getState` costs, the only call into the plug-in that's added to a gesture.
 fn costs(all: &[PluginDescriptor]) {
-    for name in ["TONE3000", "ZamCompX2", "Compressor Stereo", "Sidechain Compressor Stereo", "Parametric Equalizer x32 Stereo", "Dragonfly Hall Reverb", "CHOWTapeModel", "Multi-Sampler x12 DirectOut", "ZamGrains"] {
+    for name in [
+        "TONE3000",
+        "ZamCompX2",
+        "Compressor Stereo",
+        "Sidechain Compressor Stereo",
+        "Parametric Equalizer x32 Stereo",
+        "Dragonfly Hall Reverb",
+        "CHOWTapeModel",
+        "Multi-Sampler x12 DirectOut",
+        "ZamGrains",
+    ] {
         let Some(d) = all.iter().find(|d| d.name == name) else {
             println!("SKIP the cost of {name}: not installed");
             continue;
@@ -426,7 +462,12 @@ fn costs(all: &[PluginDescriptor]) {
             c.load_state(&st);
         }
         let load = t.elapsed() / 20;
-        println!("     {name}: getState {size} bytes, median {:?}, worst {:?}; load_state {load:?}; {} parameters", times[100], times[199], c.param_names().len());
+        println!(
+            "     {name}: getState {size} bytes, median {:?}, worst {:?}; load_state {load:?}; {} parameters",
+            times[100],
+            times[199],
+            c.param_names().len()
+        );
     }
 }
 
@@ -434,7 +475,10 @@ fn main() {
     let mut args = std::env::args().skip(1);
     let tone = PathBuf::from(args.next().expect("audio file"));
     let scratch = PathBuf::from(args.next().expect("scratch dir"));
-    let all: Vec<PluginDescriptor> = vst3_host::scan::find_bundles(&vst3_host::scan::default_search_paths()).iter().flat_map(|b| vst3_host::scan::scan_bundle(b).unwrap_or_default()).collect();
+    let all: Vec<PluginDescriptor> = vst3_host::scan::find_bundles(&vst3_host::scan::default_search_paths())
+        .iter()
+        .flat_map(|b| vst3_host::scan::scan_bundle(b).unwrap_or_default())
+        .collect();
     let find = |n: &str| all.iter().find(|d| d.name == n).cloned();
     costs(&all);
 

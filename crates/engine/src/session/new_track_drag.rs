@@ -16,7 +16,8 @@ impl Session {
         let mut made = Vec::new();
         let mut last = None;
         for (source, regions) in lanes {
-            let on_lane: Vec<&RegionMove> = regions.iter().filter(|m| self.find_region(m.id).is_some_and(|(t, _)| t == *source) && self.movable(m.id, None)).collect();
+            let on_lane: Vec<&RegionMove> =
+                regions.iter().filter(|m| self.find_region(m.id).is_some_and(|(t, _)| t == *source) && self.movable(m.id, None)).collect();
             if on_lane.is_empty() {
                 continue;
             }
@@ -99,7 +100,19 @@ mod tests {
     fn midi(s: &mut Session, track: Id, start: i64) -> Id {
         let id = s.project.alloc_id();
         let content = RegionContent::Midi { notes: vec![Note { start: 0, length: 100, pitch: 60, velocity: 100, muted: false }], cc: Vec::new() };
-        s.project.track_mut(track).unwrap().regions.push(Region { id, name: "M".into(), start, length: 1000, muted: false, color: None, content, loop_end: None, takes: None, params: Default::default(), pattern: None });
+        s.project.track_mut(track).unwrap().regions.push(Region {
+            id,
+            name: "M".into(),
+            start,
+            length: 1000,
+            muted: false,
+            color: None,
+            content,
+            loop_end: None,
+            takes: None,
+            params: Default::default(),
+            pattern: None,
+        });
         s.push_regions(track);
         id
     }
@@ -107,7 +120,19 @@ mod tests {
     fn audio(s: &mut Session, track: Id, start: i64) -> Id {
         let id = s.project.alloc_id();
         let content = RegionContent::Audio { clip: 0, offset: 0, gain_db: 0.0, fade_in: 0, fade_out: 0, fade_shape: Default::default() };
-        s.project.track_mut(track).unwrap().regions.push(Region { id, name: "A".into(), start, length: 1000, muted: false, color: None, content, loop_end: None, takes: None, params: Default::default(), pattern: None });
+        s.project.track_mut(track).unwrap().regions.push(Region {
+            id,
+            name: "A".into(),
+            start,
+            length: 1000,
+            muted: false,
+            color: None,
+            content,
+            loop_end: None,
+            takes: None,
+            params: Default::default(),
+            pattern: None,
+        });
         id
     }
 
@@ -170,7 +195,11 @@ mod tests {
         let mut s = session();
         let (a, b) = (inst(&mut s), inst(&mut s));
         let (r1, r2, r3) = (midi(&mut s, a, 1000), midi(&mut s, a, 5000), midi(&mut s, b, 2000));
-        s.drag_regions_to_new_tracks(&[RegionMove { id: r1, start: 1100, track: Some(b) }, RegionMove { id: r2, start: 5100, track: Some(b) }], &[(b, vec![to(r3, 2100)])], None);
+        s.drag_regions_to_new_tracks(
+            &[RegionMove { id: r1, start: 1100, track: Some(b) }, RegionMove { id: r2, start: 5100, track: Some(b) }],
+            &[(b, vec![to(r3, 2100)])],
+            None,
+        );
         let order = ids(&s);
         assert_eq!(order.len(), 3);
         assert!(starts(&s, a).is_empty());

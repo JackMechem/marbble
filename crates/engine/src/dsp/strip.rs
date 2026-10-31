@@ -18,7 +18,25 @@ pub(super) enum BlockEnd {
 /// One strip's work for the block. The serial loop and the worker threads run this same code, with
 /// `routes` saying how the strip reaches other strips (see [`Routes`]).
 pub(super) fn run_strip<R: Routes>(cx: &BlockCtx<'_>, ti: usize, t: &mut TrackDsp, sc: &mut Scratch, routes: &mut R) {
-    let BlockCtx { n, pos, playing, recording, sr, sources, punch_range, capture_from, capture_end, auto_monitor, low_latency, block_end, smooth, any_solo, snap_gains, iso, .. } = *cx;
+    let BlockCtx {
+        n,
+        pos,
+        playing,
+        recording,
+        sr,
+        sources,
+        punch_range,
+        capture_from,
+        capture_end,
+        auto_monitor,
+        low_latency,
+        block_end,
+        smooth,
+        any_solo,
+        snap_gains,
+        iso,
+        ..
+    } = *cx;
     t.instrument_ran = false;
     let role = iso.map(|i| i.role(t.id));
     if role == Some(Role::Skip) {

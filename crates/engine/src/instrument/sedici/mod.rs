@@ -122,7 +122,8 @@ impl OpPatch {
 
     /// Its level scale for a key and a velocity.
     fn out_level(&self, note: i32, velocity: f32) -> i32 {
-        let level = env::scale_out_level(self.level) + env::keyboard_level_scale(note, self.break_point, self.l_depth, self.r_depth, self.l_curve, self.r_curve);
+        let level =
+            env::scale_out_level(self.level) + env::keyboard_level_scale(note, self.break_point, self.l_depth, self.r_depth, self.l_curve, self.r_curve);
         ((level.min(127) << 5) + env::velocity_scale(velocity, self.vel)).max(0)
     }
 

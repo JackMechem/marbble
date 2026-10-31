@@ -281,7 +281,17 @@ fn count_in_uses_the_tempo_at_the_punch() {
 #[test]
 fn plugins_get_the_position_in_the_map() {
     use crate::tempo::{SigEvent, TempoEvent};
-    let map = TempoMap::new(48000.0, &[TempoEvent { pos: 0, bpm: 120.0, ramp: false }, TempoEvent { pos: 96000, bpm: 60.0, ramp: true }, TempoEvent { pos: 192000, bpm: 120.0, ramp: false }], &[SigEvent { bar: 2, num: 7, den: 8 }], 120.0, (4, 4));
+    let map = TempoMap::new(
+        48000.0,
+        &[
+            TempoEvent { pos: 0, bpm: 120.0, ramp: false },
+            TempoEvent { pos: 96000, bpm: 60.0, ramp: true },
+            TempoEvent { pos: 192000, bpm: 120.0, ramp: false },
+        ],
+        &[SigEvent { bar: 2, num: 7, den: 8 }],
+        120.0,
+        (4, 4),
+    );
     let mut r = rig();
     r.tx.push(Cmd::Tempo(Arc::new(map))).ok().unwrap();
     r.tx.push(Cmd::Locate(144000)).ok().unwrap();

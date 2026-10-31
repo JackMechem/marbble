@@ -64,11 +64,7 @@ impl Smoother {
         if self.cur != self.target {
             let next = self.cur + self.k * (self.target - self.cur);
             // Land exactly once the remaining step is inaudible, or too small for f32 to take.
-            self.cur = if next == self.cur || (next - self.target).abs() <= 1e-5 * (1.0 + self.target.abs()) {
-                self.target
-            } else {
-                next
-            };
+            self.cur = if next == self.cur || (next - self.target).abs() <= 1e-5 * (1.0 + self.target.abs()) { self.target } else { next };
         }
         self.cur
     }
@@ -110,7 +106,13 @@ pub fn knee_reduction_slope(over: f32, slope: f32, knee: f32) -> f32 {
 pub fn program_reduction(over: f32, slope: f32, w: f32) -> f32 {
     let z = over / w;
     // ln(1 + e^z) without overflow for large z.
-    let sp = if z > 20.0 { z } else if z < -20.0 { z.exp() } else { z.exp().ln_1p() };
+    let sp = if z > 20.0 {
+        z
+    } else if z < -20.0 {
+        z.exp()
+    } else {
+        z.exp().ln_1p()
+    };
     slope * w * sp
 }
 

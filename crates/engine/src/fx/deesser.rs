@@ -56,7 +56,15 @@ pub const PRESETS: &[FactoryPreset] = &[
 ];
 
 pub fn info() -> EffectInfo {
-    EffectInfo { id: "builtin:deesser", name: "De-Esser", category: "Dynamics", params: &PARAMS, meters: &METERS, sidechain: true, new: |sr| Box::new(DeEsser::new(sr)) }
+    EffectInfo {
+        id: "builtin:deesser",
+        name: "De-Esser",
+        category: "Dynamics",
+        params: &PARAMS,
+        meters: &METERS,
+        sidechain: true,
+        new: |sr| Box::new(DeEsser::new(sr)),
+    }
 }
 
 /// One channel of the crossover: two cascaded Butterworth sections per band.

@@ -185,7 +185,11 @@ fn time_changes_do_not_click() {
     let tempo = |d: &mut Delay, block: usize| {
         d.set_param(SYNC, 1.0);
         d.set_param(NOTE_L, 9.0);
-        if block < 150 { 120.0 } else { 97.0 }
+        if block < 150 {
+            120.0
+        } else {
+            97.0
+        }
     };
     let synced = max_step(STEREO, tempo);
     assert!(synced < 1.3 * slope, "synced step {synced}");

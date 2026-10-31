@@ -38,8 +38,7 @@
 //! (MIT licence, Copyright (c) 2016 airwindows), but none of its code is used.
 
 use super::dyn_common::{
-    db_to_lin, flush, knee_reduction, knee_reduction_slope, lin_to_db, program_reduction, DcBlock, Delay,
-    Distortion, ScMode, Smoother, Svf,
+    db_to_lin, flush, knee_reduction, knee_reduction_slope, lin_to_db, program_reduction, DcBlock, Delay, Distortion, ScMode, Smoother, Svf,
 };
 use super::util::coeff;
 use super::{Effect, EffectInfo, FactoryPreset, FxContext, Key, ParamKind, ParamSpec, Unit, MAX_METERS};
@@ -214,20 +213,10 @@ impl Compressor {
             // Auto release: a fast stage for transients and a slow one that only charges
             // under sustained reduction. Platinum scales both from the Release knob; the VCA's
             // Auto position has fixed console-style times.
-            Circuit::Platinum if auto => Block {
-                k_rel: coeff((r * 0.3).max(10.0), sr),
-                k_slow_att: coeff(300.0, sr),
-                k_slow_rel: coeff(r * 3.0, sr),
-                auto_release: true,
-                ..none
-            },
-            Circuit::Vca if auto => Block {
-                k_rel: coeff(100.0, sr),
-                k_slow_att: coeff(300.0, sr),
-                k_slow_rel: coeff(1200.0, sr),
-                auto_release: true,
-                ..none
-            },
+            Circuit::Platinum if auto => {
+                Block { k_rel: coeff((r * 0.3).max(10.0), sr), k_slow_att: coeff(300.0, sr), k_slow_rel: coeff(r * 3.0, sr), auto_release: true, ..none }
+            }
+            Circuit::Vca if auto => Block { k_rel: coeff(100.0, sr), k_slow_att: coeff(300.0, sr), k_slow_rel: coeff(1200.0, sr), auto_release: true, ..none },
             Circuit::Platinum | Circuit::Vca => none,
             Circuit::Fet => {
                 // All buttons in slows the attack, which lets the transients through.
@@ -430,14 +419,7 @@ impl Effect for Compressor {
         let mut m_gr = 0.0f32;
         let mut m_level = -120.0f32;
         for i in 0..n {
-            let cp = CurveParams {
-                circuit,
-                threshold: self.threshold.next(),
-                ratio: self.ratio.next(),
-                knee: self.knee.next(),
-                fet_mode,
-                opto_limit,
-            };
+            let cp = CurveParams { circuit, threshold: self.threshold.next(), ratio: self.ratio.next(), knee: self.knee.next(), fet_mode, opto_limit };
             let link = self.link.next();
             let gain_db = self.makeup.next() + self.auto_gain.next();
             let mix = self.mix.next();
@@ -501,16 +483,8 @@ impl Effect for Compressor {
     }
 
     fn reset(&mut self) {
-        for s in [
-            &mut self.threshold,
-            &mut self.ratio,
-            &mut self.knee,
-            &mut self.makeup,
-            &mut self.auto_gain,
-            &mut self.mix,
-            &mut self.output,
-            &mut self.link,
-        ] {
+        for s in [&mut self.threshold, &mut self.ratio, &mut self.knee, &mut self.makeup, &mut self.auto_gain, &mut self.mix, &mut self.output, &mut self.link]
+        {
             s.snap();
         }
         for ch in &mut self.chans {

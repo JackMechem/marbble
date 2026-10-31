@@ -11,10 +11,7 @@ pub const AUDIO_EXTENSIONS: &[&str] = &["wav", "wave", "aif", "aiff", "aifc", "f
 
 /// Whether a path's extension is one the decoders take. It doesn't open the file.
 pub fn is_audio_file(path: &Path) -> bool {
-    path.extension()
-        .and_then(|e| e.to_str())
-        .map(|e| AUDIO_EXTENSIONS.contains(&e.to_ascii_lowercase().as_str()))
-        .unwrap_or(false)
+    path.extension().and_then(|e| e.to_str()).map(|e| AUDIO_EXTENSIONS.contains(&e.to_ascii_lowercase().as_str())).unwrap_or(false)
 }
 
 /// An audio file decoded to float, before it is resampled to the project rate.
@@ -87,16 +84,11 @@ fn decode_symphonia(path: &Path) -> Result<Decoded> {
         .format(&hint, mss, &FormatOptions { enable_gapless: true, ..Default::default() }, &MetadataOptions::default())
         .map_err(|e| anyhow!("unsupported or damaged audio file ({e})"))?;
     let mut format = probed.format;
-    let track = format
-        .tracks()
-        .iter()
-        .find(|t| t.codec_params.codec != CODEC_TYPE_NULL)
-        .ok_or_else(|| anyhow!("no audio stream in file"))?;
+    let track = format.tracks().iter().find(|t| t.codec_params.codec != CODEC_TYPE_NULL).ok_or_else(|| anyhow!("no audio stream in file"))?;
     let track_id = track.id;
     let mut sample_rate = track.codec_params.sample_rate.unwrap_or(0);
-    let mut decoder = symphonia::default::get_codecs()
-        .make(&track.codec_params, &DecoderOptions::default())
-        .map_err(|e| anyhow!("no decoder for this format ({e})"))?;
+    let mut decoder =
+        symphonia::default::get_codecs().make(&track.codec_params, &DecoderOptions::default()).map_err(|e| anyhow!("no decoder for this format ({e})"))?;
 
     let mut channels: Vec<Vec<f32>> = Vec::new();
     let mut buf: Option<SampleBuffer<f32>> = None;

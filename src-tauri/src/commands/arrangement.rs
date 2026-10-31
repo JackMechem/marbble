@@ -183,7 +183,12 @@ fn new_track_label(verb: &str, regions: usize, tracks: usize) -> String {
 /// A drag past the last track: `lanes` are (source track, moves) for the regions that go onto
 /// a new track each, `moves` the regions landing on existing tracks. One undo step.
 #[tauri::command]
-pub fn move_regions_to_new_tracks(state: State<AppState>, moves: Vec<daw_engine::session::RegionMove>, lanes: Vec<(Id, Vec<daw_engine::session::RegionMove>)>, automation: Option<bool>) -> R<Made> {
+pub fn move_regions_to_new_tracks(
+    state: State<AppState>,
+    moves: Vec<daw_engine::session::RegionMove>,
+    lanes: Vec<(Id, Vec<daw_engine::session::RegionMove>)>,
+    automation: Option<bool>,
+) -> R<Made> {
     let regions = moves.len() + lanes.iter().map(|l| l.1.len()).sum::<usize>();
     edit_made(&state, &new_track_label("Move", regions, lanes.len()), false, |s| Ok(s.drag_regions_to_new_tracks(&moves, &lanes, automation)))
 }

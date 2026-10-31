@@ -69,7 +69,11 @@ pub fn list_dir(path: Option<String>) -> R<DirListing> {
         None => {
             let home = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")).map(PathBuf::from).unwrap_or_else(|| PathBuf::from("/"));
             let music = home.join("Music");
-            if music.is_dir() { music } else { home }
+            if music.is_dir() {
+                music
+            } else {
+                home
+            }
         }
     };
     let mut entries: Vec<DirEntry> = std::fs::read_dir(&dir)
@@ -87,11 +91,7 @@ pub fn list_dir(path: Option<String>) -> R<DirListing> {
         })
         .collect();
     entries.sort_by(|a, b| b.is_dir.cmp(&a.is_dir).then(a.name.to_lowercase().cmp(&b.name.to_lowercase())));
-    Ok(DirListing {
-        parent: dir.parent().map(|p| p.to_string_lossy().to_string()),
-        path: dir.to_string_lossy().to_string(),
-        entries,
-    })
+    Ok(DirListing { parent: dir.parent().map(|p| p.to_string_lossy().to_string()), path: dir.to_string_lossy().to_string(), entries })
 }
 
 #[tauri::command]
@@ -152,7 +152,7 @@ pub fn discard_autosave(state: State<AppState>, path: Option<String>) {
         Some(p) => daw_engine::session::discard_autosave(std::path::Path::new(&p)),
         None => with(&state, |s| s.discard_autosave()),
     }
-    }
+}
 
 /// What File › Project Alternatives and File › Revert to list.
 #[derive(Serialize)]

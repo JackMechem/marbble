@@ -109,7 +109,8 @@ fn file(root: &Path, effect: &str, name: &str) -> PathBuf {
 pub fn list_user(root: &Path, effect: &str) -> Vec<String> {
     let Ok(rd) = std::fs::read_dir(effect_dir(root, effect)) else { return Vec::new() };
     if is_bundle(effect) {
-        let mut names: Vec<String> = rd.flatten().filter(|e| e.path().join(BUNDLE_DOC).is_file()).map(|e| e.file_name().to_string_lossy().to_string()).collect();
+        let mut names: Vec<String> =
+            rd.flatten().filter(|e| e.path().join(BUNDLE_DOC).is_file()).map(|e| e.file_name().to_string_lossy().to_string()).collect();
         names.sort_by_key(|n| n.to_lowercase());
         return names;
     }
@@ -194,9 +195,20 @@ pub fn rename_user(root: &Path, effect: &str, old: &str, new: &str) -> Result<St
 /// The factory presets of an effect (or the Channel EQ), complete.
 pub fn factory(effect: &str) -> Vec<Preset> {
     if effect == CHANNEL_EQ {
-        return eq_factory().into_iter().map(|(name, eq)| Preset { name: name.into(), effect: effect.into(), version: VERSION, values: Vec::new(), eq: Some(eq), state: None, base: None }).collect();
+        return eq_factory()
+            .into_iter()
+            .map(|(name, eq)| Preset { name: name.into(), effect: effect.into(), version: VERSION, values: Vec::new(), eq: Some(eq), state: None, base: None })
+            .collect();
     }
-    let preset = |name: &str, values: &[(u32, f32)]| Preset { name: name.into(), effect: effect.into(), version: VERSION, values: values.to_vec(), eq: None, state: None, base: None };
+    let preset = |name: &str, values: &[(u32, f32)]| Preset {
+        name: name.into(),
+        effect: effect.into(),
+        version: VERSION,
+        values: values.to_vec(),
+        eq: None,
+        state: None,
+        base: None,
+    };
     // Every built-in effect and instrument starts with its defaults, as Logic's "#default".
     if let Some(info) = crate::instrument::find(effect) {
         let own = info.presets.iter().map(|f| preset(f.name, f.values));
@@ -334,7 +346,15 @@ mod tests {
     #[test]
     fn user_presets_round_trip() {
         let root = temp_root("rt");
-        let p = Preset { name: "My: Kick/Gate?".into(), effect: "builtin:noise-gate".into(), version: 0, values: vec![(0, -31.5), (4, 120.0)], eq: None, state: None, base: None };
+        let p = Preset {
+            name: "My: Kick/Gate?".into(),
+            effect: "builtin:noise-gate".into(),
+            version: 0,
+            values: vec![(0, -31.5), (4, 120.0)],
+            eq: None,
+            state: None,
+            base: None,
+        };
         let name = write_user(&root, &p, false).unwrap();
         assert_eq!(name, "My Kick Gate");
         assert!(root.join("builtin_noise-gate").join("My Kick Gate.json").exists());
@@ -347,7 +367,15 @@ mod tests {
         assert_eq!(list_user(&root, "builtin:noise-gate"), vec!["Kick".to_string()]);
         delete_user(&root, "builtin:noise-gate", "Kick").unwrap();
         assert!(list_user(&root, "builtin:noise-gate").is_empty());
-        let eq = Preset { name: "Bright".into(), effect: CHANNEL_EQ.into(), version: 0, values: Vec::new(), eq: Some(eq_factory()[3].1.clone()), state: None, base: None };
+        let eq = Preset {
+            name: "Bright".into(),
+            effect: CHANNEL_EQ.into(),
+            version: 0,
+            values: Vec::new(),
+            eq: Some(eq_factory()[3].1.clone()),
+            state: None,
+            base: None,
+        };
         write_user(&root, &eq, false).unwrap();
         assert_eq!(get(&root, CHANNEL_EQ, "Bright", false).unwrap().eq.unwrap().bands[6].gain, 4.0);
         assert!(clean_name(" ..  ").is_err());

@@ -73,10 +73,7 @@ fn binary_path(bundle: &Path) -> Option<PathBuf> {
     #[cfg(target_os = "linux")]
     let (dir, ext) = (contents.join(format!("{}-linux", std::env::consts::ARCH)), "so");
     #[cfg(target_os = "windows")]
-    let (dir, ext) = (
-        contents.join(if cfg!(target_arch = "aarch64") { "arm64-win" } else { "x86_64-win" }),
-        "vst3",
-    );
+    let (dir, ext) = (contents.join(if cfg!(target_arch = "aarch64") { "arm64-win" } else { "x86_64-win" }), "vst3");
     #[cfg(target_os = "macos")]
     let (dir, ext) = (contents.join("MacOS"), "");
 
@@ -85,9 +82,7 @@ fn binary_path(bundle: &Path) -> Option<PathBuf> {
         return Some(direct);
     }
     // Some bundles name the binary differently from the bundle folder.
-    std::fs::read_dir(&dir).ok()?.flatten().map(|e| e.path()).find(|p| {
-        p.is_file() && (ext.is_empty() || p.extension().map(|e| e == ext).unwrap_or(false))
-    })
+    std::fs::read_dir(&dir).ok()?.flatten().map(|e| e.path()).find(|p| p.is_file() && (ext.is_empty() || p.extension().map(|e| e == ext).unwrap_or(false)))
 }
 
 /// A loader error with its cause: libloading's own message is just "dlopen failed", and the
@@ -183,11 +178,7 @@ impl Module {
         let mut out = Vec::new();
         unsafe {
             let mut finfo: PFactoryInfo = std::mem::zeroed();
-            let factory_vendor = if self.factory.getFactoryInfo(&mut finfo) == kResultOk {
-                c_str(&finfo.vendor)
-            } else {
-                String::new()
-            };
+            let factory_vendor = if self.factory.getFactoryInfo(&mut finfo) == kResultOk { c_str(&finfo.vendor) } else { String::new() };
             let f2 = self.factory.cast::<IPluginFactory2>();
             for i in 0..self.factory.countClasses() {
                 let mut info: PClassInfo = std::mem::zeroed();
@@ -232,11 +223,7 @@ impl Module {
     pub(crate) unsafe fn create<I: Interface>(&self, cid: &[u8; 16]) -> Option<ComPtr<I>> {
         let mut obj: *mut std::ffi::c_void = std::ptr::null_mut();
         let iid = I::IID;
-        let r = self.factory.createInstance(
-            cid.as_ptr() as FIDString,
-            iid.as_ptr() as FIDString,
-            &mut obj,
-        );
+        let r = self.factory.createInstance(cid.as_ptr() as FIDString, iid.as_ptr() as FIDString, &mut obj);
         if r != kResultOk || obj.is_null() {
             return None;
         }

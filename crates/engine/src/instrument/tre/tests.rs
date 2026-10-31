@@ -33,7 +33,8 @@ fn render(t: &mut Tre, frames: usize, block: usize, events: &[(usize, [u8; 3])])
     let mut at = 0;
     while at < frames {
         let n = block.min(frames - at);
-        let midi: Vec<MidiEvent> = events.iter().filter(|(f, _)| *f >= at && *f < at + n).map(|(f, d)| MidiEvent { offset: (*f - at) as u32, data: *d }).collect();
+        let midi: Vec<MidiEvent> =
+            events.iter().filter(|(f, _)| *f >= at && *f < at + n).map(|(f, d)| MidiEvent { offset: (*f - at) as u32, data: *d }).collect();
         t.process(&mut l[at..at + n], &mut r[at..at + n], &midi, &ctx(sr));
         at += n;
     }
@@ -43,7 +44,21 @@ fn render(t: &mut Tre, frames: usize, block: usize, events: &[(usize, [u8; 3])])
 /// One note's settings where the oscillators' pitch is plain to measure: a bare sine-like
 /// triangle through a filter opened wide, no drift.
 fn clean_osc(wave: f32, range: f32) -> Vec<(u32, f32)> {
-    vec![(DRIFT, 0.0), (WAVE1, wave), (RANGE1, range), (ON2, 0.0), (ON3, 0.0), (LEVEL1, 3.0), (CUTOFF, 20000.0), (CONTOUR, 0.0), (EMPHASIS, 0.0), (A_ATTACK, 1.0), (A_SUSTAIN, 10.0), (TUNE2, 0.0), (TUNE3, 0.0)]
+    vec![
+        (DRIFT, 0.0),
+        (WAVE1, wave),
+        (RANGE1, range),
+        (ON2, 0.0),
+        (ON3, 0.0),
+        (LEVEL1, 3.0),
+        (CUTOFF, 20000.0),
+        (CONTOUR, 0.0),
+        (EMPHASIS, 0.0),
+        (A_ATTACK, 1.0),
+        (A_SUSTAIN, 10.0),
+        (TUNE2, 0.0),
+        (TUNE3, 0.0),
+    ]
 }
 
 #[test]
@@ -68,11 +83,39 @@ fn tuned_within_a_cent_across_the_range_at_each_rate() {
 #[test]
 fn osc_2_and_3_knobs_and_keyboard_switch_do_what_they_say() {
     // Osc 2 alone, 7 semitones up.
-    let mut t = inst(SR, &[(DRIFT, 0.0), (ON1, 0.0), (WAVE2, 0.0), (RANGE2, 3.0), (TUNE2, 7.0), (LEVEL2, 3.0), (CUTOFF, 20000.0), (CONTOUR, 0.0), (EMPHASIS, 0.0), (A_SUSTAIN, 10.0)]);
+    let mut t = inst(
+        SR,
+        &[
+            (DRIFT, 0.0),
+            (ON1, 0.0),
+            (WAVE2, 0.0),
+            (RANGE2, 3.0),
+            (TUNE2, 7.0),
+            (LEVEL2, 3.0),
+            (CUTOFF, 20000.0),
+            (CONTOUR, 0.0),
+            (EMPHASIS, 0.0),
+            (A_SUSTAIN, 10.0),
+        ],
+    );
     let (l, _) = render(&mut t, 1 << 17, 512, &[(0, [0x90, 60, 100])]);
     assert!(cents(pitch_hz(&l, SR), note_hz(67.0)).abs() < 1.0);
     // Osc 3 off the keyboard: the same pitch from any key.
-    let settings = [(DRIFT, 0.0), (ON1, 0.0), (ON2, 0.0), (ON3, 1.0), (WAVE3, 0.0), (RANGE3, 3.0), (TUNE3, 0.0), (OSC3_KBD, 0.0), (LEVEL3, 3.0), (CUTOFF, 20000.0), (CONTOUR, 0.0), (EMPHASIS, 0.0), (A_SUSTAIN, 10.0)];
+    let settings = [
+        (DRIFT, 0.0),
+        (ON1, 0.0),
+        (ON2, 0.0),
+        (ON3, 1.0),
+        (WAVE3, 0.0),
+        (RANGE3, 3.0),
+        (TUNE3, 0.0),
+        (OSC3_KBD, 0.0),
+        (LEVEL3, 3.0),
+        (CUTOFF, 20000.0),
+        (CONTOUR, 0.0),
+        (EMPHASIS, 0.0),
+        (A_SUSTAIN, 10.0),
+    ];
     for note in [36u8, 60, 90] {
         let mut t = inst(SR, &settings);
         let (l, _) = render(&mut t, 1 << 17, 512, &[(0, [0x90, note, 100])]);
@@ -86,7 +129,10 @@ fn self_oscillating_filter_tracks_the_keyboard_in_tune() {
         let mut worst = 0.0f32;
         for note in (36..=96).step_by(12) {
             // No oscillators: the filter is the sound. Cutoff at middle C, full keyboard tracking.
-            let mut t = inst(sr, &[(DRIFT, 0.0), (ON1, 0.0), (ON2, 0.0), (CUTOFF, note_hz(60.0)), (EMPHASIS, 10.0), (CONTOUR, 0.0), (KBD1, 1.0), (KBD2, 1.0), (A_SUSTAIN, 10.0)]);
+            let mut t = inst(
+                sr,
+                &[(DRIFT, 0.0), (ON1, 0.0), (ON2, 0.0), (CUTOFF, note_hz(60.0)), (EMPHASIS, 10.0), (CONTOUR, 0.0), (KBD1, 1.0), (KBD2, 1.0), (A_SUSTAIN, 10.0)],
+            );
             let (l, _) = render(&mut t, 1 << 18, 512, &[(0, [0x90, note as u8, 100])]);
             let peak = l[1 << 17..].iter().fold(0.0f32, |m, v| m.max(v.abs()));
             assert!(peak > 0.02, "note {note} at {sr}: silent ({peak})");
@@ -103,22 +149,34 @@ fn aliasing_of_a_bright_note_end_to_end() {
     // A saw high up with the filter wide open, through the mixer's saturation and the ladder.
     const N: usize = 1 << 16;
     let note = 96u8; // about 2093 Hz
-    let mut t = inst(SR, &[(DRIFT, 0.0), (WAVE1, 2.0), (RANGE1, 3.0), (ON2, 0.0), (LEVEL1, 7.0), (CUTOFF, 20000.0), (CONTOUR, 0.0), (EMPHASIS, 0.0), (A_SUSTAIN, 10.0)]);
+    let mut t = inst(
+        SR,
+        &[(DRIFT, 0.0), (WAVE1, 2.0), (RANGE1, 3.0), (ON2, 0.0), (LEVEL1, 7.0), (CUTOFF, 20000.0), (CONTOUR, 0.0), (EMPHASIS, 0.0), (A_SUSTAIN, 10.0)],
+    );
     let (l, _) = render(&mut t, 2 * N, 512, &[(0, [0x90, note, 100])]);
     // Blackman-Harris, so nothing leaks: its side lobes are at -92 dB and it's 4 bins wide.
-    let tail: Vec<f32> = l[N..].iter().enumerate().map(|(i, v)| {
-        let a = std::f64::consts::TAU * i as f64 / N as f64;
-        v * (0.35875 - 0.48829 * a.cos() + 0.14128 * (2.0 * a).cos() - 0.01168 * (3.0 * a).cos()) as f32
-    }).collect();
+    let tail: Vec<f32> = l[N..]
+        .iter()
+        .enumerate()
+        .map(|(i, v)| {
+            let a = std::f64::consts::TAU * i as f64 / N as f64;
+            v * (0.35875 - 0.48829 * a.cos() + 0.14128 * (2.0 * a).cos() - 0.01168 * (3.0 * a).cos()) as f32
+        })
+        .collect();
     let s = spectrum(&tail);
     let f0 = note_hz(note as f32) as f64;
     let bin_hz = SR as f64 / N as f64;
     // Everything further than a few bins from a harmonic, in the audio band.
-    let worst = s.iter().enumerate().filter(|(k, _)| {
-        let hz = *k as f64 * bin_hz;
-        let h = (hz / f0).round() * f0;
-        (hz - h).abs() > 8.0 * bin_hz && hz > 30.0 && hz < 20000.0
-    }).map(|(_, v)| *v).fold(0.0, f64::max);
+    let worst = s
+        .iter()
+        .enumerate()
+        .filter(|(k, _)| {
+            let hz = *k as f64 * bin_hz;
+            let h = (hz / f0).round() * f0;
+            (hz - h).abs() > 8.0 * bin_hz && hz > 30.0 && hz < 20000.0
+        })
+        .map(|(_, v)| *v)
+        .fold(0.0, f64::max);
     let peak = s.iter().copied().fold(0.0, f64::max);
     let a = db(worst / peak);
     println!("end-to-end aliasing, note 96 saw, filter open: {a:.1} dB");
@@ -129,12 +187,49 @@ fn aliasing_of_a_bright_note_end_to_end() {
 fn no_nan_or_runaway_on_extreme_settings() {
     let extremes: Vec<Vec<(u32, f32)>> = vec![
         // Everything up, feedback screaming.
-        vec![(ON3, 1.0), (NOISE_ON, 1.0), (FEEDBACK_ON, 1.0), (LEVEL1, 10.0), (LEVEL2, 10.0), (LEVEL3, 10.0), (NOISE, 10.0), (FEEDBACK, 10.0), (CUTOFF, 20000.0), (EMPHASIS, 10.0), (CONTOUR, 10.0), (VOLUME, 10.0), (DRIFT, 1.0)],
+        vec![
+            (ON3, 1.0),
+            (NOISE_ON, 1.0),
+            (FEEDBACK_ON, 1.0),
+            (LEVEL1, 10.0),
+            (LEVEL2, 10.0),
+            (LEVEL3, 10.0),
+            (NOISE, 10.0),
+            (FEEDBACK, 10.0),
+            (CUTOFF, 20000.0),
+            (EMPHASIS, 10.0),
+            (CONTOUR, 10.0),
+            (VOLUME, 10.0),
+            (DRIFT, 1.0),
+        ],
         // Filter at the bottom with full resonance and audio-rate cutoff modulation.
-        vec![(CUTOFF, 20.0), (EMPHASIS, 10.0), (FILTER_MOD, 1.0), (OSC_MOD, 1.0), (MOD_AMOUNT, 10.0), (MOD_MIX, 5.0), (RANGE3, 5.0), (WAVE3, 2.0), (VOLUME, 10.0)],
+        vec![
+            (CUTOFF, 20.0),
+            (EMPHASIS, 10.0),
+            (FILTER_MOD, 1.0),
+            (OSC_MOD, 1.0),
+            (MOD_AMOUNT, 10.0),
+            (MOD_MIX, 5.0),
+            (RANGE3, 5.0),
+            (WAVE3, 2.0),
+            (VOLUME, 10.0),
+        ],
         // Every voice at once, hard unison.
         vec![(VOICE_MODE, 1.0), (VOICES, 4.0), (UNISON_DETUNE, 1.0), (SPREAD, 1.0), (FEEDBACK_ON, 1.0), (FEEDBACK, 10.0), (EMPHASIS, 10.0), (VOLUME, 10.0)],
-        vec![(VOICE_MODE, 2.0), (VOICES, 4.0), (F_ATTACK, 1.0), (F_DECAY, 4.0), (F_SUSTAIN, 10.0), (A_ATTACK, 1.0), (A_DECAY, 4.0), (A_SUSTAIN, 10.0), (GLIDE_ON, 1.0), (GLIDE, 1.0), (BEND_RANGE, 12.0), (VOLUME, 10.0)],
+        vec![
+            (VOICE_MODE, 2.0),
+            (VOICES, 4.0),
+            (F_ATTACK, 1.0),
+            (F_DECAY, 4.0),
+            (F_SUSTAIN, 10.0),
+            (A_ATTACK, 1.0),
+            (A_DECAY, 4.0),
+            (A_SUSTAIN, 10.0),
+            (GLIDE_ON, 1.0),
+            (GLIDE, 1.0),
+            (BEND_RANGE, 12.0),
+            (VOLUME, 10.0),
+        ],
     ];
     for (k, settings) in extremes.iter().enumerate() {
         let mut t = inst(SR, settings);
@@ -175,7 +270,18 @@ fn stays_clean_through_extreme_settings_changed_mid_note() {
 
 #[test]
 fn output_doesnt_depend_on_the_block_size() {
-    let settings: Vec<(u32, f32)> = vec![(ON3, 1.0), (NOISE_ON, 1.0), (NOISE, 2.0), (GLIDE_ON, 1.0), (FILTER_MOD, 1.0), (OSC_MOD, 1.0), (RANGE3, 0.0), (OSC3_KBD, 0.0), (DRIFT, 1.0), (MOD_AMOUNT, 3.0)];
+    let settings: Vec<(u32, f32)> = vec![
+        (ON3, 1.0),
+        (NOISE_ON, 1.0),
+        (NOISE, 2.0),
+        (GLIDE_ON, 1.0),
+        (FILTER_MOD, 1.0),
+        (OSC_MOD, 1.0),
+        (RANGE3, 0.0),
+        (OSC3_KBD, 0.0),
+        (DRIFT, 1.0),
+        (MOD_AMOUNT, 3.0),
+    ];
     let mut events = Vec::new();
     for i in 0..30usize {
         events.push((i * 3333 + 11, [0x90, (40 + (i * 7) % 40) as u8, 100]));
@@ -200,7 +306,8 @@ fn output_doesnt_depend_on_the_block_size() {
 fn renders_repeat_exactly_after_a_reset_and_an_instance_differs_by_seed() {
     let settings = [(DRIFT, 1.0), (NOISE_ON, 1.0), (NOISE, 1.0), (ON3, 1.0)];
     let mut t = inst(SR, &settings);
-    let events = [(0usize, [0x90, 48, 100]), (20000, [0x80, 48, 0]), (24000, [0x90, 55, 100]), (40000, [0xB0, 1, 90]), (41000, [0xE0, 0, 90]), (42000, [0xB0, 64, 127])];
+    let events =
+        [(0usize, [0x90, 48, 100]), (20000, [0x80, 48, 0]), (24000, [0x90, 55, 100]), (40000, [0xB0, 1, 90]), (41000, [0xE0, 0, 90]), (42000, [0xB0, 64, 127])];
     let a = render(&mut t, 48000, 512, &events);
     t.reset();
     let b = render(&mut t, 48000, 512, &events);
@@ -288,7 +395,21 @@ fn moving_a_knob_mid_note_doesnt_zipper() {
 fn contours_take_their_times_and_decay_switch_works() {
     // The loudness contour through a wide open filter: measured on the signal's envelope.
     let level = |x: &[f32]| x.iter().fold(0.0f32, |m, v| m.max(v.abs()));
-    let s = |decay_on: f32| vec![(DRIFT, 0.0), (WAVE1, 3.0), (ON2, 0.0), (LEVEL1, 3.0), (CUTOFF, 20000.0), (CONTOUR, 0.0), (EMPHASIS, 0.0), (A_ATTACK, 100.0), (A_DECAY, 200.0), (A_SUSTAIN, 5.0), (DECAY_ON, decay_on)];
+    let s = |decay_on: f32| {
+        vec![
+            (DRIFT, 0.0),
+            (WAVE1, 3.0),
+            (ON2, 0.0),
+            (LEVEL1, 3.0),
+            (CUTOFF, 20000.0),
+            (CONTOUR, 0.0),
+            (EMPHASIS, 0.0),
+            (A_ATTACK, 100.0),
+            (A_DECAY, 200.0),
+            (A_SUSTAIN, 5.0),
+            (DECAY_ON, decay_on),
+        ]
+    };
     let mut t = inst(SR, &s(1.0));
     let sec = |t: f32| (t * SR) as usize;
     let (l, _) = render(&mut t, sec(1.5), 512, &[(0, [0x90, 60, 100]), (sec(0.8), [0x80, 60, 0])]);
@@ -320,7 +441,10 @@ fn low_note_priority_single_trigger_by_default() {
     let (l, _) = render(&mut t, 1 << 18, 512, &[(0, [0x90, 48, 100]), (2000, [0x90, 60, 100])]);
     assert!(cents(pitch_hz(&l, SR), note_hz(48.0)).abs() < 1.0);
     // Let the low one go: the voice moves to the one still held, without a new contour.
-    let mut t = inst(SR, &[(DRIFT, 0.0), (WAVE1, 0.0), (ON2, 0.0), (LEVEL1, 3.0), (CUTOFF, 20000.0), (CONTOUR, 0.0), (EMPHASIS, 0.0), (A_SUSTAIN, 5.0), (A_DECAY, 100.0)]);
+    let mut t = inst(
+        SR,
+        &[(DRIFT, 0.0), (WAVE1, 0.0), (ON2, 0.0), (LEVEL1, 3.0), (CUTOFF, 20000.0), (CONTOUR, 0.0), (EMPHASIS, 0.0), (A_SUSTAIN, 5.0), (A_DECAY, 100.0)],
+    );
     let (l, _) = render(&mut t, 1 << 18, 512, &[(0, [0x90, 48, 100]), (2000, [0x90, 60, 100]), (40000, [0x80, 48, 0])]);
     assert!(cents(pitch_hz(&l, SR), note_hz(60.0)).abs() < 1.0);
     let before = l[30000..39000].iter().fold(0.0f32, |m, v| m.max(v.abs()));
@@ -330,7 +454,19 @@ fn low_note_priority_single_trigger_by_default() {
 
 #[test]
 fn glide_slides_the_pitch_over_its_time() {
-    let s = [(DRIFT, 0.0), (WAVE1, 0.0), (ON2, 0.0), (LEVEL1, 3.0), (CUTOFF, 20000.0), (CONTOUR, 0.0), (EMPHASIS, 0.0), (A_SUSTAIN, 10.0), (GLIDE_ON, 1.0), (GLIDE, 500.0), (PRIORITY, 1.0)];
+    let s = [
+        (DRIFT, 0.0),
+        (WAVE1, 0.0),
+        (ON2, 0.0),
+        (LEVEL1, 3.0),
+        (CUTOFF, 20000.0),
+        (CONTOUR, 0.0),
+        (EMPHASIS, 0.0),
+        (A_SUSTAIN, 10.0),
+        (GLIDE_ON, 1.0),
+        (GLIDE, 500.0),
+        (PRIORITY, 1.0),
+    ];
     let mut t = inst(SR, &s);
     // Two octaves up, legato: measure how far it got by the zero crossings' rate.
     let (l, _) = render(&mut t, 96000, 512, &[(0, [0x90, 48, 100]), (24000, [0x90, 72, 100])]);
@@ -346,7 +482,10 @@ fn glide_slides_the_pitch_over_its_time() {
     assert!(cents(end, note_hz(72.0)).abs() < 30.0, "{end}");
     assert!(mid > before * 1.3 && mid < end * 0.9, "in between: {before} {mid} {end}");
     // Without glide it jumps.
-    let mut t = inst(SR, &[(DRIFT, 0.0), (WAVE1, 0.0), (ON2, 0.0), (LEVEL1, 3.0), (CUTOFF, 20000.0), (CONTOUR, 0.0), (EMPHASIS, 0.0), (A_SUSTAIN, 10.0), (PRIORITY, 1.0)]);
+    let mut t = inst(
+        SR,
+        &[(DRIFT, 0.0), (WAVE1, 0.0), (ON2, 0.0), (LEVEL1, 3.0), (CUTOFF, 20000.0), (CONTOUR, 0.0), (EMPHASIS, 0.0), (A_SUSTAIN, 10.0), (PRIORITY, 1.0)],
+    );
     let (l, _) = render(&mut t, 96000, 512, &[(0, [0x90, 48, 100]), (24000, [0x90, 72, 100])]);
     let ups = l[24100..27100].windows(2).filter(|w| w[0] < 0.0 && w[1] >= 0.0).count();
     assert!(cents(ups as f32 * SR / 3000.0, note_hz(72.0)).abs() < 40.0, "{ups}");
@@ -354,7 +493,20 @@ fn glide_slides_the_pitch_over_its_time() {
 
 #[test]
 fn osc_3_modulates_the_oscillators_and_the_filter_when_the_wheel_says_so() {
-    let base = vec![(DRIFT, 0.0), (WAVE1, 0.0), (ON2, 0.0), (LEVEL1, 3.0), (CUTOFF, 20000.0), (CONTOUR, 0.0), (EMPHASIS, 0.0), (A_SUSTAIN, 10.0), (RANGE3, 0.0), (OSC3_KBD, 0.0), (WAVE3, 0.0), (OSC_MOD, 1.0)];
+    let base = vec![
+        (DRIFT, 0.0),
+        (WAVE1, 0.0),
+        (ON2, 0.0),
+        (LEVEL1, 3.0),
+        (CUTOFF, 20000.0),
+        (CONTOUR, 0.0),
+        (EMPHASIS, 0.0),
+        (A_SUSTAIN, 10.0),
+        (RANGE3, 0.0),
+        (OSC3_KBD, 0.0),
+        (WAVE3, 0.0),
+        (OSC_MOD, 1.0),
+    ];
     let spread = |wheel: u8| {
         let mut t = inst(SR, &base);
         let (l, _) = render(&mut t, 96000, 512, &[(0, [0xB0, 1, wheel]), (1, [0x90, 60, 100])]);

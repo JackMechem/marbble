@@ -202,10 +202,7 @@ pub fn discard_journals(dir: &Path, keep: Option<&Path>) {
 
 /// Every plug-in slot in a project.
 fn slots_mut(p: &mut Project) -> impl Iterator<Item = &mut PluginSlot> {
-    p.tracks
-        .iter_mut()
-        .flat_map(|t| t.instrument.iter_mut().chain(t.inserts.iter_mut().flatten()))
-        .chain(p.master.inserts.iter_mut().flatten())
+    p.tracks.iter_mut().flat_map(|t| t.instrument.iter_mut().chain(t.inserts.iter_mut().flatten())).chain(p.master.inserts.iter_mut().flatten())
 }
 
 /// Why a project document couldn't be opened, in words for the user.
@@ -315,7 +312,8 @@ impl Session {
                     continue;
                 }
             };
-            let used: HashSet<PathBuf> = self.project.clips.iter().map(|c| if Path::new(&c.path).is_absolute() { PathBuf::from(&c.path) } else { self.dir.join(&c.path) }).collect();
+            let used: HashSet<PathBuf> =
+                self.project.clips.iter().map(|c| if Path::new(&c.path).is_absolute() { PathBuf::from(&c.path) } else { self.dir.join(&c.path) }).collect();
             let mut takes = Vec::new();
             for t in &j.takes {
                 let path = take_path(&self.dir, t);
@@ -516,7 +514,15 @@ mod tests {
             punch_range: None,
             latency: 0,
             min_take: 24000,
-            takes: vec![JournalTake { track, track_name: "Vocal".into(), input: InputSel::Mono(0), path: path.to_string_lossy().to_string(), channels: 1, start, bits: 24 }],
+            takes: vec![JournalTake {
+                track,
+                track_name: "Vocal".into(),
+                input: InputSel::Mono(0),
+                path: path.to_string_lossy().to_string(),
+                channels: 1,
+                start,
+                bits: 24,
+            }],
         }
         .write_to(dir)
     }

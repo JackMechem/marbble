@@ -92,7 +92,11 @@ fn split_dashes(w: &str) -> Vec<&str> {
     let b = w.as_bytes();
     for i in 0..b.len() {
         if b[i] == b'-' {
-            let negative_octave = i > 0 && i + 1 < b.len() && b[i + 1].is_ascii_digit() && parse_note(&w[from..i + 2]).is_some() && (i + 2 == b.len() || !b[i + 2].is_ascii_alphanumeric());
+            let negative_octave = i > 0
+                && i + 1 < b.len()
+                && b[i + 1].is_ascii_digit()
+                && parse_note(&w[from..i + 2]).is_some()
+                && (i + 2 == b.len() || !b[i + 2].is_ascii_alphanumeric());
             if !negative_octave {
                 if i > from {
                     out.push(&w[from..i]);

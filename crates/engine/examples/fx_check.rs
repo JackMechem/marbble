@@ -155,7 +155,10 @@ fn check_effect(s: &mut Session, info: &EffectInfo, tone: &str, scratch: &Path) 
     s.set_builtin_param(a, 0, p.id, target).unwrap();
     check(&format!("{}: values are clamped to the range", info.name), clamped);
     s.undo();
-    check(&format!("{}: undo puts {} back (and the sound)", info.name, p.name), (value(s, uid, p.id) - p.default).abs() < 1e-4 && diff(&render(s, len, None), &base) < 1e-4);
+    check(
+        &format!("{}: undo puts {} back (and the sound)", info.name, p.name),
+        (value(s, uid, p.id) - p.default).abs() < 1e-4 && diff(&render(s, len, None), &base) < 1e-4,
+    );
     s.redo();
     check(&format!("{}: redo sets it again", info.name), (value(s, uid, p.id) - target).abs() < 1e-4 && diff(&render(s, len, None), &set) < 1e-4);
     let dir = scratch.join(format!("FxCheck {}.fermata", info.name));
@@ -169,7 +172,10 @@ fn check_effect(s: &mut Session, info: &EffectInfo, tone: &str, scratch: &Path) 
     );
     let copies = s.duplicate_tracks(&[a], true);
     let copy = copies.first().and_then(|c| uid_in(s, *c, 0));
-    check(&format!("{}: a duplicated track's copy keeps the values", info.name), copy.map(|c| c != uid && (value(s, c, p.id) - target).abs() < 1e-4).unwrap_or(false));
+    check(
+        &format!("{}: a duplicated track's copy keeps the values", info.name),
+        copy.map(|c| c != uid && (value(s, c, p.id) - target).abs() < 1e-4).unwrap_or(false),
+    );
     s.delete_tracks(&copies);
     s.set_builtin_param(a, 0, p.id, p.default).unwrap();
 
@@ -182,7 +188,10 @@ fn check_effect(s: &mut Session, info: &EffectInfo, tone: &str, scratch: &Path) 
         check(&format!("{}: automation renders cleanly", info.name), finite(&auto));
     } else {
         let (moved, off) = (diff_settled(&auto, &base), diff_settled(&auto, &set));
-        check(&format!("{}: automating {} changes the output like setting it ({moved:.4} from the default, {off:.5} from set)", info.name, p.name), moved > 1e-3 && off < 1e-3);
+        check(
+            &format!("{}: automating {} changes the output like setting it ({moved:.4} from the default, {off:.5} from set)", info.name, p.name),
+            moved > 1e-3 && off < 1e-3,
+        );
     }
     check(&format!("{}: its parameters are listed for automation lanes", info.name), s.plugin_params(uid).len() == info.params.len());
     s.clear_automation(a, None);
@@ -224,7 +233,10 @@ fn check_effect(s: &mut Session, info: &EffectInfo, tone: &str, scratch: &Path) 
         Some((q, lat)) => {
             s.set_builtin_param(a, 0, q.id, q.max).unwrap();
             settle(s);
-            check(&format!("{}: {} = {} reports {lat} frames to PDC (got {})", info.name, q.name, q.max, reported(s)), reported(s) as usize == lat && s.pdc_total() as usize >= lat);
+            check(
+                &format!("{}: {} = {} reports {lat} frames to PDC (got {})", info.name, q.name, q.max, reported(s)),
+                reported(s) as usize == lat && s.pdc_total() as usize >= lat,
+            );
             let latent_render = render(s, len, None);
             let off = diff_settled(&latent_render, &base);
             check(&format!("{}: a latent render stays in line with the timeline (diff {off:.5})", info.name), finite(&latent_render) && off < 1e-3);
@@ -276,7 +288,13 @@ fn check_effect(s: &mut Session, info: &EffectInfo, tone: &str, scratch: &Path) 
             let muted = peak(&render(s, len, Some(a)));
             s.update_track_linked(b, TrackPatch { mute: Some(false), ..Default::default() });
             check(
-                &format!("Noise Gate: opened by another track ({:.1} dB alone, {:.1} keyed, {:.1} in the mix, {:.1} with the key muted)", db(alone), db(opened), db(mix), db(muted)),
+                &format!(
+                    "Noise Gate: opened by another track ({:.1} dB alone, {:.1} keyed, {:.1} in the mix, {:.1} with the key muted)",
+                    db(alone),
+                    db(opened),
+                    db(mix),
+                    db(muted)
+                ),
                 alone < 1e-4 && (db(opened) - (db(peak(&dry)) - 12.0)).abs() < 1.0 && mix > opened && muted < 1e-4,
             );
             s.set_region_gain(&[region], Some(0.0), None);
@@ -302,7 +320,10 @@ fn check_effect(s: &mut Session, info: &EffectInfo, tone: &str, scratch: &Path) 
     let off = diff(&cut(&frozen), &cut(&live));
     check(&format!("{}: freezing bakes it in (diff {off:.5})", info.name), off < 1e-3 && unloaded);
     s.unfreeze_track(a).unwrap();
-    check(&format!("{}: unfreezing loads it with its values", info.name), (value(s, uid, p.id) - target).abs() < 1e-4 && diff(&render(s, len, None), &live) < 1e-4);
+    check(
+        &format!("{}: unfreezing loads it with its values", info.name),
+        (value(s, uid, p.id) - target).abs() < 1e-4 && diff(&render(s, len, None), &live) < 1e-4,
+    );
 
     s.delete_track(a);
 }
@@ -454,7 +475,10 @@ fn main() {
     let renamed = daw_engine::presets::rename_user(&root, "builtin:noise-gate", "Fx Check Kick", "Kick 2").is_ok();
     let listed = daw_engine::presets::list_user(&root, "builtin:noise-gate");
     let deleted = daw_engine::presets::delete_user(&root, "builtin:noise-gate", "Kick 2").is_ok();
-    check("user presets rename and delete", renamed && listed == vec!["Kick 2".to_string()] && deleted && daw_engine::presets::list_user(&root, "builtin:noise-gate").is_empty());
+    check(
+        "user presets rename and delete",
+        renamed && listed == vec!["Kick 2".to_string()] && deleted && daw_engine::presets::list_user(&root, "builtin:noise-gate").is_empty(),
+    );
 
     if FAILED.load(std::sync::atomic::Ordering::Relaxed) {
         std::process::exit(1);

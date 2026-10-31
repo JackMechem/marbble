@@ -27,7 +27,12 @@ fn sampler_edit<T>(state: &State<AppState>, label: &str, key: Option<String>, f:
 }
 
 /// The same from a worker: the edit itself runs on the main thread.
-fn sampler_edit_on_main<T: Send + 'static>(app: &tauri::AppHandle, state: &State<AppState>, label: &'static str, f: impl FnOnce(&mut Session) -> anyhow::Result<T> + Send + 'static) -> R<WithSnap<T>> {
+fn sampler_edit_on_main<T: Send + 'static>(
+    app: &tauri::AppHandle,
+    state: &State<AppState>,
+    label: &'static str,
+    f: impl FnOnce(&mut Session) -> anyhow::Result<T> + Send + 'static,
+) -> R<WithSnap<T>> {
     let session = state.session.clone();
     let (tx, rx) = std::sync::mpsc::channel();
     app.run_on_main_thread(move || {
@@ -73,7 +78,13 @@ pub fn sampler_delete_zones(state: State<AppState>, track: Id, ids: Vec<u64>) ->
 
 /// Adds audio files, decoding them on this worker first so a big drop doesn't hold up the window.
 #[tauri::command(async)]
-pub fn sampler_add_files(app: tauri::AppHandle, state: State<AppState>, track: Id, paths: Vec<PathBuf>, at_key: Option<u8>) -> R<WithSnap<daw_engine::session::SamplerAdded>> {
+pub fn sampler_add_files(
+    app: tauri::AppHandle,
+    state: State<AppState>,
+    track: Id,
+    paths: Vec<PathBuf>,
+    at_key: Option<u8>,
+) -> R<WithSnap<daw_engine::session::SamplerAdded>> {
     let (pool, dir) = with(&state, |s| (s.sampler_pool(), s.sampler_dir()));
     let prepared = daw_engine::session::prepare_files(&pool, &dir, std::path::Path::new(""), &paths);
     sampler_edit_on_main(&app, &state, "Add Samples", move |s| s.sampler_add_prepared(track, prepared, at_key))

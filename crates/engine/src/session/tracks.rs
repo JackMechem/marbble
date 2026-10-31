@@ -59,7 +59,16 @@ impl Session {
             };
             track.name = if pid == BUILTIN_SYNTH { format!("Inst {count}") } else { name.clone() };
             let params = built_in.map(|i| i.params.iter().map(|p| (p.id, p.default)).collect()).unwrap_or_default();
-            track.instrument = Some(PluginSlot { uid: self.project.alloc_id(), plugin_id: pid, name, bypass: false, state: None, params, sidechain: None, sidechain_pre: false });
+            track.instrument = Some(PluginSlot {
+                uid: self.project.alloc_id(),
+                plugin_id: pid,
+                name,
+                bypass: false,
+                state: None,
+                params,
+                sidechain: None,
+                sidechain_pre: false,
+            });
         }
         let dsp = self.build_track(&track);
         let idx = index.unwrap_or(self.project.tracks.len()).min(self.project.tracks.len());
@@ -114,7 +123,12 @@ impl Session {
             .project
             .tracks
             .iter()
-            .filter(|t| t.kind != TrackKind::Aux && t.regions.is_empty() && t.alternatives.iter().all(|a| a.regions.is_empty()) && !(t.kind.is_stack() && self.project.tracks.iter().any(|c| c.parent == Some(t.id))))
+            .filter(|t| {
+                t.kind != TrackKind::Aux
+                    && t.regions.is_empty()
+                    && t.alternatives.iter().all(|a| a.regions.is_empty())
+                    && !(t.kind.is_stack() && self.project.tracks.iter().any(|c| c.parent == Some(t.id)))
+            })
             .map(|t| t.id)
             .collect();
         // An aux is used while a track that stays sends or routes to it. Auxes can feed each
@@ -148,7 +162,9 @@ impl Session {
         self.project.tracks.sort_by_key(|t| ids.iter().position(|&i| i == t.id).unwrap_or(usize::MAX));
         for &(id, parent) in parents {
             // A track can't go into itself or one of its own subtracks.
-            let ok = parent.map(|p| p != id && !self.project.descendants(id).contains(&p) && self.project.track(p).map(|t| t.kind.is_stack()).unwrap_or(false)).unwrap_or(true);
+            let ok = parent
+                .map(|p| p != id && !self.project.descendants(id).contains(&p) && self.project.track(p).map(|t| t.kind.is_stack()).unwrap_or(false))
+                .unwrap_or(true);
             // Auxes stay out of stacks, which keeps feedback loops out of the stack tree.
             let ok = ok && (parent.is_none() || !self.project.is_aux(id));
             if let (true, Some(t)) = (ok, self.project.track_mut(id)) {
@@ -217,11 +233,7 @@ impl Session {
                 } else {
                     t.automation.clear();
                 }
-                t.regions = if content {
-                    src.regions.iter().map(|r| Region { id: self.project.alloc_id(), ..r.clone() }).collect()
-                } else {
-                    Vec::new()
-                };
+                t.regions = if content { src.regions.iter().map(|r| Region { id: self.project.alloc_id(), ..r.clone() }).collect() } else { Vec::new() };
                 // Track alternatives are content too, and their regions need ids of their own:
                 // a copy sharing them would edit the original's regions once both play them.
                 if content {
@@ -270,7 +282,8 @@ impl Session {
         let order: Vec<Id> = self.project.tracks.iter().map(|t| t.id).filter(|id| ids.contains(id)).collect();
         let first = *order.first()?;
         let parent = self.project.track(first)?.parent;
-        let members: Vec<Id> = order.into_iter().filter(|id| self.project.track(*id).map(|t| t.parent == parent && t.kind != TrackKind::Aux).unwrap_or(false)).collect();
+        let members: Vec<Id> =
+            order.into_iter().filter(|id| self.project.track(*id).map(|t| t.parent == parent && t.kind != TrackKind::Aux).unwrap_or(false)).collect();
         let first = *members.first()?;
         let idx = self.project.tracks.iter().position(|t| t.id == first)?;
         let kind = if summing { TrackKind::Summing } else { TrackKind::Folder };

@@ -7,8 +7,8 @@ use super::kernel::{kernels, Bank, Kernels, GUARD, MAX_TAPS};
 use super::map::SamplerMap;
 use crate::synth_dsp::env::{EnvShape, EnvStage, Envelope, END_LEVEL};
 use crate::synth_dsp::filter::{cutoff_g, Ladder, ZdfFilter};
-use crate::synth_dsp::smooth::Glide;
 use crate::synth_dsp::pow2;
+use crate::synth_dsp::smooth::Glide;
 
 /// A stolen voice's fade. Long enough not to click, short enough to stay out of the way.
 pub const STEAL_FADE_SECS: f32 = 0.004;
@@ -394,5 +394,3 @@ impl Voice {
         self.inc
     }
 }
-
-

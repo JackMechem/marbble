@@ -9,8 +9,8 @@ use std::collections::{HashMap, HashSet};
 use serde::{Deserialize, Serialize};
 
 use crate::fades::{DragMode, FadeShape};
-use crate::prefs::{BitDepth, ClickSettings};
 use crate::pattern::Pattern;
+use crate::prefs::{BitDepth, ClickSettings};
 use crate::region_params::RegionParams;
 use crate::tempo::{SigEvent, TempoEvent};
 

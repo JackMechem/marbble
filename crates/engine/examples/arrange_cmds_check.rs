@@ -42,7 +42,11 @@ fn write_notes(path: &Path, rate: u32, notes: &[(f64, f64)]) {
     let buf: Vec<f32> = (0..rate as usize * 3)
         .map(|i| {
             let t = i as f64 / sr;
-            if notes.iter().any(|&(a, b)| t >= a && t < b) { 0.5 * (std::f64::consts::TAU * 440.0 * t).sin() as f32 } else { 0.0 }
+            if notes.iter().any(|&(a, b)| t >= a && t < b) {
+                0.5 * (std::f64::consts::TAU * 440.0 * t).sin() as f32
+            } else {
+                0.0
+            }
         })
         .collect();
     daw_engine::decode::write_wav(path, rate, &[buf]).unwrap();
@@ -179,10 +183,16 @@ fn main() {
     s.section_edit(SectionEdit::InsertSilence, l, r, None).unwrap();
     let got = spans(&s, a);
     check(&format!("insert silence cuts the region at the left locator and moves its tail: {got:?}"), got == vec![(sr / 2, l, 0), (r, sr * 3, sr / 2)]);
-    check(&format!("the markers and the arrangement section move with their time: {:?}", markers(&s)), markers(&s) == vec![sr * 12 / 10 + n, 2 * sr + n] && s.project.arrangement[0].length == 3 * sr + n);
+    check(
+        &format!("the markers and the arrangement section move with their time: {:?}", markers(&s)),
+        markers(&s) == vec![sr * 12 / 10 + n, 2 * sr + n] && s.project.arrangement[0].length == 3 * sr + n,
+    );
     let r1 = render(&mut s, &tracks, len + n);
     let d = compare(&r1, &r0, &[(0, 0, l), (r, l, len - l)], sr);
-    check(&format!("the render plays the old audio with half a second of silence at 1 s (diff {d:?}, gap peak {:.6})", peak(&r1.plain, l, r)), ok(d) && peak(&r1.plain, l, r) < 1e-6);
+    check(
+        &format!("the render plays the old audio with half a second of silence at 1 s (diff {d:?}, gap peak {:.6})", peak(&r1.plain, l, r)),
+        ok(d) && peak(&r1.plain, l, r) < 1e-6,
+    );
     s.undo();
     let back = render(&mut s, &tracks, len);
     check("undo puts it back", spans(&s, a) == a0 && compare(&back, &r0, &[(0, 0, len)], sr) == (0.0, 0.0));
@@ -191,7 +201,10 @@ fn main() {
     s.checkpoint(SectionEdit::Cut.label(), None, false);
     s.section_edit(SectionEdit::Cut, l, r, None).unwrap();
     let got = (spans(&s, a), spans(&s, b));
-    check(&format!("cut section takes the section out of the region, drops what was inside it, and closes the gap: {got:?}"), got == (vec![(sr / 2, l, 0), (l, 2 * sr, sr)], vec![(sr * 22 / 10 - n, sr * 28 / 10 - n, 0)]));
+    check(
+        &format!("cut section takes the section out of the region, drops what was inside it, and closes the gap: {got:?}"),
+        got == (vec![(sr / 2, l, 0), (l, 2 * sr, sr)], vec![(sr * 22 / 10 - n, sr * 28 / 10 - n, 0)]),
+    );
     check(&format!("the marker inside the section goes: {:?}", markers(&s)), markers(&s) == vec![2 * sr - n]);
     let r2 = render(&mut s, &tracks, len - n);
     let d = compare(&r2, &r0, &[(0, 0, l), (l, r, len - r)], sr);
@@ -201,7 +214,10 @@ fn main() {
     s.checkpoint("Insert Cut Section", None, false);
     let made = s.insert_cut_section(l).unwrap();
     let got = (spans(&s, a), spans(&s, b));
-    check(&format!("insert cut section puts the section's regions back ({} of them): {got:?}", made.len()), made.len() == 2 && got.1 == b0 && got.0 == vec![(sr / 2, l, 0), (l, r, sr / 2), (r, sr * 5 / 2, sr)]);
+    check(
+        &format!("insert cut section puts the section's regions back ({} of them): {got:?}", made.len()),
+        made.len() == 2 && got.1 == b0 && got.0 == vec![(sr / 2, l, 0), (l, r, sr / 2), (r, sr * 5 / 2, sr)],
+    );
     let r3 = render(&mut s, &tracks, len);
     let d = compare(&r3, &r0, &[(0, 0, len)], sr);
     check(&format!("and the project plays as before the cut (diff {d:?}), markers {:?}", markers(&s)), ok(d) && markers(&s) == vec![sr * 12 / 10, 2 * sr]);
@@ -213,7 +229,10 @@ fn main() {
     s.checkpoint(SectionEdit::Repeat.label(), None, false);
     let made = s.section_edit(SectionEdit::Repeat, l, r, None).unwrap();
     let got = spans(&s, b);
-    check(&format!("repeat section copies the region inside it after the right locator and moves the later one on: {got:?}"), got == vec![(sr * 11 / 10, sr * 13 / 10, 0), (sr * 11 / 10 + n, sr * 13 / 10 + n, 0), (sr * 22 / 10 + n, sr * 28 / 10 + n, 0)]);
+    check(
+        &format!("repeat section copies the region inside it after the right locator and moves the later one on: {got:?}"),
+        got == vec![(sr * 11 / 10, sr * 13 / 10, 0), (sr * 11 / 10 + n, sr * 13 / 10 + n, 0), (sr * 22 / 10 + n, sr * 28 / 10 + n, 0)],
+    );
     check(&format!("the copies are returned to select ({})", made.len()), made.len() == 2);
     let r4 = render(&mut s, &tracks, len + n);
     let d = compare(&r4, &r0, &[(0, 0, r), (r, l, n), (r + n, r, len - r)], sr);
@@ -223,16 +242,22 @@ fn main() {
 
     // ---- Remove Gaps and Remove Overlaps on track B.
     let c = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
-    let ids: Vec<Id> = [(0, 3), (5, 3), (9, 3)].iter().map(|&(at, l)| {
-        let id = s.import_audio(&noise, c, sr * at / 10).unwrap();
-        s.resize_region(id, sr * at / 10, sr * l / 10);
-        id
-    }).collect();
+    let ids: Vec<Id> = [(0, 3), (5, 3), (9, 3)]
+        .iter()
+        .map(|&(at, l)| {
+            let id = s.import_audio(&noise, c, sr * at / 10).unwrap();
+            s.resize_region(id, sr * at / 10, sr * l / 10);
+            id
+        })
+        .collect();
     let c0 = spans(&s, c);
     s.checkpoint("Remove Gaps", None, false);
     s.remove_gaps(&ids);
     let got = spans(&s, c);
-    check(&format!("remove gaps butts the regions together: {got:?}"), got.iter().map(|g| (g.0, g.1)).collect::<Vec<_>>() == vec![(0, sr * 3 / 10), (sr * 3 / 10, sr * 6 / 10), (sr * 6 / 10, sr * 9 / 10)]);
+    check(
+        &format!("remove gaps butts the regions together: {got:?}"),
+        got.iter().map(|g| (g.0, g.1)).collect::<Vec<_>>() == vec![(0, sr * 3 / 10), (sr * 3 / 10, sr * 6 / 10), (sr * 6 / 10, sr * 9 / 10)],
+    );
     s.undo();
     check("undo puts the gaps back", spans(&s, c) == c0);
     s.move_region(ids[1], sr * 2 / 10, None);
@@ -248,7 +273,10 @@ fn main() {
     s.checkpoint("Paste Replace", None, false);
     let made = s.paste_replace(&[(a, item)], sr);
     let got = spans(&s, a);
-    check(&format!("paste replace cuts a hole for the pasted region: {got:?}"), made.len() == 1 && got == vec![(sr / 2, sr, 0), (sr, sr * 13 / 10, 0), (sr * 13 / 10, sr * 5 / 2, sr * 8 / 10)]);
+    check(
+        &format!("paste replace cuts a hole for the pasted region: {got:?}"),
+        made.len() == 1 && got == vec![(sr / 2, sr, 0), (sr, sr * 13 / 10, 0), (sr * 13 / 10, sr * 5 / 2, sr * 8 / 10)],
+    );
     s.undo();
     check("undo restores the region underneath", spans(&s, a) == a0);
 

@@ -282,7 +282,11 @@ impl Effect for Delay {
         let target = times.map(|ms| {
             let d = (ms * 0.001 * sr).clamp(2.0, max_d);
             // Clean modes read whole samples, so unmodulated repeats lose no treble.
-            if clean { d.round() } else { d }
+            if clean {
+                d.round()
+            } else {
+                d
+            }
         });
         let fb_t = self.feedback();
         let cross_t = if mode == PING_PONG { 0.0 } else { self.v(CROSSFEED) };
@@ -369,10 +373,7 @@ impl Effect for Delay {
                 (0.5 * (il + ir) * self.gate + self.fb[0] * yr, self.fb[1] * yl)
             } else {
                 let c = self.cross;
-                (
-                    il * self.gate + self.fb[0] * ((1.0 - c) * yl + c * yr),
-                    ir * self.gate + self.fb[1] * ((1.0 - c) * yr + c * yl),
-                )
+                (il * self.gate + self.fb[0] * ((1.0 - c) * yl + c * yr), ir * self.gate + self.fb[1] * ((1.0 - c) * yr + c * yl))
             };
             if low_cut {
                 xl = self.low_cut[0].process(xl);

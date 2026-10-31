@@ -159,7 +159,10 @@ impl Session {
 
     fn strip_plugins(&self, instrument: Option<&PluginSlot>, inserts: &[Option<PluginSlot>], limit: u32) -> StripPlugins {
         let mut s = StripPlugins { active: 0, bypassed: 0, skip: 0, slots: Vec::new() };
-        let all = instrument.map(|i| (INSTRUMENT_BIT, i)).into_iter().chain(inserts.iter().enumerate().filter_map(|(k, i)| i.as_ref().map(|i| (1u16 << k.min(14), i))));
+        let all = instrument
+            .map(|i| (INSTRUMENT_BIT, i))
+            .into_iter()
+            .chain(inserts.iter().enumerate().filter_map(|(k, i)| i.as_ref().map(|i| (1u16 << k.min(14), i))));
         for (bit, slot) in all {
             let lat = self.slot_latency(slot);
             if lat == 0 {
@@ -203,7 +206,8 @@ impl Session {
                 sends[k] = s.filter(|s| s.bus != t.id && p.is_aux(s.bus)).map(|s| s.bus);
             }
             // Off, or gone: nothing arrives from it.
-            let source = t.instrument_output.filter(|o| !p.is_off(o.track)).and_then(|o| p.track(o.track)?.instrument.as_ref().map(|s| (o.track, self.slot_latency(s))));
+            let source =
+                t.instrument_output.filter(|o| !p.is_off(o.track)).and_then(|o| p.track(o.track)?.instrument.as_ref().map(|s| (o.track, self.slot_latency(s))));
             nodes.push(Node { id, latency: sp.active + sp.bypassed, output: p.output_of(id), sends, off, source });
             plugins.insert(id, sp);
         }
@@ -336,7 +340,14 @@ mod tests {
     fn off_strips_take_no_part() {
         // 1 (500 frames) is off; 2 (100 frames) plays out and sends to aux 9 (50 frames) as 3
         // does, and 4 (800 frames) plays only into aux 8, which is off.
-        let mut nodes = vec![node(1, 0, None, &[]), node(2, 100, None, &[(0, 9)]), node(3, 0, None, &[(0, 9)]), node(4, 800, Some(8), &[]), node(8, 0, None, &[]), node(9, 50, None, &[])];
+        let mut nodes = vec![
+            node(1, 0, None, &[]),
+            node(2, 100, None, &[(0, 9)]),
+            node(3, 0, None, &[(0, 9)]),
+            node(4, 800, Some(8), &[]),
+            node(8, 0, None, &[]),
+            node(9, 50, None, &[]),
+        ];
         nodes[0].off = true;
         nodes[4].off = true;
         let (t, master) = solve(&nodes);

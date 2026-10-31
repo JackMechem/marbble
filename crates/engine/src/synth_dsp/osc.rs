@@ -19,13 +19,17 @@ pub enum Wave {
     Sine,
     /// A triangle whose peak sits at `width` of the cycle: 0.5 is symmetric, near 1 a soft
     /// ramp that falls fast.
-    Triangle { width: f32 },
+    Triangle {
+        width: f32,
+    },
     /// Rises through the cycle and jumps down.
     Saw,
     /// Falls through the cycle and jumps up.
     RevSaw,
     /// High for `width` of the cycle (0.5 is a square); clamped to 0.01..0.99.
-    Pulse { width: f32 },
+    Pulse {
+        width: f32,
+    },
 }
 
 /// A jump's residual at the 4 sample positions around it. `d` is how far past the jump (in
@@ -35,12 +39,7 @@ fn blep(d: f32) -> [f32; 4] {
     let (d2, u) = (d * d, 1.0 - d);
     let u2 = u * u;
     const K: f32 = 1.0 / 24.0;
-    [
-        K * d2 * d2,
-        K * (1.0 + d * (4.0 + d * (6.0 + d * (4.0 - 3.0 * d)))),
-        -K * (1.0 + u * (4.0 + u * (6.0 + u * (4.0 - 3.0 * u)))),
-        -K * u2 * u2,
-    ]
+    [K * d2 * d2, K * (1.0 + d * (4.0 + d * (6.0 + d * (4.0 - 3.0 * d)))), -K * (1.0 + u * (4.0 + u * (6.0 + u * (4.0 - 3.0 * u)))), -K * u2 * u2]
 }
 
 /// A corner's residual at the same 4 positions, for a slope change of 1 per sample: the integral

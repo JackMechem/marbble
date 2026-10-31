@@ -59,7 +59,16 @@ impl Session {
         let f = t.frozen?;
         let clip = self.clips.get(&f.clip)?.clone();
         let length = clip.frames() as i64;
-        Some(Arc::new(vec![RegionDsp::Audio { start: f.start, length, offset: 0, gain: 1.0, clip, fade_in: (f.start, 0), fade_out: (f.start + length, 0), laws: Default::default() }]))
+        Some(Arc::new(vec![RegionDsp::Audio {
+            start: f.start,
+            length,
+            offset: 0,
+            gain: 1.0,
+            clip,
+            fade_in: (f.start, 0),
+            fade_out: (f.start + length, 0),
+            laws: Default::default(),
+        }]))
     }
 
     /// Freeze, step one: renders each track in `ids` through its instrument, Channel EQ and
@@ -80,7 +89,12 @@ impl Session {
                 return Err(anyhow!("{} is already frozen", t.name));
             }
             let map = self.tempo_map();
-            let span = t.regions.iter().filter(|r| !r.muted).map(|r| crate::region_params::bounds(r, &map)).fold(None, |acc: Option<(i64, i64)>, (s, e)| Some(acc.map_or((s, e), |(a, b)| (a.min(s), b.max(e)))));
+            let span = t
+                .regions
+                .iter()
+                .filter(|r| !r.muted)
+                .map(|r| crate::region_params::bounds(r, &map))
+                .fold(None, |acc: Option<(i64, i64)>, (s, e)| Some(acc.map_or((s, e), |(a, b)| (a.min(s), b.max(e)))));
             let Some((from, to)) = span else { return Err(anyhow!("{} has no regions to freeze", t.name)) };
             let name = t.name.clone();
             let iso = self.isolate_track(id, false, true);
@@ -114,7 +128,13 @@ impl Session {
                 let _ = std::fs::remove_file(&r.path);
                 continue;
             };
-            let states: Vec<(Id, String)> = t.inserts.iter().flatten().chain(t.instrument.iter()).filter_map(|s| self.controllers.get(&s.uid).map(|c| (s.uid, encode_state(&c.save_state())))).collect();
+            let states: Vec<(Id, String)> = t
+                .inserts
+                .iter()
+                .flatten()
+                .chain(t.instrument.iter())
+                .filter_map(|s| self.controllers.get(&s.uid).map(|c| (s.uid, encode_state(&c.save_state()))))
+                .collect();
             let clip = self.add_clip(&r.path, r.clip);
             let tm = self.project.track_mut(r.track).unwrap();
             for slot in tm.inserts.iter_mut().flatten().chain(tm.instrument.iter_mut()) {
@@ -203,7 +223,8 @@ impl Session {
         if cur.frozen.is_none() && t.frozen.is_none() {
             return false;
         }
-        let uids = |x: &Track| x.inserts.iter().map(|s| s.as_ref().map(|s| s.uid)).chain(std::iter::once(x.instrument.as_ref().map(|s| s.uid))).collect::<Vec<_>>();
+        let uids =
+            |x: &Track| x.inserts.iter().map(|s| s.as_ref().map(|s| s.uid)).chain(std::iter::once(x.instrument.as_ref().map(|s| s.uid))).collect::<Vec<_>>();
         match (cur.frozen.is_some(), t.frozen.is_some()) {
             (true, false) => self.load_plugins(t),
             (false, true) => self.unload_plugins(cur),
@@ -296,7 +317,19 @@ mod tests {
         let b = s.add_track(TrackKind::Instrument, InputSel::Mono(0), None, None).unwrap();
         let id = s.project.alloc_id();
         let content = RegionContent::Midi { notes: Vec::new(), cc: Vec::new() };
-        s.project.track_mut(a).unwrap().regions.push(Region { id, name: "M".into(), start: 0, length: 1000, muted: false, color: None, content, loop_end: None, takes: None, params: Default::default(), pattern: None });
+        s.project.track_mut(a).unwrap().regions.push(Region {
+            id,
+            name: "M".into(),
+            start: 0,
+            length: 1000,
+            muted: false,
+            color: None,
+            content,
+            loop_end: None,
+            takes: None,
+            params: Default::default(),
+            pattern: None,
+        });
         (s, a, b, id)
     }
 

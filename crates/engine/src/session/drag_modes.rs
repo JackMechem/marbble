@@ -220,7 +220,19 @@ mod tests {
     fn midi(s: &mut Session, track: Id, start: i64, length: i64) -> Id {
         let id = s.project.alloc_id();
         let content = RegionContent::Midi { notes: vec![Note { start: 0, length: 100, pitch: 60, velocity: 100, muted: false }], cc: Vec::new() };
-        s.project.track_mut(track).unwrap().regions.push(Region { id, name: "M".into(), start, length, muted: false, color: None, content, loop_end: None, takes: None, params: Default::default(), pattern: None });
+        s.project.track_mut(track).unwrap().regions.push(Region {
+            id,
+            name: "M".into(),
+            start,
+            length,
+            muted: false,
+            color: None,
+            content,
+            loop_end: None,
+            takes: None,
+            params: Default::default(),
+            pattern: None,
+        });
         s.push_regions(track);
         id
     }
@@ -289,7 +301,16 @@ mod tests {
     fn automation_moves_with_the_region() {
         let (mut s, t) = session();
         let a = midi(&mut s, t, 1000, 1000);
-        s.set_automation_lane(t, AutoParam::Volume, vec![AutoPoint { pos: 0, value: -10.0, curve: 0.0 }, AutoPoint { pos: 1200, value: 0.0, curve: 0.0 }, AutoPoint { pos: 1800, value: 0.0, curve: 0.0 }, AutoPoint { pos: 3000, value: -10.0, curve: 0.0 }]);
+        s.set_automation_lane(
+            t,
+            AutoParam::Volume,
+            vec![
+                AutoPoint { pos: 0, value: -10.0, curve: 0.0 },
+                AutoPoint { pos: 1200, value: 0.0, curve: 0.0 },
+                AutoPoint { pos: 1800, value: 0.0, curve: 0.0 },
+                AutoPoint { pos: 3000, value: -10.0, curve: 0.0 },
+            ],
+        );
         let curve = |s: &Session, x: i64| crate::automation::value_at(&s.project.track(t).unwrap().automation[0].points, x).unwrap();
         // Never (the default): the curve stays.
         s.drag_move_regions(&[RegionMove { id: a, start: 5000, track: None }], None);

@@ -104,7 +104,11 @@ impl Session {
         let enabled = self.project.tracks.iter().filter(|t| t.armed && t.frozen.is_none());
         let armed: Vec<Track> = enabled.clone().filter(|t| !self.project.is_off(t.id)).cloned().collect();
         if armed.is_empty() {
-            return Err(anyhow!(if enabled.count() > 0 { "Every record-enabled track is off. Turn one on to record." } else { "No tracks are record-enabled" }));
+            return Err(anyhow!(if enabled.count() > 0 {
+                "Every record-enabled track is off. Turn one on to record."
+            } else {
+                "No tracks are record-enabled"
+            }));
         }
         let (plan, quiet, capture) = self.record_plan(from, punch, cycle)?;
         self.checkpoint("Record", None, false);
@@ -269,7 +273,19 @@ impl Session {
                 let id = self.project.alloc_id();
                 if let (false, Some(t)) = (merged, self.project.track_mut(track)) {
                     let name = t.name.clone();
-                    t.regions.push(Region { id, name, start, length: end - start, muted: false, color: None, content: RegionContent::Midi { notes, cc }, loop_end: None, takes: None, params: Default::default(), pattern: None });
+                    t.regions.push(Region {
+                        id,
+                        name,
+                        start,
+                        length: end - start,
+                        muted: false,
+                        color: None,
+                        content: RegionContent::Midi { notes, cc },
+                        loop_end: None,
+                        takes: None,
+                        params: Default::default(),
+                        pattern: None,
+                    });
                 }
                 touched.push(track);
             }

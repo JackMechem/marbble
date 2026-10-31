@@ -114,7 +114,11 @@ pub fn thin(points: &[AutoPoint], tol: f32) -> Vec<AutoPoint> {
         for (k, p) in points.iter().enumerate().take(b).skip(a + 1) {
             let line = if pb.pos == pa.pos {
                 // A vertical step: anything in between is a third value.
-                if (p.value - pa.value).abs() < (p.value - pb.value).abs() { pa.value } else { pb.value }
+                if (p.value - pa.value).abs() < (p.value - pb.value).abs() {
+                    pa.value
+                } else {
+                    pb.value
+                }
             } else {
                 pa.value + (pb.value - pa.value) * ((p.pos - pa.pos) as f64 / (pb.pos - pa.pos) as f64) as f32
             };
@@ -188,7 +192,8 @@ pub fn remap_plugins(lanes: &mut [AutoLane], map: &[(Id, Id)]) {
 /// lanes of a plug-in moved to another track, as that track's instance. The rest keep their
 /// order.
 pub fn take_plugin_lanes(lanes: &mut Vec<AutoLane>, old: Id, new: Id) -> Vec<AutoLane> {
-    let (mut taken, kept): (Vec<AutoLane>, Vec<AutoLane>) = std::mem::take(lanes).into_iter().partition(|l| matches!(l.param, AutoParam::Plugin { uid, .. } if uid == old));
+    let (mut taken, kept): (Vec<AutoLane>, Vec<AutoLane>) =
+        std::mem::take(lanes).into_iter().partition(|l| matches!(l.param, AutoParam::Plugin { uid, .. } if uid == old));
     *lanes = kept;
     remap_plugins(&mut taken, &[(old, new)]);
     taken
@@ -285,7 +290,8 @@ mod tests {
 
     #[test]
     fn a_curve_only_bends_its_own_segment() {
-        let p = vec![AutoPoint { pos: 0, value: 0.0, curve: 0.8 }, AutoPoint { pos: 100, value: 1.0, curve: 0.0 }, AutoPoint { pos: 200, value: 0.0, curve: 0.0 }];
+        let p =
+            vec![AutoPoint { pos: 0, value: 0.0, curve: 0.8 }, AutoPoint { pos: 100, value: 1.0, curve: 0.0 }, AutoPoint { pos: 200, value: 0.0, curve: 0.0 }];
         assert!((value_at(&p, 150).unwrap() - 0.5).abs() < 1e-6);
         assert!(value_at(&p, 50).unwrap() > 0.8);
     }

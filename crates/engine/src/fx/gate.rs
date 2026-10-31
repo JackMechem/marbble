@@ -85,7 +85,15 @@ pub const PRESETS: &[FactoryPreset] = &[
 ];
 
 pub fn info() -> EffectInfo {
-    EffectInfo { id: "builtin:noise-gate", name: "Noise Gate", category: "Dynamics", params: &PARAMS, meters: &METERS, sidechain: true, new: |sr| Box::new(Gate::new(sr)) }
+    EffectInfo {
+        id: "builtin:noise-gate",
+        name: "Noise Gate",
+        category: "Dynamics",
+        params: &PARAMS,
+        meters: &METERS,
+        sidechain: true,
+        new: |sr| Box::new(Gate::new(sr)),
+    }
 }
 
 /// A time (ms) for 10 % to 90 % of a change, as a one-pole coefficient.
@@ -351,7 +359,8 @@ mod tests {
             g.process(&mut l, &mut r, Some((s, s)), &CTX);
             gains.extend(l.iter().map(|v| v / 0.5));
         }
-        let t = |from: usize, level: f32, rising: bool| (from..gains.len()).find(|&i| if rising { gains[i] >= level } else { gains[i] <= level }).unwrap() - from;
+        let t =
+            |from: usize, level: f32, rising: bool| (from..gains.len()).find(|&i| if rising { gains[i] >= level } else { gains[i] <= level }).unwrap() - from;
         // 10 % to 90 % of the opening takes the attack time.
         let open = t(12000, 0.1, true);
         let rise = t(12000 + open, 0.9, true);

@@ -297,10 +297,12 @@ mod tests {
         let mut out = vec![0.0f32; 64];
         let mut out_r = vec![0.0f32; 64];
         for _ in 0..40 {
-            let block: Vec<f32> = (0..64).map(|_| {
-                t += 1.0;
-                t
-            }).collect();
+            let block: Vec<f32> = (0..64)
+                .map(|_| {
+                    t += 1.0;
+                    t
+                })
+                .collect();
             d.write(&block, &block);
             d.read(37, &mut out, &mut out_r);
             // Sample i of this block is `block[i]`; 37 frames earlier it was 37 less.

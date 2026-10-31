@@ -55,7 +55,8 @@ impl Session {
         for t in self.project.tracks.iter().filter(|t| t.kind == TrackKind::Instrument) {
             let Some(c) = t.instrument.as_ref().and_then(|s| self.controllers.get(&s.uid)) else { continue };
             if c.output_buses().len() > 1 {
-                let outputs = c.output_buses().iter().map(|b| OutputInfo { index: b.index, name: tidy(&b.name), channels: b.channels, active: b.active }).collect();
+                let outputs =
+                    c.output_buses().iter().map(|b| OutputInfo { index: b.index, name: tidy(&b.name), channels: b.channels, active: b.active }).collect();
                 out.push(InstrumentOutputs { track: t.id, outputs });
             }
         }
@@ -108,7 +109,10 @@ impl Session {
         for &id in tracks {
             if let Some(a) = self.project.tracks.iter().find(|a| a.instrument_output.is_some_and(|o| o.track == id)) {
                 let name = self.project.track(id).map(|t| t.name.as_str()).unwrap_or_default();
-                return Err(anyhow!("{name} has auxes on its extra outputs ({} and maybe others). {what} would only take its main output: delete those auxes first.", a.name));
+                return Err(anyhow!(
+                    "{name} has auxes on its extra outputs ({} and maybe others). {what} would only take its main output: delete those auxes first.",
+                    a.name
+                ));
             }
         }
         Ok(())
@@ -241,13 +245,22 @@ mod tests {
         let mut p = Project::new("x", 48000);
         let mk = |p: &mut Project, kind: TrackKind| {
             let id = p.alloc_id();
-            p.tracks.push(serde_json::from_value(serde_json::json!({
-                "id": id, "kind": kind, "name": "t", "color": "", "volume_db": 0.0, "pan": 0.0, "mute": false,
-                "solo": false, "armed": false, "monitor": false, "input": { "type": "none" },
-            })).unwrap());
+            p.tracks.push(
+                serde_json::from_value(serde_json::json!({
+                    "id": id, "kind": kind, "name": "t", "color": "", "volume_db": 0.0, "pan": 0.0, "mute": false,
+                    "solo": false, "armed": false, "monitor": false, "input": { "type": "none" },
+                }))
+                .unwrap(),
+            );
             id
         };
-        let (inst, audio, aux, aux2, aux3) = (mk(&mut p, TrackKind::Instrument), mk(&mut p, TrackKind::Audio), mk(&mut p, TrackKind::Aux), mk(&mut p, TrackKind::Aux), mk(&mut p, TrackKind::Aux));
+        let (inst, audio, aux, aux2, aux3) = (
+            mk(&mut p, TrackKind::Instrument),
+            mk(&mut p, TrackKind::Audio),
+            mk(&mut p, TrackKind::Aux),
+            mk(&mut p, TrackKind::Aux),
+            mk(&mut p, TrackKind::Aux),
+        );
         p.track_mut(aux).unwrap().instrument_output = Some(InstrumentOutput { track: inst, bus: 2 });
         p.track_mut(aux2).unwrap().instrument_output = Some(InstrumentOutput { track: audio, bus: 2 });
         p.track_mut(aux3).unwrap().instrument_output = Some(InstrumentOutput { track: inst, bus: 0 });

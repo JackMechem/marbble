@@ -115,7 +115,16 @@ mod tests {
     use super::*;
 
     fn slot(uid: u64, id: &str) -> PluginSlot {
-        PluginSlot { uid, plugin_id: id.into(), name: id.into(), bypass: false, state: Some("AAAA:BBBB".into()), params: vec![(1, 2.5)], sidechain: Some(7), sidechain_pre: false }
+        PluginSlot {
+            uid,
+            plugin_id: id.into(),
+            name: id.into(),
+            bypass: false,
+            state: Some("AAAA:BBBB".into()),
+            params: vec![(1, 2.5)],
+            sidechain: Some(7),
+            sidechain_pre: false,
+        }
     }
 
     #[test]
@@ -124,7 +133,13 @@ mod tests {
         let _ = std::fs::remove_dir_all(&root);
         let mut eq = ChannelEq::default();
         eq.bands[3].gain = -4.0;
-        let s = StripSetting { name: "Lead".into(), version: 0, instrument: Some(slot(3, "builtin:synth")), inserts: vec![Some(slot(4, "builtin:compressor")), None, Some(slot(5, "/x.vst3|ABC")), None, None], eq: Some(eq) };
+        let s = StripSetting {
+            name: "Lead".into(),
+            version: 0,
+            instrument: Some(slot(3, "builtin:synth")),
+            inserts: vec![Some(slot(4, "builtin:compressor")), None, Some(slot(5, "/x.vst3|ABC")), None, None],
+            eq: Some(eq),
+        };
         let name = write(&root, &s, " Lead / Vocal? ", false).unwrap();
         assert_eq!(name, "Lead Vocal");
         assert!(write(&root, &s, "Lead Vocal", false).is_err(), "an existing setting isn't replaced silently");

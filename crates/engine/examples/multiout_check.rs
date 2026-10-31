@@ -192,7 +192,10 @@ fn main() {
     s.update_track(inst, TrackPatch { name: Some("Drums".into()), ..Default::default() });
     s.set_plugin(inst, usize::MAX, &desc.id).unwrap();
     let outputs = s.instrument_outputs();
-    check(&format!("the plug-in reports its outputs ({} buses, first extra one {:?})", outputs[0].outputs.len(), outputs[0].outputs[1].name), outputs.len() == 1 && outputs[0].outputs.len() == 13 && outputs[0].outputs[1].channels == 2);
+    check(
+        &format!("the plug-in reports its outputs ({} buses, first extra one {:?})", outputs[0].outputs.len(), outputs[0].outputs[1].name),
+        outputs.len() == 1 && outputs[0].outputs.len() == 13 && outputs[0].outputs[1].channels == 2,
+    );
     check("no extra bus is active yet", active(&s, inst).is_empty());
     load_samples(&mut s, inst, &one, &two);
     let r = s.create_midi_region(inst, 0, LEN).unwrap();
@@ -235,7 +238,10 @@ fn main() {
     check("the aux has the same samples as the main output: no extra block of latency", gap < 1e-3);
 
     let a2 = s.add_output_aux(inst).unwrap();
-    check("the next click takes the next output", s.project.track(a2).unwrap().instrument_output == Some(InstrumentOutput { track: inst, bus: 2 }) && active(&s, inst) == [1, 2]);
+    check(
+        "the next click takes the next output",
+        s.project.track(a2).unwrap().instrument_output == Some(InstrumentOutput { track: inst, bus: 2 }) && active(&s, inst) == [1, 2],
+    );
     wait_for_samples(&mut s, a2, B);
     let d2 = strip(&mut s, a2);
     println!("     aux on output 2: note A {:.1} dB, note B {:.1} dB", db(peak(&d2, A)), db(peak(&d2, B)));
@@ -349,13 +355,19 @@ fn main() {
     check("deleting the instrument leaves the aux, without that input", s.project.track(a1).is_some_and(|t| t.instrument_output.is_none()));
     check("the aux is silent, nothing breaks", peak(&mix(&mut s), (0, LEN)) == 0.0);
     s.undo();
-    check("undo rewires it and activates its buses on the new instance", s.project.track(a1).is_some_and(|t| t.instrument_output.is_some()) && active(&s, inst) == [1, 2]);
+    check(
+        "undo rewires it and activates its buses on the new instance",
+        s.project.track(a1).is_some_and(|t| t.instrument_output.is_some()) && active(&s, inst) == [1, 2],
+    );
     check("and it plays again", wait_for_samples(&mut s, a1, A) && (db(peak(&strip(&mut s, a1), A)) - db(ma)).abs() < 0.1);
 
     // Another instrument in its slot, with one output.
     s.checkpoint("Instrument", None, true);
     s.set_plugin(inst, usize::MAX, SYNTH).unwrap();
-    check("with a one-output instrument the aux has nothing, and the UI is told", s.instrument_outputs().is_empty() && peak(&strip(&mut s, a1), (0, LEN)) == 0.0);
+    check(
+        "with a one-output instrument the aux has nothing, and the UI is told",
+        s.instrument_outputs().is_empty() && peak(&strip(&mut s, a1), (0, LEN)) == 0.0,
+    );
     let d = strip(&mut s, inst);
     check("the new instrument plays on the main output", peak(&d, A) > 0.01);
     s.undo();
@@ -365,7 +377,10 @@ fn main() {
     let setting = s.copy_strip(a2).unwrap();
     s.checkpoint("Paste", None, true);
     s.paste_strip(&[a1], &setting).unwrap();
-    check("a strip setting pasted on the aux leaves its input", s.project.track(a1).unwrap().instrument_output == Some(InstrumentOutput { track: inst, bus: 1 }));
+    check(
+        "a strip setting pasted on the aux leaves its input",
+        s.project.track(a1).unwrap().instrument_output == Some(InstrumentOutput { track: inst, bus: 1 }),
+    );
     s.undo();
     let setting = s.copy_strip(inst).unwrap();
     let copy = s.add_track(TrackKind::Instrument, InputSel::None, None, None).unwrap();
@@ -402,7 +417,10 @@ fn main() {
     // Missing plug-in.
     let mut bare = Session::new(cfg, Vec::new());
     bare.open(&saved).unwrap();
-    check("with the plug-in missing, the project opens", bare.project.track(a1).is_some_and(|t| t.instrument_output.is_some()) && bare.instrument_outputs().is_empty());
+    check(
+        "with the plug-in missing, the project opens",
+        bare.project.track(a1).is_some_and(|t| t.instrument_output.is_some()) && bare.instrument_outputs().is_empty(),
+    );
     check("and the aux is silent", peak(&strip(&mut bare, a1), (0, LEN)) == 0.0);
     drop(bare);
 
@@ -460,7 +478,11 @@ fn main() {
     // The sine's largest step, plus a note's (which starts at a sample's first peak or so).
     let tone_step = 0.2 * std::f32::consts::TAU * 440.0 / rate as f32;
     let note_step = (ma * 2.0) * std::f32::consts::TAU * 1000.0 / rate as f32;
-    println!("     live: the switch took {took:?}; largest step in {} frames {step:.4} (sine {tone_step:.4}, sine + note {:.4})", out.len(), tone_step + note_step);
+    println!(
+        "     live: the switch took {took:?}; largest step in {} frames {step:.4} (sine {tone_step:.4}, sine + note {:.4})",
+        out.len(),
+        tone_step + note_step
+    );
     check("live: no click when a bus switches on and off", step < 1.5 * (tone_step + note_step));
     let quietest = out[512..].chunks(480).map(|c| c.iter().fold(0.0f32, |m, x| m.max(x.abs()))).fold(1.0f32, f32::min);
     check(&format!("live: the other track plays through it (quietest 10 ms has peak {quietest:.3})"), quietest > 0.15);

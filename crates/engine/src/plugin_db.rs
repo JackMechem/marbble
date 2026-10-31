@@ -6,8 +6,8 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
-use vst3_host::scan::{default_search_paths, find_bundles};
 use serde::{Deserialize, Serialize};
+use vst3_host::scan::{default_search_paths, find_bundles};
 use vst3_host::PluginDescriptor;
 
 pub const SCAN_ARG: &str = "--scan-vst3";
@@ -56,12 +56,7 @@ pub fn scan_child_main(bundle: &Path) -> i32 {
 
 /// Scans one bundle in a child process. Errors say why nothing came back.
 fn scan_one(exe: &Path, bundle: &Path) -> Result<Vec<PluginDescriptor>, String> {
-    let child = Command::new(exe)
-        .arg(SCAN_ARG)
-        .arg(bundle)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn();
+    let child = Command::new(exe).arg(SCAN_ARG).arg(bundle).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn();
     let mut child = child.map_err(|e| format!("could not start the scanner: {e}"))?;
     // Both pipes are read while the child runs: a chatty plug-in would otherwise fill one,
     // block, and look like a hang.

@@ -17,7 +17,7 @@
 //! The integrated and range measurements only run while the transport plays, so the time since
 //! reset or play start is what they cover; momentary, short-term and the peaks always run.
 
-use super::{EffectInfo, Effect, FactoryPreset, FxContext, Key, ParamKind, ParamSpec, Unit, MAX_METERS};
+use super::{Effect, EffectInfo, FactoryPreset, FxContext, Key, ParamKind, ParamSpec, Unit, MAX_METERS};
 use std::f64::consts::PI;
 
 pub const TARGET: u32 = 0;
@@ -37,55 +37,13 @@ static PARAMS: [ParamSpec; 5] = [
         max: 4.0,
         default: 0.0,
         unit: Unit::None,
-        kind: ParamKind::Choice(&[
-            "−23 LUFS (EBU R128)",
-            "−16 LUFS (Apple Music)",
-            "−14 LUFS (Spotify, YouTube)",
-            "−24 LUFS (ATSC A/85)",
-            "Custom",
-        ]),
+        kind: ParamKind::Choice(&["−23 LUFS (EBU R128)", "−16 LUFS (Apple Music)", "−14 LUFS (Spotify, YouTube)", "−24 LUFS (ATSC A/85)", "Custom"]),
         log: false,
     },
-    ParamSpec {
-        id: CUSTOM_TARGET,
-        name: "Custom Target",
-        min: -36.0,
-        max: -6.0,
-        default: -23.0,
-        unit: Unit::Db,
-        kind: ParamKind::Continuous,
-        log: false,
-    },
-    ParamSpec {
-        id: SCALE,
-        name: "Scale",
-        min: 0.0,
-        max: 1.0,
-        default: 0.0,
-        unit: Unit::None,
-        kind: ParamKind::Choice(&["EBU +9", "EBU +18"]),
-        log: false,
-    },
-    ParamSpec {
-        id: RESET,
-        name: "Reset",
-        min: 0.0,
-        max: 1.0,
-        default: 0.0,
-        unit: Unit::None,
-        kind: ParamKind::Toggle,
-        log: false,
-    },
-    ParamSpec {
-        id: AUTO_RESET,
-        name: "Auto-Reset on Play",
-        min: 0.0,
-        max: 1.0,
-        default: 1.0,
-        unit: Unit::None,
-        kind: ParamKind::Toggle,
-        log: false,
-    },
+    ParamSpec { id: CUSTOM_TARGET, name: "Custom Target", min: -36.0, max: -6.0, default: -23.0, unit: Unit::Db, kind: ParamKind::Continuous, log: false },
+    ParamSpec { id: SCALE, name: "Scale", min: 0.0, max: 1.0, default: 0.0, unit: Unit::None, kind: ParamKind::Choice(&["EBU +9", "EBU +18"]), log: false },
+    ParamSpec { id: RESET, name: "Reset", min: 0.0, max: 1.0, default: 0.0, unit: Unit::None, kind: ParamKind::Toggle, log: false },
+    ParamSpec { id: AUTO_RESET, name: "Auto-Reset on Play", min: 0.0, max: 1.0, default: 1.0, unit: Unit::None, kind: ParamKind::Toggle, log: false },
 ];
 
 /// Meter order: momentary, short-term and integrated loudness (LUFS), loudness range (LU), true
@@ -196,14 +154,7 @@ fn k_weighting(sr: f64) -> [Biquad; 2] {
     let (f0, q) = (38.135_470_876_024_44, 0.500_327_037_323_877_3);
     let k = (PI * f0 / sr).tan();
     let a0 = 1.0 + k / q + k * k;
-    let highpass = Biquad {
-        b0: 1.0,
-        b1: -2.0,
-        b2: 1.0,
-        a1: 2.0 * (k * k - 1.0) / a0,
-        a2: (1.0 - k / q + k * k) / a0,
-        ..Biquad::default()
-    };
+    let highpass = Biquad { b0: 1.0, b1: -2.0, b2: 1.0, a1: 2.0 * (k * k - 1.0) / a0, a2: (1.0 - k / q + k * k) / a0, ..Biquad::default() };
     [shelf, highpass]
 }
 
@@ -705,8 +656,7 @@ mod tests {
                 fx.set_param(RESET, 1.0);
                 fx.set_param(RESET, 0.0);
             }
-            let mut l: Vec<f32> =
-                (0..1024).map(|i| (amp * (PI / 2.0 * (b * 1024 + i) as f64 + PI / 4.0).sin()) as f32).collect();
+            let mut l: Vec<f32> = (0..1024).map(|i| (amp * (PI / 2.0 * (b * 1024 + i) as f64 + PI / 4.0).sin()) as f32).collect();
             let mut r = l.clone();
             fx.process(&mut l, &mut r, None, &ctx);
         }

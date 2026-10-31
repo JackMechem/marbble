@@ -133,7 +133,8 @@ impl Session {
     /// (quantize, delay in ticks) or that are pattern regions, after the tempo or signature
     /// changed.
     pub(super) fn push_tempo_regions(&mut self) {
-        let ids: Vec<Id> = self.project.tracks.iter().filter(|t| t.regions.iter().any(|r| r.params.follows_tempo() || r.pattern.is_some())).map(|t| t.id).collect();
+        let ids: Vec<Id> =
+            self.project.tracks.iter().filter(|t| t.regions.iter().any(|r| r.params.follows_tempo() || r.pattern.is_some())).map(|t| t.id).collect();
         for id in ids {
             self.push_regions(id);
         }

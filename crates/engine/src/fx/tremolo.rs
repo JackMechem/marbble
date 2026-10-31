@@ -55,7 +55,15 @@ pub const PRESETS: &[FactoryPreset] = &[
 ];
 
 pub fn info() -> EffectInfo {
-    EffectInfo { id: "builtin:tremolo", name: "Tremolo", category: "Modulation", params: &PARAMS, meters: &super::chorus::LFO_METER, sidechain: false, new: |sr| Box::new(Tremolo::new(sr)) }
+    EffectInfo {
+        id: "builtin:tremolo",
+        name: "Tremolo",
+        category: "Modulation",
+        params: &PARAMS,
+        meters: &super::chorus::LFO_METER,
+        sidechain: false,
+        new: |sr| Box::new(Tremolo::new(sr)),
+    }
 }
 
 /// The level (0..1, 1 at the top) of a waveform (an index into [`WAVEFORMS`]) at `phase`

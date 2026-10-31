@@ -26,7 +26,8 @@ const fn level_len(level: usize) -> usize {
     }
 }
 
-pub const TABLE_NAMES: &[&str] = &["Basic Shapes", "Harmonic Rise", "Vowels", "Pulse Sweep", "Sync Sweep", "FM Sweep", "Stepped Digital", "Drawbars", "Wavefolder", "Comb Sweep"];
+pub const TABLE_NAMES: &[&str] =
+    &["Basic Shapes", "Harmonic Rise", "Vowels", "Pulse Sweep", "Sync Sweep", "FM Sweep", "Stepped Digital", "Drawbars", "Wavefolder", "Comb Sweep"];
 pub const TABLES: usize = TABLE_NAMES.len();
 
 /// All the tables. One flat block of samples, indexed by [`Bank::frame`].
@@ -116,7 +117,8 @@ fn shape(table: usize, pos: f32, n: usize) -> Vec<f32> {
         }
         // A saw's spectrum through moving formants: a, e, i, o, u.
         2 => {
-            const F: [[f32; 3]; 5] = [[800.0, 1150.0, 2900.0], [400.0, 1600.0, 2700.0], [270.0, 2300.0, 3000.0], [450.0, 800.0, 2830.0], [325.0, 700.0, 2530.0]];
+            const F: [[f32; 3]; 5] =
+                [[800.0, 1150.0, 2900.0], [400.0, 1600.0, 2700.0], [270.0, 2300.0, 3000.0], [450.0, 800.0, 2830.0], [325.0, 700.0, 2530.0]];
             let seg = pos * 4.0;
             let k = (seg.floor() as usize).min(3);
             let f = seg - k as f32;
@@ -152,7 +154,16 @@ fn shape(table: usize, pos: f32, n: usize) -> Vec<f32> {
         }
         // Registrations of an organ's drawbars.
         7 => {
-            let bars: [(usize, f32); 8] = [(1, 1.0), (2, pos), (3, (pos * 2.0).min(1.0) * 0.8), (4, (pos * 3.0 - 0.3).clamp(0.0, 1.0) * 0.7), (5, (pos * 3.0 - 1.0).clamp(0.0, 1.0) * 0.6), (6, (pos * 3.0 - 1.5).clamp(0.0, 1.0) * 0.5), (8, (pos * 2.0 - 1.0).clamp(0.0, 1.0) * 0.5), (16, (pos * 2.0 - 1.2).clamp(0.0, 1.0) * 0.3)];
+            let bars: [(usize, f32); 8] = [
+                (1, 1.0),
+                (2, pos),
+                (3, (pos * 2.0).min(1.0) * 0.8),
+                (4, (pos * 3.0 - 0.3).clamp(0.0, 1.0) * 0.7),
+                (5, (pos * 3.0 - 1.0).clamp(0.0, 1.0) * 0.6),
+                (6, (pos * 3.0 - 1.5).clamp(0.0, 1.0) * 0.5),
+                (8, (pos * 2.0 - 1.0).clamp(0.0, 1.0) * 0.5),
+                (16, (pos * 2.0 - 1.2).clamp(0.0, 1.0) * 0.3),
+            ];
             (0..n)
                 .map(|i| {
                     let p = phase(i);
@@ -203,7 +214,8 @@ fn build() -> Bank {
                 for k in 1..s.len() {
                     if k <= harmonics {
                         // Keeps a fade at the top so that the edge doesn't ring into the cycle.
-                        let fade = if harmonics >= 8 && k > harmonics * 7 / 8 { 1.0 - (k - harmonics * 7 / 8) as f32 / (harmonics / 8 + 1) as f32 } else { 1.0 };
+                        let fade =
+                            if harmonics >= 8 && k > harmonics * 7 / 8 { 1.0 - (k - harmonics * 7 / 8) as f32 / (harmonics / 8 + 1) as f32 } else { 1.0 };
                         s[k] = spec[k] * (fade / n as f32);
                     }
                 }

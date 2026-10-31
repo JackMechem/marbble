@@ -61,7 +61,15 @@ pub const PRESETS: &[FactoryPreset] = &[
 ];
 
 pub fn info() -> EffectInfo {
-    EffectInfo { id: "builtin:distortion", name: "Distortion", category: "Distortion", params: &PARAMS, meters: &[], sidechain: false, new: |sr| Box::new(Distortion::new(sr)) }
+    EffectInfo {
+        id: "builtin:distortion",
+        name: "Distortion",
+        category: "Distortion",
+        params: &PARAMS,
+        meters: &[],
+        sidechain: false,
+        new: |sr| Box::new(Distortion::new(sr)),
+    }
 }
 
 /// The waveshaper for a [`TYPES`] index. Every curve has a slope of 1 at zero (2 for Fuzz) and

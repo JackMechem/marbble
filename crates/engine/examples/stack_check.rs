@@ -60,7 +60,10 @@ fn main() {
     s.update_track_linked(sum, TrackPatch { mute: Some(false), ..Default::default() });
     s.update_track_linked(a, TrackPatch { solo: Some(true), ..Default::default() });
     let (lv, master) = levels(&mut s, &[a, b, sum]);
-    check(&format!("soloing a subtrack keeps its stack audible (a={:.3} b={:.3} out={master:.3})", lv[0], lv[1]), lv[0] > 0.01 && lv[1] < 1e-4 && master > 0.01);
+    check(
+        &format!("soloing a subtrack keeps its stack audible (a={:.3} b={:.3} out={master:.3})", lv[0], lv[1]),
+        lv[0] > 0.01 && lv[1] < 1e-4 && master > 0.01,
+    );
     s.update_track_linked(a, TrackPatch { solo: Some(false), ..Default::default() });
 
     // Folder stack: its fader scales the subtracks.
@@ -105,7 +108,10 @@ fn main() {
     let all: Vec<_> = s.project.track(a).unwrap().regions.iter().map(|x| x.id).collect();
     let joined = s.join_regions(&all).unwrap();
     let t = s.project.track(a).unwrap();
-    check(&format!("join makes one region of 3x length ({} regions)", t.regions.len()), t.regions.len() == 1 && t.regions[0].length == 3 * r.length && joined.len() == 1);
+    check(
+        &format!("join makes one region of 3x length ({} regions)", t.regions.len()),
+        t.regions.len() == 1 && t.regions[0].length == 3 * r.length && joined.len() == 1,
+    );
     s.set_region_gain(&joined, Some(-20.0), None);
     s.normalize_regions(&joined);
     let gain = match &s.project.track(a).unwrap().regions[0].content {

@@ -77,7 +77,10 @@ fn main() {
     s.undo();
     s.resize_region(id, 0, len / 2);
     let r = s.project.track(a).unwrap().regions[0].clone();
-    ok &= check(&format!("trim keeps the loop end ({:?}, {} passes)", r.loop_end, r.passes().len()), r.loop_end == Some(4 * len + len / 2) && r.passes().len() == 9);
+    ok &= check(
+        &format!("trim keeps the loop end ({:?}, {} passes)", r.loop_end, r.passes().len()),
+        r.loop_end == Some(4 * len + len / 2) && r.passes().len() == 9,
+    );
     s.resize_region(id, 0, len);
     s.checkpoint("Resize Region", None, false);
     s.resize_region(id, 0, full);
@@ -88,7 +91,10 @@ fn main() {
     s.checkpoint("Repeat Regions", None, false);
     let made = s.repeat_regions(&[id], 1);
     let copy = s.project.track(a).unwrap().regions.iter().find(|r| r.id == made[0]).unwrap().clone();
-    ok &= check(&format!("repeat starts after the loop ({} at {}, loop end {:?})", copy.id, copy.start, copy.loop_end), copy.start == 4 * len + len / 2 && copy.loop_end == Some(2 * (4 * len + len / 2)));
+    ok &= check(
+        &format!("repeat starts after the loop ({} at {}, loop end {:?})", copy.id, copy.start, copy.loop_end),
+        copy.start == 4 * len + len / 2 && copy.loop_end == Some(2 * (4 * len + len / 2)),
+    );
     s.undo();
 
     // Convert Loops to Real Copies.
@@ -128,7 +134,14 @@ fn main() {
 
     // Loop repetitions sit beneath region bodies: a quiet region under the loop still wins.
     s.checkpoint("Paste", None, false);
-    let quiet = s.paste_regions(&[(a, { let mut r = s.project.track(a).unwrap().regions[0].clone(); r.loop_end = None; r })], 2 * len);
+    let quiet = s.paste_regions(
+        &[(a, {
+            let mut r = s.project.track(a).unwrap().regions[0].clone();
+            r.loop_end = None;
+            r
+        })],
+        2 * len,
+    );
     s.set_region_gain(&quiet, Some(-40.0), None);
     s.move_region(id, 0, None); // the loop's region is now the newest
     let (lv, _) = levels(&mut s, 2 * len + sr / 20, 3 * len - sr / 20, &[a]);

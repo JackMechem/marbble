@@ -452,7 +452,13 @@ mod tests {
     impl Log {
         fn new(graph: TaskGraph) -> Log {
             let n = graph.len();
-            Log { graph, done: (0..n).map(|_| AtomicU32::new(0)).collect(), clock: AtomicU32::new(1), thread: (0..n).map(|_| AtomicUsize::new(0)).collect(), early: AtomicU32::new(0) }
+            Log {
+                graph,
+                done: (0..n).map(|_| AtomicU32::new(0)).collect(),
+                clock: AtomicU32::new(1),
+                thread: (0..n).map(|_| AtomicUsize::new(0)).collect(),
+                early: AtomicU32::new(0),
+            }
         }
     }
 

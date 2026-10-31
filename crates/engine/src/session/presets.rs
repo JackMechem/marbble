@@ -64,7 +64,9 @@ impl Session {
                 return Err(anyhow!("Stereo Out has no instrument slot"));
             }
             let sidechain = copy.sidechain.filter(|&src| {
-                src != track && self.project.track(src).map(|t| t.kind != TrackKind::Folder).unwrap_or(false) && (track == MASTER_ID || !self.project.depends(track, src))
+                src != track
+                    && self.project.track(src).map(|t| t.kind != TrackKind::Folder).unwrap_or(false)
+                    && (track == MASTER_ID || !self.project.depends(track, src))
             });
             let new_slot = PluginSlot { uid: self.project.alloc_id(), sidechain, ..copy.clone() };
             let ins = self.instantiate_slot(&new_slot)?;
@@ -132,7 +134,10 @@ impl Session {
             return Err(anyhow!("\"{}\" is a preset for another plug-in", p.name));
         }
         let (_, specs) = builtin::builtin_spec(&s.plugin_id).ok_or_else(|| anyhow!("{} has no presets here", s.name))?;
-        s.params = specs.iter().map(|spec| (spec.id, p.values.iter().find(|v| v.0 == spec.id).map(|v| crate::dsp::builtin_clamp(spec, v.1)).unwrap_or(spec.default))).collect();
+        s.params = specs
+            .iter()
+            .map(|spec| (spec.id, p.values.iter().find(|v| v.0 == spec.id).map(|v| crate::dsp::builtin_clamp(spec, v.1)).unwrap_or(spec.default)))
+            .collect();
         let (uid, values) = (s.uid, s.params.clone());
         for (id, value) in values {
             self.send(Cmd::FxParam { track, uid, id, value });

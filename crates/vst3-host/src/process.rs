@@ -87,14 +87,8 @@ impl Class for ParameterChanges {
 
 impl ParameterChanges {
     pub fn new() -> ComWrapper<ParameterChanges> {
-        let queues: Vec<_> = (0..MAX_QUEUES)
-            .map(|_| {
-                ComWrapper::new(ParamValueQueue {
-                    id: Cell::new(0),
-                    points: UnsafeCell::new(Vec::with_capacity(MAX_POINTS)),
-                })
-            })
-            .collect();
+        let queues: Vec<_> =
+            (0..MAX_QUEUES).map(|_| ComWrapper::new(ParamValueQueue { id: Cell::new(0), points: UnsafeCell::new(Vec::with_capacity(MAX_POINTS)) })).collect();
         let ptrs = queues.iter().map(|q| q.as_com_ref::<IParamValueQueue>().unwrap().as_ptr()).collect();
         ComWrapper::new(ParameterChanges { queues, ptrs, count: Cell::new(0) })
     }

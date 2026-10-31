@@ -74,7 +74,10 @@ fn main() {
     for summing in [false, true] {
         let stack = s.create_stack(&[a, b], summing).unwrap();
         off(&mut s, stack, true);
-        check(&format!("an Off {} silences its subtracks", if summing { "summing stack" } else { "folder stack" }), peak(&render(&mut s)) == 0.0 && s.export_targets().is_empty());
+        check(
+            &format!("an Off {} silences its subtracks", if summing { "summing stack" } else { "folder stack" }),
+            peak(&render(&mut s)) == 0.0 && s.export_targets().is_empty(),
+        );
         off(&mut s, stack, false);
         check("back on, they play", (peak(&render(&mut s)) - peak(&both)).abs() < 0.01);
         s.flatten_stack(stack);
@@ -105,7 +108,10 @@ fn main() {
     off(&mut s, a, true);
     let unkeyed = render(&mut s);
     let tail = |r: &[Vec<f32>]| r[0][48_000..].iter().fold(0.0f32, |m, x| m.max(x.abs()));
-    check(&format!("a key from an Off track is silence: no gain reduction ({:.3}, keyed {:.3})", tail(&unkeyed), tail(&keyed)), tail(&unkeyed) > 0.01 && tail(&keyed) < 0.8 * tail(&unkeyed));
+    check(
+        &format!("a key from an Off track is silence: no gain reduction ({:.3}, keyed {:.3})", tail(&unkeyed), tail(&keyed)),
+        tail(&unkeyed) > 0.01 && tail(&keyed) < 0.8 * tail(&unkeyed),
+    );
     off(&mut s, a, false);
     s.update_track(a, TrackPatch { volume_db: Some(0.0), ..Default::default() });
     s.remove_plugin(b, 0);
@@ -148,7 +154,10 @@ fn main() {
     // Saved with the project.
     let dir = s.save(None).unwrap();
     s.open(&dir).unwrap();
-    check("saved and reopened, it is still off and silent", s.project.track(a).unwrap().off && !s.project.track(b).unwrap().off && (peak(&render(&mut s)) - one).abs() < 0.01);
+    check(
+        "saved and reopened, it is still off and silent",
+        s.project.track(a).unwrap().off && !s.project.track(b).unwrap().off && (peak(&render(&mut s)) - one).abs() < 0.01,
+    );
 
     // Live: an Off track's meter falls to nothing rather than freezing. Tracks meter while
     // playing; the null device runs as fast as it can.
@@ -171,7 +180,10 @@ fn main() {
         (at(a), at(b))
     };
     s.stop();
-    check(&format!("live, the meter falls to nothing ({on:.3} -> {quiet:.3}) and the other track plays on ({other:.3})"), on > 0.01 && quiet == 0.0 && other > 0.01);
+    check(
+        &format!("live, the meter falls to nothing ({on:.3} -> {quiet:.3}) and the other track plays on ({other:.3})"),
+        on > 0.01 && quiet == 0.0 && other > 0.01,
+    );
 
     if FAILED.load(std::sync::atomic::Ordering::Relaxed) {
         std::process::exit(1);

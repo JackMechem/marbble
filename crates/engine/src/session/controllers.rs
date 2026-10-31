@@ -145,7 +145,9 @@ impl Session {
     /// Waits for a controller to assign to `target`, or to the last touched parameter. Returns
     /// the parameter's name.
     pub fn start_learn(&mut self, target: Option<CtlTarget>) -> Result<String> {
-        let target = target.or_else(|| self.controls.touched.clone()).ok_or_else(|| anyhow!("Move a fader, knob or plug-in parameter first, then learn an assignment for it"))?;
+        let target = target
+            .or_else(|| self.controls.touched.clone())
+            .ok_or_else(|| anyhow!("Move a fader, knob or plug-in parameter first, then learn an assignment for it"))?;
         let target = self.ctl_complete(target);
         let name = self.ctl_target_name(&target).ok_or_else(|| anyhow!("That parameter isn't in this project any more"))?;
         self.controls.learn = Some((target, name.clone()));
@@ -230,7 +232,9 @@ impl Session {
         }
         for (i, (a, b)) in old.bands.iter().zip(&new.bands).enumerate() {
             let band = i as u8;
-            for (field, differs) in [(EqField::On, a.on != b.on), (EqField::Freq, a.freq != b.freq), (EqField::Gain, a.gain != b.gain), (EqField::Q, a.q != b.q)] {
+            for (field, differs) in
+                [(EqField::On, a.on != b.on), (EqField::Freq, a.freq != b.freq), (EqField::Gain, a.gain != b.gain), (EqField::Q, a.q != b.q)]
+            {
                 if differs {
                     changed.push(CtlTarget::Eq { track, band, field });
                 }
@@ -457,7 +461,11 @@ impl Session {
 
     fn ctl_set_plugin(&mut self, track: Id, uid: Id, plugin: &str, param: u32, n: f32) {
         let Some((slot, s)) = self.ctl_plugin(track, uid, plugin) else { return };
-        let name = format!("{}: {}", s.name, self.plugin_params(uid).into_iter().find(|p| p.id == param).map(|p| p.name).unwrap_or_else(|| format!("Parameter {param}")));
+        let name = format!(
+            "{}: {}",
+            s.name,
+            self.plugin_params(uid).into_iter().find(|p| p.id == param).map(|p| p.name).unwrap_or_else(|| format!("Parameter {param}"))
+        );
         let auto = AutoParam::Plugin { uid, param, name };
         // Stereo Out's plug-ins aren't automated.
         let automated = track != MASTER_ID;
@@ -600,7 +608,8 @@ impl Session {
             return;
         }
         let playing = self.is_playing();
-        let (done, keep): (Vec<_>, Vec<_>) = std::mem::take(&mut self.controls.holding).into_iter().partition(|h| !playing || h.2.elapsed().as_secs_f64() > RELEASE_SECS);
+        let (done, keep): (Vec<_>, Vec<_>) =
+            std::mem::take(&mut self.controls.holding).into_iter().partition(|h| !playing || h.2.elapsed().as_secs_f64() > RELEASE_SECS);
         self.controls.holding = keep;
         for (track, param, _) in done {
             self.automation_touch(track, param, false);

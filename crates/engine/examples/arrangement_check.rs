@@ -96,10 +96,17 @@ fn peak(a: &[Vec<f32>], from: i64, to: i64) -> f32 {
 
 /// (start, end, clip offset) of a track's regions, by start.
 fn spans(s: &Session, t: Id) -> Vec<(i64, i64, i64)> {
-    let mut v: Vec<(i64, i64, i64)> = s.project.track(t).unwrap().regions.iter().map(|r| match r.content {
-        RegionContent::Audio { offset, .. } => (r.start, r.start + r.length, offset),
-        _ => (r.start, r.start + r.length, 0),
-    }).collect();
+    let mut v: Vec<(i64, i64, i64)> = s
+        .project
+        .track(t)
+        .unwrap()
+        .regions
+        .iter()
+        .map(|r| match r.content {
+            RegionContent::Audio { offset, .. } => (r.start, r.start + r.length, offset),
+            _ => (r.start, r.start + r.length, 0),
+        })
+        .collect();
     v.sort();
     v
 }
@@ -143,7 +150,12 @@ fn main() {
     s.resize_region(rb3, sr * 22 / 10, sr * 6 / 10);
     // Volume ramps: on A across the edge of sections 1 and 2, on B through section 3.
     let ramp_a = vec![AutoPoint { pos: sr * 9 / 10, value: 0.0, curve: 0.0 }, AutoPoint { pos: sr * 11 / 10, value: -12.0, curve: 0.0 }];
-    let ramp_b = vec![AutoPoint { pos: 0, value: -6.0, curve: 0.0 }, AutoPoint { pos: 2 * sr, value: -20.0, curve: 0.0 }, AutoPoint { pos: sr * 29 / 10, value: 0.0, curve: 0.0 }, AutoPoint { pos: 3 * sr, value: -6.0, curve: 0.0 }];
+    let ramp_b = vec![
+        AutoPoint { pos: 0, value: -6.0, curve: 0.0 },
+        AutoPoint { pos: 2 * sr, value: -20.0, curve: 0.0 },
+        AutoPoint { pos: sr * 29 / 10, value: 0.0, curve: 0.0 },
+        AutoPoint { pos: 3 * sr, value: -6.0, curve: 0.0 },
+    ];
     s.set_automation_lane(a, AutoParam::Volume, ramp_a.clone());
     s.set_automation_lane(b, AutoParam::Volume, ramp_b.clone());
 
@@ -162,7 +174,10 @@ fn main() {
     // A's region: 0.5..1 s stays, 1..2 s (offset 0.5 s) goes to 2..3 s, 2..2.5 s (offset 1.5 s)
     // to 1..1.5 s.
     let got = spans(&s, a);
-    check(&format!("the region across both edges is cut into three, in their sections' new places: {got:?}"), got == vec![(sr / 2, sr, 0), (sr, sr * 3 / 2, sr * 3 / 2), (2 * sr, 3 * sr, sr / 2)]);
+    check(
+        &format!("the region across both edges is cut into three, in their sections' new places: {got:?}"),
+        got == vec![(sr / 2, sr, 0), (sr, sr * 3 / 2, sr * 3 / 2), (2 * sr, 3 * sr, sr / 2)],
+    );
     let got = spans(&s, b);
     check(&format!("the regions inside sections move whole: {got:?}"), got == vec![(sr / 10, sr * 4 / 10, 0), (sr * 12 / 10, sr * 18 / 10, 0)]);
     check(&format!("the moved section's regions are returned to select ({})", picked.len()), picked.len() == 2 && picked.contains(&rb3));
@@ -180,11 +195,21 @@ fn main() {
     let r1 = render(&mut s, &tracks, len);
     let d = compare(&r1, &r0, &[(0, 0, sr), (sr, 2 * sr, sr), (2 * sr, sr, sr), (3 * sr, 3 * sr, sr)], sr);
     let wrong = compare(&r1, &r0, &[(sr, sr, sr)], sr);
-    check(&format!("the render plays section 3's audio second and section 2's third (diff {d:?}; in the old order it would be {wrong:?})"), ok(d) && wrong.0 > 0.05);
+    check(
+        &format!("the render plays section 3's audio second and section 2's third (diff {d:?}; in the old order it would be {wrong:?})"),
+        ok(d) && wrong.0 > 0.05,
+    );
     s.undo();
     let back = render(&mut s, &tracks, len);
     let d = compare(&back, &r0, &[(0, 0, len)], sr);
-    check(&format!("undo puts the regions, automation and sound back (diff {d:?})"), spans(&s, a) == vec![(sr / 2, 5 * sr / 2, 0)] && volume(&s, a) == ramp_a && volume(&s, b) == ramp_b && s.project.arrangement[1].id == sec[1] && d == (0.0, 0.0));
+    check(
+        &format!("undo puts the regions, automation and sound back (diff {d:?})"),
+        spans(&s, a) == vec![(sr / 2, 5 * sr / 2, 0)]
+            && volume(&s, a) == ramp_a
+            && volume(&s, b) == ramp_b
+            && s.project.arrangement[1].id == sec[1]
+            && d == (0.0, 0.0),
+    );
 
     // ---- Alt-drag: a copy of section 1 between sections 1 and 2.
     s.checkpoint("Copy Arrangement Marker", None, false);
@@ -192,7 +217,10 @@ fn main() {
     let starts: Vec<i64> = s.project.arrangement.iter().map(|x| x.start).collect();
     check(&format!("the copy makes four sections: {starts:?}"), starts == vec![0, sr, 2 * sr, 3 * sr] && s.project.arrangement[1].name == "Intro");
     let got = spans(&s, b);
-    check(&format!("section 1's region is copied, the later ones move a second on: {got:?}"), got == vec![(sr / 10, sr * 4 / 10, 0), (sr * 11 / 10, sr * 14 / 10, 0), (sr * 32 / 10, sr * 38 / 10, 0)]);
+    check(
+        &format!("section 1's region is copied, the later ones move a second on: {got:?}"),
+        got == vec![(sr / 10, sr * 4 / 10, 0), (sr * 11 / 10, sr * 14 / 10, 0), (sr * 32 / 10, sr * 38 / 10, 0)],
+    );
     let r2 = render(&mut s, &tracks, len + sr);
     let d = compare(&r2, &r0, &[(0, 0, sr), (sr, 0, sr), (2 * sr, sr, sr), (3 * sr, 2 * sr, 2 * sr)], sr);
     check(&format!("the render plays section 1 twice, then the rest (diff {d:?})"), ok(d));
@@ -215,7 +243,10 @@ fn main() {
     // ---- Delete Arrangement Marker only: the content stays.
     s.delete_arrangement_marker(sec[1], false).unwrap();
     let v: Vec<(i64, i64)> = s.project.arrangement.iter().map(|x| (x.start, x.length)).collect();
-    check(&format!("deleting just the marker leaves the content and widens section 1: {v:?}"), v == vec![(0, 2 * sr), (2 * sr, sr)] && spans(&s, a) == vec![(sr / 2, 5 * sr / 2, 0)]);
+    check(
+        &format!("deleting just the marker leaves the content and widens section 1: {v:?}"),
+        v == vec![(0, 2 * sr), (2 * sr, sr)] && spans(&s, a) == vec![(sr / 2, 5 * sr / 2, 0)],
+    );
 
     let _ = std::fs::remove_dir_all(&s.dir);
     if FAILED.load(std::sync::atomic::Ordering::Relaxed) {

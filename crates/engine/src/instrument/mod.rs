@@ -98,8 +98,13 @@ pub trait Instrument: Send {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Midi {
     /// `velocity` 0..1, never 0 (a note-on with velocity 0 is a [`Midi::NoteOff`]).
-    NoteOn { note: u8, velocity: f32 },
-    NoteOff { note: u8 },
+    NoteOn {
+        note: u8,
+        velocity: f32,
+    },
+    NoteOff {
+        note: u8,
+    },
     /// -1..1, 0 centred.
     PitchBend(f32),
     /// CC 1, 0..1.
@@ -183,7 +188,7 @@ impl InstrumentInfo {
 
 /// Every built-in instrument. To add one: write its module and list it here.
 pub fn registry() -> Vec<InstrumentInfo> {
-vec![basic::info(), tre::info(), sei::info(), cinque::info(), uno::info(), sedici::info(), onda::info(), sampler::info()]
+    vec![basic::info(), tre::info(), sei::info(), cinque::info(), uno::info(), sedici::info(), onda::info(), sampler::info()]
 }
 
 /// The registry entry for a plug-in id.

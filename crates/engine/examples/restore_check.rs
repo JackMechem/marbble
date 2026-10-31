@@ -191,7 +191,10 @@ fn main() {
         }
     }
     let text = serde_json::to_string_pretty(&v).unwrap();
-    check("the older document has none of the new fields", !["\"vcas\"", "\"arrangement\"", "\"auto_lanes\"", "\"snap_zero_crossings\""].iter().any(|k| text.contains(k)));
+    check(
+        "the older document has none of the new fields",
+        !["\"vcas\"", "\"arrangement\"", "\"auto_lanes\"", "\"snap_zero_crossings\""].iter().any(|k| text.contains(k)),
+    );
     std::fs::write(old_dir.join("project.json"), text).unwrap();
     let opened = t.open(&old_dir);
     check(&format!("an older project opens ({:?})", opened.as_ref().err()), opened.is_ok());

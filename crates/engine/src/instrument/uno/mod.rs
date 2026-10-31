@@ -316,7 +316,8 @@ impl Uno {
     /// One tick at the voice's rate.
     #[inline]
     fn tick(&mut self, v: &[f32; S_COUNT]) -> f32 {
-        let (tune, cutoff, res, env, accent_knob, square, drift, sweep_coef) = (v[S_TUNE] + v[S_BEND], v[S_CUTOFF], v[S_RES], v[S_ENV], v[S_ACCENT], v[S_WAVE], v[S_DRIFT], v[S_SWEEP_COEF]);
+        let (tune, cutoff, res, env, accent_knob, square, drift, sweep_coef) =
+            (v[S_TUNE] + v[S_BEND], v[S_CUTOFF], v[S_RES], v[S_ENV], v[S_ACCENT], v[S_WAVE], v[S_DRIFT], v[S_SWEEP_COEF]);
         if self.ctl == 0 {
             self.ctl = CONTROL_TICKS;
             self.drift_st = self.drift.tick() * drift * 0.06;

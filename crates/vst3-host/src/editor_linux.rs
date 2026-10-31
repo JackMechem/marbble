@@ -218,9 +218,7 @@ impl Editor {
                 0,
                 WindowClass::INPUT_OUTPUT,
                 0,
-                &CreateWindowAux::new()
-                    .background_pixel(screen.black_pixel)
-                    .event_mask(EventMask::STRUCTURE_NOTIFY),
+                &CreateWindowAux::new().background_pixel(screen.black_pixel).event_mask(EventMask::STRUCTURE_NOTIFY),
             )
             .map_err(|e| e.to_string())?;
 
@@ -243,11 +241,7 @@ impl Editor {
             }
             window.conn.map_window(id).map_err(|e| e.to_string())?;
             window.conn.flush().map_err(|e| e.to_string())?;
-            let frame = ComWrapper::new(PlugFrame {
-                window: window.clone(),
-                view: Mutex::new(Some(view.clone())),
-                sources: Mutex::new(HashMap::new()),
-            });
+            let frame = ComWrapper::new(PlugFrame { window: window.clone(), view: Mutex::new(Some(view.clone())), sources: Mutex::new(HashMap::new()) });
             view.setFrame(frame.to_com_ptr::<IPlugFrame>().unwrap().as_ptr());
             if view.attached(id as usize as *mut std::ffi::c_void, kPlatformTypeX11EmbedWindowID) != kResultOk {
                 view.setFrame(std::ptr::null_mut());
@@ -265,9 +259,12 @@ impl Editor {
                 // the callback can't run in between, as both are on the main thread.
                 let sized = resizable.then(|| view.clone());
                 let fd = window.conn.stream().as_raw_fd();
-                l.add_fd(fd, Box::new(move || {
-                    drain_events(&win, wm_delete, &closed, sized.as_ref());
-                }))
+                l.add_fd(
+                    fd,
+                    Box::new(move || {
+                        drain_events(&win, wm_delete, &closed, sized.as_ref());
+                    }),
+                )
             });
 
             Ok(Editor { view, frame, window, wm_delete, closed, x_source, resizable })

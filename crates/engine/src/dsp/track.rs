@@ -127,7 +127,12 @@ pub enum RegionDsp {
         /// The gain laws of the fade-in and fade-out (see `fades.rs`).
         laws: [FadeLaw; 2],
     },
-    Midi { start: i64, length: i64, notes: Arc<Vec<Note>>, cc: Arc<Vec<CcEvent>> },
+    Midi {
+        start: i64,
+        length: i64,
+        notes: Arc<Vec<Note>>,
+        cc: Arc<Vec<CcEvent>>,
+    },
 }
 
 /// A strip's parameters that change without rebuilding it, in plain values. Small and `Copy`, so a fader

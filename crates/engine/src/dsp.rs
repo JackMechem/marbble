@@ -45,11 +45,11 @@ mod builtin;
 pub use builtin::{clamp as builtin_clamp, to_normalized, to_plain, BuiltinDsp, FxShared, InstrumentDsp};
 pub(crate) mod auto;
 use auto::MasterAuto;
-mod track_off;
-mod multi_out;
 pub mod graph;
+mod multi_out;
 pub mod parallel;
 pub mod pool;
+mod track_off;
 pub use graph::TaskGraph;
 pub use parallel::{ParallelTest, Workers};
 
@@ -222,7 +222,6 @@ impl Engine {
         self.resolve_routes();
         (old_t, old_m)
     }
-
 }
 
 #[cfg(test)]

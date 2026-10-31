@@ -191,7 +191,12 @@ mod tests {
     }
 
     fn probe(k: usize, key: Option<Id>) -> InsertDsp {
-        InsertDsp { uid: 900 + k as Id, bypass: false, plugin: Plugin::Builtin(Box::new(BuiltinDsp::new(&probe_info(k), SR as f32, &[]))), key: KeyRoute::new(key, false) }
+        InsertDsp {
+            uid: 900 + k as Id,
+            bypass: false,
+            plugin: Plugin::Builtin(Box::new(BuiltinDsp::new(&probe_info(k), SR as f32, &[]))),
+            key: KeyRoute::new(key, false),
+        }
     }
 
     fn blocks(k: usize) -> usize {
@@ -275,7 +280,16 @@ mod tests {
         let len = SR as usize * 10;
         let x: Vec<f32> = (0..len).map(|i| 0.5 * (std::f32::consts::TAU * 440.0 * i as f32 / SR as f32).sin()).collect();
         let clip = Arc::new(Clip::from_channels("sine.wav".into(), SR as u32, vec![x.clone(), x]));
-        Arc::new(vec![RegionDsp::Audio { start: 0, length: len as i64, offset: 0, gain: 1.0, clip, fade_in: (0, 0), fade_out: (len as i64, 0), laws: Default::default() }])
+        Arc::new(vec![RegionDsp::Audio {
+            start: 0,
+            length: len as i64,
+            offset: 0,
+            gain: 1.0,
+            clip,
+            fade_in: (0, 0),
+            fade_out: (len as i64, 0),
+            laws: Default::default(),
+        }])
     }
 
     fn peak(x: &[f32]) -> f32 {

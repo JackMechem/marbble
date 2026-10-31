@@ -55,7 +55,8 @@ fn real_copies_match_the_loop() {
     assert_eq!(fades, vec![(100, 10, 0), (100, 0, 0), (100, 0, 0), (100, 0, 30)]);
     assert!(c.iter().all(|x| x.loop_end.is_none()));
 
-    let notes = vec![Note { start: 0, length: 10, pitch: 60, velocity: 100, muted: false }, Note { start: 60, length: 10, pitch: 62, velocity: 100, muted: false }];
+    let notes =
+        vec![Note { start: 0, length: 10, pitch: 60, velocity: 100, muted: false }, Note { start: 60, length: 10, pitch: 62, velocity: 100, muted: false }];
     let m = Region { content: RegionContent::Midi { notes, cc: Vec::new() }, ..audio(0, 100, Some(250)) };
     let counts: Vec<usize> = m
         .real_copies()

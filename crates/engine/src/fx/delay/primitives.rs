@@ -11,7 +11,11 @@ pub(crate) const MAX_RATE: f32 = 192_000.0;
 /// just above zero.
 #[inline]
 pub(crate) fn flush(x: f32) -> f32 {
-    if x.abs() < 1e-15 { 0.0 } else { x }
+    if x.abs() < 1e-15 {
+        0.0
+    } else {
+        x
+    }
 }
 
 /// A ring-buffer delay line.
@@ -212,10 +216,8 @@ impl Osc {
 }
 
 /// Tempo-sync note values, as shown in the choice pop-ups ("." dotted, "T" triplet).
-pub(crate) const NOTE_LABELS: &[&str] = &[
-    "1/1", "1/1.", "1/1T", "1/2", "1/2.", "1/2T", "1/4", "1/4.", "1/4T", "1/8", "1/8.", "1/8T", "1/16", "1/16.", "1/16T",
-    "1/32", "1/32.", "1/32T",
-];
+pub(crate) const NOTE_LABELS: &[&str] =
+    &["1/1", "1/1.", "1/1T", "1/2", "1/2.", "1/2T", "1/4", "1/4.", "1/4T", "1/8", "1/8.", "1/8T", "1/16", "1/16.", "1/16T", "1/32", "1/32.", "1/32T"];
 
 /// The length of a note value in quarter-note beats.
 pub(crate) fn note_beats(index: usize) -> f64 {

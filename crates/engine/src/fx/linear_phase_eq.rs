@@ -135,7 +135,15 @@ pub const PRESETS: &[FactoryPreset] = &[
 ];
 
 pub fn info() -> EffectInfo {
-    EffectInfo { id: "builtin:linear-phase-eq", name: "Linear Phase EQ", category: "EQ", params: &PARAMS, meters: &[], sidechain: false, new: |sr| Box::new(LinearPhaseEq::new(sr)) }
+    EffectInfo {
+        id: "builtin:linear-phase-eq",
+        name: "Linear Phase EQ",
+        category: "EQ",
+        params: &PARAMS,
+        meters: &[],
+        sidechain: false,
+        new: |sr| Box::new(LinearPhaseEq::new(sr)),
+    }
 }
 
 /// The kernel length for a quality (0..=2) at a sample rate: odd, so the centre is a sample.
@@ -268,7 +276,12 @@ impl LinearPhaseEq {
         let fft = plan_forward();
         let kernel = design(&values, sample_rate, 0, fft.as_ref());
         let conv = Convolver::new(taps(2, sample_rate), kernel, (FADE_SECS * sample_rate) as usize);
-        let shared = Arc::new(Shared { values: std::array::from_fn(|i| AtomicU32::new(values[i].to_bits())), gen: AtomicU64::new(0), urgent: AtomicBool::new(false), stop: AtomicBool::new(false) });
+        let shared = Arc::new(Shared {
+            values: std::array::from_fn(|i| AtomicU32::new(values[i].to_bits())),
+            gen: AtomicU64::new(0),
+            urgent: AtomicBool::new(false),
+            stop: AtomicBool::new(false),
+        });
         let (k_tx, k_rx) = rtrb::RingBuffer::new(2);
         let (s_tx, s_rx) = rtrb::RingBuffer::new(8);
         let worker_shared = shared.clone();

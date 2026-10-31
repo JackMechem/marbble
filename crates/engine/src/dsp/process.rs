@@ -67,11 +67,7 @@ impl Engine {
             if looping && self.pos < ce && self.pos + n as i64 > ce {
                 n = (ce - self.pos) as usize;
             }
-            let in_slice = if in_ch > 0 && input.len() >= (done + n) * in_ch {
-                &input[done * in_ch..(done + n) * in_ch]
-            } else {
-                &[][..]
-            };
+            let in_slice = if in_ch > 0 && input.len() >= (done + n) * in_ch { &input[done * in_ch..(done + n) * in_ch] } else { &[][..] };
             match self.process_block(in_slice, in_ch, n) {
                 BlockEnd::Played => {}
                 // As when the callback's own panic is caught: silence, and the transport waits.
@@ -165,13 +161,7 @@ impl Engine {
 
     /// What plug-ins are told about the transport for the block starting at the playhead.
     pub fn transport(&self) -> TransportInfo {
-        let t = TransportInfo {
-            playing: self.playing,
-            recording: self.recording,
-            sample_rate: self.sample_rate,
-            cycle: None,
-            ..Default::default()
-        };
+        let t = TransportInfo { playing: self.playing, recording: self.recording, sample_rate: self.sample_rate, cycle: None, ..Default::default() };
         let mut t = transport_at(&self.tempo, &t, self.pos);
         if self.cycle.0 {
             t.cycle = Some((self.tempo.beats_at(self.cycle.1 as f64), self.tempo.beats_at(self.cycle.2 as f64)));
@@ -318,7 +308,6 @@ impl Engine {
                 cur.spent = at.elapsed().as_secs_f32();
             }
         }
-
 
         // Isolated renders are captured before the Stereo Out strip.
         let master_fx = self.isolate.is_none();

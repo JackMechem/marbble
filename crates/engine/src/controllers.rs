@@ -64,24 +64,50 @@ pub enum EqField {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum CtlTarget {
-    Volume { track: Id },
-    Pan { track: Id },
-    Mute { track: Id },
-    Solo { track: Id },
+    Volume {
+        track: Id,
+    },
+    Pan {
+        track: Id,
+    },
+    Mute {
+        track: Id,
+    },
+    Solo {
+        track: Id,
+    },
     /// Record enable.
-    Arm { track: Id },
-    Send { track: Id, slot: u8 },
+    Arm {
+        track: Id,
+    },
+    Send {
+        track: Id,
+        slot: u8,
+    },
     /// A built-in effect's or a VST3 plug-in's parameter (`track` is MASTER_ID for Stereo
     /// Out). `plugin` is the slot's plug-in id: in another project the same instance id may
     /// hold a different plug-in, and then the assignment doesn't apply.
-    Plugin { track: Id, uid: Id, plugin: String, param: u32 },
+    Plugin {
+        track: Id,
+        uid: Id,
+        plugin: String,
+        param: u32,
+    },
     /// A Channel EQ band setting (`track` is MASTER_ID for Stereo Out).
-    Eq { track: Id, band: u8, field: EqField },
+    Eq {
+        track: Id,
+        band: u8,
+        field: EqField,
+    },
     /// The Channel EQ's output gain.
-    EqOutput { track: Id },
+    EqOutput {
+        track: Id,
+    },
     /// Stereo Out's fader.
     MasterVolume,
-    Transport { action: TransportAction },
+    Transport {
+        action: TransportAction,
+    },
 }
 
 impl CtlTarget {
@@ -286,9 +312,7 @@ impl Follow {
         let prev = self.last.replace(want);
         let ok = match mode {
             Takeover::Jump => true,
-            Takeover::Pickup => {
-                self.engaged || (want - current).abs() <= CATCH || prev.is_some_and(|p| (p - current) * (want - current) <= 0.0)
-            }
+            Takeover::Pickup => self.engaged || (want - current).abs() <= CATCH || prev.is_some_and(|p| (p - current) * (want - current) <= 0.0),
         };
         self.engaged = ok;
         if !ok {
@@ -428,7 +452,11 @@ mod tests {
     #[test]
     fn finds_by_port_channel_and_controller() {
         let c = |port: &str, channel, number| Controller { port: port.into(), channel, kind: CtlKind::Cc { number } };
-        let list = vec![Assignment::new(c("A", 0, 7), CtlTarget::MasterVolume), Assignment::new(c("B", 0, 7), CtlTarget::MasterVolume), Assignment::new(c("A", 1, 7), CtlTarget::MasterVolume)];
+        let list = vec![
+            Assignment::new(c("A", 0, 7), CtlTarget::MasterVolume),
+            Assignment::new(c("B", 0, 7), CtlTarget::MasterVolume),
+            Assignment::new(c("A", 1, 7), CtlTarget::MasterVolume),
+        ];
         let m = |ch, n| CtlMsg { channel: ch, kind: CtlKind::Cc { number: n }, value: 0.0, pressed: false };
         assert_eq!(find(&list, "A", &m(0, 7)), Some(0));
         assert_eq!(find(&list, "B", &m(0, 7)), Some(1));

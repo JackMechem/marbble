@@ -84,7 +84,16 @@ fn prune_breaks_loops_and_dangling_routes() {
 }
 
 fn keyed(p: &mut Project, track: Id, source: Id) {
-    let slot = PluginSlot { uid: p.alloc_id(), plugin_id: "builtin:noise-gate".into(), name: "Noise Gate".into(), bypass: false, state: None, params: Vec::new(), sidechain: Some(source), sidechain_pre: false };
+    let slot = PluginSlot {
+        uid: p.alloc_id(),
+        plugin_id: "builtin:noise-gate".into(),
+        name: "Noise Gate".into(),
+        bypass: false,
+        state: None,
+        params: Vec::new(),
+        sidechain: Some(source),
+        sidechain_pre: false,
+    };
     p.track_mut(track).unwrap().inserts = vec![Some(slot)];
 }
 

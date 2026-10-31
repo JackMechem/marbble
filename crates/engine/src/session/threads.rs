@@ -10,7 +10,17 @@ use crate::threads::{self as setting, ThreadChoices, Topology};
 
 /// Whether a command can change which strips read which.
 pub(super) fn changes_routes(cmd: &Cmd) -> bool {
-    matches!(cmd, Cmd::AddTrack(..) | Cmd::RemoveTrack(_) | Cmd::Order(_) | Cmd::Params(..) | Cmd::Insert { .. } | Cmd::Instrument { .. } | Cmd::ReorderInserts { .. } | Cmd::Sidechain { .. })
+    matches!(
+        cmd,
+        Cmd::AddTrack(..)
+            | Cmd::RemoveTrack(_)
+            | Cmd::Order(_)
+            | Cmd::Params(..)
+            | Cmd::Insert { .. }
+            | Cmd::Instrument { .. }
+            | Cmd::ReorderInserts { .. }
+            | Cmd::Sidechain { .. }
+    )
 }
 
 /// What the session knows about the workers it started.
@@ -67,7 +77,11 @@ impl Session {
         let realtime = self.audio_status.running && self.audio_config.output.as_deref() != Some(audio_io::NULL_OUTPUT);
         let wanted = (threads, realtime);
         if worth && !self.threads.forced && self.threads.running != Some(wanted) {
-            let opts = PoolOptions { threads, realtime: realtime.then_some((self.audio_status.buffer_size, self.audio_status.sample_rate)), cpus: self.threads.topology.fast.clone() };
+            let opts = PoolOptions {
+                threads,
+                realtime: realtime.then_some((self.audio_status.buffer_size, self.audio_status.sample_rate)),
+                cpus: self.threads.topology.fast.clone(),
+            };
             self.threads.running = Some(wanted);
             self.send(Cmd::Workers(Some(Workers::new(opts))));
         }

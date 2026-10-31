@@ -22,10 +22,7 @@ impl Meter {
 
     /// Peak since the last call.
     pub fn take(&self) -> (f32, f32) {
-        (
-            f32::from_bits(self.l.swap(0, Ordering::Relaxed)),
-            f32::from_bits(self.r.swap(0, Ordering::Relaxed)),
-        )
+        (f32::from_bits(self.l.swap(0, Ordering::Relaxed)), f32::from_bits(self.r.swap(0, Ordering::Relaxed)))
     }
 }
 

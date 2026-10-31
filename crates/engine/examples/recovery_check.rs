@@ -216,8 +216,17 @@ fn main() {
         let frames = file.channels[0].len() as i64;
         starts.push(r.start);
         check(
-            &format!("{name}: one take from {} for {} frames, {} channels (recorder had {reported}, file has {frames})", r.start, r.length, file.channels.len()),
-            t.regions.len() == 1 && r.length == frames - offset && frames + 4096 >= reported && file.channels.len() == channels && (r.start - 2 * sr).abs() < sr / 10,
+            &format!(
+                "{name}: one take from {} for {} frames, {} channels (recorder had {reported}, file has {frames})",
+                r.start,
+                r.length,
+                file.channels.len()
+            ),
+            t.regions.len() == 1
+                && r.length == frames - offset
+                && frames + 4096 >= reported
+                && file.channels.len() == channels
+                && (r.start - 2 * sr).abs() < sr / 10,
         );
         check(&format!("{name}'s file is a valid WAV again"), !daw_engine::wav_repair::inspect(&path).unwrap().damaged);
     }

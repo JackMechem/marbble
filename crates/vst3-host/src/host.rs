@@ -63,14 +63,7 @@ impl IHostApplicationTrait for HostApp {
 impl IPlugInterfaceSupportTrait for HostApp {
     unsafe fn isPlugInterfaceSupported(&self, iid: *const TUID) -> tresult {
         let iid = guid_of(iid);
-        let supported = [
-            IComponent::IID,
-            IAudioProcessor::IID,
-            IEditController::IID,
-            IConnectionPoint::IID,
-            IMidiMapping::IID,
-            IPlugView::IID,
-        ];
+        let supported = [IComponent::IID, IAudioProcessor::IID, IEditController::IID, IConnectionPoint::IID, IMidiMapping::IID, IPlugView::IID];
         if supported.contains(&iid) {
             kResultTrue
         } else {
@@ -86,11 +79,7 @@ static HOST: OnceLock<HostCtx> = OnceLock::new();
 
 /// The single host-application object shared by every plugin.
 pub fn host_context() -> ComPtr<FUnknown> {
-    HOST.get_or_init(|| HostCtx(ComWrapper::new(HostApp)))
-        .0
-        .to_com_ptr::<IHostApplication>()
-        .unwrap()
-        .upcast()
+    HOST.get_or_init(|| HostCtx(ComWrapper::new(HostApp))).0.to_com_ptr::<IHostApplication>().unwrap().upcast()
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -231,11 +220,7 @@ impl IAttributeListTrait for HostAttributeList {
 
     unsafe fn setBinary(&self, id: IAttributeList_::AttrID, data: *const c_void, size: uint32) -> tresult {
         let Some(k) = key(id) else { return kInvalidArgument };
-        let bytes = if data.is_null() {
-            Vec::new()
-        } else {
-            std::slice::from_raw_parts(data as *const u8, size as usize).to_vec()
-        };
+        let bytes = if data.is_null() { Vec::new() } else { std::slice::from_raw_parts(data as *const u8, size as usize).to_vec() };
         self.values.lock().insert(k, Attr::Bin(bytes));
         kResultOk
     }

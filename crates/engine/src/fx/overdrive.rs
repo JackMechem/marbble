@@ -23,7 +23,11 @@ const fn spec(id: u32, name: &'static str, min: f32, max: f32, default: f32, uni
     ParamSpec { id, name, min, max, default, unit, kind: ParamKind::Continuous, log }
 }
 
-static PARAMS: [ParamSpec; 3] = [spec(DRIVE, "Drive", 0.0, 40.0, 12.0, Unit::Db, false), spec(TONE, "Tone", 500.0, 20000.0, 5000.0, Unit::Hz, true), spec(OUTPUT, "Output", -24.0, 12.0, 0.0, Unit::Db, false)];
+static PARAMS: [ParamSpec; 3] = [
+    spec(DRIVE, "Drive", 0.0, 40.0, 12.0, Unit::Db, false),
+    spec(TONE, "Tone", 500.0, 20000.0, 5000.0, Unit::Hz, true),
+    spec(OUTPUT, "Output", -24.0, 12.0, 0.0, Unit::Db, false),
+];
 
 #[rustfmt::skip] // One row per preset's values: split per value, these tables run to thousands of lines.
 pub const PRESETS: &[FactoryPreset] = &[
@@ -36,7 +40,15 @@ pub const PRESETS: &[FactoryPreset] = &[
 ];
 
 pub fn info() -> EffectInfo {
-    EffectInfo { id: "builtin:overdrive", name: "Overdrive", category: "Distortion", params: &PARAMS, meters: &[], sidechain: false, new: |sr| Box::new(Overdrive::new(sr)) }
+    EffectInfo {
+        id: "builtin:overdrive",
+        name: "Overdrive",
+        category: "Distortion",
+        params: &PARAMS,
+        meters: &[],
+        sidechain: false,
+        new: |sr| Box::new(Overdrive::new(sr)),
+    }
 }
 
 /// The Overdrive's curve: tanh, offset so it clips a little earlier on one side. Zero in gives

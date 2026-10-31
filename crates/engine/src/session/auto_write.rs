@@ -57,7 +57,9 @@ impl Session {
         if track == MASTER_ID {
             return match param {
                 AutoParam::Volume => Some(self.project.master.volume_db),
-                AutoParam::Plugin { uid, param, .. } => self.controllers.get(uid).and_then(|c| c.param_value(*param)).map(|v| v as f32).or_else(|| self.builtin_normalized(*uid, *param)),
+                AutoParam::Plugin { uid, param, .. } => {
+                    self.controllers.get(uid).and_then(|c| c.param_value(*param)).map(|v| v as f32).or_else(|| self.builtin_normalized(*uid, *param))
+                }
                 _ => None,
             };
         }
@@ -67,7 +69,9 @@ impl Session {
             AutoParam::Pan => Some(t.pan),
             AutoParam::Mute => Some(t.mute as u8 as f32),
             AutoParam::Send(slot) => t.sends.get(*slot as usize).copied().flatten().map(|s| s.level_db),
-            AutoParam::Plugin { uid, param, .. } => self.controllers.get(uid).and_then(|c| c.param_value(*param)).map(|v| v as f32).or_else(|| self.builtin_normalized(*uid, *param)),
+            AutoParam::Plugin { uid, param, .. } => {
+                self.controllers.get(uid).and_then(|c| c.param_value(*param)).map(|v| v as f32).or_else(|| self.builtin_normalized(*uid, *param))
+            }
         }
     }
 
@@ -130,7 +134,17 @@ impl Session {
         if mode != AutoMode::Write {
             self.send(Cmd::AutoTouch { track, target: AutoTarget::from(param), on: true });
         }
-        self.auto.passes.push(Pass { track, param: param.clone(), mode, before, done: Vec::new(), start: pos, points: vec![AutoPoint { pos, value, curve: 0.0 }], value, held: false });
+        self.auto.passes.push(Pass {
+            track,
+            param: param.clone(),
+            mode,
+            before,
+            done: Vec::new(),
+            start: pos,
+            points: vec![AutoPoint { pos, value, curve: 0.0 }],
+            value,
+            held: false,
+        });
         Some(self.auto.passes.len() - 1)
     }
 

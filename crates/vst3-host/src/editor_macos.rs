@@ -12,8 +12,8 @@ use objc2::rc::Retained;
 use objc2::runtime::{NSObject, NSObjectProtocol, ProtocolObject};
 use objc2::{define_class, msg_send, DefinedClass, MainThreadMarker, MainThreadOnly};
 use objc2_app_kit::{
-    NSBackingStoreType, NSEvent, NSEventModifierFlags, NSFloatingWindowLevel, NSResponder, NSWindow, NSWindowCollectionBehavior,
-    NSWindowDelegate, NSWindowStyleMask,
+    NSBackingStoreType, NSEvent, NSEventModifierFlags, NSFloatingWindowLevel, NSResponder, NSWindow, NSWindowCollectionBehavior, NSWindowDelegate,
+    NSWindowStyleMask,
 };
 use objc2_foundation::{NSNotification, NSPoint, NSRect, NSSize, NSString};
 use vst3::Steinberg::*;
@@ -215,13 +215,7 @@ impl Editor {
 
             let delegate = WindowDelegate::new(
                 mtm,
-                DelegateIvars {
-                    view: view.clone(),
-                    resizable,
-                    size: Cell::new((w, h)),
-                    closed: Cell::new(false),
-                    detached: Cell::new(false),
-                },
+                DelegateIvars { view: view.clone(), resizable, size: Cell::new((w, h)), closed: Cell::new(false), detached: Cell::new(false) },
             );
             window.setDelegate(Some(ProtocolObject::from_ref(&*delegate)));
             let frame = ComWrapper::new(PlugFrame { window: window.clone(), delegate: delegate.clone() });
@@ -318,9 +312,8 @@ impl PlugInWindow {
     /// A new window of this class, as the `NSWindow` the editor code works with.
     fn create(mtm: MainThreadMarker, content: NSRect, style: NSWindowStyleMask) -> Retained<NSWindow> {
         let this = Self::alloc(mtm).set_ivars(());
-        let this: Retained<Self> = unsafe {
-            msg_send![super(this), initWithContentRect: content, styleMask: style, backing: NSBackingStoreType::Buffered, defer: false]
-        };
+        let this: Retained<Self> =
+            unsafe { msg_send![super(this), initWithContentRect: content, styleMask: style, backing: NSBackingStoreType::Buffered, defer: false] };
         Retained::into_super(this)
     }
 }

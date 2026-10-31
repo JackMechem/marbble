@@ -96,10 +96,7 @@ pub fn extra_plugin_folders() -> Vec<std::path::PathBuf> {
 }
 
 pub fn load() -> Settings {
-    std::fs::read_to_string(config_dir().join("settings.json"))
-        .ok()
-        .and_then(|t| parse(&t))
-        .unwrap_or_default()
+    std::fs::read_to_string(config_dir().join("settings.json")).ok().and_then(|t| parse(&t)).unwrap_or_default()
 }
 
 /// Reads a settings file, keeping what can be read even if one section is malformed.

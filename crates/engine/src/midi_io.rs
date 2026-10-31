@@ -155,11 +155,7 @@ impl MidiIo {
         Self::port_names()
             .into_iter()
             .filter(|n| !n.contains("Midi Through"))
-            .map(|name| MidiPort {
-                enabled: !self.disabled.contains(&name),
-                connected: self.connections.iter().any(|(n, _)| *n == name),
-                name,
-            })
+            .map(|name| MidiPort { enabled: !self.disabled.contains(&name), connected: self.connections.iter().any(|(n, _)| *n == name), name })
             .collect()
     }
 

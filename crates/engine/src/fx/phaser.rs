@@ -61,7 +61,15 @@ pub const PRESETS: &[FactoryPreset] = &[
 ];
 
 pub fn info() -> EffectInfo {
-    EffectInfo { id: "builtin:phaser", name: "Phaser", category: "Modulation", params: &PARAMS, meters: &super::chorus::LFO_METER, sidechain: false, new: |sr| Box::new(Phaser::new(sr)) }
+    EffectInfo {
+        id: "builtin:phaser",
+        name: "Phaser",
+        category: "Modulation",
+        params: &PARAMS,
+        meters: &super::chorus::LFO_METER,
+        sidechain: false,
+        new: |sr| Box::new(Phaser::new(sr)),
+    }
 }
 
 /// The swept all-pass frequency at LFO position `u` (0..1).

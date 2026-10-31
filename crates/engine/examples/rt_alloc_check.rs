@@ -176,7 +176,8 @@ fn add_sampler(s: &mut Session, scratch: &std::path::Path) -> Id {
     s.set_builtin_param(t, usize::MAX, param::LFO_PITCH, 30.0).unwrap();
     s.set_builtin_param(t, usize::MAX, param::GLIDE, 20.0).unwrap();
     let r = s.create_midi_region(t, 0, 48000 * 8).unwrap();
-    let notes: Vec<daw_engine::model::Note> = (0..64).map(|k| daw_engine::model::Note { start: k * 6000, length: 18000, pitch: 40 + (k % 37) as u8, velocity: 100, muted: false }).collect();
+    let notes: Vec<daw_engine::model::Note> =
+        (0..64).map(|k| daw_engine::model::Note { start: k * 6000, length: 18000, pitch: 40 + (k % 37) as u8, velocity: 100, muted: false }).collect();
     s.set_midi_content(vec![daw_engine::session::MidiContent { region: r, notes, cc: Vec::new(), start: None, length: None }]);
     t
 }

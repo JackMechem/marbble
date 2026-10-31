@@ -139,20 +139,38 @@ fn main() {
     let (ga, gb) = sides(&mut s, &f, &l, FadeOutType::X, 0.0);
     let sum = (p(0.0)..=p(1.0)).map(|i| (ga[i] + gb[i] - 1.0).abs()).fold(0.0, f32::max);
     check(&format!("X: the two sides sum to unity across the crossfade (max error {sum:.1e})"), sum < 1e-4);
-    check(&format!("X at curve 0 is linear ({:.4} at a quarter, {:.4} in the middle)", gb[p(0.25)], gb[p(0.5)]), (gb[p(0.25)] - 0.25).abs() < 1e-3 && (gb[p(0.5)] - 0.5).abs() < 1e-3);
     check(
-        &format!("the crossfade is centred on the junction: A full before it, B full after ({:.3} {:.3} | {:.3} {:.3})", ga[p(0.0) - 10], gb[p(0.0) - 10], ga[p(1.0) + 10], gb[p(1.0) + 10]),
+        &format!("X at curve 0 is linear ({:.4} at a quarter, {:.4} in the middle)", gb[p(0.25)], gb[p(0.5)]),
+        (gb[p(0.25)] - 0.25).abs() < 1e-3 && (gb[p(0.5)] - 0.5).abs() < 1e-3,
+    );
+    check(
+        &format!(
+            "the crossfade is centred on the junction: A full before it, B full after ({:.3} {:.3} | {:.3} {:.3})",
+            ga[p(0.0) - 10],
+            gb[p(0.0) - 10],
+            ga[p(1.0) + 10],
+            gb[p(1.0) + 10]
+        ),
         (ga[p(0.0) - 10] - 1.0).abs() < 1e-5 && gb[p(0.0) - 10] == 0.0 && ga[p(1.0) + 10] == 0.0 && (gb[p(1.0) + 10] - 1.0).abs() < 1e-5,
     );
     let (ga, gb) = sides(&mut s, &f, &l, FadeOutType::X, 0.7);
     let sum = (p(0.0)..=p(1.0)).map(|i| (ga[i] + gb[i] - 1.0).abs()).fold(0.0, f32::max);
-    check(&format!("X with a curve still sums to unity (max error {sum:.1e}; B at a quarter {:.3})", gb[p(0.25)]), sum < 1e-4 && (gb[p(0.25)] - 0.25).abs() > 0.02);
+    check(
+        &format!("X with a curve still sums to unity (max error {sum:.1e}; B at a quarter {:.3})", gb[p(0.25)]),
+        sum < 1e-4 && (gb[p(0.25)] - 0.25).abs() > 0.02,
+    );
     let (ga, gb) = sides(&mut s, &f, &l, FadeOutType::EqP, 0.0);
     let pow = (p(0.0)..=p(1.0)).map(|i| (ga[i] * ga[i] + gb[i] * gb[i] - 1.0).abs()).fold(0.0, f32::max);
-    check(&format!("EqP: constant power across the crossfade (max error {pow:.1e}; each side {:.4} in the middle)", gb[p(0.5)]), pow < 1e-3 && (gb[p(0.5)] - std::f32::consts::FRAC_1_SQRT_2).abs() < 1e-3);
+    check(
+        &format!("EqP: constant power across the crossfade (max error {pow:.1e}; each side {:.4} in the middle)", gb[p(0.5)]),
+        pow < 1e-3 && (gb[p(0.5)] - std::f32::consts::FRAC_1_SQRT_2).abs() < 1e-3,
+    );
     let (ga, gb) = sides(&mut s, &f, &l, FadeOutType::XS, 0.0);
     let sum = (p(0.0)..=p(1.0)).map(|i| (ga[i] + gb[i] - 1.0).abs()).fold(0.0, f32::max);
-    check(&format!("X S: sums to unity, S-shaped ({sum:.1e}; B {:.3} at a quarter, {:.3} in the middle)", gb[p(0.25)], gb[p(0.5)]), sum < 1e-4 && (gb[p(0.25)] - 0.1464).abs() < 2e-3 && (gb[p(0.5)] - 0.5).abs() < 1e-3);
+    check(
+        &format!("X S: sums to unity, S-shaped ({sum:.1e}; B {:.3} at a quarter, {:.3} in the middle)", gb[p(0.25)], gb[p(0.5)]),
+        sum < 1e-4 && (gb[p(0.25)] - 0.1464).abs() < 2e-3 && (gb[p(0.5)] - 0.5).abs() < 1e-3,
+    );
 
     // Correlated material (DC on both sides): EqP bumps +3 dB, X stays level.
     let (t, ra, _) = pair(&mut s, &l, &f.dc, &f.dc);
@@ -187,14 +205,24 @@ fn main() {
     let butt = render(&mut s, &l);
     let step = butt.windows(2).take(2 * l.j as usize - 1).map(|w| (w[1] - w[0]).abs()).fold(0.0, f32::max);
     let low = butt[l.j as usize - 1].min(butt[l.j as usize]);
-    check(&format!("no audio to spare: butt fades meet at the junction without a jump (layout {ok_layout}, dip {low:.4}, largest step {step:.1e})"), ok_layout && low < 0.01 && step < 1e-3);
+    check(
+        &format!("no audio to spare: butt fades meet at the junction without a jump (layout {ok_layout}, dip {low:.4}, largest step {step:.1e})"),
+        ok_layout && low < 0.01 && step < 1e-3,
+    );
     let xs = s.crossfades();
-    check(&format!("the butt fades are half the length each ({:?} / {:?})", xs[0].fade_out, xs[0].fade_in), xs[0].fade_out == (l.j - l.len / 2, l.len / 2) && xs[0].fade_in == (l.j, l.len / 2));
+    check(
+        &format!("the butt fades are half the length each ({:?} / {:?})", xs[0].fade_out, xs[0].fade_in),
+        xs[0].fade_out == (l.j - l.len / 2, l.len / 2) && xs[0].fade_in == (l.j, l.len / 2),
+    );
     // A gap: the crossfade type fades out like Out, and B starts cleanly.
     s.move_region(rb, l.j + 100, None);
     let gap = render(&mut s, &l);
     check(
-        &format!("a gap turns the crossfade into a fade-out ({:.4} halfway through it, {:.4} in the gap)", gap[(l.j - l.len / 2) as usize] / DC, gap[l.j as usize + 50]),
+        &format!(
+            "a gap turns the crossfade into a fade-out ({:.4} halfway through it, {:.4} in the gap)",
+            gap[(l.j - l.len / 2) as usize] / DC,
+            gap[l.j as usize + 50]
+        ),
         (gap[(l.j - l.len / 2) as usize] / DC - curve(0.5, 0.5)).abs() < 1e-3 && gap[l.j as usize + 50] == 0.0 && (gap[l.j as usize + 101] - DC).abs() < 1e-6,
     );
     s.delete_track(t);
@@ -212,7 +240,10 @@ fn main() {
         s.set_region_fade_shape(&[r], Some(c), Some(c), None, None);
         let a = render(&mut s, &l);
         let (gi, go) = (a[(l.len / 2) as usize] / DC, a[mid_out] / DC);
-        check(&format!("curve {c}: fade-in and fade-out halfway at {gi:.4} / {go:.4} (want {:.4})", curve(0.5, c)), (gi - curve(0.5, c)).abs() < 1e-3 && (go - curve(0.5, c)).abs() < 1e-3);
+        check(
+            &format!("curve {c}: fade-in and fade-out halfway at {gi:.4} / {go:.4} (want {:.4})", curve(0.5, c)),
+            (gi - curve(0.5, c)).abs() < 1e-3 && (go - curve(0.5, c)).abs() < 1e-3,
+        );
     }
     s.delete_track(t);
 
@@ -227,7 +258,10 @@ fn main() {
     let speed = render(&mut s, &l);
     let (h, e) = (half as usize, 2 * l.j as usize);
     let (up, down, full) = (crossings(&speed[..h]), crossings(&speed[e - h..e]), crossings(&normal[..h]));
-    check(&format!("Speed Up and Slow Down play at half speed on average over a linear fade ({up} and {down} cycles, {full} at full speed)"), (up as f32 / full as f32 - 0.5).abs() < 0.03 && (down as f32 / full as f32 - 0.5).abs() < 0.03);
+    check(
+        &format!("Speed Up and Slow Down play at half speed on average over a linear fade ({up} and {down} cycles, {full} at full speed)"),
+        (up as f32 / full as f32 - 0.5).abs() < 0.03 && (down as f32 / full as f32 - 0.5).abs() < 0.03,
+    );
     let between = diff(&speed[h..e - h], &normal[h..e - h]);
     check(&format!("between the speed fades the audio is where it always was ({between:.1e})"), between < 1e-6);
     let (first, last) = (speed[1..200].iter().fold(0.0f32, |m, v| m.max(v.abs())), speed[e - 200..e].iter().fold(0.0f32, |m, v| m.max(v.abs())));
@@ -241,12 +275,21 @@ fn main() {
     s.checkpoint("Move Region", None, false);
     s.move_region(rb, l.j - l.len, None);
     let xs = s.crossfades();
-    check(&format!("moving B over A's end crossfades the overlap ({:?})", xs.first().map(|x| (x.kind, x.fade_out))), xs.len() == 1 && xs[0].kind == FadeOutType::X && xs[0].fade_out == (l.j - l.len, l.len));
+    check(
+        &format!("moving B over A's end crossfades the overlap ({:?})", xs.first().map(|x| (x.kind, x.fade_out))),
+        xs.len() == 1 && xs[0].kind == FadeOutType::X && xs[0].fade_out == (l.j - l.len, l.len),
+    );
     let ga: Vec<f32> = render(&mut s, &l).iter().map(|v| v / DC).collect();
     let (mid, end) = (ga[(l.j - l.len / 2) as usize], ga[l.j as usize + 10]);
-    check(&format!("A fades out across the overlap with its curve ({mid:.4} in the middle, {end:.4} after)"), (mid - curve(0.5, 0.5)).abs() < 1e-3 && end == 0.0);
+    check(
+        &format!("A fades out across the overlap with its curve ({mid:.4} in the middle, {end:.4} after)"),
+        (mid - curve(0.5, 0.5)).abs() < 1e-3 && end == 0.0,
+    );
     s.undo();
-    check("undo puts B back without the crossfade", s.crossfades().is_empty() && s.project.track(t).unwrap().regions.iter().any(|r| r.id == rb && r.start == l.j));
+    check(
+        "undo puts B back without the crossfade",
+        s.crossfades().is_empty() && s.project.track(t).unwrap().regions.iter().any(|r| r.id == rb && r.start == l.j),
+    );
     s.redo();
     check("redo brings both back", s.crossfades().len() == 1);
     s.set_drag_mode(DragMode::Overlap);
@@ -294,7 +337,8 @@ fn main() {
 
     // Save and load.
     let saved = s.save(None).unwrap();
-    let mut s2 = Session::new(AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() }, Vec::new());
+    let mut s2 =
+        Session::new(AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() }, Vec::new());
     s2.open(&saved).unwrap();
     let d = diff(&mix, &render(&mut s2, &l));
     check(&format!("saved and reopened, it sounds the same ({d:.1e}, {} crossfade)", s2.crossfades().len()), d < 1e-6 && s2.crossfades().len() == 1);
@@ -316,7 +360,10 @@ fn main() {
     let b = s.import_audio(&tone, tt, len / 2).unwrap();
     s.crossfade_regions(&[a], len / 10, None);
     let xs: Vec<_> = s.crossfades().into_iter().filter(|x| x.out_region == a).collect();
-    check(&format!("the tone crossfades with a copy of itself as EqP ({:?})", xs.first().map(|x| (x.kind, x.fade_out))), xs.len() == 1 && xs[0].kind == FadeOutType::EqP && xs[0].in_region == b);
+    check(
+        &format!("the tone crossfades with a copy of itself as EqP ({:?})", xs.first().map(|x| (x.kind, x.fade_out))),
+        xs.len() == 1 && xs[0].kind == FadeOutType::EqP && xs[0].in_region == b,
+    );
 
     std::process::exit(if FAILED.load(std::sync::atomic::Ordering::Relaxed) { 1 } else { 0 });
 }

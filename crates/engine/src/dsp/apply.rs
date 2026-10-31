@@ -219,7 +219,10 @@ impl Engine {
             Cmd::Params(id, p) => {
                 if let Some(t) = self.track_mut(id) {
                     let bus = |s: &Option<SendParams>| s.map(|s| s.bus);
-                    let rerouted = t.params.output != p.output || t.params.folder != p.folder || t.params.instrument_output != p.instrument_output || t.params.sends.iter().map(bus).ne(p.sends.iter().map(bus));
+                    let rerouted = t.params.output != p.output
+                        || t.params.folder != p.folder
+                        || t.params.instrument_output != p.instrument_output
+                        || t.params.sends.iter().map(bus).ne(p.sends.iter().map(bus));
                     t.params = p;
                     if rerouted {
                         self.resolve_routes();
@@ -408,7 +411,9 @@ impl Engine {
             Cmd::FxParam { track, uid, id, value } => {
                 if let Some(b) = self.builtin_mut(track, uid) {
                     b.set(id, value);
-                } else if let Some(InsertDsp { plugin: Plugin::Instrument(i), .. }) = self.track_mut(track).and_then(|t| t.instrument.as_mut()).filter(|i| i.uid == uid) {
+                } else if let Some(InsertDsp { plugin: Plugin::Instrument(i), .. }) =
+                    self.track_mut(track).and_then(|t| t.instrument.as_mut()).filter(|i| i.uid == uid)
+                {
                     i.set(id, value);
                 }
             }

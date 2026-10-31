@@ -43,10 +43,25 @@ fn main() {
                         peak = peak.max(l.iter().fold(0.0f32, |a, &b| a.max(b.abs())));
                     }
                     for bus in c.audio_buses() {
-                        println!("         {} bus \"{}\": {} ch{}{}", if bus.input { "in " } else { "out" }, bus.name, bus.channels, if bus.aux { ", aux" } else { ", main" }, if bus.default_active { ", active by default" } else { "" });
+                        println!(
+                            "         {} bus \"{}\": {} ch{}{}",
+                            if bus.input { "in " } else { "out" },
+                            bus.name,
+                            bus.channels,
+                            if bus.aux { ", aux" } else { ", main" },
+                            if bus.default_active { ", active by default" } else { "" }
+                        );
                     }
                     let st = c.save_state();
-                    println!("  OK   {:<28} [{}] vendor={} inst={} editor={} state={}B peak={peak:.3}", d.name, d.subcategories, d.vendor, d.is_instrument, c.has_editor(), st.component.len());
+                    println!(
+                        "  OK   {:<28} [{}] vendor={} inst={} editor={} state={}B peak={peak:.3}",
+                        d.name,
+                        d.subcategories,
+                        d.vendor,
+                        d.is_instrument,
+                        c.has_editor(),
+                        st.component.len()
+                    );
                     for out in c.output_buses().iter().filter(|o| o.index > 0 || c.output_buses().len() > 1) {
                         println!("         output bus {}: {:?}, {} channels", out.index, out.name, out.channels);
                     }

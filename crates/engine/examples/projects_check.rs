@@ -90,7 +90,10 @@ fn main() {
     let t = r.project.track(a).unwrap();
     let mut names: Vec<String> = t.alternatives.iter().map(|x| x.name.clone()).collect();
     names.sort();
-    check(&format!("track alternatives survive save and reopen ({names:?}, active {})", t.alternative), names == ["A", "B"] && t.alternative == "Comp" && t.regions.len() == 1);
+    check(
+        &format!("track alternatives survive save and reopen ({names:?}, active {})", t.alternative),
+        names == ["A", "B"] && t.alternative == "Comp" && t.regions.len() == 1,
+    );
     r.switch_track_alternative(a, "B").unwrap();
     let lv = level(&mut r, a);
     check(&format!("after reopening, switching still swaps what plays ({lv:.4})"), lv < 1e-4);
@@ -114,7 +117,10 @@ fn main() {
     let oldest = backups.last().unwrap().file.clone();
     s.revert_to_backup(&oldest).unwrap();
     let after: Vec<f64> = s.backups().iter().map(|b| tempo_of(&dir, &b.file)).collect();
-    check(&format!("revert loads the backup ({}) and keeps the state before it ({after:?})", s.project.tempo), s.project.tempo == 101.0 && after.contains(&110.0) && !s.dirty);
+    check(
+        &format!("revert loads the backup ({}) and keeps the state before it ({after:?})", s.project.tempo),
+        s.project.tempo == 101.0 && after.contains(&110.0) && !s.dirty,
+    );
     check("the reverted version is what's saved", reopen(&dir).project.tempo == 101.0);
 
     // ---- project alternatives ------------------------------------------------------------------
@@ -122,7 +128,10 @@ fn main() {
     s.new_alternative("Mix 2").unwrap();
     s.set_tempo(90.0);
     s.save(None).unwrap();
-    check(&format!("a new alternative copies the project ({:?})", s.alternatives()), s.alternatives() == ["Mix 2".to_string(), first.clone()] && s.project.track(a).is_some());
+    check(
+        &format!("a new alternative copies the project ({:?})", s.alternatives()),
+        s.alternatives() == ["Mix 2".to_string(), first.clone()] && s.project.track(a).is_some(),
+    );
     s.set_tempo(95.0);
     s.dirty = true;
     s.switch_alternative(&first).unwrap();
@@ -138,10 +147,16 @@ fn main() {
     s.rename_alternative("Mix 2", "Mix B").unwrap();
     s.rename_alternative(&first, "Demo").unwrap();
     let r = reopen(&dir);
-    check(&format!("renames are on disk ({:?})", r.alternatives()), r.alternatives() == ["Demo".to_string(), "Mix B".to_string()] && r.alternative_name() == "Mix B");
+    check(
+        &format!("renames are on disk ({:?})", r.alternatives()),
+        r.alternatives() == ["Demo".to_string(), "Mix B".to_string()] && r.alternative_name() == "Mix B",
+    );
     drop(r);
     s.delete_alternative("Mix B").unwrap();
-    check(&format!("deleting the active alternative switches to the other ({}, {})", s.alternative_name(), s.project.tempo), s.alternative_name() == "Demo" && s.alternatives().len() == 1 && s.project.tempo == 101.0);
+    check(
+        &format!("deleting the active alternative switches to the other ({}, {})", s.alternative_name(), s.project.tempo),
+        s.alternative_name() == "Demo" && s.alternatives().len() == 1 && s.project.tempo == 101.0,
+    );
     check("its backups go too", !dir.join("Backups").join("Mix B").exists());
     check("the last alternative stays", s.delete_alternative("Demo").is_err());
 
@@ -151,13 +166,19 @@ fn main() {
     s.add_track(TrackKind::Instrument, InputSel::None, None, None).unwrap();
     s.save_template(&templates, "Band", false).unwrap();
     let list = daw_engine::session::list_templates(&templates);
-    check(&format!("the template is listed ({} tracks)", list.first().map(|t| t.tracks).unwrap_or(0)), list.len() == 1 && list[0].name == "Band" && list[0].tracks == 2);
+    check(
+        &format!("the template is listed ({} tracks)", list.first().map(|t| t.tracks).unwrap_or(0)),
+        list.len() == 1 && list[0].name == "Band" && list[0].tracks == 2,
+    );
     let mut t = session();
     t.new_from_template(&templates, "Band").unwrap();
     let v = t.project.track(a);
     check(
         "a project from the template has its tracks and settings, no regions",
-        v.map(|v| v.name == "Vocals" && v.volume_db == -4.0 && v.regions.is_empty() && v.alternatives.is_empty()).unwrap_or(false) && t.project.tracks.len() == 2 && t.project.clips.is_empty() && !t.saved,
+        v.map(|v| v.name == "Vocals" && v.volume_db == -4.0 && v.regions.is_empty() && v.alternatives.is_empty()).unwrap_or(false)
+            && t.project.tracks.len() == 2
+            && t.project.clips.is_empty()
+            && !t.saved,
     );
     let new_dir = t.save(Some(scratch.join("FromTemplate.fermata"))).unwrap();
     let r = reopen(&new_dir);

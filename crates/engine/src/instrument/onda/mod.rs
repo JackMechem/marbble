@@ -683,7 +683,11 @@ impl Onda {
         self.patch.drive = g(DRIVE);
         self.patch.key_track = g(KEY_TRACK);
         let env = |a: u32, d: u32, s: u32, r: u32| EnvShape::new(g(a) * ms, g(d) * ms, g(s), g(r) * ms, rate);
-        self.patch.env = [env(E1_ATTACK, E1_DECAY, E1_SUSTAIN, E1_RELEASE), env(E2_ATTACK, E2_DECAY, E2_SUSTAIN, E2_RELEASE), env(E3_ATTACK, E3_DECAY, E3_SUSTAIN, E3_RELEASE)];
+        self.patch.env = [
+            env(E1_ATTACK, E1_DECAY, E1_SUSTAIN, E1_RELEASE),
+            env(E2_ATTACK, E2_DECAY, E2_SUSTAIN, E2_RELEASE),
+            env(E3_ATTACK, E3_DECAY, E3_SUSTAIN, E3_RELEASE),
+        ];
         for s in 0..MOD_SLOTS {
             let b = MOD_BASE + 3 * s;
             self.patch.slots[s as usize] = Slot { source: g(b) as usize, dest: g(b + 1) as usize, amount: g(b + 2) };

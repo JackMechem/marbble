@@ -22,7 +22,7 @@ use std::sync::Arc;
 
 use vst3_host::MidiEvent;
 
-use super::{Instrument, InstrumentData, InstrumentInfo, Midi, FxContext, MAX_METERS};
+use super::{FxContext, Instrument, InstrumentData, InstrumentInfo, Midi, MAX_METERS};
 use crate::synth_dsp::alloc::{Priority, VoiceAction, VoiceAllocator, VoiceMode};
 use crate::synth_dsp::env::EnvShape;
 use crate::synth_dsp::lfo::{Lfo, LfoRate, LfoWave};
@@ -203,7 +203,16 @@ impl Sampler {
             rate: sample_rate,
             values,
             dirty: true,
-            bank: Bank { voices: (0..VOICES).map(|_| Voice::default()).collect(), map: Arc::new(SamplerMap::default()), rr: [0; MAX_RR_GROUPS], control: Control::default(), age: 0, last_note: None, transpose: 0.0, last_played: (-1.0, -1.0) },
+            bank: Bank {
+                voices: (0..VOICES).map(|_| Voice::default()).collect(),
+                map: Arc::new(SamplerMap::default()),
+                rr: [0; MAX_RR_GROUPS],
+                control: Control::default(),
+                age: 0,
+                last_note: None,
+                transpose: 0.0,
+                last_played: (-1.0, -1.0),
+            },
             alloc: VoiceAllocator::new(),
             lfo: Lfo::new(LfoWave::Sine, LfoRate::Hz(5.0), seed),
             volume: Smoothed::new(1.0, 8.0, sample_rate),

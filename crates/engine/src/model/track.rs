@@ -143,9 +143,7 @@ impl ChannelEq {
     pub fn is_flat(&self) -> bool {
         !self.on
             || (self.output_db.abs() < 0.01
-                && self.bands.iter().all(|b| {
-                    !b.on || (matches!(b.kind, BandKind::Bell | BandKind::LowShelf | BandKind::HighShelf) && b.gain.abs() < 0.01)
-                }))
+                && self.bands.iter().all(|b| !b.on || (matches!(b.kind, BandKind::Bell | BandKind::LowShelf | BandKind::HighShelf) && b.gain.abs() < 0.01)))
     }
 }
 

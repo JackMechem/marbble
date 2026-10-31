@@ -62,11 +62,7 @@ impl BasicSynth {
         match status {
             0x90 if data[2] > 0 => {
                 self.clock += 1;
-                let slot = self
-                    .voices
-                    .iter()
-                    .position(|v| !v.active)
-                    .unwrap_or_else(|| (0..VOICES).min_by_key(|&i| self.voices[i].age).unwrap());
+                let slot = self.voices.iter().position(|v| !v.active).unwrap_or_else(|| (0..VOICES).min_by_key(|&i| self.voices[i].age).unwrap());
                 self.voices[slot] = Voice {
                     note: data[1],
                     active: true,

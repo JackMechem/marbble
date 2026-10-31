@@ -101,7 +101,17 @@ impl Session {
         let numbered = folder.takes.len();
         for (k, (offset, a, b)) in takes.into_iter().enumerate() {
             let id = self.project.alloc_id();
-            folder.takes.push(Take { id, name: format!("Take {}", numbered + k + 1), clip, offset, start: a, end: b, gain_db: 0.0, notes: Vec::new(), cc: Vec::new() });
+            folder.takes.push(Take {
+                id,
+                name: format!("Take {}", numbered + k + 1),
+                clip,
+                offset,
+                start: a,
+                end: b,
+                gain_db: 0.0,
+                notes: Vec::new(),
+                cc: Vec::new(),
+            });
         }
         folder.default_comp();
         folder.store_comp();
@@ -338,7 +348,11 @@ impl Session {
         let Some(folder) = r.takes.clone() else { return Ok(Vec::new()) };
         let RegionContent::Audio { offset, gain_db, fade_in, fade_out, fade_shape, .. } = r.content else { return Ok(Vec::new()) };
         // Rendered without the folder's gain and fades, which stay adjustable on the region.
-        let plain = Region { content: RegionContent::Audio { clip: 0, offset, gain_db: 0.0, fade_in: 0, fade_out: 0, fade_shape: FadeShape::default() }, loop_end: None, ..r.clone() };
+        let plain = Region {
+            content: RegionContent::Audio { clip: 0, offset, gain_db: 0.0, fade_in: 0, fade_out: 0, fade_shape: FadeShape::default() },
+            loop_end: None,
+            ..r.clone()
+        };
         let channels = folder.takes.iter().filter_map(|t| self.clips.get(&t.clip)).map(|c| c.channels.len().min(2)).max().unwrap_or(1);
         let audio = self.render_comp(&plain, &folder, channels);
         let rate = self.sample_rate() as u32;
@@ -380,7 +394,14 @@ impl Session {
                     length,
                     muted: true,
                     color: r.color.clone(),
-                    content: RegionContent::Audio { clip: t.clip, offset: t.offset + a, gain_db: gain_db + t.gain_db, fade_in: fade, fade_out: fade, fade_shape: FadeShape::default() },
+                    content: RegionContent::Audio {
+                        clip: t.clip,
+                        offset: t.offset + a,
+                        gain_db: gain_db + t.gain_db,
+                        fade_in: fade,
+                        fade_out: fade,
+                        fade_shape: FadeShape::default(),
+                    },
                     loop_end: None,
                     takes: None,
                     params: Default::default(),
@@ -418,7 +439,17 @@ impl Session {
             let RegionContent::Audio { clip, offset, gain_db, .. } = r.content else { continue };
             let at = r.start - fs;
             let id = self.project.alloc_id();
-            folder.takes.push(Take { id, name: r.name.clone(), clip, offset: offset - at, start: at, end: at + r.length, gain_db, notes: Vec::new(), cc: Vec::new() });
+            folder.takes.push(Take {
+                id,
+                name: r.name.clone(),
+                clip,
+                offset: offset - at,
+                start: at,
+                end: at + r.length,
+                gain_db,
+                notes: Vec::new(),
+                cc: Vec::new(),
+            });
         }
         folder.default_comp();
         let newest = picked.last().unwrap();
@@ -493,11 +524,24 @@ impl Session {
         let name = t.name.clone();
         let overlaps = |r: &Region| matches!(r.content, RegionContent::Midi { .. }) && !r.is_looped() && r.start < end && r.start + r.length > start;
         let folder_at = t.regions.iter().position(|r| r.takes.is_some() && overlaps(r));
-        let packed: Vec<Region> = if folder_at.is_some() { Vec::new() } else { t.regions.iter().filter(|r| r.takes.is_none() && overlaps(r)).cloned().collect() };
+        let packed: Vec<Region> =
+            if folder_at.is_some() { Vec::new() } else { t.regions.iter().filter(|r| r.takes.is_none() && overlaps(r)).cloned().collect() };
         if folder_at.is_none() && packed.is_empty() && passes.len() < 2 {
             let Some((notes, cc)) = passes.into_iter().next() else { return };
             let id = self.project.alloc_id();
-            let region = Region { id, name, start, length: end - start, muted: false, color: None, content: RegionContent::Midi { notes, cc }, loop_end: None, takes: None, params: Default::default(), pattern: None };
+            let region = Region {
+                id,
+                name,
+                start,
+                length: end - start,
+                muted: false,
+                color: None,
+                content: RegionContent::Midi { notes, cc },
+                loop_end: None,
+                takes: None,
+                params: Default::default(),
+                pattern: None,
+            };
             self.project.track_mut(track).unwrap().regions.push(region);
             return;
         }
@@ -512,7 +556,19 @@ impl Session {
                 let id = self.project.alloc_id();
                 let content = RegionContent::Midi { notes: Vec::new(), cc: Vec::new() };
                 let color = packed.first().and_then(|r| r.color.clone());
-                Region { id, name: name.clone(), start, length: end - start, muted: false, color, content, loop_end: None, takes: Some(TakeFolder::new()), params: Default::default(), pattern: None }
+                Region {
+                    id,
+                    name: name.clone(),
+                    start,
+                    length: end - start,
+                    muted: false,
+                    color,
+                    content,
+                    loop_end: None,
+                    takes: Some(TakeFolder::new()),
+                    params: Default::default(),
+                    pattern: None,
+                }
             }
         };
         // It covers the recording and everything packed into it.

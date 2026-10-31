@@ -68,7 +68,10 @@ fn main() {
     check("the learning move doesn't act", vol(&s) == before);
     let rows = s.controller_assignments();
     let c = &rows[0].assignment.controller;
-    check(&format!("assigned to the port without ALSA's numbers ({:?})", c), rows.len() == 1 && c.port == "Test Controller:Test Controller MIDI 1" && c.channel == 0 && c.kind == CtlKind::Cc { number: 7 });
+    check(
+        &format!("assigned to the port without ALSA's numbers ({:?})", c),
+        rows.len() == 1 && c.port == "Test Controller:Test Controller MIDI 1" && c.channel == 0 && c.kind == CtlKind::Cc { number: 7 },
+    );
 
     // The fader follows, on its taper.
     cc(&mut s, 7, 127);

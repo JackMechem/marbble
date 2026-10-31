@@ -137,10 +137,42 @@ fn resolve(dir: &Path, rel: &str) -> Option<PathBuf> {
 }
 
 const READ: &[&str] = &[
-    "sample", "key", "lokey", "hikey", "lovel", "hivel", "pitch_keycenter", "tune", "pitch", "transpose", "volume", "pan", "offset", "end", "direction", "loop_mode", "loopmode", "loop_start", "loopstart", "loop_end", "loopend", "seq_length", "seq_position",
-    "ampeg_attack", "ampeg_decay", "ampeg_sustain", "ampeg_release", "default_path", "note_offset", "octave_offset", "trigger",
+    "sample",
+    "key",
+    "lokey",
+    "hikey",
+    "lovel",
+    "hivel",
+    "pitch_keycenter",
+    "tune",
+    "pitch",
+    "transpose",
+    "volume",
+    "pan",
+    "offset",
+    "end",
+    "direction",
+    "loop_mode",
+    "loopmode",
+    "loop_start",
+    "loopstart",
+    "loop_end",
+    "loopend",
+    "seq_length",
+    "seq_position",
+    "ampeg_attack",
+    "ampeg_decay",
+    "ampeg_sustain",
+    "ampeg_release",
+    "default_path",
+    "note_offset",
+    "octave_offset",
+    "trigger",
     // Names and comments in the file, which change nothing.
-    "group_label", "global_label", "master_label", "region_label",
+    "group_label",
+    "global_label",
+    "master_label",
+    "region_label",
 ];
 
 /// A header, or an opcode and its value.
@@ -313,7 +345,8 @@ fn make_region(ops: Opcodes, control: &Opcodes, dir: &Path, file: &mut SfzFile, 
         return;
     };
     // `note_offset` moves the keys and `octave_offset` an octave at a time.
-    let shift = control.get("note_offset").and_then(|v| v.parse::<i32>().ok()).unwrap_or(0) + 12 * control.get("octave_offset").and_then(|v| v.parse::<i32>().ok()).unwrap_or(0);
+    let shift = control.get("note_offset").and_then(|v| v.parse::<i32>().ok()).unwrap_or(0)
+        + 12 * control.get("octave_offset").and_then(|v| v.parse::<i32>().ok()).unwrap_or(0);
     let note = |k: &str| ops.get(k).and_then(|v| sfz_note(v)).map(|n| n + shift);
     let key = note("key");
     let lo = note("lokey").or(key).unwrap_or(0);
@@ -366,7 +399,12 @@ fn make_region(ops: Opcodes, control: &Opcodes, dir: &Path, file: &mut SfzFile, 
     // Only stated envelopes override the instrument's. SFZ's own defaults: no attack or decay,
     // full sustain, a release of 1 ms.
     if ["ampeg_attack", "ampeg_decay", "ampeg_sustain", "ampeg_release"].iter().any(|k| ops.contains_key(*k)) {
-        z.env = Some([num("ampeg_attack").unwrap_or(0.0) as f32, num("ampeg_decay").unwrap_or(0.0) as f32, (num("ampeg_sustain").unwrap_or(100.0) / 100.0) as f32, num("ampeg_release").unwrap_or(0.001) as f32]);
+        z.env = Some([
+            num("ampeg_attack").unwrap_or(0.0) as f32,
+            num("ampeg_decay").unwrap_or(0.0) as f32,
+            (num("ampeg_sustain").unwrap_or(100.0) / 100.0) as f32,
+            num("ampeg_release").unwrap_or(0.001) as f32,
+        ]);
     }
     // Carried in `rr_group` until the whole file is read: length above, position below.
     let (len, pos) = (num("seq_length").unwrap_or(1.0) as u16, num("seq_position").unwrap_or(1.0) as u16);

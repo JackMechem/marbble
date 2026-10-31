@@ -245,7 +245,8 @@ fn listen_hears_the_filtered_key() {
 #[test]
 fn silence_stays_clean() {
     for circuit in 0..5 {
-        let mut c = comp(&[(param::CIRCUIT, circuit as f32), (param::SC_MODE, 3.0), (param::DETECTOR, 1.0), (param::AUTO_RELEASE, 1.0), (param::TIME_CONSTANT, 5.0)]);
+        let mut c =
+            comp(&[(param::CIRCUIT, circuit as f32), (param::SC_MODE, 3.0), (param::DETECTOR, 1.0), (param::AUTO_RELEASE, 1.0), (param::TIME_CONSTANT, 5.0)]);
         // A loud burst, then a long silence: every state decays to exact zeros.
         gr_trace(&mut c, -3.0, 0.2);
         let mut l = [0.0f32; 1024];

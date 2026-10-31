@@ -20,7 +20,19 @@ fn clean_a() -> Vec<(u32, f32)> {
 }
 
 fn clean_b() -> Vec<(u32, f32)> {
-    vec![(SLOP, 0.0), (MIX_A, 0.0), (MIX_B, 3.0), (B_FINE, 0.0), (B_SAW, 0.0), (B_TRI, 1.0), (CUTOFF, 20000.0), (ENV_AMOUNT, 0.0), (RESONANCE, 0.0), (KEYBOARD, 0.0), (A_SUSTAIN, 10.0)]
+    vec![
+        (SLOP, 0.0),
+        (MIX_A, 0.0),
+        (MIX_B, 3.0),
+        (B_FINE, 0.0),
+        (B_SAW, 0.0),
+        (B_TRI, 1.0),
+        (CUTOFF, 20000.0),
+        (ENV_AMOUNT, 0.0),
+        (RESONANCE, 0.0),
+        (KEYBOARD, 0.0),
+        (A_SUSTAIN, 10.0),
+    ]
 }
 
 #[test]
@@ -205,10 +217,54 @@ fn release_switch_and_the_chips() {
 #[test]
 fn no_nan_or_runaway_on_extreme_settings() {
     let cases: Vec<Vec<(u32, f32)>> = vec![
-        vec![(MIX_A, 10.0), (MIX_B, 10.0), (MIX_NOISE, 10.0), (A_PULSE, 1.0), (B_TRI, 1.0), (B_PULSE, 1.0), (RESONANCE, 10.0), (ENV_AMOUNT, 10.0), (VOLUME, 10.0)],
-        vec![(PM_FENV, 10.0), (PM_OSCB, 10.0), (PM_FREQ_A, 1.0), (PM_PW_A, 1.0), (PM_FILTER, 1.0), (A_PULSE, 1.0), (B_FREQ, 36.0), (VOLUME, 10.0), (RESONANCE, 10.0)],
-        vec![(UNISON, 1.0), (UNISON_DETUNE, 1.0), (A_SYNC, 1.0), (A_FREQ, 36.0), (MOD_REST, 10.0), (WM_MIX, 5.0), (WM_FILTER, 1.0), (WM_PW_A, 1.0), (WM_PW_B, 1.0), (VOLUME, 10.0), (CHIP, 0.0)],
-        vec![(F_ATTACK, 1.0), (F_DECAY, 2.0), (F_SUSTAIN, 10.0), (A_ATTACK, 1.0), (A_DECAY, 2.0), (A_SUSTAIN, 10.0), (GLIDE, 10.0), (BEND_RANGE, 12.0), (VOLUME, 10.0), (B_LO, 1.0), (B_KBD, 0.0)],
+        vec![
+            (MIX_A, 10.0),
+            (MIX_B, 10.0),
+            (MIX_NOISE, 10.0),
+            (A_PULSE, 1.0),
+            (B_TRI, 1.0),
+            (B_PULSE, 1.0),
+            (RESONANCE, 10.0),
+            (ENV_AMOUNT, 10.0),
+            (VOLUME, 10.0),
+        ],
+        vec![
+            (PM_FENV, 10.0),
+            (PM_OSCB, 10.0),
+            (PM_FREQ_A, 1.0),
+            (PM_PW_A, 1.0),
+            (PM_FILTER, 1.0),
+            (A_PULSE, 1.0),
+            (B_FREQ, 36.0),
+            (VOLUME, 10.0),
+            (RESONANCE, 10.0),
+        ],
+        vec![
+            (UNISON, 1.0),
+            (UNISON_DETUNE, 1.0),
+            (A_SYNC, 1.0),
+            (A_FREQ, 36.0),
+            (MOD_REST, 10.0),
+            (WM_MIX, 5.0),
+            (WM_FILTER, 1.0),
+            (WM_PW_A, 1.0),
+            (WM_PW_B, 1.0),
+            (VOLUME, 10.0),
+            (CHIP, 0.0),
+        ],
+        vec![
+            (F_ATTACK, 1.0),
+            (F_DECAY, 2.0),
+            (F_SUSTAIN, 10.0),
+            (A_ATTACK, 1.0),
+            (A_DECAY, 2.0),
+            (A_SUSTAIN, 10.0),
+            (GLIDE, 10.0),
+            (BEND_RANGE, 12.0),
+            (VOLUME, 10.0),
+            (B_LO, 1.0),
+            (B_KBD, 0.0),
+        ],
     ];
     assert_no_runaway(&cq(), &cases, 16.0);
     assert_survives_param_jumps(&cq(), 32.0);
@@ -229,7 +285,19 @@ fn busy() -> Vec<Event> {
 
 #[test]
 fn output_doesnt_depend_on_the_block_size() {
-    let s = [(PM_OSCB, 2.0), (PM_FENV, 2.0), (PM_FREQ_A, 1.0), (PM_FILTER, 1.0), (A_PULSE, 1.0), (MIX_NOISE, 1.0), (SLOP, 1.0), (WM_MIX, 3.0), (WM_FILTER, 1.0), (A_RELEASE, 20.0), (F_RELEASE, 20.0)];
+    let s = [
+        (PM_OSCB, 2.0),
+        (PM_FENV, 2.0),
+        (PM_FREQ_A, 1.0),
+        (PM_FILTER, 1.0),
+        (A_PULSE, 1.0),
+        (MIX_NOISE, 1.0),
+        (SLOP, 1.0),
+        (WM_MIX, 3.0),
+        (WM_FILTER, 1.0),
+        (A_RELEASE, 20.0),
+        (F_RELEASE, 20.0),
+    ];
     assert_block_size_independent(&cq(), &s, &busy(), 180_000);
     let s = [(UNISON, 1.0), (GLIDE, 3.0), (A_SYNC, 1.0), (SLOP, 1.0)];
     assert_block_size_independent(&cq(), &s, &busy(), 180_000);
@@ -238,13 +306,26 @@ fn output_doesnt_depend_on_the_block_size() {
 #[test]
 fn renders_repeat_and_seed_matters() {
     let s = [(SLOP, 1.0), (MIX_NOISE, 1.0), (WM_MIX, 5.0)];
-    let events = [(0usize, [0x90, 48, 100]), (20000, [0x80, 48, 0]), (24000, [0x90, 55, 100]), (40000, [0xB0, 1, 90]), (41000, [0xE0, 0, 90]), (42000, [0xB0, 64, 127])];
+    let events =
+        [(0usize, [0x90, 48, 100]), (20000, [0x80, 48, 0]), (24000, [0x90, 55, 100]), (40000, [0xB0, 1, 90]), (41000, [0xE0, 0, 90]), (42000, [0xB0, 64, 127])];
     assert_repeats(&cq(), &s, &events, 96000);
     assert_seed_matters(&cq(), &s, &events, 48000);
 }
 
 fn dark() -> Vec<(u32, f32)> {
-    vec![(SLOP, 0.0), (B_FINE, 0.0), (MIX_B, 0.0), (MIX_A, 6.0), (CUTOFF, 700.0), (ENV_AMOUNT, 0.0), (KEYBOARD, 0.0), (RESONANCE, 0.0), (A_ATTACK, 5.0), (A_SUSTAIN, 10.0), (RELEASE_ON, 0.0)]
+    vec![
+        (SLOP, 0.0),
+        (B_FINE, 0.0),
+        (MIX_B, 0.0),
+        (MIX_A, 6.0),
+        (CUTOFF, 700.0),
+        (ENV_AMOUNT, 0.0),
+        (KEYBOARD, 0.0),
+        (RESONANCE, 0.0),
+        (A_ATTACK, 5.0),
+        (A_SUSTAIN, 10.0),
+        (RELEASE_ON, 0.0),
+    ]
 }
 
 #[test]
@@ -279,7 +360,8 @@ fn filter_self_oscillates_near_the_top_and_tracks() {
     let mut worst = 0.0f32;
     for &sr in &[44100.0f32, 48000.0, 96000.0] {
         for note in (36..=84).step_by(12) {
-            let s = [(SLOP, 0.0), (MIX_A, 0.0), (MIX_B, 0.0), (CUTOFF, exact_hz(60.0)), (RESONANCE, 10.0), (ENV_AMOUNT, 0.0), (KEYBOARD, 2.0), (A_SUSTAIN, 10.0)];
+            let s =
+                [(SLOP, 0.0), (MIX_A, 0.0), (MIX_B, 0.0), (CUTOFF, exact_hz(60.0)), (RESONANCE, 10.0), (ENV_AMOUNT, 0.0), (KEYBOARD, 2.0), (A_SUSTAIN, 10.0)];
             let mut t = make(&cq(), sr, 77, &s);
             let (l, _) = render(t.as_mut(), sr, 1 << 18, 512, &[(0, [0x90, note as u8, 100])]);
             assert!(peak(&l[1 << 17..]) > 0.02, "note {note} at {sr}");

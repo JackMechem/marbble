@@ -81,8 +81,14 @@ fn main() {
             let res = s.bounce_project(&p, &opts(format, depth), &mut |_| {}).unwrap();
             let (rate, got) = read(&p);
             check(&format!("{bits}-bit {format:?}: {} written and decodes at {rate} Hz", file_name(&res.paths[0])), rate == sr && p.exists());
-            check(&format!("{bits}-bit {format:?} matches the {bits}-bit WAV sample for sample (max diff {:e})", max_diff(&got, &w)), max_diff(&got, &w) == 0.0);
-            check(&format!("{bits}-bit {format:?} is within quantization of the float mix ({:.2} LSB)", max_diff(&got, &float) / lsb), max_diff(&got, &float) <= tolerance);
+            check(
+                &format!("{bits}-bit {format:?} matches the {bits}-bit WAV sample for sample (max diff {:e})", max_diff(&got, &w)),
+                max_diff(&got, &w) == 0.0,
+            );
+            check(
+                &format!("{bits}-bit {format:?} is within quantization of the float mix ({:.2} LSB)", max_diff(&got, &float) / lsb),
+                max_diff(&got, &float) <= tolerance,
+            );
         }
         let flac = std::fs::metadata(out.join(format!("mix{bits}.flac"))).unwrap().len();
         let wav_len = std::fs::metadata(&wav).unwrap().len();
@@ -97,10 +103,14 @@ fn main() {
 
     // Sample rate conversion and normalize go through the new writers too.
     let p = out.join("mix44.flac");
-    let res = s.bounce_project(&p, &RenderOptions { sample_rate: Some(44100), normalize: true, ..opts(AudioFormat::Flac, BitDepth::Int24) }, &mut |_| {}).unwrap();
+    let res =
+        s.bounce_project(&p, &RenderOptions { sample_rate: Some(44100), normalize: true, ..opts(AudioFormat::Flac, BitDepth::Int24) }, &mut |_| {}).unwrap();
     let (rate, conv) = read(&p);
     let want = (end as f64 * 44100.0 / sr as f64).round() as usize;
-    check(&format!("44.1 kHz normalized FLAC ({rate} Hz, {} frames, want {want}, peak {:.2} dB)", conv[0].len(), res.peak_db), rate == 44100 && conv[0].len() == want && (20.0 * peak(&conv).log10() + 0.1).abs() < 0.01);
+    check(
+        &format!("44.1 kHz normalized FLAC ({rate} Hz, {} frames, want {want}, peak {:.2} dB)", conv[0].len(), res.peak_db),
+        rate == 44100 && conv[0].len() == want && (20.0 * peak(&conv).log10() + 0.1).abs() < 0.01,
+    );
 
     // ---- Export Selected Tracks --------------------------------------------------------------
     let all = s.export_tracks(&out.join("all"), &opts(AudioFormat::Wav, BitDepth::Float32), &mut |_| {}).unwrap();
@@ -114,11 +124,17 @@ fn main() {
     let lsb = 1.0 / (1u32 << 23) as f32;
     for (got, want) in [(&res.paths[0], &all.paths[0]), (&res.paths[1], &all.paths[2])] {
         let (g, w) = (read(Path::new(got)).1, read(Path::new(want)).1);
-        check(&format!("{} matches its Export All Tracks stem within 24-bit quantization ({:.2} LSB)", file_name(got), max_diff(&g, &w) / lsb), max_diff(&g, &w) <= 1.5 * lsb);
+        check(
+            &format!("{} matches its Export All Tracks stem within 24-bit quantization ({:.2} LSB)", file_name(got), max_diff(&g, &w) / lsb),
+            max_diff(&g, &w) <= 1.5 * lsb,
+        );
     }
     let aiff = s.export_selected_tracks(&out.join("selected-aiff"), &[tracks[1]], &opts(AudioFormat::Aiff, BitDepth::Int16), &mut |_| {}).unwrap();
     let (g, w) = (read(Path::new(&aiff.paths[0])).1, read(Path::new(&all.paths[1])).1);
-    check(&format!("one selected track as 16-bit AIFF: {} ({:.2} LSB from the stem)", file_name(&aiff.paths[0]), max_diff(&g, &w) * 32768.0), aiff.paths.len() == 1 && aiff.paths[0].ends_with("02 Audio 2.aif") && max_diff(&g, &w) <= 2.5 / 32768.0);
+    check(
+        &format!("one selected track as 16-bit AIFF: {} ({:.2} LSB from the stem)", file_name(&aiff.paths[0]), max_diff(&g, &w) * 32768.0),
+        aiff.paths.len() == 1 && aiff.paths[0].ends_with("02 Audio 2.aif") && max_diff(&g, &w) <= 2.5 / 32768.0,
+    );
 
     // A selected folder stack stands for its subtracks; a track without regions is left out.
     let folder = s.create_stack(&[tracks[1], tracks[2]], false).unwrap();

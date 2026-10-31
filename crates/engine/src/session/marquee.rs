@@ -9,7 +9,14 @@ impl Session {
     /// The regions on `tracks` that sound somewhere between `start` and `end`, loops included.
     pub fn marquee_regions(&self, tracks: &[Id], start: i64, end: i64) -> Vec<Id> {
         let (a, b) = (start.min(end), start.max(end));
-        self.project.tracks.iter().filter(|t| tracks.contains(&t.id)).flat_map(|t| t.regions.iter()).filter(|r| r.start < b && r.end() > a).map(|r| r.id).collect()
+        self.project
+            .tracks
+            .iter()
+            .filter(|t| tracks.contains(&t.id))
+            .flat_map(|t| t.regions.iter())
+            .filter(|r| r.start < b && r.end() > a)
+            .map(|r| r.id)
+            .collect()
     }
 
     /// Splits the regions under the marquee at its edges (looping ones become real copies
@@ -65,7 +72,19 @@ mod tests {
             let t = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
             let id = s.project.alloc_id();
             let content = RegionContent::Audio { clip, offset: 0, gain_db: 0.0, fade_in: 0, fade_out: 0, fade_shape: Default::default() };
-            s.project.track_mut(t).unwrap().regions.push(Region { id, name: "Tone".into(), start: 10_000, length: 48_000, muted: false, color: None, content, loop_end: None, takes: None, params: Default::default(), pattern: None });
+            s.project.track_mut(t).unwrap().regions.push(Region {
+                id,
+                name: "Tone".into(),
+                start: 10_000,
+                length: 48_000,
+                muted: false,
+                color: None,
+                content,
+                loop_end: None,
+                takes: None,
+                params: Default::default(),
+                pattern: None,
+            });
             s.push_regions(t);
             tracks.push(t);
         }

@@ -106,12 +106,23 @@ fn main() {
     check("both channels carry the tone", rms(&mix[0]) > 0.01 && (rms(&mix[0]) - rms(&mix[1])).abs() < 1e-3);
 
     // A section, at a different rate, in 16-bit.
-    let sec = RenderOptions { start: 24000, end: 72000, tail_secs: 0.0, bit_depth: BitDepth::Int16, sample_rate: Some(44100), normalize: false, ..Default::default() };
+    let sec = RenderOptions {
+        start: 24000,
+        end: 72000,
+        tail_secs: 0.0,
+        bit_depth: BitDepth::Int16,
+        sample_rate: Some(44100),
+        normalize: false,
+        ..Default::default()
+    };
     let p16 = out.join("section16.wav");
     s.bounce_project(&p16, &sec, &mut |_| {}).unwrap();
     let (spec, part) = read(&p16);
     let want = (48000.0 * 44100.0 / sr).round() as usize;
-    check(&format!("16-bit 44.1 kHz section is valid ({spec:?}, {} frames, want {want})", part[0].len()), spec.bits_per_sample == 16 && spec.sample_rate == 44100 && part[0].len() == want);
+    check(
+        &format!("16-bit 44.1 kHz section is valid ({spec:?}, {} frames, want {want})", part[0].len()),
+        spec.bits_per_sample == 16 && spec.sample_rate == 44100 && part[0].len() == want,
+    );
     check(&format!("16-bit section has the tone ({:.4})", peak(&part)), (peak(&part) - tone_peak).abs() < 0.01);
 
     // Normalize to -0.1 dBFS, also with the master fader down (normalize undoes it).
@@ -119,7 +130,10 @@ fn main() {
     let pn = out.join("norm.wav");
     let res = s.bounce_project(&pn, &RenderOptions { normalize: true, bit_depth: BitDepth::Float32, ..opts.clone() }, &mut |_| {}).unwrap();
     let (spec, norm) = read(&pn);
-    check(&format!("normalize hits -0.1 dBFS ({:.3} dB, reported {:.3})", db(peak(&norm)), res.peak_db), (db(peak(&norm)) + 0.1).abs() < 0.01 && spec.sample_format == hound::SampleFormat::Float);
+    check(
+        &format!("normalize hits -0.1 dBFS ({:.3} dB, reported {:.3})", db(peak(&norm)), res.peak_db),
+        (db(peak(&norm)) + 0.1).abs() < 0.01 && spec.sample_format == hound::SampleFormat::Float,
+    );
     let pq = out.join("quiet.wav");
     s.bounce_project(&pq, &opts, &mut |_| {}).unwrap();
     let (_, quiet) = read(&pq);
@@ -129,8 +143,23 @@ fn main() {
     // ---- An instrument: MIDI renders, notes end, the release becomes the tail -------------------
     let inst = s.add_track(TrackKind::Instrument, InputSel::None, None, None).unwrap();
     let bar = s.project.samples_per_bar().round() as i64;
-    let notes = vec![Note { start: 0, length: bar / 2, pitch: 60, velocity: 100, muted: false }, Note { start: bar / 2, length: bar * 4, pitch: 64, velocity: 100, muted: false }];
-    let midi = Region { id: 0, name: "Chord".into(), start: 0, length: bar, muted: false, color: None, loop_end: None, takes: None, params: Default::default(), pattern: None, content: RegionContent::Midi { notes, cc: Vec::new() } };
+    let notes = vec![
+        Note { start: 0, length: bar / 2, pitch: 60, velocity: 100, muted: false },
+        Note { start: bar / 2, length: bar * 4, pitch: 64, velocity: 100, muted: false },
+    ];
+    let midi = Region {
+        id: 0,
+        name: "Chord".into(),
+        start: 0,
+        length: bar,
+        muted: false,
+        color: None,
+        loop_end: None,
+        takes: None,
+        params: Default::default(),
+        pattern: None,
+        content: RegionContent::Midi { notes, cc: Vec::new() },
+    };
     s.paste_regions(&[(inst, midi)], 0);
     s.update_track(a, TrackPatch { mute: Some(true), ..Default::default() });
     let pi = out.join("inst.wav");
@@ -138,7 +167,10 @@ fn main() {
     let (_, synth) = read(&pi);
     let len = synth[0].len() as i64;
     check(&format!("instrument renders ({:.3}) and the tone track stays muted", peak(&synth)), peak(&synth) > 0.01);
-    check(&format!("the held note is released at the end: tail of {:.0} ms, under 2 s", (len - bar) as f64 * 1000.0 / sr), len > bar && len < bar + (2.0 * sr) as i64);
+    check(
+        &format!("the held note is released at the end: tail of {:.0} ms, under 2 s", (len - bar) as f64 * 1000.0 / sr),
+        len > bar && len < bar + (2.0 * sr) as i64,
+    );
     s.update_track(a, TrackPatch { mute: Some(false), ..Default::default() });
 
     // ---- Export All Tracks -------------------------------------------------------------------
@@ -156,13 +188,19 @@ fn main() {
     // The tone (at -6 dB) would still be playing at the end of the range; the synth's release
     // has nearly died away by then, and is silent by the end of the tail.
     let (late, last) = (rms(&stem2[0][end as usize - 1000..end as usize]), rms(&stem2[0][stem2[0].len() - 1000..]));
-    check(&format!("instrument stem has only the instrument ({late:.5} at the range end, {last:.6} at the file end)"), peak(&stem2) > 0.01 && late < 0.005 && last < 1e-4);
+    check(
+        &format!("instrument stem has only the instrument ({late:.5} at the range end, {last:.6} at the file end)"),
+        peak(&stem2) > 0.01 && late < 0.005 && last < 1e-4,
+    );
 
     // ---- Export Region ------------------------------------------------------------------------
     let pr = out.join("region.wav");
     s.export_region(region.id, &pr, &RenderOptions { tail_secs: 0.5, ..Default::default() }, &mut |_| {}).unwrap();
     let (_, reg) = read(&pr);
-    check(&format!("region export is pre-fader and region-length ({} frames, {:.2} dB)", reg[0].len(), db(peak(&reg) / tone_peak)), reg[0].len() as i64 == region.length && db(peak(&reg) / tone_peak).abs() < 0.1);
+    check(
+        &format!("region export is pre-fader and region-length ({} frames, {:.2} dB)", reg[0].len(), db(peak(&reg) / tone_peak)),
+        reg[0].len() as i64 == region.length && db(peak(&reg) / tone_peak).abs() < 0.1,
+    );
 
     // ---- Bounce in Place ----------------------------------------------------------------------
     let tracks_before = s.project.tracks.len();
@@ -177,7 +215,10 @@ fn main() {
     let r = &nt.regions[0];
     let RegionContent::Audio { clip: bclip, .. } = r.content else { unreachable!() };
     let bpeak = s.clip_peak(bclip).unwrap();
-    check(&format!("one region at the start, unity level ({} frames at {}, {:.2} dB)", r.length, r.start, db(bpeak / tone_peak)), nt.regions.len() == 1 && r.start == 0 && r.length == end && db(bpeak / tone_peak).abs() < 0.1);
+    check(
+        &format!("one region at the start, unity level ({} frames at {}, {:.2} dB)", r.length, r.start, db(bpeak / tone_peak)),
+        nt.regions.len() == 1 && r.start == 0 && r.length == end && db(bpeak / tone_peak).abs() < 0.1,
+    );
     let file = s.dir.join("Audio Files").join("Audio 1 (bounced).wav");
     check("written to the project's Audio Files", file.exists());
     let lvl = live_level(&mut s);
@@ -200,10 +241,16 @@ fn main() {
     let made = s.bounce_in_place(&[inst], &[], &BipOptions { source: BipSource::Delete, ..Default::default() }, &mut |_| {}).unwrap();
     let nt = s.project.track(made[0]).unwrap().clone();
     let RegionContent::Audio { clip: bclip, .. } = nt.regions[0].content else { unreachable!() };
-    check(&format!("instrument bounces to audio ({:.3}), tail kept ({} > {bar})", s.clip_peak(bclip).unwrap(), nt.regions[0].length), s.clip_peak(bclip).unwrap() > 0.01 && nt.regions[0].length > bar && nt.kind == TrackKind::Audio);
+    check(
+        &format!("instrument bounces to audio ({:.3}), tail kept ({} > {bar})", s.clip_peak(bclip).unwrap(), nt.regions[0].length),
+        s.clip_peak(bclip).unwrap() > 0.01 && nt.regions[0].length > bar && nt.kind == TrackKind::Audio,
+    );
     check("source instrument track deleted", s.project.track(inst).is_none());
     s.undo();
-    check("undo restores the instrument track and drops the bounce", s.project.track(inst).map(|t| t.instrument.is_some()).unwrap_or(false) && s.project.track(made[0]).is_none());
+    check(
+        "undo restores the instrument track and drops the bounce",
+        s.project.track(inst).map(|t| t.instrument.is_some()).unwrap_or(false) && s.project.track(made[0]).is_none(),
+    );
 
     // Summing stack: its output, through the stack.
     let b = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
@@ -217,13 +264,21 @@ fn main() {
     let gain = db(s.clip_peak(bclip).unwrap() / tone_peak);
     check(&format!("summing stack bounces its subtracks through itself ({gain:.2} dB), one bounce for the stack"), made.len() == 1 && (gain + 6.0).abs() < 0.2);
     let family = s.project.descendants(sum);
-    check("the stack's bounce lands below its subtracks, outside the stack", s.project.tracks.iter().position(|t| t.id == made[0]).unwrap() == s.project.tracks.iter().rposition(|t| family.contains(&t.id) || t.id == sum).unwrap() + 1 && nt.parent.is_none());
+    check(
+        "the stack's bounce lands below its subtracks, outside the stack",
+        s.project.tracks.iter().position(|t| t.id == made[0]).unwrap()
+            == s.project.tracks.iter().rposition(|t| family.contains(&t.id) || t.id == sum).unwrap() + 1
+            && nt.parent.is_none(),
+    );
 
     // From the region menu: just one region.
     let rid = s.project.track(b).unwrap().regions[0].id;
     let made = s.bounce_in_place(&[], &[rid], &BipOptions { source: BipSource::Mute, ..Default::default() }, &mut |_| {}).unwrap();
     let nt = s.project.track(made[0]).unwrap().clone();
-    check("region bounce: new track inside the stack, region muted", nt.parent == Some(sum) && s.project.track(b).unwrap().regions[0].muted && !s.project.track(b).unwrap().mute);
+    check(
+        "region bounce: new track inside the stack, region muted",
+        nt.parent == Some(sum) && s.project.track(b).unwrap().regions[0].muted && !s.project.track(b).unwrap().mute,
+    );
 
     // Folder stack: its fader is baked into the subtracks, so it is always printed.
     s.set_region_muted(rid, false);
@@ -234,13 +289,22 @@ fn main() {
     let nt = s.project.track(made[0]).unwrap().clone();
     let RegionContent::Audio { clip: bclip, .. } = nt.regions[0].content else { unreachable!() };
     let gain = db(s.clip_peak(bclip).unwrap() / tone_peak);
-    check(&format!("folder stack bounces its subtracks' mix, fader printed once ({gain:.2} dB, new track {:.1} dB)", nt.volume_db), (gain - 0.0).abs() < 0.2 && nt.volume_db == 0.0);
+    check(
+        &format!("folder stack bounces its subtracks' mix, fader printed once ({gain:.2} dB, new track {:.1} dB)", nt.volume_db),
+        (gain - 0.0).abs() < 0.2 && nt.volume_db == 0.0,
+    );
     s.delete_track(made[0]);
     s.flatten_stack(folder);
 
     // Stems ignore solos elsewhere; the full mix honours them.
     s.update_track(b, TrackPatch { solo: Some(true), ..Default::default() });
-    let res = s.export_tracks(&out.join("stems-solo"), &RenderOptions { start: 0, end, tail_secs: 0.0, bit_depth: BitDepth::Float32, ..Default::default() }, &mut |_| {}).unwrap();
+    let res = s
+        .export_tracks(
+            &out.join("stems-solo"),
+            &RenderOptions { start: 0, end, tail_secs: 0.0, bit_depth: BitDepth::Float32, ..Default::default() },
+            &mut |_| {},
+        )
+        .unwrap();
     let first = read(Path::new(&res.paths[0])).1;
     check(&format!("stem of an un-soloed track still renders ({:.3})", peak(&first)), (peak(&first) - tone_peak).abs() < 1e-3);
     let ps = out.join("solo.wav");

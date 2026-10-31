@@ -161,8 +161,12 @@ fn main() {
         })
         .collect();
     let want_spans = vec![(0, third, 0.0), (third, third, -6.0), (2 * third, len - 2 * third, -12.0)];
-    ok &= check(&format!("flatten makes a region per comp segment ({spans:?})"), flat.len() == 3 && r.len() == 3 && r.iter().all(|x| x.takes.is_none()) && spans == want_spans);
-    let offsets_ok = r.iter().zip(&f.takes).all(|(x, t)| matches!(x.content, RegionContent::Audio { clip, offset, .. } if clip == t.clip && offset == t.offset + x.start));
+    ok &= check(
+        &format!("flatten makes a region per comp segment ({spans:?})"),
+        flat.len() == 3 && r.len() == 3 && r.iter().all(|x| x.takes.is_none()) && spans == want_spans,
+    );
+    let offsets_ok =
+        r.iter().zip(&f.takes).all(|(x, t)| matches!(x.content, RegionContent::Audio { clip, offset, .. } if clip == t.clip && offset == t.offset + x.start));
     ok &= check("flattened regions play their takes' audio", offsets_ok);
     let out2 = render(&mut s, 0, len);
     let l2: Vec<f32> = (0..3).map(|k| peak(&out2[window(k).0..window(k).1]) / refs[k as usize]).collect();
@@ -175,7 +179,10 @@ fn main() {
     let r = regions(&s, a);
     let out3 = render(&mut s, 0, len);
     let l3: Vec<f32> = (0..3).map(|k| peak(&out3[window(k).0..window(k).1]) / refs[k as usize]).collect();
-    ok &= check(&format!("flatten and merge renders the comp to one region ({l3:.3?})"), merged.len() == 1 && r.len() == 1 && r[0].takes.is_none() && l3.iter().zip(want).all(|(l, w)| (l - w).abs() < 0.02));
+    ok &= check(
+        &format!("flatten and merge renders the comp to one region ({l3:.3?})"),
+        merged.len() == 1 && r.len() == 1 && r[0].takes.is_none() && l3.iter().zip(want).all(|(l, w)| (l - w).abs() < 0.02),
+    );
     s.undo();
 
     s.checkpoint("Delete Unused Takes", None, false);
@@ -259,7 +266,13 @@ fn main() {
         );
         ok &= check(
             &format!("the last pass is kept part-way ({}..{}) and heard, the one before fills in ({:?})", t[2].start, t[2].end, f.comp),
-            t[0].end == l && t[1].end == l && t[2].end >= l * 4 / 5 - sr / 10 && t[2].end < l && f.comp.len() == 2 && f.comp[0].take == t[2].id && f.comp[1].take == t[1].id,
+            t[0].end == l
+                && t[1].end == l
+                && t[2].end >= l * 4 / 5 - sr / 10
+                && t[2].end < l
+                && f.comp.len() == 2
+                && f.comp[0].take == t[2].id
+                && f.comp[1].take == t[1].id,
         );
         ok &= check("takes are named in order", t.iter().map(|x| x.name.as_str()).collect::<Vec<_>>() == ["Take 1", "Take 2", "Take 3"]);
     }
@@ -284,11 +297,17 @@ fn main() {
     s.locate(0);
     ok &= record(&mut s, None, 1, pout + bar);
     let r = regions(&s, punched);
-    let got: Vec<(i64, i64, i64)> = r.iter().filter_map(|x| match x.content {
-        RegionContent::Audio { offset, .. } => Some((x.start, x.length, offset)),
-        _ => None,
-    }).collect();
-    ok &= check(&format!("autopunch trims the take to the punch range ({got:?}, want {pin}..{pout})"), got.len() == 1 && got[0].0 == pin && got[0].1 == pout - pin && (got[0].2 - lat).abs() <= 2);
+    let got: Vec<(i64, i64, i64)> = r
+        .iter()
+        .filter_map(|x| match x.content {
+            RegionContent::Audio { offset, .. } => Some((x.start, x.length, offset)),
+            _ => None,
+        })
+        .collect();
+    ok &= check(
+        &format!("autopunch trims the take to the punch range ({got:?}, want {pin}..{pout})"),
+        got.len() == 1 && got[0].0 == pin && got[0].1 == pout - pin && (got[0].2 - lat).abs() <= 2,
+    );
     s.undo();
 
     // Autopunch inside the cycle: every pass is punched.
@@ -301,7 +320,10 @@ fn main() {
     let f = r.first().and_then(|x| x.takes.clone());
     let offs: Vec<i64> = f.as_ref().map(|f| f.takes.iter().map(|t| t.offset).collect()).unwrap_or_default();
     ok &= check(
-        &format!("punching in cycle mode makes a folder over the punch range ({:?}, offsets {offs:?})", r.iter().map(|x| (x.start, x.length)).collect::<Vec<_>>()),
+        &format!(
+            "punching in cycle mode makes a folder over the punch range ({:?}, offsets {offs:?})",
+            r.iter().map(|x| (x.start, x.length)).collect::<Vec<_>>()
+        ),
         r.len() == 1 && r[0].start == pin && r[0].length == pout - pin && offs.len() == 2 && offs[1] - offs[0] == pout - pin + lat,
     );
     s.set_punch(false, pin, pout);

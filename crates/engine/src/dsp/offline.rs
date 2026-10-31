@@ -29,7 +29,9 @@ pub struct Isolate {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum Role {
     Skip,
-    Member { heard: bool },
+    Member {
+        heard: bool,
+    },
     Tap,
     /// Plays only to feed a side-chain key (see `Isolate::keys`).
     Key,
@@ -92,7 +94,15 @@ impl Engine {
         self.render_with(from, to, 0, None, &mut |_| {}, Some((at, edit)))
     }
 
-    fn render_with(&mut self, from: i64, to: i64, tail: i64, isolate: Option<Isolate>, progress: &mut dyn FnMut(f64), edit: Option<(i64, &mut dyn FnMut())>) -> Vec<Vec<f32>> {
+    fn render_with(
+        &mut self,
+        from: i64,
+        to: i64,
+        tail: i64,
+        isolate: Option<Isolate>,
+        progress: &mut dyn FnMut(f64),
+        edit: Option<(i64, &mut dyn FnMut())>,
+    ) -> Vec<Vec<f32>> {
         self.settle();
         // Apply edits that are still queued, so the render hears the latest settings.
         self.process(&[], 0, &mut [], 0);

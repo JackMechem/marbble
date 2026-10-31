@@ -232,7 +232,14 @@ pub fn move_regions(state: State<AppState>, moves: Vec<daw_engine::session::Regi
 /// Sets fade curves (-1..1) and types for the Region inspector; omitted settings stay. Curve
 /// drags of the same regions share an undo step.
 #[tauri::command]
-pub fn set_region_fade_shape(state: State<AppState>, ids: Vec<Id>, in_curve: Option<f32>, out_curve: Option<f32>, in_type: Option<FadeInType>, out_type: Option<FadeOutType>) -> Snapshot {
+pub fn set_region_fade_shape(
+    state: State<AppState>,
+    ids: Vec<Id>,
+    in_curve: Option<f32>,
+    out_curve: Option<f32>,
+    in_type: Option<FadeInType>,
+    out_type: Option<FadeOutType>,
+) -> Snapshot {
     let curve = in_curve.is_some() || out_curve.is_some();
     let key = curve.then(|| format!("fade-curve:{ids:?}"));
     edit(&state, if curve { "Fade Curve" } else { "Fade Type" }, key, false, |s| s.set_region_fade_shape(&ids, in_curve, out_curve, in_type, out_type))

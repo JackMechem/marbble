@@ -28,7 +28,13 @@ pub struct Gapless {
 impl Gapless {
     /// Drops the priming and padding from decoded channels at `sample_rate`.
     pub fn trim(&self, channels: &mut [Vec<f32>], sample_rate: u32) {
-        let scale = |n: u64| if self.timescale == 0 || self.timescale == sample_rate { n } else { (n as f64 * sample_rate as f64 / self.timescale as f64).round() as u64 };
+        let scale = |n: u64| {
+            if self.timescale == 0 || self.timescale == sample_rate {
+                n
+            } else {
+                (n as f64 * sample_rate as f64 / self.timescale as f64).round() as u64
+            }
+        };
         let len = channels.first().map(|c| c.len()).unwrap_or(0);
         let delay = (scale(self.delay) as usize).min(len);
         let keep = match self.frames {
@@ -190,9 +196,10 @@ pub fn parse_moov(moov: &[u8]) -> Option<Gapless> {
     }
     let movie_scale = child(moov, b"mvhd").and_then(timescale)?;
     // The first sound track.
-    let trak = boxes(moov).filter(|(k, _)| *k == b"trak").map(|(_, b)| b).find(|t| {
-        child(t, b"mdia").and_then(|m| child(m, b"hdlr")).and_then(|h| h.get(8..12)) == Some(b"soun".as_slice())
-    })?;
+    let trak = boxes(moov)
+        .filter(|(k, _)| *k == b"trak")
+        .map(|(_, b)| b)
+        .find(|t| child(t, b"mdia").and_then(|m| child(m, b"hdlr")).and_then(|h| h.get(8..12)) == Some(b"soun".as_slice()))?;
     let media_scale = child(trak, b"mdia").and_then(|m| child(m, b"mdhd")).and_then(timescale)?;
     let (dur, time) = child(trak, b"edts").and_then(|e| child(e, b"elst")).and_then(first_edit)?;
     if movie_scale == 0 || media_scale == 0 {

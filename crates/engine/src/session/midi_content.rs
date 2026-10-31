@@ -161,7 +161,19 @@ impl Session {
                 .collect();
             let cc = part.cc.iter().map(|c| CcEvent { start: to_samples(c.start) - rstart, kind: c.kind, value: c.value }).collect();
             let rid = self.project.alloc_id();
-            self.project.track_mut(tid).unwrap().regions.push(Region { id: rid, name, start: rstart, length, muted: false, color: None, content: RegionContent::Midi { notes, cc }, loop_end: None, takes: None, params: Default::default(), pattern: None });
+            self.project.track_mut(tid).unwrap().regions.push(Region {
+                id: rid,
+                name,
+                start: rstart,
+                length,
+                muted: false,
+                color: None,
+                content: RegionContent::Midi { notes, cc },
+                loop_end: None,
+                takes: None,
+                params: Default::default(),
+                pattern: None,
+            });
             self.push_regions(tid);
             made.push(rid);
         }
@@ -226,7 +238,14 @@ impl Session {
             }
         }
         let signatures = map.signatures().iter().map(|s| ((map.bar_start_q(s.bar as i64) * ppq).round() as u64, s.num, s.den)).collect();
-        let file = SmfFile { ppq: smf::PPQ, tempo: Some(self.project.tempo), signature: Some((self.project.sig_num, self.project.sig_den)), tracks: parts, tempos, signatures };
+        let file = SmfFile {
+            ppq: smf::PPQ,
+            tempo: Some(self.project.tempo),
+            signature: Some((self.project.sig_num, self.project.sig_den)),
+            tracks: parts,
+            tempos,
+            signatures,
+        };
         std::fs::write(path, smf::write(&file)).with_context(|| format!("writing {}", path.display()))?;
         Ok(())
     }

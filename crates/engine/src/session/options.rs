@@ -220,7 +220,8 @@ impl Session {
     /// overlap on `track`, growing it to cover them. False when there is none to merge into.
     pub(super) fn merge_midi_take(&mut self, track: Id, start: i64, end: i64, notes: &[Note], cc: &[CcEvent]) -> bool {
         let Some(t) = self.project.track_mut(track) else { return false };
-        let Some(r) = t.regions.iter_mut().rev().find(|r| matches!(r.content, RegionContent::Midi { .. }) && r.start < end && r.start + r.length > start) else {
+        let Some(r) = t.regions.iter_mut().rev().find(|r| matches!(r.content, RegionContent::Midi { .. }) && r.start < end && r.start + r.length > start)
+        else {
             return false;
         };
         let new_start = r.start.min(start);

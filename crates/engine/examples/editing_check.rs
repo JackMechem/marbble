@@ -78,7 +78,10 @@ fn main() {
     let v = regions(&s, a);
     let cut = v[1].start;
     let (at, peak) = sample_at(&s, &v[1], cut);
-    check(&format!("on: the split moves to a crossing within 5 ms ({cut}, |{at:.4}| of {peak:.3})"), v.len() == 2 && v[0].start + v[0].length == cut && (cut - pos).abs() <= window && (cut - pos).abs() > 10 && at.abs() < peak * 0.05);
+    check(
+        &format!("on: the split moves to a crossing within 5 ms ({cut}, |{at:.4}| of {peak:.3})"),
+        v.len() == 2 && v[0].start + v[0].length == cut && (cut - pos).abs() <= window && (cut - pos).abs() > 10 && at.abs() < peak * 0.05,
+    );
     s.undo();
     let inside = s.edit_range(&regions(&s, a).iter().map(|r| r.id).collect::<Vec<_>>(), 30_011, 60_029, RangeEdit::Split).unwrap();
     let r = regions(&s, a).into_iter().find(|r| inside.contains(&r.id)).unwrap();

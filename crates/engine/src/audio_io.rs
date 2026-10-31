@@ -162,22 +162,14 @@ fn device_id(d: &Device) -> String {
 }
 
 fn describe(d: &Device, input: bool, default_id: &str) -> Option<DeviceInfo> {
-    let configs: Vec<_> = if input {
-        d.supported_input_configs().ok()?.collect()
-    } else {
-        d.supported_output_configs().ok()?.collect()
-    };
+    let configs: Vec<_> = if input { d.supported_input_configs().ok()?.collect() } else { d.supported_output_configs().ok()?.collect() };
     if configs.is_empty() {
         return None;
     }
     let channels = if input { d.default_input_config().ok() } else { d.default_output_config().ok() }
         .map(|c| c.channels())
         .unwrap_or_else(|| configs.iter().map(|c| c.channels()).min().unwrap_or(0));
-    let mut rates: Vec<u32> = COMMON_RATES
-        .iter()
-        .copied()
-        .filter(|r| configs.iter().any(|c| c.min_sample_rate() <= *r && *r <= c.max_sample_rate()))
-        .collect();
+    let mut rates: Vec<u32> = COMMON_RATES.iter().copied().filter(|r| configs.iter().any(|c| c.min_sample_rate() <= *r && *r <= c.max_sample_rate())).collect();
     rates.dedup();
     let id = device_id(d);
     Some(DeviceInfo { is_default: id == default_id, id, name: device_name(d), channels, sample_rates: rates })
@@ -264,12 +256,8 @@ fn choose_config(d: &Device, input: bool, rate: u32, buffer: u32) -> Result<(Str
         _ => 9,
     };
     // Use the device's own default layout: ALSA plug devices advertise up to 64 channels.
-    let default_ch = if input { d.default_input_config().ok() } else { d.default_output_config().ok() }
-        .map(|c| c.channels())
-        .unwrap_or(2);
-    let usable = |c: &&cpal::SupportedStreamConfigRange| {
-        c.min_sample_rate() <= rate && rate <= c.max_sample_rate() && fmt_rank(c.sample_format()) < 9
-    };
+    let default_ch = if input { d.default_input_config().ok() } else { d.default_output_config().ok() }.map(|c| c.channels()).unwrap_or(2);
+    let usable = |c: &&cpal::SupportedStreamConfigRange| c.min_sample_rate() <= rate && rate <= c.max_sample_rate() && fmt_rank(c.sample_format()) < 9;
     let best = configs
         .iter()
         .filter(usable)

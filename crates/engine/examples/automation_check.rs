@@ -86,7 +86,10 @@ fn main() {
     let (e, _) = levels_at(&mut s, a, early.0, early.1);
     let (l, _) = levels_at(&mut s, a, late.0, late.1);
     let rise = db(l) - db(e);
-    check(&format!("volume ramp: quiet early, loud late ({:.1} dB -> {:.1} dB, flat {:.1} dB)", db(e), db(l), db(flat)), rise > 30.0 && (db(flat) - db(e)) > 30.0);
+    check(
+        &format!("volume ramp: quiet early, loud late ({:.1} dB -> {:.1} dB, flat {:.1} dB)", db(e), db(l), db(flat)),
+        rise > 30.0 && (db(flat) - db(e)) > 30.0,
+    );
 
     // Off ignores the lane.
     s.set_auto_mode(a, AutoMode::Off);
@@ -101,7 +104,10 @@ fn main() {
     s.set_automation_lane(a, AutoParam::Pan, pts(&[(0, -1.0), (len, 1.0)]));
     let (el, er) = levels_at(&mut s, a, early.0, early.1);
     let (ll, lr) = levels_at(&mut s, a, late.0, late.1);
-    check(&format!("pan lane: left early (L {:.1} / R {:.1} dB), right late (L {:.1} / R {:.1} dB)", db(el), db(er), db(ll), db(lr)), db(el) - db(er) > 15.0 && db(lr) - db(ll) > 15.0);
+    check(
+        &format!("pan lane: left early (L {:.1} / R {:.1} dB), right late (L {:.1} / R {:.1} dB)", db(el), db(er), db(ll), db(lr)),
+        db(el) - db(er) > 15.0 && db(lr) - db(ll) > 15.0,
+    );
     s.clear_automation(a, None);
 
     // Write: fader moves while playing become a lane, in one undo step.

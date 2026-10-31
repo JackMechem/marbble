@@ -179,7 +179,8 @@ impl Convolver {
         let inv = planner.plan_fft_inverse(2 * PART);
         let scratch = vec![Complex::new(0.0, 0.0); fwd.get_scratch_len().max(inv.get_scratch_len())];
         let max_parts = max_taps.div_ceil(PART).max(kernel.count()).max(1);
-        let channel = || Channel { x: vec![0.0; 2 * PART], fdl: vec![Complex::new(0.0, 0.0); max_parts * BINS], tail: vec![0.0; PART], tail_next: vec![0.0; PART] };
+        let channel =
+            || Channel { x: vec![0.0; 2 * PART], fdl: vec![Complex::new(0.0, 0.0); max_parts * BINS], tail: vec![0.0; PART], tail_next: vec![0.0; PART] };
         let blocks = fade_frames.div_ceil(PART).max(1);
         let len = blocks * PART;
         let fade = (0..len).map(|i| (0.5 - 0.5 * (std::f64::consts::PI * i as f64 / len as f64).cos()) as f32).collect();
@@ -273,7 +274,17 @@ impl Convolver {
     /// One kernel's tail for the coming block of one channel: the inverse FFT of every
     /// partition but the first times the matching past input spectrum.
     #[allow(clippy::too_many_arguments)]
-    fn tail_of(k: &Kernel, ch: &mut Channel, newest: usize, max_parts: usize, inv: &Arc<dyn ComplexToReal<f32>>, acc: &mut [Complex<f32>], time: &mut [f32], scratch: &mut [Complex<f32>], next: bool) {
+    fn tail_of(
+        k: &Kernel,
+        ch: &mut Channel,
+        newest: usize,
+        max_parts: usize,
+        inv: &Arc<dyn ComplexToReal<f32>>,
+        acc: &mut [Complex<f32>],
+        time: &mut [f32],
+        scratch: &mut [Complex<f32>],
+        next: bool,
+    ) {
         let out = if next { &mut ch.tail_next } else { &mut ch.tail };
         if !k.live.iter().any(|&l| l) {
             out.fill(0.0);
@@ -338,7 +349,17 @@ impl Convolver {
             self.next = self.pending.take();
             self.fade_at = 0;
             for c in 0..2 {
-                Self::tail_of(self.next.as_ref().unwrap(), &mut self.ch[c], self.newest, self.max_parts, &self.inv, &mut self.acc, &mut self.time, &mut self.scratch, true);
+                Self::tail_of(
+                    self.next.as_ref().unwrap(),
+                    &mut self.ch[c],
+                    self.newest,
+                    self.max_parts,
+                    &self.inv,
+                    &mut self.acc,
+                    &mut self.time,
+                    &mut self.scratch,
+                    true,
+                );
             }
         }
         let mut i = 0;

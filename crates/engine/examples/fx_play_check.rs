@@ -95,7 +95,10 @@ fn play_bounce_freeze(s: &mut Session, id: &str, tone: &str, out: &Path) {
     s.bounce_project(&after, &opts, &mut |_| {}).unwrap();
     let (b, f) = (read(&before), read(&after));
     let off = diff(&b, &f);
-    check(&format!("{name}: a bounce of the frozen track matches the live bounce (diff {off:.6})"), b[0].len() == f[0].len() && b[0].len() as i64 >= LEN && off < 1e-4);
+    check(
+        &format!("{name}: a bounce of the frozen track matches the live bounce (diff {off:.6})"),
+        b[0].len() == f[0].len() && b[0].len() as i64 >= LEN && off < 1e-4,
+    );
     s.unfreeze_track(a).unwrap();
     s.delete_track(a);
 }

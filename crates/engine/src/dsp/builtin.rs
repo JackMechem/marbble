@@ -13,7 +13,7 @@ use std::sync::Arc;
 
 use vst3_host::MidiEvent;
 
-use crate::fx::{EffectInfo, Effect, FxContext, Key, ParamKind, ParamSpec, MAX_METERS};
+use crate::fx::{Effect, EffectInfo, FxContext, Key, ParamKind, ParamSpec, MAX_METERS};
 use crate::instrument::{Instrument, InstrumentInfo};
 
 /// A plain value (in the parameter's units) from a normalized 0..1 one.
@@ -142,7 +142,13 @@ impl BuiltinDsp {
     /// Instantiates an effect with the given parameter values (plain units; missing ones keep
     /// their defaults). Allocates: call off the audio thread.
     pub fn new(info: &EffectInfo, sample_rate: f32, values: &[(u32, f32)]) -> BuiltinDsp {
-        let mut b = BuiltinDsp { fx: (info.new)(sample_rate), specs: info.params, shared: Arc::new(FxShared::new(info.params, info.meters)), meter_buf: [0.0; MAX_METERS], fresh: true };
+        let mut b = BuiltinDsp {
+            fx: (info.new)(sample_rate),
+            specs: info.params,
+            shared: Arc::new(FxShared::new(info.params, info.meters)),
+            meter_buf: [0.0; MAX_METERS],
+            fresh: true,
+        };
         for &(id, v) in values {
             b.set(id, v);
         }
@@ -261,7 +267,13 @@ impl InstrumentDsp {
     /// their defaults) and the seed for its analog-style differences. Allocates: call off the
     /// audio thread.
     pub fn new(info: &InstrumentInfo, sample_rate: f32, seed: u64, values: &[(u32, f32)]) -> InstrumentDsp {
-        let mut b = InstrumentDsp { inst: (info.new)(sample_rate, seed), specs: info.params, shared: Arc::new(FxShared::new(info.params, info.meters)), meter_buf: [0.0; MAX_METERS], fresh: true };
+        let mut b = InstrumentDsp {
+            inst: (info.new)(sample_rate, seed),
+            specs: info.params,
+            shared: Arc::new(FxShared::new(info.params, info.meters)),
+            meter_buf: [0.0; MAX_METERS],
+            fresh: true,
+        };
         for &(id, v) in values {
             b.set(id, v);
         }

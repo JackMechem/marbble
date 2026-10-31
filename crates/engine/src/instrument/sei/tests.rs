@@ -47,7 +47,11 @@ fn saw_pulse_and_sub_stay_locked() {
 
 #[test]
 fn aliasing_of_a_bright_note_end_to_end() {
-    for (note, wave, name) in [(96u8, vec![(SAW_ON, 1.0)], "saw"), (96, vec![(SAW_ON, 0.0), (PULSE_ON, 1.0), (PWM, 6.0)], "pulse"), (84, vec![(SAW_ON, 1.0), (PULSE_ON, 1.0), (SUB, 10.0)], "everything")] {
+    for (note, wave, name) in [
+        (96u8, vec![(SAW_ON, 1.0)], "saw"),
+        (96, vec![(SAW_ON, 0.0), (PULSE_ON, 1.0), (PWM, 6.0)], "pulse"),
+        (84, vec![(SAW_ON, 1.0), (PULSE_ON, 1.0), (SUB, 10.0)], "everything"),
+    ] {
         let s = with(clean(), &wave);
         let mut t = make(&sei(), SR, 77, &s);
         let (l, _) = render(t.as_mut(), SR, 1 << 17, 512, &[(0, [0x90, note, 100])]);
@@ -61,10 +65,33 @@ fn aliasing_of_a_bright_note_end_to_end() {
 #[test]
 fn no_nan_or_runaway_on_extreme_settings() {
     let cases: Vec<Vec<(u32, f32)>> = vec![
-        vec![(SAW_ON, 1.0), (PULSE_ON, 1.0), (SUB, 10.0), (NOISE, 10.0), (CUTOFF, 20000.0), (RESONANCE, 10.0), (ENV_AMOUNT, 10.0), (LEVEL, 10.0), (CHORUS, 3.0), (HPF, 0.0)],
+        vec![
+            (SAW_ON, 1.0),
+            (PULSE_ON, 1.0),
+            (SUB, 10.0),
+            (NOISE, 10.0),
+            (CUTOFF, 20000.0),
+            (RESONANCE, 10.0),
+            (ENV_AMOUNT, 10.0),
+            (LEVEL, 10.0),
+            (CHORUS, 3.0),
+            (HPF, 0.0),
+        ],
         vec![(CUTOFF, 20.0), (RESONANCE, 10.0), (VCF_LFO, 10.0), (DCO_LFO, 10.0), (LFO_RATE, 10.0), (PWM_MODE, 0.0), (PWM, 10.0), (LEVEL, 10.0), (CHORUS, 2.0)],
         vec![(ASSIGN, 2.0), (UNISON_DETUNE, 1.0), (RESONANCE, 10.0), (LEVEL, 10.0), (SUB, 10.0), (PULSE_ON, 1.0)],
-        vec![(ATTACK, 1.5), (DECAY, 1.5), (SUSTAIN, 10.0), (RELEASE, 1.5), (PORTA_ON, 1.0), (PORTA, 1.0), (BEND_DCO, 12.0), (BEND_VCF, 10.0), (ENV_POLARITY, 1.0), (ENV_AMOUNT, 10.0), (LEVEL, 10.0)],
+        vec![
+            (ATTACK, 1.5),
+            (DECAY, 1.5),
+            (SUSTAIN, 10.0),
+            (RELEASE, 1.5),
+            (PORTA_ON, 1.0),
+            (PORTA, 1.0),
+            (BEND_DCO, 12.0),
+            (BEND_VCF, 10.0),
+            (ENV_POLARITY, 1.0),
+            (ENV_AMOUNT, 10.0),
+            (LEVEL, 10.0),
+        ],
     ];
     assert_no_runaway(&sei(), &cases, 16.0);
     assert_survives_param_jumps(&sei(), 32.0);
@@ -95,7 +122,8 @@ fn output_doesnt_depend_on_the_block_size() {
 #[test]
 fn renders_repeat_and_seed_matters() {
     let s = [(NOISE, 1.0), (VARIATION, 1.0), (DCO_LFO, 2.0), (CHORUS_NOISE, 1.0)];
-    let events = [(0usize, [0x90, 48, 100]), (20000, [0x80, 48, 0]), (24000, [0x90, 55, 100]), (40000, [0xB0, 1, 90]), (41000, [0xE0, 0, 90]), (42000, [0xB0, 64, 127])];
+    let events =
+        [(0usize, [0x90, 48, 100]), (20000, [0x80, 48, 0]), (24000, [0x90, 55, 100]), (40000, [0xB0, 1, 90]), (41000, [0xE0, 0, 90]), (42000, [0xB0, 64, 127])];
     assert_repeats(&sei(), &s, &events, 96000);
     assert_seed_matters(&sei(), &s, &events, 48000);
 }
@@ -208,7 +236,16 @@ fn filter_self_oscillates_near_the_top_of_the_knob() {
     let mut worst = 0.0f32;
     for &sr in &[44100.0f32, 48000.0, 96000.0] {
         for note in (36..=84).step_by(12) {
-            let s = [(VARIATION, 0.0), (CHORUS, 0.0), (SAW_ON, 0.0), (CUTOFF, exact_hz(60.0)), (RESONANCE, 10.0), (ENV_AMOUNT, 0.0), (KEYBOARD, 10.0), (SUSTAIN, 10.0)];
+            let s = [
+                (VARIATION, 0.0),
+                (CHORUS, 0.0),
+                (SAW_ON, 0.0),
+                (CUTOFF, exact_hz(60.0)),
+                (RESONANCE, 10.0),
+                (ENV_AMOUNT, 0.0),
+                (KEYBOARD, 10.0),
+                (SUSTAIN, 10.0),
+            ];
             let mut t = make(&sei(), sr, 77, &s);
             let (l, _) = render(t.as_mut(), sr, 1 << 18, 512, &[(0, [0x90, note as u8, 100])]);
             assert!(peak(&l[1 << 17..]) > 0.02, "note {note} at {sr}: silent");

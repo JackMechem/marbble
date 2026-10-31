@@ -24,7 +24,8 @@ pub fn render(t: &mut dyn Instrument, sr: f32, frames: usize, block: usize, even
     let mut at = 0;
     while at < frames {
         let n = block.min(frames - at);
-        let midi: Vec<MidiEvent> = events.iter().filter(|(f, _)| *f >= at && *f < at + n).map(|(f, d)| MidiEvent { offset: (*f - at) as u32, data: *d }).collect();
+        let midi: Vec<MidiEvent> =
+            events.iter().filter(|(f, _)| *f >= at && *f < at + n).map(|(f, d)| MidiEvent { offset: (*f - at) as u32, data: *d }).collect();
         t.process(&mut l[at..at + n], &mut r[at..at + n], &midi, &ctx(sr));
         at += n;
     }
@@ -174,7 +175,15 @@ pub fn assert_seed_matters(info: &InstrumentInfo, settings: &[(u32, f32)], event
 }
 
 /// The biggest step around an event against the steady note's, by `ratio`.
-pub fn assert_no_click(info: &InstrumentInfo, settings: &[(u32, f32)], events: &[Event], steady: std::ops::Range<usize>, around: std::ops::Range<usize>, ratio: f32, what: &str) {
+pub fn assert_no_click(
+    info: &InstrumentInfo,
+    settings: &[(u32, f32)],
+    events: &[Event],
+    steady: std::ops::Range<usize>,
+    around: std::ops::Range<usize>,
+    ratio: f32,
+    what: &str,
+) {
     let frames = around.end.max(steady.end);
     let mut t = make(info, 48000.0, 77, settings);
     let (l, _) = render(t.as_mut(), 48000.0, frames, 512, events);

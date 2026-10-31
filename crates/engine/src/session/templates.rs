@@ -47,7 +47,8 @@ pub fn list_templates(folder: &Path) -> Vec<UserTemplate> {
                         return None;
                     }
                     let doc: Project = serde_json::from_slice(&std::fs::read(&path).ok()?).ok()?;
-                    let modified = e.metadata().and_then(|m| m.modified()).ok().and_then(|t| t.duration_since(UNIX_EPOCH).ok()).map(|d| d.as_secs()).unwrap_or(0);
+                    let modified =
+                        e.metadata().and_then(|m| m.modified()).ok().and_then(|t| t.duration_since(UNIX_EPOCH).ok()).map(|d| d.as_secs()).unwrap_or(0);
                     Some(UserTemplate { name, tracks: doc.tracks.len(), kinds: doc.tracks.iter().map(|t| t.kind).collect(), tempo: doc.tempo, modified })
                 })
                 .collect()

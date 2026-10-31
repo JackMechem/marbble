@@ -18,8 +18,8 @@ use std::path::PathBuf;
 
 use daw_engine::arrange_cmds::SectionEdit;
 use daw_engine::audio_io::AudioConfig;
-use daw_engine::fades::DragMode;
 use daw_engine::dsp::ParallelTest;
+use daw_engine::fades::DragMode;
 use daw_engine::model::{AutoMode, AutoParam, Id, Note, Project, RegionContent, TrackKind, MASTER_ID};
 use daw_engine::pattern::Step;
 use daw_engine::session::{MidiContent, RegionMove, RegionParamsPatch, TrackPatch, VcaPatch};
@@ -197,7 +197,9 @@ fn pdc_problem(s: &Session) -> Option<String> {
             match slots(st.track).iter().find(|x| x.uid == *uid) {
                 None => return Some(format!("delay compensation counts plug-in {uid} on track {}, which isn't there", st.track)),
                 // The built-in synth has no latency.
-                Some(x) if x.plugin_id == daw_engine::session::BUILTIN_SYNTH => return Some(format!("delay compensation gives the synth {uid} on track {} a latency", st.track)),
+                Some(x) if x.plugin_id == daw_engine::session::BUILTIN_SYNTH => {
+                    return Some(format!("delay compensation gives the synth {uid} on track {} a latency", st.track))
+                }
                 _ => {}
             }
         }
@@ -347,7 +349,14 @@ fn edit(s: &mut Session, g: &mut Rng, w: &World) -> (String, bool) {
                         3 => s.delete_comp(f, g.below(3)),
                         4 => s.rename_comp(f, g.below(3), "Soak".into()),
                         _ => {
-                            let takes: Vec<Id> = s.project.tracks.iter().flat_map(|t| t.regions.iter()).find(|r| r.id == f).map(|r| r.takes.as_ref().unwrap().takes.iter().map(|t| t.id).collect()).unwrap_or_default();
+                            let takes: Vec<Id> = s
+                                .project
+                                .tracks
+                                .iter()
+                                .flat_map(|t| t.regions.iter())
+                                .find(|r| r.id == f)
+                                .map(|r| r.takes.as_ref().unwrap().takes.iter().map(|t| t.id).collect())
+                                .unwrap_or_default();
                             s.select_take(f, g.pick(&takes).unwrap_or(0));
                         }
                     }
@@ -372,7 +381,13 @@ fn edit(s: &mut Session, g: &mut Rng, w: &World) -> (String, bool) {
                         }
                         2 => s.delete_unused_takes(f),
                         _ => {
-                            let take = s.project.tracks.iter().flat_map(|t| t.regions.iter()).find(|r| r.id == f).and_then(|r| r.takes.as_ref()?.takes.first().map(|t| t.id));
+                            let take = s
+                                .project
+                                .tracks
+                                .iter()
+                                .flat_map(|t| t.regions.iter())
+                                .find(|r| r.id == f)
+                                .and_then(|r| r.takes.as_ref()?.takes.first().map(|t| t.id));
                             s.delete_take(f, take.unwrap_or(0));
                         }
                     }
@@ -444,7 +459,11 @@ fn edit(s: &mut Session, g: &mut Rng, w: &World) -> (String, bool) {
             }
             35 => {
                 let t = if g.chance(15) { MASTER_ID } else { g.pick(&tracks).unwrap_or(MASTER_ID) };
-                let plugs: Vec<(Id, u32)> = s.project.track(t).map(|t| t.inserts.iter().flatten().filter(|x| x.plugin_id.starts_with("builtin:")).map(|x| (x.uid, 0)).collect()).unwrap_or_default();
+                let plugs: Vec<(Id, u32)> = s
+                    .project
+                    .track(t)
+                    .map(|t| t.inserts.iter().flatten().filter(|x| x.plugin_id.starts_with("builtin:")).map(|x| (x.uid, 0)).collect())
+                    .unwrap_or_default();
                 if let Some((uid, param)) = g.pick(&plugs) {
                     s.set_automation_lane(t, AutoParam::Plugin { uid, param, name: "P".into() }, random_points(g, 0.0, 1.0));
                 } else {
@@ -513,7 +532,17 @@ fn edit(s: &mut Session, g: &mut Rng, w: &World) -> (String, bool) {
                 }
             }
             40 => {
-                let fx = ["builtin:chorus", "builtin:flanger", "builtin:phaser", "builtin:tremolo", "builtin:overdrive", "builtin:distortion", "builtin:gain", "builtin:linear-phase-eq", "builtin:compressor"];
+                let fx = [
+                    "builtin:chorus",
+                    "builtin:flanger",
+                    "builtin:phaser",
+                    "builtin:tremolo",
+                    "builtin:overdrive",
+                    "builtin:distortion",
+                    "builtin:gain",
+                    "builtin:linear-phase-eq",
+                    "builtin:compressor",
+                ];
                 if let Some(t) = g.pick(&strips) {
                     s.set_plugin(t, 4 + g.below(4), fx[g.below(fx.len())])?;
                 }
@@ -532,7 +561,8 @@ fn edit(s: &mut Session, g: &mut Rng, w: &World) -> (String, bool) {
             }
             43 => {
                 if let Some(t) = g.pick(&strips) {
-                    let slots: Vec<(usize, String)> = s.project.track(t).unwrap().inserts.iter().enumerate().filter_map(|(k, x)| x.as_ref().map(|x| (k, x.plugin_id.clone()))).collect();
+                    let slots: Vec<(usize, String)> =
+                        s.project.track(t).unwrap().inserts.iter().enumerate().filter_map(|(k, x)| x.as_ref().map(|x| (k, x.plugin_id.clone()))).collect();
                     if let Some((k, id)) = g.pick(&slots) {
                         if let Some(info) = daw_engine::fx::find(&id) {
                             let p = &info.params[g.below(info.params.len())];
@@ -543,7 +573,16 @@ fn edit(s: &mut Session, g: &mut Rng, w: &World) -> (String, bool) {
             }
             44 => {
                 if let Some(t) = g.pick(&tracks) {
-                    s.update_track(t, TrackPatch { volume_db: Some(-20.0 + 26.0 * g.unit()), mute: g.chance(20).then(|| g.chance(30)), pan: Some(g.unit() * 2.0 - 1.0), off: g.chance(20).then(|| g.chance(30)), ..Default::default() });
+                    s.update_track(
+                        t,
+                        TrackPatch {
+                            volume_db: Some(-20.0 + 26.0 * g.unit()),
+                            mute: g.chance(20).then(|| g.chance(30)),
+                            pan: Some(g.unit() * 2.0 - 1.0),
+                            off: g.chance(20).then(|| g.chance(30)),
+                            ..Default::default()
+                        },
+                    );
                 }
             }
             45 => {
@@ -566,7 +605,13 @@ fn edit(s: &mut Session, g: &mut Rng, w: &World) -> (String, bool) {
                     let RegionContent::Midi { notes, cc } = &r.content else { unreachable!() };
                     let mut notes = notes.clone();
                     match g.below(3) {
-                        0 => notes.push(Note { start: g.range(0, r.length), length: g.range(100, BAR), pitch: 40 + g.below(40) as u8, velocity: 1 + g.below(126) as u8, muted: false }),
+                        0 => notes.push(Note {
+                            start: g.range(0, r.length),
+                            length: g.range(100, BAR),
+                            pitch: 40 + g.below(40) as u8,
+                            velocity: 1 + g.below(126) as u8,
+                            muted: false,
+                        }),
                         1 if !notes.is_empty() => {
                             notes.remove(g.below(notes.len()));
                         }
@@ -593,7 +638,18 @@ fn edit(s: &mut Session, g: &mut Rng, w: &World) -> (String, bool) {
                 }
             }
             51 => {
-                let comps: Vec<(Id, usize)> = s.project.tracks.iter().flat_map(|t| t.inserts.iter().enumerate().filter(|(_, x)| x.as_ref().is_some_and(|x| x.plugin_id == "builtin:compressor")).map(move |(k, _)| (t.id, k))).collect();
+                let comps: Vec<(Id, usize)> = s
+                    .project
+                    .tracks
+                    .iter()
+                    .flat_map(|t| {
+                        t.inserts
+                            .iter()
+                            .enumerate()
+                            .filter(|(_, x)| x.as_ref().is_some_and(|x| x.plugin_id == "builtin:compressor"))
+                            .map(move |(k, _)| (t.id, k))
+                    })
+                    .collect();
                 if let Some((t, k)) = g.pick(&comps) {
                     s.set_sidechain(t, k, g.pick(&strips))?;
                     s.set_sidechain_pre(t, k, g.chance(50))?;
@@ -614,7 +670,8 @@ fn edit(s: &mut Session, g: &mut Rng, w: &World) -> (String, bool) {
             56 => s.nudge_regions(&[region], g.range(-BAR / 4, BAR / 4)),
             57 => {
                 let ids = some(g, &all.iter().map(|x| x.1).collect::<Vec<_>>());
-                let items: Vec<(Id, daw_engine::model::Region)> = s.marquee_copy(&tracks, a, b.min(a + BAR)).into_iter().filter_map(|(k, r)| s.project.tracks.get(k).map(|t| (t.id, r))).collect();
+                let items: Vec<(Id, daw_engine::model::Region)> =
+                    s.marquee_copy(&tracks, a, b.min(a + BAR)).into_iter().filter_map(|(k, r)| s.project.tracks.get(k).map(|t| (t.id, r))).collect();
                 if g.chance(50) {
                     s.paste_replace(&items, g.range(0, BAR));
                 } else {
@@ -783,7 +840,13 @@ fn main() {
             pool_on(&mut t);
             t.open(&saved).unwrap();
             let reopened = render(&mut t);
-            check(&format!("after edit {i} ({name}), the project saves and reopens with the same render ({})", if same(&reopened, &now) { "bit-identical".into() } else { first_diff(&reopened, &now) }), same(&reopened, &now));
+            check(
+                &format!(
+                    "after edit {i} ({name}), the project saves and reopens with the same render ({})",
+                    if same(&reopened, &now) { "bit-identical".into() } else { first_diff(&reopened, &now) }
+                ),
+                same(&reopened, &now),
+            );
             drop(t);
         }
     }
@@ -793,7 +856,10 @@ fn main() {
         s.stop();
         check(&format!("{compared} renders on {threads} threads matched the serial loop's"), compared > 0);
         let pooled = s.status.parallel_blocks.load(std::sync::atomic::Ordering::Relaxed);
-        check(&format!("the pool played throughout ({pooled} blocks), and no strip panicked"), pooled > 0 && s.status.engine_errors.load(std::sync::atomic::Ordering::Relaxed) == 0);
+        check(
+            &format!("the pool played throughout ({pooled} blocks), and no strip panicked"),
+            pooled > 0 && s.status.engine_errors.load(std::sync::atomic::Ordering::Relaxed) == 0,
+        );
     }
 
     let last = render(&mut s);
@@ -802,13 +868,19 @@ fn main() {
         s.undo();
     }
     let back = render(&mut s);
-    check(&format!("undoing every edit gives the first render back ({})", if same(&back, &first) { "bit-identical".into() } else { first_diff(&back, &first) }), same(&back, &first));
+    check(
+        &format!("undoing every edit gives the first render back ({})", if same(&back, &first) { "bit-identical".into() } else { first_diff(&back, &first) }),
+        same(&back, &first),
+    );
     check("and the first document", doc(&s) == first_doc);
     for _ in 0..depth {
         s.redo();
     }
     let again = render(&mut s);
-    check(&format!("redoing them all gives the last render ({})", if same(&again, &last) { "bit-identical".into() } else { first_diff(&again, &last) }), same(&again, &last));
+    check(
+        &format!("redoing them all gives the last render ({})", if same(&again, &last) { "bit-identical".into() } else { first_diff(&again, &last) }),
+        same(&again, &last),
+    );
     check("and the last document", doc(&s) == last_doc);
 
     if FAILED.load(std::sync::atomic::Ordering::Relaxed) {

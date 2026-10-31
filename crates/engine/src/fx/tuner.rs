@@ -15,7 +15,7 @@
 //! strip the high harmonics that would otherwise make the NSDF peak too sharp to interpolate.
 //! The detector runs every [`HOP_SECS`], at the end of a block, so its cost is bounded per block.
 
-use super::{EffectInfo, Effect, FactoryPreset, FxContext, Key, ParamKind, ParamSpec, Unit, MAX_METERS};
+use super::{Effect, EffectInfo, FactoryPreset, FxContext, Key, ParamKind, ParamSpec, Unit, MAX_METERS};
 use std::f64::consts::TAU;
 
 pub const REFERENCE: u32 = 0;
@@ -26,66 +26,12 @@ pub const TRANSPOSE: u32 = 4;
 pub const THRESHOLD: u32 = 5;
 
 static PARAMS: [ParamSpec; 6] = [
-    ParamSpec {
-        id: REFERENCE,
-        name: "Reference",
-        min: 400.0,
-        max: 480.0,
-        default: 440.0,
-        unit: Unit::Hz,
-        kind: ParamKind::Continuous,
-        log: false,
-    },
-    ParamSpec {
-        id: MUTE,
-        name: "Mute",
-        min: 0.0,
-        max: 1.0,
-        default: 0.0,
-        unit: Unit::None,
-        kind: ParamKind::Toggle,
-        log: false,
-    },
-    ParamSpec {
-        id: DISPLAY,
-        name: "Display",
-        min: 0.0,
-        max: 1.0,
-        default: 0.0,
-        unit: Unit::None,
-        kind: ParamKind::Choice(&["Needle", "Strobe"]),
-        log: false,
-    },
-    ParamSpec {
-        id: NOTATION,
-        name: "Notation",
-        min: 0.0,
-        max: 1.0,
-        default: 0.0,
-        unit: Unit::None,
-        kind: ParamKind::Choice(&["Sharps", "Flats"]),
-        log: false,
-    },
-    ParamSpec {
-        id: TRANSPOSE,
-        name: "Transpose",
-        min: -24.0,
-        max: 24.0,
-        default: 0.0,
-        unit: Unit::Semitones,
-        kind: ParamKind::Continuous,
-        log: false,
-    },
-    ParamSpec {
-        id: THRESHOLD,
-        name: "Threshold",
-        min: -90.0,
-        max: -20.0,
-        default: -60.0,
-        unit: Unit::Db,
-        kind: ParamKind::Continuous,
-        log: false,
-    },
+    ParamSpec { id: REFERENCE, name: "Reference", min: 400.0, max: 480.0, default: 440.0, unit: Unit::Hz, kind: ParamKind::Continuous, log: false },
+    ParamSpec { id: MUTE, name: "Mute", min: 0.0, max: 1.0, default: 0.0, unit: Unit::None, kind: ParamKind::Toggle, log: false },
+    ParamSpec { id: DISPLAY, name: "Display", min: 0.0, max: 1.0, default: 0.0, unit: Unit::None, kind: ParamKind::Choice(&["Needle", "Strobe"]), log: false },
+    ParamSpec { id: NOTATION, name: "Notation", min: 0.0, max: 1.0, default: 0.0, unit: Unit::None, kind: ParamKind::Choice(&["Sharps", "Flats"]), log: false },
+    ParamSpec { id: TRANSPOSE, name: "Transpose", min: -24.0, max: 24.0, default: 0.0, unit: Unit::Semitones, kind: ParamKind::Continuous, log: false },
+    ParamSpec { id: THRESHOLD, name: "Threshold", min: -90.0, max: -20.0, default: -60.0, unit: Unit::Db, kind: ParamKind::Continuous, log: false },
 ];
 
 /// Meter order: detected frequency in Hz (0 when nothing is detected), the nearest MIDI note
@@ -166,14 +112,7 @@ impl Biquad {
         let (s, c) = w.sin_cos();
         let alpha = s / (2.0 * q);
         let a0 = 1.0 + alpha;
-        Biquad {
-            b0: (1.0 - c) / 2.0 / a0,
-            b1: (1.0 - c) / a0,
-            b2: (1.0 - c) / 2.0 / a0,
-            a1: -2.0 * c / a0,
-            a2: (1.0 - alpha) / a0,
-            ..Biquad::default()
-        }
+        Biquad { b0: (1.0 - c) / 2.0 / a0, b1: (1.0 - c) / a0, b2: (1.0 - c) / 2.0 / a0, a1: -2.0 * c / a0, a2: (1.0 - alpha) / a0, ..Biquad::default() }
     }
 
     #[inline]

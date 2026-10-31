@@ -139,7 +139,8 @@ impl SamplerState {
 
     /// Reads a slot's state. None or unreadable is an empty instrument.
     pub fn parse(state: Option<&str>) -> SamplerState {
-        let mut s: SamplerState = state.and_then(|t| serde_json::from_str(t).map_err(|e| log::error!("a sampler's zones can't be read: {e}")).ok()).unwrap_or_default();
+        let mut s: SamplerState =
+            state.and_then(|t| serde_json::from_str(t).map_err(|e| log::error!("a sampler's zones can't be read: {e}")).ok()).unwrap_or_default();
         s.zones.iter_mut().for_each(Zone::tidy);
         s.next_id = s.next_id.max(s.zones.iter().map(|z| z.id + 1).max().unwrap_or(1));
         s

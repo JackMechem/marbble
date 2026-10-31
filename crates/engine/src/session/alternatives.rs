@@ -47,7 +47,13 @@ fn alt_dir(dir: &Path, name: &str) -> PathBuf {
 /// The inactive alternatives in the project folder `dir`.
 fn inactive(dir: &Path) -> Vec<String> {
     std::fs::read_dir(dir.join(ALTERNATIVES_DIR))
-        .map(|rd| rd.flatten().filter(|e| e.path().join(PROJECT_FILE).is_file()).map(|e| e.file_name().to_string_lossy().to_string()).filter(|n| !n.starts_with('.')).collect())
+        .map(|rd| {
+            rd.flatten()
+                .filter(|e| e.path().join(PROJECT_FILE).is_file())
+                .map(|e| e.file_name().to_string_lossy().to_string())
+                .filter(|n| !n.starts_with('.'))
+                .collect()
+        })
         .unwrap_or_default()
 }
 

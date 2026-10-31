@@ -287,7 +287,8 @@ impl Session {
 
     /// Repeats the selection `times` times straight after itself, as Logic's Repeat Regions.
     pub fn repeat_regions(&mut self, ids: &[Id], times: usize) -> Vec<Id> {
-        let items: Vec<(Id, Region)> = ids.iter().filter_map(|id| self.find_region(*id)).map(|(t, i)| (t, self.project.track(t).unwrap().regions[i].clone())).collect();
+        let items: Vec<(Id, Region)> =
+            ids.iter().filter_map(|id| self.find_region(*id)).map(|(t, i)| (t, self.project.track(t).unwrap().regions[i].clone())).collect();
         let (Some(lo), Some(hi)) = (items.iter().map(|(_, r)| r.start).min(), items.iter().map(|(_, r)| r.end()).max()) else { return Vec::new() };
         let mut made = Vec::new();
         for k in 1..=times.clamp(1, 256) as i64 {
@@ -394,7 +395,19 @@ impl Session {
         }
         let id = self.project.alloc_id();
         let name = self.project.track(track).unwrap().name.clone();
-        self.project.track_mut(track).unwrap().regions.push(Region { id, name, start: start.max(0), length: length.max(1), muted: false, color: None, content: RegionContent::Midi { notes: Vec::new(), cc: Vec::new() }, loop_end: None, takes: None, params: Default::default(), pattern: None });
+        self.project.track_mut(track).unwrap().regions.push(Region {
+            id,
+            name,
+            start: start.max(0),
+            length: length.max(1),
+            muted: false,
+            color: None,
+            content: RegionContent::Midi { notes: Vec::new(), cc: Vec::new() },
+            loop_end: None,
+            takes: None,
+            params: Default::default(),
+            pattern: None,
+        });
         self.push_regions(track);
         self.dirty = true;
         Ok(id)
@@ -468,7 +481,8 @@ impl Session {
             let r = self.project.track(track).unwrap().regions[idx].clone();
             let RegionContent::Audio { clip, offset, gain_db, fade_in, fade_out, fade_shape } = r.content else { continue };
             // Render without gain and fades, which stay adjustable on the new region.
-            let plain = Region { content: RegionContent::Audio { clip, offset, gain_db: 0.0, fade_in: 0, fade_out: 0, fade_shape: FadeShape::default() }, ..r.clone() };
+            let plain =
+                Region { content: RegionContent::Audio { clip, offset, gain_db: 0.0, fade_in: 0, fade_out: 0, fade_shape: FadeShape::default() }, ..r.clone() };
             let mut audio = self.render_region(&plain, self.region_channels(&r));
             audio.iter_mut().for_each(|c| c.reverse());
             let path = self.unique_audio_path(&format!("{} Reversed", r.name));
@@ -527,7 +541,19 @@ impl Session {
             let color = picked[0].color.clone();
             let t = self.project.track_mut(track).unwrap();
             t.regions.retain(|r| !ids.contains(&r.id));
-            t.regions.push(Region { id, name, start: lo, length: hi - lo, muted: false, color, content, loop_end: None, takes: None, params: Default::default(), pattern: None });
+            t.regions.push(Region {
+                id,
+                name,
+                start: lo,
+                length: hi - lo,
+                muted: false,
+                color,
+                content,
+                loop_end: None,
+                takes: None,
+                params: Default::default(),
+                pattern: None,
+            });
             self.push_regions(track);
             made.push(id);
         }
@@ -587,7 +613,19 @@ impl Session {
         let name = path.file_stem().map(|s| s.to_string_lossy().to_string()).unwrap_or_default();
         let fade = self.default_fade(frames);
         let t = self.project.track_mut(track).unwrap();
-        t.regions.push(Region { id, name, start: start.max(0), length: frames, muted: false, color: None, content: RegionContent::Audio { clip: clip_id, offset: 0, gain_db: 0.0, fade_in: fade, fade_out: fade, fade_shape: FadeShape::default() }, loop_end: None, takes: None, params: Default::default(), pattern: None });
+        t.regions.push(Region {
+            id,
+            name,
+            start: start.max(0),
+            length: frames,
+            muted: false,
+            color: None,
+            content: RegionContent::Audio { clip: clip_id, offset: 0, gain_db: 0.0, fade_in: fade, fade_out: fade, fade_shape: FadeShape::default() },
+            loop_end: None,
+            takes: None,
+            params: Default::default(),
+            pattern: None,
+        });
         self.push_regions(track);
         self.dirty = true;
         Ok(id)
@@ -631,7 +669,26 @@ impl Session {
                     let fade = self.default_fade(frames);
                     let t = self.project.track_mut(id).unwrap();
                     t.name = name.clone();
-                    t.regions.push(Region { id: rid, name, start: start.max(0), length: frames, muted: false, color: None, content: RegionContent::Audio { clip: clip_id, offset: 0, gain_db: 0.0, fade_in: fade, fade_out: fade, fade_shape: FadeShape::default() }, loop_end: None, takes: None, params: Default::default(), pattern: None });
+                    t.regions.push(Region {
+                        id: rid,
+                        name,
+                        start: start.max(0),
+                        length: frames,
+                        muted: false,
+                        color: None,
+                        content: RegionContent::Audio {
+                            clip: clip_id,
+                            offset: 0,
+                            gain_db: 0.0,
+                            fade_in: fade,
+                            fade_out: fade,
+                            fade_shape: FadeShape::default(),
+                        },
+                        loop_end: None,
+                        takes: None,
+                        params: Default::default(),
+                        pattern: None,
+                    });
                     self.push_regions(id);
                     self.select_track(Some(id));
                 }

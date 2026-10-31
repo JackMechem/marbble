@@ -12,7 +12,8 @@ pub(super) fn channel_count(arr: SpeakerArrangement) -> usize {
 unsafe fn find_aux_input(component: &ComPtr<IComponent>, n_in: usize) -> Option<usize> {
     (1..n_in).find(|&i| {
         let mut info: BusInfo = std::mem::zeroed();
-        component.getBusInfo(MediaTypes_::kAudio as i32, BusDirections_::kInput as i32, i as i32, &mut info) == kResultOk && info.busType == BusTypes_::kAux as BusType
+        component.getBusInfo(MediaTypes_::kAudio as i32, BusDirections_::kInput as i32, i as i32, &mut info) == kResultOk
+            && info.busType == BusTypes_::kAux as BusType
     })
 }
 
@@ -23,18 +24,12 @@ pub fn instantiate(desc: &PluginDescriptor, sample_rate: f64, max_block: usize) 
 
 /// Loads a plug-in, with its aux input active (`keyed`) or not. Without a key the aux bus stays
 /// inactive, whatever the plug-in's default, so the plug-in uses its internal key.
-pub fn instantiate_keyed(
-    desc: &PluginDescriptor,
-    sample_rate: f64,
-    max_block: usize,
-    keyed: bool,
-) -> Result<(PluginProcessor, PluginController), String> {
+pub fn instantiate_keyed(desc: &PluginDescriptor, sample_rate: f64, max_block: usize, keyed: bool) -> Result<(PluginProcessor, PluginController), String> {
     let module = load_module(&desc.path)?;
     let cid = unhex(&desc.cid).ok_or("bad class id")?;
     unsafe {
         let host = host_context();
-        let component: ComPtr<IComponent> =
-            module.create::<IComponent>(&cid).ok_or("factory could not create the component")?;
+        let component: ComPtr<IComponent> = module.create::<IComponent>(&cid).ok_or("factory could not create the component")?;
         if component.initialize(host.as_ptr()) != kResultOk {
             return Err("component failed to initialize".into());
         }
@@ -66,10 +61,7 @@ pub fn instantiate_keyed(
 
         let mut connections = None;
         if separate_controller {
-            if let (Some(a), Some(b)) = (
-                component.cast::<IConnectionPoint>(),
-                controller.as_ref().and_then(|c| c.cast::<IConnectionPoint>()),
-            ) {
+            if let (Some(a), Some(b)) = (component.cast::<IConnectionPoint>(), controller.as_ref().and_then(|c| c.cast::<IConnectionPoint>())) {
                 a.connect(b.as_ptr());
                 b.connect(a.as_ptr());
                 connections = Some((a, b));
@@ -96,8 +88,7 @@ pub fn instantiate_keyed(
             c.setComponentHandler(handler.to_com_ptr::<IComponentHandler>().unwrap().as_ptr());
         }
 
-        let processor: ComPtr<IAudioProcessor> =
-            component.cast::<IAudioProcessor>().ok_or("plugin has no audio processor")?;
+        let processor: ComPtr<IAudioProcessor> = component.cast::<IAudioProcessor>().ok_or("plugin has no audio processor")?;
 
         // Ask for stereo on the main buses; keep whatever the plugin wants on the others.
         let n_in = component.getBusCount(MediaTypes_::kAudio as i32, BusDirections_::kInput as i32).max(0) as usize;
@@ -107,10 +98,8 @@ pub fn instantiate_keyed(
             processor.getBusArrangement(dir, i as i32, &mut arr);
             arr
         };
-        let mut in_arr: Vec<SpeakerArrangement> =
-            (0..n_in).map(|i| current(BusDirections_::kInput as i32, i)).collect();
-        let mut out_arr: Vec<SpeakerArrangement> =
-            (0..n_out).map(|i| current(BusDirections_::kOutput as i32, i)).collect();
+        let mut in_arr: Vec<SpeakerArrangement> = (0..n_in).map(|i| current(BusDirections_::kInput as i32, i)).collect();
+        let mut out_arr: Vec<SpeakerArrangement> = (0..n_out).map(|i| current(BusDirections_::kOutput as i32, i)).collect();
         if let Some(a) = in_arr.first_mut() {
             *a = SpeakerArr::kStereo;
         }
@@ -143,12 +132,8 @@ pub fn instantiate_keyed(
             key_bus = None;
         }
 
-        let inputs: Vec<Bus> = (0..n_in)
-            .map(|i| Bus::new(channel_count(current(BusDirections_::kInput as i32, i)), max_block))
-            .collect();
-        let outputs: Vec<Bus> = (0..n_out)
-            .map(|i| Bus::new(channel_count(current(BusDirections_::kOutput as i32, i)), max_block))
-            .collect();
+        let inputs: Vec<Bus> = (0..n_in).map(|i| Bus::new(channel_count(current(BusDirections_::kInput as i32, i)), max_block)).collect();
+        let outputs: Vec<Bus> = (0..n_out).map(|i| Bus::new(channel_count(current(BusDirections_::kOutput as i32, i)), max_block)).collect();
 
         if n_in > 0 {
             component.activateBus(MediaTypes_::kAudio as i32, BusDirections_::kInput as i32, 0, 1);
@@ -231,7 +216,20 @@ pub fn instantiate_keyed(
             edit_l: vec![0.0; EDIT_BLOCK.min(max_block)],
             edit_r: vec![0.0; EDIT_BLOCK.min(max_block)],
         };
-        let ctrl_half = PluginController { desc: desc.clone(), shared, out_rx, editor: None, gestures_rx, latency_changed: false, key_bus, key_active: keyed && key_bus.is_some(), outputs: output_buses, params_restarted: false, host_changes: Default::default(), host_set: Default::default() };
+        let ctrl_half = PluginController {
+            desc: desc.clone(),
+            shared,
+            out_rx,
+            editor: None,
+            gestures_rx,
+            latency_changed: false,
+            key_bus,
+            key_active: keyed && key_bus.is_some(),
+            outputs: output_buses,
+            params_restarted: false,
+            host_changes: Default::default(),
+            host_set: Default::default(),
+        };
         Ok((proc_half, ctrl_half))
     }
 }

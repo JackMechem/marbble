@@ -67,11 +67,38 @@ fn edits_that_are_not_about_the_instrument_leave_held_notes_alone() {
     start(&mut s, &mut e, inst);
     #[allow(clippy::type_complexity)] // One local table of named edits.
     let edits: Vec<(&str, Box<dyn FnMut(&mut Session)>)> = vec![
-        ("add an audio track", Box::new(|s: &mut Session| { s.add_track(TrackKind::Audio, InputSel::None, None, None).unwrap(); })),
-        ("add an instrument track", Box::new(|s| { s.add_track(TrackKind::Instrument, InputSel::None, None, None).unwrap(); })),
-        ("add an aux", Box::new(|s| { s.create_aux(None).unwrap(); })),
-        ("delete a track", Box::new(|s| { let last = s.project.tracks.last().unwrap().id; s.delete_track(last); })),
-        ("reorder tracks", Box::new(|s| { let ids = s.project.tracks.iter().rev().map(|t| t.id).collect(); s.reorder_tracks(ids); })),
+        (
+            "add an audio track",
+            Box::new(|s: &mut Session| {
+                s.add_track(TrackKind::Audio, InputSel::None, None, None).unwrap();
+            }),
+        ),
+        (
+            "add an instrument track",
+            Box::new(|s| {
+                s.add_track(TrackKind::Instrument, InputSel::None, None, None).unwrap();
+            }),
+        ),
+        (
+            "add an aux",
+            Box::new(|s| {
+                s.create_aux(None).unwrap();
+            }),
+        ),
+        (
+            "delete a track",
+            Box::new(|s| {
+                let last = s.project.tracks.last().unwrap().id;
+                s.delete_track(last);
+            }),
+        ),
+        (
+            "reorder tracks",
+            Box::new(|s| {
+                let ids = s.project.tracks.iter().rev().map(|t| t.id).collect();
+                s.reorder_tracks(ids);
+            }),
+        ),
         ("add a send", Box::new(move |s| s.set_send(inst, 0, Some(TrackSend { bus: aux, level_db: -6.0, pre_fader: false, muted: false })).unwrap())),
         ("change a send's level", Box::new(move |s| s.set_send_level(inst, 0, -12.0))),
         ("remove a send", Box::new(move |s| s.set_send(inst, 0, None).unwrap())),
@@ -79,7 +106,14 @@ fn edits_that_are_not_about_the_instrument_leave_held_notes_alone() {
         ("mute another track", Box::new(move |s| s.update_track(other, TrackPatch { mute: Some(true), ..Default::default() }))),
         ("switch the metronome", Box::new(|s| s.set_metronome(true))),
         ("move the cycle", Box::new(|s| s.set_cycle(false, 480_000, 960_000))),
-        ("undo a track add", Box::new(|s| { s.checkpoint("Add", None, false); s.add_track(TrackKind::Audio, InputSel::None, None, None).unwrap(); s.undo(); })),
+        (
+            "undo a track add",
+            Box::new(|s| {
+                s.checkpoint("Add", None, false);
+                s.add_track(TrackKind::Audio, InputSel::None, None, None).unwrap();
+                s.undo();
+            }),
+        ),
         // Live MIDI moves elsewhere, but no key is down: what the regions play has nothing to do with it.
         ("select another instrument track", Box::new(move |s| s.select_track(Some(other)))),
         ("select an aux", Box::new(move |s| s.select_track(Some(aux)))),

@@ -42,7 +42,12 @@ fn sine(hz: f64, rate: u32, secs: f64, level: f32) -> Vec<f32> {
 fn write(path: &Path, rate: u32, ch: &[Vec<f32>], bits: u16) {
     std::fs::create_dir_all(path.parent().unwrap()).unwrap();
     let float = bits == 0;
-    let spec = hound::WavSpec { channels: ch.len() as u16, sample_rate: rate, bits_per_sample: if float { 32 } else { bits }, sample_format: if float { hound::SampleFormat::Float } else { hound::SampleFormat::Int } };
+    let spec = hound::WavSpec {
+        channels: ch.len() as u16,
+        sample_rate: rate,
+        bits_per_sample: if float { 32 } else { bits },
+        sample_format: if float { hound::SampleFormat::Float } else { hound::SampleFormat::Int },
+    };
     let mut w = hound::WavWriter::create(path, spec).unwrap();
     for i in 0..ch[0].len() {
         for c in ch {
@@ -131,7 +136,10 @@ fn main() {
     });
     play_notes(&mut s, t, &[(0, 60, 127), (RATE, 72, 127)]);
     let a = render(&mut s);
-    check(&format!("it plays at its pitch from a 44.1 kHz, 16-bit file ({:.3} Hz)", freq(&a[0][2000..RATE as usize / 2 - 1000])), cents(freq(&a[0][2000..RATE as usize / 2 - 1000]), 440.0).abs() < 0.05);
+    check(
+        &format!("it plays at its pitch from a 44.1 kHz, 16-bit file ({:.3} Hz)", freq(&a[0][2000..RATE as usize / 2 - 1000])),
+        cents(freq(&a[0][2000..RATE as usize / 2 - 1000]), 440.0).abs() < 0.05,
+    );
     let up = freq(&a[0][RATE as usize + 2000..RATE as usize * 3 / 2 - 1000]);
     check(&format!("and an octave up on C4 ({up:.3} Hz)"), cents(up, 880.0).abs() < 0.05);
     check("a render repeats bit for bit", same(&a, &render(&mut s)));
@@ -144,7 +152,13 @@ fn main() {
     let paths: Vec<PathBuf> = ["Keys_C3", "Keys_C4", "Keys_C5"].iter().map(|n| src.join(format!("{n}.wav"))).collect();
     s.sampler_add_files(m, &paths, None).unwrap();
     let z = zones_of(&s, m);
-    check("three named files split the keyboard by their notes", z.len() == 3 && (z[0].root, z[0].key_hi) == (60, 66) && (z[1].root, z[1].key_lo, z[1].key_hi) == (72, 67, 78) && (z[2].root, z[2].key_lo, z[2].key_hi) == (84, 79, 127));
+    check(
+        "three named files split the keyboard by their notes",
+        z.len() == 3
+            && (z[0].root, z[0].key_hi) == (60, 66)
+            && (z[1].root, z[1].key_lo, z[1].key_hi) == (72, 67, 78)
+            && (z[2].root, z[2].key_lo, z[2].key_hi) == (84, 79, 127),
+    );
     write(&src.join("Kick.wav"), 48000, &[sine(60.0, 48000, 0.3, 0.8)], 16);
     write(&src.join("Snare.wav"), 48000, &[sine(180.0, 48000, 0.2, 0.6)], 16);
     let d = s.add_track(TrackKind::Instrument, InputSel::None, Some(SAMPLER.into()), None).unwrap();
@@ -177,7 +191,16 @@ fn main() {
     let before_edit = state_of(&s, t);
     s.set_builtin_param(t, SLOT, param::VEL_AMP, 0.0).unwrap();
     let r2 = s.create_midi_region(t, RATE * 2, RATE).unwrap();
-    s.set_midi_content(vec![MidiContent { region: r2, notes: vec![Note { start: 0, length: RATE / 4, pitch: 90, velocity: 40, muted: false }, Note { start: RATE / 2, length: RATE / 4, pitch: 90, velocity: 120, muted: false }], cc: Vec::new(), start: None, length: None }]);
+    s.set_midi_content(vec![MidiContent {
+        region: r2,
+        notes: vec![
+            Note { start: 0, length: RATE / 4, pitch: 90, velocity: 40, muted: false },
+            Note { start: RATE / 2, length: RATE / 4, pitch: 90, velocity: 120, muted: false },
+        ],
+        cc: Vec::new(),
+        start: None,
+        length: None,
+    }]);
     let layers = s.render(RATE * 2, RATE * 3, 0, None, &mut |_| {}).unwrap();
     let (quiet, full) = (layers[0][RATE as usize / 8], layers[0][RATE as usize * 5 / 8]);
     check(&format!("velocity layers: {quiet:.3} then {full:.3}"), (quiet - 0.1).abs() < 0.01 && (full - 0.4).abs() < 0.01);
@@ -255,9 +278,17 @@ fn main() {
     s.checkpoint("Convert to Sampler Track", None, true);
     let new = s.convert_region_to_sampler(region, None).unwrap();
     let nt = s.project.track(new).unwrap();
-    check("a new instrument track with a sampler, below the original", nt.kind == TrackKind::Instrument && nt.instrument.as_ref().unwrap().plugin_id == SAMPLER && s.project.tracks.iter().position(|x| x.id == new) == s.project.tracks.iter().position(|x| x.id == at).map(|p| p + 1));
+    check(
+        "a new instrument track with a sampler, below the original",
+        nt.kind == TrackKind::Instrument
+            && nt.instrument.as_ref().unwrap().plugin_id == SAMPLER
+            && s.project.tracks.iter().position(|x| x.id == new) == s.project.tracks.iter().position(|x| x.id == at).map(|p| p + 1),
+    );
     check("the original region is muted", s.project.track(at).unwrap().regions[0].muted);
-    check("a MIDI region stands in its place", matches!(&nt.regions[0].content, RegionContent::Midi { notes, .. } if notes.len() == 1 && notes[0].pitch == 60) && nt.regions[0].start == 0);
+    check(
+        "a MIDI region stands in its place",
+        matches!(&nt.regions[0].content, RegionContent::Midi { notes, .. } if notes.len() == 1 && notes[0].pitch == 60) && nt.regions[0].start == 0,
+    );
     let converted = s.render(0, RATE * 2, 0, None, &mut |_| {}).unwrap();
     let err = audio_render[0].iter().zip(&converted[0]).take(RATE as usize * 3 / 2).fold(0.0f32, |m, (a, b)| m.max((a - b).abs()));
     check(&format!("it plays what the region played (differs by {err:.4} at most)"), err < 0.05);
@@ -336,7 +367,11 @@ fn main() {
     s.save_preset(t, SLOT, "Spare", false).unwrap();
     let root = daw_engine::presets::user_root();
     daw_engine::presets::rename_user(&root, SAMPLER, "Spare", "Renamed").unwrap();
-    check("renaming takes its samples along", scratch.join("home/Music/Fermata Instruments/Renamed/Samples/Vox.wav").is_file() && daw_engine::presets::list(&root, SAMPLER).user.contains(&"Renamed".to_string()));
+    check(
+        "renaming takes its samples along",
+        scratch.join("home/Music/Fermata Instruments/Renamed/Samples/Vox.wav").is_file()
+            && daw_engine::presets::list(&root, SAMPLER).user.contains(&"Renamed".to_string()),
+    );
     daw_engine::presets::delete_user(&root, SAMPLER, "Renamed").unwrap();
     check("deleting takes them too", !scratch.join("home/Music/Fermata Instruments/Renamed").exists());
     let with_it = render(&mut s);
@@ -348,7 +383,10 @@ fn main() {
     check("another project loads it, with its zones", zones_of(&s, other).iter().any(|z| z.name == "Vox" && z.loop_on));
     let vox2 = zones_of(&s, other).into_iter().find(|z| z.name == "Vox").unwrap();
     check("copied into that project", other_dir.join(&vox2.file).is_file());
-    check("and its parameters", s.builtin_params(s.project.track(other).unwrap().instrument.as_ref().unwrap().uid).iter().any(|p| p.0 == param::A_RELEASE && p.1 == 300.0));
+    check(
+        "and its parameters",
+        s.builtin_params(s.project.track(other).unwrap().instrument.as_ref().unwrap().uid).iter().any(|p| p.0 == param::A_RELEASE && p.1 == 300.0),
+    );
     play_notes(&mut s, other, &[(0, 60, 127), (RATE, 72, 127)]);
     let there = render(&mut s);
     let err = with_it[0].iter().zip(&there[0]).take(RATE as usize / 4).fold(0.0f32, |m, (a, b)| m.max((a - b).abs()));
@@ -356,7 +394,10 @@ fn main() {
     s.save(None).unwrap();
     std::fs::remove_dir_all(scratch.join("home/Music/Fermata Instruments/My Keys")).unwrap();
     s.open(&other_dir).unwrap();
-    check("that project doesn't need the instrument's folder any more", peak(&render(&mut s)[0]) > 0.1 && s.sampler_view(other).unwrap().zones.iter().all(|z| z.error.is_none()));
+    check(
+        "that project doesn't need the instrument's folder any more",
+        peak(&render(&mut s)[0]) > 0.1 && s.sampler_view(other).unwrap().zones.iter().all(|z| z.error.is_none()),
+    );
     let t = other;
 
     println!("-- Factory presets keep the zones");
@@ -408,21 +449,36 @@ fn main() {
     .unwrap();
     let inst = s.add_track(TrackKind::Instrument, InputSel::None, Some(SAMPLER.into()), None).unwrap();
     let report = s.sampler_load_sfz(inst, &sfz).unwrap();
-    check(&format!("{} regions in; ignored {:?}; left out {:?}; missing {:?}", report.zones, report.ignored, report.left_out, report.missing), report.zones == 5);
+    check(
+        &format!("{} regions in; ignored {:?}; left out {:?}; missing {:?}", report.zones, report.ignored, report.left_out, report.missing),
+        report.zones == 5,
+    );
     check("what it ignored is listed", report.ignored.iter().any(|(k, n)| k == "cutoff" && *n >= 1));
     check("a region it can't do is left out and said", report.left_out.len() == 1 && report.left_out[0].contains("trigger=release"));
     check("a missing sample in the file is said", report.missing == ["WAVS/gone.wav".to_string()]);
     let z = zones_of(&s, inst);
-    check("keys, velocities, root, tune and volume read", z[0].key_lo == 48 && z[0].key_hi == 59 && z[0].root == 57 && z[0].gain_db == -6.0 && z[1].fine == 50.0);
+    check(
+        "keys, velocities, root, tune and volume read",
+        z[0].key_lo == 48 && z[0].key_hi == 59 && z[0].root == 57 && z[0].gain_db == -6.0 && z[1].fine == 50.0,
+    );
     check("its samples are in the project", s.project_path().join(&z[0].file).is_file() && z[0].file.starts_with("Samples/Inst/"));
     check("its envelope is the zone's own", z[0].env == Some([0.0, 0.0, 1.0, 0.05]));
     s.update_track(t, TrackPatch { mute: Some(true), ..Default::default() });
     let r = s.create_midi_region(inst, 0, RATE * 2).unwrap();
     let n = |start: i64, pitch: u8| Note { start, length: RATE / 4, pitch, velocity: 127, muted: false };
-    s.set_midi_content(vec![MidiContent { region: r, notes: vec![n(0, 57), n(RATE / 2, 69), n(RATE, 30), n(RATE * 3 / 2, 40), n(RATE * 7 / 4, 40)], cc: Vec::new(), start: None, length: None }]);
+    s.set_midi_content(vec![MidiContent {
+        region: r,
+        notes: vec![n(0, 57), n(RATE / 2, 69), n(RATE, 30), n(RATE * 3 / 2, 40), n(RATE * 7 / 4, 40)],
+        cc: Vec::new(),
+        start: None,
+        length: None,
+    }]);
     let out = s.render(0, RATE * 2, 0, None, &mut |_| {}).unwrap();
     let f = freq(&out[0][2000..RATE as usize / 4 - 2000]);
-    check(&format!("SFZ's C4 = 60 and a 44.1 kHz sample: A3 at {f:.3} Hz, at -6 dB"), cents(f, 220.0).abs() < 0.1 && (peak(&out[0][2000..RATE as usize / 4 - 2000]) - 0.25).abs() < 0.02);
+    check(
+        &format!("SFZ's C4 = 60 and a 44.1 kHz sample: A3 at {f:.3} Hz, at -6 dB"),
+        cents(f, 220.0).abs() < 0.1 && (peak(&out[0][2000..RATE as usize / 4 - 2000]) - 0.25).abs() < 0.02,
+    );
     let f = freq(&out[0][RATE as usize / 2 + 2000..RATE as usize * 3 / 4 - 2000]);
     let want = 880.0 * 2f64.powf((-12.0 + 0.5) / 12.0);
     check(&format!("tune in cents: {f:.3} Hz against {want:.3}"), cents(f, want).abs() < 0.1);
@@ -434,7 +490,10 @@ fn main() {
     s.save(None).unwrap();
     std::fs::remove_dir_all(scratch.join("library")).unwrap();
     s.open(&other_dir).unwrap();
-    check("with the library gone it still opens and plays", s.sampler_view(inst).unwrap().zones.iter().all(|z| z.error.is_none()) && peak(&s.render(0, RATE, 0, None, &mut |_| {}).unwrap()[0]) > 0.1);
+    check(
+        "with the library gone it still opens and plays",
+        s.sampler_view(inst).unwrap().zones.iter().all(|z| z.error.is_none()) && peak(&s.render(0, RATE, 0, None, &mut |_| {}).unwrap()[0]) > 0.1,
+    );
 
     println!("-- Time a load takes");
     let big = scratch.join("big.wav");

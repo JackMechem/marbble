@@ -105,7 +105,10 @@ fn main() {
         let want = (lp::taps(k, sr as f32) - 1) / 2;
         let flat = render(&mut s, len);
         let off = diff(&flat, &dry);
-        check(&format!("{name} quality: reports {want} frames of latency (got {}) and, flat, plays the dry signal in time (diff {off:.2e})", latency_of(&s, uid)), latency_of(&s, uid) as usize == want && off < 1e-5);
+        check(
+            &format!("{name} quality: reports {want} frames of latency (got {}) and, flat, plays the dry signal in time (diff {off:.2e})", latency_of(&s, uid)),
+            latency_of(&s, uid) as usize == want && off < 1e-5,
+        );
     }
     s.set_builtin_param(t, 0, QUALITY, 1.0).unwrap();
     s.remove_plugin(t, 0);
@@ -121,7 +124,17 @@ fn main() {
         s.set_builtin_param(t, 0, freq(bi), band.freq).unwrap();
         s.set_builtin_param(t, 0, q(bi), band.q).unwrap();
         if lp::is_cut(bi) {
-            s.set_builtin_param(t, 0, slope(bi), match band.slope { 12 => 0.0, 24 => 1.0, _ => 2.0 }).unwrap();
+            s.set_builtin_param(
+                t,
+                0,
+                slope(bi),
+                match band.slope {
+                    12 => 0.0,
+                    24 => 1.0,
+                    _ => 2.0,
+                },
+            )
+            .unwrap();
         } else {
             s.set_builtin_param(t, 0, gain(bi), band.gain).unwrap();
         }
@@ -149,7 +162,10 @@ fn main() {
     };
     let worst_lin = (0..FREQS.len()).map(|k| shape(&linear, k)).fold(0.0f32, f32::max);
     let worst_ch = (0..FREQS.len()).map(|k| shape(&channel, k)).fold(0.0f32, f32::max);
-    check(&format!("no phase shift: every burst is the dry one scaled (residual {:.2} %, the Channel EQ's {:.0} %)", worst_lin * 100.0, worst_ch * 100.0), worst_lin < 0.005 && worst_ch > 0.05);
+    check(
+        &format!("no phase shift: every burst is the dry one scaled (residual {:.2} %, the Channel EQ's {:.0} %)", worst_lin * 100.0, worst_ch * 100.0),
+        worst_lin < 0.005 && worst_ch > 0.05,
+    );
 
     if FAILED.load(std::sync::atomic::Ordering::Relaxed) {
         std::process::exit(1);

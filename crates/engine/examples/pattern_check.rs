@@ -87,7 +87,10 @@ fn main() {
     s.checkpoint("Create Pattern Region", None, false);
     let p = s.create_pattern_region(inst, bar, bar).unwrap();
     let made = region(&s, p);
-    check("a new pattern region has the default kit and plays nothing", made.pattern.as_ref().map(|p| p.rows.len()) == Some(8) && onset(&bounce(&mut s, &scratch, end)).is_none());
+    check(
+        "a new pattern region has the default kit and plays nothing",
+        made.pattern.as_ref().map(|p| p.rows.len()) == Some(8) && onset(&bounce(&mut s, &scratch, end)).is_none(),
+    );
 
     // ---- straight: kick on the beats, snare on 2 and 4, half-step gates ------------------------
     s.checkpoint("Steps", None, false);
@@ -96,7 +99,11 @@ fn main() {
     let played = bounce(&mut s, &scratch, end);
     let sixteenths = |k: usize| k as f64 / 4.0;
     let straight_notes = |bpm: f64| {
-        let mut n: Vec<Note> = [0, 4, 8, 12].iter().map(|&k| note_at(sixteenths(k), sixteenths(k) + 0.125, 36, bpm)).chain([4, 12].iter().map(|&k| note_at(sixteenths(k), sixteenths(k) + 0.125, 38, bpm))).collect();
+        let mut n: Vec<Note> = [0, 4, 8, 12]
+            .iter()
+            .map(|&k| note_at(sixteenths(k), sixteenths(k) + 0.125, 36, bpm))
+            .chain([4, 12].iter().map(|&k| note_at(sixteenths(k), sixteenths(k) + 0.125, 38, bpm)))
+            .collect();
         n.sort_by_key(|n| (n.start, n.pitch));
         n
     };
@@ -146,7 +153,10 @@ fn main() {
     s.set_pattern(p, solo).unwrap();
     let only = bounce(&mut s, &scratch, end);
     s.undo();
-    check(&format!("the first swung hat starts a quarter step late ({:?}, want {})", onset(&only), bar + at(swing16(1), 120.0)), onset(&only) == Some(bar + at(swing16(1), 120.0)));
+    check(
+        &format!("the first swung hat starts a quarter step late ({:?}, want {})", onset(&only), bar + at(swing16(1), 120.0)),
+        onset(&only) == Some(bar + at(swing16(1), 120.0)),
+    );
 
     // A tie carries the note before it on: one note two steps long.
     s.checkpoint("Tie", None, false);
@@ -174,7 +184,11 @@ fn main() {
     s.undo();
     let undone = bounce(&mut s, &scratch, end);
     check(
-        &format!("a painted run of steps changes the sound and undoes in one step (diff {:.2e}, after undo {:.2e})", max_diff(&edited, &before), max_diff(&undone, &before)),
+        &format!(
+            "a painted run of steps changes the sound and undoes in one step (diff {:.2e}, after undo {:.2e})",
+            max_diff(&edited, &before),
+            max_diff(&undone, &before)
+        ),
         max_diff(&edited, &before) > 1e-3 && max_diff(&undone, &before) < 1e-6 && region(&s, p).pattern.as_ref() == Some(&swung),
     );
 
@@ -192,7 +206,10 @@ fn main() {
     s.set_tempo(100.0);
     let slow = bounce(&mut s, &scratch, end);
     let want = by_hand(&mut s, &scratch, inst, p, bar, bar, straight_notes(100.0), end);
-    check(&format!("steps follow a tempo change (max diff {:.2e}, onset {:?})", max_diff(&slow, &want), onset(&slow)), max_diff(&slow, &want) < 1e-6 && onset(&slow) == Some(bar));
+    check(
+        &format!("steps follow a tempo change (max diff {:.2e}, onset {:?})", max_diff(&slow, &want), onset(&slow)),
+        max_diff(&slow, &want) < 1e-6 && onset(&slow) == Some(bar),
+    );
     s.undo();
 
     // ---- Convert to MIDI Region renders identically ----------------------------------------------
@@ -206,7 +223,10 @@ fn main() {
         _ => 0,
     };
     let d = max_diff(&converted, &pattern_render);
-    check(&format!("Convert to MIDI Region writes the notes ({n}) and renders identically (max diff {d:.2e})"), r.pattern.is_none() && n == swung_notes.len() && d < 1e-6);
+    check(
+        &format!("Convert to MIDI Region writes the notes ({n}) and renders identically (max diff {d:.2e})"),
+        r.pattern.is_none() && n == swung_notes.len() && d < 1e-6,
+    );
     s.undo();
     check("undo makes it a pattern region again", region(&s, p).pattern.as_ref() == Some(&swung));
 
@@ -217,7 +237,10 @@ fn main() {
     let midi = bounce(&mut s, &scratch, end);
     s.convert_midi_to_patterns(&[p]);
     let again = bounce(&mut s, &scratch, end);
-    check(&format!("Convert to Pattern Region plays the same notes (max diff {:.2e})", max_diff(&again, &midi)), region(&s, p).pattern.is_some() && max_diff(&again, &midi) < 1e-6);
+    check(
+        &format!("Convert to Pattern Region plays the same notes (max diff {:.2e})", max_diff(&again, &midi)),
+        region(&s, p).pattern.is_some() && max_diff(&again, &midi) < 1e-6,
+    );
     s.undo();
 
     // A saved project keeps its pattern.

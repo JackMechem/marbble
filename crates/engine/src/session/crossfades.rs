@@ -14,7 +14,14 @@ impl Session {
     /// Sets fade curves (-1..1) and types; None leaves that setting alone. Choosing a
     /// crossfade type for a region that has no fade-out but meets the next region gives it
     /// one: the overlap, or the Crossfade Time where the two just touch.
-    pub fn set_region_fade_shape(&mut self, ids: &[Id], in_curve: Option<f32>, out_curve: Option<f32>, in_type: Option<FadeInType>, out_type: Option<FadeOutType>) {
+    pub fn set_region_fade_shape(
+        &mut self,
+        ids: &[Id],
+        in_curve: Option<f32>,
+        out_curve: Option<f32>,
+        in_type: Option<FadeInType>,
+        out_type: Option<FadeOutType>,
+    ) {
         let default_len = self.crossfade_frames();
         let starting: Vec<(Id, i64)> = ids
             .iter()
@@ -224,7 +231,19 @@ mod tests {
     fn add(s: &mut Session, t: Id, clip: Id, start: i64, length: i64, offset: i64) -> Id {
         let id = s.project.alloc_id();
         let content = RegionContent::Audio { clip, offset, gain_db: 0.0, fade_in: 0, fade_out: 0, fade_shape: FadeShape::default() };
-        s.project.track_mut(t).unwrap().regions.push(Region { id, name: "R".into(), start, length, muted: false, color: None, content, loop_end: None, takes: None, params: Default::default(), pattern: None });
+        s.project.track_mut(t).unwrap().regions.push(Region {
+            id,
+            name: "R".into(),
+            start,
+            length,
+            muted: false,
+            color: None,
+            content,
+            loop_end: None,
+            takes: None,
+            params: Default::default(),
+            pattern: None,
+        });
         s.push_regions(t);
         id
     }

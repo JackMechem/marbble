@@ -23,7 +23,10 @@ pub enum GraphError {
     /// An edge names a track that isn't in the list, or the list names one twice.
     Unknown(Id),
     /// An edge points backwards in the list (or at its own track).
-    Backwards { from: Id, to: Id },
+    Backwards {
+        from: Id,
+        to: Id,
+    },
 }
 
 impl std::fmt::Display for GraphError {
@@ -118,7 +121,8 @@ impl TaskGraph {
                 edges.push((id, to));
             }
         }
-        let heavy = |id: Id| p.track(id).is_some_and(|t| t.frozen.is_none() && !p.is_off(id) && (t.instrument.is_some() || t.inserts.iter().any(Option::is_some)));
+        let heavy =
+            |id: Id| p.track(id).is_some_and(|t| t.frozen.is_none() && !p.is_off(id) && (t.instrument.is_some() || t.inserts.iter().any(Option::is_some)));
         TaskGraph::new(ids, &edges, heavy)
     }
 
@@ -245,7 +249,16 @@ mod tests {
     }
 
     fn insert(uid: Id, sidechain: Option<Id>) -> PluginSlot {
-        PluginSlot { uid, plugin_id: "builtin:gain".into(), name: "Gain".into(), bypass: false, state: None, params: Vec::new(), sidechain, sidechain_pre: false }
+        PluginSlot {
+            uid,
+            plugin_id: "builtin:gain".into(),
+            name: "Gain".into(),
+            bypass: false,
+            state: None,
+            params: Vec::new(),
+            sidechain,
+            sidechain_pre: false,
+        }
     }
 
     #[test]

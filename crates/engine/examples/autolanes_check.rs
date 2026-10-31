@@ -121,7 +121,10 @@ fn main() {
     let w = windows(&late, &base, &inv, 0.02, 0.98);
     // Lanes are read once per audio block and the fader is smoothed, so the steep end of this
     // curve lags a little more.
-    check(&format!("a negative curve follows its curve too (worst {:.3} dB, middle {:.1} dB)", worst(&w), level(&late, &base, 0.49, 0.51)), worst(&w) < 0.6 && level(&late, &base, 0.49, 0.51) < -22.0);
+    check(
+        &format!("a negative curve follows its curve too (worst {:.3} dB, middle {:.1} dB)", worst(&w), level(&late, &base, 0.49, 0.51)),
+        worst(&w) < 0.6 && level(&late, &base, 0.49, 0.51) < -22.0,
+    );
     s.undo();
     check("undo takes the curve back", same(&render(&mut s, len), &curved));
     s.undo();
@@ -135,7 +138,10 @@ fn main() {
     let out = render(&mut s, len);
     let (early, end) = (level(&out, &base, 0.1, 0.45), level(&out, &base, 0.97, 0.99));
     let w = windows(&out, &base, &s.project.master.automation[0].points.clone(), 0.02, 0.98);
-    check(&format!("Stereo Out's volume lane shapes the bounce ({early:.2} dB, then {end:.2} dB; worst {:.3} dB)", worst(&w)), (early + 20.0).abs() < 0.1 && worst(&w) < 0.3);
+    check(
+        &format!("Stereo Out's volume lane shapes the bounce ({early:.2} dB, then {end:.2} dB; worst {:.3} dB)", worst(&w)),
+        (early + 20.0).abs() < 0.1 && worst(&w) < 0.3,
+    );
     s.set_auto_mode(MASTER_ID, AutoMode::Off);
     check("Off leaves Stereo Out at its fader", same(&render(&mut s, len), &base));
     s.set_auto_mode(MASTER_ID, AutoMode::Read);
@@ -165,7 +171,10 @@ fn main() {
     let folder = s.create_stack(&[b], false).unwrap();
     s.update_track(folder, TrackPatch { volume_db: Some(-6.0), ..Default::default() });
     let foldered = render(&mut s, len);
-    check(&format!("the folder's fader scales its subtrack ({:.2} dB)", level(&foldered, &one, 0.1, 0.9)), (level(&foldered, &one, 0.1, 0.9) + 6.0).abs() < 0.1);
+    check(
+        &format!("the folder's fader scales its subtrack ({:.2} dB)", level(&foldered, &one, 0.1, 0.9)),
+        (level(&foldered, &one, 0.1, 0.9) + 6.0).abs() < 0.1,
+    );
     let ramp = vec![pt(0, -24.0, 0.4), pt(len, 0.0, 0.0)];
     lane(&mut s, folder, AutoParam::Volume, ramp.clone());
     let r = render(&mut s, len);
@@ -182,7 +191,10 @@ fn main() {
     lane(&mut s, folder, AutoParam::Mute, vec![pt(0, 0.0, 0.0), pt(half, 0.0, 0.0), pt(half, 1.0, 0.0)]);
     let m = render(&mut s, len);
     let (on, off) = (level(&m, &one, 0.1, 0.45), level(&m, &r, 0.1, 0.45));
-    check(&format!("a folder's mute lane mutes its subtrack (unchanged by {off:.2} dB, then {:.1} dB)", level(&m, &one, 0.55, 0.95)), off.abs() < 0.01 && on < -6.0 && level(&m, &one, 0.55, 0.95) < -80.0);
+    check(
+        &format!("a folder's mute lane mutes its subtrack (unchanged by {off:.2} dB, then {:.1} dB)", level(&m, &one, 0.55, 0.95)),
+        off.abs() < 0.01 && on < -6.0 && level(&m, &one, 0.55, 0.95) < -80.0,
+    );
     // A nested folder follows the outer folder's lane.
     s.clear_automation(folder, Some(AutoParam::Mute));
     s.checkpoint("Create Track Stack", None, false);
@@ -206,12 +218,16 @@ fn main() {
     s.set_automation_lane(b, AutoParam::Pan, vec![pt(0, -0.5, -0.75), pt(len, 0.5, 0.0)]);
     s.set_auto_lanes(vec![(b, vec![AutoParam::Pan, AutoParam::Mute]), (MASTER_ID, vec![AutoParam::Volume])]);
     let path = s.save(None).unwrap();
-    let mut t = Session::new(AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() }, Vec::new());
+    let mut t =
+        Session::new(AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() }, Vec::new());
     t.open(&path).unwrap();
     let tb = t.project.track(b).unwrap();
     check(
         "a saved project keeps curves, Stereo Out's lanes and the shown lanes",
-        t.project.master.automation[0].points[0].curve == 0.25 && tb.automation.iter().any(|l| l.points[0].curve == -0.75) && tb.auto_lanes.len() == 2 && t.project.master.auto_lanes.len() == 1,
+        t.project.master.automation[0].points[0].curve == 0.25
+            && tb.automation.iter().any(|l| l.points[0].curve == -0.75)
+            && tb.auto_lanes.len() == 2
+            && t.project.master.auto_lanes.len() == 1,
     );
     check("and plays them as before", same(&render(&mut t, len), &render(&mut s, len)));
 
@@ -247,7 +263,8 @@ fn main() {
     for track in [MASTER_ID, b] {
         use daw_engine::fx::gain::GAIN;
         s.set_plugin(track, 1, "builtin:gain").unwrap();
-        let uid = if track == MASTER_ID { s.project.master.inserts[1].as_ref().unwrap().uid } else { s.project.track(b).unwrap().inserts[1].as_ref().unwrap().uid };
+        let uid =
+            if track == MASTER_ID { s.project.master.inserts[1].as_ref().unwrap().uid } else { s.project.track(b).unwrap().inserts[1].as_ref().unwrap().uid };
         // -6 dB: the Gain runs from -96 to +24 dB.
         s.set_automation_lane(track, AutoParam::Plugin { uid, param: GAIN, name: "Gain".into() }, vec![pt(0, 0.75, 0.0)]);
         let by_lane = render(&mut s, len);

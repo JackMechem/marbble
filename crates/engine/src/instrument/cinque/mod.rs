@@ -245,7 +245,8 @@ impl Cinque {
         self.lfo_inc = hz as f64 / self.sr as f64;
         let unison = g(UNISON) >= 0.5;
         // In Unison, the lowest key and all five voices: the instrument's way.
-        let (mode, size) = if unison { (VoiceMode::Mono { priority: Priority::Low, multi_trigger: g(UNISON_RETRIG) >= 0.5 }, VOICES) } else { (VoiceMode::Poly, 1) };
+        let (mode, size) =
+            if unison { (VoiceMode::Mono { priority: Priority::Low, multi_trigger: g(UNISON_RETRIG) >= 0.5 }, VOICES) } else { (VoiceMode::Poly, 1) };
         self.patch.group_gain = 1.0 / (size as f32).powf(0.4);
         let voices = &mut self.voices;
         self.alloc.set_mode(mode, size, VOICES, |a| {
@@ -401,7 +402,30 @@ impl Instrument for Cinque {
         let Some(slot) = self.values.get_mut(id as usize) else { return };
         *slot = value;
         self.smooth_target(id);
-        if matches!(id, F_ATTACK | F_DECAY | F_SUSTAIN | F_RELEASE | A_ATTACK | A_DECAY | A_SUSTAIN | A_RELEASE | RELEASE_ON | B_LO | B_KBD | A_SYNC | KEYBOARD | GLIDE | UNISON_DETUNE | VEL_FILTER | VEL_AMP | CHIP | LFO_RATE | UNISON | UNISON_RETRIG) {
+        if matches!(
+            id,
+            F_ATTACK
+                | F_DECAY
+                | F_SUSTAIN
+                | F_RELEASE
+                | A_ATTACK
+                | A_DECAY
+                | A_SUSTAIN
+                | A_RELEASE
+                | RELEASE_ON
+                | B_LO
+                | B_KBD
+                | A_SYNC
+                | KEYBOARD
+                | GLIDE
+                | UNISON_DETUNE
+                | VEL_FILTER
+                | VEL_AMP
+                | CHIP
+                | LFO_RATE
+                | UNISON
+                | UNISON_RETRIG
+        ) {
             self.dirty = true;
         }
     }

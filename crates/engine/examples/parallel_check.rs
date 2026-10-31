@@ -315,7 +315,10 @@ fn main() {
     let again = s.render(0, 2 * BAR, BAR / 2, None, &mut |_| {}).unwrap();
     check("two serial renders are the same (the baseline is sound)", same(&serial, &again));
     check(&format!("the render has sound (peak {:.3})", peak(&serial[0])), peak(&serial[0]) > 0.01);
-    let isolated = |s: &mut Session, id: Id| s.render(0, BAR, 0, Some(daw_engine::dsp::Isolate { tracks: vec![(id, true)], tap: id, fader: true, effects: true, keys: Vec::new() }), &mut |_| {}).unwrap();
+    let isolated = |s: &mut Session, id: Id| {
+        s.render(0, BAR, 0, Some(daw_engine::dsp::Isolate { tracks: vec![(id, true)], tap: id, fader: true, effects: true, keys: Vec::new() }), &mut |_| {})
+            .unwrap()
+    };
     let iso_serial = isolated(&mut s, e.bus);
     let status = s.status.clone();
     for threads in [2u32, 3, 4, 8] {
@@ -372,7 +375,10 @@ fn main() {
             let blocks = (frames / buffer) as u64;
             let same_bits = out.len() == base.len() && out.iter().zip(&base).all(|(a, b)| a.to_bits() == b.to_bits());
             // Blocks of over MAX_BLOCK frames count a pool run per sub-block.
-            check(&format!("{buffer} frames on {threads} threads: bit-identical ({pooled} blocks on the pool, of about {blocks})"), same_bits && pooled + 12 >= blocks && errors == 0);
+            check(
+                &format!("{buffer} frames on {threads} threads: bit-identical ({pooled} blocks on the pool, of about {blocks})"),
+                same_bits && pooled + 12 >= blocks && errors == 0,
+            );
             if !same_bits {
                 println!("     {}", first_diff(&out, &base));
             }

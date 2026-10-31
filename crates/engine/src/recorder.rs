@@ -214,11 +214,7 @@ impl Recorder {
 
     /// The takes being recorded.
     pub fn active(&self) -> Vec<ActiveTake> {
-        self.takes
-            .lock()
-            .iter()
-            .map(|(&track, t)| ActiveTake { track, path: t.path.clone(), channels: t.channels, start: t.start, bits: t.bits })
-            .collect()
+        self.takes.lock().iter().map(|(&track, t)| ActiveTake { track, path: t.path.clone(), channels: t.channels, start: t.start, bits: t.bits }).collect()
     }
 
     /// Write errors not reported yet, for the UI.

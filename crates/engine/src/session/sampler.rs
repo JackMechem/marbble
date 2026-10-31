@@ -225,7 +225,11 @@ fn trim_points(channels: &[Vec<f32>], rate: u32) -> (u64, u64) {
 impl Session {
     /// The state of a track's sampler, by its slot in the document.
     fn sampler_slot(&self, track: Id) -> Result<&PluginSlot> {
-        self.project.track(track).and_then(|t| t.instrument.as_ref()).filter(|s| s.plugin_id == SAMPLER).ok_or_else(|| anyhow!("That track has no Fermata Sampler"))
+        self.project
+            .track(track)
+            .and_then(|t| t.instrument.as_ref())
+            .filter(|s| s.plugin_id == SAMPLER)
+            .ok_or_else(|| anyhow!("That track has no Fermata Sampler"))
     }
 
     /// The pool, for a command that fills it from a worker.
@@ -298,7 +302,13 @@ impl Session {
                 let mut error = issues.and_then(|i| i.iter().find(|x| x.zone == zone.id)).map(|x| x.error.text());
                 // Gone since it loaded: it plays on from memory, but won't next time.
                 let buf = if error.is_some() { None } else { pool.get(&self.dir.join(&zone.file)).map_err(|e| error = Some(e.text())).ok() };
-                ZoneView { frames: buf.as_ref().map_or(0, |b| b.frames as u64), rate: buf.as_ref().map_or(0, |b| b.rate), channels: buf.as_ref().map_or(0, |b| b.ch.len() as u32), error, zone }
+                ZoneView {
+                    frames: buf.as_ref().map_or(0, |b| b.frames as u64),
+                    rate: buf.as_ref().map_or(0, |b| b.rate),
+                    channels: buf.as_ref().map_or(0, |b| b.ch.len() as u32),
+                    error,
+                    zone,
+                }
             })
             .collect();
         Ok(SamplerView { zones, memory: pool.bytes() as u64, limit: pool.limit() as u64, recording: self.sampler_recording() })
@@ -535,7 +545,11 @@ impl Session {
         let peak = channels.iter().flatten().fold(0.0f32, |m, s| m.max(s.abs()));
         if frames == 0 || peak < SILENT {
             let _ = std::fs::remove_file(&take.path);
-            return Err(anyhow!(if frames == 0 { "Nothing came in from the input. Check Settings › Audio." } else { "The input was silent, so nothing was kept. Check the input and its level." }));
+            return Err(anyhow!(if frames == 0 {
+                "Nothing came in from the input. Check Settings › Audio."
+            } else {
+                "The input was silent, so nothing was kept. Check the input and its level."
+            }));
         }
         let rate = self.sample_rate() as u32;
         self.sampler.pool.insert(&take.path, rate, &channels).map_err(|e| anyhow!("The recording is {}", e.text()))?;
@@ -710,7 +724,15 @@ impl Session {
             done.insert(was, rel.clone());
             z.file = rel;
         }
-        let p = Preset { name: name.clone(), effect: SAMPLER.into(), version: 1, values: self.builtin_params(slot.uid), eq: None, state: Some(state.to_json()), base: None };
+        let p = Preset {
+            name: name.clone(),
+            effect: SAMPLER.into(),
+            version: 1,
+            values: self.builtin_params(slot.uid),
+            eq: None,
+            state: Some(state.to_json()),
+            base: None,
+        };
         std::fs::write(tmp.join(presets::BUNDLE_DOC), serde_json::to_string_pretty(&p)?)?;
         let old = root.join(format!(".replaced {name}"));
         let _ = std::fs::remove_dir_all(&old);

@@ -7,10 +7,10 @@
 
 mod commands;
 mod crash;
-mod menu;
-mod recent;
 #[cfg(target_os = "linux")]
 mod glib_loop;
+mod menu;
+mod recent;
 mod settings;
 mod windows;
 

@@ -147,7 +147,17 @@ pub fn base(s: &mut Session, dir: &Path) -> World {
         next - 1
     };
     let (t1, t2, rid) = (id(), id(), id());
-    let take = |id: Id, name: &str, pitch: u8| Take { id, name: name.into(), clip: 0, offset: 0, start: 0, end: 2 * BAR, gain_db: 0.0, notes: vec![note(0, q, pitch, 100), note(2 * q, q, pitch + 4, 100), note(BAR + q, q, pitch + 7, 100)], cc: Vec::new() };
+    let take = |id: Id, name: &str, pitch: u8| Take {
+        id,
+        name: name.into(),
+        clip: 0,
+        offset: 0,
+        start: 0,
+        end: 2 * BAR,
+        gain_db: 0.0,
+        notes: vec![note(0, q, pitch, 100), note(2 * q, q, pitch + 4, 100), note(BAR + q, q, pitch + 7, 100)],
+        cc: Vec::new(),
+    };
     let mut folder = TakeFolder::new();
     folder.takes = vec![take(t1, "Take 1", 48), take(t2, "Take 2", 55)];
     folder.comp = vec![CompSegment { start: 0, end: 2 * BAR, take: t2 }];
@@ -220,14 +230,20 @@ pub fn steps() -> Vec<(&'static str, StepFn)> {
             s.update_vca(w.vca, VcaPatch { level_db: Some(-5.0), ..Default::default() });
         }),
         ("Assign VCA", |s, w| s.assign_vca(&[w.drums], Some(w.vca)).unwrap()),
-        ("Folder automation", |s, w| s.set_automation_lane(w.folder, AutoParam::Volume, vec![pt(0, -12.0, 0.5), pt(3 * BAR, 0.0, 0.0), pt(6 * BAR, -6.0, -0.4)])),
-        ("Folder mute automation", |s, w| s.set_automation_lane(w.folder, AutoParam::Mute, vec![pt(0, 0.0, 0.0), pt(7 * BAR, 0.0, 0.0), pt(7 * BAR, 1.0, 0.0)])),
+        ("Folder automation", |s, w| {
+            s.set_automation_lane(w.folder, AutoParam::Volume, vec![pt(0, -12.0, 0.5), pt(3 * BAR, 0.0, 0.0), pt(6 * BAR, -6.0, -0.4)])
+        }),
+        ("Folder mute automation", |s, w| {
+            s.set_automation_lane(w.folder, AutoParam::Mute, vec![pt(0, 0.0, 0.0), pt(7 * BAR, 0.0, 0.0), pt(7 * BAR, 1.0, 0.0)])
+        }),
         ("Curved pan", |s, w| s.set_automation_lane(w.a2, AutoParam::Pan, vec![pt(0, -0.8, 0.7), pt(4 * BAR, 0.8, -0.7), pt(8 * BAR, 0.0, 0.0)])),
         ("Effect automation", |s, w| {
             let uid = slot_uid(s, w.a1, 0);
             s.set_automation_lane(w.a1, AutoParam::Plugin { uid, param: 0, name: "Rate".into() }, vec![pt(0, 0.1, 0.0), pt(4 * BAR, 0.9, 0.3)]);
         }),
-        ("Stereo Out automation", |s, _| s.set_automation_lane(MASTER_ID, AutoParam::Volume, vec![pt(0, -3.0, 0.0), pt(5 * BAR, -1.0, 0.6), pt(8 * BAR, -9.0, 0.0)])),
+        ("Stereo Out automation", |s, _| {
+            s.set_automation_lane(MASTER_ID, AutoParam::Volume, vec![pt(0, -3.0, 0.0), pt(5 * BAR, -1.0, 0.6), pt(8 * BAR, -9.0, 0.0)])
+        }),
         ("Stereo Out effect automation", |s, _| {
             // Gain runs from -96 to +24 dB: 0.8 is 0 dB.
             set_fx(s, MASTER_ID, 0, "builtin:gain", 0.8);
@@ -246,8 +262,23 @@ pub fn steps() -> Vec<(&'static str, StepFn)> {
             p.rows[1].steps = (0..16).map(|k| Step { on: k % 2 == 0, ..Step::default() }).collect();
             s.set_pattern(w.pattern, p).unwrap();
         }),
-        ("Pattern region parameters", |s, w| s.set_region_params(&[w.pattern], &RegionParamsPatch { transpose: Some(-2), velocity: Some(-20), ..Default::default() })),
-        ("Region parameters", |s, w| s.set_region_params(&[w.midi], &RegionParamsPatch { quantize: Some(16), swing: Some(60), transpose: Some(3), dynamics: Some(150), gate: Some(80), delay: Some(30.0), ..Default::default() })),
+        ("Pattern region parameters", |s, w| {
+            s.set_region_params(&[w.pattern], &RegionParamsPatch { transpose: Some(-2), velocity: Some(-20), ..Default::default() })
+        }),
+        ("Region parameters", |s, w| {
+            s.set_region_params(
+                &[w.midi],
+                &RegionParamsPatch {
+                    quantize: Some(16),
+                    swing: Some(60),
+                    transpose: Some(3),
+                    dynamics: Some(150),
+                    gate: Some(80),
+                    delay: Some(30.0),
+                    ..Default::default()
+                },
+            )
+        }),
         ("Audio region delay", |s, w| {
             let r = region_ids(s, w.a2)[2];
             s.set_region_params(&[r], &RegionParamsPatch { delay: Some(7.5), delay_ms: Some(true), ..Default::default() });

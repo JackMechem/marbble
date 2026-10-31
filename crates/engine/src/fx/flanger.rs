@@ -47,7 +47,15 @@ pub const PRESETS: &[FactoryPreset] = &[
 ];
 
 pub fn info() -> EffectInfo {
-    EffectInfo { id: "builtin:flanger", name: "Flanger", category: "Modulation", params: &PARAMS, meters: &LFO_METER, sidechain: false, new: |sr| Box::new(Flanger::new(sr)) }
+    EffectInfo {
+        id: "builtin:flanger",
+        name: "Flanger",
+        category: "Modulation",
+        params: &PARAMS,
+        meters: &LFO_METER,
+        sidechain: false,
+        new: |sr| Box::new(Flanger::new(sr)),
+    }
 }
 
 pub struct Flanger {
@@ -141,7 +149,19 @@ mod tests {
             let mut peak = 0.0f32;
             let mut late = 0.0f32;
             for block in 0..(12 * 48_000 / 512) {
-                let mut l: Vec<f32> = (0..512).map(|i| if block < 940 { if (block * 512 + i) / 5 % 2 == 0 { 1.0 } else { -1.0 } } else { 0.0 }).collect();
+                let mut l: Vec<f32> = (0..512)
+                    .map(|i| {
+                        if block < 940 {
+                            if (block * 512 + i) / 5 % 2 == 0 {
+                                1.0
+                            } else {
+                                -1.0
+                            }
+                        } else {
+                            0.0
+                        }
+                    })
+                    .collect();
                 let mut r = l.clone();
                 f.process(&mut l, &mut r, None, &CTX);
                 for x in l.iter().chain(&r) {

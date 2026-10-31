@@ -100,15 +100,7 @@ pub const METERS: &[&str] = &["Input", "Output", "Gain Reduction"];
 
 /// The registry entry.
 pub fn info() -> EffectInfo {
-    EffectInfo {
-        id: ID,
-        name: "Limiter",
-        category: "Dynamics",
-        params: &PARAMS,
-        meters: METERS,
-        sidechain: false,
-        new: |sr| Box::new(Limiter::new(sr)),
-    }
+    EffectInfo { id: ID, name: "Limiter", category: "Dynamics", params: &PARAMS, meters: METERS, sidechain: false, new: |sr| Box::new(Limiter::new(sr)) }
 }
 
 /// The longest lookahead, in seconds.
@@ -485,9 +477,7 @@ mod tests {
         let mut r = Vec::with_capacity(len);
         for n in 0..len {
             let t = n as f32 / SR;
-            let mut x = 0.45 * (tau * 12000.0 * t + std::f32::consts::FRAC_PI_4).sin()
-                + 0.3 * (tau * 997.0 * t).sin()
-                + 0.25 * (tau * 15013.0 * t).sin();
+            let mut x = 0.45 * (tau * 12000.0 * t + std::f32::consts::FRAC_PI_4).sin() + 0.3 * (tau * 997.0 * t).sin() + 0.25 * (tau * 15013.0 * t).sin();
             let sec = n % 24000;
             if sec < 2400 {
                 // A decaying 60 Hz thump every half second.

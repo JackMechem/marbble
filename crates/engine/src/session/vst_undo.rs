@@ -365,7 +365,10 @@ impl Session {
             }
             if w.tracker.due(now, !c.edits_pending()) {
                 stepped |= self.finish_vst_edit(uid);
-            } else if w.tracker.pending.is_none() && w.stale.is_some_and(|t| now.duration_since(t) >= REFRESH_QUIET) && now.duration_since(w.read_at) >= REFRESH_MIN.max(w.read_took * REFRESH_SHARE) {
+            } else if w.tracker.pending.is_none()
+                && w.stale.is_some_and(|t| now.duration_since(t) >= REFRESH_QUIET)
+                && now.duration_since(w.read_at) >= REFRESH_MIN.max(w.read_took * REFRESH_SHARE)
+            {
                 let start = Instant::now();
                 w.known = Arc::new(c.save_state());
                 w.reads += 1;

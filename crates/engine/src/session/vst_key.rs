@@ -113,7 +113,16 @@ mod tests {
     }
 
     fn missing_slot(uid: Id, source: Option<Id>) -> PluginSlot {
-        PluginSlot { uid, plugin_id: "/nowhere/Gone.vst3|0123456789ABCDEF".into(), name: "Gone".into(), bypass: false, state: None, params: Vec::new(), sidechain: source, sidechain_pre: false }
+        PluginSlot {
+            uid,
+            plugin_id: "/nowhere/Gone.vst3|0123456789ABCDEF".into(),
+            name: "Gone".into(),
+            bypass: false,
+            state: None,
+            params: Vec::new(),
+            sidechain: source,
+            sidechain_pre: false,
+        }
     }
 
     #[test]

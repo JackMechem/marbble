@@ -48,7 +48,11 @@ const DIFFUSER_MS: [[f32; 4]; 2] = [[1.37, 2.13, 3.73, 5.51], [1.53, 2.37, 3.31,
 
 /// The Hadamard matrix entry: rows and columns are mutually orthogonal ±1 vectors.
 const fn hadamard(row: usize, col: usize) -> f32 {
-    if (row & col).count_ones().is_multiple_of(2) { 1.0 } else { -1.0 }
+    if (row & col).count_ones().is_multiple_of(2) {
+        1.0
+    } else {
+        -1.0
+    }
 }
 
 /// The next value of the shared pattern generator (an LCG, the same one the panel uses).

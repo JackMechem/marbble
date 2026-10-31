@@ -5,7 +5,6 @@ use daw_engine::audio_io::AudioConfig;
 use daw_engine::model::{AutoMode, AutoParam, AutoPoint, InputSel, TrackKind, TrackSend};
 use daw_engine::Session;
 
-
 /// Plays for a moment and returns the peak meter of each track id given, plus Stereo Out.
 /// Plays for a moment and returns the peak meter of each track id given, plus Stereo Out.
 fn levels(s: &mut Session, ids: &[u64]) -> (Vec<f32>, f32) {

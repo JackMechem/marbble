@@ -72,10 +72,14 @@ impl Session {
             (Some(id), true) => Some((id, crate::eq::spectrum(&self.analyzer_buf, self.sample_rate()))),
             _ => None,
         };
-        let meters: Vec<(Id, f32, f32)> = self.meters.iter().map(|(&id, m)| {
-            let (l, r) = m.take();
-            (id, l, r)
-        }).collect();
+        let meters: Vec<(Id, f32, f32)> = self
+            .meters
+            .iter()
+            .map(|(&id, m)| {
+                let (l, r) = m.take();
+                (id, l, r)
+            })
+            .collect();
         let master = self.status.master.take();
         let peak_holds = self.hold_peaks(&meters, master);
         let n_in = self.audio_status.input_channels as usize;
@@ -148,7 +152,11 @@ impl Session {
             (false, Some(t)) => format!("A buffer took {ms:.0} ms; \"{t}\" took longest."),
             (false, None) => format!("A buffer took {ms:.0} ms."),
         };
-        log::warn!("overload: {detail} ({} threads, {} late blocks so far)", self.status.threads.load(Ordering::Relaxed), self.status.late_blocks.load(Ordering::Relaxed));
+        log::warn!(
+            "overload: {detail} ({} threads, {} late blocks so far)",
+            self.status.threads.load(Ordering::Relaxed),
+            self.status.late_blocks.load(Ordering::Relaxed)
+        );
         let msg = format!("System overload: the audio engine couldn't keep up, {what}. {detail} Try a larger buffer size in Settings › Audio, or bypass or freeze heavy plug-ins.");
         self.warning.get_or_insert(msg);
     }
@@ -164,7 +172,10 @@ impl Session {
         self.bad_audio_at = Instant::now();
         let uid = self.status.bad_audio_uid.load(Ordering::Relaxed);
         let p = &self.project;
-        let found = p.tracks.iter().find_map(|t| t.inserts.iter().flatten().chain(t.instrument.iter()).find(|s| s.uid == uid).map(|s| (s.name.clone(), t.name.clone())));
+        let found = p
+            .tracks
+            .iter()
+            .find_map(|t| t.inserts.iter().flatten().chain(t.instrument.iter()).find(|s| s.uid == uid).map(|s| (s.name.clone(), t.name.clone())));
         let found = found.or_else(|| p.master.inserts.iter().flatten().find(|s| s.uid == uid).map(|s| (s.name.clone(), "Stereo Out".to_string())));
         let (plugin, track) = found.unwrap_or_else(|| ("A plug-in".into(), "a track".into()));
         Some(format!("{plugin} on {track} put out invalid audio (NaN or a runaway level), so Fermata muted it to protect the rest of the mix. If it keeps happening, bypass it or reset its settings."))

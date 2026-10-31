@@ -13,7 +13,11 @@ pub enum AutoParam {
     /// A send level, by send slot.
     Send(u8),
     /// A plug-in parameter: instance id, VST3 parameter id, and its name for display.
-    Plugin { uid: Id, param: u32, name: String },
+    Plugin {
+        uid: Id,
+        param: u32,
+        name: String,
+    },
 }
 
 impl AutoParam {

@@ -91,12 +91,21 @@ fn main() {
     // The gain-reduction meter: the tone at -21.5 dBFS is well over a -45 dB threshold.
     let t = play(&mut s);
     let gr = |id: Id| t.gain_reduction.iter().find(|g| g.0 == id).map(|g| g.1);
-    check(&format!("the compressed strips report gain reduction ({:?} {:?} {:?})", gr(src), gr(a), gr(b)), [src, a, b].iter().all(|&id| gr(id).map(|g| g > 3.0).unwrap_or(false)));
+    check(
+        &format!("the compressed strips report gain reduction ({:?} {:?} {:?})", gr(src), gr(a), gr(b)),
+        [src, a, b].iter().all(|&id| gr(id).map(|g| g > 3.0).unwrap_or(false)),
+    );
 
     let label = s.undo();
-    check(&format!("one undo ({label:?}) takes it off both tracks"), inserts(&s, a).iter().all(|x| x.is_none()) && inserts(&s, b)[1].as_deref() == Some("builtin:reverb") && inserts(&s, b)[0].is_none());
+    check(
+        &format!("one undo ({label:?}) takes it off both tracks"),
+        inserts(&s, a).iter().all(|x| x.is_none()) && inserts(&s, b)[1].as_deref() == Some("builtin:reverb") && inserts(&s, b)[0].is_none(),
+    );
     let t = play(&mut s);
-    check("a strip without dynamics shows no gain reduction", !t.gain_reduction.iter().any(|g| g.0 == a || g.0 == b) && t.gain_reduction.iter().any(|g| g.0 == src));
+    check(
+        "a strip without dynamics shows no gain reduction",
+        !t.gain_reduction.iter().any(|g| g.0 == a || g.0 == b) && t.gain_reduction.iter().any(|g| g.0 == src),
+    );
 
     // ---- clip indicators ---------------------------------------------------------------------
     // Without its compressor, region gain takes track b's tone 30 dB up: +8.5 dBFS.

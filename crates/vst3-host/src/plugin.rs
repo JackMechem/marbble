@@ -29,8 +29,8 @@ mod instantiate;
 pub use instantiate::*;
 mod multi_out;
 mod processor;
-pub use multi_out::OutputBus;
 use multi_out::OutGate;
+pub use multi_out::OutputBus;
 
 /// Parameter changes the host can queue for one `process` call (automation).
 const MAX_QUEUED: usize = 512;
@@ -161,7 +161,10 @@ enum Gate {
     Shut,
     /// Frames to wait before the fade back, so a latent plug-in's first output has arrived,
     /// and frames left of the fade.
-    Opening { settle: u32, left: u32 },
+    Opening {
+        settle: u32,
+        left: u32,
+    },
 }
 
 /// The audio-thread half. `process` never allocates.

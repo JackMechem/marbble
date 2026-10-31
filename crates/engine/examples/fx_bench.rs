@@ -26,6 +26,13 @@ fn main() {
             total += d;
             n += 1;
         }
-        println!("{:16} worst {:7.3} ms ({:5.1}%)  avg {:7.3} ms ({:5.1}%)", info.name, worst, 100.0 * worst / budget, total / n as f64, 100.0 * total / n as f64 / budget);
+        println!(
+            "{:16} worst {:7.3} ms ({:5.1}%)  avg {:7.3} ms ({:5.1}%)",
+            info.name,
+            worst,
+            100.0 * worst / budget,
+            total / n as f64,
+            100.0 * total / n as f64 / budget
+        );
     }
 }

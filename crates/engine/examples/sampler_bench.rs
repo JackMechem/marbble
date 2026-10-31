@@ -95,7 +95,11 @@ fn main() {
     let seconds: f64 = std::env::args().nth(2).and_then(|s| s.parse().ok()).unwrap_or(3.0);
     let t = Instant::now();
     let _ = Sampler::new(SR, 1);
-    println!("first instance, building the kernel tables ({} MB): {:.0} ms", daw_engine::instrument::sampler::kernel::kernels().bytes() >> 20, t.elapsed().as_secs_f64() * 1000.0);
+    println!(
+        "first instance, building the kernel tables ({} MB): {:.0} ms",
+        daw_engine::instrument::sampler::kernel::kernels().bytes() >> 20,
+        t.elapsed().as_secs_f64() * 1000.0
+    );
     let pool = SamplePool::default();
     let cases = [
         Case { name: "1 stereo voice, pitched", stereo: true, file_rate: 44100, filter: 0.0, notes: 1, up: 1 },

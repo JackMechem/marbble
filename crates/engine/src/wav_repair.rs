@@ -86,7 +86,16 @@ fn layout(f: &mut std::fs::File) -> Result<Layout> {
             if block_align == 0 {
                 return Err(anyhow!("the WAV format chunk is invalid"));
             }
-            return Ok(Layout { channels, sample_rate, bits, block_align: block_align as u64, riff_size, data_size_at: at as u64 + 4, data_size: size as u32, file_len });
+            return Ok(Layout {
+                channels,
+                sample_rate,
+                bits,
+                block_align: block_align as u64,
+                riff_size,
+                data_size_at: at as u64 + 4,
+                data_size: size as u32,
+                file_len,
+            });
         }
         if id == b"fmt " {
             let b = head.get(at + 8..at + 24).ok_or_else(|| anyhow!("the WAV format chunk is cut short"))?;

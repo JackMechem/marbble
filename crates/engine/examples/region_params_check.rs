@@ -84,10 +84,16 @@ fn main() {
     let by_hand = vec![note(0, beat / 4, 72, 62), note(2 * beat, beat / 2, 76, 32)];
     s.checkpoint("By Hand", None, false);
     s.set_midi_content(vec![MidiContent { region: r, notes: by_hand.clone(), cc: Vec::new(), start: None, length: None }]);
-    s.set_region_params(&[r], &RegionParamsPatch { quantize: Some(0), transpose: Some(0), velocity: Some(0), dynamics: Some(100), gate: Some(100), ..Default::default() });
+    s.set_region_params(
+        &[r],
+        &RegionParamsPatch { quantize: Some(0), transpose: Some(0), velocity: Some(0), dynamics: Some(100), gate: Some(100), ..Default::default() },
+    );
     let written = bounce(&mut s, &scratch, end);
     let d = max_diff(&with_params, &written);
-    check(&format!("parameters play the notes worked out by hand (max diff {d:.2e}, onset {:?})", onset(&with_params)), d < 1e-6 && onset(&with_params) == Some(bar));
+    check(
+        &format!("parameters play the notes worked out by hand (max diff {d:.2e}, onset {:?})", onset(&with_params)),
+        d < 1e-6 && onset(&with_params) == Some(bar),
+    );
     s.undo();
     let p = s.project.tracks.iter().flat_map(|t| t.regions.iter()).find(|x| x.id == r).unwrap().params;
     check("undo puts the parameters and notes back", p.quantize == 4 && p.gate == 50 && notes(&s, r)[0].start == 1000);
@@ -99,14 +105,21 @@ fn main() {
     let applied = notes(&s, r);
     let region = s.project.tracks.iter().flat_map(|t| t.regions.iter()).find(|x| x.id == r).unwrap().clone();
     check(
-        &format!("Apply writes the notes and resets the parameters ({:?})", applied.iter().map(|n| (n.start, n.length, n.pitch, n.velocity)).collect::<Vec<_>>()),
-        region.params.is_default() && applied.iter().zip(&by_hand).all(|(a, b)| (a.start, a.length, a.pitch, a.velocity) == (b.start, b.length, b.pitch, b.velocity)),
+        &format!(
+            "Apply writes the notes and resets the parameters ({:?})",
+            applied.iter().map(|n| (n.start, n.length, n.pitch, n.velocity)).collect::<Vec<_>>()
+        ),
+        region.params.is_default()
+            && applied.iter().zip(&by_hand).all(|(a, b)| (a.start, a.length, a.pitch, a.velocity) == (b.start, b.length, b.pitch, b.velocity)),
     );
     let baked = bounce(&mut s, &scratch, end);
     check(&format!("applied region plays the same (max diff {:.2e})", max_diff(&baked, &with_params)), max_diff(&baked, &with_params) < 1e-6);
     s.undo();
     let back = s.project.tracks.iter().flat_map(|t| t.regions.iter()).find(|x| x.id == r).unwrap().clone();
-    check("one undo brings the parameters and the notes back", back.params.quantize == 4 && back.params.transpose == 12 && notes(&s, r)[0].start == 1000 && s.undo_label() == undo_depth);
+    check(
+        "one undo brings the parameters and the notes back",
+        back.params.quantize == 4 && back.params.transpose == 12 && notes(&s, r)[0].start == 1000 && s.undo_label() == undo_depth,
+    );
     let again = bounce(&mut s, &scratch, end);
     check("and the engine plays the parameters again", max_diff(&again, &with_params) < 1e-6);
 
@@ -135,7 +148,10 @@ fn main() {
     check(&format!("50 ms delay ({:?}, want {})", onset(&late), bar + 1000 + ms(50.0)), onset(&late) == Some(bar + 1000 + ms(50.0)));
     set(&mut s, &[r], RegionParamsPatch { delay: Some(-100.0), ..Default::default() });
     let early = bounce(&mut s, &scratch, end);
-    check(&format!("a negative delay plays before the region start ({:?}, want {})", onset(&early), bar + 1000 - ms(100.0)), onset(&early) == Some(bar + 1000 - ms(100.0)));
+    check(
+        &format!("a negative delay plays before the region start ({:?}, want {})", onset(&early), bar + 1000 - ms(100.0)),
+        onset(&early) == Some(bar + 1000 - ms(100.0)),
+    );
     // Switching to ticks keeps the delay: -100 ms at 120 BPM = -192 ticks.
     set(&mut s, &[r], RegionParamsPatch { delay_ms: Some(false), ..Default::default() });
     let p = s.project.tracks.iter().flat_map(|t| t.regions.iter()).find(|x| x.id == r).unwrap().params;
@@ -149,7 +165,11 @@ fn main() {
 
     // ---- quantize follows tempo changes ------------------------------------------------------
     s.checkpoint("Quantize", None, false);
-    set(&mut s, &[r], RegionParamsPatch { quantize: Some(4), transpose: Some(0), velocity: Some(0), dynamics: Some(100), gate: Some(100), ..Default::default() });
+    set(
+        &mut s,
+        &[r],
+        RegionParamsPatch { quantize: Some(4), transpose: Some(0), velocity: Some(0), dynamics: Some(100), gate: Some(100), ..Default::default() },
+    );
     let on = onset(&bounce(&mut s, &scratch, end));
     check(&format!("quantized at 120 BPM ({on:?})"), on == Some(bar));
     // At 100 BPM, beats fall every 0.6 s: the note at bar + 1000 goes to the nearest one.

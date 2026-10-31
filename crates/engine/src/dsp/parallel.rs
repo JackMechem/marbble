@@ -427,7 +427,15 @@ mod tests {
 
     fn tone(uid: Id, hz: f32, key: Option<Id>, pre: bool) -> InsertDsp {
         // `EffectInfo::new` is a plain function, so the pitch comes through the uid's slot below.
-        let info = EffectInfo { id: "test:tone", name: "Tone", category: "Utility", params: &[], meters: &[], sidechain: true, new: |_| Box::new(Tone { phase: 0.0, hz: 0.0 }) };
+        let info = EffectInfo {
+            id: "test:tone",
+            name: "Tone",
+            category: "Utility",
+            params: &[],
+            meters: &[],
+            sidechain: true,
+            new: |_| Box::new(Tone { phase: 0.0, hz: 0.0 }),
+        };
         let mut b = BuiltinDsp::new(&info, SR as f32, &[]);
         b.replace_effect_for_tests(Box::new(Tone { phase: uid as f32 * 0.01, hz }));
         InsertDsp { uid, bypass: false, plugin: Plugin::Builtin(Box::new(b)), key: KeyRoute::new(key, pre) }
@@ -511,7 +519,8 @@ mod tests {
         for missing in [(1, 5), (1, 7), (2, 6), (1, 4), (2, 4)] {
             let mut r = rig();
             let full = project(&mut r);
-            let edges: Vec<(Id, Id)> = [(1, 5), (2, 5), (1, 6), (1, 7), (2, 6), (3, 7), (4, 6), (5, 7), (1, 4), (2, 4)].into_iter().filter(|x| *x != missing).collect();
+            let edges: Vec<(Id, Id)> =
+                [(1, 5), (2, 5), (1, 6), (1, 7), (2, 6), (3, 7), (4, 6), (5, 7), (1, 4), (2, 4)].into_iter().filter(|x| *x != missing).collect();
             let ids = (0..full.len()).map(|i| full.id(i)).collect();
             r.tx.push(Cmd::Graph(Some(Box::new(TaskGraph::new(ids, &edges, |_| true).unwrap())))).ok().unwrap();
             r.tx.push(Cmd::Workers(Some(Workers::new(PoolOptions { threads: 4, ..Default::default() })))).ok().unwrap();
@@ -576,10 +585,24 @@ mod tests {
         let armed = Arc::new(std::sync::atomic::AtomicBool::new(false));
         let mut e = rig();
         let g = project(&mut e);
-        let info = EffectInfo { id: "test:bomb", name: "Bomb", category: "Utility", params: &[], meters: &[], sidechain: false, new: |_| Box::new(Tone { phase: 0.0, hz: 0.0 }) };
+        let info = EffectInfo {
+            id: "test:bomb",
+            name: "Bomb",
+            category: "Utility",
+            params: &[],
+            meters: &[],
+            sidechain: false,
+            new: |_| Box::new(Tone { phase: 0.0, hz: 0.0 }),
+        };
         let mut b = BuiltinDsp::new(&info, SR as f32, &[]);
         b.replace_effect_for_tests(Box::new(Bomb(armed.clone())));
-        e.tx.push(Cmd::Insert { track: 3, slot: 1, insert: Some(InsertDsp { uid: 99, bypass: false, plugin: Plugin::Builtin(Box::new(b)), key: KeyRoute::default() }) }).ok().unwrap();
+        e.tx.push(Cmd::Insert {
+            track: 3,
+            slot: 1,
+            insert: Some(InsertDsp { uid: 99, bypass: false, plugin: Plugin::Builtin(Box::new(b)), key: KeyRoute::default() }),
+        })
+        .ok()
+        .unwrap();
         e.tx.push(Cmd::Graph(Some(Box::new(g)))).ok().unwrap();
         e.tx.push(Cmd::Workers(Some(Workers::new(PoolOptions { threads: 4, ..Default::default() })))).ok().unwrap();
         e.tx.push(Cmd::ParallelTest(ParallelTest { always: true, renders: false, patient: true })).ok().unwrap();
@@ -628,10 +651,24 @@ mod tests {
         let hold = Arc::new(AtomicU32::new(0));
         let mut e = rig();
         let g = project(&mut e);
-        let info = EffectInfo { id: "test:tar", name: "Tar", category: "Utility", params: &[], meters: &[], sidechain: false, new: |_| Box::new(Tone { phase: 0.0, hz: 0.0 }) };
+        let info = EffectInfo {
+            id: "test:tar",
+            name: "Tar",
+            category: "Utility",
+            params: &[],
+            meters: &[],
+            sidechain: false,
+            new: |_| Box::new(Tone { phase: 0.0, hz: 0.0 }),
+        };
         let mut b = BuiltinDsp::new(&info, SR as f32, &[]);
         b.replace_effect_for_tests(Box::new(TarOnWorker(Tar(hold.clone()))));
-        e.tx.push(Cmd::Insert { track: 2, slot: 1, insert: Some(InsertDsp { uid: 99, bypass: false, plugin: Plugin::Builtin(Box::new(b)), key: KeyRoute::default() }) }).ok().unwrap();
+        e.tx.push(Cmd::Insert {
+            track: 2,
+            slot: 1,
+            insert: Some(InsertDsp { uid: 99, bypass: false, plugin: Plugin::Builtin(Box::new(b)), key: KeyRoute::default() }),
+        })
+        .ok()
+        .unwrap();
         e.tx.push(Cmd::Graph(Some(Box::new(g)))).ok().unwrap();
         e.tx.push(Cmd::Workers(Some(Workers::new(PoolOptions { threads: 2, ..Default::default() })))).ok().unwrap();
         e.tx.push(Cmd::ParallelTest(ParallelTest { always: true, renders: false, patient: false })).ok().unwrap();

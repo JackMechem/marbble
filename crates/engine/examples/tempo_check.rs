@@ -138,8 +138,14 @@ fn main() {
     settle();
     let t = s.transport_info();
     check(
-        &format!("plug-in transport at 7 s: {} BPM, {:.3} quarters, bar at {:.3}, {}/{}", t.tempo, t.position_quarters, t.bar_start_quarters, t.sig_num, t.sig_den),
-        (t.tempo - 60.0).abs() < 1e-9 && (t.position_quarters - 9.0).abs() < 1e-9 && (t.bar_start_quarters - 8.0).abs() < 1e-9 && (t.sig_num, t.sig_den) == (7, 8),
+        &format!(
+            "plug-in transport at 7 s: {} BPM, {:.3} quarters, bar at {:.3}, {}/{}",
+            t.tempo, t.position_quarters, t.bar_start_quarters, t.sig_num, t.sig_den
+        ),
+        (t.tempo - 60.0).abs() < 1e-9
+            && (t.position_quarters - 9.0).abs() < 1e-9
+            && (t.bar_start_quarters - 8.0).abs() < 1e-9
+            && (t.sig_num, t.sig_den) == (7, 8),
     );
 
     // ---- undo brings the old map back to the engine ---------------------------------------
@@ -150,10 +156,16 @@ fn main() {
     s.undo();
     settle();
     let back = s.transport_info().tempo;
-    check(&format!("editing the tempo at the playhead changes that event ({changed} BPM), undo restores it ({back})"), (changed - 90.0).abs() < 1e-9 && (back - 60.0).abs() < 1e-9 && s.project.tempo_map[1].bpm == 60.0);
+    check(
+        &format!("editing the tempo at the playhead changes that event ({changed} BPM), undo restores it ({back})"),
+        (changed - 90.0).abs() < 1e-9 && (back - 60.0).abs() < 1e-9 && s.project.tempo_map[1].bpm == 60.0,
+    );
     s.undo();
     settle();
-    check("undoing the whole edit leaves one tempo again", s.project.tempo_map.is_empty() && s.project.signatures.is_empty() && s.transport_info().tempo == 120.0);
+    check(
+        "undoing the whole edit leaves one tempo again",
+        s.project.tempo_map.is_empty() && s.project.signatures.is_empty() && s.transport_info().tempo == 120.0,
+    );
     s.redo();
 
     // ---- Move MIDI Regions with Tempo, and quantize ---------------------------------------
@@ -163,7 +175,13 @@ fn main() {
     let r3 = map.bar_start(3).round() as i64;
     let rid = s.create_midi_region(inst, r3, (map.bar_start(4) - map.bar_start(3)).round() as i64).unwrap();
     let eighth = (map.sample_at(map.bar_start_q(3) + 0.5) - map.bar_start(3)).round() as i64;
-    s.set_midi_content(vec![MidiContent { region: rid, notes: vec![Note { start: eighth, length: eighth, pitch: 60, velocity: 100, muted: false }], cc: vec![], start: None, length: None }]);
+    s.set_midi_content(vec![MidiContent {
+        region: rid,
+        notes: vec![Note { start: eighth, length: eighth, pitch: 60, velocity: 100, muted: false }],
+        cc: vec![],
+        start: None,
+        length: None,
+    }]);
     let audio = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
     let _ = audio;
     // Twice as fast after bar 1: with Move MIDI the region follows its bar.
@@ -172,7 +190,10 @@ fn main() {
     let map2 = s.tempo_map();
     let (start, notes) = midi_notes(&s, rid);
     let bb = map2.bar_beat_at((start + notes[0].start) as f64);
-    check(&format!("Move MIDI keeps the region on bar 3 ({start} vs {:.0}) and its note on beat 2 ({bb:?})", map2.bar_start(3)), (start as f64 - map2.bar_start(3)).abs() <= 1.0 && bb.bar == 3 && bb.beat == 2 && bb.div == 1);
+    check(
+        &format!("Move MIDI keeps the region on bar 3 ({start} vs {:.0}) and its note on beat 2 ({bb:?})", map2.bar_start(3)),
+        (start as f64 - map2.bar_start(3)).abs() <= 1.0 && bb.bar == 3 && bb.beat == 2 && bb.div == 1,
+    );
     s.undo();
     let (start, _) = midi_notes(&s, rid);
     s.checkpoint("Tempo", None, false);
@@ -186,7 +207,13 @@ fn main() {
     let q16 = (srf * 60.0 / 120.0 / 4.0).round() as i64;
     let sixteenth = (srf / 4.0) as i64;
     let off = r3 + sixteenth * 3 + sixteenth / 3;
-    s.set_midi_content(vec![MidiContent { region: rid, notes: vec![Note { start: off - r3, length: 100, pitch: 62, velocity: 100, muted: false }], cc: vec![], start: None, length: None }]);
+    s.set_midi_content(vec![MidiContent {
+        region: rid,
+        notes: vec![Note { start: off - r3, length: 100, pitch: 62, velocity: 100, muted: false }],
+        cc: vec![],
+        start: None,
+        length: None,
+    }]);
     s.quantize_regions(&[rid], q16);
     let (start, notes) = midi_notes(&s, rid);
     check(&format!("quantize follows the tempo map ({} → {})", off, start + notes[0].start), start + notes[0].start == r3 + sixteenth * 3);
@@ -199,11 +226,20 @@ fn main() {
     let map = s.tempo_map();
     let late = map.bar_start(6).round() as i64;
     let rid2 = s.create_midi_region(inst, late, sr).unwrap();
-    s.set_midi_content(vec![MidiContent { region: rid2, notes: vec![Note { start: 0, length: sr / 4, pitch: 64, velocity: 90, muted: false }], cc: vec![], start: None, length: None }]);
+    s.set_midi_content(vec![MidiContent {
+        region: rid2,
+        notes: vec![Note { start: 0, length: sr / 4, pitch: 64, velocity: 90, muted: false }],
+        cc: vec![],
+        start: None,
+        length: None,
+    }]);
     let file = scratch.join("tempo_check.mid");
     s.export_midi(&[rid2], &file).unwrap();
     let parsed = daw_engine::smf::read(&std::fs::read(&file).unwrap()).unwrap();
-    check(&format!("the exported tempo track has the changes ({} tempos, {} signatures)", parsed.tempos.len(), parsed.signatures.len()), parsed.tempos.len() > 10 && parsed.signatures.len() == 3);
+    check(
+        &format!("the exported tempo track has the changes ({} tempos, {} signatures)", parsed.tempos.len(), parsed.signatures.len()),
+        parsed.tempos.len() > 10 && parsed.signatures.len() == 3,
+    );
 
     s.new_project();
     s.dir = scratch.join("TempoCheckImport.fermata");
@@ -212,15 +248,24 @@ fn main() {
     let fm = fresh.tempo_map();
     let (start, notes) = midi_notes(fresh, made[0]);
     let at = start + notes[0].start;
-    check(&format!("an empty project adopts the file's tempo map and signatures ({} events)", fm.events().len()), fm.signatures() == map.signatures() && (fm.bpm_at(srf) - 120.0).abs() < 0.01);
+    check(
+        &format!("an empty project adopts the file's tempo map and signatures ({} events)", fm.events().len()),
+        fm.signatures() == map.signatures() && (fm.bpm_at(srf) - 120.0).abs() < 0.01,
+    );
     check(&format!("bar positions survive the round trip ({at} vs {late})"), (at - late).abs() <= 2 && (fm.bar_start(6) - map.bar_start(6)).abs() <= 2.0);
     // The ramp comes back as steps whose durations add up.
-    check("the ramp's duration survives as steps", (fm.bar_start(3) - map.bar_start(3)).abs() <= 2.0 && (fm.bpm_at(4.0 * srf) - map.bpm_at(4.0 * srf)).abs() < 2.0);
+    check(
+        "the ramp's duration survives as steps",
+        (fm.bar_start(3) - map.bar_start(3)).abs() <= 2.0 && (fm.bpm_at(4.0 * srf) - map.bpm_at(4.0 * srf)).abs() < 2.0,
+    );
 
     // Into a project with music and another tempo, the file plays at its own times.
     let other = fresh.add_track(TrackKind::Instrument, InputSel::None, None, None).unwrap();
     fresh.set_tempo_map(vec![ev(0, 100.0, false)], false);
     let made = fresh.import_midi(&file, Some(other), 0, None).unwrap();
     let (start, notes) = midi_notes(fresh, made[0]);
-    check(&format!("into a project at another tempo, notes keep the file's timing ({} vs {late})", start + notes[0].start), (start + notes[0].start - late).abs() <= 2 && fresh.project.tempo == 100.0);
+    check(
+        &format!("into a project at another tempo, notes keep the file's timing ({} vs {late})", start + notes[0].start),
+        (start + notes[0].start - late).abs() <= 2 && fresh.project.tempo == 100.0,
+    );
 }

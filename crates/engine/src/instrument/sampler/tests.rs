@@ -45,8 +45,6 @@ fn zone(id: u64, file: &str, root: u8) -> Zone {
     Zone::new(id, file.into(), file.into(), root)
 }
 
-
-
 /// Plays `n` samples with events at absolute positions, in blocks of `block`.
 fn play(s: &mut Sampler, n: usize, block: usize, events: &[(usize, [u8; 3])], ctx: &FxContext) -> (Vec<f32>, Vec<f32>) {
     let (mut l, mut r) = (vec![0.0; n], vec![0.0; n]);
@@ -169,7 +167,12 @@ fn depths_play_in_tune() {
     let wave = sine(440.0, 44100, 3.0);
     for (bits, float) in [(16, false), (24, false), (32, false), (32, true)] {
         let path = dir.join(format!("{bits}{float}.wav"));
-        let spec = hound::WavSpec { channels: 1, sample_rate: 44100, bits_per_sample: bits, sample_format: if float { hound::SampleFormat::Float } else { hound::SampleFormat::Int } };
+        let spec = hound::WavSpec {
+            channels: 1,
+            sample_rate: 44100,
+            bits_per_sample: bits,
+            sample_format: if float { hound::SampleFormat::Float } else { hound::SampleFormat::Int },
+        };
         let mut w = hound::WavWriter::create(&path, spec).unwrap();
         for &v in &wave {
             if float {
@@ -212,7 +215,22 @@ fn aliasing_playing_up_is_measured() {
     let n = 8192;
     let w = window(n);
     let mut worst = -200.0f64;
-    for (file_hz, note_up) in [(5000.0, 12u8), (5000.0, 7), (4100.0, 11), (9000.0, 12), (3000.0, 24), (1300.0, 35), (1500.0, 36), (900.0, 47), (900.0, 48), (15000.0, 2), (18000.0, 7), (8000.0, 19), (12000.0, 12), (6000.0, 31)] {
+    for (file_hz, note_up) in [
+        (5000.0, 12u8),
+        (5000.0, 7),
+        (4100.0, 11),
+        (9000.0, 12),
+        (3000.0, 24),
+        (1300.0, 35),
+        (1500.0, 36),
+        (900.0, 47),
+        (900.0, 48),
+        (15000.0, 2),
+        (18000.0, 7),
+        (8000.0, 19),
+        (12000.0, 12),
+        (6000.0, 31),
+    ] {
         let wave = sine(file_hz, 48000, 5.0);
         let mut s = sampler(&format!("alias{file_hz}{note_up}"), 48000.0, &[("a.wav", 48000, vec![wave])], vec![zone(1, "a.wav", 36)]);
         let (l, _) = play(&mut s, n + 2048, 512, &[(0, [0x90, 36 + note_up, 127])], &CTX);
@@ -524,7 +542,12 @@ fn reset_repeats_bit_for_bit_and_block_size_doesnt_matter() {
     other.rr_group = 3;
     let mut third = zone(3, "a.wav", 60);
     third.rr_group = 3;
-    let mut s = sampler("repeat", 48000.0, &[("a.wav", 44100, vec![w.clone()]), ("b.wav", 44100, vec![w.iter().map(|v| v * 0.5).collect(), w.clone()])], vec![z, other, third]);
+    let mut s = sampler(
+        "repeat",
+        48000.0,
+        &[("a.wav", 44100, vec![w.clone()]), ("b.wav", 44100, vec![w.iter().map(|v| v * 0.5).collect(), w.clone()])],
+        vec![z, other, third],
+    );
     use params::param::*;
     s.set_param(F_TYPE, 4.0);
     s.set_param(CUTOFF, 1500.0);

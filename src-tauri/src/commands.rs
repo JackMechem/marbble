@@ -10,15 +10,18 @@
 use std::path::PathBuf;
 
 use daw_engine::audio_io::{list_devices, AudioConfig, AudioStatus, DeviceList};
+use daw_engine::controllers::{CtlTarget, Takeover};
 use daw_engine::fades::{Crossfade, DragMode, FadeInType, FadeOutType};
+use daw_engine::instrument::sampler::state::Zone;
 use daw_engine::model::{AutoMode, AutoParam, AutoPoint, ChannelEq, Group, Id, InputSel, Project, Region, TrackKind, TrackSend, MASTER_ID};
 use daw_engine::prefs::{BitDepth, ClickSettings, Prefs};
-use daw_engine::session::{BipOptions, BipSource, BounceResult, ClipInfo, InstrumentOutputs, MidiContent, PdcReport, PlayedNotes, RangeEdit, RegionParamsPatch, RenderOptions, TrackPatch};
-use daw_engine::vst3_host::{ParamInfo, PluginDescriptor};
-use daw_engine::tempo::{SigEvent, TempoEvent};
-use daw_engine::controllers::{CtlTarget, Takeover};
 use daw_engine::session::AssignmentRow;
-use daw_engine::instrument::sampler::state::Zone;
+use daw_engine::session::{
+    BipOptions, BipSource, BounceResult, ClipInfo, InstrumentOutputs, MidiContent, PdcReport, PlayedNotes, RangeEdit, RegionParamsPatch, RenderOptions,
+    TrackPatch,
+};
+use daw_engine::tempo::{SigEvent, TempoEvent};
+use daw_engine::vst3_host::{ParamInfo, PluginDescriptor};
 use daw_engine::{plugin_db, transients, Session};
 use serde::Serialize;
 use tauri::{Emitter, State};
@@ -175,7 +178,11 @@ fn edit_made(state: &State<AppState>, label: &str, plugins: bool, f: impl FnOnce
 }
 
 fn plural(n: usize, one: &str, many: &str) -> String {
-    if n > 1 { many.into() } else { one.into() }
+    if n > 1 {
+        many.into()
+    } else {
+        one.into()
+    }
 }
 
 #[tauri::command]

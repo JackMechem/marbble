@@ -4,9 +4,9 @@
 use crate::synth_dsp::alloc::unison_spread;
 use crate::synth_dsp::analog::{sub_seed, Rng, Tolerance};
 use crate::synth_dsp::filter::{cutoff_g, OtaCascade, ZdfFilter};
+use crate::synth_dsp::note_hz;
 use crate::synth_dsp::osc::{Noise, Osc, Wave};
 use crate::synth_dsp::smooth::Glide;
-use crate::synth_dsp::note_hz;
 
 pub const VOICES: usize = 6;
 const FILTER_REF_NOTE: f32 = 60.0;
@@ -221,4 +221,3 @@ impl Voice {
         }
     }
 }
-

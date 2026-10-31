@@ -34,14 +34,14 @@ use crate::recorder::{FinishedTake, Recorder, TakePreview};
 mod engine_sync;
 mod files;
 mod groups;
+mod multi_out;
 mod periodic;
 mod plugins;
 mod regions;
+mod routing;
 mod tracks;
 mod transport;
 mod undo;
-mod routing;
-mod multi_out;
 pub use multi_out::{InstrumentOutputs, OutputInfo};
 mod bounce;
 pub use bounce::{AudioFormat, BipOptions, BipSource, BitDepth, BounceResult, InPlaceRender, RenderOptions};
@@ -56,25 +56,25 @@ pub use pdc::{PdcReport, StripLatency};
 mod freeze;
 pub use freeze::FreezeRender;
 mod markers;
-mod takes;
 mod region_moves;
+mod takes;
 pub use region_moves::RegionMove;
+mod builtin;
 mod new_track_drag;
 mod tempo;
-mod builtin;
 pub use builtin::{builtin_effects, builtin_instruments, BuiltinInfo, BuiltinInstrument, FxTick};
 mod presets;
 pub use presets::EQ_SLOT;
-mod insert_order;
 mod crossfades;
+mod insert_order;
 mod region_params;
 pub use region_params::{PlayedNotes, RegionParamsPatch};
 mod drag_modes;
 mod strip_meters;
 pub use strip_meters::PeakHolds;
-mod strip_settings;
-mod marquee;
 mod controllers;
+mod marquee;
+mod strip_settings;
 pub use controllers::{controller_label, AssignmentRow};
 mod vca;
 mod vst_undo;
@@ -84,11 +84,11 @@ mod backups;
 pub use backups::BackupInfo;
 mod templates;
 pub use templates::{delete_template, list_templates, rename_template, templates_dir, UserTemplate};
-mod track_alternatives;
+mod arrange_cmds;
 mod arrangement;
 mod auto_lanes;
 mod patterns;
-mod arrange_cmds;
+mod track_alternatives;
 use arrange_cmds::SectionClip;
 
 pub const BUILTIN_SYNTH: &str = "builtin:synth";
@@ -101,13 +101,13 @@ pub const AUTOSAVE_FILE: &str = "project.autosave.json";
 mod auto_write;
 mod recovery;
 pub use recovery::{discard_journals, read_journal, recording_journals, JournalTake, RecJournal, RecordingRecovery, BACKUP_FILE};
-mod zero_crossings;
-mod region_gain;
 mod musical_moves;
+mod region_gain;
+mod sampler;
 mod threads;
 mod track_off;
 mod vst_key;
-mod sampler;
+mod zero_crossings;
 pub use sampler::{prepare_files, PreparedFile, SamplerAdded, SamplerRecording, SamplerView, SamplerWave, SfzReport, ZoneView, SAMPLES_DIR};
 #[cfg(test)]
 mod held_notes;
@@ -344,15 +344,7 @@ impl Session {
         let (live_tx, live_rx) = rtrb::RingBuffer::new(1024);
         let (rec_tx, rec_rx) = rtrb::RingBuffer::new(8192);
         let (an_tx, an_rx) = rtrb::RingBuffer::new(1 << 16);
-        let engine = Arc::new(Mutex::new(Engine::new(
-            audio_config.sample_rate as f64,
-            cmd_rx,
-            garbage_tx,
-            status.clone(),
-            live_rx,
-            rec_tx,
-            an_tx,
-        )));
+        let engine = Arc::new(Mutex::new(Engine::new(audio_config.sample_rate as f64, cmd_rx, garbage_tx, status.clone(), live_rx, rec_tx, an_tx)));
         let mut midi = MidiIo::new(live_tx);
         midi.refresh();
         let engine_rate = audio_config.sample_rate as f64;

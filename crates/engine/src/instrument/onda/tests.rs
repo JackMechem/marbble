@@ -76,7 +76,16 @@ fn level_choice_keeps_every_harmonic_under_nyquist() {
 #[test]
 fn aliasing_is_measured_low_across_the_tables_at_high_notes() {
     let mut worst = -200.0f64;
-    for (table, pos, name) in [(0.0, 0.5, "saw"), (0.0, 0.75, "square"), (3.0, 1.0, "narrow pulse"), (4.0, 1.0, "sync"), (5.0, 1.0, "FM"), (6.0, 1.0, "stepped"), (8.0, 1.0, "folded"), (9.0, 0.5, "comb")] {
+    for (table, pos, name) in [
+        (0.0, 0.5, "saw"),
+        (0.0, 0.75, "square"),
+        (3.0, 1.0, "narrow pulse"),
+        (4.0, 1.0, "sync"),
+        (5.0, 1.0, "FM"),
+        (6.0, 1.0, "stepped"),
+        (8.0, 1.0, "folded"),
+        (9.0, 0.5, "comb"),
+    ] {
         for note in [84u8, 96, 108] {
             let mut t = make(&od(), SR, 77, &plain(table, pos));
             let (l, _) = render(t.as_mut(), SR, 1 << 16, 512, &[(0, [0x90, note, 100])]);
@@ -99,7 +108,21 @@ fn aliasing_is_measured_low_across_the_tables_at_high_notes() {
 fn a_position_scan_has_no_zipper() {
     // A slow envelope sweeps the whole table on a low tone. The biggest step in a stretch of the
     // sweep, against the same tone at the positions it passes through, held still.
-    let scan_env = |e: f32| vec![(A_TABLE, 0.0), (A_POS, 0.0), (FILTER_ON, 0.0), (E1_SUSTAIN, 1.0), (A_LEVEL, 0.3), (VOLUME, 10.0), (E2_ATTACK, e), (E2_SUSTAIN, 1.0), (MOD_BASE, 1.0), (MOD_BASE + 1, 1.0), (MOD_BASE + 2, 0.5)];
+    let scan_env = |e: f32| {
+        vec![
+            (A_TABLE, 0.0),
+            (A_POS, 0.0),
+            (FILTER_ON, 0.0),
+            (E1_SUSTAIN, 1.0),
+            (A_LEVEL, 0.3),
+            (VOLUME, 10.0),
+            (E2_ATTACK, e),
+            (E2_SUSTAIN, 1.0),
+            (MOD_BASE, 1.0),
+            (MOD_BASE + 1, 1.0),
+            (MOD_BASE + 2, 0.5),
+        ]
+    };
     let run = |s: &[(u32, f32)], n: usize| {
         let mut t = make(&od(), SR, 77, s);
         render(t.as_mut(), SR, n, 512, &[(0, [0x90, 36, 100])]).0
@@ -210,14 +233,19 @@ fn unison_is_stereo_detuned_and_keeps_its_level() {
 #[test]
 fn the_filter_types_shape_differently_and_key_track_works() {
     let band = |ty: f32, res: f32, note: u8| {
-        let mut t = make(&od(), SR, 77, &[(A_POS, 0.5), (A_LEVEL, 0.5), (FILTER_TYPE, ty), (CUTOFF, 1000.0), (RESONANCE, res), (E1_SUSTAIN, 1.0), (VOLUME, 10.0)]);
+        let mut t =
+            make(&od(), SR, 77, &[(A_POS, 0.5), (A_LEVEL, 0.5), (FILTER_TYPE, ty), (CUTOFF, 1000.0), (RESONANCE, res), (E1_SUSTAIN, 1.0), (VOLUME, 10.0)]);
         let (l, _) = render(t.as_mut(), SR, 1 << 16, 512, &[(0, [0x90, note, 100])]);
         // Blackman-Harris: a rectangular window's leakage from the low partials would drown what's up there.
         let n = 1usize << 15;
-        let w: Vec<f32> = l[n..].iter().enumerate().map(|(i, v)| {
-            let a = std::f64::consts::TAU * i as f64 / n as f64;
-            v * (0.35875 - 0.48829 * a.cos() + 0.14128 * (2.0 * a).cos() - 0.01168 * (3.0 * a).cos()) as f32
-        }).collect();
+        let w: Vec<f32> = l[n..]
+            .iter()
+            .enumerate()
+            .map(|(i, v)| {
+                let a = std::f64::consts::TAU * i as f64 / n as f64;
+                v * (0.35875 - 0.48829 * a.cos() + 0.14128 * (2.0 * a).cos() - 0.01168 * (3.0 * a).cos()) as f32
+            })
+            .collect();
         let s = spectrum(&w);
         let bin = |hz: f32| (hz / SR * (1 << 15) as f32) as usize;
         let e = |a: f32, b: f32| db(s[bin(a)..bin(b)].iter().map(|v| v * v).sum::<f64>().sqrt());
@@ -316,7 +344,22 @@ fn no_nan_or_runaway_on_extreme_settings() {
     for (k, (s, d)) in [(1.0, 1.0), (2.0, 2.0), (3.0, 3.0), (4.0, 4.0), (5.0, 7.0), (6.0, 8.0), (7.0, 9.0), (8.0, 10.0)].iter().enumerate() {
         all_slots.extend(slot(k as u32, *s, *d, 1.0));
     }
-    let wide = vec![(A_VOICES, 6.0), (B_ON, 1.0), (B_VOICES, 6.0), (A_DETUNE, 1.0), (B_DETUNE, 1.0), (A_LEVEL, 1.0), (B_LEVEL, 1.0), (SUB_LEVEL, 1.0), (NOISE_LEVEL, 1.0), (VOLUME, 10.0), (POLYPHONY, 16.0), (L1_RATE, 40.0), (L2_RATE, 40.0), (L2_WAVE, 4.0)];
+    let wide = vec![
+        (A_VOICES, 6.0),
+        (B_ON, 1.0),
+        (B_VOICES, 6.0),
+        (A_DETUNE, 1.0),
+        (B_DETUNE, 1.0),
+        (A_LEVEL, 1.0),
+        (B_LEVEL, 1.0),
+        (SUB_LEVEL, 1.0),
+        (NOISE_LEVEL, 1.0),
+        (VOLUME, 10.0),
+        (POLYPHONY, 16.0),
+        (L1_RATE, 40.0),
+        (L2_RATE, 40.0),
+        (L2_WAVE, 4.0),
+    ];
     let mut cases: Vec<Vec<(u32, f32)>> = Vec::new();
     for ty in 0..7 {
         cases.push(with(with(wide.clone(), &all_slots), &[(FILTER_TYPE, ty as f32), (RESONANCE, 1.0), (DRIVE, 1.0), (CUTOFF, 20000.0)]));
@@ -341,7 +384,17 @@ fn busy() -> Vec<Event> {
 
 #[test]
 fn output_doesnt_depend_on_the_block_size() {
-    let mut s = vec![(A_VOICES, 3.0), (B_ON, 1.0), (B_TABLE, 5.0), (NOISE_LEVEL, 0.1), (SUB_LEVEL, 0.3), (L1_WAVE, 4.0), (L2_RETRIG, 1.0), (E1_RELEASE, 30.0), (FM_AMOUNT, 0.1)];
+    let mut s = vec![
+        (A_VOICES, 3.0),
+        (B_ON, 1.0),
+        (B_TABLE, 5.0),
+        (NOISE_LEVEL, 0.1),
+        (SUB_LEVEL, 0.3),
+        (L1_WAVE, 4.0),
+        (L2_RETRIG, 1.0),
+        (E1_RELEASE, 30.0),
+        (FM_AMOUNT, 0.1),
+    ];
     s.extend(slot(0, 3.0, 1.0, 0.4));
     s.extend(slot(1, 4.0, 7.0, 0.3));
     s.extend(slot(2, 1.0, 2.0, 0.3));
@@ -353,7 +406,8 @@ fn output_doesnt_depend_on_the_block_size() {
 #[test]
 fn renders_repeat_and_seed_matters() {
     let s = [(A_VOICES, 4.0), (L1_WAVE, 4.0), (NOISE_LEVEL, 0.2)];
-    let events = [(0usize, [0x90, 48, 100]), (20000, [0x80, 48, 0]), (24000, [0x90, 55, 100]), (40000, [0xB0, 1, 90]), (41000, [0xE0, 0, 90]), (42000, [0xB0, 64, 127])];
+    let events =
+        [(0usize, [0x90, 48, 100]), (20000, [0x80, 48, 0]), (24000, [0x90, 55, 100]), (40000, [0xB0, 1, 90]), (41000, [0xE0, 0, 90]), (42000, [0xB0, 64, 127])];
     assert_repeats(&od(), &s, &events, 96000);
     assert_seed_matters(&od(), &s, &events, 48000);
 }

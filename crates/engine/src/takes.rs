@@ -440,14 +440,22 @@ pub fn pass_pieces_edged(r: &Region, f: &TakeFolder, ps: i64, pl: i64, xfade: i6
             let fade_in = if joined_in {
                 (start, hb_in + ext_in)
             } else if a == tt0 - lead {
-                if first_pass { own_in } else { (start, 0) }
+                if first_pass {
+                    own_in
+                } else {
+                    (start, 0)
+                }
             } else {
                 (start, short)
             };
             let fade_out = if joined_out {
                 (tl(b) - hb_out, hb_out + ext_out)
             } else if b == tt0 + pl + tail {
-                if last_pass { own_out } else { (stop, 0) }
+                if last_pass {
+                    own_out
+                } else {
+                    (stop, 0)
+                }
             } else {
                 (stop - short, short)
             };
@@ -563,7 +571,17 @@ mod tests {
         TakeFolder {
             takes: takes
                 .iter()
-                .map(|&(id, start, end)| Take { id, name: format!("Take {id}"), clip: id * 10, offset: 1000 * id as i64, start, end, gain_db: 0.0, notes: Vec::new(), cc: Vec::new() })
+                .map(|&(id, start, end)| Take {
+                    id,
+                    name: format!("Take {id}"),
+                    clip: id * 10,
+                    offset: 1000 * id as i64,
+                    start,
+                    end,
+                    gain_db: 0.0,
+                    notes: Vec::new(),
+                    cc: Vec::new(),
+                })
                 .collect(),
             ..TakeFolder::new()
         }
@@ -680,7 +698,17 @@ mod tests {
     fn midi_takes_window_and_store() {
         let note = |start, pitch| Note { start, length: 10, pitch, velocity: 100, muted: false };
         let mut f = TakeFolder::new();
-        f.takes.push(Take { id: 1, name: "Take 1".into(), clip: 0, offset: 0, start: 0, end: 1000, gain_db: 0.0, notes: vec![note(50, 60), note(500, 62)], cc: Vec::new() });
+        f.takes.push(Take {
+            id: 1,
+            name: "Take 1".into(),
+            clip: 0,
+            offset: 0,
+            start: 0,
+            end: 1000,
+            gain_db: 0.0,
+            notes: vec![note(50, 60), note(500, 62)],
+            cc: Vec::new(),
+        });
         f.takes.push(Take { id: 2, name: "Take 2".into(), clip: 0, offset: 0, start: 0, end: 1000, gain_db: 0.0, notes: vec![note(300, 72)], cc: Vec::new() });
         assert_eq!(f.midi_take(), Some(2), "the newest without a comp");
         f.select_whole(1);

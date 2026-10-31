@@ -266,10 +266,7 @@ fn crossfadeable(r: &Region) -> bool {
 /// end, its loop end for a loop) that runs on past it. None when a gap follows.
 pub fn following<'a>(regions: &'a [Region], a: &Region) -> Option<&'a Region> {
     let a_end = a.end();
-    regions
-        .iter()
-        .filter(|b| b.id != a.id && crossfadeable(b) && b.start > a.start && b.start <= a_end && b.end() > a_end)
-        .min_by_key(|b| (b.start, b.id))
+    regions.iter().filter(|b| b.id != a.id && crossfadeable(b) && b.start > a.start && b.start <= a_end && b.end() > a_end).min_by_key(|b| (b.start, b.id))
 }
 
 /// How much audio a region's files have to spare for a crossfade: before its start, and past

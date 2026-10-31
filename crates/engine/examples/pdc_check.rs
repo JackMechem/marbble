@@ -162,7 +162,10 @@ fn main() {
         let l = lag(&dry, &wet, 1000);
         let l_src = lag(&src, &dry, 1000);
         let kind = if pre { "pre" } else { "post" };
-        ok &= check(&format!("{kind}-fader send through a latent aux lines up with the dry path (lag {l}, wet rms {:.3}, timeline lag {l_src})", rms(&wet)), l == 0 && l_src == 0 && rms(&wet) > 0.01);
+        ok &= check(
+            &format!("{kind}-fader send through a latent aux lines up with the dry path (lag {l}, wet rms {:.3}, timeline lag {l_src})", rms(&wet)),
+            l == 0 && l_src == 0 && rms(&wet) > 0.01,
+        );
     }
     let r = s.pdc_report();
     let send_delay = r.strips.iter().find(|x| x.track == c).map(|x| x.delay).unwrap_or(0);
@@ -212,7 +215,8 @@ fn main() {
     s.set_prefs(prefs.clone());
     let mb = mix_of(&mut s, &all, &[b], len);
     let l = lag(&ma, &mb, 1000);
-    ok &= check(&format!("renders in Low Latency Mode stay aligned (lag {l}, low latency {})", s.pdc_report().low_latency), l == 0 && s.pdc_report().low_latency);
+    ok &=
+        check(&format!("renders in Low Latency Mode stay aligned (lag {l}, low latency {})", s.pdc_report().low_latency), l == 0 && s.pdc_report().low_latency);
 
     println!("{}", if ok { "ALL PASS" } else { "SOME FAILED" });
     if !ok || FAILED.load(std::sync::atomic::Ordering::Relaxed) {

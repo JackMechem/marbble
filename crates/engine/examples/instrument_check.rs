@@ -95,7 +95,10 @@ fn check_model(scratch: &std::path::Path, plugin: &str, edit: u32, to: f32) {
     let group_ok = daw_engine::session::builtin_instruments().iter().any(|i| i.id == plugin && !i.sections.is_empty());
     check(&format!("{name}: the registry lists it with its sections"), group_ok);
     let base = render(&mut s);
-    check(&format!("{name}: a MIDI region renders (peak {:.3})", peak(&base)), peak(&base) > 0.01 && peak(&base) < 1.6 && base.iter().flatten().all(|v| v.is_finite()));
+    check(
+        &format!("{name}: a MIDI region renders (peak {:.3})", peak(&base)),
+        peak(&base) > 0.01 && peak(&base) < 1.6 && base.iter().flatten().all(|v| v.is_finite()),
+    );
     check(&format!("{name}: two renders are bit-identical"), same(&base, &render(&mut s)));
 
     // A parameter edit, undo and redo.
@@ -180,19 +183,28 @@ fn main() {
 
     // The registry.
     let listed = daw_engine::session::builtin_instruments();
-    check("the registry lists Fermata Synth and Fermata Tre", listed.iter().any(|i| i.id == BUILTIN_SYNTH && i.name == "Fermata Synth") && listed.iter().any(|i| i.id == TRE && !i.sections.is_empty()));
+    check(
+        "the registry lists Fermata Synth and Fermata Tre",
+        listed.iter().any(|i| i.id == BUILTIN_SYNTH && i.name == "Fermata Synth") && listed.iter().any(|i| i.id == TRE && !i.sections.is_empty()),
+    );
     check("instruments aren't in the effects' list", daw_engine::session::builtin_effects().iter().all(|e| e.id != TRE && e.id != BUILTIN_SYNTH));
 
     // Loading.
     let a = track(&mut s, TRE);
     let slot = s.project.track(a).unwrap().instrument.clone().unwrap();
-    check(&format!("a new track takes it, named for it ({})", s.project.track(a).unwrap().name), slot.plugin_id == TRE && slot.name == "Fermata Tre" && s.project.track(a).unwrap().name == "Fermata Tre");
+    check(
+        &format!("a new track takes it, named for it ({})", s.project.track(a).unwrap().name),
+        slot.plugin_id == TRE && slot.name == "Fermata Tre" && s.project.track(a).unwrap().name == "Fermata Tre",
+    );
     check("its values are written out in the project", slot.params.len() == daw_engine::instrument::find(TRE).unwrap().params.len());
     check("it isn't reported missing", s.missing_plugins().is_empty());
     check("an instrument doesn't go in an Audio FX slot", s.set_plugin(a, 0, TRE).is_err());
     check("an effect doesn't go in the instrument slot", s.set_plugin(a, SLOT, "builtin:reverb").is_err());
     let plain = s.add_track(TrackKind::Instrument, InputSel::None, None, None).unwrap();
-    check("a new instrument track without a choice is still Fermata Synth", s.project.track(plain).unwrap().instrument.as_ref().unwrap().plugin_id == BUILTIN_SYNTH);
+    check(
+        "a new instrument track without a choice is still Fermata Synth",
+        s.project.track(plain).unwrap().instrument.as_ref().unwrap().plugin_id == BUILTIN_SYNTH,
+    );
     s.delete_track(plain);
 
     // Rendering.
@@ -222,7 +234,10 @@ fn main() {
     // Automation.
     let infos = s.plugin_params(uid);
     let cutoff_norm = |hz: f32| (hz / 20.0).ln() / 1000f32.ln();
-    check(&format!("the lane picker lists its {} parameters", infos.len()), infos.len() > 40 && infos.iter().any(|p| p.name == "Cutoff" && p.id == param::CUTOFF));
+    check(
+        &format!("the lane picker lists its {} parameters", infos.len()),
+        infos.len() > 40 && infos.iter().any(|p| p.name == "Cutoff" && p.id == param::CUTOFF),
+    );
     let lane = AutoParam::Plugin { uid, param: param::CUTOFF, name: "Fermata Tre: Cutoff".into() };
     let pt = |pos: i64, value: f32| daw_engine::model::AutoPoint { pos, value, curve: 0.0 };
     s.set_automation_lane(a, lane.clone(), vec![pt(0, cutoff_norm(100.0)), pt(RATE * 2, cutoff_norm(3000.0))]);
@@ -310,7 +325,10 @@ fn main() {
     let off = diff(&cut(&frozen), &cut(&live_long));
     let ringing = frozen[0][upto + RATE as usize / 4..upto + RATE as usize / 2].iter().fold(0.0f32, |m, v| m.max(v.abs()));
     let wanted = live_long[0][upto + RATE as usize / 4..upto + RATE as usize / 2].iter().fold(0.0f32, |m, v| m.max(v.abs()));
-    check(&format!("a frozen track plays what it played live, with its tail (off by {off:.5}; tail {ringing:.3}, live {wanted:.3})"), off < 2e-3 && ringing > 0.25 * wanted && ringing < 4.0 * wanted);
+    check(
+        &format!("a frozen track plays what it played live, with its tail (off by {off:.5}; tail {ringing:.3}, live {wanted:.3})"),
+        off < 2e-3 && ringing > 0.25 * wanted && ringing < 4.0 * wanted,
+    );
     s.unfreeze_track(a).unwrap();
     check("unfrozen, it renders live again, bit for bit", same(&live, &render(&mut s)));
 
@@ -419,8 +437,16 @@ fn main() {
     drop(s);
 
     // Every model after Tre: the whole round through a real session.
-    use daw_engine::instrument::{cinque::params::param as cq, onda::params::param as od, sedici::params::param as sd, sei::params::param as se, uno::params::param as un};
-    for (plugin, edit, to) in [("builtin:sei", se::CUTOFF, 300.0f32), ("builtin:cinque", cq::CUTOFF, 300.0), ("builtin:uno", un::CUTOFF, 220.0), ("builtin:sedici", sd::O1 + sd::LEVEL, 50.0), ("builtin:onda", od::CUTOFF, 300.0)] {
+    use daw_engine::instrument::{
+        cinque::params::param as cq, onda::params::param as od, sedici::params::param as sd, sei::params::param as se, uno::params::param as un,
+    };
+    for (plugin, edit, to) in [
+        ("builtin:sei", se::CUTOFF, 300.0f32),
+        ("builtin:cinque", cq::CUTOFF, 300.0),
+        ("builtin:uno", un::CUTOFF, 220.0),
+        ("builtin:sedici", sd::O1 + sd::LEVEL, 50.0),
+        ("builtin:onda", od::CUTOFF, 300.0),
+    ] {
         check_model(&scratch, plugin, edit, to);
     }
 

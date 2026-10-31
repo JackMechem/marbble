@@ -145,7 +145,10 @@ fn main() {
     s.checkpoint("Rename Comp", None, false);
     s.rename_comp(folder, 2, "Lead".into());
     let f = region(&s, folder).takes.unwrap();
-    check(&format!("Duplicate Comp copies the comp heard and Rename names it ({:?})", f.comp_names()), f.comp_names() == ["Comp 1", "Comp 2", "Lead"] && f.comp_name() == "Lead" && render(&mut s, j, 3 * j) == comp2);
+    check(
+        &format!("Duplicate Comp copies the comp heard and Rename names it ({:?})", f.comp_names()),
+        f.comp_names() == ["Comp 1", "Comp 2", "Lead"] && f.comp_name() == "Lead" && render(&mut s, j, 3 * j) == comp2,
+    );
     s.checkpoint("Delete Comp", None, false);
     s.delete_comp(folder, 2);
     s.delete_comp(folder, 1);
@@ -171,7 +174,10 @@ fn main() {
     p.editing.crossfade_ms = 50.0;
     s.set_prefs(p);
     let w50 = width(&mut s);
-    check(&format!("the comp boundary crossfades over the Crossfade Time ({w20} and {w50} frames)"), (w20 - ms(20.0)).abs() <= ms(20.0) / 30 && (w50 - ms(50.0)).abs() <= ms(50.0) / 30);
+    check(
+        &format!("the comp boundary crossfades over the Crossfade Time ({w20} and {w50} frames)"),
+        (w20 - ms(20.0)).abs() <= ms(20.0) / 30 && (w50 - ms(50.0)).abs() <= ms(50.0) / 30,
+    );
     s.delete_track(t);
 
     let t = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
@@ -189,7 +195,10 @@ fn main() {
     p.editing.crossfade_ms = 20.0;
     s.set_prefs(p);
     s.move_region(b, 2 * j, None);
-    check(&format!("X-Fade crossfades butted regions over the Crossfade Time ({x50}, then {})", fade_out(&s, a)), x50 == ms(50.0) && fade_out(&s, a) == ms(20.0));
+    check(
+        &format!("X-Fade crossfades butted regions over the Crossfade Time ({x50}, then {})", fade_out(&s, a)),
+        x50 == ms(50.0) && fade_out(&s, a) == ms(20.0),
+    );
     s.set_drag_mode(DragMode::Overlap);
     s.delete_track(t);
 

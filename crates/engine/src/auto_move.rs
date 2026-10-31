@@ -85,7 +85,9 @@ pub(crate) fn prune(mut pts: Vec<(AutoPoint, bool)>) -> Vec<AutoPoint> {
                 (None, None) => false,
                 (None, Some(n)) => same(n.value, p.value),
                 (Some(a), None) => same(a.value, p.value),
-                (Some(a), Some(b)) if a.pos == p.pos || b.pos == p.pos => (a.pos == p.pos && same(a.value, p.value)) || (b.pos == p.pos && same(b.value, p.value)),
+                (Some(a), Some(b)) if a.pos == p.pos || b.pos == p.pos => {
+                    (a.pos == p.pos && same(a.value, p.value)) || (b.pos == p.pos && same(b.value, p.value))
+                }
                 (Some(a), Some(b)) => same(a.value + (b.value - a.value) * ((p.pos - a.pos) as f64 / (b.pos - a.pos) as f64) as f32, p.value),
             };
         if redundant {

@@ -86,7 +86,24 @@ fn main() {
     let dpath = audio_dir.join("Drum Loop.wav");
     write_wav(&dpath, drums(4));
     let gpath = audio_dir.join("Pluck.wav");
-    let ns = [(0.0, 196.0), (0.5, 246.9), (1.0, 293.7), (1.5, 392.0), (2.0, 174.6), (2.5, 220.0), (3.0, 261.6), (3.5, 349.2), (4.0, 164.8), (4.5, 196.0), (5.0, 246.9), (5.5, 329.6), (6.0, 174.6), (6.5, 220.0), (7.0, 261.6), (7.5, 349.2)];
+    let ns = [
+        (0.0, 196.0),
+        (0.5, 246.9),
+        (1.0, 293.7),
+        (1.5, 392.0),
+        (2.0, 174.6),
+        (2.5, 220.0),
+        (3.0, 261.6),
+        (3.5, 349.2),
+        (4.0, 164.8),
+        (4.5, 196.0),
+        (5.0, 246.9),
+        (5.5, 329.6),
+        (6.0, 174.6),
+        (6.5, 220.0),
+        (7.0, 261.6),
+        (7.5, 349.2),
+    ];
     write_wav(&gpath, pluck(&ns, 8.5));
 
     let bar = (SR * 2) as i64;
@@ -108,7 +125,19 @@ fn main() {
         notes.push(Note { start: i as i64 * 4 * beat + 2 * beat, length: beat, pitch: chord[2] + 12, velocity: 100, muted: false });
     }
     let id = s.project.alloc_id();
-    s.project.track_mut(keys).unwrap().regions.push(Region { id, name: "Pad".into(), start: 0, length: 4 * bar, muted: false, color: None, content: RegionContent::Midi { notes, cc: Vec::new() }, loop_end: None, takes: None, params: Default::default(), pattern: None });
+    s.project.track_mut(keys).unwrap().regions.push(Region {
+        id,
+        name: "Pad".into(),
+        start: 0,
+        length: 4 * bar,
+        muted: false,
+        color: None,
+        content: RegionContent::Midi { notes, cc: Vec::new() },
+        loop_end: None,
+        takes: None,
+        params: Default::default(),
+        pattern: None,
+    });
     if let Some(p) = s.plugins.iter().find(|p| p.name == "ZamCompX2").cloned() {
         s.set_plugin(drums_t, 0, &p.id).unwrap();
     }

@@ -50,13 +50,21 @@ fn mute(s: &mut Session, id: Id, on: bool) {
 /// Finds a parameter by name and sets it, by normalized value.
 fn set_param(s: &mut Session, uid: Id, name: &str, value: f64) {
     let params = s.plugin_params(uid);
-    let p = params.iter().find(|p| p.name.to_lowercase().contains(&name.to_lowercase())).unwrap_or_else(|| panic!("no parameter {name}: {:?}", params.iter().map(|p| p.name.as_str()).collect::<Vec<_>>()));
+    let p = params
+        .iter()
+        .find(|p| p.name.to_lowercase().contains(&name.to_lowercase()))
+        .unwrap_or_else(|| panic!("no parameter {name}: {:?}", params.iter().map(|p| p.name.as_str()).collect::<Vec<_>>()));
     s.edit_vst_param(uid, p.id, value);
 }
 
 fn lsp_plugins() -> Vec<PluginDescriptor> {
     let bundles = vst3_host::scan::find_bundles(&vst3_host::scan::default_search_paths());
-    bundles.iter().filter(|b| b.to_string_lossy().contains("lsp-plugins")).flat_map(|b| vst3_host::scan::scan_bundle(b).unwrap_or_default()).filter(|d| d.name.contains("Compressor") || d.name.contains("Gate")).collect()
+    bundles
+        .iter()
+        .filter(|b| b.to_string_lossy().contains("lsp-plugins"))
+        .flat_map(|b| vst3_host::scan::scan_bundle(b).unwrap_or_default())
+        .filter(|d| d.name.contains("Compressor") || d.name.contains("Gate"))
+        .collect()
 }
 
 fn main() {
@@ -101,7 +109,10 @@ fn main() {
     mute(&mut s, key, true);
     let none_silent = level_of(&mut s);
     mute(&mut s, key, false);
-    check(&format!("no source: the other track makes no difference ({none_loud:.2} and {none_silent:.2} dB, dry {dry:.2} dB)"), (none_loud - none_silent).abs() < 0.01 && (none_loud - dry).abs() < 0.5);
+    check(
+        &format!("no source: the other track makes no difference ({none_loud:.2} and {none_silent:.2} dB, dry {dry:.2} dB)"),
+        (none_loud - none_silent).abs() < 0.01 && (none_loud - dry).abs() < 0.5,
+    );
     s.set_sidechain(main, 0, Some(key)).unwrap();
     s.set_sidechain_pre(main, 0, true).unwrap();
     check("choosing a source activates it", s.vst_key_active(uid) == Some(true));
@@ -111,7 +122,10 @@ fn main() {
     mute(&mut s, key, true);
     let silent = level_of(&mut s);
     mute(&mut s, key, false);
-    check(&format!("Sidechain Compressor: a loud key compresses ({loud:.2} dB), a silent one doesn't ({silent:.2} dB)"), loud < silent - 12.0 && (silent - dry).abs() < 0.5);
+    check(
+        &format!("Sidechain Compressor: a loud key compresses ({loud:.2} dB), a silent one doesn't ({silent:.2} dB)"),
+        loud < silent - 12.0 && (silent - dry).abs() < 0.5,
+    );
 
     // ---- the same source through the fader, after it ------------------------------------------
     s.set_sidechain_pre(main, 0, false).unwrap();
@@ -127,7 +141,10 @@ fn main() {
     off(&mut s, main, true);
     let off_main = level_of(&mut s);
     off(&mut s, main, false);
-    check(&format!("an Off track with a keyed plug-in is silent ({off_main:.2} dB) and back on it's keyed ({:.2} dB)", level_of(&mut s)), off_main < -100.0 && (level_of(&mut s) - loud).abs() < 0.5);
+    check(
+        &format!("an Off track with a keyed plug-in is silent ({off_main:.2} dB) and back on it's keyed ({:.2} dB)", level_of(&mut s)),
+        off_main < -100.0 && (level_of(&mut s) - loud).abs() < 0.5,
+    );
     off(&mut s, main, true);
     s.set_sidechain(main, 0, None).unwrap();
     s.set_sidechain(main, 0, Some(key)).unwrap();
@@ -182,7 +199,10 @@ fn main() {
     s.checkpoint("Delete", None, true);
     s.delete_track(key);
     let gone = s.project.track(main).unwrap().inserts[0].as_ref().unwrap().sidechain.is_none();
-    check(&format!("deleting the source takes the key off ({:.2} dB)", level_of(&mut s)), gone && s.vst_key_active(uid) == Some(false) && (level_of(&mut s) - dry).abs() < 0.5);
+    check(
+        &format!("deleting the source takes the key off ({:.2} dB)", level_of(&mut s)),
+        gone && s.vst_key_active(uid) == Some(false) && (level_of(&mut s) - dry).abs() < 0.5,
+    );
     s.undo();
     let active = s.vst_key_active(uid) == Some(true) && s.project.track(main).unwrap().inserts[0].as_ref().is_some_and(|x| x.sidechain == Some(key));
     check(&format!("undo brings source and key back ({:.2} dB)", level_of(&mut s)), active && (level_of(&mut s) - loud).abs() < 0.5);
@@ -216,7 +236,10 @@ fn main() {
     mute(&mut s, copy, false);
     let dup = s.project.track(copy).unwrap().inserts[0].clone().unwrap();
     let dup_level = level_of(&mut s);
-    check(&format!("a duplicate is keyed by the same source, with the same settings ({dup_level:.2} dB)"), dup.sidechain == Some(key) && dup.uid != uid_now && s.vst_key_active(dup.uid) == Some(true) && (dup_level - loud).abs() < 0.5);
+    check(
+        &format!("a duplicate is keyed by the same source, with the same settings ({dup_level:.2} dB)"),
+        dup.sidechain == Some(key) && dup.uid != uid_now && s.vst_key_active(dup.uid) == Some(true) && (dup_level - loud).abs() < 0.5,
+    );
     s.delete_track(copy);
     mute(&mut s, main, false);
     let strip = s.copy_strip(main).unwrap();
@@ -225,7 +248,10 @@ fn main() {
     s.paste_strip(&[other], &strip).unwrap();
     let pasted = s.project.track(other).unwrap().inserts[0].clone().unwrap();
     let strip_level = level_of(&mut s);
-    check(&format!("a pasted channel strip keeps the key ({strip_level:.2} dB)"), pasted.sidechain == Some(key) && s.vst_key_active(pasted.uid) == Some(true) && (strip_level - loud).abs() < 0.5);
+    check(
+        &format!("a pasted channel strip keeps the key ({strip_level:.2} dB)"),
+        pasted.sidechain == Some(key) && s.vst_key_active(pasted.uid) == Some(true) && (strip_level - loud).abs() < 0.5,
+    );
     s.paste_strip(&[key], &strip).unwrap();
     let own = s.project.track(key).unwrap().inserts[0].clone().unwrap();
     check("pasted onto the source itself the key stays behind", own.sidechain.is_none() && s.vst_key_active(own.uid) == Some(false));
@@ -255,7 +281,10 @@ fn main() {
     mute(&mut s, key, true);
     let closed = level_of(&mut s);
     mute(&mut s, key, false);
-    check(&format!("Sidechain Gate: a loud key opens it ({open:.2} dB), a silent one closes it ({closed:.2} dB)"), open > closed + 6.0 && (open - dry).abs() < 3.0);
+    check(
+        &format!("Sidechain Gate: a loud key opens it ({open:.2} dB), a silent one closes it ({closed:.2} dB)"),
+        open > closed + 6.0 && (open - dry).abs() < 3.0,
+    );
     s.remove_plugin(main, 0);
 
     // ---- a mono aux input gets a mix-down ---------------------------------------------------------
@@ -289,7 +318,10 @@ fn main() {
     s.set_sidechain(main, 0, None).unwrap();
     let unkeyed = s.pdc_total();
     s.set_sidechain(main, 0, Some(key)).unwrap();
-    check(&format!("a keyed plug-in's latency reaches delay compensation ({} frames, {unkeyed} without the key)", s.pdc_total()), unkeyed > 0 && s.pdc_total() == unkeyed);
+    check(
+        &format!("a keyed plug-in's latency reaches delay compensation ({} frames, {unkeyed} without the key)", s.pdc_total()),
+        unkeyed > 0 && s.pdc_total() == unkeyed,
+    );
     set_param(&mut s, uid, "Sidechain lookahead", 0.0);
     render(&mut s);
     s.set_sidechain(main, 0, None).unwrap();
@@ -298,18 +330,25 @@ fn main() {
     s.open(&dir).unwrap();
     let slot = s.project.track(main).unwrap().inserts[0].clone().unwrap();
     let reopened = level_of(&mut s);
-    check(&format!("reopened it's keyed, plug-in settings included ({saved_level:.2} and {reopened:.2} dB)"), slot.sidechain == Some(key) && slot.sidechain_pre && s.vst_key_active(slot.uid) == Some(true) && (reopened - saved_level).abs() < 0.1);
+    check(
+        &format!("reopened it's keyed, plug-in settings included ({saved_level:.2} and {reopened:.2} dB)"),
+        slot.sidechain == Some(key) && slot.sidechain_pre && s.vst_key_active(slot.uid) == Some(true) && (reopened - saved_level).abs() < 0.1,
+    );
 
     // Without the plug-in the key stays in the project; only clearing it is possible.
     let mut t = Session::new(cfg.clone(), Vec::new());
     t.open(&dir).unwrap();
     let held = t.project.track(main).unwrap().inserts[0].clone().unwrap();
-    check("a missing plug-in keeps its key source", held.sidechain == Some(key) && t.missing_plugins().iter().any(|m| m.uid == held.uid) && t.vst_key_inputs().is_empty());
+    check(
+        "a missing plug-in keeps its key source",
+        held.sidechain == Some(key) && t.missing_plugins().iter().any(|m| m.uid == held.uid) && t.vst_key_inputs().is_empty(),
+    );
     check("but can't be given another", t.set_sidechain(main, 0, Some(key)).is_err());
     let moved = t.save(Some(scratch.join("Moved.fermata"))).unwrap();
     let json = std::fs::read_to_string(moved.join("project.json")).unwrap();
     let v: serde_json::Value = serde_json::from_str(&json).unwrap();
-    let kept = v["tracks"].as_array().unwrap().iter().flat_map(|t| t["inserts"].as_array().unwrap().iter()).any(|i| i["sidechain"].as_u64() == Some(key as u64));
+    let kept =
+        v["tracks"].as_array().unwrap().iter().flat_map(|t| t["inserts"].as_array().unwrap().iter()).any(|i| i["sidechain"].as_u64() == Some(key as u64));
     check("and saving there keeps it for the computer that has the plug-in", kept);
     drop(t);
 
@@ -327,7 +366,10 @@ fn main() {
     s.open(&moved).unwrap();
     let slot = s.project.track(main).unwrap().inserts[0].clone().unwrap();
     let old = level_of(&mut s);
-    check(&format!("a project from before side-chains loads with the aux input inactive ({old:.2} dB)"), slot.sidechain.is_none() && s.vst_key_active(slot.uid) == Some(false) && (old - dry).abs() < 0.5);
+    check(
+        &format!("a project from before side-chains loads with the aux input inactive ({old:.2} dB)"),
+        slot.sidechain.is_none() && s.vst_key_active(slot.uid) == Some(false) && (old - dry).abs() < 0.5,
+    );
 
     std::process::exit(FAILED.load(std::sync::atomic::Ordering::Relaxed) as i32);
 }

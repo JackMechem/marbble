@@ -126,7 +126,11 @@ fn parse(s: &str) -> Diagram {
         let (a, b) = x.split_once('>').unwrap();
         (a.parse().unwrap(), b.parse().unwrap())
     };
-    Diagram { edges: parts[0].split_whitespace().map(pair).collect(), carriers: parts[1].split_whitespace().map(|x| x.parse().unwrap()).collect(), fb: pair(parts[2].trim()) }
+    Diagram {
+        edges: parts[0].split_whitespace().map(pair).collect(),
+        carriers: parts[1].split_whitespace().map(|x| x.parse().unwrap()).collect(),
+        fb: pair(parts[2].trim()),
+    }
 }
 
 #[test]
@@ -450,7 +454,13 @@ fn no_nan_or_runaway_on_extreme_settings() {
         }
         s
     };
-    let cases: Vec<Vec<(u32, f32)>> = vec![all(32.0, 7.0), all(1.0, 7.0), all(4.0, 7.0), all(6.0, 7.0), with(all(16.0, 7.0), &[(PL1, 99.0), (PL2, 0.0), (PR1, 99.0), (PR2, 99.0), (LFO_PMD, 99.0), (LFO_AMD, 99.0), (LFO_PMS, 7.0), (LFO_SPEED, 99.0)])];
+    let cases: Vec<Vec<(u32, f32)>> = vec![
+        all(32.0, 7.0),
+        all(1.0, 7.0),
+        all(4.0, 7.0),
+        all(6.0, 7.0),
+        with(all(16.0, 7.0), &[(PL1, 99.0), (PL2, 0.0), (PR1, 99.0), (PR2, 99.0), (LFO_PMD, 99.0), (LFO_AMD, 99.0), (LFO_PMS, 7.0), (LFO_SPEED, 99.0)]),
+    ];
     assert_no_runaway(&sd(), &cases, 16.0);
     assert_survives_param_jumps(&sd(), 32.0);
 }
@@ -470,7 +480,18 @@ fn busy() -> Vec<Event> {
 
 #[test]
 fn output_doesnt_depend_on_the_block_size() {
-    let s = [(ALGORITHM, 1.0), (FEEDBACK, 5.0), (O2 + LEVEL, 70.0), (O3 + LEVEL, 80.0), (O4 + LEVEL, 60.0), (LFO_PMD, 20.0), (LFO_WAVE, 5.0), (LFO_SYNC, 0.0), (O1 + R4, 70.0), (O3 + R4, 70.0)];
+    let s = [
+        (ALGORITHM, 1.0),
+        (FEEDBACK, 5.0),
+        (O2 + LEVEL, 70.0),
+        (O3 + LEVEL, 80.0),
+        (O4 + LEVEL, 60.0),
+        (LFO_PMD, 20.0),
+        (LFO_WAVE, 5.0),
+        (LFO_SYNC, 0.0),
+        (O1 + R4, 70.0),
+        (O3 + R4, 70.0),
+    ];
     assert_block_size_independent(&sd(), &s, &busy(), 180_000);
     let s = [(POLY, 1.0), (PORTA, 40.0), (KEY_SYNC, 0.0), (ALGORITHM, 4.0), (FEEDBACK, 7.0), (O4 + LEVEL, 80.0), (O6 + LEVEL, 70.0)];
     assert_block_size_independent(&sd(), &s, &busy(), 180_000);
@@ -479,7 +500,8 @@ fn output_doesnt_depend_on_the_block_size() {
 #[test]
 fn renders_repeat_and_seed_matters() {
     let s = [(KEY_SYNC, 0.0), (ALGORITHM, 5.0), (O2 + LEVEL, 70.0), (LFO_WAVE, 5.0), (LFO_PMD, 30.0), (LFO_SYNC, 0.0)];
-    let events = [(0usize, [0x90, 48, 100]), (20000, [0x80, 48, 0]), (24000, [0x90, 55, 100]), (40000, [0xB0, 1, 90]), (41000, [0xE0, 0, 90]), (42000, [0xB0, 64, 127])];
+    let events =
+        [(0usize, [0x90, 48, 100]), (20000, [0x80, 48, 0]), (24000, [0x90, 55, 100]), (40000, [0xB0, 1, 90]), (41000, [0xE0, 0, 90]), (42000, [0xB0, 64, 127])];
     assert_repeats(&sd(), &s, &events, 96000);
     // Free-running operators and sample-and-hold are what a seed changes; with key sync on and no
     // random LFO there's nothing to differ, as on the hardware.

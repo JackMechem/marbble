@@ -75,7 +75,10 @@ fn glide(s: &mut Session, what: &str, track: Id, reference: &[Vec<f32>], edit: &
     let off = off_from(&out, reference, change, settled);
     let before_edit: Vec<Vec<f32>> = out.iter().map(|c| c[..at].to_vec()).collect();
     let untouched = off_from(&before_edit, reference, 0, 0);
-    check(&format!("{what}: after the glide the output is the sine exactly {change} frames later (diff {off:.2e}; before the edit {untouched:.2e})"), off < 1e-6 && untouched < 1e-6);
+    check(
+        &format!("{what}: after the glide the output is the sine exactly {change} frames later (diff {off:.2e}; before the edit {untouched:.2e})"),
+        off < 1e-6 && untouched < 1e-6,
+    );
 }
 
 fn main() {

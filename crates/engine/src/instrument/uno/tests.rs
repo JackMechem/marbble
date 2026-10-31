@@ -27,7 +27,11 @@ fn tuned_within_a_cent_across_the_range_at_each_rate() {
 
 #[test]
 fn aliasing_end_to_end() {
-    for (s, note, what) in [(clean(), 84u8, "saw"), (with(clean(), &[(WAVE, 1.0)]), 84, "square"), (with(clean(), &[(RESONANCE, 9.0), (CUTOFF, 3000.0)]), 84, "saw with resonance")] {
+    for (s, note, what) in [
+        (clean(), 84u8, "saw"),
+        (with(clean(), &[(WAVE, 1.0)]), 84, "square"),
+        (with(clean(), &[(RESONANCE, 9.0), (CUTOFF, 3000.0)]), 84, "saw with resonance"),
+    ] {
         let mut t = make(&uno(), SR, 77, &s);
         let (l, _) = render(t.as_mut(), SR, 1 << 17, 512, &[(0, [0x90, note, 100])]);
         // The VEG's long decay would smear the lines: normalize it out for the measurement.

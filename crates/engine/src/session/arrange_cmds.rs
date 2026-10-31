@@ -129,7 +129,14 @@ impl Session {
 
     /// The regions on `scope`'s tracks (every track for None) that lie within `a..b`.
     fn regions_within(&self, a: i64, b: i64, scope: Option<&[Id]>) -> Vec<Id> {
-        self.project.tracks.iter().filter(|t| scope.is_none_or(|s| s.contains(&t.id))).flat_map(|t| t.regions.iter()).filter(|r| r.start >= a && r.end() <= b).map(|r| r.id).collect()
+        self.project
+            .tracks
+            .iter()
+            .filter(|t| scope.is_none_or(|s| s.contains(&t.id)))
+            .flat_map(|t| t.regions.iter())
+            .filter(|r| r.start >= a && r.end() <= b)
+            .map(|r| r.id)
+            .collect()
     }
 
     /// Applies a time map to the regions and automation of `scope`'s tracks, or with None to
@@ -199,7 +206,11 @@ impl Session {
             length: b - a,
             tracks,
             master: if global { copy_lanes(&self.project.master.automation, a, b) } else { Vec::new() },
-            markers: if global { self.project.markers.iter().filter(|m| m.pos >= a && m.pos < b).map(|m| Marker { pos: m.pos - a, ..m.clone() }).collect() } else { Vec::new() },
+            markers: if global {
+                self.project.markers.iter().filter(|m| m.pos >= a && m.pos < b).map(|m| Marker { pos: m.pos - a, ..m.clone() }).collect()
+            } else {
+                Vec::new()
+            },
             global,
         }
     }
@@ -530,7 +541,9 @@ mod tests {
         let mut s = Session::new(cfg, Vec::new());
         s.dir = std::env::temp_dir().join(format!("fermata-arrange-cmds-{}", std::process::id()));
         let path = s.dir.join("Audio Files").join("tone.wav");
-        let tone: Vec<f32> = (0..200_000).map(|i| if (50_000..80_000).contains(&i) || i >= 150_000 { 0.0 } else { 0.5 * (i as f32 * std::f32::consts::TAU * 100.0 / 48_000.0).sin() }).collect();
+        let tone: Vec<f32> = (0..200_000)
+            .map(|i| if (50_000..80_000).contains(&i) || i >= 150_000 { 0.0 } else { 0.5 * (i as f32 * std::f32::consts::TAU * 100.0 / 48_000.0).sin() })
+            .collect();
         let clip = s.add_clip(&path, Clip::from_channels(path.clone(), 48_000, vec![tone]));
         let tracks: Vec<Id> = (0..2).map(|_| s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap()).collect();
         (s, tracks, clip)
@@ -539,7 +552,19 @@ mod tests {
     fn region(s: &mut Session, t: Id, clip: Id, start: i64, length: i64, offset: i64) -> Id {
         let id = s.project.alloc_id();
         let content = RegionContent::Audio { clip, offset, gain_db: 0.0, fade_in: 0, fade_out: 0, fade_shape: Default::default() };
-        s.project.track_mut(t).unwrap().regions.push(Region { id, name: "R".into(), start, length, muted: false, color: None, content, loop_end: None, takes: None, params: Default::default(), pattern: None });
+        s.project.track_mut(t).unwrap().regions.push(Region {
+            id,
+            name: "R".into(),
+            start,
+            length,
+            muted: false,
+            color: None,
+            content,
+            loop_end: None,
+            takes: None,
+            params: Default::default(),
+            pattern: None,
+        });
         s.push_regions(t);
         id
     }

@@ -38,7 +38,19 @@ mod tests {
         for k in 0..3 {
             let id = s.project.alloc_id();
             let content = RegionContent::Audio { clip, offset: 0, gain_db: 0.0, fade_in: 0, fade_out: 0, fade_shape: Default::default() };
-            s.project.track_mut(t).unwrap().regions.push(Region { id, name: "DC".into(), start: k * 10_000, length: 4_800, muted: false, color: None, content, loop_end: None, takes: None, params: Default::default(), pattern: None });
+            s.project.track_mut(t).unwrap().regions.push(Region {
+                id,
+                name: "DC".into(),
+                start: k * 10_000,
+                length: 4_800,
+                muted: false,
+                color: None,
+                content,
+                loop_end: None,
+                takes: None,
+                params: Default::default(),
+                pattern: None,
+            });
             ids.push(id);
         }
         s.set_region_gains(&[(ids[0], -6.0), (ids[1], 45.0), (ids[2], f32::NEG_INFINITY)]);

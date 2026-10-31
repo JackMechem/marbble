@@ -32,9 +32,7 @@ impl InputLevel {
 /// pass through the sound server (direct ALSA hardware).
 fn target_for(device: Option<&str>) -> Option<String> {
     match device {
-        None | Some("alsa:default") | Some("alsa:pipewire") | Some("pipewire:input_default") => {
-            Some("@DEFAULT_AUDIO_SOURCE@".to_string())
-        }
+        None | Some("alsa:default") | Some("alsa:pipewire") | Some("pipewire:input_default") => Some("@DEFAULT_AUDIO_SOURCE@".to_string()),
         Some(id) => {
             let name = id.strip_prefix("pipewire:").or_else(|| id.strip_prefix("pulseaudio:"))?;
             node_id_by_name(name)
@@ -46,10 +44,7 @@ fn target_for(device: Option<&str>) -> Option<String> {
 fn node_id_by_name(name: &str) -> Option<String> {
     let out = Command::new("pw-dump").output().ok()?;
     let objs: Vec<serde_json::Value> = serde_json::from_slice(&out.stdout).ok()?;
-    objs.iter()
-        .find(|o| o["info"]["props"]["node.name"].as_str() == Some(name))
-        .and_then(|o| o["id"].as_u64())
-        .map(|id| id.to_string())
+    objs.iter().find(|o| o["info"]["props"]["node.name"].as_str() == Some(name)).and_then(|o| o["id"].as_u64()).map(|id| id.to_string())
 }
 
 fn describe(target: &str) -> String {

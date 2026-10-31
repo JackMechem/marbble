@@ -294,25 +294,12 @@ impl PluginProcessor {
         match status {
             0x90 if m.data[2] > 0 => {
                 e.r#type = Event_::EventTypes_::kNoteOnEvent as u16;
-                e.__field0.noteOn = NoteOnEvent {
-                    channel,
-                    pitch: m.data[1] as i16,
-                    tuning: 0.0,
-                    velocity: m.data[2] as f32 / 127.0,
-                    length: 0,
-                    noteId: -1,
-                };
+                e.__field0.noteOn = NoteOnEvent { channel, pitch: m.data[1] as i16, tuning: 0.0, velocity: m.data[2] as f32 / 127.0, length: 0, noteId: -1 };
                 self.events_in.push(e);
             }
             0x80 | 0x90 => {
                 e.r#type = Event_::EventTypes_::kNoteOffEvent as u16;
-                e.__field0.noteOff = NoteOffEvent {
-                    channel,
-                    pitch: m.data[1] as i16,
-                    velocity: m.data[2] as f32 / 127.0,
-                    noteId: -1,
-                    tuning: 0.0,
-                };
+                e.__field0.noteOff = NoteOffEvent { channel, pitch: m.data[1] as i16, velocity: m.data[2] as f32 / 127.0, noteId: -1, tuning: 0.0 };
                 self.events_in.push(e);
             }
             0xB0 => {

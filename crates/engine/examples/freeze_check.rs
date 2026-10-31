@@ -66,7 +66,8 @@ fn main() {
     let audio = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
     s.import_audio(Path::new(&tone), audio, 0).unwrap();
     let r = s.create_midi_region(inst, 0, 2 * bar).unwrap();
-    let notes: Vec<Note> = (1..8).flat_map(|i| [60u8, 64, 67].map(|p| Note { start: i * beat, length: beat / 2, pitch: p, velocity: 110, muted: false })).collect();
+    let notes: Vec<Note> =
+        (1..8).flat_map(|i| [60u8, 64, 67].map(|p| Note { start: i * beat, length: beat / 2, pitch: p, velocity: 110, muted: false })).collect();
     s.set_midi_content(vec![MidiContent { region: r, notes, cc: vec![], start: None, length: None }]);
     let uid = s.set_plugin(inst, 0, &maxim.id).unwrap();
     let (plain, _) = mix(&mut s, len);
@@ -96,7 +97,10 @@ fn main() {
     s.move_region(r, start + beat, None);
     let refused = s.frozen_guard();
     let now = s.project.track(inst).unwrap().regions[0].start;
-    ok &= check(&format!("moving a frozen region is refused ({:?})", refused.as_ref().err().map(|e| e.to_string())), refused.is_err() && now == start && s.undo_label().as_deref() == Some("Freeze Track"));
+    ok &= check(
+        &format!("moving a frozen region is refused ({:?})", refused.as_ref().err().map(|e| e.to_string())),
+        refused.is_err() && now == start && s.undo_label().as_deref() == Some("Freeze Track"),
+    );
     ok &= check("loading a plug-in onto a frozen track is refused", s.set_plugin(inst, 1, &maxim.id).is_err() && s.plugin_instances() == 0);
     s.set_bypass(inst, 0, true);
     s.remove_plugin(inst, 0);
@@ -117,13 +121,19 @@ fn main() {
 
     // Undo and redo.
     s.undo();
-    ok &= check(&format!("undo unfreezes and reloads the plug-in ({} loaded)", s.plugin_instances()), s.project.track(inst).unwrap().frozen.is_none() && s.plugin_instances() == 1);
+    ok &= check(
+        &format!("undo unfreezes and reloads the plug-in ({} loaded)", s.plugin_instances()),
+        s.project.track(inst).unwrap().frozen.is_none() && s.plugin_instances() == 1,
+    );
     let (back, _) = mix(&mut s, len);
     let d = diff(&live, &back);
     ok &= check(&format!("after undo it plays live again (max diff {d:.2e}, latency {})", s.pdc_total()), d < 1e-3 && s.pdc_total() > 0);
     s.redo();
     let (again, _) = mix(&mut s, len);
-    ok &= check(&format!("redo freezes it again (max diff {:.2e})", diff(&frozen, &again)), s.project.track(inst).unwrap().frozen.is_some() && s.plugin_instances() == 0 && diff(&frozen, &again) < 1e-6);
+    ok &= check(
+        &format!("redo freezes it again (max diff {:.2e})", diff(&frozen, &again)),
+        s.project.track(inst).unwrap().frozen.is_some() && s.plugin_instances() == 0 && diff(&frozen, &again) < 1e-6,
+    );
 
     // Unfreeze, and undo that.
     let file = frozen_file(&s, inst).unwrap();
@@ -131,9 +141,15 @@ fn main() {
     s.unfreeze_track(inst).unwrap();
     let (unfrozen, _) = mix(&mut s, len);
     let d = diff(&live, &unfrozen);
-    ok &= check(&format!("unfreeze deletes the file, reloads the plug-in and plays live (max diff {d:.2e})"), !file.exists() && s.plugin_instances() == 1 && d < 1e-3);
+    ok &= check(
+        &format!("unfreeze deletes the file, reloads the plug-in and plays live (max diff {d:.2e})"),
+        !file.exists() && s.plugin_instances() == 1 && d < 1e-3,
+    );
     s.undo();
-    ok &= check("undoing the unfreeze brings the freeze file back", file.exists() && s.plugin_instances() == 0 && s.project.track(inst).unwrap().frozen.is_some());
+    ok &= check(
+        "undoing the unfreeze brings the freeze file back",
+        file.exists() && s.plugin_instances() == 0 && s.project.track(inst).unwrap().frozen.is_some(),
+    );
 
     // Save and reopen a frozen project.
     let dir = s.save(Some(scratch.join("FreezeCheckSaved.fermata"))).unwrap();

@@ -24,7 +24,13 @@ impl Session {
         };
         if track == MASTER_ID {
             let m = &self.project.master;
-            return Ok(StripSetting { name: "Stereo Out".into(), version: 0, instrument: None, inserts: m.inserts.iter().map(|s| s.as_ref().map(capture)).collect(), eq: Some(m.eq.clone()) });
+            return Ok(StripSetting {
+                name: "Stereo Out".into(),
+                version: 0,
+                instrument: None,
+                inserts: m.inserts.iter().map(|s| s.as_ref().map(capture)).collect(),
+                eq: Some(m.eq.clone()),
+            });
         }
         let t = self.project.track(track).ok_or_else(|| anyhow!("no such track"))?;
         if t.kind == TrackKind::Folder {
@@ -112,7 +118,11 @@ impl Session {
         }
         let new_slot = from.map(|s| {
             // A side-chain only comes along where its source exists and keys without a loop.
-            let sidechain = s.sidechain.filter(|&src| src != track && self.project.track(src).map(|t| t.kind != TrackKind::Folder).unwrap_or(false) && (track == MASTER_ID || !self.project.depends(track, src)));
+            let sidechain = s.sidechain.filter(|&src| {
+                src != track
+                    && self.project.track(src).map(|t| t.kind != TrackKind::Folder).unwrap_or(false)
+                    && (track == MASTER_ID || !self.project.depends(track, src))
+            });
             PluginSlot { uid: self.project.alloc_id(), sidechain, ..s.clone() }
         });
         let ins = match &new_slot {
@@ -246,8 +256,32 @@ mod tests {
     fn missing_plug_ins_stay_as_missing_slots() {
         let mut s = session("missing");
         let a = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
-        let gone = PluginSlot { uid: 1, plugin_id: "/nowhere/Gone.vst3|0123456789ABCDEF".into(), name: "Gone".into(), bypass: false, state: Some("AAAA:".into()), params: Vec::new(), sidechain: None, sidechain_pre: false };
-        let st = StripSetting { inserts: vec![Some(gone), Some(PluginSlot { uid: 2, plugin_id: "builtin:limiter".into(), name: "Limiter".into(), bypass: false, state: None, params: Vec::new(), sidechain: Some(a), sidechain_pre: false })], ..Default::default() };
+        let gone = PluginSlot {
+            uid: 1,
+            plugin_id: "/nowhere/Gone.vst3|0123456789ABCDEF".into(),
+            name: "Gone".into(),
+            bypass: false,
+            state: Some("AAAA:".into()),
+            params: Vec::new(),
+            sidechain: None,
+            sidechain_pre: false,
+        };
+        let st = StripSetting {
+            inserts: vec![
+                Some(gone),
+                Some(PluginSlot {
+                    uid: 2,
+                    plugin_id: "builtin:limiter".into(),
+                    name: "Limiter".into(),
+                    bypass: false,
+                    state: None,
+                    params: Vec::new(),
+                    sidechain: Some(a),
+                    sidechain_pre: false,
+                }),
+            ],
+            ..Default::default()
+        };
         s.paste_strip(&[a], &through_json(&st)).unwrap();
         let t = s.project.track(a).unwrap();
         let kept = t.inserts[0].as_ref().unwrap();

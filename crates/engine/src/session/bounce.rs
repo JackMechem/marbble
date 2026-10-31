@@ -207,7 +207,11 @@ impl Session {
             .tracks
             .iter()
             // An aux on an instrument's extra output has the instrument's content.
-            .filter(|t| t.kind != TrackKind::Folder && !self.project.is_off(t.id) && (self.content_span(t.id).is_some() || self.output_source(t.id).is_some_and(|s| self.content_span(s).is_some())))
+            .filter(|t| {
+                t.kind != TrackKind::Folder
+                    && !self.project.is_off(t.id)
+                    && (self.content_span(t.id).is_some() || self.output_source(t.id).is_some_and(|s| self.content_span(s).is_some()))
+            })
             .map(|t| t.id)
             .collect()
     }

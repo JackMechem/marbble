@@ -157,7 +157,11 @@ impl Session {
         // doesn't need the instrument's strip audible, so that stays out of the solo.
         if !solo && p.tracks.iter().any(|y| y.solo) {
             let soloed = |y: &Track| y.solo || p.ancestors(y.id).iter().filter_map(|a| p.track(*a)).any(|a| a.solo);
-            solo = p.tracks.iter().filter(|y| y.id != t.id).any(|y| (soloed(y) && p.reaches(y.id, t.id)) || (y.kind == TrackKind::Aux && y.solo && p.reaches_past_fader(t.id, y.id)));
+            solo = p
+                .tracks
+                .iter()
+                .filter(|y| y.id != t.id)
+                .any(|y| (soloed(y) && p.reaches(y.id, t.id)) || (y.kind == TrackKind::Aux && y.solo && p.reaches_past_fader(t.id, y.id)));
         }
         // Summing stacks and auxes are buses; a folder passes its subtracks on to wherever it
         // plays. An explicit output overrides the stack.
@@ -311,7 +315,17 @@ impl Session {
                                 let gain = volume_gain(*gain_db + p.gain_db);
                                 let law_in = if own_in.0 .1 > 0 && p.fade_in == own_in.0 { own_in.1.clone() } else { comp_law.clone() };
                                 let law_out = if own_out.0 .1 > 0 && p.fade_out == own_out.0 { own_out.1.clone() } else { comp_law.clone() };
-                                segs.push(Seg { region: r.id, start: p.start, end: p.end, offset: p.offset, gain, clip: c.clone(), fade_in: p.fade_in, fade_out: p.fade_out, laws: [law_in, law_out] });
+                                segs.push(Seg {
+                                    region: r.id,
+                                    start: p.start,
+                                    end: p.end,
+                                    offset: p.offset,
+                                    gain,
+                                    clip: c.clone(),
+                                    fade_in: p.fade_in,
+                                    fade_out: p.fade_out,
+                                    laws: [law_in, law_out],
+                                });
                             }
                         }
                     }
@@ -353,7 +367,17 @@ impl Session {
                                 (false, None) => ((ps + pl, 0), FadeLaw::default()),
                             };
                             let (s, e) = (ps.min(fin.0), (ps + pl).max(fout.0 + fout.1));
-                            let seg = Seg { region: r.id, start: s, end: e, offset: *offset + (s - ps), gain: volume_gain(*gain_db), clip: c.clone(), fade_in: fin, fade_out: fout, laws: [law_in, law_out] };
+                            let seg = Seg {
+                                region: r.id,
+                                start: s,
+                                end: e,
+                                offset: *offset + (s - ps),
+                                gain: volume_gain(*gain_db),
+                                clip: c.clone(),
+                                fade_in: fin,
+                                fade_out: fout,
+                                laws: [law_in, law_out],
+                            };
                             lay(&mut segs, seg, &keep);
                         }
                     }
