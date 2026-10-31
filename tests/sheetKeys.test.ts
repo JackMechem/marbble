@@ -3,6 +3,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { heldBack, NON_MODAL_COMMANDS, outsideKey } from "../src/sheetKeysModel.ts";
 
 const read = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
@@ -57,14 +59,17 @@ test("the non-modal commands are real key commands", () => {
 test("every sheet registers its keys", () => {
   // The shared frames, and the sheets with their own markup.
   assert.match(read("src/components/Dialogs.tsx"), /export function Sheet\([^]*?useSheetKeys\(ref, onClose, mode\)/);
-  assert.match(read("src/components/Settings.tsx"), /function SheetFrame\([^]*?useSheetKeys\(ref, onClose\)/);
+  assert.match(read("src/components/settingsPanes/parts.tsx"), /function SheetFrame\([^]*?useSheetKeys\(ref, onClose\)/);
   assert.match(read("src/components/NameSheet.tsx"), /useSheetKeys\(box,/);
   assert.match(read("src/components/ProjectChooser.tsx"), /useSheetKeys\(box, close\)/);
   assert.match(read("src/components/ControllerAssignments.tsx"), /<Sheet title="Controller Assignments"[^>]*mode="non-modal"/);
   // Any other file drawing a sheet's box registers it too.
-  const dir = new URL("../src/components/", import.meta.url);
-  for (const f of readdirSync(dir).filter((f) => f.endsWith(".tsx"))) {
-    const src = readFileSync(new URL(f, dir), "utf8");
+  // Subfolders too; the panes and panels live there. Windows's separators are normalised for the message.
+  const dir = fileURLToPath(new URL("../src/components/", import.meta.url));
+  const files = readdirSync(dir, { recursive: true, encoding: "utf8" }).map((f) => f.replace(/\\/g, "/")).filter((f) => f.endsWith(".tsx"));
+  assert.ok(files.includes("settingsPanes/parts.tsx"), "the scan reaches the subfolders");
+  for (const f of files) {
+    const src = readFileSync(join(dir, f), "utf8");
     if (/className="(sheet|chooser)"/.test(src)) assert.ok(src.includes("useSheetKeys("), `${f} draws a sheet without useSheetKeys`);
   }
   assert.match(read("src/main.tsx"), /installSheetKeys\(\);/);
