@@ -6,29 +6,16 @@ import type { TempoMap } from "./tempo";
 import { mix, theme } from "./theme";
 import { pixelRatio } from "./uiScale";
 import { curve, type CurveShape } from "./ccCurves";
+import { BLACK, LANE_PAD, laneValue, laneY, pitchAt, timeAt, xOf, yOf, type PrView } from "./pianoRollModel";
+
+export { BLACK, LANE_PAD, laneValue, laneY, pitchAt, timeAt, xOf, yOf, type PrView };
 
 export const KEY_W = 64;
 export const PR_RULER_H = 28;
 /** Height of the cycle strip at the top of the ruler. */
 export const CYCLE_H = 10;
 
-/** Horizontal and vertical mapping of the note area (CSS pixels). */
-export interface PrView {
-  /** Pixels per sample. */
-  pps: number;
-  noteH: number;
-  left: number;
-  top: number;
-  W: number;
-  H: number;
-}
 
-export const xOf = (v: PrView, t: number) => t * v.pps - v.left;
-export const yOf = (v: PrView, p: number) => (127 - p) * v.noteH - v.top;
-export const timeAt = (v: PrView, x: number) => (x + v.left) / v.pps;
-export const pitchAt = (v: PrView, y: number) => Math.max(0, Math.min(127, 127 - Math.floor((y + v.top) / v.noteH)));
-
-export const BLACK = new Set([1, 3, 6, 8, 10]);
 const NAMES = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
 /** Logic's octave numbering: middle C (MIDI 60) is C3. */
 export const noteName = (p: number) => `${NAMES[p % 12]}${Math.floor(p / 12) - 2}`;
@@ -356,11 +343,7 @@ export interface LaneScene {
   ends: Map<Id, number>;
 }
 
-export const LANE_PAD = 6;
 
-/** Lane y for a value (0–max) and back. */
-export const laneY = (H: number, value: number, max: number) => LANE_PAD + (1 - value / max) * (H - 2 * LANE_PAD);
-export const laneValue = (H: number, y: number, max: number) => Math.round(Math.max(0, Math.min(1, 1 - (y - LANE_PAD) / (H - 2 * LANE_PAD))) * max);
 
 export function drawLane(ctx: CanvasRenderingContext2D, v: PrView, g: Grid, H: number, s: LaneScene) {
   const W = v.W;

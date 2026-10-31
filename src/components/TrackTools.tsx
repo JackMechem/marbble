@@ -6,7 +6,7 @@ import { useStore } from "../store";
 import type { TrackTool } from "../tools";
 import { toolMenuItems } from "../trackTools";
 import { openMenuAt } from "./Menu";
-import { ToolIcon } from "./PianoRoll";
+import { ToolIcon } from "./pianoRollEditor/ToolIcon";
 
 /** A Tracks-area tool's icon: the Piano Roll's where the two share a tool. */
 export function TrackToolIcon({ tool }: { tool: TrackTool }) {
