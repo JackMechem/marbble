@@ -1,5 +1,5 @@
 import type { Project } from "./api";
-import { tempoMap, type Bbt } from "./tempo";
+import { tempoMap, type Bbt } from "./tempo.ts";
 
 export const PEAK_BUCKET = 256;
 
