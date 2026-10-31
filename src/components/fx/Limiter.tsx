@@ -2,7 +2,7 @@
 // Gain and Out Ceiling as the two big controls, then Release, Lookahead, the mode and True
 // Peak. Parameter ids mirror crates/engine/src/fx/limiter.rs.
 import type { FxPanelProps } from "../../fx";
-import { GrBar, LevelBar, ParamChoice, ParamKnob, ParamToggle } from "./Compressor";
+import { GrBar, LevelBar, ParamChoice, ParamKnob, ParamToggle } from "./dynControls";
 
 const P = { gain: 0, ceiling: 1, release: 2, lookahead: 3, mode: 4, truePeak: 5 } as const;
 
