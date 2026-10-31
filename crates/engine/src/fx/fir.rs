@@ -118,9 +118,8 @@ pub fn plan_forward() -> Arc<dyn RealToComplex<f32>> {
 /// The dot product of two equally long slices, in eight lanes so it vectorizes.
 fn dot(a: &[f32], b: &[f32]) -> f32 {
     let mut acc = [0.0f32; 8];
-    let (ca, cb) = (a.chunks_exact(8), b.chunks_exact(8));
-    let (ra, rb) = (ca.remainder(), cb.remainder());
-    for (x, y) in ca.zip(cb) {
+    let ((ca, ra), (cb, rb)) = (a.as_chunks::<8>(), b.as_chunks::<8>());
+    for (x, y) in ca.iter().zip(cb) {
         for k in 0..8 {
             acc[k] += x[k] * y[k];
         }
@@ -166,6 +165,8 @@ pub struct Convolver {
     fade: Vec<f32>,
     fade_at: usize,
     /// Kernels taken out of use, for the owner to dispose of off the audio thread.
+    // Boxed so retiring a kernel moves a pointer: the audio thread neither copies nor frees it.
+    #[allow(clippy::vec_box)]
     retired: Vec<Box<Kernel>>,
 }
 

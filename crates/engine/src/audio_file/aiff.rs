@@ -14,7 +14,7 @@ const AIFC_VERSION_1: u32 = 0xA280_5140;
 /// The compression name for `fl32`, as a Pascal string (a length byte, then the text) of even
 /// length, so it needs no pad byte.
 const FL32_NAME: &[u8] = b"\x1532-bit floating point";
-const _: () = assert!(FL32_NAME.len() % 2 == 0 && FL32_NAME[0] as usize == FL32_NAME.len() - 1);
+const _: () = assert!(FL32_NAME.len().is_multiple_of(2) && FL32_NAME[0] as usize == FL32_NAME.len() - 1);
 
 /// `rate` as the 80-bit IEEE extended float AIFF stores sample rates in: a 15-bit biased
 /// exponent, then a 64-bit mantissa with an explicit leading 1.

@@ -108,9 +108,9 @@ struct Up {
 impl Up {
     fn new(h: &[f64]) -> Up {
         let c = h.len() / 2;
-        let par = if c % 2 == 0 { 1 } else { 0 };
+        let par = if c.is_multiple_of(2) { 1 } else { 0 };
         let taps: Vec<f32> = (0..).map(|q| 2 * q + par).take_while(|&k| k < h.len()).map(|k| (2.0 * h[k]) as f32).collect();
-        Up { center_first: c % 2 == 0, center_delay: c / 2, hist: History::new(taps.len().max(c / 2 + 1)), taps }
+        Up { center_first: c.is_multiple_of(2), center_delay: c / 2, hist: History::new(taps.len().max(c / 2 + 1)), taps }
     }
 
     /// The two 2× samples for one input sample, in time order.
@@ -140,7 +140,7 @@ struct Down {
 impl Down {
     fn new(h: &[f64]) -> Down {
         let c = h.len() / 2;
-        let par = if c % 2 == 0 { 1 } else { 0 };
+        let par = if c.is_multiple_of(2) { 1 } else { 0 };
         let taps = (0..).map(|q| 2 * q + par).take_while(|&k| k < h.len()).map(|k| h[k] as f32).collect();
         Down { taps, par, c, hist: History::new(h.len()) }
     }

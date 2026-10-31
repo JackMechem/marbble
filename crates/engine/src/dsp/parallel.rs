@@ -357,6 +357,8 @@ mod tests {
         engine: Engine,
         tx: rtrb::Producer<Cmd>,
         status: Arc<EngineStatus>,
+        // Holds the rings' far ends open for the rig's life; nothing reads this tuple.
+        #[allow(clippy::type_complexity)]
         _keep: (rtrb::Consumer<Garbage>, rtrb::Producer<[u8; 3]>, rtrb::Consumer<(i64, [u8; 3])>, rtrb::Consumer<f32>),
     }
 

@@ -158,7 +158,7 @@ impl Engine {
             while left > 0 {
                 let n = left.min(MAX_BLOCK as i64) as usize;
                 e.process(&[], 0, &mut buf[..n * 2], 2);
-                for f in buf[..n * 2].chunks_exact(2) {
+                for f in buf[..n * 2].as_chunks::<2>().0 {
                     out[0].push(f[0]);
                     out[1].push(f[1]);
                 }

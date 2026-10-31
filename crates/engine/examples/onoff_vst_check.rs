@@ -28,7 +28,7 @@ fn watch(s: &mut Session, id: Id, ms: u64) -> (f32, f32) {
         std::thread::sleep(Duration::from_millis(20));
         let t = s.tick();
         level = level.max(t.meters.iter().find(|m| m.0 == id).map(|m| m.1.max(m.2)).unwrap_or(0.0));
-        cpu += t.cpu as f32;
+        cpu += t.cpu;
         n += 1;
     }
     (level, cpu / n.max(1) as f32)

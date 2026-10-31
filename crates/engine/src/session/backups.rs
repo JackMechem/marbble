@@ -109,7 +109,7 @@ pub(super) fn list_backups(dir: &Path, alt: &str) -> Vec<BackupInfo> {
                 .collect()
         })
         .unwrap_or_default();
-    out.sort_by(|a, b| b.time.cmp(&a.time));
+    out.sort_by_key(|b| std::cmp::Reverse(b.time));
     out
 }
 

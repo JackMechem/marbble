@@ -56,6 +56,7 @@ fn row(pitch: u8, on: &[usize], gate: u8) -> PatternRow {
 
 /// Renders `notes` written into a plain MIDI region at `start` (the pattern region muted), then
 /// puts everything back with undo.
+#[allow(clippy::too_many_arguments)] // A check's helper: each caller spells out its own case.
 fn by_hand(s: &mut Session, dir: &Path, track: Id, pattern: Id, start: i64, length: i64, notes: Vec<Note>, end: i64) -> Vec<f32> {
     s.checkpoint("By Hand", None, false);
     s.set_region_muted(pattern, true);

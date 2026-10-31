@@ -13,6 +13,12 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # Clippy and rustfmt run on this exact version, while the builds and tests float on stable, so
+  # a lint added to a new Rust release can't turn CI red without a code change. Bump it on
+  # purpose, in a commit that also fixes what the new version reports (docs/DEVELOPING.md).
+  LINT_TOOLCHAIN: "1.99.0"
+
 jobs:
   test:
     strategy:
@@ -51,6 +57,12 @@ jobs:
         run: cargo test -p daw
       - name: Check everything compiles (examples included)
         run: cargo check --workspace --all-targets
+      - name: Install the pinned lint toolchain
+        if: runner.os == 'Linux'
+        run: rustup toolchain install "$LINT_TOOLCHAIN" --profile minimal --component clippy --component rustfmt
+      - name: Clippy, warnings are errors
+        if: runner.os == 'Linux'
+        run: cargo "+$LINT_TOOLCHAIN" clippy --workspace --all-targets -- -D warnings
       # A real Session on ALSA's null output device (no sound card, audio server or plug-ins
       # needed), with a generated test tone; the same script developers run.
       - name: Headless engine checks

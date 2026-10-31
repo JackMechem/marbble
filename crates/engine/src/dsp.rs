@@ -148,6 +148,7 @@ const RUNAWAY: f32 = 1000.0;
 /// Silences NaNs and clamps infinite or runaway samples, so one unstable plug-in can't poison
 /// everything after it (a NaN never leaves a filter's state, and huge values overflow
 /// detectors into NaN) or reach the device. Returns whether anything had to be fixed.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // The test below must also catch NaN, so it can't be `>`.
 fn contain(l: &mut [f32], r: &mut [f32]) -> bool {
     let mut bad = false;
     for s in l.iter_mut().chain(r.iter_mut()) {
@@ -497,6 +498,9 @@ impl TrackDsp {
     }
 }
 
+// By value on purpose: commands sit inside the preallocated ring, so sending and applying one
+// allocates nothing, and there is no box for the audio thread to free.
+#[allow(clippy::large_enum_variant)]
 pub enum Cmd {
     Play { from: i64 },
     Record { from: i64, punch: i64 },
@@ -742,6 +746,9 @@ impl Click {
 
 pub struct Engine {
     pub sample_rate: f64,
+    // Boxed so a strip arrives in a `Cmd`, and goes back as `Garbage`, by moving a pointer, and
+    // the audio thread never copies one or frees it.
+    #[allow(clippy::vec_box)]
     tracks: Vec<Box<TrackDsp>>,
     master_inserts: Vec<Option<InsertDsp>>,
     master_volume: f32,
@@ -1672,7 +1679,7 @@ impl Engine {
     pub fn process(&mut self, input: &[f32], in_ch: usize, output: &mut [f32], out_ch: usize) {
         let started = Instant::now();
         let _ftz = crate::denormals::NoDenormals::new();
-        let frames = if out_ch == 0 { 0 } else { output.len() / out_ch };
+        let frames = output.len().checked_div(out_ch).unwrap_or(0);
 
         // A block was given up on and a strip still isn't done: the strips and everything the
         // block reads belong to the threads playing it, commands wait, and the output is silent.
@@ -2637,6 +2644,8 @@ mod tests {
     struct Rig {
         engine: Engine,
         tx: rtrb::Producer<Cmd>,
+        // Holds the rings' far ends open for the rig's life; nothing reads this tuple.
+        #[allow(clippy::type_complexity)]
         _keep: (rtrb::Consumer<Garbage>, rtrb::Producer<[u8; 3]>, rtrb::Consumer<(i64, [u8; 3])>, rtrb::Consumer<f32>),
     }
 

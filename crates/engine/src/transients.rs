@@ -72,6 +72,7 @@ pub fn detect(channels: &[Vec<f32>], sample_rate: u32, sensitivity: f32) -> Vec<
     let mut slow = FLOOR;
     let mut armed = true;
     let mut last: Option<usize> = None;
+    #[allow(clippy::needless_range_loop)] // `k` is the hop number the whole loop works in.
     for k in 0..hops {
         let fast_db = db(peak[k]);
         let rise = fast_db - db(slow);

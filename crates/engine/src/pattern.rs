@@ -135,7 +135,7 @@ pub fn step_quarters(rate: u16) -> f64 {
 
 /// Whether a rate is a triplet (triplet rows don't swing).
 pub fn is_triplet(rate: u16) -> bool {
-    rate % 3 == 0
+    rate.is_multiple_of(3)
 }
 
 fn nearest_rate(rate: u16) -> u16 {
@@ -377,7 +377,7 @@ mod tests {
         let p = pattern(vec![three, eighths]);
         let n = p.notes(0, 16 * S16, &map120());
         // Every 3 sixteenths, through the pattern's own 16.
-        assert_eq!(starts(&n, 36), vec![0, 3, 6, 9, 12, 15].iter().map(|k| k * S16).collect::<Vec<_>>());
+        assert_eq!(starts(&n, 36), [0, 3, 6, 9, 12, 15].iter().map(|k| k * S16).collect::<Vec<_>>());
         // Eighths, 4 to a cycle: steps 0, 1 then 4, 5.
         assert_eq!(starts(&n, 38), vec![0, 2 * S16, 8 * S16, 10 * S16]);
         assert_eq!(n.iter().find(|n| n.pitch == 38).unwrap().length, 2 * S16);

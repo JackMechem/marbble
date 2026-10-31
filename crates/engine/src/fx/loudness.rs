@@ -179,7 +179,7 @@ impl Biquad {
 /// RLB high-pass. The analog parameters are those that reproduce the BS.1770-4 48 kHz table
 /// through the bilinear transform (as libebur128 derives them).
 fn k_weighting(sr: f64) -> [Biquad; 2] {
-    let (f0, gain_db, q) = (1681.974_450_955_533, 3.999_843_853_973_347, 0.707_175_236_955_419_6);
+    let (f0, gain_db, q) = (1_681.974_450_955_533, 3.999_843_853_973_347, 0.707_175_236_955_419_6);
     let k = (PI * f0 / sr).tan();
     let vh = 10f64.powf(gain_db / 20.0);
     let vb = vh.powf(0.499_666_774_154_541_6);

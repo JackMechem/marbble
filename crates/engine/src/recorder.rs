@@ -142,6 +142,7 @@ pub struct Recorder {
 }
 
 impl Recorder {
+    #[allow(clippy::new_without_default)] // It starts a thread, which a `Default` shouldn't hide.
     pub fn new() -> Recorder {
         let takes: Arc<Mutex<HashMap<Id, Take>>> = Arc::default();
         let weak = Arc::downgrade(&takes);

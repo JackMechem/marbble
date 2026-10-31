@@ -54,6 +54,7 @@ impl Session {
     /// How a recording starting at `punch` (transport from `from`) is set up: the plan for
     /// cutting it into takes afterwards, the range where record-enabled tracks fall silent
     /// (None: throughout) and the engine positions input is captured between.
+    #[allow(clippy::type_complexity)] // Three named in the doc comment, used once at the one call.
     pub(super) fn record_plan(&self, from: i64, punch: i64, cycle: Option<(i64, i64)>) -> Result<(RecPlan, Option<(i64, i64)>, (i64, i64))> {
         let plan = RecPlan {
             from,

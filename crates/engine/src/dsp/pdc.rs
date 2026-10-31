@@ -250,8 +250,8 @@ mod tests {
             // After the fade the output is exactly the input at the new delay.
             let x = |i: usize| 0.5 * (std::f32::consts::TAU * 440.0 * i as f32 / SR).sin();
             let settled = 20 * 256 + fade as usize;
-            for i in settled..out.len() {
-                assert_eq!(out[i], x(i - to as usize), "{from} → {to} at {i}");
+            for (i, y) in out.iter().enumerate().skip(settled) {
+                assert_eq!(*y, x(i - to as usize), "{from} → {to} at {i}");
             }
         }
         // Without the fade, the 38-frame jump clicks: up to 2 · 0.5 · sin(π · 440 · 38 / 48000)

@@ -218,10 +218,7 @@ impl Session {
             let sp = &plugins[&n.id];
             let params = if on {
                 // The line also stands in for bypassed plug-ins, which don't run.
-                let mut sends = [0; SEND_SLOTS];
-                for k in 0..SEND_SLOTS {
-                    sends[k] = t.send_delays[k] + sp.bypassed;
-                }
+                let sends = std::array::from_fn::<_, SEND_SLOTS, _>(|k| t.send_delays[k] + sp.bypassed);
                 PdcParams {
                     output: t.output_delay + sp.bypassed,
                     sends,

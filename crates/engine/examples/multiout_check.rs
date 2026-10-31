@@ -438,7 +438,7 @@ fn main() {
                 COUNTING.with(|c| c.set(warm));
                 guard.process(&[], 0, &mut buf, 2);
                 COUNTING.with(|c| c.set(false));
-                out.extend(buf.chunks_exact(2).map(|f| f[0]));
+                out.extend(buf.as_chunks::<2>().0.iter().map(|f| f[0]));
                 // About real time, so a block is under way when the session changes something.
                 std::thread::sleep(Duration::from_micros(800));
             }

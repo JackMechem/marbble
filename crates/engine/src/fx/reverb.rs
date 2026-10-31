@@ -71,6 +71,8 @@ const SCALE_SLEW: f32 = 1e-5;
 /// The fade when the room type changes, which clears the old tail.
 const TYPE_FADE_MS: f32 = 15.0;
 
+// One argument per `ParamSpec` field, so the table below reads as rows.
+#[allow(clippy::too_many_arguments)]
 const fn spec(id: u32, name: &'static str, min: f32, max: f32, default: f32, unit: Unit, kind: ParamKind, log: bool) -> ParamSpec {
     ParamSpec { id, name, min, max, default, unit, kind, log }
 }
@@ -218,7 +220,7 @@ const DIFFUSER_MS: [[f32; 4]; 2] = [[1.37, 2.13, 3.73, 5.51], [1.53, 2.37, 3.31,
 
 /// The Hadamard matrix entry: rows and columns are mutually orthogonal ±1 vectors.
 const fn hadamard(row: usize, col: usize) -> f32 {
-    if (row & col).count_ones() % 2 == 0 { 1.0 } else { -1.0 }
+    if (row & col).count_ones().is_multiple_of(2) { 1.0 } else { -1.0 }
 }
 
 /// The next value of the shared pattern generator (an LCG, the same one the panel uses).
@@ -252,12 +254,12 @@ fn is_prime(n: usize) -> bool {
     if n < 4 {
         return n > 1;
     }
-    if n % 2 == 0 {
+    if n.is_multiple_of(2) {
         return false;
     }
     let mut d = 3;
     while d * d <= n {
-        if n % d == 0 {
+        if n.is_multiple_of(d) {
             return false;
         }
         d += 2;
@@ -404,6 +406,8 @@ impl Fdn {
 
     /// Sets the line lengths for a room and size. With `snap` they jump there; otherwise they
     /// glide (a size change while playing).
+    // Indexes parallel per-channel or per-line arrays together: an index reads best here.
+    #[allow(clippy::needless_range_loop)]
     fn configure(&mut self, def: &RoomDef, scale: f32, sample_rate: f32, snap: bool) {
         let (lo, hi) = def.lines;
         for i in 0..N {
@@ -465,6 +469,8 @@ impl Fdn {
 
     /// One sample. `x` is the stereo input already scaled; returns the late reverb.
     #[inline]
+    // Indexes parallel per-channel or per-line arrays together: an index reads best here.
+    #[allow(clippy::needless_range_loop)]
     fn tick(&mut self, x: [f32; 2], diffusion: f32, density: f32, excursion: f32, glide: f32) -> [f32; 2] {
         // Input diffusion: four allpasses per side smear transients before the network.
         let mut d = x;
@@ -594,15 +600,15 @@ impl Plate {
         }
         self.k = sample_rate / DATTORRO_RATE;
         // The input diffusers are fixed: scaled by the sample rate only.
-        for i in 0..4 {
-            self.input_len[i] = ((PLATE_INPUT[i] as f32 * self.k).round() as usize).max(1);
+        for (len, input) in self.input_len.iter_mut().zip(&PLATE_INPUT) {
+            *len = ((*input as f32 * self.k).round() as usize).max(1);
         }
     }
 
     fn set_decay(&mut self, rt: Rt, sample_rate: f32) {
-        for h in 0..2 {
-            let half: f32 = PLATE_TANK[h].iter().sum::<f32>() * self.k * self.scale_target;
-            self.filters[h].set(half, rt.mid, rt.low, rt.high, sample_rate);
+        for (filter, tank) in self.filters.iter_mut().zip(&PLATE_TANK) {
+            let half: f32 = tank.iter().sum::<f32>() * self.k * self.scale_target;
+            filter.set(half, rt.mid, rt.low, rt.high, sample_rate);
         }
     }
 
@@ -619,6 +625,8 @@ impl Plate {
 
     /// One sample of mono input; returns the stereo tank output.
     #[inline]
+    // Indexes parallel per-channel or per-line arrays together: an index reads best here.
+    #[allow(clippy::needless_range_loop)]
     fn tick(&mut self, x: f32, diffusion: f32, density: f32, excursion: f32, glide: f32) -> [f32; 2] {
         self.scale += ((self.scale_target - self.scale) * glide).clamp(-SCALE_SLEW, SCALE_SLEW);
         let mut d = x;
@@ -864,6 +872,8 @@ impl Effect for Reverb {
         self.values.get(id as usize).copied().unwrap_or(0.0)
     }
 
+    // Indexes parallel per-channel or per-line arrays together: an index reads best here.
+    #[allow(clippy::needless_range_loop)]
     fn process(&mut self, l: &mut [f32], r: &mut [f32], _key: Key, ctx: &FxContext) {
         if ctx.sample_rate > 0.0 && (ctx.sample_rate - self.sr).abs() > 0.5 && ctx.sample_rate <= MAX_RATE {
             self.set_rate(ctx.sample_rate);
@@ -1076,6 +1086,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::needless_range_loop)] // `room` is the value under test; ROOM_TYPES only names it.
     fn decay_matches_rt60_for_every_room() {
         for room in 0..ROOM_TYPES.len() {
             for rt in [1.0f32, 3.0] {
@@ -1114,6 +1125,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::needless_range_loop)] // `room` is the value under test; ROOM_TYPES only names it.
     fn stable_at_max_decay_and_freeze() {
         for room in 0..ROOM_TYPES.len() {
             let mut fx = wet_only(room);
@@ -1154,6 +1166,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::needless_range_loop)] // `room` is the value under test; ROOM_TYPES only names it.
     fn wet_is_decorrelated() {
         for room in 0..ROOM_TYPES.len() {
             let mut fx = wet_only(room);
@@ -1175,6 +1188,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::needless_range_loop)] // `room` is the value under test; ROOM_TYPES only names it.
     fn silence_after_the_tail_without_denormals() {
         for room in 0..ROOM_TYPES.len() {
             let mut fx = wet_only(room);

@@ -299,6 +299,8 @@ const TAPE_OVERDRIVE: f32 = 1.1;
 const DIGITAL_MAX_FEEDBACK: f32 = 0.98;
 const MAX_TAIL_SECS: f32 = 30.0;
 
+// One argument per `ParamSpec` field, so the table below reads as rows.
+#[allow(clippy::too_many_arguments)]
 const fn spec(id: u32, name: &'static str, min: f32, max: f32, default: f32, unit: Unit, kind: ParamKind, log: bool) -> ParamSpec {
     ParamSpec { id, name, min, max, default, unit, kind, log }
 }
@@ -635,6 +637,8 @@ impl Effect for Delay {
         self.values.get(id as usize).copied().unwrap_or(0.0)
     }
 
+    // Indexes parallel per-channel or per-line arrays together: an index reads best here.
+    #[allow(clippy::needless_range_loop)]
     fn process(&mut self, l: &mut [f32], r: &mut [f32], _key: Key, ctx: &FxContext) {
         if ctx.sample_rate > 0.0 && (ctx.sample_rate - self.sr).abs() > 0.5 && ctx.sample_rate <= MAX_RATE {
             self.set_rate(ctx.sample_rate);

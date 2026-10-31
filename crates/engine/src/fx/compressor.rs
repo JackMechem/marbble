@@ -74,6 +74,8 @@ pub mod param {
 
 const NPARAMS: usize = 21;
 
+// One argument per `ParamSpec` field, so the table below reads as rows.
+#[allow(clippy::too_many_arguments)]
 const fn spec(id: u32, name: &'static str, min: f32, max: f32, default: f32, unit: Unit, kind: ParamKind, log: bool) -> ParamSpec {
     ParamSpec { id, name, min, max, default, unit, kind, log }
 }

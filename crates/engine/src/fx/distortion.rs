@@ -309,6 +309,7 @@ pub(crate) mod tests {
     use super::*;
 
     #[test]
+    #[allow(clippy::needless_range_loop)] // `kind` is the value under test; TYPES only names it.
     fn curves_are_bounded_and_unity_at_small_levels() {
         for kind in 0..TYPES.len() {
             let slope = (curve(kind, 1e-4) - curve(kind, -1e-4)) / 2e-4;
@@ -328,6 +329,7 @@ pub(crate) mod tests {
     }
 
     #[test]
+    #[allow(clippy::needless_range_loop)] // `kind` is the value under test; TYPES only names it.
     fn compensation_holds_the_reference_level() {
         for kind in 0..TYPES.len() {
             for db in [0.0, 12.0, 30.0, 60.0] {

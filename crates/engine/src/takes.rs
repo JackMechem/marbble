@@ -20,6 +20,8 @@ pub const PASS_MARK: [u8; 3] = [0xF9, 0, 0];
 const MAX_TAKES: i64 = 999;
 
 impl Take {
+    // A length in frames on the timeline, not a container's: "empty" means nothing here.
+    #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> i64 {
         (self.end - self.start).max(0)
     }
@@ -514,6 +516,7 @@ impl RecPlan {
     /// Without a punch range the file is one continuous stream, the passes back to back. With
     /// one, each pass only captured `w0..g1`, so the passes are `g1 - w0` frames apart. Either
     /// way the latency puts the audio heard at `w0` `latency` frames into its pass.
+    #[allow(clippy::type_complexity)] // The doc comment names the parts; there is one caller.
     pub fn cycle_takes(&self, frames: i64) -> Option<(i64, i64, Vec<(i64, i64, i64)>)> {
         let (cs, ce) = self.cycle?;
         let (w0, w1, g1) = self.cycle_window()?;

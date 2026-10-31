@@ -65,6 +65,7 @@ fn edits_that_are_not_about_the_instrument_leave_held_notes_alone() {
     let engine = s.engine_for_checks();
     let mut e = engine.lock();
     start(&mut s, &mut e, inst);
+    #[allow(clippy::type_complexity)] // One local table of named edits.
     let edits: Vec<(&str, Box<dyn FnMut(&mut Session)>)> = vec![
         ("add an audio track", Box::new(|s: &mut Session| { s.add_track(TrackKind::Audio, InputSel::None, None, None).unwrap(); })),
         ("add an instrument track", Box::new(|s| { s.add_track(TrackKind::Instrument, InputSel::None, None, None).unwrap(); })),

@@ -34,10 +34,10 @@ fn largest_step(a: &[Vec<f32>]) -> f32 {
 fn off_from(out: &[Vec<f32>], reference: &[Vec<f32>], shift: i64, from: usize) -> f32 {
     let mut worst = 0.0f32;
     for (o, r) in out.iter().zip(reference) {
-        for n in from..o.len() {
+        for (n, x) in o.iter().enumerate().skip(from) {
             let m = n as i64 - shift;
             if m >= 0 && (m as usize) < r.len() {
-                worst = worst.max((o[n] - r[m as usize]).abs());
+                worst = worst.max((x - r[m as usize]).abs());
             }
         }
     }

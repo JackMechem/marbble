@@ -144,7 +144,7 @@ mod tests {
         assert_eq!(nearest_zero_crossing(&[dc], 100, 15), None);
         // The side of a crossing nearer zero, and the earlier frame on a tie.
         let step = vec![0.5f32, 0.4, 0.1, -0.3, -0.5, 0.2, -0.2];
-        assert_eq!(nearest_zero_crossing(&[step.clone()], 3, 2), Some(2));
+        assert_eq!(nearest_zero_crossing(std::slice::from_ref(&step), 3, 2), Some(2));
         assert_eq!(nearest_zero_crossing(&[step], 6, 0), Some(6));
     }
 }

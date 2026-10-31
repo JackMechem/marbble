@@ -241,10 +241,10 @@ pub fn spectrum(samples: &[f32], sample_rate: f64) -> Vec<f32> {
     let mut re = vec![0.0f64; n];
     let mut im = vec![0.0f64; n];
     let mut wsum = 0.0;
-    for i in 0..n {
+    for (i, x) in re.iter_mut().enumerate() {
         let w = 0.5 - 0.5 * (std::f64::consts::TAU * i as f64 / (n - 1) as f64).cos();
         wsum += w;
-        re[i] = samples.get(i).copied().unwrap_or(0.0) as f64 * w;
+        *x = samples.get(i).copied().unwrap_or(0.0) as f64 * w;
     }
     fft(&mut re, &mut im);
     let bin_hz = sample_rate / n as f64;

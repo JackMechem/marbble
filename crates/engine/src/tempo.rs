@@ -165,7 +165,7 @@ impl GridPoint {
     }
 
     pub fn on_beat(&self) -> bool {
-        self.sub % self.div.max(1) == 0
+        self.sub.is_multiple_of(self.div.max(1))
     }
 }
 
@@ -446,6 +446,7 @@ impl TempoMap {
 
     /// `q` snapped to the nearest multiple of `step` quarters counted from its bar line, or to
     /// the next bar line when that is nearer (so odd meters line up, as in Logic).
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // The test below must also catch a NaN step.
     pub fn snap_q(&self, q: f64, step: f64) -> f64 {
         let (_, start, m) = self.bar_of_q(q);
         let end = start + m.bar_q();

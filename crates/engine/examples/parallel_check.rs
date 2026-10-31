@@ -252,7 +252,7 @@ fn play_live(s: &mut Session, e: &Extras, buffer: usize, frames: usize) -> (Vec<
     let mut at = 0usize;
     let blocks = frames / buffer;
     for b in 0..blocks {
-        for (i, f) in input.chunks_exact_mut(2).enumerate() {
+        for (i, f) in input.as_chunks_mut::<2>().0.iter_mut().enumerate() {
             let t = (at + i) as f32 / RATE as f32;
             f[0] = 0.2 * (t * 700.0).sin();
             f[1] = 0.1 * (t * 1100.0).sin();
