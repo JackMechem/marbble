@@ -1,0 +1,140 @@
+/* Number fields, checkboxes, range sliders (components/Form.tsx) and the sheets' footer row. */
+/* Number field with steppers */
+.numfield {
+  display: flex;
+  align-items: stretch;
+  height: 24px;
+  border-radius: 5px;
+  background: var(--field);
+  box-shadow: var(--field-shadow);
+  overflow: hidden;
+}
+
+.numfield input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  text-align: center;
+  outline: none;
+  color: var(--text);
+}
+
+.numfield-step {
+  width: 20px;
+  color: var(--dim);
+  font-size: 13px;
+  line-height: 1;
+}
+
+.numfield-step:hover {
+  background: var(--btn-hi);
+  color: var(--text);
+}
+
+.numfield:focus-within {
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+/* Checkboxes */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  border-radius: 4px;
+  background: var(--field);
+  box-shadow: inset 0 0 0 1px var(--line);
+  display: inline-grid;
+  place-content: center;
+}
+
+input[type="checkbox"]:checked {
+  background: var(--accent);
+  box-shadow: none;
+}
+
+input[type="checkbox"]:checked::after {
+  content: "";
+  width: 4px;
+  height: 8px;
+  margin-top: -2px;
+  border: solid var(--accent-ink);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* Range sliders */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 14px;
+  background: none;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--slider-track);
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: var(--slider-thumb);
+  box-shadow: var(--slider-thumb-shadow);
+}
+
+.sheet-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.count {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sheet-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.push {
+  min-width: 78px;
+  height: 24px;
+  padding: 0 12px;
+  border-radius: 6px;
+  background: var(--push);
+  color: var(--text);
+  box-shadow: var(--btn-shadow);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.push:hover {
+  background: var(--push-hi);
+}
+
+.push.default {
+  background: var(--push-default);
+  color: #fff;
+}
+
+.push.default:hover {
+  filter: brightness(1.08);
+}
+
+.push:disabled {
+  opacity: 0.6;
+}
+

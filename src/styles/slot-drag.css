@@ -1,0 +1,10 @@
+/* Dragging a plug-in between Audio FX slots. */
+/* Dragging a plug-in between Audio FX slots. */
+.slot.slot-dragging {
+  opacity: 0.45;
+}
+
+.slot.slot-drop {
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+

@@ -1,0 +1,138 @@
+/* The Musical Typing window. */
+/* ---- Musical Typing ------------------------------------------------------------------------ */
+
+.mt-window {
+  position: fixed;
+  z-index: 40;
+  border-radius: 10px;
+  background: var(--sheet-bg);
+  box-shadow: var(--sheet-shadow);
+  overflow: hidden;
+  user-select: none;
+}
+
+.mt-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 8px 12px;
+}
+
+.mt-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.mt-step {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  background: var(--btn);
+  box-shadow: var(--btn-shadow);
+  color: var(--btn-text);
+  font-size: 14px;
+  line-height: 1;
+}
+
+.mt-step:hover {
+  background: var(--btn-hi);
+}
+
+.mt-value {
+  min-width: 34px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.mt-hint {
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--field);
+  color: var(--faint);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.mt-sustain {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 5px;
+  background: var(--btn);
+  box-shadow: var(--btn-shadow);
+  color: var(--btn-text);
+}
+
+.mt-sustain.on {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.mt-keys {
+  position: relative;
+  height: 132px;
+  margin: 2px 12px 12px;
+  touch-action: none;
+}
+
+.mt-white,
+.mt-black {
+  position: absolute;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  cursor: pointer;
+}
+
+.mt-white {
+  height: 132px;
+  border-radius: 0 0 5px 5px;
+  background: linear-gradient(#fdfdfd, #e9e9ec);
+  box-shadow: inset -1px 0 0 #b9bac0, inset 0 -3px 0 #c9cad0;
+  z-index: 1;
+}
+
+.mt-white.on {
+  background: linear-gradient(#cfe3ff, var(--accent));
+}
+
+.mt-black {
+  height: 82px;
+  border-radius: 0 0 4px 4px;
+  background: linear-gradient(#3a3b40, #18191c);
+  box-shadow: inset 0 -3px 0 #050506;
+  z-index: 2;
+}
+
+.mt-black.on {
+  background: linear-gradient(#5aa9ff, #2f6fd1);
+}
+
+.mt-key {
+  margin-bottom: 18px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #5d6068;
+}
+
+.mt-black .mt-key {
+  margin-bottom: 8px;
+  color: #c9ccd4;
+}
+
+.mt-white.typed:not(.on) {
+  background: linear-gradient(#ffffff, #e2ecfb);
+}
+
+.mt-c {
+  position: absolute;
+  bottom: 4px;
+  font-size: 9px;
+  color: #8b8e96;
+}
+

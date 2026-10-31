@@ -1,0 +1,385 @@
+/* The Project Chooser (components/ProjectChooser.tsx). */
+/* ---- Project Chooser -------------------------------------------------------------------- */
+
+.chooser-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.chooser {
+  width: min(900px, calc(100vw - 40px));
+  height: min(600px, calc(100vh - 40px));
+  display: grid;
+  grid-template-columns: 190px 1fr;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--sheet-bg);
+  box-shadow: var(--sheet-shadow);
+  animation: sheet-in 0.16s ease-out;
+}
+
+.chooser-side {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px 10px 12px;
+  background: var(--panel);
+  border-right: 1px solid var(--edge);
+}
+
+.chooser-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px 18px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.chooser-nav {
+  display: flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 500;
+  text-align: left;
+}
+
+.chooser-nav:hover {
+  background: var(--card-hi);
+}
+
+.chooser-nav.on {
+  background: var(--select);
+  color: #fff;
+}
+
+.chooser-count {
+  margin-left: auto;
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 9px;
+  background: rgba(0, 0, 0, 0.2);
+  font-size: 10.5px;
+  text-align: center;
+}
+
+.chooser-side-foot {
+  margin-top: auto;
+  padding: 0 8px;
+}
+
+.chooser-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding: 18px 22px 16px;
+}
+
+.chooser-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+
+.tpl-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.tpl {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 10px 12px;
+  border-radius: 9px;
+  background: var(--card);
+  box-shadow: 0 0 0 1px var(--edge);
+  text-align: left;
+}
+
+.tpl:hover {
+  background: var(--card-hi);
+}
+
+.tpl.on {
+  background: var(--card-on);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.tpl-art {
+  height: 84px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px;
+  border-radius: 6px;
+  background: var(--field);
+  box-shadow: var(--field-shadow);
+}
+
+.tpl-plus {
+  align-self: center;
+  font-size: 30px;
+  font-weight: 300;
+  color: var(--faint);
+}
+
+.tpl-lane {
+  position: relative;
+  height: 16px;
+  border-radius: 2px;
+  background: var(--headers-bg);
+}
+
+.tpl-head {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: 2px 0 0 2px;
+}
+
+.tpl-region {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  border-radius: 2px;
+}
+
+.tpl-head.a,
+.tpl-region.a {
+  background: #3b8fd9;
+}
+
+.tpl-head.i,
+.tpl-region.i {
+  background: #4fae4c;
+}
+
+.tpl-name {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.tpl-desc {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--dim);
+}
+
+.chooser-details {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px 12px;
+  margin-top: 20px;
+  padding: 14px 16px;
+  border-radius: 9px;
+  background: var(--sheet-inner);
+}
+
+.chooser-details > label {
+  text-align: right;
+  color: var(--dim);
+}
+
+.text-field {
+  height: 26px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 5px;
+  background: var(--field);
+  box-shadow: var(--field-shadow);
+  color: var(--text);
+  font-size: 12.5px;
+  outline: none;
+}
+
+.text-field:focus {
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.path-field {
+  flex: 1;
+  min-width: 0;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  padding: 0 9px;
+  border-radius: 5px;
+  background: var(--field);
+  box-shadow: var(--field-shadow);
+  color: var(--dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  direction: rtl;
+  text-align: left;
+}
+
+.detail-gap {
+  width: 12px;
+}
+
+.inline-label {
+  color: var(--dim);
+  white-space: nowrap;
+}
+
+/* The details row sizes its own pop-ups; the app-wide minimum would push them off the edge. */
+.chooser-details .select {
+  min-width: 0;
+}
+
+.chooser-details .text-field {
+  width: 100%;
+  min-width: 0;
+}
+
+.chooser-details .row-inline {
+  min-width: 0;
+}
+
+.recent-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  margin: 0 -8px;
+  padding: 0 8px;
+}
+
+.recent {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 7px;
+}
+
+.recent:hover {
+  background: var(--card-hi);
+}
+
+.recent.on {
+  background: var(--select);
+  color: #fff;
+}
+
+.recent.on .recent-path,
+.recent.on .recent-meta,
+.recent.on .dim {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.recent.missing {
+  opacity: 0.55;
+}
+
+.recent-icon {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--card);
+  color: var(--accent);
+}
+
+.recent.on .recent-icon {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+
+.recent-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.recent-name {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.recent-path {
+  font-size: 11px;
+  color: var(--faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recent-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  font-size: 11px;
+  color: var(--dim);
+  white-space: nowrap;
+}
+
+.warn-text {
+  color: var(--mon);
+}
+
+.recent-forget {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--faint);
+  opacity: 0;
+}
+
+.recent:hover .recent-forget {
+  opacity: 1;
+}
+
+.recent-forget:hover {
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--text);
+}
+
+.recent-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 60px 0;
+  color: var(--dim);
+}
+
+.chooser-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: auto;
+  padding-top: 16px;
+}
+
+.chooser-foot > .dim {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+

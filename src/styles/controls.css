@@ -1,0 +1,115 @@
+/* Shared controls (components/Controls.tsx): sliders, knobs, faders, meters. */
+/* ---- sliders, knobs, faders, meters --------------------------------------------------------- */
+
+.hslider {
+  position: relative;
+  height: 14px;
+  display: flex;
+  align-items: center;
+}
+
+.hslider::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--slider-track);
+}
+
+.hslider-fill {
+  position: absolute;
+  left: 0;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--slider-fill);
+}
+
+.hslider-thumb {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--slider-thumb);
+  box-shadow: var(--slider-thumb-shadow);
+}
+
+.knob {
+  cursor: ns-resize;
+}
+
+.knob-ring {
+  fill: none;
+  stroke: var(--knob-ring);
+  stroke-width: 3;
+}
+
+.knob-arc {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}
+
+.knob-body {
+  fill: var(--knob-body);
+  stroke: var(--knob-edge);
+  stroke-width: 0.5;
+}
+
+.knob-pointer {
+  stroke: var(--knob-pointer);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.fader {
+  position: relative;
+  width: 26px;
+  cursor: ns-resize;
+}
+
+.fader-track {
+  position: absolute;
+  left: 50%;
+  top: 9px;
+  bottom: 9px;
+  width: 4px;
+  margin-left: -2px;
+  border-radius: 2px;
+  background: var(--fader-track);
+}
+
+.fader-unity {
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  height: 1px;
+  background: var(--fader-unity);
+}
+
+.fader-cap {
+  position: absolute;
+  left: 2px;
+  width: 22px;
+  height: 18px;
+  border-radius: 3px;
+  background: var(--fader-cap);
+  box-shadow: var(--fader-cap-shadow);
+}
+
+.fader-cap::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  top: 8.5px;
+  height: 1px;
+  background: var(--fader-line);
+}
+
+.meter {
+  display: block;
+  border-radius: 1px;
+}
+

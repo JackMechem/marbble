@@ -1,0 +1,36 @@
+/* The status line and toasts. */
+/* ---- status line & toast ------------------------------------------------------------------ */
+
+.status-line {
+  height: 22px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 10px;
+  font-size: 11px;
+  color: var(--faint);
+  background: var(--status-bg);
+  border-top: 1px solid var(--edge);
+}
+
+.status-line .spacer {
+  flex: 1;
+}
+
+.status-line .bad {
+  color: var(--red);
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 34px;
+  transform: translateX(-50%);
+  z-index: 120;
+  padding: 7px 14px;
+  border-radius: 7px;
+  background: var(--toast-bg);
+  box-shadow: var(--menu-shadow);
+  font-size: 12px;
+}
+

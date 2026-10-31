@@ -1,0 +1,114 @@
+/* The Piano Roll's Quantize panel and tool cursors. */
+.pr-qpanel {
+  position: fixed;
+  z-index: 90;
+  width: 262px;
+  padding: 10px 12px 12px;
+  border-radius: 8px;
+  background: var(--menu-bg);
+  box-shadow: var(--menu-shadow);
+  color: var(--text);
+}
+
+.pr-qtitle {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.pr-qgrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  margin-bottom: 10px;
+}
+
+.pr-qval {
+  height: 20px;
+  border-radius: 4px;
+  background: var(--btn);
+  color: var(--btn-text);
+  box-shadow: var(--btn-shadow);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pr-qval:hover {
+  background: var(--btn-hi);
+}
+
+.pr-qval.on {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.pr-qrow {
+  display: grid;
+  grid-template-columns: 58px 1fr 36px;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  color: var(--dim);
+}
+
+.pr-qrow input {
+  accent-color: var(--accent);
+}
+
+.pr-qnum {
+  text-align: right;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.pr-qcheck {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  color: var(--dim);
+}
+
+.pr-qfoot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.pr-qbtn {
+  height: 22px;
+  padding: 0 14px;
+  border-radius: 5px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+/* Tool cursors: the note area and the lane. */
+.pr-cursor-pencil {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Cpath d='M2.5 17.5l1.2-4.6L13.6 3l3.4 3.4-9.9 9.9z' fill='white' stroke='black' stroke-width='1.2' stroke-linejoin='round'/%3E%3Cpath d='M11.8 4.8l3.4 3.4' stroke='black' stroke-width='1.2'/%3E%3C/svg%3E") 2 17, crosshair;
+}
+
+.pr-cursor-eraser {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Cpath d='M7 17 2.8 12.8l8.5-8.5 5.9 5.9L10.4 17z' fill='white' stroke='black' stroke-width='1.2' stroke-linejoin='round'/%3E%3Cpath d='M6.2 8.9l5.9 5.9' stroke='black' stroke-width='1.2'/%3E%3C/svg%3E") 4 16, cell;
+}
+
+.pr-cursor-scissors {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Ccircle cx='5.5' cy='14.5' r='2.4' fill='white' stroke='black' stroke-width='1.2'/%3E%3Ccircle cx='14.5' cy='14.5' r='2.4' fill='white' stroke='black' stroke-width='1.2'/%3E%3Cpath d='M7.2 12.8 15 2.5M12.8 12.8 5 2.5' stroke='black' stroke-width='1.4' stroke-linecap='round'/%3E%3C/svg%3E") 10 2, crosshair;
+}
+
+.pr-cursor-velocity {
+  cursor: ns-resize;
+}
+
+.pr-cursor-mute {
+  cursor: pointer;
+}
+
+.pr-cursor-glue {
+  cursor: copy;
+}
+
+canvas.pr-cursor-line {
+  cursor: crosshair;
+}
+

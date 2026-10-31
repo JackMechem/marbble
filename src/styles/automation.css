@@ -1,0 +1,46 @@
+/* Automation in the track headers, and the headers while Hide is on. */
+/* ---- automation ------------------------------------------------------------------------- */
+
+.th-buttons[hidden] {
+  display: none;
+}
+
+.th-auto {
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+}
+
+.auto-mode {
+  flex: none;
+  height: 19px;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--tbtn);
+  color: var(--tbtn-text);
+  box-shadow: var(--tbtn-shadow);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.hide-mode:hover {
+  background: var(--btn-hi);
+}
+
+.hide-mode.on {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.tbtn.hide.on {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* Everything but the H button fades. */
+.track-header.is-hidden > :not(.th-main),
+.track-header.is-hidden .th-name,
+.track-header.is-hidden .th-buttons > :not(.hide) {
+  opacity: 0.45;
+}
+

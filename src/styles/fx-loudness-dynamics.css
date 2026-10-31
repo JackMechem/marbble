@@ -1,0 +1,432 @@
+/* Effect panels: more Tuner, Loudness Meter and dynamics rules (level bars, transfer curve, knobs). */
+.tuner-mute {
+  margin-left: auto;
+}
+
+.tuner-mute.on,
+.tuner-mute.on:hover {
+  background: var(--mute);
+  color: #fff;
+  box-shadow: none;
+}
+
+.loud {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 470px;
+  padding: 12px;
+  user-select: none;
+}
+
+.loud-main {
+  display: flex;
+  gap: 10px;
+}
+
+.loud-meters {
+  display: flex;
+  gap: 6px;
+  padding: 10px 12px 6px 4px;
+  border-radius: 8px;
+  background: var(--lcd-bg);
+  box-shadow: var(--lcd-shadow);
+}
+
+.loud-scale {
+  position: relative;
+  width: 24px;
+  height: 172px;
+}
+
+.loud-scale span {
+  position: absolute;
+  right: 2px;
+  transform: translateY(50%);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  color: var(--lcd-label);
+}
+
+.loud-scale span.zero {
+  font-weight: 700;
+  color: var(--green);
+}
+
+.loud-bar-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.loud-bar {
+  position: relative;
+  width: 16px;
+  height: 172px;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.loud-bar-cover {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: var(--fader-track);
+  transition: height 60ms linear;
+}
+
+.loud-bar-target {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--lcd-text);
+  opacity: 0.8;
+}
+
+.loud-bar-label {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--lcd-label);
+}
+
+.loud-readouts {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.loud-read {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  column-gap: 5px;
+  align-content: center;
+  padding: 7px 12px;
+  border-radius: 8px;
+  background: var(--lcd-bg);
+  box-shadow: var(--lcd-shadow);
+}
+
+.loud-read-label,
+.loud-delta {
+  grid-column: 1 / -1;
+}
+
+.loud-read-label {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--lcd-label);
+}
+
+.loud-read-value {
+  font-size: 25px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--lcd-text);
+}
+
+.dyn-level-bar {
+  position: relative;
+  width: 8px;
+  border-radius: 2px;
+  background: var(--fader-track);
+  overflow: hidden;
+}
+
+.dyn-level.horizontal .dyn-level-bar {
+  width: auto;
+  height: 8px;
+}
+
+.dyn-level-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 0;
+  background: linear-gradient(to top, #2f9e44, #55c23b 55%, #d8d33a 80%, #e9a23b 90%, #e5483a);
+  background-size: 100% var(--dyn-bar-len, 108px);
+  background-position: bottom;
+}
+
+.dyn-level.horizontal .dyn-level-fill {
+  top: 0;
+  right: auto;
+  width: 0;
+  height: auto;
+  background: linear-gradient(to right, #2f9e44, #55c23b 55%, #d8d33a 80%, #e9a23b 90%, #e5483a);
+  background-size: var(--dyn-bar-len, 108px) 100%;
+  background-position: left;
+}
+
+.dyn-level.horizontal .dyn-level-hold,
+.dyn-level.horizontal .dyn-level-zero {
+  top: 0;
+  bottom: 0;
+  right: auto;
+  width: 1px;
+  height: auto;
+}
+
+.dyn-level-hold {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--meter-hold, #e8e8e8);
+}
+
+.dyn-level-hold.over {
+  background: var(--red);
+}
+
+.dyn-level-zero {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.dyn-level-label {
+  color: var(--faint);
+  font-size: 9.5px;
+}
+
+.dyn-level-peak {
+  min-width: 30px;
+  height: 16px;
+  padding: 0 3px;
+  border-radius: 3px;
+  background: var(--readout);
+  color: var(--lcd-text);
+  font-size: 9.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dyn-level-peak.over {
+  background: var(--red);
+  color: #fff;
+}
+
+/* Transfer curve. */
+.dyn-graph {
+  position: relative;
+  flex: none;
+  border-radius: 6px;
+  background: var(--field);
+  box-shadow: var(--field-shadow);
+  overflow: hidden;
+}
+
+.dyn-graph canvas {
+  display: block;
+}
+
+.dyn-graph-dot {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  margin: 0 0 -3.5px -3.5px;
+  border-radius: 50%;
+  background: var(--text);
+  box-shadow: 0 0 0 2px var(--accent-soft), 0 0 6px var(--accent);
+  pointer-events: none;
+}
+
+/* Knobs. */
+.dyn-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 6px;
+  border-radius: 8px;
+  background: var(--panel-2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 0 0 0.5px var(--edge);
+}
+
+.dyn-big {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding-right: 14px;
+  border-right: 1px solid var(--line);
+}
+
+.dyn-small {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.dyn-lim .dyn-big {
+  padding: 0;
+  border: 0;
+  justify-content: space-around;
+}
+
+.dyn-knob {
+  width: 70px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.dyn-big .dyn-knob {
+  width: 96px;
+}
+
+.dyn-knob svg {
+  display: block;
+  cursor: ns-resize;
+}
+
+.dyn-knob-track {
+  fill: none;
+  stroke: var(--knob-ring);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.dyn-knob-arc {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.dyn-knob-step {
+  fill: var(--dim);
+}
+
+.dyn-knob-body {
+  fill: var(--knob-body);
+  stroke: var(--knob-edge);
+  stroke-width: 0.75;
+}
+
+.dyn-knob-pointer {
+  stroke: var(--knob-pointer);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.dyn-knob-label {
+  color: var(--dim);
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+.dyn-big .dyn-knob-label {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.dyn-knob-value {
+  min-width: 52px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--readout);
+  color: var(--lcd-text);
+  font-size: 10px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.loud-read-value i {
+  font-style: normal;
+  color: var(--lcd-label);
+}
+
+.loud-read-unit {
+  font-size: 10px;
+  color: var(--lcd-label);
+}
+
+.loud-read.integrated {
+  grid-column: 1 / -1;
+}
+
+.loud-read.integrated .loud-read-value {
+  font-size: 34px;
+}
+
+.loud-delta {
+  font-size: 10.5px;
+  color: var(--lcd-label);
+}
+
+.loud-delta.on {
+  color: var(--green);
+}
+
+.loud-small {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 0.8fr 1fr 1.3fr;
+  gap: 8px;
+}
+
+.loud-read.small {
+  padding: 6px 10px;
+}
+
+.loud-read.small .loud-read-value {
+  font-size: 15px;
+}
+
+.loud-read.over .loud-read-value {
+  color: var(--red);
+}
+
+.loud-history {
+  border-radius: 8px;
+  background: var(--lcd-bg);
+  box-shadow: var(--lcd-shadow);
+  overflow: hidden;
+}
+
+.loud-history-canvas {
+  display: block;
+}
+
+.loud-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.loud-controls > label {
+  color: var(--dim);
+}
+
+.loud-controls .segmented button {
+  min-width: 0;
+  height: 20px;
+}
+
+.loud-custom {
+  min-width: 80px;
+}
+
+.loud-spacer {
+  flex: 1;
+}
+
+.loud-reset:active {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+

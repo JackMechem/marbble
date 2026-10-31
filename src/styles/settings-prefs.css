@@ -1,0 +1,44 @@
+/* Preference sections and segmented controls in Settings. */
+/* Preference sections */
+.pref-section {
+  margin-bottom: 16px;
+}
+
+.pref-title {
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.pref-hint {
+  margin-top: 7px;
+  color: var(--faint);
+}
+
+.segmented {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  border-radius: 6px;
+  background: var(--field);
+  box-shadow: var(--field-shadow);
+}
+
+.segmented button {
+  min-width: 52px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 4px;
+  color: var(--dim);
+  font-weight: 500;
+}
+
+.segmented button:hover {
+  color: var(--text);
+}
+
+.segmented button.on {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+

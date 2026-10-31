@@ -1,0 +1,15 @@
+/* Hide Track: the H mode button, the headers' H button, hidden tracks. */
+/* Hide Track: the H mode button above the headers, the H button on each header, and hidden
+   tracks shown dimmed while hide mode is on. */
+.hide-mode {
+  width: 22px;
+  height: 18px;
+  margin-left: 6px;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  background: var(--btn);
+  color: var(--btn-text);
+  box-shadow: var(--btn-shadow);
+}
+

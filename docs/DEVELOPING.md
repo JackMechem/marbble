@@ -312,6 +312,7 @@ instead and enforce rules that would otherwise only fail in the running app.
 | `storeSelectors.test.ts` | Guard: no `useStore`, `useEd` or `useSettings` selector builds a new array or object on each call (which re-renders forever and blanks the window). |
 | `commands.test.ts` | Guard: every key command and native menu item is handled, and no two key commands share a default key. |
 | `tauriCommands.test.ts` | Guard: every Tauri command the frontend calls is registered, and each call passes its required arguments in camelCase and nothing else. |
+| `styles.test.ts` | Guard: `src/styles/index.css` imports every stylesheet exactly once with the tokens first, no other file imports CSS, and each file's braces balance. |
 | `browserDialogs.test.ts` | Guard: no `window.prompt`, `confirm` or `alert` in `src/` (macOS's web view doesn't implement them; use `askName` or the dialog plug-in). |
 
 ### What to run before sending a change
@@ -395,7 +396,8 @@ These keep the code maintainable and the merges clean.
 - **Where things go.** Substantial new code goes into a new module (`session/<feature>.rs`,
   `src/<feature>.ts`, `src/components/<Feature>.tsx`) and is wired in with small edits. New
   struct fields go at the end of the struct, new commands at the end of `commands.rs` and of the
-  `invoke_handler` list in `main.rs`, new CSS at the end of `styles.css`, new menu items next
+  `invoke_handler` list in `main.rs`, new CSS at the end of its area's file in `src/styles/` (a new area: a new file imported at the
+  end of `src/styles/index.css`), new menu items next
   to related ones.
 - **Comments.** Public items get doc comments. Comments explain *why*, not what. Keep the
   Logic Pro reference in mind: behaviour and labels follow Logic unless there is a reason not
@@ -538,7 +540,7 @@ For a CSS colour:
 1. `src/themes.ts`: add `"--my-colour": "..."` to `studioCss`. Flat, Midnight, Light and High
    Contrast inherit it by spreading, so override it only where it must differ (at least check
    `lightCss` and `contrastCss`).
-2. Use `var(--my-colour)` in `src/styles.css` (new rules go at the end).
+2. Use `var(--my-colour)` in the area's file in `src/styles/` (new rules go at the end of it).
 
 For a canvas colour:
 

@@ -1,0 +1,51 @@
+/* The Audio Track Editor's scroll area, playhead and gain box. */
+.aed-scroll {
+  position: absolute;
+  inset: 0;
+  overflow-x: scroll;
+  overflow-y: hidden;
+}
+
+/* The playhead: a 1px line with the ruler's triangle at the top. */
+.aed-playhead {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1px;
+  background: var(--ph);
+  pointer-events: none;
+  will-change: transform;
+  z-index: 2;
+}
+
+.aed-playhead::before {
+  content: "";
+  position: absolute;
+  left: -5px;
+  top: 7px;
+  width: 11px;
+  height: 7px;
+  background: var(--ph);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+
+.aed-gain {
+  min-width: 64px;
+  height: 20px;
+  padding: 0 8px;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  background: var(--lcd-bg);
+  box-shadow: var(--lcd-shadow);
+  color: var(--lcd-text);
+  font-variant-numeric: tabular-nums;
+  cursor: ns-resize;
+  user-select: none;
+}
+
+.aed-gain.disabled {
+  color: var(--faint);
+  cursor: default;
+}
+

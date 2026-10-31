@@ -1,0 +1,68 @@
+/* Settings: the MIDI pane. */
+.status-dot.off {
+  background: var(--faint);
+}
+
+/* MIDI */
+.midi-ports {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.midi-port {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.midi-port .status-dot {
+  margin: 0 0 0 6px;
+}
+
+.velocity-graph rect {
+  fill: var(--field);
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.velocity-graph polyline {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+
+.midi-monitor {
+  width: 100%;
+  max-width: 470px;
+  min-height: 132px;
+  padding: 6px 8px;
+  border-radius: 5px;
+  background: var(--field);
+  box-shadow: var(--field-shadow);
+  font-variant-numeric: tabular-nums;
+}
+
+.midi-msg {
+  display: grid;
+  grid-template-columns: 150px 44px 1fr;
+  gap: 8px;
+  padding: 1px 0;
+  color: var(--dim);
+  white-space: nowrap;
+}
+
+.midi-msg.fresh {
+  color: var(--text);
+}
+
+.midi-port-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.midi-what {
+  white-space: pre;
+}
+

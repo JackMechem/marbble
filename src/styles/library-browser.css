@@ -1,0 +1,151 @@
+/* The Library and the Browser. */
+/* ---- library & browser -------------------------------------------------------------------- */
+
+.library,
+.browser {
+  width: var(--library-w, 230px);
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border-right: 1px solid var(--edge);
+  min-height: 0;
+}
+
+.browser {
+  border-right: 0;
+  border-left: 1px solid var(--edge);
+}
+
+.pane-title {
+  height: 28px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  font-weight: 600;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--edge);
+}
+
+.search {
+  margin: 7px 8px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 0;
+  background: var(--field);
+  outline: none;
+  box-shadow: var(--field-shadow);
+}
+
+.search:focus {
+  box-shadow: 0 0 0 2px var(--accent-soft), 0 0 0 1px var(--accent);
+}
+
+.lib-list,
+.browser-list {
+  flex: 1;
+  overflow: auto;
+  padding: 0 0 8px;
+}
+
+.lib-group {
+  padding: 6px 10px 3px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.lib-vendor {
+  padding: 6px 10px 2px;
+  color: var(--dim);
+  font-weight: 600;
+}
+
+.lib-item {
+  padding: 3px 10px 3px 18px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lib-item:hover {
+  background: var(--panel-3);
+}
+
+.lib-item.on {
+  background: var(--select);
+  color: #fff;
+}
+
+.pane-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border-top: 1px solid var(--edge);
+}
+
+.small-btn {
+  padding: 2px 9px;
+  border-radius: 4px;
+  background: var(--btn);
+  color: var(--btn-text);
+  box-shadow: var(--btn-shadow);
+}
+
+.small-btn:hover {
+  background: var(--btn-hi);
+}
+
+.small-btn.icon {
+  padding: 2px 5px;
+}
+
+.small-btn:disabled {
+  opacity: 0.5;
+}
+
+.browser-path {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  color: var(--dim);
+  border-bottom: 1px solid var(--header-line);
+}
+
+.browser-path span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.browser-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+
+.browser-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.browser-item:hover {
+  background: var(--panel-3);
+}
+
+.browser-item svg {
+  flex: none;
+  color: var(--dim);
+}
+
+.browser-item.dir svg {
+  color: var(--accent);
+}
+

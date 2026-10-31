@@ -1,0 +1,54 @@
+/* The Audio Track Editor's bar and body. */
+/* ---- audio track editor ------------------------------------------------------------------- */
+
+.aed-info {
+  height: 22px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 10px;
+  font-size: 11px;
+  color: var(--dim);
+  white-space: nowrap;
+  overflow: hidden;
+  background: var(--panel);
+  border-bottom: 1px solid var(--edge);
+}
+
+.aed-info b {
+  color: var(--text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.aed-info .aed-sel {
+  margin-left: auto;
+}
+
+.aed-info .aed-sel b {
+  color: var(--accent);
+}
+
+.aed-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.aed-scale {
+  flex: none;
+  display: block;
+  border-right: 1px solid var(--edge);
+}
+
+.aed-main {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.aed-canvas {
+}
+

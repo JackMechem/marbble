@@ -1348,7 +1348,9 @@ drawings. The common pattern:
   plus a `CanvasTheme` for canvas drawing. Flat, Midnight, Light and High Contrast spread the
   previous theme's maps and override what differs, so a new variable only needs a value in
   Studio to exist everywhere.
-- `src/styles.css` uses only the variables, never literal theme colours.
+- `src/styles/` uses only the variables, never literal theme colours. `src/styles/index.css`
+  imports one stylesheet per area, and its order is the cascade: `tokens.css` first, the rest in
+  the order they were written, so an area can come in more than one file (see the comment there).
 
 ### Key commands
 
@@ -2252,7 +2254,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `theme.ts` | `CanvasTheme` and the live canvas colours. |
 | `uiScale.ts` | Interface scale and canvas pixel ratio. |
 | `icons.tsx` | Hand-drawn control bar glyphs. |
-| `styles.css` | All styles, using the theme variables. |
+| `styles/` | All styles, using the theme variables: `index.css` imports one file per area, in cascade order; `tokens.css` holds the `:root` variables. |
 | `detach.ts` | Detached panel windows: the panel kind registry, sharing UI state and snapshots between windows, detaching and attaching, remembered geometry. |
 | `detachModel.ts` | Panel keys and window labels, the shared fields, fitting windows to monitors; pure, tested. |
 | `panelKinds.tsx` | The detachable panel kinds: Mixer, Editors, Event List, Step Sequencer, Channel EQ, effect panels. |

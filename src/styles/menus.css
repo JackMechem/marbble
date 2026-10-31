@@ -1,0 +1,93 @@
+/* In-window menus (components/Menu.tsx). */
+/* ---- menus -------------------------------------------------------------------------------- */
+
+.menu-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.menu {
+  position: fixed;
+  pointer-events: auto;
+  min-width: 150px;
+  max-height: calc(100vh - 12px);
+  overflow-y: auto;
+  padding: 5px;
+  border-radius: 7px;
+  background: var(--menu-bg);
+  box-shadow: var(--menu-shadow);
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  height: 23px;
+  padding: 0 8px 0 2px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.menu-item:hover,
+.menu-item.open {
+  background: var(--select);
+  color: #fff;
+}
+
+.menu-item.disabled {
+  color: var(--faint);
+}
+
+.menu-item.disabled:hover {
+  background: none;
+}
+
+.menu-check {
+  width: 16px;
+  text-align: center;
+  font-size: 11px;
+}
+
+.menu-label {
+  flex: 1;
+}
+
+.menu-hint {
+  margin-left: 22px;
+  color: var(--dim);
+  font-size: 11px;
+}
+
+.menu-item:hover .menu-hint,
+.menu-item.open .menu-hint {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.menu-arrow {
+  margin-left: 14px;
+  display: grid;
+  place-items: center;
+}
+
+.menu-sep {
+  height: 1px;
+  margin: 4px 8px;
+  background: var(--menu-sep);
+}
+
+.menu-header {
+  padding: 4px 18px 2px;
+  font-size: 10.5px;
+  color: var(--faint);
+}
+
+.menu-swatch {
+  width: 46px;
+  height: 12px;
+  border-radius: 2px;
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.6);
+}
+

@@ -1,0 +1,31 @@
+/* Plug-in latency readouts and frozen tracks. */
+/* ---- plug-in latency and track freeze ----------------------------------------------------- */
+
+.strip-latency {
+  margin-left: 4px;
+  font-size: 9px;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  cursor: default;
+}
+
+.status-line .pdc-status {
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+
+.tbtn.freeze.on {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* A frozen track's name and plug-ins are greyed: they can't change until it is unfrozen. */
+.track-header.frozen .th-name {
+  opacity: 0.6;
+  font-style: italic;
+}
+
+.slot.filled.frozen {
+  opacity: 0.55;
+}
+

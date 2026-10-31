@@ -1,0 +1,8 @@
+/* The control bar's Replace mode button. */
+/* ---- Record in Replace mode ---------------------------------------------------------------- */
+
+.mode-btn.replace.on {
+  background: var(--red);
+  color: #fff;
+}
+

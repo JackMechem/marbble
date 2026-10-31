@@ -1,0 +1,7 @@
+/* The Step Sequencer's focus outline. */
+/* ---- Step Sequencer focus (components/StepSequencer.tsx) ---------------------------------- */
+
+.step-seq:focus {
+  outline: none;
+}
+

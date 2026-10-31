@@ -1,0 +1,80 @@
+/* The inspector column and its disclosure sections. */
+/* ---- inspector & channel strips ----------------------------------------------------------- */
+
+.inspector {
+  width: var(--inspector-w, 222px);
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border-right: 1px solid var(--edge);
+  min-height: 0;
+}
+
+.inspector-top {
+  overflow: auto;
+  flex: none;
+  max-height: 40%;
+}
+
+.disclosure-head {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 8px;
+  font-weight: 600;
+  color: var(--text);
+  border-bottom: 1px solid var(--header-line);
+  background: var(--panel-2);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.disclosure-head span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.disclosure-body {
+  padding: 5px 8px 8px;
+  border-bottom: 1px solid var(--header-line);
+}
+
+.insp-row {
+  display: flex;
+  align-items: center;
+  height: 19px;
+}
+
+.insp-label {
+  width: 70px;
+  color: var(--dim);
+  text-align: right;
+  padding-right: 8px;
+}
+
+.insp-value {
+  flex: 1;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.insp-empty {
+  color: var(--faint);
+  padding: 6px 4px;
+}
+
+.inspector-strips {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  border-top: 1px solid var(--edge);
+}
+
+.inspector-strips .strip {
+  flex: 1;
+}
+

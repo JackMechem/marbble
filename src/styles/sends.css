@@ -1,0 +1,67 @@
+/* Sends and the Output slot (components/Sends.tsx). */
+/* ---- sends & output routing ---------------------------------------------------------------- */
+
+.slot.send .slot-name {
+  text-align: left;
+  padding: 0 2px 0 6px;
+  cursor: default;
+}
+
+.slot.filled.send.muted {
+  background: var(--slot-static);
+  color: var(--faint);
+}
+
+.send-knob {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-right: 2px;
+  cursor: ns-resize;
+}
+
+.send-knob svg {
+  display: block;
+}
+
+.send-knob-ring {
+  fill: none;
+  stroke: var(--knob-ring);
+  stroke-width: 2.5;
+}
+
+.send-knob-arc {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+/* Pre-fader sends read differently at a glance. */
+.send-knob.pre .send-knob-arc {
+  stroke: var(--mon);
+}
+
+.slot.send.muted .send-knob-arc {
+  stroke: var(--faint);
+}
+
+.send-knob-body {
+  fill: var(--knob-body);
+  stroke: var(--knob-edge);
+  stroke-width: 0.5;
+}
+
+.send-knob-pointer {
+  stroke: var(--knob-pointer);
+  stroke-width: 1.3;
+  stroke-linecap: round;
+}
+
+.slot.output-pick:hover {
+  background: var(--slot-static-hi);
+}
+
+.slot.output-pick .slot-name {
+  font-weight: 400;
+}
+

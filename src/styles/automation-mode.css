@@ -1,0 +1,55 @@
+/* The automation mode pop-up and the parameter chooser. */
+.auto-mode.compact {
+  width: 44px;
+  padding: 0;
+}
+
+.auto-mode:hover {
+  background: var(--tbtn-hi);
+}
+
+/* As in Logic: green while reading, orange to red while writing. */
+.auto-mode.read {
+  background: var(--green);
+  color: #fff;
+}
+
+.auto-mode.touch,
+.auto-mode.latch {
+  background: var(--mon);
+  color: var(--mon-ink);
+}
+
+.auto-mode.write {
+  background: var(--red);
+  color: #fff;
+}
+
+.auto-param {
+  min-width: 68px;
+  flex: 1;
+  height: 19px;
+  font-size: 11px;
+  justify-content: space-between;
+}
+
+.auto-param span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.strip-pan {
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.strip-pan .auto-mode {
+  width: 52px;
+}
+
+.auto-mode-spacer {
+  height: 19px;
+}
+

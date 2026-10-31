@@ -1,0 +1,493 @@
+/* Effect panels: the window frame, shared groups and knobs, dynamics sections, the Limiter, side-chain and preset pop-ups. */
+/* Built-in effect panels (components/fx). The window borrows the Channel EQ window's frame. */
+.fx-window {
+  width: auto;
+  min-width: 360px;
+  max-width: calc(100vw - 40px);
+}
+
+.fx-window .eq-titlebar {
+  gap: 8px;
+}
+
+.fx-power {
+  width: 22px;
+  height: 20px;
+  border-radius: 5px;
+  background: var(--btn);
+  box-shadow: var(--btn-shadow);
+  color: var(--dim);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.fx-power.on {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: none;
+}
+
+.fx-body {
+  padding: 12px 14px 14px;
+  background: var(--panel);
+}
+
+.fx-body.bypassed .fx-panel,
+.fx-body.bypassed .fx-generic {
+  opacity: 0.55;
+}
+
+.fx-panel,
+.fx-generic {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.fx-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fx-knobs,
+.fx-switches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 4px;
+  max-width: 480px;
+}
+
+.fx-switches {
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.fx-group {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 8px 8px;
+  border-radius: 8px;
+  background: var(--panel-2);
+  box-shadow: inset 0 0 0 1px var(--edge);
+}
+
+.fx-group-title {
+  margin-bottom: 4px;
+  font-size: 10.5px;
+  color: var(--faint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.fx-group-body {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+}
+
+.fx-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  padding: 0 6px;
+}
+
+.fx-knob {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.fx-label {
+  font-size: 11px;
+  color: var(--dim);
+  white-space: nowrap;
+}
+
+.fx-value {
+  min-width: 56px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--readout);
+  font-size: 11px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  cursor: text;
+}
+
+.fx-value-edit {
+  width: 64px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--field);
+  box-shadow: var(--field-shadow);
+  color: var(--text);
+  font-size: 11px;
+  text-align: center;
+}
+
+.fx-toggle {
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 5px;
+  background: var(--btn);
+  color: var(--btn-text);
+  box-shadow: var(--btn-shadow);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.fx-toggle:hover {
+  background: var(--btn-hi);
+}
+
+.fx-toggle.on {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: none;
+}
+
+.fx-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.fx-segments {
+  display: flex;
+  border-radius: 5px;
+  box-shadow: var(--btn-shadow);
+  overflow: hidden;
+}
+
+.fx-segments button {
+  height: 22px;
+  padding: 0 10px;
+  background: var(--btn);
+  color: var(--btn-text);
+  font-size: 11.5px;
+}
+
+.fx-segments button + button {
+  border-left: 1px solid var(--edge);
+}
+
+.fx-segments button.on {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.dyn-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 21px;
+  padding: 0 8px;
+  border-radius: 5px;
+  background: var(--btn);
+  color: var(--btn-text);
+  box-shadow: var(--btn-shadow);
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+.dyn-toggle:hover {
+  background: var(--btn-hi);
+}
+
+.dyn-led {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--knob-ring);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.6);
+}
+
+.dyn-toggle.on .dyn-led {
+  background: var(--mon);
+  box-shadow: 0 0 5px var(--mon);
+}
+
+/* The lower sections. */
+.dyn-sections {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr 1fr;
+  gap: 6px;
+}
+
+.dyn-section {
+  border-radius: 6px;
+  background: var(--panel);
+  box-shadow: 0 0 0 0.5px var(--edge);
+}
+
+.dyn-section-title {
+  padding: 4px 8px 0;
+  color: var(--faint);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dyn-section-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  padding: 5px 8px 7px;
+}
+
+.dyn-section .dyn-knob {
+  width: 52px;
+}
+
+.dyn-section .dyn-knob-value {
+  min-width: 44px;
+}
+
+.dyn-field {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+.dyn-field-label {
+  color: var(--dim);
+  font-size: 10px;
+}
+
+.dyn-note {
+  color: var(--faint);
+}
+
+.dyn-footer {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 0 2px;
+  font-size: 10.5px;
+}
+
+.dyn-circuit-name {
+  font-weight: 600;
+}
+
+.dyn-circuit-about {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--faint);
+}
+
+.dyn-footer-gr {
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Limiter. */
+.dyn-lim-body {
+  display: flex;
+  gap: 12px;
+}
+
+.dyn-lim-meters {
+  display: flex;
+  gap: 8px;
+  padding: 8px 8px 6px;
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 0 0 0.5px var(--edge);
+}
+
+.dyn-lim-controls {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dyn-lim-gr {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 7px 12px 4px;
+  border-radius: 6px;
+  background: var(--lcd-bg);
+  box-shadow: var(--lcd-shadow);
+}
+
+.dyn-lim-gr .dyn-field-label {
+  color: var(--lcd-label);
+}
+
+.dyn-lim .dyn-small {
+  flex-wrap: wrap;
+  justify-content: space-around;
+  row-gap: 8px;
+}
+
+.fx-popup {
+  height: 20px;
+  max-width: 180px;
+  padding: 0 18px 0 8px;
+  border-radius: 5px;
+  background: var(--popup) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23888'/%3E%3C/svg%3E") no-repeat right 6px center;
+  box-shadow: var(--btn-shadow);
+  color: var(--text);
+  font-size: 11.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fx-sidechain,
+.fx-presets {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  cursor: default;
+}
+
+.fx-preset {
+  min-width: 120px;
+  text-align: left;
+}
+
+.fx-step {
+  width: 16px;
+  height: 20px;
+  border-radius: 4px;
+  color: var(--dim);
+  font-size: 14px;
+  line-height: 1;
+}
+
+.fx-step:hover {
+  background: var(--btn-hi);
+  color: var(--text);
+}
+
+.fx-sheet {
+  position: absolute;
+  top: 26px;
+  left: 0;
+  z-index: 5;
+  width: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--sheet-radius);
+  background: var(--sheet-bg);
+  box-shadow: var(--sheet-shadow);
+  cursor: default;
+}
+
+.fx-sheet-input {
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 5px;
+  background: var(--field);
+  box-shadow: var(--field-shadow);
+  color: var(--text);
+}
+
+.fx-sheet-error {
+  color: var(--red);
+  font-size: 11.5px;
+}
+
+.fx-sheet-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.fx-sheet-buttons .push {
+  min-width: 64px;
+}
+
+.fx-meters {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 8px 8px;
+  border-radius: 8px;
+  background: var(--panel-2);
+  box-shadow: inset 0 0 0 1px var(--edge);
+}
+
+.fx-meter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.fx-meter .fx-value {
+  min-width: 40px;
+  cursor: default;
+}
+
+.fx-meter-bar {
+  position: relative;
+  width: 12px;
+  border-radius: 3px;
+  background: var(--lcd-bg);
+  box-shadow: inset 0 0 0 1px var(--edge);
+  overflow: hidden;
+}
+
+.fx-meter-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: var(--green);
+}
+
+.fx-meter-bar.reduction .fx-meter-fill {
+  background: var(--solo);
+}
+
+.fx-meter-mark {
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  height: 2px;
+  margin-bottom: -1px;
+  background: var(--accent);
+}
+
+.fx-led {
+  align-self: flex-end;
+  min-width: 52px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--lcd-bg);
+  color: var(--faint);
+  font-size: 10.5px;
+  text-align: center;
+}
+
+.fx-led.on {
+  background: var(--green);
+  color: #fff;
+}
+
+.fx-gate .fx-meters,
+.fx-deesser .fx-meters {
+  align-self: stretch;
+}
+

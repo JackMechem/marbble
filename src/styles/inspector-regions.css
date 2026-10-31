@@ -1,0 +1,18 @@
+/* The Region inspector's pop-up values and replaced fades. */
+/* Region inspector: a label or value that is a pop-up (Fade In / Speed Up, the fade Type). */
+.insp-popup {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: inherit;
+}
+
+.insp-popup:hover {
+  color: var(--text);
+}
+
+/* A fade-in a crossfade replaces. */
+.insp-row.replaced {
+  opacity: 0.45;
+}
+

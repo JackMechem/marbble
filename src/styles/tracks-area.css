@@ -1,0 +1,400 @@
+/* The Tracks area: local menu bar, ruler, track headers, the canvas, the playhead. */
+/* ---- tracks area ---------------------------------------------------------------------------- */
+
+.tracks-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.local-bar {
+  height: 28px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px;
+  background: var(--local-bar);
+  border-bottom: 1px solid var(--edge);
+}
+
+.local-menus {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.local-menu {
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.local-menu:hover {
+  background: var(--btn);
+}
+
+.local-title {
+  font-weight: 600;
+  color: var(--text);
+  padding: 0 4px;
+  /* Long region names shorten instead of wrapping the local bar onto several lines. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  max-width: 260px;
+}
+
+.local-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--dim);
+}
+
+.lb-btn {
+  width: 26px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  background: var(--btn);
+  color: var(--btn-text);
+  box-shadow: var(--btn-shadow);
+}
+
+.lb-btn.on {
+  color: var(--accent);
+}
+
+.lb-label {
+  color: var(--dim);
+}
+
+.popup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 20px;
+  padding: 0 7px 0 9px;
+  border-radius: 4px;
+  background: var(--btn);
+  color: var(--btn-text);
+  box-shadow: var(--btn-shadow);
+}
+
+.popup:hover {
+  background: var(--btn-hi);
+}
+
+.zoom {
+  width: 64px;
+  accent-color: var(--accent);
+  height: 14px;
+}
+
+.tracks-body {
+  flex: 1;
+  display: grid;
+  min-height: 0;
+  background: var(--panel);
+}
+
+.headers-top {
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  background: var(--headers-top);
+  border-bottom: 1px solid var(--edge);
+  border-right: 1px solid var(--edge);
+}
+
+.add-track {
+  width: 22px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  background: var(--btn);
+  color: var(--btn-text);
+  box-shadow: var(--btn-shadow);
+}
+
+.add-track:hover {
+  background: var(--btn-hi);
+}
+
+.ruler {
+  display: block;
+}
+
+.ruler-wrap {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Playhead handle in the ruler: a downward triangle on a 1px stem. */
+.ruler-playhead {
+  position: absolute;
+  left: -5px;
+  top: 12px;
+  width: 11px;
+  height: 18px;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.ruler-playhead::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 11px;
+  height: 7px;
+  background: var(--ph);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+
+.ruler-playhead::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 6px;
+  width: 1px;
+  height: 12px;
+  background: var(--ph);
+}
+
+.headers {
+  position: relative;
+  overflow: hidden;
+  background: var(--headers-bg);
+  border-right: 1px solid var(--edge);
+}
+
+.headers-inner {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+}
+
+.track-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 0 0;
+  overflow: hidden;
+  border-bottom: 1px solid var(--header-line);
+  background: var(--header);
+}
+
+.track-header.selected {
+  background: var(--header-sel);
+}
+
+.th-color {
+  width: 3px;
+  align-self: stretch;
+  opacity: 0.9;
+}
+
+.th-num {
+  width: 20px;
+  text-align: right;
+  color: var(--faint);
+  font-size: 12px;
+  cursor: grab;
+}
+
+.th-icon {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: var(--icon-bg);
+  cursor: grab;
+}
+
+.th-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.th-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.th-name {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+}
+
+.th-rename {
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--field);
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  padding: 0 3px;
+  outline: none;
+  width: 100%;
+}
+
+.th-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.th-buttons .tbtn {
+  width: 25px;
+  height: 21px;
+  font-size: 11.5px;
+  border-radius: 4px;
+}
+
+.th-resize {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 6px;
+  cursor: ns-resize;
+  z-index: 1;
+}
+
+.th-resize:hover {
+  background: linear-gradient(transparent 4px, var(--accent) 4px);
+}
+
+.tbtn {
+  width: 20px;
+  height: 17px;
+  display: grid;
+  place-items: center;
+  border-radius: 3px;
+  background: var(--tbtn);
+  color: var(--tbtn-text);
+  font-size: 10.5px;
+  font-weight: 700;
+  box-shadow: var(--tbtn-shadow);
+}
+
+.tbtn:hover {
+  background: var(--tbtn-hi);
+}
+
+.tbtn.mon {
+  color: var(--mon);
+}
+
+.tbtn.rec {
+  color: var(--red);
+}
+
+.tbtn.mute.on {
+  background: var(--mute);
+  color: #fff;
+}
+
+.tbtn.solo.on {
+  background: var(--solo);
+  color: var(--solo-ink);
+}
+
+.tbtn.rec.on {
+  background: var(--red);
+  color: #fff;
+}
+
+.tbtn.mon.on {
+  background: var(--mon);
+  color: var(--mon-ink);
+}
+
+.tbtn.ghost {
+  background: none;
+  box-shadow: none;
+}
+
+.th-volume {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: stretch;
+}
+
+.reorder-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent);
+}
+
+.headers-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 30px 0;
+}
+
+.big-add {
+  padding: 6px 14px;
+  border-radius: 6px;
+  background: var(--btn);
+  color: var(--btn-text);
+  box-shadow: var(--btn-shadow);
+  font-weight: 500;
+}
+
+.big-add:hover {
+  background: var(--btn-hi);
+}
+
+.arrange {
+  position: relative;
+  overflow: hidden;
+}
+
+.arrange-canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.arrange-scroll {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+}
+
+.playhead {
+  will-change: transform;
+  position: absolute;
+  top: 0;
+  bottom: 10px;
+  left: 0;
+  width: 1px;
+  background: var(--text);
+  pointer-events: none;
+  z-index: 2;
+}
+

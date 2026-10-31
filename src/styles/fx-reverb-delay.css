@@ -1,0 +1,38 @@
+/* Effect panels: Reverb and Delay, first part. */
+/* ---- fx: reverb & delay ---- */
+
+.sp-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 600px;
+  padding: 10px 12px 12px;
+  background: var(--sheet-inner);
+  user-select: none;
+}
+
+.sp-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sp-spacer {
+  flex: 1;
+}
+
+.sp-segments button {
+  min-width: 0;
+  padding: 0 10px;
+}
+
+.sp-toggle {
+  height: 24px;
+  padding: 0 11px;
+  border-radius: 5px;
+  background: var(--btn);
+  color: var(--btn-text);
+  box-shadow: var(--btn-shadow);
+  font-weight: 500;
+}
+

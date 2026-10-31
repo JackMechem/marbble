@@ -1,0 +1,164 @@
+/* Sheets (the modal frame), the New Tracks chooser, form rows, checks and selects. */
+/* ---- sheets ------------------------------------------------------------------------------- */
+
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(0, 0, 0, 0.28);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.sheet {
+  margin-top: 54px;
+  border-radius: var(--sheet-radius);
+  background: var(--sheet-bg);
+  box-shadow: var(--sheet-shadow);
+  padding: 16px 20px 16px;
+  animation: sheet-in 0.16s ease-out;
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(-12px);
+    opacity: 0;
+  }
+}
+
+.sheet-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+
+.track-types {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.track-type {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 14px 12px;
+  border-radius: 8px;
+  background: var(--card);
+  box-shadow: 0 0 0 0.5px var(--edge);
+  color: var(--dim);
+  text-align: center;
+}
+
+.track-type:hover {
+  background: var(--card-hi);
+}
+
+.track-type.on {
+  background: var(--card-on);
+  box-shadow: 0 0 0 2px var(--accent);
+  color: var(--accent);
+}
+
+.tt-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.tt-sub {
+  font-size: 11px;
+  color: var(--dim);
+  line-height: 1.35;
+}
+
+.sheet-details {
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--sheet-inner);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.details-title {
+  font-weight: 600;
+  color: var(--dim);
+}
+
+.form-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.form-row > label:first-child {
+  width: 100px;
+  text-align: right;
+  color: var(--text);
+}
+
+.form-row.checks {
+  padding-left: 108px;
+  gap: 16px;
+}
+
+.form-hint {
+  padding-left: 108px;
+  color: var(--faint);
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text);
+}
+
+.check input,
+.insp-value input {
+  accent-color: var(--accent);
+  margin: 0;
+}
+
+.select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 24px;
+  min-width: 180px;
+  max-width: 100%;
+  padding: 0 6px 0 9px;
+  border-radius: 5px;
+  background: var(--popup);
+  color: var(--text);
+  box-shadow: var(--btn-shadow);
+  text-align: left;
+}
+
+.select:hover {
+  background: var(--btn-hi);
+}
+
+.select-label {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.select-arrows {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  display: grid;
+  place-items: center;
+  border-radius: 3px;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+

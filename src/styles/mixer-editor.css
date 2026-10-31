@@ -1,0 +1,72 @@
+/* The Mixer and the bottom editor pane's frames. */
+/* ---- mixer & editor ---------------------------------------------------------------------- */
+
+.mixer,
+.editor {
+  height: var(--mixer-h, 400px);
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--edge);
+  background: var(--bg);
+}
+
+.editor {
+  height: var(--editor-h, 300px);
+}
+
+.mixer-filters {
+  display: flex;
+  gap: 2px;
+  margin-left: 12px;
+}
+
+.filter {
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: var(--dim);
+  font-weight: 500;
+}
+
+.filter.on {
+  background: var(--btn);
+  color: var(--text);
+}
+
+/* The strips scroll both ways when the Mixer is too small for them. The row is at least as
+   tall as the view and as tall as the tallest strip, so every strip ends on the same line. */
+.mixer-strips {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+}
+
+.mixer-row {
+  display: flex;
+  width: max-content;
+  min-width: 100%;
+  min-height: 100%;
+}
+
+.mixer-gap {
+  flex: 1;
+  min-width: 12px;
+}
+
+.editor-body {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+}
+
+.editor-body canvas {
+  display: block;
+}
+
+.editor-empty {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: var(--faint);
+}
+

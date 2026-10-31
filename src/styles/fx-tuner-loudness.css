@@ -1,0 +1,190 @@
+/* Effect panels: the Tuner and the Loudness Meter. */
+/* ---- fx: tuner & loudness ---- */
+
+.tuner {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 380px;
+  padding: 12px;
+  user-select: none;
+}
+
+.tuner-face {
+  position: relative;
+  padding: 8px 14px 10px;
+  border-radius: 9px;
+  background: var(--lcd-bg);
+  box-shadow: var(--lcd-shadow);
+  color: var(--lcd-text);
+}
+
+.tuner-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  height: 66px;
+}
+
+/* Flat and sharp lights: triangles pointing at the note, the way to turn the peg. */
+.tuner-led {
+  width: 0;
+  height: 0;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  opacity: 0.22;
+  transition: opacity 80ms linear;
+}
+
+.tuner-led.flat {
+  border-left: 13px solid var(--red);
+}
+
+.tuner-led.sharp {
+  border-right: 13px solid var(--red);
+}
+
+.tuner-led.lit {
+  opacity: 1;
+  filter: drop-shadow(0 0 4px var(--red));
+}
+
+.tuner-note {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  min-width: 96px;
+  line-height: 1;
+}
+
+.tuner-letter {
+  font-size: 58px;
+  font-weight: 300;
+  letter-spacing: -1px;
+  transition: color 120ms linear;
+}
+
+.tuner-note.idle .tuner-letter {
+  color: var(--lcd-label);
+}
+
+.tuner-note.in-tune .tuner-letter {
+  color: var(--green);
+}
+
+.tuner-marks {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 52px;
+  min-width: 18px;
+  margin-left: 3px;
+  padding-top: 3px;
+}
+
+.tuner-acc {
+  font-size: 22px;
+}
+
+.tuner-oct {
+  font-size: 17px;
+  color: var(--lcd-label);
+}
+
+.tuner-dial {
+  display: block;
+}
+
+.tuner-foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tuner-readout {
+  min-width: 96px;
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.tuner-readout.right {
+  text-align: right;
+}
+
+.tuner-readout small,
+.tuner-muted {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--lcd-label);
+}
+
+.tuner-readout small {
+  margin-left: 4px;
+}
+
+.tuner-ref-badge {
+  font-size: 10.5px;
+  color: var(--lcd-label);
+  white-space: nowrap;
+}
+
+.tuner-level {
+  position: relative;
+  height: 3px;
+  margin-top: 9px;
+  border-radius: 2px;
+  background: var(--lcd-sep);
+}
+
+.tuner-level-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--lcd-label);
+}
+
+.tuner-level-fill.open {
+  background: var(--green);
+}
+
+.tuner-level-gate {
+  position: absolute;
+  top: -2px;
+  width: 1px;
+  height: 7px;
+  background: var(--lcd-text);
+}
+
+.tuner-muted {
+  position: absolute;
+  top: 9px;
+  right: 12px;
+  color: var(--mute);
+}
+
+.tuner-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 12px;
+}
+
+.tuner-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tuner-field > label {
+  font-size: 10.5px;
+  color: var(--dim);
+}
+
+.tuner-stepper {
+  display: flex;
+}
+

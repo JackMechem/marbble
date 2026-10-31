@@ -14,5 +14,6 @@ from the latest round of work, including what still needs a look in the running 
   and say when the app restarts. Report progress as each piece lands.
 - Commit and push only when asked, to `dev`, one commit per feature with a descriptive body.
   Commits are signed with the user's YubiKey, so leave signing and pushing to them.
-- When two branches append to the end of `src/styles.css`, check the merged tail by hand and
-  run the vite build before trusting the merge.
+- Styles live in `src/styles/`, one file per area; `src/styles/index.css` imports them and its
+  order is the cascade. When two branches add `@import` lines to the end of it or append to the
+  same area file, check the merged tail by hand and run the vite build before trusting the merge.

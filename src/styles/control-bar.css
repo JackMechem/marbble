@@ -1,0 +1,293 @@
+/* The control bar: view buttons, transport, LCD, mode buttons, CPU meter. */
+/* ---- control bar -------------------------------------------------------------------------- */
+
+.control-bar {
+  height: 54px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px;
+  background: var(--cb-bg);
+  border-bottom: 1px solid var(--cb-edge);
+}
+
+.cb-group {
+  display: flex;
+  gap: 6px;
+  flex: 1;
+}
+
+.cb-group.right {
+  justify-content: flex-end;
+}
+
+.cb-btn {
+  width: 32px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius);
+  background: var(--btn);
+  color: var(--btn-text);
+  box-shadow: var(--btn-shadow);
+}
+
+.cb-btn:hover {
+  background: var(--btn-hi);
+}
+
+.cb-btn.on {
+  background: var(--btn-active);
+  color: var(--accent);
+}
+
+.cb-center {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.transport,
+.cb-modes {
+  display: flex;
+  gap: 3px;
+}
+
+.tp-btn {
+  width: 34px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius);
+  background: var(--btn);
+  color: var(--btn-text);
+  box-shadow: var(--btn-shadow);
+}
+
+.tp-btn:hover {
+  background: var(--btn-hi);
+}
+
+.tp-btn:active {
+  background: var(--btn-active);
+}
+
+.tp-btn.rec {
+  color: var(--red);
+}
+
+.tp-btn.play.on {
+  background: var(--btn-active);
+  color: var(--green);
+}
+
+.tp-btn.rec.on {
+  background: var(--red);
+  color: #fff;
+  animation: rec-pulse 1s steps(2, start) infinite;
+}
+
+@keyframes rec-pulse {
+  50% {
+    filter: brightness(0.82);
+  }
+}
+
+/* LCD */
+.lcd {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  height: 42px;
+  min-width: 290px;
+  padding: 0 22px 0 6px;
+  border-radius: 7px;
+  background: var(--lcd-bg);
+  box-shadow: var(--lcd-shadow);
+}
+
+.lcd-field {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 12px;
+  cursor: ns-resize;
+}
+
+.lcd-digits {
+  display: flex;
+  gap: 18px;
+  font-size: 23px;
+  font-weight: 500;
+  letter-spacing: -0.2px;
+  color: var(--lcd-text);
+  line-height: 1;
+}
+
+.lcd-pos .lcd-digits span {
+  min-width: 18px;
+  text-align: right;
+}
+
+.lcd-time .lcd-digits {
+  font-size: 20px;
+}
+
+.lcd-labels {
+  display: flex;
+  gap: 18px;
+  margin-top: 3px;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  color: var(--lcd-label);
+}
+
+.lcd-pos .lcd-labels span {
+  min-width: 18px;
+  text-align: right;
+}
+
+.lcd-sep {
+  width: 1px;
+  margin: 8px 0;
+  background: var(--lcd-sep);
+}
+
+.lcd-tempo .lcd-digits {
+  min-width: 44px;
+  justify-content: center;
+}
+
+.lcd-tempo .lcd-labels {
+  justify-content: center;
+}
+
+.lcd-input {
+  width: 64px;
+  font-size: 18px;
+  background: var(--field);
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  color: var(--lcd-text);
+  padding: 1px 4px;
+  outline: none;
+}
+
+.lcd-stack {
+  gap: 2px;
+  cursor: default;
+}
+
+.lcd-small {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--lcd-text);
+  padding: 0 2px;
+  border-radius: 3px;
+}
+
+.lcd-small:hover {
+  background: var(--lcd-hover);
+}
+
+.lcd-mode {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  color: var(--lcd-label);
+  border-radius: 3px;
+}
+
+.lcd-mode:hover {
+  color: var(--lcd-text);
+  background: var(--lcd-hover);
+}
+
+.mode-btn {
+  min-width: 30px;
+  height: 24px;
+  padding: 0 6px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius);
+  background: var(--btn);
+  color: var(--btn-text);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  box-shadow: var(--btn-shadow);
+}
+
+.mode-btn:hover {
+  background: var(--btn-hi);
+}
+
+.mode-btn.cycle.on {
+  background: var(--cycle);
+  color: var(--cycle-ink);
+}
+
+.mode-btn.purple.on {
+  background: var(--metro);
+  color: var(--metro-ink);
+}
+
+.cb-master {
+  display: flex;
+  align-items: center;
+}
+
+.cpu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--faint);
+}
+
+.cpu-bar {
+  position: relative;
+  width: 38px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--slider-track);
+  overflow: hidden;
+}
+
+.cpu-bar div {
+  height: 100%;
+}
+
+/* The worst recent block. Its right edge marks the value, so it stays on the bar at 100% and off
+   it at 0. --text, not the level meters' --meter-hold, which no theme sets and whose light
+   fallback is lost on the Light theme's pale track. */
+.cpu-peak {
+  position: absolute;
+  top: 0;
+  width: 1px;
+  transform: translateX(-100%);
+  background: var(--text);
+}
+
+/* A block ran late since the last click: red like a strip's clip indicator, until clicked. */
+.cpu.over {
+  cursor: pointer;
+}
+
+.cpu.over span {
+  align-self: flex-start;
+  margin-left: -2px;
+  padding: 0 2px;
+  border-radius: 2px;
+  background: var(--red);
+  color: #fff;
+}
+

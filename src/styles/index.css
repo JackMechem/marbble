@@ -1,0 +1,85 @@
+/* The app's stylesheet, in cascade order. main.tsx imports this file and nothing else imports CSS.
+
+   The order below IS the cascade: when two rules of equal specificity match one element, the
+   later file wins, so moving an @import can change how the app looks. The list follows the order
+   the rules were written in, which is why some areas come in more than one file (settings-*,
+   piano-roll*, fx-*): bringing the fragments together could change which rule wins. Before
+   merging any, compare the emitted CSS, or show no element can match both sides.
+
+   - Rules for an existing area go at the end of that area's file.
+   - A new area gets a new file, with its @import at the end of this list.
+   - Every colour, gradient and shadow comes from a theme variable (themes.ts); tokens.css holds
+     the Studio values for the first paint and stays first.
+
+   tests/styles.test.ts checks that every file here is imported exactly once. */
+@import "./tokens.css";
+@import "./base.css";
+@import "./layout.css";
+@import "./control-bar.css";
+@import "./controls.css";
+@import "./tracks-area.css";
+@import "./inspector.css";
+@import "./strip.css";
+@import "./mixer-editor.css";
+@import "./library-browser.css";
+@import "./menus.css";
+@import "./sheets.css";
+@import "./form-controls.css";
+@import "./settings-window.css";
+@import "./status-line.css";
+@import "./settings-prefs.css";
+@import "./channel-eq.css";
+@import "./project-chooser.css";
+@import "./file-drop.css";
+@import "./musical-typing.css";
+@import "./track-stacks.css";
+@import "./splitters.css";
+@import "./hide-track.css";
+@import "./automation.css";
+@import "./sends.css";
+@import "./bounce.css";
+@import "./audio-editor.css";
+@import "./piano-roll-frame.css";
+@import "./audio-editor-playhead.css";
+@import "./automation-mode.css";
+@import "./settings-panes.css";
+@import "./piano-roll.css";
+@import "./settings-midi.css";
+@import "./settings-plugins-keys.css";
+@import "./settings-recovery.css";
+@import "./piano-roll-tools.css";
+@import "./latency-freeze.css";
+@import "./markers-global-tracks.css";
+@import "./fx-tuner-loudness.css";
+@import "./fx-dynamics.css";
+@import "./fx-reverb-delay.css";
+@import "./fx-loudness-dynamics.css";
+@import "./fx-reverb-delay-2.css";
+@import "./fx-dynamics-2.css";
+@import "./fx-panels.css";
+@import "./slot-drag.css";
+@import "./inspector-regions.css";
+@import "./track-headers-compact.css";
+@import "./overview.css";
+@import "./fx-dock.css";
+@import "./detached-windows.css";
+@import "./region-params.css";
+@import "./event-list.css";
+@import "./fx-modulation.css";
+@import "./strip-setting.css";
+@import "./tracks-tools.css";
+@import "./midi-learn.css";
+@import "./vca.css";
+@import "./record-replace.css";
+@import "./step-input.css";
+@import "./alternatives.css";
+@import "./arrangement-track.css";
+@import "./automation-lanes.css";
+@import "./step-sequencer.css";
+@import "./fx-linear-phase.css";
+@import "./strip-silence.css";
+@import "./step-sequencer-focus.css";
+@import "./track-on-off.css";
+@import "./strip-next-output.css";
+@import "./fx-instrument.css";
+@import "./fx-sampler.css";

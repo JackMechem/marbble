@@ -1,0 +1,219 @@
+/* The channel strip: slots, fader, readouts, buttons. */
+.strip {
+  width: 104px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  padding: 6px 5px 0;
+  background: var(--strip);
+  border-right: 1px solid var(--strip-line);
+  min-height: 0;
+}
+
+.strip.selected {
+  background: var(--strip-sel);
+}
+
+.strip-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.strip-label {
+  font-size: 10px;
+  color: var(--faint);
+  text-align: center;
+  letter-spacing: 0.2px;
+}
+
+.slot {
+  position: relative;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  border-radius: 3px;
+  background: var(--slot-empty);
+  box-shadow: var(--slot-empty-shadow);
+  overflow: hidden;
+}
+
+.slot.empty:hover {
+  background: var(--slot-empty-hi);
+}
+
+.slot.filled {
+  background: var(--slot-filled);
+  color: var(--slot-text);
+  box-shadow: var(--slot-shadow);
+}
+
+.slot.filled.instrument {
+  background: var(--slot-inst);
+}
+
+.slot.filled.editing {
+  background: var(--slot-edit);
+  color: var(--slot-edit-text);
+}
+
+.slot.filled.bypassed {
+  background: var(--slot-static);
+  color: var(--faint);
+}
+
+.slot.filled.missing .slot-name {
+  color: var(--faint);
+  font-style: italic;
+  text-decoration: line-through;
+}
+
+/* A VST3 keyed by another track (its editor is a native window, so the slot says so). */
+.slot.filled.keyed .slot-name::before {
+  content: "SC";
+  margin-right: 4px;
+  font-size: 8px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.slot-name {
+  flex: 1;
+  min-width: 0;
+  padding: 0 4px;
+  font-size: 11px;
+  font-weight: 500;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slot-name.dim {
+  color: var(--faint);
+}
+
+.slot-power,
+.slot-arrow {
+  width: 14px;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+}
+
+.slot.filled:hover .slot-power,
+.slot.filled:hover .slot-arrow,
+.slot.bypassed .slot-power {
+  opacity: 0.8;
+}
+
+.slot-power:hover,
+.slot-arrow:hover {
+  background: rgba(0, 0, 0, 0.18);
+  opacity: 1 !important;
+}
+
+.slot.bypassed .slot-power {
+  color: var(--faint);
+}
+
+.slot.static {
+  justify-content: center;
+  font-size: 11px;
+  color: var(--dim);
+}
+
+.slot.output,
+.slot.input-slot {
+  background: var(--slot-static);
+  color: var(--text);
+  box-shadow: var(--slot-shadow);
+}
+
+.slot.input-slot:hover {
+  background: var(--slot-static-hi);
+}
+
+.slot-format {
+  width: 18px;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: var(--dim);
+  border-right: 1px solid var(--strip-line);
+}
+
+.strip-pan {
+  display: flex;
+  justify-content: center;
+  margin-top: auto;
+}
+
+.strip-readouts {
+  display: flex;
+  gap: 3px;
+}
+
+.readout {
+  flex: 1;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 3px;
+  background: var(--readout);
+  box-shadow: var(--field-shadow);
+  font-size: 11px;
+  color: var(--text);
+}
+
+.readout.peak.clip {
+  background: var(--red);
+  color: #fff;
+}
+
+/* The fader and meter are drawn at the box's measured height, so the box takes no size from
+   them (contain: size): it gets the strip's spare height, and at least 60px. */
+.strip-fader {
+  flex: 1;
+  min-height: 60px;
+  contain: size;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.strip-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: center;
+}
+
+.btn-row {
+  display: flex;
+  gap: 4px;
+}
+
+.strip-buttons .tbtn {
+  width: 27px;
+  height: 21px;
+  font-size: 11.5px;
+}
+
+.strip-name {
+  margin: 2px -5px 0;
+  padding: 5px 4px 6px;
+  border-top: 3px solid;
+  background: var(--strip-name);
+  text-align: center;
+  font-weight: 600;
+  font-size: 11.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+

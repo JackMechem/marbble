@@ -1,0 +1,43 @@
+/* The Bounce, Export and Bounce in Place dialogs. */
+/* ---- Bounce and export ------------------------------------------------------------------- */
+
+.bounce-form {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.bounce-form .settings-grid .select {
+  width: 220px;
+}
+
+.bounce-form .row-inline .numfield + .dim {
+  white-space: nowrap;
+}
+
+.bip-grid {
+  grid-template-columns: 90px 1fr;
+}
+
+.bip-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.bounce-progress {
+  height: 4px;
+  margin-top: 14px;
+  border-radius: 2px;
+  background: var(--field);
+  box-shadow: var(--field-shadow);
+  overflow: hidden;
+}
+
+.bounce-progress > div {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.12s linear;
+}
+
