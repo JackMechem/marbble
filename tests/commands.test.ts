@@ -4,8 +4,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
-const read = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
+const read = (path: string) => readFileSync(fileURLToPath(new URL(`../${path}`, import.meta.url)), "utf8");
 const keymap = read("src/keymap.ts");
 const app = read("src/App.tsx");
 const arrange = read("src/arrangeCmds.ts");
@@ -147,7 +148,7 @@ test("the key commands that go through handleMenu name one of its cases", () => 
 test("every key hint in a menu or tooltip names a key command", () => {
   const ids = new Set(commands().map((c) => c.id));
   const src = (dir: string): string[] =>
-    readdirSync(new URL(`../${dir}`, import.meta.url), { withFileTypes: true }).flatMap((e) =>
+    readdirSync(fileURLToPath(new URL(`../${dir}`, import.meta.url)), { withFileTypes: true }).flatMap((e) =>
       e.isDirectory() ? src(`${dir}/${e.name}`) : /\.tsx?$/.test(e.name) ? [read(`${dir}/${e.name}`)] : [],
     );
   const named = src("src").flatMap((s) => [...s.matchAll(/\b(?:keyHint|keysFor)\("([^"]+)"/g)].map((m) => m[1]));

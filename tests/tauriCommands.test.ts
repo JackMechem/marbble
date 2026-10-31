@@ -81,7 +81,7 @@ function uses(): Use[] {
   for (const path of files(join(ROOT, "src"), /\.tsx?$/)) {
     const src = readFileSync(path, "utf8");
     for (const m of src.matchAll(/\b(?:act|call|actMade|invoke)(?:<[^>]*>)?\(\s*"(\w+)"\s*(,\s*)?/g)) {
-      const where = `${relative(ROOT, path)}:${src.slice(0, m.index).split("\n").length}`;
+      const where = `${relative(ROOT, path).replaceAll("\\", "/")}:${src.slice(0, m.index).split("\n").length}`;
       const at = m.index + m[0].length;
       if (!m[2]) out.push({ where, cmd: m[1], args: [], spread: false });
       else if (src[at] !== "{") out.push({ where, cmd: m[1], args: null, spread: true });

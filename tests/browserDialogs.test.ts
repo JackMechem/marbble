@@ -63,6 +63,6 @@ test("the checker finds browser dialogs and lets the dialog plug-in's through", 
 });
 
 test("no source uses window.prompt, confirm or alert", () => {
-  const bad = sources(SRC).flatMap((p) => browserDialogs(readFileSync(p, "utf8")).map((d) => `${p.slice(SRC.length)}: ${d}`));
+  const bad = sources(SRC).flatMap((p) => browserDialogs(readFileSync(p, "utf8")).map((d) => `${p.slice(SRC.length).replaceAll("\\", "/")}: ${d}`));
   assert.deepEqual(bad, [], "use askName (components/NameSheet.tsx) or @tauri-apps/plugin-dialog instead");
 });

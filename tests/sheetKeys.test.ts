@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { heldBack, NON_MODAL_COMMANDS, outsideKey } from "../src/sheetKeysModel.ts";
 
-const read = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
+const read = (path: string) => readFileSync(fileURLToPath(new URL(`../${path}`, import.meta.url)), "utf8");
 
 test("with no sheet open, every key reaches the app", () => {
   assert.equal(outsideKey([], "Backspace", "delete-regions"), "pass");
