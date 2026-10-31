@@ -1,0 +1,5 @@
+# Commits that only reformat: `git config blame.ignoreRevsFile .git-blame-ignore-revs` makes blame
+# look through them, and GitHub reads this file by itself.
+#
+# The project-wide `cargo fmt` pass.
+0c34b307751accec3f61cd1fd239ceb33f914b2f

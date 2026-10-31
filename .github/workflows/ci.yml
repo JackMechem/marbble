@@ -60,6 +60,9 @@ jobs:
       - name: Install the pinned lint toolchain
         if: runner.os == 'Linux'
         run: rustup toolchain install "$LINT_TOOLCHAIN" --profile minimal --component clippy --component rustfmt
+      - name: Formatting
+        if: runner.os == 'Linux'
+        run: cargo "+$LINT_TOOLCHAIN" fmt --all --check
       - name: Clippy, warnings are errors
         if: runner.os == 'Linux'
         run: cargo "+$LINT_TOOLCHAIN" clippy --workspace --all-targets -- -D warnings

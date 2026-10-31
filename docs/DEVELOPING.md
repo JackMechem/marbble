@@ -95,7 +95,8 @@ cargo build -p daw                       # the whole app, including the Tauri cr
 cargo test -p daw-engine --lib           # engine unit tests
 cargo test -p daw                        # Tauri crate tests (settings parsing)
 cargo run -q -p daw-engine --example <name> -- <args>   # headless checks, below
-cargo clippy --workspace --all-targets
+cargo clippy --workspace --all-targets -- -D warnings
+cargo fmt --all                          # rustfmt.toml sets the rules
 npx tsc --noEmit -p .                    # type-check the frontend
 ```
 
@@ -331,7 +332,7 @@ instead and enforce rules that would otherwise only fail in the running app.
   `scripts/headless-checks.sh` and the plug-in checks `pdc_check` and `freeze_check`); for a
   built-in effect, `fx_check` and `fx_bench`
 - `npm test`, `npx tsc --noEmit -p .` and `npm run build` (the Vite bundle and CSS)
-- `cargo clippy --workspace --all-targets`
+- `cargo clippy --workspace --all-targets -- -D warnings` and `cargo fmt --all --check`
 - a visual check in the running app for UI changes
 
 ## Debugging
@@ -430,15 +431,18 @@ These keep the code maintainable and the merges clean.
 - **Where things go.** Substantial new code goes into a new module (`session/<feature>.rs`,
   `src/<feature>.ts`, `src/components/<Feature>.tsx`) and is wired in with small edits. New
   struct fields go at the end of the struct, new commands at the end of the fitting `commands/<area>.rs` and of the
-  `invoke_handler` list in `main.rs`, new CSS at the end of `styles.css`, new menu items next
-  to related ones.
+  `invoke_handler` list in `main.rs`, new CSS at the end of its area's file in
+  `src/styles/` (a new area: a new file imported at the end of `src/styles/index.css`), new menu
+  items next to related ones.
 - **Comments.** Public items get doc comments. Comments explain *why*, not what. Keep the
   Logic Pro reference in mind: behaviour and labels follow Logic unless there is a reason not
   to, and the reason goes in a comment.
 - **UI.** Use the existing CSS variables and components (`Form.tsx`, `Controls.tsx`,
   `Menu.tsx`). Follow the Logic-like visual language; don't introduce a new look.
-- **Formatting.** `rustfmt` for Rust (long lines are accepted in this codebase); TypeScript is
-  strict with no unused locals or parameters.
+- **Formatting.** `cargo fmt --all` for Rust, which CI checks. `rustfmt.toml` allows lines up to 160
+  columns; `#[rustfmt::skip]` stays on tables that would otherwise fall apart. The one project-wide
+  pass is listed in `.git-blame-ignore-revs`, so `git config blame.ignoreRevsFile .git-blame-ignore-revs`
+  lets blame look through it. TypeScript is strict with no unused locals or parameters.
 
 ## The frontend: where things live
 
@@ -631,6 +635,34 @@ complete model and `tre/` a larger one.
    `parallel_check`, and `cargo run --release -q -p daw-engine --example instrument_bench` for the
    cost per block.
 
+### Add a panel
+
+There are four kinds, from least to most wiring. New CSS goes in `src/styles/` (see
+[Conventions](#conventions)); use the theme variables.
+
+**A sheet.** Build it on `Sheet` from `components/Dialogs.tsx`, which registers its keys with
+`useSheetKeys` (`tests/sheetKeys.test.ts` fails on a sheet that doesn't). A flag or a `state.dialog`
+value in `store.ts` shows it, and `App.tsx` renders it next to the others.
+
+**A Settings pane.** A file in `components/settingsPanes/` exporting a component that takes
+`{ close }`, ending in `Foot`, and an entry in `tabs` in `SettingsWindow` (`Settings.tsx`) with an
+id added to `SettingsTab` in `store.ts`.
+
+**A built-in effect's or instrument's panel.** `components/fx/<Name>.tsx` exporting a component
+that takes `FxPanelProps`: `info` and `values` to read, `set` and `touch` to change a parameter,
+`meters` to draw (start from `fx/Gain.tsx`; `fx/common.tsx` has the controls). Register it by plug-in
+id in `FX_PANELS` (`src/fx.ts`). That is all: `fx/FxPanel.tsx` shows it docked, floating or in its
+own window, with the header controls. Without an entry an effect gets the generic panel, and an
+instrument the sectioned one from its spec.
+
+**A pane in the bottom section.**
+
+1. Add it to `BottomPane` in `store.ts`, and show it with `setState({ bottom: "<pane>" })`
+   from a key command, a menu item or `EditorTabs`.
+2. Render it in the layout in `App.tsx`, next to `s.bottom === "steps"`.
+3. To let it detach, register it in `panelKinds.tsx` with `bottomPanel("<pane>", { title, render,
+   size, own: ownBottom("<pane>") })`, and put `<DetachButton panel="<pane>" />` in its bar.
+
 ### Add a theme colour
 
 For a CSS colour:
@@ -709,7 +741,8 @@ or notarized yet.
 `.github/workflows/ci.yml` runs on pushes to `main`, on pull requests and on demand, on
 `ubuntu-24.04`, `windows-latest` and `macos-latest`: `npm ci`, `npm run build` (type check and
 frontend build), `npm test`, `cargo test -p daw-engine --lib`, `cargo test -p daw` and
-`cargo check --workspace --all-targets` (so the examples must compile). On Linux it then runs
+`cargo check --workspace --all-targets` (so the examples must compile). On Linux it then checks
+`cargo fmt` and runs clippy with `-D warnings`, both on the pinned `LINT_TOOLCHAIN`, and runs
 `scripts/headless-checks.sh`: the headless checks that need no third-party plug-ins, on ALSA's
 `null` device (the runner has no sound card or audio server) with a generated test tone. A
 separate `nix` job runs `nix flake check`, which builds the Nix package. `pdc_check`,
