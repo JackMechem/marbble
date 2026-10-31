@@ -1,0 +1,1261 @@
+/* The landing page. Its colours are the app's Studio theme (src/styles.css in the app), with the
+   yellow of the app's icon as the one accent. */
+
+:root {
+  --bg: #1c1c1e;
+  --panel: #232325;
+  --panel-2: #2c2c2f;
+  --line: #3b3b3e;
+  --line-soft: #2f2f32;
+  --edge: #141415;
+  --text: #e8e8eb;
+  --body: #c4c4c9;
+  --dim: #9b9ba0;
+  --faint: #6c6c71;
+  --accent: #f2c230;
+  --accent-ink: #2a2205;
+  --lcd-bg: #161617;
+  --lcd-text: #ececef;
+  --lcd-label: #85858a;
+  --lcd-sep: #2c2c2e;
+  --slot: #5b6472;
+  --red: #ec3d33;
+  --mono: "JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sans: "Archivo Variable", "Helvetica Neue", "Segoe UI", system-ui, sans-serif;
+  --pad: clamp(1rem, 3.2vw, 3rem);
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--body);
+  font: 400 1.0625rem/1.55 var(--sans);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "tnum" 1;
+  overflow-x: hidden;
+}
+h1,
+h2,
+h3,
+h4,
+p,
+ol,
+ul,
+dl,
+dd,
+figure {
+  margin: 0;
+  padding: 0;
+}
+ol,
+ul {
+  list-style: none;
+}
+a {
+  color: var(--text);
+  text-decoration: underline;
+  text-decoration-color: var(--faint);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+a:hover {
+  text-decoration-color: var(--accent);
+  color: #fff;
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.skip {
+  position: absolute;
+  left: -999px;
+  top: 0.5rem;
+  background: var(--accent);
+  color: var(--accent-ink);
+  padding: 0.5rem 0.75rem;
+  z-index: 10;
+}
+.skip:focus {
+  left: 0.5rem;
+}
+.mono {
+  font-family: var(--mono);
+  font-size: 0.92em;
+}
+.fine {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--dim);
+}
+.fine a {
+  color: var(--body);
+}
+
+/* The bar at the very top. */
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.7rem var(--pad);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-weight: 700;
+  font-stretch: 112%;
+  letter-spacing: -0.005em;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 1.0625rem;
+}
+.top nav {
+  display: flex;
+  gap: clamp(0.75rem, 2vw, 1.75rem);
+  font-size: 0.9375rem;
+}
+.top nav a {
+  text-decoration: none;
+  color: var(--body);
+}
+.top nav a:hover {
+  color: var(--accent);
+}
+.top nav {
+  align-items: center;
+}
+.top nav .top-dl {
+  padding: 0.3rem 0.65rem 0.32rem;
+  border-radius: 3px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.top nav .top-dl:hover {
+  background: #ffd24d;
+  color: var(--accent-ink);
+}
+
+/* The LCD: the app's control-bar display, here reading out real facts about the project. */
+.lcd {
+  display: flex;
+  margin-inline: var(--pad);
+  background: var(--lcd-bg);
+  border-radius: 5px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.7), 0 1px 0 rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+.lcd > div {
+  padding: 0.45rem 0.9rem 0.5rem;
+  border-right: 1px solid var(--lcd-sep);
+  min-width: 0;
+  white-space: nowrap;
+}
+.lcd > div:last-child {
+  border-right: 0;
+}
+.lcd dt {
+  font: 500 0.625rem/1.3 var(--sans);
+  font-stretch: 100%;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--lcd-label);
+}
+.lcd dd {
+  font: 500 0.9375rem/1.35 var(--mono);
+  color: var(--lcd-text);
+}
+.lcd .lamp {
+  color: var(--accent);
+}
+.lcd .pos {
+  margin-left: auto;
+  border-left: 1px solid var(--lcd-sep);
+}
+.lcd .pos dd {
+  font-size: 1.125rem;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+}
+.lcd .pos-mode dd {
+  color: var(--faint);
+}
+.lcd .pos-mode dd.on {
+  color: var(--accent);
+}
+.transport {
+  display: flex;
+  align-items: center;
+  padding: 0 0.55rem !important;
+}
+.transport[hidden] {
+  display: none;
+}
+.transport button {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 4px;
+  background: #3b3b3e;
+  color: var(--lcd-text);
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 0 0.5px #111;
+}
+.transport button:hover {
+  background: #4a4a4e;
+}
+
+/* The word itself. Wide cut, heavy, cut to the width of the page. */
+.wordmark {
+  /* Sized so that the word runs from margin to margin. */
+  font-size: min(calc((100vw - 2 * var(--pad)) * 0.2035), 25rem);
+  line-height: 0.82;
+  font-weight: 800;
+  font-stretch: 125%;
+  letter-spacing: -0.045em;
+  color: var(--text);
+  margin: clamp(0.9rem, 2vw, 1.75rem) var(--pad) clamp(0.6rem, 1.4vw, 1.1rem);
+  margin-left: calc(var(--pad) - 0.045em);
+  white-space: nowrap;
+}
+
+/* The lane: a phrase with one note held under a fermata. */
+.lane {
+  --p: 0.87;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  border-block: 1px solid var(--line);
+  background: linear-gradient(#202022, #1a1a1c);
+}
+.lane-main {
+  position: relative;
+  min-width: 0;
+}
+.ruler {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  font: 500 0.6875rem/1 var(--mono);
+  color: var(--lcd-label);
+  border-bottom: 1px solid var(--line-soft);
+  background: #1a1a1c;
+}
+.ruler li {
+  padding: 0.35rem 0.35rem 0.35rem 0.4rem;
+  border-left: 1px solid var(--line);
+  height: 1.6rem;
+}
+.ruler li:first-child {
+  border-left: 0;
+}
+/* A marker lane, where the sign sits above its note as it would on a stave. */
+.marks {
+  position: relative;
+  height: clamp(2.4rem, 3.5vw, 3.25rem);
+  border-bottom: 1px solid var(--line-soft);
+  background-image: repeating-linear-gradient(90deg, var(--line-soft) 0 1px, transparent 1px 10%);
+}
+.fermata-sign {
+  position: absolute;
+  bottom: 0.25rem;
+  width: clamp(1.8rem, 3vw, 2.9rem);
+  transform: translateX(-50%);
+}
+.marks small {
+  position: absolute;
+  bottom: 0.5rem;
+  font: 500 0.6875rem/1 var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--lcd-label);
+}
+.wave {
+  position: relative;
+  overflow: hidden;
+  height: clamp(7.5rem, 13.5vw, 15rem);
+  background-image: repeating-linear-gradient(90deg, var(--line-soft) 0 1px, transparent 1px 10%);
+}
+.wave svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.wave svg {
+  fill: none;
+  stroke: #616167;
+  stroke-width: 1.5;
+}
+.wave .played {
+  clip-path: inset(0 calc(100% - var(--p) * 100%) 0 0);
+}
+.wave .played {
+  stroke: var(--accent);
+}
+.playhead {
+  position: absolute;
+  inset: 0;
+  transform: translateX(calc(var(--p) * 100%));
+  pointer-events: none;
+}
+.playhead i {
+  display: block;
+  width: 1.5px;
+  height: 100%;
+  background: #fff;
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.5);
+}
+.meters {
+  display: flex;
+  gap: 3px;
+  padding: 0.5rem clamp(0.5rem, 1.4vw, 1.25rem);
+  border-left: 1px solid var(--line);
+}
+.meter {
+  position: relative;
+  width: clamp(7px, 0.8vw, 12px);
+  background: #101011;
+  box-shadow: inset 0 0 0 1px #0a0a0b;
+  overflow: hidden;
+}
+.meter i {
+  position: absolute;
+  inset: 0;
+  /* The level uncovers a fixed scale, so that red stays at the top of the ladder. */
+  clip-path: inset(calc(100% - var(--v) * 100%) 0 0 0);
+  background: linear-gradient(to top, #a68420, var(--accent) 72%, #ffe48a 94%, var(--red) 94%);
+}
+.meter::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(to top, transparent 0 3px, #101011 3px 4px);
+}
+.meter b {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #fff;
+  z-index: 1;
+}
+.scale {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 1.5rem;
+  margin-left: 3px;
+  font: 500 0.625rem/1 var(--mono);
+  color: var(--lcd-label);
+  text-align: right;
+}
+
+/* Under the lane: what it is, and how far along it is. */
+.intro {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: clamp(1.5rem, 4vw, 4rem);
+  padding: clamp(1.5rem, 3.4vw, 3rem) var(--pad) clamp(2.5rem, 5vw, 4.5rem);
+}
+.lead p:first-child {
+  font-size: clamp(1.3rem, 2.15vw, 1.95rem);
+  line-height: 1.26;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  max-width: 34em;
+}
+.lead-sub {
+  margin-top: 0.85rem;
+  color: var(--dim);
+  max-width: 38em;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.5rem;
+}
+.btn {
+  display: inline-block;
+  padding: 0.7rem 1.1rem 0.72rem;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 1rem;
+  line-height: 1.1;
+  text-decoration: none;
+  color: var(--text);
+  background: #3b3b3e;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 0 0.5px #111;
+}
+.btn:hover {
+  background: #4a4a4e;
+  color: #fff;
+}
+.btn.primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 0 0 0.5px #5a4708;
+}
+.btn.primary:hover {
+  background: #ffd24d;
+  color: var(--accent-ink);
+}
+.alpha {
+  align-self: start;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  padding: 0.95rem 1.1rem 1rem;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  background: rgba(255, 255, 255, 0.015);
+}
+.alpha h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font: 600 0.75rem/1.2 var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.6rem;
+}
+.alpha ul {
+  display: grid;
+  gap: 0.4rem;
+}
+.alpha p {
+  margin-top: 0.7rem;
+  font-size: 0.875rem;
+}
+.led {
+  display: inline-block;
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), inset 0 0 1px 1px rgba(255, 255, 255, 0.35);
+}
+
+/* Sections are panels divided by a ruler's ticks, the app's timeline turned into a seam. */
+.panel {
+  padding: clamp(2.5rem, 5.5vw, 5rem) var(--pad);
+  border-top: 1px solid var(--line);
+  position: relative;
+}
+.panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 7px;
+  background-image: repeating-linear-gradient(90deg, var(--line) 0 1px, transparent 1px 12px);
+}
+.panel-head {
+  max-width: 50rem;
+  margin-bottom: clamp(1.5rem, 3vw, 2.5rem);
+}
+.tag {
+  font: 500 0.75rem/1.2 var(--mono);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.9rem;
+}
+.panel-head h2 {
+  font-size: clamp(1.75rem, 3.7vw, 3.25rem);
+  line-height: 1.05;
+  font-weight: 700;
+  font-stretch: 108%;
+  letter-spacing: -0.024em;
+  color: var(--text);
+  margin-bottom: 1rem;
+}
+.panel-head p + p {
+  margin-top: 0.8rem;
+}
+.sub {
+  font-size: 1.25rem;
+  line-height: 1.2;
+  font-weight: 700;
+  font-stretch: 104%;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  margin-bottom: 0.5rem;
+}
+
+/* A rack of instruments: one per unit. */
+.rack {
+  border-top: 1px solid var(--line);
+}
+.rack li {
+  border-bottom: 1px solid var(--line-soft);
+}
+.rack a {
+  display: grid;
+  grid-template-columns: 11rem 11rem 11rem minmax(0, 1fr);
+  gap: clamp(0.75rem, 2vw, 1.75rem);
+  align-items: center;
+  padding: 0.75rem 0;
+  text-decoration: none;
+  color: var(--body);
+}
+.rack a:hover .name {
+  color: var(--accent);
+}
+.rack a:hover .scope {
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--faint);
+}
+.scope {
+  display: block;
+  height: 3.75rem;
+  background: var(--lcd-bg);
+  background-image: linear-gradient(var(--lcd-sep), var(--lcd-sep));
+  background-size: 100% 1px;
+  background-position: 0 50%;
+  background-repeat: no-repeat;
+  border-radius: 4px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.7), 0 1px 0 rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+.scope svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.scope path {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.25;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: round;
+}
+.name {
+  font-size: 1.3125rem;
+  line-height: 1.15;
+  font-weight: 700;
+  font-stretch: 106%;
+  letter-spacing: -0.012em;
+  color: var(--text);
+}
+.name small {
+  display: block;
+  font: 500 0.6875rem/1.3 var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--lcd-label);
+  margin-bottom: 0.2rem;
+}
+.voices {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.voices b {
+  font: 500 1.75rem/1 var(--mono);
+  color: var(--lcd-text);
+  min-width: 2.2ch;
+  text-align: right;
+}
+.voices small {
+  font-size: 0.75rem;
+  line-height: 1.25;
+  color: var(--dim);
+}
+.what {
+  font-size: 0.9688rem;
+  line-height: 1.42;
+}
+#instruments > .fine {
+  margin-top: 1.1rem;
+  max-width: 54rem;
+}
+
+/* Sampler: words beside the keyboard. */
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: clamp(1.5rem, 4vw, 4rem);
+  align-items: center;
+}
+.split .panel-head {
+  margin-bottom: 0;
+}
+.zones svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.zones figcaption {
+  margin-top: 0.5rem;
+  font: 500 0.6875rem/1.3 var(--mono);
+  color: var(--lcd-label);
+}
+.zones text {
+  font: 500 9.5px var(--mono);
+  fill: var(--lcd-label);
+}
+.zone {
+  fill: #2f3238;
+  stroke: var(--slot);
+  stroke-width: 1;
+}
+.zone.on {
+  fill: var(--accent);
+  stroke: var(--accent);
+}
+.key {
+  fill: #cfcfd3;
+}
+.key.on {
+  fill: var(--accent);
+}
+.key.black {
+  fill: #101011;
+  stroke: #000;
+  stroke-width: 0.5;
+}
+
+/* The signal path. */
+.path {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  border-block: 1px solid var(--line);
+  counter-reset: stage;
+}
+.path li {
+  position: relative;
+  padding: 0.8rem 1rem 1rem;
+  border-left: 1px solid var(--line-soft);
+  min-height: 12rem;
+  display: flex;
+  flex-direction: column;
+}
+.path li:first-child {
+  border-left: 0;
+  padding-left: 0;
+}
+.path li:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 1.15rem;
+  right: -5px;
+  width: 8px;
+  height: 8px;
+  border-top: 1.5px solid var(--dim);
+  border-right: 1.5px solid var(--dim);
+  transform: rotate(45deg);
+  background: var(--bg);
+  z-index: 1;
+}
+.path-n {
+  font: 500 0.75rem/1.2 var(--mono);
+  letter-spacing: 0.08em;
+  color: var(--lcd-label);
+  padding-bottom: 0.7rem;
+}
+.path-fader {
+  position: relative;
+  display: block;
+  height: 3rem;
+  margin-bottom: 0.75rem;
+}
+.path-fader::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 50%;
+  width: 4px;
+  margin-left: -2px;
+  background: #121213;
+  border-radius: 2px;
+}
+.path-fader i {
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  width: 2.5rem;
+  height: 1.05rem;
+  margin-left: -1.25rem;
+  border-radius: 2px;
+  background: linear-gradient(#77777c, #5a5a5f 45%, #4a4a4f 55%, #5e5e63);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+.path-fader i::after {
+  content: "";
+  position: absolute;
+  inset: 50% 0 auto;
+  height: 1px;
+  background: #e4e4e8;
+}
+.path-out {
+  display: grid;
+  gap: 3px;
+  align-content: center;
+  height: 3rem;
+  margin-bottom: 0.75rem;
+  padding-inline: 0.5rem;
+  background: var(--lcd-bg);
+  border-radius: 3px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.7), 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+.path-out i {
+  display: block;
+  height: 6px;
+  background: linear-gradient(90deg, #a68420, var(--accent) 80%, transparent 80%);
+  background-size: 100% 100%;
+  -webkit-mask-image: repeating-linear-gradient(90deg, #000 0 3px, transparent 3px 4px);
+  mask-image: repeating-linear-gradient(90deg, #000 0 3px, transparent 3px 4px);
+}
+.path-out i + i {
+  background: linear-gradient(90deg, #a68420, var(--accent) 72%, transparent 72%);
+}
+.path h3 {
+  font-size: 1.0625rem;
+  line-height: 1.2;
+  font-weight: 650;
+  color: var(--text);
+  margin-bottom: 0.25rem;
+}
+.path p {
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--dim);
+}
+.path-viz {
+  display: block;
+  width: 100%;
+  height: 3rem;
+  margin-bottom: 0.75rem;
+  background: var(--lcd-bg);
+  border-radius: 3px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.7), 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+.path-viz path {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+.path-slots {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+  height: 3rem;
+  margin-bottom: 0.75rem;
+}
+.path-slots i {
+  background: #1f1f21;
+  border-radius: 1.5px;
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.4);
+}
+.path-slots i.on {
+  background: linear-gradient(#5b6472, #4c5461);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+.path-sends {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.35rem;
+  align-items: center;
+  justify-items: center;
+  height: 3rem;
+  margin-bottom: 0.75rem;
+}
+.path-sends i {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background: #1f1f21;
+  box-shadow: inset 0 0 0 1.5px #3b3b3e;
+}
+.path-sends i.on {
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+
+.mix-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(2rem, 5vw, 5rem);
+  margin-top: clamp(2rem, 4vw, 3.5rem);
+}
+.mix-grid p + p {
+  margin-top: 0.6rem;
+}
+.slots {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem 1.25rem;
+  margin-top: 1.25rem;
+}
+.slots h4 {
+  font: 500 0.6875rem/1.3 var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--lcd-label);
+  margin-bottom: 0.35rem;
+}
+.slots ul {
+  display: grid;
+  gap: 2px;
+}
+.slots li {
+  font-size: 0.875rem;
+  line-height: 1;
+  padding: 0.42rem 0.55rem 0.44rem;
+  color: #f0f0f3;
+  background: linear-gradient(#5b6472, #4c5461);
+  border-radius: 3px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 0 0 0.5px #17171a;
+}
+.cores {
+  margin-top: 2rem;
+}
+.cpu {
+  display: grid;
+  gap: 0.5rem;
+  margin: 1rem 0 0.75rem;
+  padding: 0.8rem 0.9rem;
+  background: var(--lcd-bg);
+  border-radius: 5px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.7), 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+.cpu-row {
+  display: grid;
+  grid-template-columns: 6.75rem 1fr 3rem;
+  align-items: center;
+  gap: 0.7rem;
+  font: 500 0.75rem/1 var(--mono);
+  color: var(--lcd-label);
+}
+.cpu-bar {
+  position: relative;
+  height: 0.75rem;
+  background: #232325;
+  border-radius: 1px;
+}
+.cpu-bar i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: #e8e8eb;
+  border-radius: 1px;
+}
+.cpu-row:first-child .cpu-bar i {
+  background: var(--accent);
+}
+.cpu-bar b {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  background: #fff;
+}
+.cpu-val {
+  color: var(--lcd-text);
+  font-size: 0.9375rem;
+  text-align: right;
+}
+
+/* The spec sheet. */
+.spec {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: clamp(2rem, 5vw, 5rem);
+  border-top: 1px solid var(--line);
+}
+.spec > div {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  gap: 1rem;
+  padding: 0.8rem 0 0.9rem;
+  border-bottom: 1px solid var(--line-soft);
+}
+.spec dt {
+  font-weight: 650;
+  font-size: 0.9688rem;
+  line-height: 1.42;
+}
+.spec dt a {
+  text-decoration-color: var(--line);
+}
+.spec dd {
+  font-size: 0.9375rem;
+  line-height: 1.42;
+}
+#editing > .fine {
+  margin-top: 1.25rem;
+}
+
+/* Downloads. */
+.dl {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+.dl-os {
+  background: var(--bg);
+  padding: 1rem 1.1rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+}
+.dl-head {
+  margin-bottom: 0.85rem;
+}
+.dl h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-stretch: 108%;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  color: var(--text);
+}
+.dl-status {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8125rem;
+  color: var(--dim);
+  margin-top: 0.25rem;
+}
+.dl-status .led {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--faint);
+}
+.dl-status.lit .led {
+  background: var(--accent);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+}
+.dl ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.4rem;
+  margin-bottom: 0.85rem;
+}
+.dl li a {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 4px;
+  background: #3b3b3e;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 0 0.5px #111;
+  color: var(--text);
+  text-decoration: none;
+  line-height: 1.2;
+}
+.dl li a:hover {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.dl li a:hover span {
+  color: var(--accent-ink);
+}
+.dl li b {
+  font-weight: 650;
+}
+.dl li span {
+  font: 500 0.75rem/1 var(--mono);
+  color: var(--dim);
+}
+.dl-os .fine {
+  margin-top: auto;
+}
+.source {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.5rem 2rem;
+  align-items: start;
+  margin-top: 2rem;
+}
+.source .sub {
+  grid-column: 1 / -1;
+}
+.source pre {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  background: var(--lcd-bg);
+  border-radius: 5px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.7), 0 1px 0 rgba(255, 255, 255, 0.05);
+  font: 500 0.875rem/1.6 var(--mono);
+  color: var(--lcd-text);
+  overflow-x: auto;
+}
+
+/* The two doors into the docs. */
+.doors {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid var(--line);
+}
+.door {
+  display: flex;
+  flex-direction: column;
+  padding: clamp(2rem, 4.5vw, 4rem) var(--pad);
+  text-decoration: none;
+  color: var(--body);
+  min-height: 20rem;
+}
+.door + .door {
+  border-left: 1px solid var(--line);
+}
+.door h2 {
+  font-size: clamp(2.25rem, 5.6vw, 5rem);
+  line-height: 0.98;
+  font-weight: 800;
+  font-stretch: 118%;
+  letter-spacing: -0.035em;
+  color: var(--text);
+  margin-bottom: 1rem;
+}
+.door p:not(.tag) {
+  max-width: 34em;
+}
+.door .go {
+  margin-top: auto;
+  padding-top: 1.5rem;
+  font: 500 0.875rem/1 var(--mono);
+  color: var(--dim);
+}
+.door .go i {
+  font-style: normal;
+  display: inline-block;
+  transition: transform 0.15s;
+}
+.door:hover {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.door:hover h2,
+.door:hover .go,
+.door:hover .tag {
+  color: var(--accent-ink);
+}
+.door:hover .go i {
+  transform: translateX(0.3rem);
+}
+.quick {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem clamp(1rem, 3vw, 2.25rem);
+  padding: 1rem var(--pad);
+  border-top: 1px solid var(--line);
+  font-size: 0.9375rem;
+}
+
+.foot {
+  border-top: 1px solid var(--line);
+  padding: 1.25rem var(--pad) 2rem;
+  display: grid;
+  gap: 0.4rem;
+}
+.foot svg {
+  vertical-align: -1px;
+  margin-right: 0.3rem;
+}
+
+/* Real screenshots, once they've arrived. */
+.shot {
+  margin-block: clamp(1.5rem, 3vw, 2.5rem);
+}
+main > .shot {
+  margin: 0;
+  padding: 0 var(--pad) clamp(2.5rem, 5vw, 4.5rem);
+}
+.shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 0 0 1px #000, 0 0 0 2px var(--line), 0 18px 50px rgba(0, 0, 0, 0.5);
+}
+.shot figcaption {
+  margin-top: 0.7rem;
+  font: 500 0.75rem/1.3 var(--mono);
+  color: var(--lcd-label);
+}
+.shots-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(1rem, 3vw, 2.5rem);
+}
+.split .shot {
+  margin: 0;
+}
+
+/* Narrower windows */
+@media (max-width: 75rem) {
+  .rack a {
+    grid-template-columns: 9rem 8.5rem 9.5rem minmax(0, 1fr);
+  }
+  .path {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .path li {
+    min-height: 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .path li:nth-child(3n + 1) {
+    border-left: 0;
+    padding-left: 0;
+  }
+  .path li:nth-last-child(-n + 3) {
+    border-bottom: 0;
+  }
+  .path li:nth-child(3n)::after {
+    display: none;
+  }
+  .lcd .opt:nth-child(5) {
+    display: none;
+  }
+}
+@media (max-width: 58rem) {
+  .intro,
+  .split,
+  .mix-grid,
+  .spec {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dl {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rack a {
+    grid-template-columns: 7rem minmax(0, 1fr) auto;
+    grid-template-areas: "scope name voices" "what what what";
+    row-gap: 0.55rem;
+  }
+  .scope {
+    grid-area: scope;
+    height: 3rem;
+  }
+  .name {
+    grid-area: name;
+  }
+  .voices {
+    grid-area: voices;
+  }
+  .what {
+    grid-area: what;
+  }
+  .lcd .opt {
+    display: none;
+  }
+  .shots-pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 40rem) {
+  body {
+    font-size: 1rem;
+  }
+  .top nav a:nth-child(2),
+  .top nav a:nth-child(3),
+  .top nav a:nth-child(4) {
+    display: none;
+  }
+  .name {
+    font-size: 1.125rem;
+  }
+  .voices b {
+    font-size: 1.375rem;
+  }
+  .voices small br,
+  .voices small span {
+    display: none;
+  }
+  .lcd > div {
+    padding-inline: 0.6rem;
+  }
+  .lcd .pos-mode {
+    display: none;
+  }
+  .lcd .pos dt span,
+  .lcd .pos dt {
+    font-size: 0.5625rem;
+  }
+  .lcd dd {
+    font-size: 0.8125rem;
+  }
+  .lcd .pos dd {
+    font-size: 0.9375rem;
+  }
+  .ruler li:nth-child(even) {
+    color: transparent;
+  }
+  .path {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .path li,
+  .path li:nth-child(3n + 1) {
+    display: grid;
+    grid-template-columns: 2.75rem minmax(0, 1fr);
+    column-gap: 0.75rem;
+    border-left: 0;
+    padding-inline: 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .path li:nth-last-child(-n + 3) {
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .path li:last-child {
+    border-bottom: 0;
+  }
+  .path li > * {
+    grid-column: 2;
+  }
+  .path li .path-n {
+    grid-column: 1;
+    grid-row: 1 / span 3;
+    padding-top: 0.2rem;
+  }
+  .path-viz,
+  .path-slots,
+  .path-sends,
+  .path-fader,
+  .path-out {
+    display: none;
+  }
+  .path li::after {
+    display: none;
+  }
+  .doors {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .door {
+    min-height: 0;
+  }
+  .door + .door {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+  .spec > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.2rem;
+  }
+  .source {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .slots {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

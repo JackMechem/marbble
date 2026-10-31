@@ -1,0 +1,31 @@
+---
+// Mermaid is large, so it loads only on a page with a diagram. Without JavaScript the diagram's
+// source stays readable as text.
+import Default from "@astrojs/starlight/components/Head.astro";
+---
+
+<Default />
+<script>
+  const blocks = [...document.querySelectorAll<HTMLElement>("pre.mermaid")];
+  if (blocks.length) {
+    const sources = blocks.map((b) => b.textContent ?? "");
+    const { default: mermaid } = await import("mermaid");
+    const draw = async () => {
+      const dark = document.documentElement.dataset.theme !== "light";
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: "base",
+        themeVariables: dark
+          ? { darkMode: true, background: "#1c1c1e", primaryColor: "#2c2c2f", primaryTextColor: "#e2e2e5", primaryBorderColor: "#5a5a5e", lineColor: "#9b9ba0", secondaryColor: "#333336", tertiaryColor: "#262628", fontFamily: "Archivo Variable, sans-serif" }
+          : { background: "#ffffff", primaryColor: "#f3f3f4", primaryTextColor: "#1c1c1e", primaryBorderColor: "#85858a", lineColor: "#54545a", secondaryColor: "#e8e8ea", tertiaryColor: "#f8f8f9", fontFamily: "Archivo Variable, sans-serif" },
+      });
+      blocks.forEach((b, i) => {
+        b.removeAttribute("data-processed");
+        b.textContent = sources[i];
+      });
+      await mermaid.run({ nodes: blocks });
+    };
+    await draw();
+    new MutationObserver(draw).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  }
+</script>

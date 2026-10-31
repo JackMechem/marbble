@@ -1,0 +1,170 @@
+/* The docs in the app's colours: the Studio theme's graphite (src/styles.css in the app) with the
+   yellow of Fermata's icon as the one accent. Yellow can't carry text on white, so the light theme
+   links in a deep ochre. */
+
+:root {
+  --sl-font: "Archivo Variable";
+  --sl-font-mono: "JetBrains Mono Variable";
+
+  --sl-color-white: #f4f4f6;
+  --sl-color-gray-1: #e2e2e5;
+  --sl-color-gray-2: #c9c9ce;
+  --sl-color-gray-3: #9b9ba0;
+  --sl-color-gray-4: #6c6c71;
+  --sl-color-gray-5: #3b3b3e;
+  --sl-color-gray-6: #262628;
+  --sl-color-black: #1c1c1e;
+
+  --sl-color-accent-low: #3d3210;
+  --sl-color-accent: #f2c230;
+  --sl-color-accent-high: #f2c230;
+  --sl-color-text-invert: #2a2205;
+
+  --sl-color-bg-nav: #222224;
+  --sl-color-bg-sidebar: #222224;
+  --sl-color-bg-inline-code: #2f2f32;
+  --sl-color-hairline: #2f2f32;
+  --sl-color-hairline-light: #3b3b3e;
+  --sl-color-hairline-shade: #141415;
+
+  --sl-text-h1: 2.5rem;
+  --sl-text-h2: 1.625rem;
+  --sl-text-h3: 1.25rem;
+  --sl-text-h4: 1.0625rem;
+  --sl-line-height: 1.6;
+  --sl-content-width: 46rem;
+
+  --fm-badge: #f2c230;
+  --fm-badge-ink: #2a2205;
+}
+
+:root[data-theme="light"] {
+  --sl-color-white: #161617;
+  --sl-color-gray-1: #232325;
+  --sl-color-gray-2: #38383b;
+  --sl-color-gray-3: #5a5a5e;
+  --sl-color-gray-4: #85858a;
+  --sl-color-gray-5: #cfcfd3;
+  --sl-color-gray-6: #ececee;
+  --sl-color-gray-7: #f5f5f6;
+  --sl-color-black: #ffffff;
+
+  --sl-color-accent-low: #fbf0c6;
+  --sl-color-accent: #8a6700;
+  --sl-color-accent-high: #6f5300;
+  --sl-color-text-accent: #6f5300;
+  --sl-color-text-invert: #ffffff;
+
+  --sl-color-bg-nav: #f5f5f6;
+  --sl-color-bg-sidebar: #f5f5f6;
+  --sl-color-bg-inline-code: #ececee;
+  --sl-color-hairline: #e3e3e6;
+  --sl-color-hairline-light: #cfcfd3;
+  --sl-color-hairline-shade: #cfcfd3;
+
+  --fm-badge: #232325;
+  --fm-badge-ink: #f2c230;
+}
+
+header.header {
+  border-bottom-color: var(--sl-color-hairline-light);
+}
+
+.content-panel h1 {
+  font-weight: 750;
+  letter-spacing: -0.02em;
+}
+.sl-markdown-content h2 {
+  font-weight: 700;
+  letter-spacing: -0.012em;
+  padding-top: 0.25rem;
+}
+.sl-markdown-content h3 {
+  font-weight: 650;
+}
+.sl-markdown-content h4,
+.sl-markdown-content h5 {
+  font-weight: 650;
+}
+.sl-markdown-content a {
+  text-underline-offset: 0.18em;
+  text-decoration-thickness: 1px;
+}
+:root:not([data-theme="light"]) .sl-markdown-content a:not(:where(.not-content *)) {
+  color: #f4cf5b;
+}
+
+/* Tables are this manual's reference: tight, ruled, labelled like a panel. */
+.sl-markdown-content table {
+  font-size: var(--sl-text-sm);
+  line-height: 1.45;
+}
+.sl-markdown-content th {
+  font: 600 0.6875rem/1.4 var(--sl-font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sl-color-gray-3);
+  background: transparent;
+  border-bottom: 1px solid var(--sl-color-gray-4);
+}
+.sl-markdown-content td {
+  border-bottom: 1px solid var(--sl-color-hairline);
+}
+.sl-markdown-content code {
+  font-size: 0.875em;
+  border-radius: 3px;
+}
+.sl-markdown-content hr {
+  display: none;
+}
+
+/* Sidebar */
+.sidebar-content {
+  font-size: var(--sl-text-sm);
+}
+.sidebar-content .large {
+  font-size: var(--sl-text-sm) !important;
+}
+.sidebar-content summary .group-label .large {
+  font: 600 0.6875rem/1.4 var(--sl-font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sl-color-gray-3);
+}
+.sidebar-content ul ul summary .group-label .large {
+  font: 500 var(--sl-text-sm) / 1.4 var(--sl-font);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--sl-color-gray-2);
+}
+.sidebar-content a[aria-current="page"],
+.sidebar-content a[aria-current="page"]:hover,
+.sidebar-content a[aria-current="page"]:focus {
+  background: var(--sl-color-accent);
+  color: var(--sl-color-text-invert);
+}
+
+/* A diagram waits as its source until Mermaid has drawn it. */
+pre.mermaid {
+  background: transparent;
+  border: 1px solid var(--sl-color-hairline-light);
+  border-radius: 4px;
+  padding: 1rem;
+  overflow-x: auto;
+  font-size: var(--sl-text-xs);
+  text-align: center;
+}
+pre.mermaid:not([data-processed]) {
+  text-align: start;
+  color: var(--sl-color-gray-3);
+  white-space: pre;
+}
+pre.mermaid svg {
+  max-width: 100% !important;
+  height: auto;
+}
+
+.starlight-aside--note {
+  --sl-color-asides-text-accent: var(--sl-color-accent);
+  --sl-color-asides-border: var(--sl-color-accent);
+}

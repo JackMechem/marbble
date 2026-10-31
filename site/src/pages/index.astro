@@ -1,0 +1,452 @@
+---
+import "@fontsource-variable/archivo/wdth.css";
+import "@fontsource-variable/jetbrains-mono/wght.css";
+import "../styles/landing.css";
+import archivoFile from "@fontsource-variable/archivo/files/archivo-latin-wdth-normal.woff2?url";
+import Shot from "../components/Shot.astro";
+import { REPO_URL } from "../../docs.config.mjs";
+import anchors from "../generated/anchors.json";
+import meta from "../generated/meta.json";
+import { BARS, HOLD_BAR, ZONES, coarse, eqCurve, phrase, scopes, wavePath } from "../lib/art.mjs";
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+// Links into the docs go through the generated map, so a renamed heading fails the build.
+const doc = (file: "guide" | "arch" | "dev", anchor = "") => {
+  const name = { guide: "docs/USER_GUIDE.md", arch: "docs/ARCHITECTURE.md", dev: "docs/DEVELOPING.md" }[file];
+  const target = (anchors as Record<string, Record<string, string>>)[name][anchor];
+  if (!target) throw new Error(`Landing page links to ${name}#${anchor}, which doesn't exist`);
+  return `${base}${target}`;
+};
+
+const releases = `${REPO_URL}/releases`;
+const roadmap = `${REPO_URL}/blob/main/TODO.md`;
+
+const WAVE_W = 1440;
+const WAVE_H = 200;
+const peaks = phrase(720);
+const waveD = wavePath(peaks, WAVE_W, WAVE_H);
+const levels = coarse(peaks).join(",");
+const START = 8.7; // Where the playhead rests without JavaScript: on the held note.
+const startLevel = 0.86;
+
+const traces = scopes();
+
+const instruments = [
+  { id: "tre", name: "Tre", voices: "1", note: "plus Unison and Poly", shelf: "Vintage", text: "Three oscillators and a mixer that overdrives, into a 24 dB transistor-ladder filter that self-oscillates in tune. Two contours with a Decay switch, glide, oscillator drift, and osc 3 and noise as modulators.", link: doc("guide", "fermata-tre") },
+  { id: "sei", name: "Sei", voices: "6", note: "one DCO each", shelf: "Vintage", text: "Saw, pulse and a sub an octave down, a 24 dB filter, one envelope with a VCA gate, a four-position high-pass, and a stereo bucket-brigade chorus with modes I, II and I+II.", link: doc("guide", "the-other-synth-models") },
+  { id: "cinque", name: "Cinque", voices: "5", note: "two oscillators each", shelf: "Vintage", text: "Poly Mod from the filter envelope and Osc B, to Osc A's pitch and width and the filter, separately in every voice. Sync, a wheel for LFO or noise, and a slop control for how far voices wander.", link: doc("guide", "the-other-synth-models") },
+  { id: "uno", name: "Uno", voices: "1", note: "one oscillator", shelf: "Vintage", text: "A diode ladder, accent with its sweep, and slide, made for a bass line played from a MIDI region: overlapping notes slide, high velocities accent, and with the resonance up, accents close together climb.", link: doc("guide", "the-other-synth-models") },
+  { id: "sedici", name: "Sedici", voices: "16", note: "six operators each", shelf: "Vintage", text: "Frequency modulation with 32 algorithms, four-rate envelopes and keyboard scaling, running at a fixed 49.096 kHz whatever the project's rate, with a switchable low-resolution converter character.", link: doc("guide", "the-other-synth-models") },
+  { id: "onda", name: "Onda", voices: "16", note: "up to 7 unison per osc", shelf: "Modern", text: "Two wavetable oscillators with position scan over band-limited tables generated in code, seven filters, three envelopes, two LFOs and eight modulation slots you route yourself.", link: doc("guide", "the-other-synth-models") },
+];
+
+const effects = [
+  ["Dynamics", ["Compressor", "Limiter", "Noise Gate", "De-Esser"]],
+  ["Space and modulation", ["Reverb", "Delay", "Chorus", "Flanger", "Phaser", "Tremolo"]],
+  ["Drive", ["Overdrive", "Distortion"]],
+  ["EQ, utility, metering", ["Linear Phase EQ", "Gain", "Tuner", "Loudness Meter"]],
+] as const;
+
+const path = [
+  { n: "IN", title: "Region or instrument", text: "Audio, MIDI or a pattern; a VST3 or built-in instrument." },
+  { n: "EQ", title: "Channel EQ", text: "Eight bands, with an analyzer." },
+  { n: "FX", title: "Audio FX", text: "Eight slots: built-in or VST3, with plug-in delay compensation." },
+  { n: "SND", title: "Sends", text: "Eight, pre- or post-fader, to aux buses." },
+  { n: "FDR", title: "Fader and pan", text: "Peak readouts, gain-reduction bar, groups and VCA faders." },
+  { n: "OUT", title: "Output", text: "Routing to any bus, up to Stereo Out and its automation." },
+];
+
+const spec = [
+  ["Recording", "Audio from any input, mono or stereo per track, with latency compensation; MIDI with controllers, pitch bend and aftertouch. Count-in, pre-roll, Autopunch, Replace mode, Step Input. Crash-safe takes.", doc("guide", "3-recording")],
+  ["Comping", "Cycle-record into take folders and swipe across takes to build a comp. Several comps per folder, crossfaded boundaries, and MIDI take folders.", doc("guide", "7-take-folders-and-comping")],
+  ["Tracks area", "Move, trim, split, loop, fade and nudge with Smart snap, musically across tempo changes. Eight tools, five drag modes, fade curves, Strip Silence and section edits.", doc("guide", "5-editing-in-the-tracks-area")],
+  ["Editors", "A Piano Roll with eight tools, quantize and a velocity and controller lane; an Event List; a Step Sequencer with pattern regions; an Audio Track Editor with Split at Transients.", doc("guide", "10-the-piano-roll-event-list-and-step-sequencer")],
+  ["Arrangement", "Track stacks, groups, Freeze, Track Off and track alternatives. Markers and an Arrangement track whose sections move and copy with their content.", doc("guide", "8-markers-and-the-arrangement-track")],
+  ["Automation", "Off, Read, Touch, Latch and Write on volume, pan, mute, sends and plug-in parameters. Several lanes per track and curved segments.", doc("guide", "13-automation")],
+  ["MIDI Learn", "Assign a controller's knobs, faders and buttons to mixer controls, plug-in parameters and the transport.", doc("guide", "14-controller-assignments-midi-learn")],
+  ["Bounce", "Offline bounce of a project or section, and export of tracks or a region, as WAV, AIFF or FLAC at 16-bit dithered, 24-bit or 32-bit float.", doc("guide", "15-bounce-and-export")],
+  ["Projects", "Folders with templates, alternatives, backups with Revert to, autosave, crash recovery and undo for every edit.", doc("guide", "16-projects")],
+  ["Interface", "Separate windows for the Mixer, editors and panels, five themes, interface scaling from 90 to 200%, and rebindable key commands shown the way your platform writes them.", doc("guide", "17-settings-reference")],
+] as const;
+
+const downloads = [
+  {
+    os: "Linux",
+    status: "Main platform, tested",
+    lit: true,
+    rows: [
+      ["AppImage", "x86_64", "amd64\\.AppImage$"],
+      ["AppImage", "aarch64", "aarch64\\.AppImage$"],
+      [".deb", "x86_64", "amd64\\.deb$"],
+      [".deb", "aarch64", "arm64\\.deb$"],
+    ],
+    note: "Built on Ubuntu 24.04: needs glibc 2.39 and PipeWire 1.0 or newer. Stable releases add .rpm. With Nix, use the flake.",
+  },
+  {
+    os: "Windows",
+    status: "Not yet run on a real machine",
+    lit: false,
+    rows: [["Installer", "x64", "x64-setup\\.exe$"]],
+    note: "Unsigned: in the SmartScreen prompt, choose More info, then Run anyway. VST3 editor windows don't open here yet, though the plug-ins still load and play.",
+  },
+  {
+    os: "macOS",
+    status: "Not yet run on a real machine",
+    lit: false,
+    rows: [
+      [".dmg", "Apple Silicon", "aarch64\\.dmg$"],
+      [".dmg", "Intel", "x64\\.dmg$"],
+    ],
+    note: "Unsigned: right-click the app and choose Open the first time, or run xattr -cr /Applications/Fermata.app.",
+  },
+];
+
+// Keys of the sampler drawing: which of 12 are black.
+const isBlack = (k: number) => [1, 3, 6, 8, 10].includes(k % 12);
+const KEYS = 37;
+const whiteCount = Array.from({ length: KEYS }, (_, k) => k).filter((k) => !isBlack(k)).length;
+const whiteW = 780 / whiteCount;
+const keyX = (k: number) => {
+  let whites = 0;
+  for (let i = 0; i < k; i++) if (!isBlack(i)) whites++;
+  return isBlack(k) ? whites * whiteW - whiteW * 0.3 : whites * whiteW;
+};
+const zoneTop = 8;
+const zoneH = 112;
+
+const title = "Fermata: an open-source digital audio workstation, written in Rust";
+const description = "A digital audio workstation modelled on Logic Pro's workflow and layout, with six synth models, a sampler, sixteen effects and VST3 hosting. MIT licensed, and in alpha.";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#1c1c1e" />
+    <meta name="color-scheme" content="dark" />
+    <link rel="canonical" href={new URL(import.meta.env.BASE_URL, Astro.site).href} />
+    <link rel="icon" href={`${base}/favicon.svg`} type="image/svg+xml" />
+    <link rel="preload" href={archivoFile} as="font" type="font/woff2" crossorigin />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Fermata" />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={new URL(import.meta.env.BASE_URL, Astro.site).href} />
+    <meta property="og:image" content={new URL(`${import.meta.env.BASE_URL}og.png`, Astro.site).href} />
+    <meta name="twitter:card" content="summary_large_image" />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+
+    <header class="top">
+      <a class="brand" href={`${base}/`} aria-label="Fermata, home">
+        <svg viewBox="0 0 64 44" width="30" height="21" aria-hidden="true"><path d="M6 36a26 26 0 0 1 52 0" fill="none" stroke="var(--accent)" stroke-width="7"></path><circle cx="32" cy="35" r="6.5" fill="var(--text)"></circle></svg>
+        <span>Fermata</span>
+      </a>
+      <nav aria-label="Main">
+        <a href={`${base}/guide/`}>User Guide</a>
+        <a href={`${base}/architecture/`}>Contributors</a>
+        <a href={`${base}/changelog/`}>Changelog</a>
+        <a href={REPO_URL} rel="noopener">GitHub</a>
+        <a class="top-dl" href="#download">Download</a>
+      </nav>
+    </header>
+
+    <main id="main">
+      <section class="hero" aria-labelledby="hero-title">
+        <dl class="lcd">
+          <div><dt>Version</dt><dd data-version>{meta.version}</dd></div>
+          <div><dt>Status</dt><dd class="lamp">Alpha</dd></div>
+          <div class="opt"><dt>Licence</dt><dd>MIT</dd></div>
+          <div class="opt"><dt>Engine</dt><dd>Rust</dd></div>
+          <div class="opt"><dt>Interface</dt><dd>Tauri 2, React</dd></div>
+          <div class="pos">
+            <dt>Bar <span aria-hidden="true">.</span> Beat <span aria-hidden="true">.</span> Div</dt>
+            <dd aria-hidden="true" data-pos>009.3.4</dd>
+          </div>
+          <div class="pos-mode">
+            <dt>Mode</dt>
+            <dd aria-hidden="true" class="on" data-mode>Hold</dd>
+          </div>
+          <div class="transport" hidden data-transport>
+            <button type="button" data-toggle aria-label="Pause the animation">
+              <svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path data-icon d="M2 1h3v10H2zM7 1h3v10H7z" fill="currentColor"></path></svg>
+            </button>
+          </div>
+        </dl>
+
+        <h1 id="hero-title" class="wordmark">Fermata</h1>
+
+        <div class="lane" style={`--p:${START / BARS}`} data-lane data-levels={levels} data-bars={BARS} data-hold={HOLD_BAR} data-start={START}>
+          <div class="lane-main">
+            <ol class="ruler" aria-hidden="true">
+              {Array.from({ length: BARS }, (_, i) => <li>{i + 1}</li>)}
+            </ol>
+            <div class="marks" aria-hidden="true">
+              <svg class="fermata-sign" style={`left:${((HOLD_BAR + 0.75) / BARS) * 100}%`} viewBox="0 0 64 44"><path d="M6 36a26 26 0 0 1 52 0" fill="none" stroke="var(--accent)" stroke-width="6"></path><circle cx="32" cy="35" r="5.5" fill="var(--accent)"></circle></svg>
+            </div>
+            <div class="wave" role="img" aria-label="A drawn waveform: eight bars of a bass line, then one note held under a fermata, with a playhead moving across it.">
+              <svg viewBox={`0 0 ${WAVE_W} ${WAVE_H}`} preserveAspectRatio="none" aria-hidden="true"><path id="phrase" d={waveD}></path></svg>
+              <svg class="played" viewBox={`0 0 ${WAVE_W} ${WAVE_H}`} preserveAspectRatio="none" aria-hidden="true"><use href="#phrase"></use></svg>
+              <div class="playhead" aria-hidden="true"><i></i></div>
+            </div>
+          </div>
+          <div class="meters" aria-hidden="true">
+            <div class="meter"><i data-meter style={`--v:${startLevel}`}></i><b data-peak style={`bottom:${startLevel * 100}%`}></b></div>
+            <div class="meter"><i data-meter style={`--v:${startLevel - 0.03}`}></i><b data-peak style={`bottom:${(startLevel - 0.03) * 100}%`}></b></div>
+            <ol class="scale"><li>0</li><li>-6</li><li>-12</li><li>-24</li><li>-∞</li></ol>
+          </div>
+        </div>
+
+        <div class="intro">
+          <div class="lead">
+            <p>A digital audio workstation modelled on Logic Pro's workflow and layout. The audio engine and VST3 host are written in Rust; the interface is Tauri 2 with React.</p>
+            <p class="lead-sub">Record, edit, mix and bounce. Developed on Linux, with early builds for Windows and macOS. Open source under the MIT licence.</p>
+            <div class="actions">
+              <a class="btn primary" href="#download">Download the alpha</a>
+              <a class="btn" href={`${base}/guide/`}>Read the User Guide</a>
+            </div>
+          </div>
+          <aside class="alpha" aria-labelledby="alpha-title">
+            <h2 id="alpha-title"><span class="led" aria-hidden="true"></span>This is alpha software</h2>
+            <ul>
+              <li>It's developed and tested on Linux. The Windows and macOS builds pass their headless checks on a stand-in device, but haven't been run on a real machine.</li>
+              <li>The synth models follow documented behaviour. None has been tuned by ear or compared with the hardware it's modelled on.</li>
+              <li>Keep backups of projects that matter.</li>
+            </ul>
+            <p><a href={doc("guide", "20-known-limitations")}>Known limitations</a> · <a href={roadmap} rel="noopener">What's left to do</a></p>
+          </aside>
+        </div>
+      </section>
+
+      <Shot id="main-window" />
+
+      <section class="panel" id="instruments" aria-labelledby="instruments-title">
+        <header class="panel-head">
+          <p class="tag">01 Instruments</p>
+          <h2 id="instruments-title">Six synth models, on the same footing as the effects.</h2>
+          <p>Each has a panel you can dock or float, factory presets, automation, MIDI learn, undo and saving, and each freezes and bounces. They sit under Vintage Synths and Modern Synths in the instrument slot, beside the simple Fermata Synth that new tracks start with.</p>
+        </header>
+        <ol class="rack">
+          {
+            instruments.map((m) => (
+              <li>
+                <a href={m.link}>
+                  <span class="scope" aria-hidden="true">
+                    <svg viewBox="0 0 220 72" preserveAspectRatio="none">
+                      {traces[m.id].map((d: string, i: number, all: string[]) => (
+                        <path d={d} style={all.length > 1 ? `opacity:${0.25 + (i / (all.length - 1)) * 0.75}` : undefined} />
+                      ))}
+                    </svg>
+                  </span>
+                  <span class="name"><small>{m.shelf}</small>Fermata {m.name}</span>
+                  <span class="voices" title={`${m.voices} ${m.voices === "1" ? "voice" : "voices"}, ${m.note}`}>
+                    <b>{m.voices}</b>
+                    <small>{m.voices === "1" ? "voice" : "voices"}<br /><span>{m.note}</span></small>
+                  </span>
+                  <span class="what">{m.text}</span>
+                </a>
+              </li>
+            ))
+          }
+        </ol>
+        <p class="fine">The traces are textbook waveforms of each kind of engine, drawn for this page, not recordings of the instruments. Five of the six follow a specific instrument's documented behaviour: <a href={doc("guide", "the-other-synth-models")}>the Guide says which</a>, and how far that goes. None has been compared with the original, and every constant marked as a guess in the <a href={doc("arch", "built-in-instruments")}>architecture notes</a> is still to be tuned by ear.</p>
+        <Shot id="instrument-panel" />
+      </section>
+
+      <section class="panel split" id="sampler" aria-labelledby="sampler-title">
+        <header class="panel-head">
+          <p class="tag">02 Sampler</p>
+          <h2 id="sampler-title">Your own sounds, playable straight away.</h2>
+          <p>Drop a file on Fermata Sampler and it plays across the keyboard. Several files map themselves by the note in their names; layers and round robins sort themselves out the same way. Or record straight in from the audio input, or turn an audio region into a sampler track, whole or sliced at its transients.</p>
+          <p class="fine">Loops with crossfades, one-shot, reverse, an amp envelope, a filter with envelope, an LFO, glide and polyphony. A useful subset of SFZ loads, and what it doesn't do is listed. Samples are copied into the project and held in memory, up to 4 GB; there's no disk streaming yet. <a href={doc("guide", "fermata-sampler")}>Sampler guide</a></p>
+        </header>
+        <Shot id="sampler">
+          <figure class="zones">
+            <svg viewBox="0 0 780 226" role="img" aria-label="Diagram: sample zones laid over a three-octave keyboard, stacked by velocity.">
+              {
+                ZONES.map((z) => {
+                  const x0 = keyX(z.a);
+                  const x1 = keyX(z.b) + (isBlack(z.b) ? whiteW * 0.6 : whiteW);
+                  const y0 = zoneTop + (1 - z.hi) * zoneH;
+                  const y1 = zoneTop + (1 - z.lo) * zoneH;
+                  return <rect class:list={["zone", { on: z.on }]} x={x0 + 1} y={y0 + 1} width={x1 - x0 - 2} height={y1 - y0 - 2} rx="1.5"></rect>;
+                })
+              }
+              <g transform="translate(0 128)">
+                {Array.from({ length: KEYS }, (_, k) => k).filter((k) => !isBlack(k)).map((k) => <rect class:list={["key", { on: k >= 7 && k <= 13 }]} x={keyX(k) + 0.5} y="0" width={whiteW - 1} height="82" rx="1"></rect>)}
+                {Array.from({ length: KEYS }, (_, k) => k).filter(isBlack).map((k) => <rect class="key black" x={keyX(k)} y="0" width={whiteW * 0.6} height="50" rx="1"></rect>)}
+                {[0, 12, 24, 36].map((k, i) => <text x={keyX(k) + 1} y="95">{`C${i + 2}`}</text>)}
+              </g>
+            </svg>
+            <figcaption>Diagram: zones across keys, stacked by velocity.</figcaption>
+          </figure>
+        </Shot>
+      </section>
+
+      <section class="panel" id="mixing" aria-labelledby="mixing-title">
+        <header class="panel-head">
+          <p class="tag">03 Mixing</p>
+          <h2 id="mixing-title">A channel strip's whole signal path, with delay compensation on every route.</h2>
+        </header>
+        <ol class="path">
+          {
+            path.map((s) => (
+              <li>
+                <span class="path-n">{s.n}</span>
+                {s.n === "IN" && (
+                  <svg class="path-viz" viewBox="0 0 240 64" preserveAspectRatio="none" aria-hidden="true"><path d={traces.uno[0].replace(/(\d+\.\d) (\d+\.\d)/g, (_: string, x: string, y: string) => `${(Number(x) * 240) / 220} ${(Number(y) * 64) / 72}`)}></path></svg>
+                )}
+                {s.n === "EQ" && (
+                  <svg class="path-viz" viewBox="0 0 240 64" preserveAspectRatio="none" aria-hidden="true"><path d={eqCurve()}></path></svg>
+                )}
+                {s.n === "FDR" && <span class="path-fader" aria-hidden="true"><i></i></span>}
+                {s.n === "OUT" && <span class="path-out" aria-hidden="true"><i></i><i></i></span>}
+                {s.n === "FX" && <span class="path-slots" aria-hidden="true">{Array.from({ length: 8 }, (_, k) => <i class:list={{ on: k < 3 }}></i>)}</span>}
+                {s.n === "SND" && <span class="path-sends" aria-hidden="true">{Array.from({ length: 8 }, (_, k) => <i class:list={{ on: k < 2 }}></i>)}</span>}
+                <h3>{s.title}</h3>
+                <p>{s.text}</p>
+              </li>
+            ))
+          }
+        </ol>
+        <Shot id="mixer" />
+
+        <div class="mix-grid">
+          <div>
+            <h3 class="sub">Sixteen built-in effects</h3>
+            <p>In any Audio FX slot, with docked, floating or separate-window panels, presets and automatable parameters. The Compressor has five modelled circuits, and it, the Noise Gate and the De-Esser take a side-chain from any track, pre- or post-fader. <a href={doc("guide", "built-in-effects")}>Effects guide</a></p>
+            <div class="slots">
+              {
+                effects.map(([group, names]) => (
+                  <div>
+                    <h4>{group}</h4>
+                    <ul>{names.map((n) => <li>{n}</li>)}</ul>
+                  </div>
+                ))
+              }
+            </div>
+            <Shot id="effect-panel" />
+          </div>
+          <div>
+            <h3 class="sub">VST3, kept at arm's length</h3>
+            <p>Instruments and effects are scanned in a separate process. Every plug-in's output is checked, so NaNs and runaway levels are silenced and the plug-in is named in a message. Side-chain inputs, multi-output instruments, and undo for a knob moved in a plug-in's own window. <a href={doc("guide", "plug-ins")}>Plug-ins guide</a></p>
+            <p class="fine">VST3 only: no CLAP, AU or VST2. Editor windows open on Linux (X11) and macOS, and not yet on Windows.</p>
+
+            <h3 class="sub cores">Tracks across cores</h3>
+            <p>Independent tracks play at the same time on a small pool of real-time threads, and the output is the same sample for sample however many play it.</p>
+            <div class="cpu" role="img" aria-label="Audio load on one project. One thread: 56% average, 72% peak. Automatic, six threads: 13 to 14% average, about 20% peak.">
+              <div class="cpu-row">
+                <span class="cpu-label">1 thread</span>
+                <span class="cpu-bar"><i style="width:56%"></i><b style="left:72%"></b></span>
+                <span class="cpu-val">56%</span>
+              </div>
+              <div class="cpu-row">
+                <span class="cpu-label">Automatic (6)</span>
+                <span class="cpu-bar"><i style="width:14%"></i><b style="left:20%"></b></span>
+                <span class="cpu-val">14%</span>
+              </div>
+            </div>
+            <p class="fine">Audio load, with a tick at the peak: one measurement, of a copy of one real project with five heavy VST3s at 512 samples on Linux, with its output turned down. It's not a benchmark, and nobody has listened through it yet. Automatic stays on one thread on Windows and macOS for now. <a href={doc("arch", "multi-core-processing")}>How it works</a></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="editing" aria-labelledby="editing-title">
+        <header class="panel-head">
+          <p class="tag">04 Everything else</p>
+          <h2 id="editing-title">The rest of the spec sheet.</h2>
+        </header>
+        <dl class="spec">
+          {
+            spec.map(([term, text, link]) => (
+              <div>
+                <dt><a href={link}>{term}</a></dt>
+                <dd>{text}</dd>
+              </div>
+            ))
+          }
+        </dl>
+        <div class="shots-pair">
+          <Shot id="take-folder" />
+          <Shot id="piano-roll" />
+        </div>
+        <p class="fine">Not there yet: Flex Time and Flex Pitch, a Score editor, control surface protocols such as Mackie Control, MP3 and AAC bounces, and ASIO on Windows. <a href={doc("guide", "20-known-limitations")}>The full list</a></p>
+      </section>
+
+      <section class="panel" id="download" aria-labelledby="download-title" data-releases={`https://api.github.com/repos/${REPO_URL.replace("https://github.com/", "")}/releases?per_page=5`}>
+        <header class="panel-head">
+          <p class="tag">05 Download</p>
+          <h2 id="download-title">Get the current alpha.</h2>
+          <p>
+            Latest: <a class="mono" data-latest href={releases} rel="noopener">v{meta.version}</a>, a prerelease. Builds aren't signed yet, so your system will warn about them. Each button gets the newest release's file, or opens the <a href={releases} rel="noopener">releases page</a> if GitHub can't be asked.
+          </p>
+        </header>
+        <div class="dl">
+          {
+            downloads.map((d) => (
+              <div class="dl-os">
+                <div class="dl-head">
+                  <h3>{d.os}</h3>
+                  <p class:list={["dl-status", { lit: d.lit }]}><span class="led" aria-hidden="true"></span>{d.status}</p>
+                </div>
+                <ul>
+                  {d.rows.map(([format, arch, pattern]) => (
+                    <li>
+                      <a href={releases} data-asset={pattern} rel="noopener">
+                        <b>{format}</b>
+                        <span>{arch}</span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+                <p class="fine">{d.note}</p>
+              </div>
+            ))
+          }
+        </div>
+        <div class="source">
+          <h3 class="sub">Or build it</h3>
+          <pre tabindex="0"><code>git clone {REPO_URL} && cd fermata
+nix run .</code></pre>
+          <p class="fine">Nix flakes do it in one go. <a href={doc("dev", "build-and-run")}>Build instructions</a> cover other Linux distributions, Windows and macOS.</p>
+        </div>
+      </section>
+
+      <section class="doors" id="docs" aria-label="Documentation">
+        <a class="door" href={`${base}/guide/`}>
+          <p class="tag">If you make music</p>
+          <h2>User Guide</h2>
+          <p>Recording, editing, mixing and exporting, every setting and key command, and what to do when it goes wrong.</p>
+          <span class="go" aria-hidden="true">Open the guide <i>→</i></span>
+        </a>
+        <a class="door" href={`${base}/architecture/`}>
+          <p class="tag">If you read code</p>
+          <h2>Contributors</h2>
+          <p>Threads, real-time rules, the project model, the engine graph, the VST3 host and a map of every source file. How to build, test and debug, and recipes for common changes.</p>
+          <span class="go" aria-hidden="true">Open the docs <i>→</i></span>
+        </a>
+        <ul class="quick" aria-label="Popular pages">
+          <li><a href={doc("guide", "1-getting-started")}>Getting started</a></li>
+          <li><a href={doc("guide", "18-key-command-reference")}>Key commands</a></li>
+          <li><a href={doc("guide", "19-troubleshooting")}>Troubleshooting</a></li>
+          <li><a href={doc("arch", "3-real-time-rules")}>Real-time rules</a></li>
+          <li><a href={doc("dev", "recipes")}>Recipes</a></li>
+          <li><a href={`${base}${meta.page}`}>What's new in {meta.version}</a></li>
+        </ul>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <p><svg viewBox="0 0 64 44" width="22" height="15" aria-hidden="true"><path d="M6 36a26 26 0 0 1 52 0" fill="none" stroke="var(--accent)" stroke-width="7"></path><circle cx="32" cy="35" r="6.5" fill="var(--dim)"></circle></svg> Fermata is released under the <a href={`${REPO_URL}/blob/main/LICENSE`} rel="noopener">MIT licence</a>. <a href={REPO_URL} rel="noopener">Source on GitHub</a>.</p>
+      <p class="fine">Logic Pro is a trademark of Apple Inc., and VST is a trademark of Steinberg Media Technologies GmbH. Fermata isn't affiliated with, or endorsed by, either of them or the maker of any instrument its synth models follow.</p>
+    </footer>
+
+    <script>
+      import "../lib/landing.ts";
+    </script>
+  </body>
+</html>

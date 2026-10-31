@@ -1,0 +1,36 @@
+---
+// A real screenshot if its file has arrived in public/screenshots/, otherwise nothing, or whatever
+// the page puts in the fallback slot. The list of slots is public/screenshots/manifest.json.
+import fs from "node:fs";
+import path from "node:path";
+import manifest from "../../public/screenshots/manifest.json";
+
+const { id } = Astro.props;
+const slot = manifest.slots.find((s) => s.id === id);
+if (!slot) throw new Error(`No screenshot slot "${id}" in manifest.json`);
+
+const file = path.resolve("public/screenshots", slot.file);
+const exists = fs.existsSync(file);
+let width: number | undefined;
+let height: number | undefined;
+if (exists) {
+  // A PNG's size is in its header; with it the page doesn't jump as the picture loads.
+  const head = fs.readFileSync(file).subarray(16, 24);
+  width = head.readUInt32BE(0);
+  height = head.readUInt32BE(4);
+}
+const src = `${import.meta.env.BASE_URL}screenshots/${slot.file}`;
+---
+
+{
+  exists ? (
+    <figure class="shot">
+      <a href={src}>
+        <img src={src} alt={slot.alt} width={width} height={height} loading="lazy" decoding="async" />
+      </a>
+      <figcaption>{slot.caption}</figcaption>
+    </figure>
+  ) : (
+    <slot />
+  )
+}

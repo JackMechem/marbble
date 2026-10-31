@@ -1,0 +1,68 @@
+{
+  "about": "Real screenshots of the running app go here, as <id>.png, and the landing page picks them up at the next build. Until a file exists the page shows no frame for it: each section is complete without. Capture at 2x if you can, in the Studio theme, at the width given, from a project you're happy to show (no private names). Never put a mock-up here.",
+  "slots": [
+    {
+      "id": "main-window",
+      "file": "main-window.png",
+      "width": "2400 px or more, about 16:10",
+      "section": "After the hero",
+      "alt": "Fermata's main window with an arrangement of audio and instrument tracks.",
+      "caption": "The main window.",
+      "shows": "The whole main window on a project with a dozen or so tracks: control bar and LCD at the top, Inspector open on the left, audio and MIDI regions in the tracks area, the Mixer or nothing in the bottom section. The picture that says what the app is."
+    },
+    {
+      "id": "instrument-panel",
+      "file": "instrument-panel.png",
+      "width": "2400 px or more, wide and short",
+      "section": "Instruments",
+      "alt": "A built-in instrument's panel docked in the bottom section, its sections in one row.",
+      "caption": "A built-in instrument, docked in the bottom section.",
+      "shows": "Fermata Tre or Sei with its panel docked in the bottom section in Row layout, with the small keyboard and the preset pop-up visible. Crop to the bottom section, or show enough of the tracks area above to give it context."
+    },
+    {
+      "id": "sampler",
+      "file": "sampler.png",
+      "width": "1600 px or more, about 16:9",
+      "section": "Sampler (takes the place of the zone diagram)",
+      "alt": "Fermata Sampler's panel with zones mapped across the keyboard.",
+      "caption": "Fermata Sampler with zones mapped across the keys.",
+      "shows": "Fermata Sampler with several zones mapped (a multi-sampled instrument, ideally velocity layers too), one zone selected so that its waveform and loop show."
+    },
+    {
+      "id": "mixer",
+      "file": "mixer.png",
+      "width": "2400 px or more, about 2:1",
+      "section": "Mixing",
+      "alt": "The Mixer: channel strips with plug-in slots, sends and faders.",
+      "caption": "The Mixer.",
+      "shows": "The Mixer with eight or more strips during playback: plug-ins in the slots, some sends, an aux or two, meters moving, ideally a VCA strip."
+    },
+    {
+      "id": "effect-panel",
+      "file": "effect-panel.png",
+      "width": "1200 px or more",
+      "section": "Mixing",
+      "alt": "A built-in effect's panel with its knobs and metering.",
+      "caption": "A built-in effect.",
+      "shows": "One built-in effect's panel floating, with something moving on its meters or graph: the Compressor with gain reduction, or the Channel EQ with the analyzer running."
+    },
+    {
+      "id": "piano-roll",
+      "file": "piano-roll.png",
+      "width": "2000 px or more, about 16:9",
+      "section": "Editing",
+      "alt": "The Piano Roll with notes and a velocity lane.",
+      "caption": "The Piano Roll, with its velocity and controller lane.",
+      "shows": "The Piano Roll on a real phrase with the velocity and controller lane open, some velocities varied."
+    },
+    {
+      "id": "take-folder",
+      "file": "take-folder.png",
+      "width": "2000 px or more, wide",
+      "section": "Editing",
+      "alt": "A take folder opened in the tracks area, with a comp swiped across its takes.",
+      "caption": "A take folder with a swiped comp.",
+      "shows": "An opened take folder in the tracks area with several take rows and a comp swiped across them, so the highlighted stretches read clearly."
+    }
+  ]
+}
