@@ -6,10 +6,29 @@ All notable changes to Fermata are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0-alpha.5] - 2026-11-02
+
+### Added
+
+- **Website:** a landing page and the User Guide, Architecture, Developing and Changelog as searchable
+  pages, at <https://jackmechem.github.io/fermata/>. They're built from the Markdown in this repository,
+  so they stay in step with it.
+
+### Changed
+
+- The code is reorganised into smaller modules, with no change in behaviour: the engine's session,
+  processing, project model and the largest effects, the app's commands, and on the frontend the
+  stylesheet, Piano Roll, Tracks area, Audio Track Editor, Settings, automation and the Compressor panel.
+  Renders are bit-identical to alpha.4's, and the CPU cost is the same.
+- Every module says what it's for, and DEVELOPING has a map of where things live and recipes for adding
+  an instrument and a panel.
+- CI checks formatting and runs clippy with warnings as errors, on a pinned toolchain.
+
 ### Fixed
 
 - A project with a sampler saved on Windows now finds its samples on Linux and macOS: sample paths
   are kept with forward slashes.
+- The User Guide lists Linear Phase EQ among the built-in effects.
 
 ## [0.1.0-alpha.4] - 2026-10-31
 
@@ -481,7 +500,8 @@ The first prerelease. Everything below is new.
 - The `takes_check` headless check "autopunch trims the take" fails about one run in five,
   from the null audio device's timing.
 
-[Unreleased]: https://github.com/JackMechem/fermata/compare/v0.1.0-alpha.4...HEAD
+[Unreleased]: https://github.com/JackMechem/fermata/compare/v0.1.0-alpha.5...HEAD
+[0.1.0-alpha.5]: https://github.com/JackMechem/fermata/compare/v0.1.0-alpha.4...v0.1.0-alpha.5
 [0.1.0-alpha.4]: https://github.com/JackMechem/fermata/compare/v0.1.0-alpha.3...v0.1.0-alpha.4
 [0.1.0-alpha.3]: https://github.com/JackMechem/fermata/compare/v0.1.0-alpha.2...v0.1.0-alpha.3
 [0.1.0-alpha.2]: https://github.com/JackMechem/fermata/compare/v0.1.0-alpha.1...v0.1.0-alpha.2
