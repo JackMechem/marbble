@@ -1,4 +1,4 @@
-//! One voice of Fermata Tre: three oscillators, noise, the mixer, a ladder and two contours,
+//! One voice of Marbble Tre: three oscillators, noise, the mixer, a ladder and two contours,
 //! ticking at the oversampled rate. Everything that is shared by the voices is in [`Frame`]
 //! (changes smoothly, updated once per output sample) and [`Patch`] (changes in steps).
 

@@ -1,4 +1,4 @@
-//! The project on disk: new, save and open. A project is a `.fermata` folder holding `project.json`
+//! The project on disk: new, save and open. A project is a `.marbble` folder holding `project.json`
 //! and its audio.
 //!
 //! Autosave and recovery are in `options.rs` and `recovery.rs`, backups in `backups.rs`, project
@@ -42,10 +42,10 @@ impl Session {
         self.redo_stack.clear();
     }
 
-    /// Saves into `dir` (a `.fermata` folder). Saving somewhere new copies the audio files.
+    /// Saves into `dir` (a `.marbble` folder, or an older `.fermata` one). Saving somewhere new copies the audio files.
     pub fn save(&mut self, dir: Option<PathBuf>) -> Result<PathBuf> {
         let target = dir.unwrap_or_else(|| self.dir.clone());
-        let target = if target.extension().map(|e| e == "fermata").unwrap_or(false) { target } else { target.with_extension("fermata") };
+        let target = crate::old_name::project_path(target);
         std::fs::create_dir_all(target.join(AUDIO_DIR))?;
         self.ensure_freeze_files();
         if target != self.dir {

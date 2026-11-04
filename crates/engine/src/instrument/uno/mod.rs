@@ -1,4 +1,4 @@
-//! Fermata Uno: a one-oscillator bass line synth, modelled on the architecture and behaviour of
+//! Marbble Uno: a one-oscillator bass line synth, modelled on the architecture and behaviour of
 //! the Roland TB-303 (this project isn't affiliated with Roland, and the product name stays clear
 //! of theirs). Its reference is what's publicly documented about the circuit, Robin Whittle's and
 //! Tim Stinchcombe's analyses above all; nothing here was compared with the hardware. See
@@ -523,7 +523,7 @@ impl Instrument for Uno {
 pub fn info() -> InstrumentInfo {
     InstrumentInfo {
         id: "builtin:uno",
-        name: "Fermata Uno",
+        name: "Marbble Uno",
         group: "Vintage Synths",
         about: "One oscillator, a diode ladder, accent and slide: a bass line machine. Overlapping notes slide, high velocity accents",
         params: PARAMS,

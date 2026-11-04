@@ -1,4 +1,4 @@
-//! Fermata Cinque measured through its public contract, and what's specific to it: above all Poly Mod.
+//! Marbble Cinque measured through its public contract, and what's specific to it: above all Poly Mod.
 use super::*;
 use crate::instrument::test_kit::*;
 use crate::synth_dsp::test_util::*;

@@ -230,7 +230,7 @@ impl Editor {
             let _ = conn.change_property32(PropMode::REPLACE, id, wm_protocols, AtomEnum::ATOM, &[wm_delete]);
             let _ = conn.change_property8(PropMode::REPLACE, id, AtomEnum::WM_NAME, AtomEnum::STRING, title.as_bytes());
             let _ = conn.change_property8(PropMode::REPLACE, id, net_wm_name, utf8, title.as_bytes());
-            let _ = conn.change_property8(PropMode::REPLACE, id, AtomEnum::WM_CLASS, AtomEnum::STRING, b"fermata-plugin\0Fermata\0");
+            let _ = conn.change_property8(PropMode::REPLACE, id, AtomEnum::WM_CLASS, AtomEnum::STRING, b"marbble-plugin\0Marbble\0");
             let window = Arc::new(Window { conn, id, size: Mutex::new((w as u32, h as u32)), resizable });
             if resizable {
                 // WM_NORMAL_HINTS: just PPosition.

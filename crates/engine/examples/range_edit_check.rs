@@ -53,7 +53,7 @@ fn main() {
     let scratch = PathBuf::from(args.next().expect("scratch dir"));
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg, Vec::new());
-    s.dir = scratch.join("RangeEditCheck.fermata");
+    s.dir = scratch.join("RangeEditCheck.marbble");
     let rate = s.sample_rate() as i64;
 
     let t = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();

@@ -1,4 +1,4 @@
-//! The parameters of Fermata Onda. The ids are stable forever: projects and presets store them.
+//! The parameters of Marbble Onda. The ids are stable forever: projects and presets store them.
 
 use super::tables::TABLE_NAMES;
 use crate::fx::{ParamSpec, Unit};

@@ -126,7 +126,7 @@ export function generate() {
       const front = [
         "---",
         `title: ${yaml(page.title)}`,
-        `description: ${yaml(describe(page.body, `${page.title}, from the Fermata ${doc.title}.`))}`,
+        `description: ${yaml(describe(page.body, `${page.title}, from the Marbble ${doc.title}.`))}`,
         `editUrl: ${yaml(editUrl)}`,
         "---",
         "",

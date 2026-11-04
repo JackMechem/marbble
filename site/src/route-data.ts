@@ -17,7 +17,7 @@ export const onRequest = defineRouteMiddleware((context) => {
   // Prev and next stay inside the zone.
   const inZone = (link?: { href: string }) => {
     if (!link) return false;
-    const path = link.href.replace(/^.*?\/fermata\//, "");
+    const path = link.href.replace(/^.*?\/marbble\//, "");
     return zone.areas.some((a) => path.startsWith(`${a}/`));
   };
   const { prev, next } = route.pagination;

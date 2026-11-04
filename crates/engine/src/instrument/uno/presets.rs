@@ -1,4 +1,4 @@
-//! Factory presets of Fermata Uno: written here, knob positions a player might dial in on an
+//! Factory presets of Marbble Uno: written here, knob positions a player might dial in on an
 //! instrument with this few knobs. Parameters a preset doesn't list go to their defaults.
 
 use super::params::param::*;

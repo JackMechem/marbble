@@ -81,7 +81,7 @@ fn main() {
     };
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg, plugins);
-    s.dir = scratch.join("PdcCheck.fermata");
+    s.dir = scratch.join("PdcCheck.marbble");
     std::fs::create_dir_all(&s.dir).unwrap();
     let sr = s.sample_rate() as u32;
     let noise = noise_file(&s.dir, sr);
@@ -196,7 +196,7 @@ fn main() {
     ok &= check(&format!("undo restores the compensation ({after_remove} -> {after_undo})"), after_remove == lat_b && after_undo == 2 * lat_b);
 
     // Project load computes it from scratch.
-    let dir = s.save(Some(scratch.join("PdcCheckSaved.fermata"))).unwrap();
+    let dir = s.save(Some(scratch.join("PdcCheckSaved.marbble"))).unwrap();
     let mut prefs2 = s.prefs.clone();
     prefs2.latency.compensation = PdcMode::Off;
     s.set_prefs(prefs2);

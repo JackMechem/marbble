@@ -85,7 +85,7 @@ done
 
 made_scratch=
 if [ -z "$scratch" ]; then
-  scratch=$(mktemp -d "${TMPDIR:-/tmp}/fermata-checks.XXXXXX")
+  scratch=$(mktemp -d "${TMPDIR:-/tmp}/marbble-checks.XXXXXX")
   made_scratch=1
 fi
 mkdir -p "$scratch"

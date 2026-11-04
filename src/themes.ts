@@ -646,7 +646,7 @@ export const THEMES: Theme[] = [
   { id: "contrast", name: "High Contrast", description: "Maximum legibility: black, white and bold edges.", css: contrastCss, canvas: contrastCanvas },
 ];
 
-const KEY = "fermata.theme";
+const KEY = "marbble.theme";
 
 export function savedThemeId(): string {
   try {

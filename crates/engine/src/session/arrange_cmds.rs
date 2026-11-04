@@ -539,7 +539,7 @@ mod tests {
     fn session() -> (Session, Vec<Id>, Id) {
         let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
         let mut s = Session::new(cfg, Vec::new());
-        s.dir = std::env::temp_dir().join(format!("fermata-arrange-cmds-{}", std::process::id()));
+        s.dir = std::env::temp_dir().join(format!("marbble-arrange-cmds-{}", std::process::id()));
         let path = s.dir.join("Audio Files").join("tone.wav");
         let tone: Vec<f32> = (0..200_000)
             .map(|i| if (50_000..80_000).contains(&i) || i >= 150_000 { 0.0 } else { 0.5 * (i as f32 * std::f32::consts::TAU * 100.0 / 48_000.0).sin() })

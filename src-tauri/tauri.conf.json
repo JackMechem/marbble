@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Fermata",
+  "productName": "Marbble",
   "version": "0.1.0-alpha.5",
-  "identifier": "studio.fermata.daw",
+  "identifier": "io.github.jackmechem.marbble",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Fermata",
+        "title": "Marbble",
         "width": 1480,
         "height": 920,
         "minWidth": 1000,

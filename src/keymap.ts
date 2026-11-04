@@ -129,7 +129,7 @@ export const KEY_COMMANDS: KeyCommand[] = [
 
 /** Accelerators of the native menu (src-tauri/src/menu.rs); they can't be changed here. */
 export const MENU_SHORTCUTS: { label: string; menu: string; key: string }[] = [
-  { label: "Settings…", menu: "Fermata", key: "Mod+," },
+  { label: "Settings…", menu: "Marbble", key: "Mod+," },
   { label: "New…", menu: "File", key: "Mod+N" },
   { label: "Open Recent…", menu: "File", key: "Mod+Shift+O" },
   { label: "Open…", menu: "File", key: "Mod+O" },

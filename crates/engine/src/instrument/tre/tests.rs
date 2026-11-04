@@ -1,4 +1,4 @@
-//! Fermata Tre measured through its public contract.
+//! Marbble Tre measured through its public contract.
 use super::*;
 use crate::synth_dsp::test_util::*;
 use crate::synth_dsp::{note_hz, tanh_fast};

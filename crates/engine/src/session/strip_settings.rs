@@ -162,7 +162,7 @@ mod tests {
     fn session(tag: &str) -> Session {
         let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
         let mut s = Session::new(cfg, Vec::new());
-        s.dir = std::env::temp_dir().join(format!("fermata-strip-settings-{tag}-{}", std::process::id()));
+        s.dir = std::env::temp_dir().join(format!("marbble-strip-settings-{tag}-{}", std::process::id()));
         s
     }
 

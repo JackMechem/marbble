@@ -68,7 +68,7 @@ define_class!(
     // SAFETY: NSObject has no subclassing requirements, and WindowDelegate doesn't implement Drop.
     #[unsafe(super(NSObject))]
     #[thread_kind = MainThreadOnly]
-    #[name = "FermataPlugInWindowDelegate"]
+    #[name = "MarbblePlugInWindowDelegate"]
     #[ivars = DelegateIvars]
     struct WindowDelegate;
 
@@ -202,7 +202,7 @@ impl Editor {
             window.setReleasedWhenClosed(false);
             window.setTitle(&NSString::from_str(title));
             // Like Logic's plug-in windows: floating above the project windows, hidden while
-            // another app is active so they don't cover it (switching between Fermata's own
+            // another app is active so they don't cover it (switching between Marbble's own
             // windows keeps the app active, so that doesn't hide them), and shown over a full-screen
             // main window.
             window.setLevel(NSFloatingWindowLevel);
@@ -283,7 +283,7 @@ define_class!(
     // SAFETY: NSWindow may be subclassed; PlugInWindow has no ivars and doesn't implement Drop.
     #[unsafe(super(NSWindow, NSResponder, NSObject))]
     #[thread_kind = MainThreadOnly]
-    #[name = "FermataPlugInWindow"]
+    #[name = "MarbblePlugInWindow"]
     struct PlugInWindow;
 
     impl PlugInWindow {

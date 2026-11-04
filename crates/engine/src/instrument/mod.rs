@@ -163,7 +163,7 @@ pub struct InstrumentInfo {
     pub id: &'static str,
     /// The name in menus and the panel. No trademarks: see docs/ARCHITECTURE.md.
     pub name: &'static str,
-    /// The menu group: "Fermata" (house instruments), "Vintage Synths", "Samplers" and so on.
+    /// The menu group: "Marbble" (house instruments), "Vintage Synths", "Samplers" and so on.
     pub group: &'static str,
     /// A line for the Library's tooltip.
     pub about: &'static str,

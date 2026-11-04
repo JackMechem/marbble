@@ -83,7 +83,7 @@ mod tests {
     fn session() -> (Session, Id, Id) {
         let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
         let mut s = Session::new(cfg, Vec::new());
-        s.dir = std::env::temp_dir().join(format!("fermata-zero-{}", std::process::id()));
+        s.dir = std::env::temp_dir().join(format!("marbble-zero-{}", std::process::id()));
         let path = s.dir.join("Audio Files").join("sine.wav");
         let sine: Vec<f32> = (0..48_000).map(|i| (i as f32 * std::f32::consts::TAU / 100.0).sin() * 0.5).collect();
         let clip = s.add_clip(&path, Clip::from_channels(path.clone(), 48_000, vec![sine.clone(), sine]));

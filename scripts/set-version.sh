@@ -1,5 +1,5 @@
 #!/bin/sh
-# Sets Fermata's version everywhere it is recorded: the Cargo workspace (and Cargo.lock),
+# Sets Marbble's version everywhere it is recorded: the Cargo workspace (and Cargo.lock),
 # package.json and package-lock.json, src-tauri/tauri.conf.json and nix/package.nix.
 # Needs GNU sed (Linux, or gsed on macOS).
 # usage: scripts/set-version.sh 0.2.0      (or a prerelease such as 0.2.0-alpha.1)

@@ -123,7 +123,7 @@ mod tests {
     use std::path::PathBuf;
 
     fn scratch(name: &str) -> PathBuf {
-        std::env::temp_dir().join(format!("fermata-audio-file-{}-{name}", std::process::id()))
+        std::env::temp_dir().join(format!("marbble-audio-file-{}-{name}", std::process::id()))
     }
 
     /// A second of stereo: a sine on the left, a quieter one with noise on the right, and a

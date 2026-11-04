@@ -409,7 +409,7 @@ impl Session {
                             f if f.starts_with(super::backups::BACKUPS_DIR) => "its most recent backup (recent changes may be missing)",
                             _ => file,
                         };
-                        let msg = format!("“{name}”: {}, so Fermata opened {what} instead. Save the project to repair it.", problems.join("; "));
+                        let msg = format!("“{name}”: {}, so Marbble opened {what} instead. Save the project to repair it.", problems.join("; "));
                         log::warn!("{msg}");
                         self.warning = Some(msg);
                         self.saved = dir.join(PROJECT_FILE).exists();
@@ -424,7 +424,7 @@ impl Session {
             }
         }
         if problems.len() == 1 && !dir.join(PROJECT_FILE).exists() {
-            return Err(anyhow!("“{name}” is not a Fermata project (there's no {PROJECT_FILE} in it)"));
+            return Err(anyhow!("“{name}” is not a Marbble project (there's no {PROJECT_FILE} in it)"));
         }
         Err(anyhow!("“{name}” can't be opened: {}, and there's no autosave or backup to fall back on.", problems.join("; ")))
     }
@@ -481,9 +481,9 @@ mod tests {
     fn session(tag: &str) -> (Session, PathBuf) {
         let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
         let mut s = Session::new(cfg, Vec::new());
-        let scratch = std::env::temp_dir().join(format!("fermata-recovery-{tag}-{}", std::process::id()));
+        let scratch = std::env::temp_dir().join(format!("marbble-recovery-{tag}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&scratch);
-        s.dir = scratch.join("Song.fermata");
+        s.dir = scratch.join("Song.marbble");
         (s, scratch)
     }
 
@@ -537,7 +537,7 @@ mod tests {
 
     #[test]
     fn journal_round_trips() {
-        let dir = std::env::temp_dir().join(format!("fermata-journal-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("marbble-journal-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let mut j = journal(&dir, 7, &dir.join("a.wav"), 96000);

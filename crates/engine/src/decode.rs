@@ -221,7 +221,7 @@ mod tests {
     #[test]
     fn wav_round_trip() {
         // decode() must read back exactly what write_wav() produces.
-        let dir = std::env::temp_dir().join(format!("fermata-decode-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("marbble-decode-{}", std::process::id()));
         let p = dir.join("t.wav");
         let ch = vec![(0..1000).map(|i| i as f32 / 1000.0).collect::<Vec<f32>>(); 2];
         write_wav(&p, 48000, &ch).unwrap();

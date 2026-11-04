@@ -1,5 +1,5 @@
 {
-  description = "Fermata, a cross-platform DAW with VST3 hosting, modelled on Logic Pro";
+  description = "Marbble, a cross-platform DAW with VST3 hosting, modelled on Logic Pro";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
@@ -14,33 +14,33 @@
     in
     {
       packages = forAllSystems (pkgs: rec {
-        fermata = pkgs.callPackage ./nix/package.nix { };
-        default = fermata;
+        marbble = pkgs.callPackage ./nix/package.nix { };
+        default = marbble;
       });
 
       apps = forAllSystems (pkgs: rec {
-        fermata = {
+        marbble = {
           type = "app";
-          program = nixpkgs.lib.getExe self.packages.${pkgs.stdenv.hostPlatform.system}.fermata;
+          program = nixpkgs.lib.getExe self.packages.${pkgs.stdenv.hostPlatform.system}.marbble;
         };
-        default = fermata;
+        default = marbble;
       });
 
       devShells = forAllSystems (pkgs: {
         default = import ./nix/shell.nix {
           inherit pkgs;
-          inherit (self.packages.${pkgs.stdenv.hostPlatform.system}) fermata;
+          inherit (self.packages.${pkgs.stdenv.hostPlatform.system}) marbble;
         };
       });
 
-      # For NixOS / home-manager configurations: `nixpkgs.overlays = [ fermata.overlays.default ];`
+      # For NixOS / home-manager configurations: `nixpkgs.overlays = [ marbble.overlays.default ];`
       overlays.default = final: _prev: {
-        fermata = final.callPackage ./nix/package.nix { };
+        marbble = final.callPackage ./nix/package.nix { };
       };
 
       checks = forAllSystems (pkgs: {
         # Builds the app and runs the engine's unit tests.
-        fermata = self.packages.${pkgs.stdenv.hostPlatform.system}.fermata;
+        marbble = self.packages.${pkgs.stdenv.hostPlatform.system}.marbble;
       });
 
       formatter = forAllSystems (pkgs: pkgs.nixfmt);

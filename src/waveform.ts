@@ -86,7 +86,7 @@ function parseWave(buf: ArrayBuffer): Wave {
 
 // ---- the style setting ----------------------------------------------------------------------
 
-const KEY = "fermata.waveStyle";
+const KEY = "marbble.waveStyle";
 
 export function savedWaveStyle(): WaveStyle {
   try {

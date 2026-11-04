@@ -87,7 +87,7 @@ export interface State {
   moveMidiWithTempo: boolean;
   /** The built-in effects (`list_builtin_effects`). */
   fxList: FxInfo[];
-  /** The built-in instruments, Fermata Synth among them. */
+  /** The built-in instruments, Marbble Synth among them. */
   instList: InstInfo[];
   /** Built-in effect instances whose panels are open (docked or floating); see `fxDock`. */
   fxPanels: Id[];

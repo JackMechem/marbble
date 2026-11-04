@@ -219,12 +219,12 @@ export function Library() {
           <div className="lib-group">{isInst ? "Instruments" : "Audio FX"}</div>
           {isInst && !instList.length && (
             <div className={"lib-item" + (current(track) === BUILTIN_SYNTH ? " on" : "")} onClick={() => load(BUILTIN_SYNTH)}>
-              Fermata Synth
+              Marbble Synth
             </div>
           )}
           {isInst &&
             [...instGroups.entries()]
-              .sort((a, b) => (a[0] === "Fermata" ? -1 : b[0] === "Fermata" ? 1 : a[0].localeCompare(b[0])))
+              .sort((a, b) => (a[0] === "Marbble" ? -1 : b[0] === "Marbble" ? 1 : a[0].localeCompare(b[0])))
               .map(([group, is]) => (
                 <div key={`inst:${group}`}>
                   <div className="lib-vendor">{group}</div>
@@ -241,7 +241,7 @@ export function Library() {
               <div key={`fx:${cat}`}>
                 <div className="lib-vendor">{cat}</div>
                 {fs.map((f) => (
-                  <div key={f.id} className="lib-item" onClick={() => load(f.id)} title={`Fermata ${f.category}`}>
+                  <div key={f.id} className="lib-item" onClick={() => load(f.id)} title={`Marbble ${f.category}`}>
                     {f.name}
                   </div>
                 ))}

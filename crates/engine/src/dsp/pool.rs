@@ -215,7 +215,7 @@ impl Pool {
         for index in 1..threads {
             let sh = shared.clone();
             let o = opts.clone();
-            match thread::Builder::new().name(format!("fermata-dsp-{index}")).stack_size(STACK_SIZE).spawn(move || worker(sh, index, o)) {
+            match thread::Builder::new().name(format!("marbble-dsp-{index}")).stack_size(STACK_SIZE).spawn(move || worker(sh, index, o)) {
                 Ok(j) => joins.push(j),
                 // The caller can do every task alone, with whichever workers did start.
                 Err(e) => log::error!("no processing thread {index}: {e}"),

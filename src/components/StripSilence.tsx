@@ -19,7 +19,7 @@ interface StripSettings {
 
 /** Logic's defaults: 4 %, 0.1 s, 0.02 s and 0.1 s. */
 const DEFAULTS: StripSettings = { threshold: 0.04, min_time: 0.1, pre_attack: 0.02, post_release: 0.1 };
-const PREFS = "fermata.stripSilence";
+const PREFS = "marbble.stripSilence";
 
 function loadSettings(): StripSettings {
   try {

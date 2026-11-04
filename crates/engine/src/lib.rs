@@ -1,4 +1,4 @@
-//! Fermata's audio engine: project model, real-time graph, device I/O, recording and MIDI.
+//! Marbble's audio engine: project model, real-time graph, device I/O, recording and MIDI.
 //!
 //! Two halves never share mutable data: [`Session`] (`session.rs`, `session/`) owns the document and
 //! runs off the audio thread; [`dsp::Engine`] (`dsp.rs`, `dsp/`) is the real-time graph. See
@@ -41,6 +41,7 @@ pub mod decode;
 pub mod denormals;
 pub mod midi;
 pub mod midi_io;
+pub mod old_name;
 pub mod plugin_db;
 pub mod prefs;
 pub mod presets;

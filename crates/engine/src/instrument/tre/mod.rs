@@ -1,4 +1,4 @@
-//! Fermata Tre: a three-oscillator monophonic synth, modelled on the architecture and behaviour of
+//! Marbble Tre: a three-oscillator monophonic synth, modelled on the architecture and behaviour of
 //! the Minimoog Model D (this project isn't affiliated with Moog Music, and the product name stays
 //! clear of theirs). The model's reference is what's publicly documented about the instrument and
 //! its circuit; nothing here was compared with the hardware. See docs/ARCHITECTURE.md for what is
@@ -551,7 +551,7 @@ impl Instrument for Tre {
 pub fn info() -> InstrumentInfo {
     InstrumentInfo {
         id: "builtin:tre",
-        name: "Fermata Tre",
+        name: "Marbble Tre",
         group: "Vintage Synths",
         about: "Three oscillators, a transistor ladder and two contours: a classic monophonic synth",
         params: PARAMS,

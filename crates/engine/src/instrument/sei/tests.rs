@@ -1,4 +1,4 @@
-//! Fermata Sei measured through its public contract, and what's specific to it.
+//! Marbble Sei measured through its public contract, and what's specific to it.
 use super::*;
 use crate::instrument::test_kit::*;
 use crate::synth_dsp::test_util::*;

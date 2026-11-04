@@ -20,7 +20,7 @@ export function DetachedWindow() {
   const { kind, arg } = parsePanelKey(ownPanel ?? "");
   const k = panelKind(kind);
   const ready = useStore((s) => s.snap !== null);
-  const title = useStore((s) => (k ? k.title(arg, s) : "Fermata"));
+  const title = useStore((s) => (k ? k.title(arg, s) : "Marbble"));
   const dialog = useStore((s) => s.dialog);
   const groupSheet = useStore((s) => s.groupSheet);
 

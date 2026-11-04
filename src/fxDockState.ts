@@ -74,7 +74,7 @@ export const toggleEqPanel = (track: Id) => togglePanel(eqKey(track));
 
 // ---- remembered floating sizes ----------------------------------------------------------------
 
-const SIZES = "fermata.fxPanelSizes";
+const SIZES = "marbble.fxPanelSizes";
 
 /** The size a type of panel ("builtin:compressor", "builtin:channel-eq") was last given. */
 export function savedPanelSize(type: string): Size | null {

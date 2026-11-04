@@ -260,7 +260,7 @@ mod tests {
 
     #[test]
     fn writes_the_chosen_bit_depth() {
-        let dir = std::env::temp_dir().join(format!("fermata-rec-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("marbble-rec-{}", std::process::id()));
         let rec = Recorder::new();
         for (depth, bits) in [(BitDepth::Int24, 24), (BitDepth::Float32, 32)] {
             let path = dir.join(format!("take{bits}.wav"));

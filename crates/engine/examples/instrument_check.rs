@@ -1,8 +1,8 @@
-//! Built-in instruments through the real session (silent ALSA null output), with Fermata Tre:
+//! Built-in instruments through the real session (silent ALSA null output), with Marbble Tre:
 //! loading it, a MIDI region's render and that it repeats bit for bit, parameter edits, automation
 //! lanes, undo and redo, factory and user presets, saving and reopening, Freeze, Bounce in Place,
 //! a bounce's tail, Track Off, copy and paste, strip settings, duplicating, MIDI learn, note chase
-//! and live MIDI. And that Fermata Synth is still there, and an old project's slot still loads.
+//! and live MIDI. And that Marbble Synth is still there, and an old project's slot still loads.
 //! Then the models after it, one by one, through the same core of that path.
 //! usage: instrument_check <scratch dir>
 use std::path::PathBuf;
@@ -147,7 +147,7 @@ fn check_model(scratch: &std::path::Path, plugin: &str, edit: u32, to: f32) {
     check(&format!("{name}: it deletes"), daw_engine::presets::delete_user(&root, plugin, user).is_ok());
 
     // Saving and reopening.
-    let dir = scratch.join(format!("{name}.fermata"));
+    let dir = scratch.join(format!("{name}.marbble"));
     s.save(Some(dir.clone())).unwrap();
     drop(s);
     let mut s = session();
@@ -184,8 +184,8 @@ fn main() {
     // The registry.
     let listed = daw_engine::session::builtin_instruments();
     check(
-        "the registry lists Fermata Synth and Fermata Tre",
-        listed.iter().any(|i| i.id == BUILTIN_SYNTH && i.name == "Fermata Synth") && listed.iter().any(|i| i.id == TRE && !i.sections.is_empty()),
+        "the registry lists Marbble Synth and Marbble Tre",
+        listed.iter().any(|i| i.id == BUILTIN_SYNTH && i.name == "Marbble Synth") && listed.iter().any(|i| i.id == TRE && !i.sections.is_empty()),
     );
     check("instruments aren't in the effects' list", daw_engine::session::builtin_effects().iter().all(|e| e.id != TRE && e.id != BUILTIN_SYNTH));
 
@@ -194,7 +194,7 @@ fn main() {
     let slot = s.project.track(a).unwrap().instrument.clone().unwrap();
     check(
         &format!("a new track takes it, named for it ({})", s.project.track(a).unwrap().name),
-        slot.plugin_id == TRE && slot.name == "Fermata Tre" && s.project.track(a).unwrap().name == "Fermata Tre",
+        slot.plugin_id == TRE && slot.name == "Marbble Tre" && s.project.track(a).unwrap().name == "Marbble Tre",
     );
     check("its values are written out in the project", slot.params.len() == daw_engine::instrument::find(TRE).unwrap().params.len());
     check("it isn't reported missing", s.missing_plugins().is_empty());
@@ -202,7 +202,7 @@ fn main() {
     check("an effect doesn't go in the instrument slot", s.set_plugin(a, SLOT, "builtin:reverb").is_err());
     let plain = s.add_track(TrackKind::Instrument, InputSel::None, None, None).unwrap();
     check(
-        "a new instrument track without a choice is still Fermata Synth",
+        "a new instrument track without a choice is still Marbble Synth",
         s.project.track(plain).unwrap().instrument.as_ref().unwrap().plugin_id == BUILTIN_SYNTH,
     );
     s.delete_track(plain);
@@ -238,7 +238,7 @@ fn main() {
         &format!("the lane picker lists its {} parameters", infos.len()),
         infos.len() > 40 && infos.iter().any(|p| p.name == "Cutoff" && p.id == param::CUTOFF),
     );
-    let lane = AutoParam::Plugin { uid, param: param::CUTOFF, name: "Fermata Tre: Cutoff".into() };
+    let lane = AutoParam::Plugin { uid, param: param::CUTOFF, name: "Marbble Tre: Cutoff".into() };
     let pt = |pos: i64, value: f32| daw_engine::model::AutoPoint { pos, value, curve: 0.0 };
     s.set_automation_lane(a, lane.clone(), vec![pt(0, cutoff_norm(100.0)), pt(RATE * 2, cutoff_norm(3000.0))]);
     let automated = render(&mut s);
@@ -282,7 +282,7 @@ fn main() {
     s.set_builtin_param(a, SLOT, param::DRIFT, 1.0).unwrap();
     s.set_automation_lane(a, lane.clone(), vec![pt(0, cutoff_norm(800.0)), pt(RATE, cutoff_norm(2000.0))]);
     let lead = render(&mut s);
-    let dir = scratch.join("Tre.fermata");
+    let dir = scratch.join("Tre.marbble");
     s.save(Some(dir.clone())).unwrap();
     let text = std::fs::read_to_string(dir.join("project.json")).unwrap_or_default();
     check("the project file holds the slot's values", text.contains(TRE) && text.contains("\"params\""));
@@ -430,7 +430,7 @@ fn main() {
 
     // A slot saved before this existed still opens as what it was.
     let synth = track(&mut s, BUILTIN_SYNTH);
-    check("Fermata Synth still loads with no values", s.project.track(synth).unwrap().instrument.as_ref().unwrap().params.is_empty());
+    check("Marbble Synth still loads with no values", s.project.track(synth).unwrap().instrument.as_ref().unwrap().params.is_empty());
     s.update_track(a, TrackPatch { mute: Some(true), ..Default::default() });
     check("and plays", peak(&render(&mut s)) > 0.01);
     check("no audio was contained", s.status.bad_audio.load(Ordering::Relaxed) == 0);

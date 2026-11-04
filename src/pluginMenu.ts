@@ -17,7 +17,7 @@ export function builtinFxItems(list: FxInfo[], pick: (id: string) => void, curre
 }
 
 /**
- * The built-in instruments as menu items: the house ones ("Fermata") in the menu itself, others in
+ * The built-in instruments as menu items: the house ones ("Marbble") in the menu itself, others in
  * a submenu per group (Vintage Synths, ...).
  */
 export function builtinInstrumentItems(list: InstInfo[], pick: (id: string) => void, current?: string): MenuItem[] {
@@ -27,8 +27,8 @@ export function builtinInstrumentItems(list: InstInfo[], pick: (id: string) => v
     if (!groups.has(i.category)) groups.set(i.category, []);
     groups.get(i.category)!.push(i);
   }
-  const house = list.filter((i) => i.category === "Fermata").map(item);
-  const others = [...groups.entries()].filter(([g]) => g !== "Fermata").sort((a, b) => a[0].localeCompare(b[0]));
+  const house = list.filter((i) => i.category === "Marbble").map(item);
+  const others = [...groups.entries()].filter(([g]) => g !== "Marbble").sort((a, b) => a[0].localeCompare(b[0]));
   return [...house, ...others.map(([label, is]) => ({ label, children: is.map(item) }))];
 }
 
@@ -69,11 +69,11 @@ export function pluginMenu(
   if (opts.instrument) {
     // Before the list arrives, the synth every track can always have.
     const list = getState().instList;
-    const fallback: MenuItem[] = [{ label: "Fermata Synth", checked: opts.current === BUILTIN_SYNTH, onClick: () => opts.pick(BUILTIN_SYNTH) }];
+    const fallback: MenuItem[] = [{ label: "Marbble Synth", checked: opts.current === BUILTIN_SYNTH, onClick: () => opts.pick(BUILTIN_SYNTH) }];
     items.push(...(list.length ? builtinInstrumentItems(list, opts.pick, opts.current) : fallback));
     items.push({ separator: true });
   } else if (getState().fxList.length) {
-    items.push({ label: "Fermata", header: true }, ...builtinFxItems(getState().fxList, opts.pick, opts.current), { separator: true });
+    items.push({ label: "Marbble", header: true }, ...builtinFxItems(getState().fxList, opts.pick, opts.current), { separator: true });
   }
   const cats = new Map<string, PluginDesc[]>();
   for (const p of pool) {

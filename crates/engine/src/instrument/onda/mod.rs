@@ -1,4 +1,4 @@
-//! Fermata Onda: a modern wavetable synth of the kind that Serum made the standard (this project isn't
+//! Marbble Onda: a modern wavetable synth of the kind that Serum made the standard (this project isn't
 //! affiliated with Xfer Records, and the product name stays clear of theirs). It isn't a copy of any
 //! one instrument's panel: it's the architecture: two wavetable oscillators with position scan and
 //! unison, a sub and noise, a choice of filters, three envelopes, two LFOs and a modulation matrix.
@@ -933,7 +933,7 @@ impl Instrument for Onda {
 pub fn info() -> InstrumentInfo {
     InstrumentInfo {
         id: "builtin:onda",
-        name: "Fermata Onda",
+        name: "Marbble Onda",
         group: "Modern Synths",
         about: "Two wavetable oscillators with position scan and unison, seven filters, three envelopes, two LFOs and a modulation matrix",
         params: PARAMS,

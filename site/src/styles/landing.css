@@ -236,7 +236,7 @@ a:hover {
   white-space: nowrap;
 }
 
-/* The lane: a phrase with one note held under a fermata. */
+/* The lane: a phrase whose last note rings out, with arrangement markers above it. */
 .lane {
   --p: 0.87;
   display: grid;
@@ -270,12 +270,6 @@ a:hover {
   height: clamp(2.4rem, 3.5vw, 3.25rem);
   border-bottom: 1px solid var(--line-soft);
   background-image: repeating-linear-gradient(90deg, var(--line-soft) 0 1px, transparent 1px 10%);
-}
-.fermata-sign {
-  position: absolute;
-  bottom: 0.25rem;
-  width: clamp(1.8rem, 3vw, 2.9rem);
-  transform: translateX(-50%);
 }
 .marks small {
   position: absolute;
@@ -1069,14 +1063,17 @@ a:hover {
   display: grid;
   gap: 0.4rem;
 }
-.foot svg {
-  vertical-align: -1px;
+.foot img {
+  vertical-align: -3px;
   margin-right: 0.3rem;
 }
 
 /* Real screenshots, once they've arrived. */
 .shot {
   margin-block: clamp(1.5rem, 3vw, 2.5rem);
+}
+.shot-grid .shot {
+  margin-block: 0 clamp(1rem, 2vw, 1.5rem);
 }
 main > .shot {
   margin: 0;

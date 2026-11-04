@@ -1,4 +1,4 @@
-//! Fermata Sampler's panel: zones, adding and slicing files, recording into it. Long jobs decode
+//! Marbble Sampler's panel: zones, adding and slicing files, recording into it. Long jobs decode
 //! on a worker and hand the edit back to the main thread.
 
 use super::*;

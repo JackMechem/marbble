@@ -1,9 +1,9 @@
 # Development shell. Takes its toolchain and libraries from the package itself, so the shell
 # and `nix build` can't drift apart.
-{ pkgs, fermata }:
+{ pkgs, marbble }:
 
 pkgs.mkShell {
-  inputsFrom = [ fermata ];
+  inputsFrom = [ marbble ];
 
   packages = with pkgs; [
     cargo

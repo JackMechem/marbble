@@ -1,4 +1,4 @@
-//! Fermata Sampler: samples mapped across keys and velocities, in memory, with loops, round robin,
+//! Marbble Sampler: samples mapped across keys and velocities, in memory, with loops, round robin,
 //! an amp envelope, a filter with its envelope, an LFO, glide and polyphony.
 //!
 //! - [`state`]: the zones as saved in the slot's `PluginSlot::state`.
@@ -177,7 +177,7 @@ impl Bank {
     }
 }
 
-/// Fermata Sampler's real-time half, the instance in the slot: its sample map arrives whole through
+/// Marbble Sampler's real-time half, the instance in the slot: its sample map arrives whole through
 /// `Instrument::swap_data`, built off the audio thread.
 pub struct Sampler {
     rate: f32,
@@ -461,7 +461,7 @@ impl Instrument for Sampler {
 pub fn info() -> InstrumentInfo {
     InstrumentInfo {
         id: ID,
-        name: "Fermata Sampler",
+        name: "Marbble Sampler",
         group: "Samplers",
         about: "Your own samples across keys and velocities, with loops, round robin and SFZ loading",
         params: PARAMS,

@@ -1,5 +1,5 @@
 # Builds the website in site/ from docs/ and CHANGELOG.md and publishes it to GitHub Pages at
-# https://jackmechem.github.io/fermata/. A broken link in the docs fails the build, and the site
+# https://jackmechem.github.io/marbble/. A broken link in the docs fails the build, and the site
 # that's live stays as it was. Needs Settings › Pages › Source set to "GitHub Actions" once.
 name: Website
 

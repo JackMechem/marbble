@@ -308,15 +308,20 @@ fn same<T: Serialize>(a: &T, b: &T) -> bool {
     serde_json::to_string(a).ok() == serde_json::to_string(b).ok()
 }
 
-/// ~/Music/Fermata, where new projects go unless Settings › General names another folder.
+/// ~/Music/Marbble, where new projects go unless Settings › General names another folder. Until
+/// it exists, the projects folder from before the rename (~/Music/Fermata) stays the default.
 pub fn default_projects_root() -> PathBuf {
     let home = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")).map(PathBuf::from).unwrap_or_default();
-    home.join("Music").join("Fermata")
+    let root = home.join("Music").join("Marbble");
+    if root.exists() {
+        return root;
+    }
+    crate::old_name::old_projects_root().unwrap_or(root)
 }
 
 fn untitled_dir(root: &Path) -> PathBuf {
     for i in 1.. {
-        let name = if i == 1 { "Untitled.fermata".to_string() } else { format!("Untitled {i}.fermata") };
+        let name = if i == 1 { "Untitled.marbble".to_string() } else { format!("Untitled {i}.marbble") };
         let p = root.join(name);
         if !p.exists() {
             return p;

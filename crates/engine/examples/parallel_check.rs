@@ -95,7 +95,7 @@ fn set_string(state: &mut Vec<u8>, name: &str, v: &str) {
 /// folders, patterns) and, on top, a summing stack, auxes fed by outputs and by sends before and
 /// after the fader and by each other, a post-fader key, Off, frozen, muted and monitored tracks.
 fn build(s: &mut Session, scratch: &Path) -> Extras {
-    s.dir = scratch.join("Parallel.fermata");
+    s.dir = scratch.join("Parallel.marbble");
     let mut w = base(s, scratch);
     for (name, step) in steps() {
         s.checkpoint(name, None, true);
@@ -426,7 +426,7 @@ fn realtime_workers(scratch: &Path) {
 fn rt_threads() -> usize {
     let Ok(dir) = std::fs::read_dir("/proc/self/task") else { return 0 };
     dir.flatten()
-        .filter(|d| std::fs::read_to_string(d.path().join("comm")).is_ok_and(|c| c.starts_with("fermata-dsp")))
+        .filter(|d| std::fs::read_to_string(d.path().join("comm")).is_ok_and(|c| c.starts_with("marbble-dsp")))
         .filter(|d| {
             // The policy is the 41st field of `stat`, after the command in parentheses.
             let stat = std::fs::read_to_string(d.path().join("stat")).unwrap_or_default();

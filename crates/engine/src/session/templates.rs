@@ -144,7 +144,7 @@ mod tests {
 
     #[test]
     fn template_round_trip() {
-        let folder = std::env::temp_dir().join(format!("fermata-templates-{}", std::process::id()));
+        let folder = std::env::temp_dir().join(format!("marbble-templates-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&folder);
         let mut s = session();
         let a = s.add_track(TrackKind::Audio, InputSel::Mono(1), None, None).unwrap();

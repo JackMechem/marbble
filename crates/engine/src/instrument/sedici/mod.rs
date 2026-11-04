@@ -1,4 +1,4 @@
-//! Fermata Sedici: six-operator FM with sixteen voices, modelled on the architecture and behaviour
+//! Marbble Sedici: six-operator FM with sixteen voices, modelled on the architecture and behaviour
 //! of the Yamaha DX7 (this project isn't affiliated with Yamaha, and the product name stays clear
 //! of theirs). Its reference is what's publicly documented about the instrument and the published
 //! reverse engineering of its chips; nothing here was compared with the hardware. See
@@ -920,7 +920,7 @@ impl Instrument for Sedici {
 pub fn info() -> InstrumentInfo {
     InstrumentInfo {
         id: "builtin:sedici",
-        name: "Fermata Sedici",
+        name: "Marbble Sedici",
         group: "Vintage Synths",
         about: "Six-operator FM, 32 algorithms, 16 voices, at the original's own sample rate",
         params: PARAMS,

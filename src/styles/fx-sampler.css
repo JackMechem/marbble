@@ -1,5 +1,5 @@
-/* Fermata Sampler's panel (fx/Sampler.tsx). */
-/* Fermata Sampler's panel (fx/Sampler.tsx): left to right for the dock, scrolling sideways. */
+/* Marbble Sampler's panel (fx/Sampler.tsx). */
+/* Marbble Sampler's panel (fx/Sampler.tsx): left to right for the dock, scrolling sideways. */
 .fx-body:has(> .smp-panel) {
   overflow: hidden;
 }

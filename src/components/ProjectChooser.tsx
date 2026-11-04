@@ -143,7 +143,7 @@ export function ProjectChooser() {
   useSheetKeys(box, close);
 
   const toast = (text: string) => setState({ toast: { text, at: Date.now(), ms: 5000 } });
-  const target = `${location.replace(/\/+$/, "")}/${name.trim() || "Untitled"}.fermata`;
+  const target = `${location.replace(/\/+$/, "")}/${name.trim() || "Untitled"}.marbble`;
 
   const create = async (templateId: string = template) => {
     if (!name.trim()) return toast("Give the project a name");
@@ -241,7 +241,7 @@ export function ProjectChooser() {
   };
 
   const browse = async () => {
-    const dir = await open({ directory: true, title: "Open Project (select a .fermata folder)", defaultPath: location || undefined });
+    const dir = await open({ directory: true, title: "Open Project (select a .marbble folder)", defaultPath: location || undefined });
     if (typeof dir === "string") openPath(dir);
   };
 
@@ -266,7 +266,7 @@ export function ProjectChooser() {
               <path d="M3 15a8 8 0 0 1 16 0" stroke="var(--cycle)" strokeWidth="2.4" strokeLinecap="round" />
               <circle cx="11" cy="14" r="2.2" fill="var(--text)" />
             </svg>
-            <span>Fermata</span>
+            <span>Marbble</span>
           </div>
           <button className={"chooser-nav" + (tab === "new" ? " on" : "")} onClick={() => setState({ chooserTab: "new" })}>
             New Project

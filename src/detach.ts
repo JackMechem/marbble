@@ -73,7 +73,7 @@ export interface PanelKind {
   alive?(arg: string, s: State): boolean;
   /** In the panel's own window: a change that keeps its state fit to show it, or null. */
   own?(arg: string, s: State): Partial<State> | null;
-  /** Reopened at launch if it was detached when Fermata quit. */
+  /** Reopened at launch if it was detached when Marbble quit. */
   restore?: boolean;
   /** A first window's size, in logical pixels. */
   size: { w: number; h: number };
@@ -284,7 +284,7 @@ function onPanelMsg(m: PanelMsg & { from: string }) {
 
 // ---- detaching and attaching ----------------------------------------------------------------
 
-const MEMORY = "fermata.detachedPanels";
+const MEMORY = "marbble.detachedPanels";
 
 function loadMemory(): PanelMemory {
   try {
@@ -430,7 +430,7 @@ let restored = false;
 
 /**
  * The main window's part (App, once): it hears the panels, and reopens the panels that were
- * detached when Fermata quit. `key` runs a key command a panel window passed on.
+ * detached when Marbble quit. `key` runs a key command a panel window passed on.
  */
 export function installDetach(opts: { key: (id: string, repeat: boolean) => void }): () => void {
   keyAction = opts.key;

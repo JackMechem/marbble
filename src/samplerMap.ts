@@ -1,4 +1,4 @@
-// Fermata Sampler's panel, the parts with no screen in them: zones as the engine sends them
+// Marbble Sampler's panel, the parts with no screen in them: zones as the engine sends them
 // (crates/engine/src/instrument/sampler/state.rs), note names, and the sums behind the zone map
 // and the waveform's handles. Tested in tests/samplerMap.test.ts.
 

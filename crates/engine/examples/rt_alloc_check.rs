@@ -146,7 +146,7 @@ fn s_state(s: &Session, t: Id) -> Option<String> {
     s.project.track(t).and_then(|t| t.instrument.as_ref()).and_then(|i| i.state.clone())
 }
 
-/// A track with Fermata Sampler, its zones in the way a real instrument would use them, and enough
+/// A track with Marbble Sampler, its zones in the way a real instrument would use them, and enough
 /// notes at low polyphony to keep it stealing.
 fn add_sampler(s: &mut Session, scratch: &std::path::Path) -> Id {
     use daw_engine::instrument::sampler::{params::param, state::SamplerState};
@@ -201,7 +201,7 @@ fn scenario(scratch: &Path, threads: u32) {
     std::fs::create_dir_all(scratch).unwrap();
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg, Vec::new());
-    s.dir = scratch.join("RtAlloc.fermata");
+    s.dir = scratch.join("RtAlloc.marbble");
     let mut w = base(&mut s, scratch);
     for (name, step) in steps() {
         s.checkpoint(name, None, true);

@@ -21,7 +21,7 @@ fn tracks_with_built_in_instruments_count_as_work_for_a_second_thread() {
     s.add_track(TrackKind::Instrument, InputSel::None, Some(TRE.into()), None).unwrap();
     assert_eq!(width(&s), 2, "two instruments overlap");
     s.add_track(TrackKind::Instrument, InputSel::None, None, None).unwrap();
-    assert_eq!(width(&s), 3, "Fermata Synth too, as before");
+    assert_eq!(width(&s), 3, "Marbble Synth too, as before");
     s.update_track(a, TrackPatch { off: Some(true), ..Default::default() });
     assert_eq!(width(&s), 2, "one that's Off doesn't");
 }
@@ -53,7 +53,7 @@ fn an_instrument_slot_answers_the_calls_an_effects_slot_does() {
 }
 
 #[test]
-fn fermata_synth_stays_without_settings_or_a_panel_entry_in_the_project() {
+fn marbble_synth_stays_without_settings_or_a_panel_entry_in_the_project() {
     let mut s = session();
     let t = s.add_track(TrackKind::Instrument, InputSel::None, None, None).unwrap();
     let slot = s.project.track(t).unwrap().instrument.clone().unwrap();

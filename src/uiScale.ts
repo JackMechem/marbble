@@ -5,7 +5,7 @@ import { getState, setState } from "./store";
 /** Interface sizes offered in Settings › Appearance. */
 export const UI_SCALES = [0.9, 1, 1.1, 1.25, 1.5, 1.75, 2];
 
-const KEY = "fermata.uiScale";
+const KEY = "marbble.uiScale";
 
 // The display's own density, read before any page zoom is applied.
 const baseRatio = window.devicePixelRatio || 1;

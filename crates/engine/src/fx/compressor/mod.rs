@@ -32,7 +32,7 @@
 //! output gain. Gain reduction is computed in dB, so the envelopes behave the same at every
 //! level.
 //!
-//! Provenance: written for Fermata from the papers and published behaviour of the units above;
+//! Provenance: written for Marbble from the papers and published behaviour of the units above;
 //! no third-party code is included. The idea of letting the FET release slow down as reduction
 //! builds up was suggested by the program-dependent "speed" variable in Airwindows' Pop2
 //! (MIT licence, Copyright (c) 2016 airwindows), but none of its code is used.

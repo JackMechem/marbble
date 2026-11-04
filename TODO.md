@@ -1,4 +1,4 @@
-# Fermata roadmap
+# Marbble roadmap
 
 What's left, in the order it matters for a usable release. Each stage builds on the one before.
 The full Logic Pro feature scope is in [LOGIC_FEATURES.md](LOGIC_FEATURES.md); known limitations
@@ -14,17 +14,17 @@ passed silently or on a stand-in, and nobody has tried the thing on real gear ye
 Things that pass their checks but want a person.
 
 - **Synth models (Tre, Sei, Cinque, Uno, Sedici, Onda).** Unit tests, `instrument_check`, `rt_alloc_check` and
-  `parallel_check` pass, as does a before-and-after render of Fermata Synth. Their panels have been seen in the
+  `parallel_check` pass, as does a before-and-after render of Marbble Synth. Their panels have been seen in the
   docked row, and the owner has heard them briefly ("oh this is sick"), but **none has been tuned or compared with
   the hardware.** Tre's likeness to the Model D is from documented behaviour only.
   - Every preset wants hearing (19 on Tre, 14 to 16 on the others), and Tre's fatness judging against what it's
     modelled on.
   - Every constant marked as a guess in [ARCHITECTURE](docs/ARCHITECTURE.md#built-in-instruments) and
-    [Fermata Tre](docs/ARCHITECTURE.md#fermata-tre) wants tuning by ear.
+    [Marbble Tre](docs/ARCHITECTURE.md#marbble-tre) wants tuning by ear.
   - The published figures in the Sei, Uno and Sedici sections came from memory of those sources: worth a check
     against them.
-  - New instrument tracks still default to Fermata Synth: to decide after listening.
-- **Fermata Sampler.** `sampler_check`, its unit tests, `rt_alloc_check` and `parallel_check` pass, silently,
+  - New instrument tracks still default to Marbble Synth: to decide after listening.
+- **Marbble Sampler.** `sampler_check`, its unit tests, `rt_alloc_check` and `parallel_check` pass, silently,
   against generated audio. The panel has been opened in the dock, and bugs found that way are fixed (it now fills the
   dock, its wheel moves along the row, and percent parameters are right).
   - **Not heard:** drops haven't been tried, and nothing's been listened to. Try one recording played across the
@@ -114,7 +114,7 @@ they use there (simulated on Linux), but none of this has run on a real machine.
   while monitoring.
 - On a live Stop with delay compensation, the audio still in the compensation delay lines plays out at static levels (renders
   keep reading automation through it; playback doesn't).
-- Fermata Synth's renders aren't repeatable with its mod wheel up (its LFO runs free, and `silence` keeps its controllers).
+- Marbble Synth's renders aren't repeatable with its mod wheel up (its LFO runs free, and `silence` keeps its controllers).
   Left alone, as old projects depend on it; a new default could drop it.
 
 ### Built-in instruments
@@ -130,9 +130,9 @@ they use there (simulated on Linux), but none of this has run on a real machine.
   On Tre, a wave or range switch moved under a held note steps at once, as a real switch does; it could click a little at an
   extreme setting.
 
-### Fermata Sampler
+### Marbble Sampler
 
-- SFZ is a subset (see [ARCHITECTURE](docs/ARCHITECTURE.md#fermata-sampler)). Likely next by how often libraries need them:
+- SFZ is a subset (see [ARCHITECTURE](docs/ARCHITECTURE.md#marbble-sampler)). Likely next by how often libraries need them:
   per-region filters, `amp_veltrack`, `group`/`off_by` for hi-hats, release triggers, `ampeg_hold`, and `loop_sustain` playing on
   past its loop.
 - A channel strip setting or a template with a sampler keeps its zones, not its samples, so elsewhere they show as missing. A
@@ -164,9 +164,9 @@ they use there (simulated on Linux), but none of this has run on a real machine.
 
 ### Larger
 
-- The settings folder is `~/.config/fermata` on macOS too; `~/Library/Application Support` is the native place, but moving it
+- The settings folder is `~/.config/marbble` on macOS too; `~/Library/Application Support` is the native place, but moving it
   needs a migration.
-- VST3 editor windows on Linux don't pass unused keys to Fermata, so Ctrl+Z and Space do nothing with focus in one; macOS does
+- VST3 editor windows on Linux don't pass unused keys to Marbble, so Ctrl+Z and Space do nothing with focus in one; macOS does
   (`src/pluginKeys.ts`). Tried on 2026-10-30, not implemented: "forward unless X focus is in a plug-in child" would steal typing
   from LSP's text fields, which don't take X focus (from reading sources, unmeasured). Likely mechanism: a sync `XGrabKey` on the
   frame with `XAllowEvents` replay, on its own thread. Rule to be chosen by measuring whether the I-beam cursor is readable on JUCE
@@ -240,7 +240,7 @@ Goal: precise MIDI editing and hands-on control from hardware.
 
 ## Stage 5: Mixing and delivery
 
-Goal: finish a mix and deliver it without leaving Fermata.
+Goal: finish a mix and deliver it without leaving Marbble.
 
 - [x] Channel strip settings; copy and paste a whole strip
 - [x] Several automation lanes per track, automation curves, automation for folder stacks and

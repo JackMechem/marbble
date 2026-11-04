@@ -53,7 +53,7 @@ fn main() {
     };
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg, plugins);
-    s.dir = scratch.join("FreezeCheck.fermata");
+    s.dir = scratch.join("FreezeCheck.marbble");
     std::fs::create_dir_all(&s.dir).unwrap();
     let bar = s.project.samples_per_bar().round() as i64;
     let beat = s.project.samples_per_beat().round() as i64;
@@ -152,7 +152,7 @@ fn main() {
     );
 
     // Save and reopen a frozen project.
-    let dir = s.save(Some(scratch.join("FreezeCheckSaved.fermata"))).unwrap();
+    let dir = s.save(Some(scratch.join("FreezeCheckSaved.marbble"))).unwrap();
     s.new_project();
     s.open(&dir).unwrap();
     let (reopened, _) = mix(&mut s, len);

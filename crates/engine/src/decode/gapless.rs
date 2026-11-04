@@ -309,7 +309,7 @@ mod tests {
 
     #[test]
     fn reads_a_file_with_moov_after_the_data() {
-        let dir = std::env::temp_dir().join(format!("fermata-gapless-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("marbble-gapless-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("t.m4a");
         let moov = bx(b"moov", &cat(&[header(b"mvhd", 600), trak(b"soun", 44_100, &[(600, 2112)])]));

@@ -4,6 +4,6 @@
 <plist version="1.0">
 <dict>
     <key>NSMicrophoneUsageDescription</key>
-    <string>Fermata records from your audio interface or microphone, and plug-ins can process live input.</string>
+    <string>Marbble records from your audio interface or microphone, and plug-ins can process live input.</string>
 </dict>
 </plist>

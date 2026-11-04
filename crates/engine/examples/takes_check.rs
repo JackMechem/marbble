@@ -75,7 +75,7 @@ fn main() {
     let scratch = args.next().expect("scratch dir");
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg, Vec::new());
-    s.dir = std::path::PathBuf::from(&scratch).join("TakesCheck.fermata");
+    s.dir = std::path::PathBuf::from(&scratch).join("TakesCheck.marbble");
     let _ = std::fs::remove_dir_all(&s.dir);
     std::fs::create_dir_all(s.dir.join("Audio Files")).unwrap();
     s.prefs.recording.pre_roll_secs = 0.0;

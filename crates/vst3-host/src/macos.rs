@@ -80,7 +80,7 @@ pub fn wrong_arch(bin: &Path) -> Option<String> {
     };
     let built: Vec<String> = archs.iter().map(|a| mac(a)).collect();
     Some(format!(
-        "built for {} only, and this copy of Fermata runs as {}: install a Universal or {} version of the plug-in",
+        "built for {} only, and this copy of Marbble runs as {}: install a Universal or {} version of the plug-in",
         built.join(" and "),
         mac(ours),
         if ours == "aarch64" { "Apple Silicon" } else { "Intel" },

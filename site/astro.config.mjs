@@ -9,7 +9,7 @@ const { sidebar, watch } = generate();
 
 /** In `astro dev`, editing a source document regenerates its pages. */
 const regenerate = {
-  name: "fermata-docs",
+  name: "marbble-docs",
   hooks: {
     "astro:server:setup": ({ server }) => {
       server.watcher.add(watch);
@@ -27,8 +27,8 @@ export default defineConfig({
   integrations: [
     regenerate,
     starlight({
-      title: "Fermata",
-      description: "User guide and developer documentation for Fermata, an open-source digital audio workstation written in Rust.",
+      title: "Marbble",
+      description: "User guide and developer documentation for Marbble, an open-source digital audio workstation written in Rust.",
       favicon: "/favicon.svg",
       social: [{ icon: "github", label: "GitHub", href: REPO_URL }],
       sidebar,

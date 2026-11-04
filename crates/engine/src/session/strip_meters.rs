@@ -136,7 +136,7 @@ mod tests {
     fn ticks_hold_the_peaks_between_them() {
         let cfg = crate::audio_io::AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
         let mut s = Session::new(cfg, Vec::new());
-        s.dir = std::env::temp_dir().join(format!("fermata-strip-meters-{}", std::process::id()));
+        s.dir = std::env::temp_dir().join(format!("marbble-strip-meters-{}", std::process::id()));
         let a = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
         // One tick reports a clip, the next a quiet block; the hold remembers the clip.
         let held = s.hold_peaks(&[(a, 0.2, 1.6)], (0.5, 0.4));

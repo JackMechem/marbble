@@ -232,9 +232,9 @@ mod tests {
     fn session(tag: &str) -> (Session, PathBuf) {
         let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
         let mut s = Session::new(cfg, Vec::new());
-        let scratch = std::env::temp_dir().join(format!("fermata-backups-{tag}-{}", std::process::id()));
+        let scratch = std::env::temp_dir().join(format!("marbble-backups-{tag}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&scratch);
-        s.dir = scratch.join("Song.fermata");
+        s.dir = scratch.join("Song.marbble");
         (s, scratch)
     }
 

@@ -85,7 +85,7 @@ fn main() {
     let scratch = args.next().expect("scratch dir");
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg, Vec::new());
-    s.dir = std::path::PathBuf::from(&scratch).join("AutoLanesCheck.fermata");
+    s.dir = std::path::PathBuf::from(&scratch).join("AutoLanesCheck.marbble");
     println!("audio: {:?}", s.audio_status);
 
     let a = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();

@@ -1,7 +1,7 @@
 //! Placing files on keys: telling the note, velocity layer and round-robin turn from a file's name,
 //! and splitting the keyboard between them.
 //!
-//! Note names read Logic's way, as the rest of Fermata shows them: middle C (MIDI 60) is C3.
+//! Note names read Logic's way, as the rest of Marbble shows them: middle C (MIDI 60) is C3.
 
 use super::state::Zone;
 

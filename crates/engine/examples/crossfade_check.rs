@@ -118,7 +118,7 @@ fn main() {
     let scratch = PathBuf::from(args.next().expect("scratch dir"));
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg, Vec::new());
-    s.dir = scratch.join("CrossfadeCheck.fermata");
+    s.dir = scratch.join("CrossfadeCheck.marbble");
     let _ = std::fs::remove_dir_all(&s.dir);
     std::fs::create_dir_all(s.dir.join("Audio Files")).unwrap();
     let sr = s.sample_rate() as u32;

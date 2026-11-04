@@ -69,7 +69,7 @@ fn main() {
     std::fs::create_dir_all(&scratch).unwrap();
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg, Vec::new());
-    s.dir = scratch.join("ChaseCheck.fermata");
+    s.dir = scratch.join("ChaseCheck.marbble");
     let bar = s.project.samples_per_bar().round() as i64;
     let beat = s.project.samples_per_beat().round() as i64;
 

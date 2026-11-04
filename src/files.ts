@@ -38,7 +38,7 @@ export async function undoRedo(which: "undo" | "redo") {
 
 export async function openProjectDialog() {
   if (!(await confirmDiscard("Open another project"))) return;
-  const dir = await open({ directory: true, title: "Open Project (select a .fermata folder)" });
+  const dir = await open({ directory: true, title: "Open Project (select a .marbble folder)" });
   if (typeof dir === "string") await openProjectPath(dir);
 }
 
@@ -49,7 +49,7 @@ export async function saveProject(as = false) {
     await act("save_project", { path: null });
     return;
   }
-  const path = await save({ title: "Save Project", defaultPath: snap.path.replace(/\.fermata$/, "") + ".fermata" });
+  const path = await save({ title: "Save Project", defaultPath: snap.path.replace(/\.(marbble|fermata)$/, "") + ".marbble" });
   if (path) await act("save_project", { path });
 }
 

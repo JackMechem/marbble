@@ -138,11 +138,11 @@ fn main() {
         println!("{block} frames at {SR} Hz: budget {budget:.0} us");
         for (name, values, notes) in &cases {
             let (mean, worst) = measure(&tre, values, *notes, block, seconds);
-            println!("  Fermata Tre, {name:38} mean {mean:7.1} us ({:5.2} %)  worst {worst:7.1} us ({:5.2} %)", 100.0 * mean / budget, 100.0 * worst / budget);
+            println!("  Marbble Tre, {name:38} mean {mean:7.1} us ({:5.2} %)  worst {worst:7.1} us ({:5.2} %)", 100.0 * mean / budget, 100.0 * worst / budget);
         }
         let (mean, worst) = measure(&tre, &[], 0, block, seconds.min(1.0));
         println!(
-            "  Fermata Tre, {:38} mean {mean:7.1} us ({:5.2} %)  worst {worst:7.1} us ({:5.2} %)",
+            "  Marbble Tre, {:38} mean {mean:7.1} us ({:5.2} %)  worst {worst:7.1} us ({:5.2} %)",
             "at rest (no notes)",
             100.0 * mean / budget,
             100.0 * worst / budget
@@ -164,7 +164,7 @@ fn main() {
         let basic = instrument::find(daw_engine::session::BUILTIN_SYNTH).unwrap();
         let (mean, worst) = measure(&basic, &[], 1, block, seconds);
         println!(
-            "  Fermata Synth, {:36} mean {mean:7.1} us ({:5.2} %)  worst {worst:7.1} us ({:5.2} %)",
+            "  Marbble Synth, {:36} mean {mean:7.1} us ({:5.2} %)  worst {worst:7.1} us ({:5.2} %)",
             "one voice, for scale",
             100.0 * mean / budget,
             100.0 * worst / budget

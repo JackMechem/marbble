@@ -59,7 +59,7 @@ fn tone_region(s: &mut Session, tone: &Path, track: Id, start: i64, len: i64) ->
 }
 
 fn modes(tone: &Path, scratch: &Path) {
-    let mut s = session(scratch.join("DragModes.fermata"));
+    let mut s = session(scratch.join("DragModes.marbble"));
     let sec = s.sample_rate() as i64;
     let t = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
     let a = tone_region(&mut s, tone, t, 0, sec);
@@ -144,7 +144,7 @@ fn modes(tone: &Path, scratch: &Path) {
 }
 
 fn automation(tone: &Path, scratch: &Path) {
-    let mut s = session(scratch.join("MoveAutomation.fermata"));
+    let mut s = session(scratch.join("MoveAutomation.marbble"));
     let sec = s.sample_rate() as i64;
     let t = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
     // A region at 0.5..1 s, and volume automation that is only open under it.

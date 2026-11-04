@@ -175,7 +175,7 @@ fn main() {
     let scratch = PathBuf::from(args.get(1).expect("usage: recovery_check <audio file> <scratch dir>"));
 
     // ---- a plain recording, killed mid-take ---------------------------------------------
-    let dir = scratch.join("RecoveryCheck.fermata");
+    let dir = scratch.join("RecoveryCheck.marbble");
     let _ = std::fs::remove_dir_all(&dir);
     let c = crash("plain", &dir);
     check(&format!("the child recorded two takes before the crash ({:?})", c.frames), c.frames.len() == 2 && c.frames.iter().all(|f| f.1 > 0));
@@ -194,7 +194,7 @@ fn main() {
     let ok = info.as_ref().map(|r| r.has_autosave && r.recording.as_ref().map(|x| x.takes == 2).unwrap_or(false)).unwrap_or(false);
     check(&format!("recovery is offered: the record-start autosave and two takes ({:?})", info.as_ref().map(|r| (r.has_autosave, r.recording.clone()))), ok);
 
-    let mut s = session(&scratch.join("Elsewhere.fermata"));
+    let mut s = session(&scratch.join("Elsewhere.marbble"));
     s.open_recovered(&dir).unwrap();
     let sr = s.sample_rate() as i64;
     check(&format!("the project opens at {}", s.dir.display()), s.dir == dir && s.dirty);
@@ -274,10 +274,10 @@ fn main() {
     drop(s);
 
     // ---- a cycle recording, killed mid-pass ----------------------------------------------
-    let dir = scratch.join("RecoveryCycle.fermata");
+    let dir = scratch.join("RecoveryCycle.marbble");
     let _ = std::fs::remove_dir_all(&dir);
     let c = crash("cycle", &dir);
-    let mut s = session(&scratch.join("Elsewhere2.fermata"));
+    let mut s = session(&scratch.join("Elsewhere2.marbble"));
     let info = recovery_info(&dir);
     check(
         &format!("a cycle recording is offered without an autosave ({:?})", info.as_ref().map(|r| (r.has_autosave, r.recording.clone()))),
@@ -294,8 +294,8 @@ fn main() {
         &format!("the cycle passes come back as a take folder over the cycle ({folder:?}, recorder had {passes}+ passes)"),
         regions.len() == 1 && matches!(folder, Some((0, l, n)) if l == cycle && n as i64 >= passes.max(2)),
     );
-    let _ = std::fs::remove_dir_all(scratch.join("Elsewhere.fermata"));
-    let _ = std::fs::remove_dir_all(scratch.join("Elsewhere2.fermata"));
+    let _ = std::fs::remove_dir_all(scratch.join("Elsewhere.marbble"));
+    let _ = std::fs::remove_dir_all(scratch.join("Elsewhere2.marbble"));
     if FAILED.load(std::sync::atomic::Ordering::Relaxed) {
         std::process::exit(1);
     }

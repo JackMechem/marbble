@@ -113,7 +113,7 @@ pub fn recoverable_projects(state: State<AppState>) -> Vec<daw_engine::session::
     let mut dirs: Vec<PathBuf> = crate::recent::paths().into_iter().map(PathBuf::from).collect();
     for r in [root, daw_engine::session::default_projects_root()] {
         if let Ok(rd) = std::fs::read_dir(&r) {
-            dirs.extend(rd.flatten().map(|e| e.path()).filter(|p| p.extension().map(|e| e == "fermata").unwrap_or(false)));
+            dirs.extend(rd.flatten().map(|e| e.path()).filter(|p| daw_engine::old_name::is_project(p)));
         }
     }
     let mut seen = Vec::new();

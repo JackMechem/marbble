@@ -30,7 +30,7 @@ export interface Prefs {
   density: Density;
 }
 
-const PREFS_KEY = "fermata.pianoRoll";
+const PREFS_KEY = "marbble.pianoRoll";
 const DEFAULT_PREFS: Prefs = {
   pxPerBeat: 80,
   noteH: 12,

@@ -30,7 +30,7 @@ mod tests {
     fn gains_are_set_per_region_and_clamped() {
         let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
         let mut s = Session::new(cfg, Vec::new());
-        s.dir = std::env::temp_dir().join(format!("fermata-gain-{}", std::process::id()));
+        s.dir = std::env::temp_dir().join(format!("marbble-gain-{}", std::process::id()));
         let path = s.dir.join("Audio Files").join("dc.wav");
         let clip = s.add_clip(&path, Clip::from_channels(path.clone(), 48_000, vec![vec![0.25; 4_800]]));
         let t = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();

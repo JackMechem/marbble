@@ -178,6 +178,6 @@ impl Session {
             .find_map(|t| t.inserts.iter().flatten().chain(t.instrument.iter()).find(|s| s.uid == uid).map(|s| (s.name.clone(), t.name.clone())));
         let found = found.or_else(|| p.master.inserts.iter().flatten().find(|s| s.uid == uid).map(|s| (s.name.clone(), "Stereo Out".to_string())));
         let (plugin, track) = found.unwrap_or_else(|| ("A plug-in".into(), "a track".into()));
-        Some(format!("{plugin} on {track} put out invalid audio (NaN or a runaway level), so Fermata muted it to protect the rest of the mix. If it keeps happening, bypass it or reset its settings."))
+        Some(format!("{plugin} on {track} put out invalid audio (NaN or a runaway level), so Marbble muted it to protect the rest of the mix. If it keeps happening, bypass it or reset its settings."))
     }
 }

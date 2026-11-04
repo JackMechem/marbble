@@ -160,7 +160,7 @@ export const ccName = (n: number) => CC_NAMES[n] ?? "";
 
 // ---- rows -----------------------------------------------------------------------------------
 
-/** The kinds of event Fermata stores, as the Event List's filter buttons name them. */
+/** The kinds of event Marbble stores, as the Event List's filter buttons name them. */
 export type EventType = "note" | "bend" | "control" | "pressure";
 
 /** `label` is the filter button's, `status` the Status column's, `name` one event's. */

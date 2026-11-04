@@ -72,7 +72,7 @@ fn main() {
     let plugins = daw_engine::plugin_db::load_cache().unwrap_or_default();
     let comp = plugins.iter().find(|p| p.name == "ZamCompX2").map(|p| p.id.clone());
     let mut s = Session::new(cfg, plugins);
-    s.dir = scratch.join("BounceCheck.fermata");
+    s.dir = scratch.join("BounceCheck.marbble");
     let _ = std::fs::remove_dir_all(&s.dir);
     let sr = s.sample_rate();
     println!("audio: {:?}", s.audio_status);

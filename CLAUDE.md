@@ -1,4 +1,4 @@
-# Fermata
+# Marbble
 
 A Logic Pro–style DAW in Rust, Tauri 2 and React. Start with `docs/ARCHITECTURE.md` and
 `docs/DEVELOPING.md`. The roadmap is in `TODO.md`; its "Open items" section lists what is left

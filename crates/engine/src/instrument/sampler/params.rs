@@ -1,4 +1,4 @@
-//! The parameters of Fermata Sampler, numeric settings of the whole instrument. Each zone's own
+//! The parameters of Marbble Sampler, numeric settings of the whole instrument. Each zone's own
 //! settings are in its state (`state.rs`). The ids are stable forever: projects and presets store
 //! them.
 

@@ -1,5 +1,5 @@
 /* The docs in the app's colours: the Studio theme's graphite (src/styles.css in the app) with the
-   yellow of Fermata's icon as the one accent. Yellow can't carry text on white, so the light theme
+   yellow of Marbble's icon as the one accent. Yellow can't carry text on white, so the light theme
    links in a deep ochre. */
 
 :root {
@@ -34,8 +34,8 @@
   --sl-line-height: 1.6;
   --sl-content-width: 46rem;
 
-  --fm-badge: #f2c230;
-  --fm-badge-ink: #2a2205;
+  --mb-badge: #f2c230;
+  --mb-badge-ink: #2a2205;
 }
 
 :root[data-theme="light"] {
@@ -62,8 +62,8 @@
   --sl-color-hairline-light: #cfcfd3;
   --sl-color-hairline-shade: #cfcfd3;
 
-  --fm-badge: #232325;
-  --fm-badge-ink: #f2c230;
+  --mb-badge: #232325;
+  --mb-badge-ink: #f2c230;
 }
 
 header.header {

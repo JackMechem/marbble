@@ -179,7 +179,7 @@ export function nudgeSamples(p: Project, pos = 0): number {
 
 // ---- launch and crash recovery ------------------------------------------------------------
 
-/** Audio a recording left behind when Fermata quit mid-take. */
+/** Audio a recording left behind when Marbble quit mid-take. */
 export interface RecordingRecovery {
   started: number;
   takes: number;

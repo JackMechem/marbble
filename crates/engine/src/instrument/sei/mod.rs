@@ -1,4 +1,4 @@
-//! Fermata Sei: a six-voice polyphonic synth, modelled on the architecture and behaviour of the
+//! Marbble Sei: a six-voice polyphonic synth, modelled on the architecture and behaviour of the
 //! Roland Juno-106 family (this project isn't affiliated with Roland, and the product name stays
 //! clear of theirs). Its reference is what's publicly documented about the instrument; nothing
 //! here was compared with the hardware. See docs/ARCHITECTURE.md for what's documented behaviour
@@ -482,7 +482,7 @@ impl Instrument for Sei {
 pub fn info() -> InstrumentInfo {
     InstrumentInfo {
         id: "builtin:sei",
-        name: "Fermata Sei",
+        name: "Marbble Sei",
         group: "Vintage Synths",
         about: "Six digitally controlled voices, one envelope, one filter and a stereo bucket-brigade chorus",
         params: PARAMS,

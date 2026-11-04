@@ -181,7 +181,7 @@ fn main() {
     };
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg.clone(), vec![desc.clone()]);
-    s.dir = scratch.join("MultiOut.fermata");
+    s.dir = scratch.join("MultiOut.marbble");
     std::fs::create_dir_all(&s.dir).unwrap();
     let rate = s.project.sample_rate;
     let (one, two) = (scratch.join("one.wav"), scratch.join("two.wav"));

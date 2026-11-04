@@ -13,6 +13,10 @@ import "./panelKinds";
 import { ownPanel } from "./detach";
 import { DetachedWindow } from "./components/DetachedWindow";
 import { installSheetKeys } from "./sheetKeys";
+import { migrateStorage } from "./oldName";
+
+// Before anything reads its preferences.
+migrateStorage();
 
 // First, so open sheets see every key press before anything else does.
 installSheetKeys();

@@ -14,7 +14,7 @@ use crate::instrument::{FxContext, Instrument};
 const CTX: FxContext = FxContext { sample_rate: 48000.0, tempo: 120.0, playing: true, position: 0.0 };
 
 fn temp(tag: &str) -> std::path::PathBuf {
-    let p = std::env::temp_dir().join(format!("fermata-sampler-{tag}-{}", std::process::id()));
+    let p = std::env::temp_dir().join(format!("marbble-sampler-{tag}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&p);
     std::fs::create_dir_all(&p).unwrap();
     p

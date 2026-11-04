@@ -49,7 +49,7 @@ fn main() {
     let mut args = std::env::args().skip(1);
     let tone = args.next().expect("audio file");
     let scratch = PathBuf::from(args.next().expect("scratch dir"));
-    let dir = scratch.join("ProjectsCheck.fermata");
+    let dir = scratch.join("ProjectsCheck.marbble");
     let mut s = session();
     s.dir = dir.clone();
     s.prefs.general.backups = 3;
@@ -180,7 +180,7 @@ fn main() {
             && t.project.clips.is_empty()
             && !t.saved,
     );
-    let new_dir = t.save(Some(scratch.join("FromTemplate.fermata"))).unwrap();
+    let new_dir = t.save(Some(scratch.join("FromTemplate.marbble"))).unwrap();
     let r = reopen(&new_dir);
     check("it saves and reopens as an ordinary project", r.project.tracks.len() == 2 && r.alternative_name() == "FromTemplate");
     daw_engine::session::rename_template(&templates, "Band", "Trio").unwrap();

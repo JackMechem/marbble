@@ -38,7 +38,7 @@ interface Prefs {
   midiOut: boolean;
 }
 
-const PREFS_KEY = "fermata.eventList";
+const PREFS_KEY = "marbble.eventList";
 const DEFAULT_PREFS: Prefs = { show: { note: true, bend: true, control: true, pressure: true }, addType: "note", catchPlayhead: true, midiOut: true };
 
 let prefs: Prefs = (() => {

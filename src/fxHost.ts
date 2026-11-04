@@ -23,7 +23,7 @@ export function fxInfo(pluginId: string | undefined): FxInfo | undefined {
   return st.fxList.find((f) => f.id === pluginId) ?? st.instList.find((f) => f.id === pluginId);
 }
 
-/** Built-in effects and instruments with settings have a panel; Fermata Synth has none. */
+/** Built-in effects and instruments with settings have a panel; Marbble Synth has none. */
 export const isBuiltinFx = (pluginId: string | undefined) => !!fxInfo(pluginId)?.params.length;
 
 /** Where a built-in instance sits: its strip (MASTER_ID for Stereo Out) and slot. */

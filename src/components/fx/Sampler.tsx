@@ -1,4 +1,4 @@
-// Fermata Sampler's panel, laid out left to right for the wide, short dock: the zones on a keyboard
+// Marbble Sampler's panel, laid out left to right for the wide, short dock: the zones on a keyboard
 // map, then the selected zone's waveform and settings, then the instrument's parameter sections in
 // a row. It scrolls sideways when the dock is narrower than that, and works floated.
 import { useCallback, useEffect, useRef, useState } from "react";

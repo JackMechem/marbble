@@ -1,4 +1,4 @@
-// Files going into Fermata Sampler: from its panel's Add… button, or dropped on it from the desktop
+// Files going into Marbble Sampler: from its panel's Add… button, or dropped on it from the desktop
 // or the All Files browser (src/dnd.ts asks `samplerAt` first).
 import { call, type Id, type Snapshot } from "./api";
 import { isSfzPath, keyAt } from "./samplerMap";

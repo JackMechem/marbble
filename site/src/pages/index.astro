@@ -7,7 +7,7 @@ import Shot from "../components/Shot.astro";
 import { REPO_URL } from "../../docs.config.mjs";
 import anchors from "../generated/anchors.json";
 import meta from "../generated/meta.json";
-import { BARS, HOLD_BAR, ZONES, coarse, eqCurve, phrase, scopes, wavePath } from "../lib/art.mjs";
+import { BARS, LAST_BAR, ZONES, coarse, eqCurve, phrase, scopes, wavePath } from "../lib/art.mjs";
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -27,13 +27,13 @@ const WAVE_H = 200;
 const peaks = phrase(720);
 const waveD = wavePath(peaks, WAVE_W, WAVE_H);
 const levels = coarse(peaks).join(",");
-const START = 8.7; // Where the playhead rests without JavaScript: on the held note.
+const START = 8.7; // Where the playhead rests without JavaScript: on the last note.
 const startLevel = 0.86;
 
 const traces = scopes();
 
 const instruments = [
-  { id: "tre", name: "Tre", voices: "1", note: "plus Unison and Poly", shelf: "Vintage", text: "Three oscillators and a mixer that overdrives, into a 24 dB transistor-ladder filter that self-oscillates in tune. Two contours with a Decay switch, glide, oscillator drift, and osc 3 and noise as modulators.", link: doc("guide", "fermata-tre") },
+  { id: "tre", name: "Tre", voices: "1", note: "plus Unison and Poly", shelf: "Vintage", text: "Three oscillators and a mixer that overdrives, into a 24 dB transistor-ladder filter that self-oscillates in tune. Two contours with a Decay switch, glide, oscillator drift, and osc 3 and noise as modulators.", link: doc("guide", "marbble-tre") },
   { id: "sei", name: "Sei", voices: "6", note: "one DCO each", shelf: "Vintage", text: "Saw, pulse and a sub an octave down, a 24 dB filter, one envelope with a VCA gate, a four-position high-pass, and a stereo bucket-brigade chorus with modes I, II and I+II.", link: doc("guide", "the-other-synth-models") },
   { id: "cinque", name: "Cinque", voices: "5", note: "two oscillators each", shelf: "Vintage", text: "Poly Mod from the filter envelope and Osc B, to Osc A's pitch and width and the filter, separately in every voice. Sync, a wheel for LFO or noise, and a slop control for how far voices wander.", link: doc("guide", "the-other-synth-models") },
   { id: "uno", name: "Uno", voices: "1", note: "one oscillator", shelf: "Vintage", text: "A diode ladder, accent with its sweep, and slide, made for a bass line played from a MIDI region: overlapping notes slide, high velocities accent, and with the resonance up, accents close together climb.", link: doc("guide", "the-other-synth-models") },
@@ -98,7 +98,7 @@ const downloads = [
       [".dmg", "Apple Silicon", "aarch64\\.dmg$"],
       [".dmg", "Intel", "x64\\.dmg$"],
     ],
-    note: "Unsigned: right-click the app and choose Open the first time, or run xattr -cr /Applications/Fermata.app.",
+    note: "Unsigned: right-click the app and choose Open the first time, or run xattr -cr /Applications/Marbble.app.",
   },
 ];
 
@@ -115,7 +115,7 @@ const keyX = (k: number) => {
 const zoneTop = 8;
 const zoneH = 112;
 
-const title = "Fermata: an open-source digital audio workstation, written in Rust";
+const title = "Marbble: an open-source digital audio workstation, written in Rust";
 const description = "A digital audio workstation modelled on Logic Pro's workflow and layout, with six synth models, a sampler, sixteen effects and VST3 hosting. MIT licensed, and in alpha.";
 ---
 
@@ -132,7 +132,7 @@ const description = "A digital audio workstation modelled on Logic Pro's workflo
     <link rel="icon" href={`${base}/favicon.svg`} type="image/svg+xml" />
     <link rel="preload" href={archivoFile} as="font" type="font/woff2" crossorigin />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Fermata" />
+    <meta property="og:title" content="Marbble" />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={new URL(import.meta.env.BASE_URL, Astro.site).href} />
     <meta property="og:image" content={new URL(`${import.meta.env.BASE_URL}og.png`, Astro.site).href} />
@@ -142,9 +142,9 @@ const description = "A digital audio workstation modelled on Logic Pro's workflo
     <a class="skip" href="#main">Skip to content</a>
 
     <header class="top">
-      <a class="brand" href={`${base}/`} aria-label="Fermata, home">
-        <svg viewBox="0 0 64 44" width="30" height="21" aria-hidden="true"><path d="M6 36a26 26 0 0 1 52 0" fill="none" stroke="var(--accent)" stroke-width="7"></path><circle cx="32" cy="35" r="6.5" fill="var(--text)"></circle></svg>
-        <span>Fermata</span>
+      <a class="brand" href={`${base}/`} aria-label="Marbble, home">
+        <img src={`${base}/favicon.svg`} width="28" height="28" alt="" />
+        <span>Marbble</span>
       </a>
       <nav aria-label="Main">
         <a href={`${base}/guide/`}>User Guide</a>
@@ -169,7 +169,7 @@ const description = "A digital audio workstation modelled on Logic Pro's workflo
           </div>
           <div class="pos-mode">
             <dt>Mode</dt>
-            <dd aria-hidden="true" class="on" data-mode>Hold</dd>
+            <dd aria-hidden="true" class="on" data-mode>Play</dd>
           </div>
           <div class="transport" hidden data-transport>
             <button type="button" data-toggle aria-label="Pause the animation">
@@ -178,17 +178,18 @@ const description = "A digital audio workstation modelled on Logic Pro's workflo
           </div>
         </dl>
 
-        <h1 id="hero-title" class="wordmark">Fermata</h1>
+        <h1 id="hero-title" class="wordmark">Marbble</h1>
 
-        <div class="lane" style={`--p:${START / BARS}`} data-lane data-levels={levels} data-bars={BARS} data-hold={HOLD_BAR} data-start={START}>
+        <div class="lane" style={`--p:${START / BARS}`} data-lane data-levels={levels} data-bars={BARS} data-start={START}>
           <div class="lane-main">
             <ol class="ruler" aria-hidden="true">
               {Array.from({ length: BARS }, (_, i) => <li>{i + 1}</li>)}
             </ol>
             <div class="marks" aria-hidden="true">
-              <svg class="fermata-sign" style={`left:${((HOLD_BAR + 0.75) / BARS) * 100}%`} viewBox="0 0 64 44"><path d="M6 36a26 26 0 0 1 52 0" fill="none" stroke="var(--accent)" stroke-width="6"></path><circle cx="32" cy="35" r="5.5" fill="var(--accent)"></circle></svg>
+              <small style="left:0.5%">Verse</small>
+              <small style={`left:${(LAST_BAR / BARS) * 100 + 0.5}%`}>Outro</small>
             </div>
-            <div class="wave" role="img" aria-label="A drawn waveform: eight bars of a bass line, then one note held under a fermata, with a playhead moving across it.">
+            <div class="wave" role="img" aria-label="A drawn waveform: eight bars of a bass line, then one long note left to ring, with a playhead moving across it.">
               <svg viewBox={`0 0 ${WAVE_W} ${WAVE_H}`} preserveAspectRatio="none" aria-hidden="true"><path id="phrase" d={waveD}></path></svg>
               <svg class="played" viewBox={`0 0 ${WAVE_W} ${WAVE_H}`} preserveAspectRatio="none" aria-hidden="true"><use href="#phrase"></use></svg>
               <div class="playhead" aria-hidden="true"><i></i></div>
@@ -228,7 +229,7 @@ const description = "A digital audio workstation modelled on Logic Pro's workflo
         <header class="panel-head">
           <p class="tag">01 Instruments</p>
           <h2 id="instruments-title">Six synth models, on the same footing as the effects.</h2>
-          <p>Each has a panel you can dock or float, factory presets, automation, MIDI learn, undo and saving, and each freezes and bounces. They sit under Vintage Synths and Modern Synths in the instrument slot, beside the simple Fermata Synth that new tracks start with.</p>
+          <p>Each has a panel you can dock or float, factory presets, automation, MIDI learn, undo and saving, and each freezes and bounces. They sit under Vintage Synths and Modern Synths in the instrument slot, beside the simple Marbble Synth that new tracks start with.</p>
         </header>
         <ol class="rack">
           {
@@ -242,7 +243,7 @@ const description = "A digital audio workstation modelled on Logic Pro's workflo
                       ))}
                     </svg>
                   </span>
-                  <span class="name"><small>{m.shelf}</small>Fermata {m.name}</span>
+                  <span class="name"><small>{m.shelf}</small>Marbble {m.name}</span>
                   <span class="voices" title={`${m.voices} ${m.voices === "1" ? "voice" : "voices"}, ${m.note}`}>
                     <b>{m.voices}</b>
                     <small>{m.voices === "1" ? "voice" : "voices"}<br /><span>{m.note}</span></small>
@@ -261,8 +262,8 @@ const description = "A digital audio workstation modelled on Logic Pro's workflo
         <header class="panel-head">
           <p class="tag">02 Sampler</p>
           <h2 id="sampler-title">Your own sounds, playable straight away.</h2>
-          <p>Drop a file on Fermata Sampler and it plays across the keyboard. Several files map themselves by the note in their names; layers and round robins sort themselves out the same way. Or record straight in from the audio input, or turn an audio region into a sampler track, whole or sliced at its transients.</p>
-          <p class="fine">Loops with crossfades, one-shot, reverse, an amp envelope, a filter with envelope, an LFO, glide and polyphony. A useful subset of SFZ loads, and what it doesn't do is listed. Samples are copied into the project and held in memory, up to 4 GB; there's no disk streaming yet. <a href={doc("guide", "fermata-sampler")}>Sampler guide</a></p>
+          <p>Drop a file on Marbble Sampler and it plays across the keyboard. Several files map themselves by the note in their names; layers and round robins sort themselves out the same way. Or record straight in from the audio input, or turn an audio region into a sampler track, whole or sliced at its transients.</p>
+          <p class="fine">Loops with crossfades, one-shot, reverse, an amp envelope, a filter with envelope, an LFO, glide and polyphony. A useful subset of SFZ loads, and what it doesn't do is listed. Samples are copied into the project and held in memory, up to 4 GB; there's no disk streaming yet. <a href={doc("guide", "marbble-sampler")}>Sampler guide</a></p>
         </header>
         <Shot id="sampler">
           <figure class="zones">
@@ -410,7 +411,7 @@ const description = "A digital audio workstation modelled on Logic Pro's workflo
         </div>
         <div class="source">
           <h3 class="sub">Or build it</h3>
-          <pre tabindex="0"><code>git clone {REPO_URL} && cd fermata
+          <pre tabindex="0"><code>git clone {REPO_URL} && cd marbble
 nix run .</code></pre>
           <p class="fine">Nix flakes do it in one go. <a href={doc("dev", "build-and-run")}>Build instructions</a> cover other Linux distributions, Windows and macOS.</p>
         </div>
@@ -441,8 +442,8 @@ nix run .</code></pre>
     </main>
 
     <footer class="foot">
-      <p><svg viewBox="0 0 64 44" width="22" height="15" aria-hidden="true"><path d="M6 36a26 26 0 0 1 52 0" fill="none" stroke="var(--accent)" stroke-width="7"></path><circle cx="32" cy="35" r="6.5" fill="var(--dim)"></circle></svg> Fermata is released under the <a href={`${REPO_URL}/blob/main/LICENSE`} rel="noopener">MIT licence</a>. <a href={REPO_URL} rel="noopener">Source on GitHub</a>.</p>
-      <p class="fine">Logic Pro is a trademark of Apple Inc., and VST is a trademark of Steinberg Media Technologies GmbH. Fermata isn't affiliated with, or endorsed by, either of them or the maker of any instrument its synth models follow.</p>
+      <p><img src={`${base}/favicon.svg`} width="18" height="18" alt="" /> Marbble is released under the <a href={`${REPO_URL}/blob/main/LICENSE`} rel="noopener">MIT licence</a>. <a href={REPO_URL} rel="noopener">Source on GitHub</a>.</p>
+      <p class="fine">Logic Pro is a trademark of Apple Inc., and VST is a trademark of Steinberg Media Technologies GmbH. Marbble isn't affiliated with, or endorsed by, either of them or the maker of any instrument its synth models follow.</p>
     </footer>
 
     <script>

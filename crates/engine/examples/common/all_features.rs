@@ -82,7 +82,7 @@ pub fn add_model(s: &mut Session, plugin: &str, preset: &str) -> Id {
     t
 }
 
-/// A Fermata Tre track with a part and a lane moving its cutoff, for the real-time checks: a built-in
+/// A Marbble Tre track with a part and a lane moving its cutoff, for the real-time checks: a built-in
 /// instrument with drift on, and audio-rate modulation so its costliest path runs.
 #[allow(dead_code)]
 pub fn add_tre(s: &mut Session) -> Id {
@@ -95,7 +95,7 @@ pub fn add_tre(s: &mut Session) -> Id {
         s.set_builtin_param(t, usize::MAX, id, v).unwrap();
     }
     let uid = s.project.track(t).unwrap().instrument.as_ref().unwrap().uid;
-    let lane = AutoParam::Plugin { uid, param: param::CUTOFF, name: "Fermata Tre: Cutoff".into() };
+    let lane = AutoParam::Plugin { uid, param: param::CUTOFF, name: "Marbble Tre: Cutoff".into() };
     s.set_automation_lane(t, lane, vec![pt(0, 0.3, 0.0), pt(4 * BAR, 0.8, 0.0), pt(8 * BAR, 0.4, 0.0)]);
     t
 }
@@ -138,8 +138,8 @@ pub fn base(s: &mut Session, dir: &Path) -> World {
     w.folder = s.create_stack(&[w.a1, w.inst], false).unwrap();
 
     // A MIDI take folder on the second instrument at bar 5: two takes, the second heard.
-    s.save(Some(dir.join("Base.fermata"))).unwrap();
-    let file = dir.join("Base.fermata/project.json");
+    s.save(Some(dir.join("Base.marbble"))).unwrap();
+    let file = dir.join("Base.marbble/project.json");
     let mut doc: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&file).unwrap()).unwrap();
     let mut next = doc["next_id"].as_u64().unwrap();
     let mut id = || {
@@ -180,7 +180,7 @@ pub fn base(s: &mut Session, dir: &Path) -> World {
     let t = tracks.iter_mut().find(|t| t["id"].as_u64() == Some(w.drums)).unwrap();
     t["regions"].as_array_mut().unwrap().push(serde_json::to_value(&region).unwrap());
     std::fs::write(&file, serde_json::to_string_pretty(&doc).unwrap()).unwrap();
-    s.open(&dir.join("Base.fermata")).unwrap();
+    s.open(&dir.join("Base.marbble")).unwrap();
     w.midi_folder = rid;
     w
 }

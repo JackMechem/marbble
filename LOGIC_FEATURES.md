@@ -1,8 +1,8 @@
-# Logic Pro feature scope for Fermata
+# Logic Pro feature scope for Marbble
 
-A list of the features in Logic Pro, grouped into the stages in which Fermata could build them,
-with each one checked against what Fermata has today. It is a planning document: it shows how
-far Fermata has come and what is left. It is not a promise to clone everything. Some items are
+A list of the features in Logic Pro, grouped into the stages in which Marbble could build them,
+with each one checked against what Marbble has today. It is a planning document: it shows how
+far Marbble has come and what is left. It is not a promise to clone everything. Some items are
 macOS-specific and are marked as such.
 
 - **Date:** 2026-10-29
@@ -10,7 +10,7 @@ macOS-specific and are marked as such.
   cover 12.0, 12.1 and 12.3). Page references such as "(p. 512)" point to that guide. The
   bundled instruments and effects are documented in Apple's separate *Logic Pro Instruments* and
   *Logic Pro Effects* guides, so Stage 5 summarises them by category.
-- **Fermata status** was checked against the source code of the current merged tree (`src/`,
+- **Marbble status** was checked against the source code of the current merged tree (`src/`,
   `crates/engine`, `crates/vst3-host`, `src-tauri`), not only the README.
 
 ## Legend
@@ -18,7 +18,7 @@ macOS-specific and are marked as such.
 | Mark | Meaning |
 |---|---|
 | `[x]` | Implemented |
-| `[~]` | Partial: Fermata has a simpler version (the note says what's missing) |
+| `[~]` | Partial: Marbble has a simpler version (the note says what's missing) |
 | `[ ]` | Not started |
 
 ## Summary
@@ -91,7 +91,7 @@ hosting, automation and undo. This stage is mostly done.
 - [x] Reset the audio engine (reopen devices) (p. 1041)
 - [x] Connect USB/MIDI keyboards; every input routed to the selected instrument track (p. 73)
 - [x] Turn individual MIDI inputs on or off (p. 1061)
-- [~] Receive MIDI from other apps (p. 76). *Through system MIDI ports; Fermata doesn't create a virtual port of its own.*
+- [~] Receive MIDI from other apps (p. 76). *Through system MIDI ports; Marbble doesn't create a virtual port of its own.*
 - [ ] Local Off: stop a keyboard's own sound generation (p. 75)
 
 ### Work with projects (p. 78–115)
@@ -185,8 +185,8 @@ hosting, automation and undo. This stage is mostly done.
 - [x] Overdub: merge into an overlapped region (p. 204)
 - [x] Record audio and a software instrument at the same time (p. 209)
 - [x] MIDI Thru on or off; velocity scaling (as played, soft, hard, fixed) (p. 1057, 1087)
-- [x] Built-in Fermata Synth, so instrument tracks make sound without a plug-in
-- [x] Built-in instruments with panels, presets, automation and MIDI learn, like the built-in effects (Fermata Tre, Sei, Cinque, Uno, Sedici, Onda)
+- [x] Built-in Marbble Synth, so instrument tracks make sound without a plug-in
+- [x] Built-in instruments with panels, presets, automation and MIDI learn, like the built-in effects (Marbble Tre, Sei, Cinque, Uno, Sedici, Onda)
 
 ### Metronome (p. 216–218)
 
@@ -315,7 +315,7 @@ hosting, automation and undo. This stage is mostly done.
 
 ### Plug-in hosting (p. 559–580)
 
-- [x] Third-party plug-ins: Audio Units in Logic, VST3 in Fermata (p. 559)
+- [x] Third-party plug-ins: Audio Units in Logic, VST3 in Marbble (p. 559)
 - [x] Scan in a separate process so a crashing plug-in can't take the app down; results cached
 - [x] Instrument and effect plug-ins; separate component/controller plug-ins
 - [x] Plug-in state saved in the project
@@ -529,7 +529,7 @@ most of it the everyday editing and mixing work.
 Event List (p. 460–480)
 - [x] Event List as a pane or window (p. 461)
 - [~] View the events in a region, or the regions in a project (p. 462). *Events of the selected MIDI regions on one track; no region list.*
-- [x] Filter by event type (p. 463). *For the types Fermata stores.*
+- [x] Filter by event type (p. 463). *For the types Marbble stores.*
 - [~] Create, duplicate and edit events numerically (p. 467–472). *Create at the playhead and edit by dragging or typing; no Duplicate, Copy or Paste in the list.*
 - [~] Note events, including release velocity (p. 474–475). *No release velocity.*
 - [~] Controller, pitch bend, program change, aftertouch and poly aftertouch events (p. 475–478). *Controllers, pitch bend and channel aftertouch; no program change or poly aftertouch.*
@@ -546,7 +546,7 @@ MIDI Transform (p. 523–538)
 - [ ] User transform sets: conditions, operations and the map (p. 526–534)
 
 Audio File Editor (p. 499–523)
-- [~] Non-destructive range edits (p. 511). *Fermata's Audio Track Editor has split, trim, silence, delete, normalize, reverse and fade on a selection, and transient detection with Split at Transients. Destructive file editing is missing.*
+- [~] Non-destructive range edits (p. 511). *Marbble's Audio Track Editor has split, trim, silence, delete, normalize, reverse and fade on a selection, and transient detection with Split at Transients. Destructive file editing is missing.*
 - [ ] Destructive editing of the audio file, with backup and revert (p. 511, 521)
 - [ ] Sample-level view and amplitude scales (p. 502–503)
 - [ ] Navigate to the loudest point or to silences (p. 506)
@@ -727,8 +727,8 @@ smart tempo, samplers, virtual players, pattern tools, Live Loops and notation.
 
 ### Sampler, Quick Sampler and Drum Machine Designer (p. 122, 329, 564)
 
-- [x] Sampler instrument (multi-zone, mapping, modulation). *Fermata Sampler; see its open items in TODO.md.*
-- [~] Quick Sampler: Classic, One Shot, Slice and Recorder modes. *All in Fermata Sampler's one panel: a zone over the keyboard, one-shot, Slice, Record.*
+- [x] Sampler instrument (multi-zone, mapping, modulation). *Marbble Sampler; see its open items in TODO.md.*
+- [~] Quick Sampler: Classic, One Shot, Slice and Recorder modes. *All in Marbble Sampler's one panel: a zone over the keyboard, one-shot, Slice, Record.*
 - [~] Create sampler tracks by dropping files on Sampler or Quick Sampler zones, Original or Optimized (p. 122). *Dropping on the panel of a sampler track that exists. No Optimized mode.*
 - [x] Convert audio regions to a new Sampler track, sliced at transients or markers (p. 329). *Whole or at transients; not at markers.*
 - [ ] Drum Machine Designer: a pad grid of sub-tracks with per-pad channel strips (p. 122, 697)
@@ -845,7 +845,7 @@ smart tempo, samplers, virtual players, pattern tools, Live Loops and notation.
 
 ## Stage 4: Studio integration
 
-Connecting Fermata to the rest of a studio: control surfaces, remotes, sync, video, surround and
+Connecting Marbble to the rest of a studio: control surfaces, remotes, sync, video, surround and
 external hardware.
 
 ### Control surfaces (p. 1182–1201)
@@ -945,15 +945,15 @@ and Drummer are listed in Stage 3.
 
 ### Bundled instruments (Logic Pro Instruments guide)
 
-Fermata has these so far, on a shared framework for more (`crates/engine/src/instrument`): **Fermata
+Marbble has these so far, on a shared framework for more (`crates/engine/src/instrument`): **Marbble
 Synth**, a small polyphonic synth that responds to pitch bend, sustain, modulation and expression;
-models of documented hardware behaviour (not affiliated, and none compared with the hardware): **Fermata Tre**
+models of documented hardware behaviour (not affiliated, and none compared with the hardware): **Marbble Tre**
 (Minimoog Model D), **Sei** (Juno-106 family), **Cinque** (Prophet-5), **Uno** (TB-303) and **Sedici** (DX7);
 and **Onda**, a modern wavetable synth.
 
-- [~] Synthesisers: Alchemy, Retro Synth, ES1, ES2, ES E, ES M, ES P, EFM1, Sculpture, Vocoder (EVOC 20 PolySynth). *Fermata Synth; Tre, Sei, Cinque and Uno (analog); Sedici (FM, closest to EFM1 but with six operators); Onda (wavetable, closest to Retro Synth's table mode and Alchemy's simple use).*
+- [~] Synthesisers: Alchemy, Retro Synth, ES1, ES2, ES E, ES M, ES P, EFM1, Sculpture, Vocoder (EVOC 20 PolySynth). *Marbble Synth; Tre, Sei, Cinque and Uno (analog); Sedici (FM, closest to EFM1 but with six operators); Onda (wavetable, closest to Retro Synth's table mode and Alchemy's simple use).*
 - [ ] Granular synthesis, including Alchemy granular sync (p. 10)
-- [~] Sample-based instruments: Sampler, Quick Sampler, Sample Alchemy (engines in Stage 3). *Fermata Sampler; no Sample Alchemy.*
+- [~] Sample-based instruments: Sampler, Quick Sampler, Sample Alchemy (engines in Stage 3). *Marbble Sampler; no Sample Alchemy.*
 - [ ] Keyboards: Studio Piano, Vintage B3 organ, Vintage Electric Piano, Vintage Clav, Vintage Mellotron
 - [ ] Orchestral: Studio Strings, Studio Horns
 - [ ] Bass: Studio Bass
@@ -963,7 +963,7 @@ and **Onda**, a modern wavetable synth.
 
 ### Bundled audio effects (Logic Pro Effects guide)
 
-Fermata has a built-in eight-band **Channel EQ** with analyzer, and fifteen built-in effects (Compressor, Limiter, Noise Gate, De-Esser, Reverb, Delay, Chorus, Flanger, Phaser, Tremolo, Overdrive, Distortion, Gain, Tuner, Loudness Meter); everything else comes from VST3.
+Marbble has a built-in eight-band **Channel EQ** with analyzer, and fifteen built-in effects (Compressor, Limiter, Noise Gate, De-Esser, Reverb, Delay, Chorus, Flanger, Phaser, Tremolo, Overdrive, Distortion, Gain, Tuner, Loudness Meter); everything else comes from VST3.
 
 - [~] EQ: Channel EQ, Linear Phase EQ, Match EQ, Single Band EQ, Vintage Console, Graphic and Tube EQs. *Channel EQ and Linear Phase EQ (with a Low/Medium/High quality setting).*
 - [~] Dynamics: Compressor (with circuit models), Limiter, Adaptive Limiter, Multipressor, Noise Gate, Expander, Enveloper, DeEsser 2. *Compressor with five circuits, Limiter (with an Adaptive mode), Noise Gate and De-Esser; no Multipressor, Expander or Enveloper.*
@@ -1051,7 +1051,7 @@ this stage is about doing the equivalent on Linux, Windows and macOS.
 - [ ] Privacy and analytics settings (p. 1034)
 - [ ] My Info (user name for metadata) (p. 1076)
 
-Not applicable to Fermata (listed for completeness, not counted):
+Not applicable to Marbble (listed for completeness, not counted):
 - Apple Creator Studio subscription (p. 64–66)
 - Touch Bar controls and shortcuts (p. 1172–1181)
 - Apogee device control panel (p. 72)
@@ -1059,7 +1059,7 @@ Not applicable to Fermata (listed for completeness, not counted):
 
 ---
 
-## What Fermata has that Logic doesn't, or does differently
+## What Marbble has that Logic doesn't, or does differently
 
 - **VST3 instead of Audio Units.** Plug-ins are scanned in a separate process with a cached
   scan report that shows each bundle that failed and why (crashed, timed out, no plug-ins).
@@ -1079,7 +1079,7 @@ Not applicable to Fermata (listed for completeness, not counted):
   with the selection tools of its Audio File Editor (silence, normalize, reverse, fade to
   selection, split at transients) without touching the file.
 - **Anti-click fades** applied automatically to new recordings and imports.
-- **Open project format:** a `.fermata` folder holding readable `project.json` and plain WAV files.
+- **Open project format:** a `.marbble` folder holding readable `project.json` and plain WAV files.
 - **Configurable history** of 10–1000 undo steps.
 
 ## Recommended next items
@@ -1089,7 +1089,7 @@ comping, the tempo map and signatures, plug-in presets (built-in effects and Cha
 side-chains for the built-in dynamics and the bundled effects core are done; most of the ten
 are done too, and the rest are partly done, as noted. [TODO.md](TODO.md) has the staged roadmap.
 
-1. **Plug-in editor windows on Windows and macOS.** Without them, Fermata is effectively a
+1. **Plug-in editor windows on Windows and macOS.** Without them, Marbble is effectively a
    Linux-only DAW for anyone using plug-ins. *macOS is done; Windows is not.*
 2. **Crossfades, fade curves and drag modes** (X-Fade and Shuffle). These are the basis of
    clean audio editing and comping. *Done: fades, crossfades and all five drag modes.*

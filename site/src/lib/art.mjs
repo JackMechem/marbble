@@ -14,11 +14,11 @@ function mulberry(seed) {
 }
 
 export const BARS = 10;
-/** The bar (0-based) where the held note starts, under the fermata. */
-export const HOLD_BAR = 8;
+/** The bar (0-based) where the last note starts and rings out. */
+export const LAST_BAR = 8;
 
 /**
- * The hero's phrase: eight bars of a bass line, then one note held under a fermata.
+ * The hero's phrase: eight bars of a bass line, then one long note left to ring.
  * Returns peak values per column in 0..1.
  */
 export function phrase(columns = 720) {
@@ -27,7 +27,7 @@ export function phrase(columns = 720) {
     [0, 1], [0.5, 0.45], [0.75, 0.6], [1.5, 0.55], [2, 0.85], [2.75, 0.5], [3.25, 0.65],
   ];
   const notes = [];
-  for (let bar = 0; bar < HOLD_BAR; bar++) {
+  for (let bar = 0; bar < LAST_BAR; bar++) {
     for (const [beat, vel] of pattern) {
       const v = vel * (0.72 + 0.28 * Math.min(1, (bar + 1) / 5)) * (0.9 + rand() * 0.15);
       if (bar % 4 === 3 && beat > 2.5 && rand() < 0.5) continue;
@@ -49,9 +49,9 @@ export function phrase(columns = 720) {
       if (t < n.at) continue;
       level = Math.max(level, n.v * Math.exp(-(t - n.at) / n.decay));
     }
-    if (t >= HOLD_BAR) {
-      // The held note: a quick swell, then a long sustain with a slow beat in it, then away.
-      const d = t - HOLD_BAR;
+    if (t >= LAST_BAR) {
+      // The last note: a quick swell, then a long sustain with a slow beat in it, then away.
+      const d = t - LAST_BAR;
       const swell = Math.min(1, d / 0.05);
       const fade = t > 9.55 ? Math.max(0, 1 - (t - 9.55) / 0.42) ** 1.6 : 1;
       level = (0.82 + 0.1 * Math.sin(d * 13)) * swell * fade * (1 - d * 0.1);

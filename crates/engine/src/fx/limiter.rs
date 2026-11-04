@@ -3,7 +3,7 @@
 //!
 //! How it guarantees the ceiling (the approach is the well-known one described, among others,
 //! by Geraint Luff in "Designing a straightforward limiter", Signalsmith Audio, 2022; the code
-//! here is Fermata's own):
+//! here is Marbble's own):
 //!
 //! 1. Each sample's peak (the 4× oversampled true peak when True Peak is on) gives the gain
 //!    that sample needs: `min(1, ceiling / peak)`.

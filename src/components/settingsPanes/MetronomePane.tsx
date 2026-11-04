@@ -98,7 +98,7 @@ export function MetronomePane({ close }: { close: () => void }) {
         <button className="push" title="The settings new projects start with" onClick={() => act("set_click", { click: deflt })} disabled={isDefault}>
           Revert to Default
         </button>
-        <button className="push" title="Fermata's original metronome settings" onClick={() => act("set_click", { click: DEFAULT_CLICK })} disabled={JSON.stringify(click) === JSON.stringify(DEFAULT_CLICK)}>
+        <button className="push" title="Marbble's original metronome settings" onClick={() => act("set_click", { click: DEFAULT_CLICK })} disabled={JSON.stringify(click) === JSON.stringify(DEFAULT_CLICK)}>
           Factory Settings
         </button>
         <button

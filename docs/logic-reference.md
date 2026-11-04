@@ -1,6 +1,6 @@
 # Logic Pro 11 reference (design research)
 
-This is a condensed version of the research behind Fermata's layout and behaviour. The primary
+This is a condensed version of the research behind Marbble's layout and behaviour. The primary
 source is Apple's Logic Pro User Guide (support.apple.com/guide/logicpro).
 
 Colour values are estimates from screenshots, because Apple does not publish them. Items marked

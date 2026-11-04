@@ -1,4 +1,4 @@
-//! One voice of Fermata Cinque: two VCOs, noise, a 4-pole filter, two envelopes and Poly Mod,
+//! One voice of Marbble Cinque: two VCOs, noise, a 4-pole filter, two envelopes and Poly Mod,
 //! ticking at the oversampled rate.
 
 use crate::synth_dsp::alloc::unison_spread;

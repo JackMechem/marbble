@@ -1,4 +1,4 @@
-# Fermata architecture
+# Marbble architecture
 
 This document is for developers who are new to the code. It explains how the pieces fit
 together, which rules keep the audio thread safe, and where to find things. For building,
@@ -27,13 +27,13 @@ Contents:
 
 ## 1. Overview
 
-Fermata is a Cargo workspace with three crates plus a React frontend:
+Marbble is a Cargo workspace with three crates plus a React frontend:
 
 | Part | Path | Role |
 |---|---|---|
 | `vst3-host` | `crates/vst3-host` | VST3 hosting on the `vst3` bindings: module loading, scanning, host COM objects, the real-time processing wrapper, editor windows. |
 | `daw-engine` | `crates/engine` | The audio engine: the project model, the real-time graph, the session controller, device I/O, recording, MIDI, rendering. No UI code. |
-| `daw` | `src-tauri` | The Tauri 2 application: commands, the native menu, settings and recent files, the timers that drive plug-in idle and UI ticks. The binary is called `daw`; packages also install it as `fermata`. |
+| `daw` | `src-tauri` | The Tauri 2 application: commands, the native menu, settings and recent files, the timers that drive plug-in idle and UI ticks. The binary is called `daw`; packages also install it as `marbble`. |
 | frontend | `src` | React 19 + TypeScript, built with Vite. Canvas for the tracks area, ruler, editors and meters. |
 
 The engine is split into two halves that never share mutable data directly:
@@ -63,14 +63,14 @@ flowchart LR
 | **Main / UI thread** | Tauri | Runs synchronous Tauri commands (most edits, including audio import with its decoding and resampling), the native menu, the GTK main loop on Linux, the 30 ms idle timer (`Session::idle`: plug-in controller idle, latency changes, draining `Garbage`, automation follow and writes), and taking autosaves. All VST3 *controllers* and editor windows live here. | Block for long. Renders are async commands for that reason. |
 | **`audio-io`** | `audio_io::start` | Builds and owns the cpal streams, then waits until the device is closed. | |
 | **Audio callback** | cpal (output stream) | Calls `Engine::process` once per device buffer, inside `catch_unwind`; the input stream's callback only fills the input ring. Runs with real-time priority (rtkit on Linux). | Allocate, lock, block, do I/O. See [Real-time rules](#3-real-time-rules). |
-| **`fermata-dsp-N`** | `dsp/pool.rs`, started by `Session::sync_parallel` | Plays strips alongside the audio callback when Settings › Audio › Processing Threads allows it and a project is heavy enough, then blocks until the next block. Real-time like the callback. See [Multi-core processing](#multi-core-processing). | The same as the audio callback. |
+| **`marbble-dsp-N`** | `dsp/pool.rs`, started by `Session::sync_parallel` | Plays strips alongside the audio callback when Settings › Audio › Processing Threads allows it and a project is heavy enough, then blocks until the next block. Real-time like the callback. See [Multi-core processing](#multi-core-processing). | The same as the audio callback. |
 | **`recorder`** | `recorder.rs` | Every 10 ms, drains the ring buffer of each armed track into its WAV file and an in-memory copy, and keeps a peak preview for the UI. | Touch the engine or the project. |
 | **`ui-tick`** | `src-tauri/src/main.rs` | Every 33 ms: locks the session, builds a `Tick` (playhead, meters, input levels, recording previews, CPU, latency, analyzer spectrum, warnings, meters of open built-in effect panels, the clip indicators' held peaks, each strip's gain reduction) and emits it as the `tick` event. | Edit anything. |
 | **MIDI refresh** | `main.rs` | Every 3 s: `Session::refresh_midi`, so devices plugged in later get connected. | |
 | **MIDI input callbacks** | midir, in `midi_io.rs` (one per port) | Drop system messages, take assigned controllers (all of them while learning) into a queue for `Session::idle` (controller assignments), apply the velocity curve, push the rest into the `live_midi` ring the engine reads, and log the message for Settings › MIDI. | |
 | **Async command workers** | Tauri's async runtime (`#[tauri::command(async)]`) | Offline renders (bounce, export, Bounce in Place, Freeze), plug-in rescans, waveform and transient requests, device lists, recent projects, the input level check, folder listings. Renders hold the session lock and the engine lock for their whole length; the parts that edit tracks or plug-ins are handed back to the main thread with `run_on_main_thread`. | Touch plug-in controllers. |
 | **Autosave writer** | `main.rs::autosave` | Writes an `AutosaveJob` (already serialized on the main thread) to disk, atomically. | |
-| **Plug-in scan subprocess** | `plugin_db.rs` | `fermata --scan-vst3 <bundle>` loads one bundle in a child process and prints its descriptors, so a crashing plug-in can't take the app down. Four scan worker threads start the children and wait for them (at first launch before the window opens, otherwise from Rescan). | Load plug-ins in the app's own process. |
+| **Plug-in scan subprocess** | `plugin_db.rs` | `marbble --scan-vst3 <bundle>` loads one bundle in a child process and prints its descriptors, so a crashing plug-in can't take the app down. Four scan worker threads start the children and wait for them (at first launch before the window opens, otherwise from Rescan). | Load plug-ins in the app's own process. |
 
 On non-Linux platforms there is no GTK timer; a helper thread posts the idle work to the main
 thread with `run_on_main_thread` every 30 ms instead (`main.rs`).
@@ -869,10 +869,10 @@ Rule for new features: **anything new you send to the engine must also be restor
 
 ## 8. Persistence
 
-### The `.fermata` project folder
+### The `.marbble` project folder
 
 ```
-Song.fermata/
+Song.marbble/
   project.json             the Project (the active alternative), pretty-printed, with plug-in states (base64)
   project.autosave.json    only while there are unsaved changes (see below)
   project.json.bak         the previous save, only with Settings › General › Backups at 0
@@ -944,15 +944,23 @@ the alternative change). Their ids are `alternative:<name>` and `revert:<file>`.
   skips writing an unchanged document.
 - Saving deletes the autosave (in the new and the old folder); so does Don't Save.
 - `recovery_info(dir)` reports an autosave newer than `project.json`.
-  `recoverable_projects` checks the recent list plus every `.fermata` folder in the projects
-  folder and in `~/Music/Fermata`. Untitled projects autosave into their (not yet saved)
+  `recoverable_projects` checks the recent list plus every `.marbble` folder in the projects
+  folder and in `~/Music/Marbble`. Untitled projects autosave into their (not yet saved)
   folder in the projects folder, which is how they are found.
 - `open_recovered` loads the autosave and marks the project dirty, so saving writes it back.
 
 ### Settings and other files
 
-The config folder is `$XDG_CONFIG_HOME/fermata`, else `%APPDATA%\fermata`, else
-`~/.config/fermata` (`plugin_db::config_dir`; macOS uses `~/.config/fermata` too).
+The config folder is `$XDG_CONFIG_HOME/marbble`, else `%APPDATA%\marbble`, else
+`~/.config/marbble` (`plugin_db::config_dir`; macOS uses `~/.config/marbble` too).
+
+Marbble was called Fermata up to 0.1.0-alpha.5, and `old_name.rs` is the one place that knows it:
+`.fermata` project folders still open and save in place, and `old_name::migrate`, first thing at
+launch, moves the old config folder, `~/Music/Fermata Instruments` and the webview's storage
+(named after the old identifier `studio.fermata.daw`) to their new names, never over anything
+already there. `src/oldName.ts` then renames the `fermata.` localStorage keys. An existing
+`~/Music/Fermata` stays the default projects folder until `~/Music/Marbble` exists, since recent
+projects point into it.
 
 | File | Written by | Contents |
 |---|---|---|
@@ -969,19 +977,19 @@ Interface-only state lives in the webview's `localStorage`:
 
 | Key | Module | Contents |
 |---|---|---|
-| `fermata.theme` | `themes.ts` | Theme id (a copy of `ui.theme`, for the first paint). |
-| `fermata.uiScale` | `uiScale.ts` | Interface scale, 0.9 to 2 (a copy of `ui.ui_scale`). |
-| `fermata.waveStyle` | `waveform.ts` | Waveform drawing style (a copy of `ui.wave_style`). |
-| `fermata.paneSizes` | `components/Splitter.tsx` | Library, Inspector, Browser, Mixer, Editor and header sizes. |
-| `fermata.trackHeights:<project path>` | `layout.ts` | `{ base, heights, output }` for one project (`output`: the Output track shown). |
-| `fermata.bounce` | `components/Bounce.tsx` | Tail, format, resolution, sample rate and normalize of the bounce and export dialogs. |
-| `fermata.bounce-in-place` | `components/Bounce.tsx` | Bounce in Place options. |
-| `fermata.pianoRoll` | `components/pianoRollEditor/prefs.ts` | Piano Roll view and Time Quantize settings. |
-| `fermata.eventList` | `components/EventList.tsx` | Event List filters, the type + adds, Catch and MIDI Out. |
-| `fermata.stripSilence` | `components/StripSilence.tsx` | The Strip Silence sheet's last settings. |
-| `fermata.showOverview` | `components/Overview.tsx` | Whether the overview strip replaces the scroll bar. |
-| `fermata.fxPanelSizes` | `fxDockState.ts` | The last size of each effect type's floating panel. |
-| `fermata.detachedPanels` | `detach.ts` | Which panels were detached at quit, and each kind's window geometry. |
+| `marbble.theme` | `themes.ts` | Theme id (a copy of `ui.theme`, for the first paint). |
+| `marbble.uiScale` | `uiScale.ts` | Interface scale, 0.9 to 2 (a copy of `ui.ui_scale`). |
+| `marbble.waveStyle` | `waveform.ts` | Waveform drawing style (a copy of `ui.wave_style`). |
+| `marbble.paneSizes` | `components/Splitter.tsx` | Library, Inspector, Browser, Mixer, Editor and header sizes. |
+| `marbble.trackHeights:<project path>` | `layout.ts` | `{ base, heights, output }` for one project (`output`: the Output track shown). |
+| `marbble.bounce` | `components/Bounce.tsx` | Tail, format, resolution, sample rate and normalize of the bounce and export dialogs. |
+| `marbble.bounce-in-place` | `components/Bounce.tsx` | Bounce in Place options. |
+| `marbble.pianoRoll` | `components/pianoRollEditor/prefs.ts` | Piano Roll view and Time Quantize settings. |
+| `marbble.eventList` | `components/EventList.tsx` | Event List filters, the type + adds, Catch and MIDI Out. |
+| `marbble.stripSilence` | `components/StripSilence.tsx` | The Strip Silence sheet's last settings. |
+| `marbble.showOverview` | `components/Overview.tsx` | Whether the overview strip replaces the scroll bar. |
+| `marbble.fxPanelSizes` | `fxDockState.ts` | The last size of each effect type's floating panel. |
+| `marbble.detachedPanels` | `detach.ts` | Which panels were detached at quit, and each kind's window geometry. |
 
 Appearance settings (theme, size, waveforms) are saved in `settings.json` by `appearance.ts`;
 the `localStorage` copies only let the window open in the right theme and size before the
@@ -1022,7 +1030,7 @@ settings have loaded.
 
 ### Scanning out of process
 
-`plugin_db.rs` runs the app binary itself as `fermata --scan-vst3 <bundle>` for every bundle
+`plugin_db.rs` runs the app binary itself as `marbble --scan-vst3 <bundle>` for every bundle
 (`main.rs` checks for the flag before anything else starts). The child prints the descriptors
 as one JSON line and exits 0 (1 on error, 2 without a path). The parent polls with a 20 s
 timeout and kills a hung child, takes the last stdout line that parses (plug-ins print their own
@@ -1071,7 +1079,7 @@ session and processors come back as `Garbage`). `PluginProcessor` moves into the
 
 ### Host objects
 
-`host.rs` implements `IHostApplication` (name "Fermata", creating `IMessage` and
+`host.rs` implements `IHostApplication` (name "Marbble", creating `IMessage` and
 `IAttributeList` objects), `IPlugInterfaceSupport`, and `IComponentHandler`
 (`beginEdit`/`performEdit`/`endEdit`/`restartComponent`). `stream.rs` is an in-memory
 `IBStream` for state. On Linux the editor's `IPlugFrame` also implements `IRunLoop`; on macOS it is a plain frame.
@@ -1194,7 +1202,7 @@ stores the pair as base64 in `PluginSlot::state` and restores it straight after 
   and hide while another app is active (`hidesOnDeactivate`), like Logic's; several cascade. An
   NSWindowDelegate reports the close button (`windowWillClose:`, read by `pump`) and applies
   `checkSizeConstraint` during live resizes, then `onSize`. The window is a small NSWindow
-  subclass (`FermataPlugInWindow`) whose `keyDown:`/`keyUp:` get only the keys the plug-in's
+  subclass (`MarbblePlugInWindow`) whose `keyDown:`/`keyUp:` get only the keys the plug-in's
   view didn't use; they go to the hook set with `keys::set_key_forwarder` (`keys.rs` maps macOS
   key codes to KeyboardEvent `key`/`code`). The app emits them to the main window as
   `plugin-key`, and `src/pluginKeys.ts` re-dispatches each as a synthetic KeyboardEvent, so key
@@ -1401,7 +1409,7 @@ built-in effect panel) can be shown in an OS window of its own, labelled `panel-
 `main.tsx` renders `DetachedWindow` instead of `App` when the label is a panel's.
 
 - **Authority.** The main window decides what is detached (`state.detached`), remembers it with
-  each kind's window geometry (localStorage `fermata.detachedPanels`), and opens, focuses and
+  each kind's window geometry (localStorage `marbble.detachedPanels`), and opens, focuses and
   closes the windows (`windows.rs`: `open_panel_window`, `focus_panel_window`,
   `close_panel_window`). Panel windows ask it with `panel-msg` events (`hello`, `attach`,
   `detach`, `close`, `key`, `geometry`), and key commands pressed in them run in the main
@@ -1599,12 +1607,12 @@ can: `ParamSpec`, `FactoryPreset`, `FxContext`, presets, `FxShared`, the panels'
 - **Multi-core**: a track with an instrument counts toward `heavy_width`, the same whichever kind it
   holds. An instrument touches nothing but itself, and runs under its strip's task.
 - **In the UI**: `list_builtin_instruments` fills `instList` (`src/store.ts`). `fxInfo` looks through
-  both lists; `isBuiltinFx` is true for what has parameters, so Fermata Synth still has no panel.
+  both lists; `isBuiltinFx` is true for what has parameters, so Marbble Synth still has no panel.
   `InstrumentPanel` (`src/components/fx/Instrument.tsx`) shows the sections and a keyboard, unless
   `FX_PANELS` has a custom panel for that id. The keyboard selects the track and plays through
   `midi_event`, the Musical Typing path.
 
-**Fermata Synth** stays as it was: `basic.rs` wraps `BasicSynth` without changing it. Old projects
+**Marbble Synth** stays as it was: `basic.rs` wraps `BasicSynth` without changing it. Old projects
 render bit for bit as before. It has a quirk the contract forbids for new instruments: `silence` keeps
 the mod wheel, expression and vibrato LFO, the LFO running free even while stopped, so with the wheel
 up its renders differ from one to the next.
@@ -1632,9 +1640,9 @@ Stealing: the allocator says `stolen` and the voice decides. A voice with free-r
 needs nothing (`env.rs` retriggers from the current level, and the oscillators' and filter's state carry
 on). A voice whose phase jumps, like a sampler's, should keep spare voices and fade the stolen one.
 
-#### Fermata Tre
+#### Marbble Tre
 
-`instrument/tre/`: modelled on the Minimoog Model D. Fermata isn't affiliated with Moog Music or any
+`instrument/tre/`: modelled on the Minimoog Model D. Marbble isn't affiliated with Moog Music or any
 maker, and nothing in the product uses their names. **It hasn't been compared with the hardware, nor
 heard: everything below is from documented behaviour and measured here on its own terms.**
 
@@ -1669,7 +1677,7 @@ off by default, except what a preset turns on.
 - **Per voice** (`instrument_bench`, release build, i7-13700KF, block time against the buffer's
   duration): one voice with all three oscillators, noise and resonance is 87 µs at 512 samples and 21.5 µs at
   128, 0.8 % of one core; the same with audio-rate modulation; 8 voices 600 µs and 150 µs, 5.6 %; the
-  worst block at 128 samples with 8 voices 161 to 351 µs from run to run, with other work on the machine. At rest (no notes): nothing. Fermata Synth's one
+  worst block at 128 samples with 8 voices 161 to 351 µs from run to run, with other work on the machine. At rest (no notes): nothing. Marbble Synth's one
   voice, for scale, is 0.05 %. So 16 voices of this kind would be about 11 % of one core: a polyphonic model
   is plausible, and multi-core shares several of them out. Per sample it's about 85 ns a voice tick at 96 kHz.
 - **Block size:** the same MIDI gives the same bits at 1, 37, 128, 512 and 1024 frames. Parameter edits land
@@ -1683,7 +1691,7 @@ off by default, except what a preset turns on.
   times with volume, cutoff and a mixer level stepping every block.
 - **Aliasing end to end:** a saw at note 96 (2 kHz), filter open, through the saturators: -61 dB.
 
-#### Fermata Sampler
+#### Marbble Sampler
 
 `instrument/sampler/`, and `session/sampler.rs` on the session's side. **Nothing here has been heard,
 and its panel hasn't been opened.** Everything below is measured against generated audio.
@@ -1735,10 +1743,10 @@ and its panel hasn't been opened.** Everything below is measured against generat
   transport does, only when there is real input, and the file lands in `Samples`. A second `Recorder` instance keeps
   its take out of `finish_all` for a song's recording. There's no crash journal for it, no monitoring (the engine doesn't
   play the input back for this) and no latency compensation (trimming makes that moot for a sample).
-- **Reusable instruments** (`presets.rs`): the sampler's user presets are folders, `~/Music/Fermata Instruments/<name>/`
+- **Reusable instruments** (`presets.rs`): the sampler's user presets are folders, `~/Music/Marbble Instruments/<name>/`
   with `instrument.json` and `Samples/`, listed in the ordinary preset menu. Loading one copies its samples into the
   project. Renaming and deleting move or remove the folder. Factory presets only shape the parameters and keep the zones.
-- **Name parsing** (`mapping.rs`): note names read as C3 = 60, as Fermata shows them, so a library named with C4 = 60 lands an
+- **Name parsing** (`mapping.rs`): note names read as C3 = 60, as Marbble shows them, so a library named with C4 = 60 lands an
   octave off (its SFZ, if it has one, reads C4 = 60, as SFZ defines). A file's `smpl` chunk outranks its name.
 - **SFZ** (`sfz.rs`). Read: `<control>` (`default_path`, `note_offset`, `octave_offset`), `<global>`, `<master>`, `<group>`, `<region>`,
   `#define`, `#include`, `sample`, `key`, `lokey`, `hikey`, `lovel`, `hivel`, `pitch_keycenter`, `tune` or `pitch`, `transpose`, `volume`, `pan`,
@@ -1775,9 +1783,9 @@ edit to an instrument of 2000 zones 2.1 ms.
 - **Real time:** `rt_alloc_check` plays one stealing voices, through zones and samples replaced under held notes, a parameter change and Track Off, at 1 and 4 threads: 0 allocations or frees.
   `parallel_check` plays one with round robin, loops and the Random LFO, serial against 2, 3, 4 and 8 threads.
 
-#### Fermata Sei
+#### Marbble Sei
 
-`instrument/sei/`: modelled on the Roland Juno-106 family. Fermata isn't affiliated with Roland. **Not compared
+`instrument/sei/`: modelled on the Roland Juno-106 family. Marbble isn't affiliated with Roland. **Not compared
 with the hardware, nor heard: what follows is from documentation and measured on its own terms.**
 
 From what's documented: one DCO per voice whose saw, pulse and sub square come from one clock, so they stay
@@ -1800,9 +1808,9 @@ Voice Variation. High-pass after the voices is from memory of the block diagram.
 silent and costs nothing; the hardware hisses always. Clock bleed isn't modelled, being above the audio band. Added:
 Unison Detune, Velocity, Voice Variation, Chorus Noise; off or modest by default.
 
-#### Fermata Cinque
+#### Marbble Cinque
 
-`instrument/cinque/`: modelled on the Sequential Prophet-5. Fermata isn't affiliated with Sequential. **Not compared
+`instrument/cinque/`: modelled on the Sequential Prophet-5. Marbble isn't affiliated with Sequential. **Not compared
 with the hardware, nor heard.**
 
 From what's documented: two VCOs per voice (A saw and pulse, with sync to B; B saw, triangle and pulse, Lo Freq and a
@@ -1818,9 +1826,9 @@ waves that are on; the wheel's reach; the mixer's drive; the two filter chips' c
 Added: Velocity (off), Mod Amount (where the wheel rests), Unison Detune. Exponential FM from Osc B moves the mean pitch, as
 exponential FM does.
 
-#### Fermata Uno
+#### Marbble Uno
 
-`instrument/uno/`: modelled on the Roland TB-303. Fermata isn't affiliated with Roland. The reference is what's published
+`instrument/uno/`: modelled on the Roland TB-303. Marbble isn't affiliated with Roland. The reference is what's published
 on the circuit, Robin Whittle's Devil Fish notes and Tim Stinchcombe's filter analysis above all, from memory of
 them. **Not compared with the hardware, nor heard.**
 
@@ -1838,9 +1846,9 @@ Guesses: Env Mod's reach (40 semitones) and its pull (14); accent's reach (36 se
 lag (47 to 147 ms, from a reading of a 1 µF and 47 k + 100 k); the square's droop and slew; Resonance stopping at 0.965 of self-oscillation; the
 feedback high-pass (150 Hz); the input drive. Added: Slide Time, Accent at Velocity, Drift, a bend range.
 
-#### Fermata Sedici
+#### Marbble Sedici
 
-`instrument/sedici/`: modelled on the Yamaha DX7. Fermata isn't affiliated with Yamaha. Its scales are from the published
+`instrument/sedici/`: modelled on the Yamaha DX7. Marbble isn't affiliated with Yamaha. Its scales are from the published
 reverse engineering of the chips (Ken Shirriff's die photographs, the fits in Raph Levien's MSFA engine that Dexed grew
 from), **from memory of them, not checked against a source here. Not compared with the hardware, nor heard.**
 
@@ -1861,7 +1869,7 @@ LFO delay. Guesses: vibrato's reach at full (±12 semitones), amp mod's (about 4
 **Differences on purpose:** a voice stolen with key sync fades for 2 ms first (the hardware clicks; the contract says it mustn't). A released voice at a fourth level above zero
 drones, as on the hardware, until the transport stops, when it fades. An operator's level or envelope moved under a held note is heard on that note, so a lane works (the hardware's edit buffer acts from the next key). Added: Volume, Touch and the wheel's routings as knobs rather than function settings. A seed only changes anything with Osc Key Sync off or a random LFO.
 
-#### Fermata Onda
+#### Marbble Onda
 
 `instrument/onda/`: a modern wavetable synth of the kind Serum made the standard. It isn't modelled on one instrument's
 panel and isn't affiliated with Xfer Records or anyone else. Its group is **Modern Synths**. Its tables (`tables.rs`) are generated in
@@ -2156,8 +2164,8 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `audio_file.rs` | Writing bounces: `AudioFormat`, `BitDepth`, the shared dithering `Quantizer`. |
 | `audio_file/wav.rs`, `aiff.rs`, `flac.rs` | The writers: WAV through hound, AIFF and AIFF-C by hand, FLAC through `flacenc`. |
 | `eq.rs` | Channel EQ biquads (f64), coefficient computation, the analyzer spectrum. |
-| `synth.rs` | Fermata Synth, the original small polyphonic instrument. Unchanged since it was written: old projects depend on its every sample. |
-| `instrument/` | Built-in instruments: the `Instrument` contract and registry (`mod.rs`), Fermata Synth in the registry (`basic.rs`), Fermata Tre (`tre/`), Sei (`sei/`), Cinque (`cinque/`), Uno (`uno/`), Sedici (`sedici/`), Onda (`onda/`), what they share (`common.rs`) and test with (`test_kit.rs`). See [Built-in instruments](#built-in-instruments). |
+| `synth.rs` | Marbble Synth, the original small polyphonic instrument. Unchanged since it was written: old projects depend on its every sample. |
+| `instrument/` | Built-in instruments: the `Instrument` contract and registry (`mod.rs`), Marbble Synth in the registry (`basic.rs`), Marbble Tre (`tre/`), Sei (`sei/`), Cinque (`cinque/`), Uno (`uno/`), Sedici (`sedici/`), Onda (`onda/`), what they share (`common.rs`) and test with (`test_kit.rs`). See [Built-in instruments](#built-in-instruments). |
 | `synth_dsp/` | Parts for synth models: `osc`, `filter`, `env`, `lfo`, `alloc`, `analog`, `resample`, `smooth`. |
 | `transients.rs` | Onset detection for transient markers and Split at Transients. |
 | `vca.rs` | VCA faders: the offset and mute a strip gets from its VCA chain, loop checks. |
@@ -2275,7 +2283,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `compressorModel.ts`, `dynScale.ts` | The Compressor's parameter ids, circuits and curve (mirrors `compressor.rs`), and the dynamics panels' value formatting and knob maths; pure, tested. |
 | `settingsText.ts` | The words Settings and the Recovery sheet show: MIDI messages, plug-in types, what crashed work left; pure, tested. |
 | `instLayout.ts` | How an instrument panel lays out its sections, chosen apart for docked and floating; pure, tested. |
-| `samplerMap.ts`, `samplerDrop.ts` | Fermata Sampler's zones, note names and the sums behind its map (pure, tested); files going into it from its panel or a drop. |
+| `samplerMap.ts`, `samplerDrop.ts` | Marbble Sampler's zones, note names and the sums behind its map (pure, tested); files going into it from its panel or a drop. |
 | `sideChain.ts` | The key sources a side-chain menu offers; pure, tested. |
 | `threads.ts` | Settings › Audio › Processing Threads; pure, tested. |
 | `trackOff.ts` | Whether a track is off through its stacks, as `Project::is_off` has it; pure, tested. |
@@ -2354,7 +2362,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `fx/common.tsx` | Shared panel controls: knobs, toggles, choices, meters, the side-chain pop-up. |
 | `fx/Presets.tsx` | The preset pop-up (built-in effects, instruments and Channel EQ). |
 | `fx/Instrument.tsx` | The panel a built-in instrument gets from its spec: sections and a small keyboard (`pianoKeys.ts`, pure, tested). |
-| `fx/Sampler.tsx` | Fermata Sampler's panel: zone map, waveform handles, keyboard. |
+| `fx/Sampler.tsx` | Marbble Sampler's panel: zone map, waveform handles, keyboard. |
 | `fx/dynControls.tsx`, `fx/TransferGraph.tsx` | The dynamics panels' knob, choices, section, level bar and GR meters; the Compressor's transfer curve. |
 | `fx/Compressor.tsx`, `Limiter.tsx`, `Gate.tsx`, `DeEsser.tsx`, `Reverb.tsx`, `Delay.tsx`, `Tuner.tsx`, `Loudness.tsx`, `Gain.tsx`, `LinearPhaseEq.tsx` | Each effect's panel. |
 | `fx/Modulation.tsx`, `Distortion.tsx` | The Chorus, Flanger, Phaser and Tremolo panels; the Distortion and Overdrive panels. |

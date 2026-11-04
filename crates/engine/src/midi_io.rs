@@ -32,7 +32,7 @@ pub struct MidiLogEntry {
     pub data: [u8; 3],
 }
 
-/// A MIDI input port and whether Fermata listens to it.
+/// A MIDI input port and whether Marbble listens to it.
 #[derive(Debug, Clone, Serialize)]
 pub struct MidiPort {
     pub name: String,
@@ -142,7 +142,7 @@ impl MidiIo {
     }
 
     pub fn port_names() -> Vec<String> {
-        let Ok(input) = MidiInput::new("Fermata") else { return Vec::new() };
+        let Ok(input) = MidiInput::new("Marbble") else { return Vec::new() };
         input.ports().iter().filter_map(|p| input.port_name(p).ok()).collect()
     }
 
@@ -181,13 +181,13 @@ impl MidiIo {
         let names = Self::port_names();
         let disabled = &self.disabled;
         self.connections.retain(|(n, _)| names.contains(n) && !disabled.contains(n));
-        let Ok(probe) = MidiInput::new("Fermata") else { return };
+        let Ok(probe) = MidiInput::new("Marbble") else { return };
         for port in probe.ports() {
             let Ok(name) = probe.port_name(&port) else { continue };
             if self.connections.iter().any(|(n, _)| *n == name) || name.contains("Midi Through") || self.disabled.contains(&name) {
                 continue;
             }
-            let Ok(mut input) = MidiInput::new("Fermata") else { continue };
+            let Ok(mut input) = MidiInput::new("Marbble") else { continue };
             input.ignore(midir::Ignore::All);
             let sink = self.sink.clone();
             let filter = self.filter.clone();
@@ -196,7 +196,7 @@ impl MidiIo {
             let controls = self.controls.clone();
             let port_name = name.clone();
             let key: Arc<str> = Arc::from(controllers::port_key(&name));
-            match input.connect(&port, "fermata-in", move |_, msg, _| receive(&sink, &filter, &log, epoch, &controls, &port_name, &key, msg), ()) {
+            match input.connect(&port, "marbble-in", move |_, msg, _| receive(&sink, &filter, &log, epoch, &controls, &port_name, &key, msg), ()) {
                 Ok(c) => {
                     log::info!("MIDI input connected: {name}");
                     self.connections.push((name, c));

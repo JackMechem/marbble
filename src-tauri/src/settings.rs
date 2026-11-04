@@ -1,4 +1,4 @@
-//! Application settings persisted between launches, in `~/.config/fermata/settings.json`.
+//! Application settings persisted between launches, in `~/.config/marbble/settings.json`.
 //!
 //! Every section and field falls back to its default, so files written by older versions load.
 
@@ -23,7 +23,7 @@ pub struct Settings {
     pub plugins: PluginPrefs,
 }
 
-/// What Fermata shows at launch when no project was given on the command line.
+/// What Marbble shows at launch when no project was given on the command line.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Startup {

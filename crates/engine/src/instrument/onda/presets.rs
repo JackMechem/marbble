@@ -1,4 +1,4 @@
-//! Factory presets of Fermata Onda: written here. Parameters a preset doesn't list go to their
+//! Factory presets of Marbble Onda: written here. Parameters a preset doesn't list go to their
 //! defaults. A slot is three values: source, destination, amount.
 
 use super::params::param::*;

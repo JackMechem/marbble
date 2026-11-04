@@ -161,7 +161,7 @@ export function zoomTracks(factor: number) {
 
 // ---- persistence: heights (and the Output track) are view preferences, remembered per project folder
 
-const key = (path: string) => `fermata.trackHeights:${path}`;
+const key = (path: string) => `marbble.trackHeights:${path}`;
 
 export function loadHeights(path: string) {
   try {

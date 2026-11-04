@@ -1,4 +1,4 @@
-//! Fermata Cinque: a five-voice polyphonic synth, modelled on the architecture and behaviour of
+//! Marbble Cinque: a five-voice polyphonic synth, modelled on the architecture and behaviour of
 //! the Sequential Prophet-5 (this project isn't affiliated with Sequential, and the product name
 //! stays clear of theirs). Its reference is what's publicly documented about the instrument; nothing
 //! here was compared with the hardware. See docs/ARCHITECTURE.md.
@@ -486,7 +486,7 @@ impl Instrument for Cinque {
 pub fn info() -> InstrumentInfo {
     InstrumentInfo {
         id: "builtin:cinque",
-        name: "Fermata Cinque",
+        name: "Marbble Cinque",
         group: "Vintage Synths",
         about: "Five voices of two oscillators each, a 4-pole filter, and Poly Mod from the filter envelope and Osc B",
         params: PARAMS,

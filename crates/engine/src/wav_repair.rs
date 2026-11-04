@@ -3,7 +3,7 @@
 //! The recorder (hound) writes the RIFF header first with zero sizes and only fills them in on
 //! a checkpoint or when the take finishes, so after a crash the sizes are zero or stale while
 //! the audio itself is in the file. The data chunk is always the last chunk of the files
-//! Fermata records, so its true size is simply what follows its header, down to a whole frame.
+//! Marbble records, so its true size is simply what follows its header, down to a whole frame.
 //! Don't use this on arbitrary files: one with chunks after the audio would lose them.
 
 use std::fs::OpenOptions;
@@ -140,7 +140,7 @@ mod tests {
     use super::*;
 
     fn scratch(tag: &str) -> std::path::PathBuf {
-        let d = std::env::temp_dir().join(format!("fermata-wavrepair-{tag}-{}", std::process::id()));
+        let d = std::env::temp_dir().join(format!("marbble-wavrepair-{tag}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&d);
         std::fs::create_dir_all(&d).unwrap();
         d

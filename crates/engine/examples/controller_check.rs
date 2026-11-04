@@ -44,7 +44,7 @@ fn main() {
     let scratch = std::path::PathBuf::from(args.next().expect("scratch dir"));
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg, Vec::new());
-    s.dir = scratch.join("ControllerCheck.fermata");
+    s.dir = scratch.join("ControllerCheck.marbble");
     let file = scratch.join("controller-assignments.json");
     s.load_controller_assignments(file.clone());
 

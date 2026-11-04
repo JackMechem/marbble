@@ -1,4 +1,4 @@
-//! Fermata Sampler through the real session (silent ALSA null output): loading files and mapping
+//! Marbble Sampler through the real session (silent ALSA null output): loading files and mapping
 //! them, rendering, recording from a simulated input, converting a region, editing with undo and
 //! redo, saving and reopening, moving the project, deleting originals and samples, saving and
 //! loading a reusable instrument, Freeze, Track Off, copying, and an SFZ file made here.
@@ -118,7 +118,7 @@ fn main() {
     std::env::set_var("XDG_DATA_HOME", scratch.join("home/data"));
     let src = scratch.join("originals");
     let mut s = session();
-    let project = scratch.join("Song.fermata");
+    let project = scratch.join("Song.marbble");
     s.save(Some(project.clone())).unwrap();
 
     println!("-- Getting sounds in: dropped files");
@@ -320,13 +320,13 @@ fn main() {
     }
     s.open(&project).unwrap();
     check("with every original deleted it still plays, bit for bit", same(&before, &render(&mut s)));
-    let moved_dir = scratch.join("Elsewhere/Moved.fermata");
+    let moved_dir = scratch.join("Elsewhere/Moved.marbble");
     std::fs::create_dir_all(moved_dir.parent().unwrap()).unwrap();
     s.new_project();
     std::fs::rename(&project, &moved_dir).unwrap();
     s.open(&moved_dir).unwrap();
     check("moving the project folder changes nothing", same(&before, &render(&mut s)));
-    let saved_as = scratch.join("Copy.fermata");
+    let saved_as = scratch.join("Copy.marbble");
     s.save(Some(saved_as.clone())).unwrap();
     check("Save As brings the samples along", saved_as.join("Samples/Vox.wav").is_file());
     check("and the copy plays the same", same(&before, &render(&mut s)));
@@ -359,9 +359,9 @@ fn main() {
     s.sampler_update_zones(t, vec![shaped]).unwrap();
     s.set_builtin_param(t, SLOT, param::A_RELEASE, 300.0).unwrap();
     let name = s.save_preset(t, SLOT, "My Keys", false).unwrap();
-    let home_doc = scratch.join("home/Music/Fermata Instruments/My Keys/instrument.json");
+    let home_doc = scratch.join("home/Music/Marbble Instruments/My Keys/instrument.json");
     check("saved in the Music folder, the folder made on first save", name == "My Keys" && home_doc.is_file());
-    check("with a copy of its samples", scratch.join("home/Music/Fermata Instruments/My Keys/Samples/Vox.wav").is_file());
+    check("with a copy of its samples", scratch.join("home/Music/Marbble Instruments/My Keys/Samples/Vox.wav").is_file());
     check("listed in the preset menu", daw_engine::presets::list(&daw_engine::presets::user_root(), SAMPLER).user == vec!["My Keys".to_string()]);
     check("an existing one isn't replaced without asking", s.save_preset(t, SLOT, "My Keys", false).is_err());
     s.save_preset(t, SLOT, "Spare", false).unwrap();
@@ -369,15 +369,15 @@ fn main() {
     daw_engine::presets::rename_user(&root, SAMPLER, "Spare", "Renamed").unwrap();
     check(
         "renaming takes its samples along",
-        scratch.join("home/Music/Fermata Instruments/Renamed/Samples/Vox.wav").is_file()
+        scratch.join("home/Music/Marbble Instruments/Renamed/Samples/Vox.wav").is_file()
             && daw_engine::presets::list(&root, SAMPLER).user.contains(&"Renamed".to_string()),
     );
     daw_engine::presets::delete_user(&root, SAMPLER, "Renamed").unwrap();
-    check("deleting takes them too", !scratch.join("home/Music/Fermata Instruments/Renamed").exists());
+    check("deleting takes them too", !scratch.join("home/Music/Marbble Instruments/Renamed").exists());
     let with_it = render(&mut s);
     s.new_project();
     let other = s.add_track(TrackKind::Instrument, InputSel::None, Some(SAMPLER.into()), None).unwrap();
-    let other_dir = scratch.join("Other.fermata");
+    let other_dir = scratch.join("Other.marbble");
     s.save(Some(other_dir.clone())).unwrap();
     s.load_preset(other, SLOT, SAMPLER, "My Keys", false).unwrap();
     check("another project loads it, with its zones", zones_of(&s, other).iter().any(|z| z.name == "Vox" && z.loop_on));
@@ -392,7 +392,7 @@ fn main() {
     let err = with_it[0].iter().zip(&there[0]).take(RATE as usize / 4).fold(0.0f32, |m, (a, b)| m.max((a - b).abs()));
     check(&format!("and it sounds the same there ({err:.5})"), err < 1e-4);
     s.save(None).unwrap();
-    std::fs::remove_dir_all(scratch.join("home/Music/Fermata Instruments/My Keys")).unwrap();
+    std::fs::remove_dir_all(scratch.join("home/Music/Marbble Instruments/My Keys")).unwrap();
     s.open(&other_dir).unwrap();
     check(
         "that project doesn't need the instrument's folder any more",

@@ -87,7 +87,7 @@ fn main() {
 
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg.clone(), plugins.clone());
-    s.dir = scratch.join("VstSidechain.fermata");
+    s.dir = scratch.join("VstSidechain.marbble");
     std::fs::create_dir_all(&s.dir).unwrap();
     // The source comes after the plug-in's track, so the key has to reorder them. It's heard only
     // through the key: taken before its fader, which is all the way down.
@@ -326,7 +326,7 @@ fn main() {
     render(&mut s);
     s.set_sidechain(main, 0, None).unwrap();
     s.set_sidechain(main, 0, Some(key)).unwrap();
-    let dir = s.save(Some(scratch.join("Saved.fermata"))).unwrap();
+    let dir = s.save(Some(scratch.join("Saved.marbble"))).unwrap();
     s.open(&dir).unwrap();
     let slot = s.project.track(main).unwrap().inserts[0].clone().unwrap();
     let reopened = level_of(&mut s);
@@ -344,7 +344,7 @@ fn main() {
         held.sidechain == Some(key) && t.missing_plugins().iter().any(|m| m.uid == held.uid) && t.vst_key_inputs().is_empty(),
     );
     check("but can't be given another", t.set_sidechain(main, 0, Some(key)).is_err());
-    let moved = t.save(Some(scratch.join("Moved.fermata"))).unwrap();
+    let moved = t.save(Some(scratch.join("Moved.marbble"))).unwrap();
     let json = std::fs::read_to_string(moved.join("project.json")).unwrap();
     let v: serde_json::Value = serde_json::from_str(&json).unwrap();
     let kept =

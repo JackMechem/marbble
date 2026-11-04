@@ -7,7 +7,7 @@ use anyhow::{anyhow, bail, Result};
 
 use crate::model::CcKind;
 
-/// Ticks per quarter note in files Fermata writes.
+/// Ticks per quarter note in files Marbble writes.
 pub const PPQ: u16 = 960;
 
 /// A note in a MIDI file, in the file's ticks.

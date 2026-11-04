@@ -272,7 +272,7 @@ mod tests {
     fn session(frames: usize) -> (Session, Id, Id) {
         let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
         let mut s = Session::new(cfg, Vec::new());
-        s.dir = std::env::temp_dir().join(format!("fermata-range-edit-{}", std::process::id()));
+        s.dir = std::env::temp_dir().join(format!("marbble-range-edit-{}", std::process::id()));
         let t = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
         let ramp: Vec<f32> = (0..frames).map(|i| i as f32 / frames as f32).collect();
         let path = s.dir.join("Audio Files").join("ramp.wav");

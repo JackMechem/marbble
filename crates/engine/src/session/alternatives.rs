@@ -2,7 +2,7 @@
 //! arrangement in one project folder, sharing its Audio Files.
 //!
 //! The active alternative is always the project.json at the top of the folder, with its name
-//! in `Project::alternative`, so autosave, recovery, backups and older versions of Fermata see
+//! in `Project::alternative`, so autosave, recovery, backups and older versions of Marbble see
 //! it as the project. The others wait in `Alternatives/<name>/project.json`. Switching saves
 //! the active one, copies it into its folder, puts the chosen one in its place and removes
 //! that one's folder. Every step writes atomically, and the order means a crash between steps
@@ -223,9 +223,9 @@ mod tests {
     fn session(tag: &str) -> (Session, PathBuf) {
         let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
         let mut s = Session::new(cfg, Vec::new());
-        let scratch = std::env::temp_dir().join(format!("fermata-alternatives-{tag}-{}", std::process::id()));
+        let scratch = std::env::temp_dir().join(format!("marbble-alternatives-{tag}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&scratch);
-        s.dir = scratch.join("Song.fermata");
+        s.dir = scratch.join("Song.marbble");
         (s, scratch)
     }
 

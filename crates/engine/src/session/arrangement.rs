@@ -189,7 +189,7 @@ mod tests {
     fn session() -> (Session, Vec<Id>, Vec<Id>, Id) {
         let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
         let mut s = Session::new(cfg, Vec::new());
-        s.dir = std::env::temp_dir().join(format!("fermata-arrangement-{}", std::process::id()));
+        s.dir = std::env::temp_dir().join(format!("marbble-arrangement-{}", std::process::id()));
         let path = s.dir.join("Audio Files").join("tone.wav");
         let clip = s.add_clip(&path, Clip::from_channels(path.clone(), 48000, vec![vec![0.25; 2_000_000]]));
         let tracks: Vec<Id> = (0..2).map(|_| s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap()).collect();

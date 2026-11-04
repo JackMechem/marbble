@@ -81,7 +81,7 @@ mod tests {
     fn moves_many_regions_across_tracks_of_their_kind() {
         let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
         let mut s = Session::new(cfg, Vec::new());
-        s.dir = std::env::temp_dir().join(format!("fermata-region-moves-{}", std::process::id()));
+        s.dir = std::env::temp_dir().join(format!("marbble-region-moves-{}", std::process::id()));
         let a = s.add_track(TrackKind::Instrument, InputSel::Mono(0), None, None).unwrap();
         let b = s.add_track(TrackKind::Instrument, InputSel::Mono(0), None, None).unwrap();
         let audio = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();

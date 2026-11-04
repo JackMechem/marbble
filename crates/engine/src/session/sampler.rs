@@ -1,4 +1,4 @@
-//! Fermata Sampler on the session's side: its zones and files, recording into it, turning regions
+//! Marbble Sampler on the session's side: its zones and files, recording into it, turning regions
 //! into sampler tracks, and instruments saved with their samples.
 //!
 //! - **Zones** live in the instrument slot's `PluginSlot::state`, so saving, undo, copying and
@@ -73,7 +73,7 @@ pub struct ZoneView {
     pub error: Option<String>,
 }
 
-/// All Fermata Sampler's panel draws for a track.
+/// All Marbble Sampler's panel draws for a track.
 #[derive(Debug, Clone, Serialize)]
 pub struct SamplerView {
     pub zones: Vec<ZoneView>,
@@ -229,7 +229,7 @@ impl Session {
             .track(track)
             .and_then(|t| t.instrument.as_ref())
             .filter(|s| s.plugin_id == SAMPLER)
-            .ok_or_else(|| anyhow!("That track has no Fermata Sampler"))
+            .ok_or_else(|| anyhow!("That track has no Marbble Sampler"))
     }
 
     /// The pool, for a command that fills it from a worker.
@@ -276,7 +276,7 @@ impl Session {
     fn sampler_store(&mut self, track: Id, state: &SamplerState) -> Result<()> {
         self.check_unfrozen(&[track])?;
         let t = self.project.track_mut(track).ok_or_else(|| anyhow!("no such track"))?;
-        let s = t.instrument.as_mut().filter(|s| s.plugin_id == SAMPLER).ok_or_else(|| anyhow!("That track has no Fermata Sampler"))?;
+        let s = t.instrument.as_mut().filter(|s| s.plugin_id == SAMPLER).ok_or_else(|| anyhow!("That track has no Marbble Sampler"))?;
         s.state = Some(state.to_json());
         let slot = s.clone();
         let data = self.sampler_data(&slot);

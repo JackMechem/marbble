@@ -1,4 +1,4 @@
-//! Factory presets of Fermata Cinque: written here, from what the instrument is known for.
+//! Factory presets of Marbble Cinque: written here, from what the instrument is known for.
 //! Parameters a preset doesn't list go to their defaults.
 
 use super::params::param::*;

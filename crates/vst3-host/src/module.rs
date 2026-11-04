@@ -108,7 +108,7 @@ fn open_error(bin: &Path, e: libloading::Error) -> String {
         // A hardened-runtime host refuses plug-ins signed by another team (or not at all)
         // unless it has the disable-library-validation entitlement.
         if reason.contains("not valid for use in process") || reason.contains("library validation") {
-            format!("macOS refused to load it: this build of Fermata enforces library validation ({reason})")
+            format!("macOS refused to load it: this build of Marbble enforces library validation ({reason})")
         } else {
             format!("dlopen failed: {reason}")
         }

@@ -111,8 +111,8 @@ mod tests {
     #[test]
     fn off_tracks_dont_record_and_arent_switched_during_a_take() {
         let mut s = session();
-        let dir = std::env::temp_dir().join(format!("fermata-off-{}", std::process::id()));
-        s.dir = dir.join("Off.fermata");
+        let dir = std::env::temp_dir().join(format!("marbble-off-{}", std::process::id()));
+        s.dir = dir.join("Off.marbble");
         let (a, b) = (audio(&mut s), audio(&mut s));
         s.update_track(a, TrackPatch { armed: Some(true), ..Default::default() });
         set_off(&mut s, a, true);

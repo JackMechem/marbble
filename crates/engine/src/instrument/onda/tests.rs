@@ -1,4 +1,4 @@
-//! Fermata Onda measured through its public contract, and what's specific to it: band-limited
+//! Marbble Onda measured through its public contract, and what's specific to it: band-limited
 //! tables, position scan, unison, the filters and the modulation matrix.
 use super::tables::{level_for, TABLES, TOP_HARMONICS};
 use super::*;

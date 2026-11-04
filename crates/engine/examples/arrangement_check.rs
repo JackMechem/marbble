@@ -120,7 +120,7 @@ fn main() {
     let scratch = PathBuf::from(args.next().expect("scratch dir"));
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg, Vec::new());
-    s.dir = scratch.join("ArrangementCheck.fermata");
+    s.dir = scratch.join("ArrangementCheck.marbble");
     let _ = std::fs::remove_dir_all(&s.dir);
     let sr = s.sample_rate() as i64;
     println!("audio: {:?}, {sr} Hz", s.audio_status);

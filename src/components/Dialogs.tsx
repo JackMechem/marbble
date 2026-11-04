@@ -50,7 +50,7 @@ export function NewTrackDialog() {
   for (let c = 0; c < ch; c++) inputs.push([`mono:${c}`, inputLabel({ type: "mono", ch: c })]);
   for (let c = 0; c + 1 < ch; c += 2) inputs.push([`stereo:${c}`, inputLabel({ type: "stereo", ch: c })]);
   const instList = useStore((s) => s.instList);
-  const builtIn: [string, string][] = instList.length ? instList.map((i) => [i.id, i.category === "Fermata" ? i.name : `${i.category}: ${i.name}`]) : [[BUILTIN_SYNTH, "Fermata Synth"]];
+  const builtIn: [string, string][] = instList.length ? instList.map((i) => [i.id, i.category === "Marbble" ? i.name : `${i.category}: ${i.name}`]) : [[BUILTIN_SYNTH, "Marbble Synth"]];
   const instruments: [string, string][] = [...builtIn, ...plugins.filter((p) => p.is_instrument).map((p) => [p.id, `${p.name} — ${p.vendor}`] as [string, string])];
 
   const create = async () => {
@@ -180,8 +180,8 @@ function InputLevelCheck() {
           {level.device} is {level.muted ? "muted" : `set to ${pct}%`} in the system mixer
         </b>
         {level.muted
-          ? ", so Fermata receives silence."
-          : `, which lowers everything you record by ${Math.abs(level.gain_db).toFixed(0)} dB before it reaches Fermata.`}{" "}
+          ? ", so Marbble receives silence."
+          : `, which lowers everything you record by ${Math.abs(level.gain_db).toFixed(0)} dB before it reaches Marbble.`}{" "}
         Recording software expects 100% — set your level with the gain knob on the interface instead.
       </div>
       <button
@@ -242,7 +242,7 @@ function AudioPane({ close }: { close: () => void }) {
     const sr = project?.sample_rate;
     if (sr && cfg.sample_rate !== sr && project.tracks.some((t) => t.regions.some((r) => r.content.type === "audio"))) {
       const ok = await ask(
-        `This project's audio was recorded at ${(sr / 1000).toFixed(1)} kHz. Fermata plays audio files without converting them, so at ${(cfg.sample_rate / 1000).toFixed(1)} kHz they would play ${cfg.sample_rate > sr ? "faster and higher" : "slower and lower"}.`,
+        `This project's audio was recorded at ${(sr / 1000).toFixed(1)} kHz. Marbble plays audio files without converting them, so at ${(cfg.sample_rate / 1000).toFixed(1)} kHz they would play ${cfg.sample_rate > sr ? "faster and higher" : "slower and lower"}.`,
         { title: "Change Sample Rate", kind: "warning", okLabel: "Change Anyway", cancelLabel: "Cancel" },
       );
       if (!ok) return false;
@@ -307,7 +307,7 @@ function AudioPane({ close }: { close: () => void }) {
         <span />
         <span className="form-note">
           Leave this off if your interface or pedal monitors directly — otherwise you hear a second, delayed copy, which sounds hollow
-          or phasey. Use a track's I button to hear its input through Fermata (and its plug-ins).
+          or phasey. Use a track's I button to hear its input through Marbble (and its plug-ins).
         </span>
         <label>Recording Delay:</label>
         <div className="row-inline">

@@ -41,7 +41,7 @@ fn main() {
     let scratch = args.next().expect("scratch dir");
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg, Vec::new());
-    s.dir = std::path::PathBuf::from(&scratch).join("SendsCheck.fermata");
+    s.dir = std::path::PathBuf::from(&scratch).join("SendsCheck.marbble");
     let mut ok = true;
 
     let a = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
@@ -157,7 +157,7 @@ fn main() {
     );
 
     // Save and reopen: the graph is rebuilt with its routing.
-    let saved = s.save(Some(std::path::PathBuf::from(&scratch).join("SendsReload.fermata"))).unwrap();
+    let saved = s.save(Some(std::path::PathBuf::from(&scratch).join("SendsReload.marbble"))).unwrap();
     s.open(&saved).unwrap();
     s.set_cycle(true, 0, 48000);
     let (lv, _) = levels(&mut s, &[x, y]);

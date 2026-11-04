@@ -6,7 +6,6 @@ function runPlayhead() {
   if (!lane || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   const levels = (lane.dataset.levels ?? "").split(",").map((n) => Number(n) / 99);
   const bars = Number(lane.dataset.bars);
-  const hold = Number(lane.dataset.hold);
   let x = Number(lane.dataset.start);
 
   const pos = document.querySelector<HTMLElement>("[data-pos]")!;
@@ -19,8 +18,6 @@ function runPlayhead() {
   transport.hidden = false;
 
   const BARS_PER_SECOND = 0.75;
-  const HELD = 0.16; // Under the fermata, time nearly stops. That's what the sign means.
-  const held = (at: number) => at >= hold + 0.22 && at < hold + 1.5;
 
   const meterLevel = [0, 0];
   const peakLevel = [0, 0];
@@ -40,7 +37,7 @@ function runPlayhead() {
     last = now;
     if (wait > 0) wait -= dt;
     else {
-      x += dt * BARS_PER_SECOND * (held(x) ? HELD : 1);
+      x += dt * BARS_PER_SECOND;
       if (x >= bars) {
         x = 0;
         wait = 0.5;
@@ -53,8 +50,8 @@ function runPlayhead() {
     const text = `${pad(bar + 1, 3)}.${Math.floor(within) + 1}.${(Math.floor(within * 4) % 4) + 1}`;
     if (text !== lastPos) {
       pos.textContent = text;
-      mode.textContent = held(x) ? "Hold" : "Play";
-      mode.classList.toggle("on", held(x));
+      mode.textContent = wait > 0 ? "Stop" : "Play";
+      mode.classList.toggle("on", wait <= 0);
       lastPos = text;
     }
 

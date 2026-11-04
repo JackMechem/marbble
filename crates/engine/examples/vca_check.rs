@@ -55,7 +55,7 @@ fn main() {
     let scratch = PathBuf::from(args.next().expect("scratch dir"));
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg, Vec::new());
-    s.dir = scratch.join("VcaCheck.fermata");
+    s.dir = scratch.join("VcaCheck.marbble");
     let _ = std::fs::remove_dir_all(&s.dir);
 
     let a = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();

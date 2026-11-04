@@ -64,7 +64,7 @@ fn main() {
     let scratch = PathBuf::from(args.next().expect("scratch dir"));
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg, Vec::new());
-    s.dir = scratch.join("InsertOrder.fermata");
+    s.dir = scratch.join("InsertOrder.marbble");
     std::fs::create_dir_all(&s.dir).unwrap();
     let len = 48000;
 
@@ -275,7 +275,7 @@ fn automation_follows(s: &mut Session, tone: &str, len: i64, scratch: &std::path
     let path = s.save(None).unwrap();
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut t = Session::new(cfg, Vec::new());
-    t.dir = scratch.join("InsertOrder.fermata");
+    t.dir = scratch.join("InsertOrder.marbble");
     t.open(&path).unwrap();
     settle(&mut t);
     let reloaded = render(&mut t, len, e);

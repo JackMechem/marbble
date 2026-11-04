@@ -80,7 +80,7 @@ function ProjectGeneral() {
           note={
             pending !== null && hasAudio ? (
               <span className="pref-warning">
-                This project's audio was recorded at {(p.sample_rate / 1000).toFixed(1)} kHz. Fermata plays audio files without converting them, so at{" "}
+                This project's audio was recorded at {(p.sample_rate / 1000).toFixed(1)} kHz. Marbble plays audio files without converting them, so at{" "}
                 {(pending / 1000).toFixed(1)} kHz they would play {pending > p.sample_rate ? "faster and higher" : "slower and lower"}.{" "}
                 <button className="link-btn" onClick={() => applyRate(pending)}>
                   Change Anyway

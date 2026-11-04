@@ -10,11 +10,11 @@
 // until the next entry. A title of null uses the heading's own. An anchor that has gone away
 // costs a warning and the pages either side merge; nothing breaks.
 
-export const REPO = "JackMechem/fermata";
+export const REPO = "JackMechem/marbble";
 export const REPO_URL = `https://github.com/${REPO}`;
 export const BRANCH = "main";
 export const SITE = "https://jackmechem.github.io";
-export const BASE = "/fermata";
+export const BASE = "/marbble";
 
 // Past this many source lines the build prints a warning: time to add a split.
 export const LONG_PAGE_LINES = 330;
@@ -46,8 +46,8 @@ export const DOCS = [
     ],
     split: {
       "software-instruments-and-musical-typing": [
-        [null, "fermata-sampler"],
-        [null, "fermata-tre"],
+        [null, "marbble-sampler"],
+        [null, "marbble-tre"],
         [null, "the-other-synth-models"],
         [null, "musical-typing"],
         [null, "step-input"],
@@ -111,9 +111,9 @@ export const DOCS = [
       "built-in-effects-and-presets": [
         ["The effect framework", "the-effect-framework"],
         [null, "built-in-instruments"],
-        ["Fermata Tre internals", "fermata-tre"],
-        ["Fermata Sampler internals", "fermata-sampler"],
-        ["Synth model internals", "fermata-sei"],
+        ["Marbble Tre internals", "marbble-tre"],
+        ["Marbble Sampler internals", "marbble-sampler"],
+        ["Synth model internals", "marbble-sei"],
         ["Clipboard and strip settings", "clipboard-and-moving-plug-ins"],
       ],
       "module-map": [

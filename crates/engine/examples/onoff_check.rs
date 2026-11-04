@@ -46,7 +46,7 @@ fn main() {
     let scratch = PathBuf::from(args.next().expect("scratch dir"));
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg, Vec::new());
-    s.dir = scratch.join("OnOffCheck.fermata");
+    s.dir = scratch.join("OnOffCheck.marbble");
     std::fs::create_dir_all(&s.dir).unwrap();
 
     // Two tracks in the mix: one off leaves the other, both off leave silence.

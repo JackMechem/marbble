@@ -1,4 +1,4 @@
-// The Settings window (Fermata › Settings…, ⌘,), Project Settings (File › Project
+// The Settings window (Marbble › Settings…, ⌘,), Project Settings (File › Project
 // Settings…, ⌥P) and the crash-recovery sheet. Modelled on Logic Pro's Settings: a row of
 // icon tabs, each pane a form whose changes apply at once.
 //
@@ -21,7 +21,7 @@ export { RecoverySheet } from "./settingsPanes/RecoverySheet";
 type PaneProps = { close: () => void };
 
 /**
- * Fermata › Settings. The Audio and Appearance panes live in Dialogs.tsx and are passed in.
+ * Marbble › Settings. The Audio and Appearance panes live in Dialogs.tsx and are passed in.
  */
 export function SettingsWindow({ audio: AudioPane, appearance: AppearancePane }: { audio: React.FC<PaneProps>; appearance: React.FC<PaneProps> }) {
   const tab = useStore((s) => s.settingsTab);

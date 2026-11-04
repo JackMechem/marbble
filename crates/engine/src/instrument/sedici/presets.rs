@@ -1,4 +1,4 @@
-//! Factory presets of Fermata Sedici: written here, from what the instrument is known for, with no
+//! Factory presets of Marbble Sedici: written here, from what the instrument is known for, with no
 //! patch data from any instrument. Parameters a preset doesn't list go to their defaults.
 
 use super::params::param::*;

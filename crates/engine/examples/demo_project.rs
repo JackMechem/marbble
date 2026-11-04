@@ -1,5 +1,5 @@
 //! Writes a small demo project (synthesized drums, a plucked part and a MIDI region) for
-//! trying the UI: `cargo run -p daw-engine --example demo_project -- <out.fermata>`.
+//! trying the UI: `cargo run -p daw-engine --example demo_project -- <out.marbble>`.
 use daw_engine::audio_io::AudioConfig;
 use daw_engine::model::{InputSel, Note, Region, RegionContent, TrackKind};
 use daw_engine::session::TrackPatch;

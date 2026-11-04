@@ -74,7 +74,7 @@ pub fn clean_name(name: &str) -> Result<String> {
 /// save.
 pub fn bundle_root() -> PathBuf {
     let home = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")).map(PathBuf::from).unwrap_or_default();
-    home.join("Music").join("Fermata Instruments")
+    home.join("Music").join("Marbble Instruments")
 }
 
 /// The name of the document in an instrument's folder.
@@ -338,7 +338,7 @@ mod tests {
     use super::*;
 
     fn temp_root(tag: &str) -> PathBuf {
-        let p = std::env::temp_dir().join(format!("fermata-presets-{tag}-{}", std::process::id()));
+        let p = std::env::temp_dir().join(format!("marbble-presets-{tag}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&p);
         p
     }

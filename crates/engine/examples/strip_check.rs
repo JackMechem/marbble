@@ -54,7 +54,7 @@ fn main() {
     let scratch = PathBuf::from(args.next().expect("scratch dir"));
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg, Vec::new());
-    s.dir = scratch.join("StripCheck.fermata");
+    s.dir = scratch.join("StripCheck.marbble");
     // Saved settings go to the scratch folder, never the real config folder.
     let root = scratch.join("channel-strips");
     let _ = std::fs::remove_dir_all(&root);

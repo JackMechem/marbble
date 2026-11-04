@@ -50,7 +50,7 @@ pub fn clamp_bpm(bpm: f64) -> f64 {
     }
 }
 
-/// A signature Fermata can show: 1–32 beats of a whole, half, quarter, eighth or sixteenth.
+/// A signature Marbble can show: 1–32 beats of a whole, half, quarter, eighth or sixteenth.
 pub fn clamp_sig(num: u32, den: u32) -> (u32, u32) {
     (num.clamp(1, 32), if [1, 2, 4, 8, 16].contains(&den) { den } else { 4 })
 }

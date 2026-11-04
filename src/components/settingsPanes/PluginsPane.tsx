@@ -152,7 +152,7 @@ export function PluginsPane({ close }: { close: () => void }) {
           )}
         </Row>
       </Section>
-      <Foot close={close} note="Bundles are scanned one by one in a separate process, so a crashing plug-in can't take Fermata down.">
+      <Foot close={close} note="Bundles are scanned one by one in a separate process, so a crashing plug-in can't take Marbble down.">
         <button className="push" disabled={scanning} onClick={rescan}>
           {scanning ? "Scanning…" : "Rescan Plug-ins"}
         </button>

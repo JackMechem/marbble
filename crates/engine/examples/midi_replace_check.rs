@@ -75,7 +75,7 @@ fn main() {
     std::fs::create_dir_all(&scratch).unwrap();
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg, Vec::new());
-    s.dir = scratch.join("ReplaceCheck.fermata");
+    s.dir = scratch.join("ReplaceCheck.marbble");
     s.prefs.recording.pre_roll_secs = 0.0;
     s.set_count_in(false);
     let bar = s.project.samples_per_bar().round() as i64;

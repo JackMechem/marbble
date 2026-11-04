@@ -57,7 +57,7 @@ fn main() {
     std::fs::create_dir_all(&scratch).unwrap();
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg, Vec::new());
-    s.dir = scratch.join("RegionParams.fermata");
+    s.dir = scratch.join("RegionParams.marbble");
     let sr = s.sample_rate();
     s.set_tempo(120.0);
     let beat = (sr / 2.0).round() as i64;

@@ -129,7 +129,7 @@ mod tests {
 
     #[test]
     fn saved_settings_round_trip() {
-        let root = std::env::temp_dir().join(format!("fermata-strips-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("marbble-strips-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
         let mut eq = ChannelEq::default();
         eq.bands[3].gain = -4.0;

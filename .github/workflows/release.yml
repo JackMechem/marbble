@@ -1,4 +1,4 @@
-# Builds Fermata for Linux, Windows and macOS and publishes the bundles as a GitHub release
+# Builds Marbble for Linux, Windows and macOS and publishes the bundles as a GitHub release
 # when a version tag (v1.2.3, or v1.2.3-alpha.1 for a prerelease) is pushed. Pushing the
 # `release-check` branch runs the same builds without releasing anything, to try a change to
 # this workflow first. See docs/DEVELOPING.md, "Versioning and releases".
@@ -37,7 +37,7 @@ jobs:
             echo "- **Windows:** \`_x64-setup.exe\`"
             echo "- **macOS:** \`_aarch64.dmg\` (Apple Silicon) or \`_x64.dmg\` (Intel)"
             echo
-            echo "The builds aren't signed yet. On macOS, right-click the app and choose Open the first time (or run \`xattr -cr /Applications/Fermata.app\`); on Windows, choose More info › Run anyway in the SmartScreen prompt."
+            echo "The builds aren't signed yet. On macOS, right-click the app and choose Open the first time (or run \`xattr -cr /Applications/Marbble.app\`); on Windows, choose More info › Run anyway in the SmartScreen prompt."
           } >> notes.md
       - id: release
         uses: actions/github-script@v8
@@ -49,7 +49,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               tag_name: tag,
-              name: `Fermata ${tag}`,
+              name: `Marbble ${tag}`,
               body: fs.readFileSync("notes.md", "utf8"),
               draft: true,
               prerelease: tag.includes("-"),

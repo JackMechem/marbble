@@ -1,10 +1,10 @@
-# Developing Fermata
+# Developing Marbble
 
-How to build, run and test Fermata, how to debug it, the conventions the code follows, and
+How to build, run and test Marbble, how to debug it, the conventions the code follows, and
 step-by-step recipes for the most common changes. Read [ARCHITECTURE.md](ARCHITECTURE.md)
 first for how the pieces fit together.
 
-The repository is at <https://github.com/JackMechem/fermata>; the main branch is `main`.
+The repository is at <https://github.com/JackMechem/marbble>; the main branch is `main`.
 
 Contents:
 
@@ -32,10 +32,10 @@ The flake provides the package, an app, a dev shell, an overlay and a check, for
 nix develop               # or `nix-shell`: Rust, Node, WebKitGTK, ALSA/JACK/PipeWire
 pnpm install              # or `npm install`
 pnpm tauri dev            # or `npm run tauri dev`
-pnpm tauri dev -- -- path/to/Song.fermata   # open a project at launch
+pnpm tauri dev -- -- path/to/Song.marbble   # open a project at launch
 ```
 
-- `nix/shell.nix` takes its inputs from the package (`inputsFrom = [ fermata ]`), so the shell
+- `nix/shell.nix` takes its inputs from the package (`inputsFrom = [ marbble ]`), so the shell
   and `nix build` use the same libraries. It adds cargo, rustc, clippy, rustfmt, rust-analyzer
   and Node, sets `GIO_MODULE_DIR` and the GSettings schemas for GTK file dialogs, and puts ALSA,
   JACK, PipeWire and D-Bus on `LD_LIBRARY_PATH` for dev builds.
@@ -50,15 +50,15 @@ pnpm tauri dev -- -- path/to/Song.fermata   # open a project at launch
 Other flake outputs:
 
 ```sh
-nix run .                 # build and launch Fermata
-nix build .               # result/bin/fermata (and result/bin/daw), desktop entry and icons
+nix run .                 # build and launch Marbble
+nix build .               # result/bin/marbble (and result/bin/daw), desktop entry and icons
 nix profile install .     # install it for your user
 nix flake check           # builds the package, which runs the engine's unit tests
 ```
 
 To use it in a NixOS or home-manager configuration, take the flake as an input and use
-`fermata.packages.${system}.default`, or add `fermata.overlays.default` to
-`nixpkgs.overlays` and use `pkgs.fermata`.
+`marbble.packages.${system}.default`, or add `marbble.overlays.default` to
+`nixpkgs.overlays` and use `pkgs.marbble`.
 
 Flakes only see files that git tracks, so `git add` new files before `nix build`.
 
@@ -148,7 +148,7 @@ Most take an audio file and a scratch directory, which must be an absolute path 
 the project folder (never point it at your real projects):
 
 ```sh
-cargo run -q -p daw-engine --example stack_check -- /path/to/tone.wav /tmp/fermata-scratch
+cargo run -q -p daw-engine --example stack_check -- /path/to/tone.wav /tmp/marbble-scratch
 ```
 
 `scripts/headless-checks.sh` builds the examples once and runs every check that needs no
@@ -161,7 +161,7 @@ device at the configured rate and buffer size instead of ALSA's `null` output:
 ```sh
 scripts/headless-checks.sh                       # all of them, in a temporary folder
 scripts/headless-checks.sh takes_check fx_check  # just these
-scripts/headless-checks.sh --scratch /tmp/fermata-checks   # keep the projects and logs there
+scripts/headless-checks.sh --scratch /tmp/marbble-checks   # keep the projects and logs there
 ```
 
 It runs the checks as on a fresh CI runner: `HOME` and the `XDG_*` folders point into the
@@ -212,7 +212,7 @@ folder is kept when anything failed.
 | `pattern_check` | scratch dir | Pattern regions (Step Sequencer) in offline renders of the built-in synth: straight, swung, polymetric and other-rate rows, ties, a looped region and a tempo change play exactly the notes worked out by hand; a painted run of steps undoes in one step; Convert to MIDI Region and back render identically; saving. |
 | `editing_check` | audio file, scratch dir | Snap Edits to Zero Crossings (a split off and on lands within 5 ms on a near-zero sample; a range split at both ends), a region gain drag sent as the Tracks area does (heard at -12 dB, one undo step), and a nudge in bars and beats across a 120 to 90 BPM change. |
 | `pdc_glide_check` | scratch dir | Delay compensation changes while playing: a sine plays on one track while the Overdrive (38 frames), then the Linear Phase EQ (2047), are inserted on another and then removed, mid-render with the transport running (`Session::render_with_edit`), and a pre-fader send into an aux changes delay the same way. No step may exceed the sine's own (the output reports what an instant jump would have stepped), and after the 15 ms glide the output is the sine exactly as far moved as the delay. |
-| `instrument_check` | scratch dir | A built-in instrument (Fermata Tre) through the real session: loading, a MIDI region's render, two renders bit-identical, parameter edits, automation, undo and redo, factory and user presets, save and reopen, duplicates having differences of their own, Freeze with its tail, Bounce in Place, a bounce's tail, Track Off, copy and paste, strip settings, MIDI learn, chase and live MIDI, a held key when the target moves or it's bypassed. That Fermata Synth still loads and plays. |
+| `instrument_check` | scratch dir | A built-in instrument (Marbble Tre) through the real session: loading, a MIDI region's render, two renders bit-identical, parameter edits, automation, undo and redo, factory and user presets, save and reopen, duplicates having differences of their own, Freeze with its tail, Bounce in Place, a bounce's tail, Track Off, copy and paste, strip settings, MIDI learn, chase and live MIDI, a held key when the target moves or it's bypassed. That Marbble Synth still loads and plays. |
 | `linphase_check` | scratch dir | The Linear Phase EQ: flat, at each Quality, it reports its latency and plays the dry signal in time; with the same settings as a Channel EQ its magnitude at eleven frequencies matches within 0.25 dB, and each sine burst comes out as the dry one scaled (no phase shift), unlike the Channel EQ's. |
 | `restore_check` | scratch dir | Every feature in one project (`examples/common/all_features.rs`): each step (new effects, Linear Phase EQ and its latency, a pre-fader key, VCAs, folder, curved and Stereo Out automation, pattern regions, region parameters, take folders and comps, a MIDI take folder, loop crossfades, an arrangement move, marquee delete, Strip Silence, a zero-crossing split, track alternatives, a section cut) undone and redone with bit-identical renders and documents; all undone and all redone; save and reopen identical; an older project (the new fields stripped) opens with their defaults and renders the same. |
 | `soak_check` | scratch dir, optional edit count, seed and thread count (4; 1 for the callback alone) | Feature interactions: the all-features project, then a few hundred edits drawn at random (fixed seed) from the session's public edit methods, all with the null device's callback playing every block through the worker pool. After each edit the task graph must fit the engine's routes, and every 40 a render on the pool must match the serial loop's bit for bit. After each the project must hold together (unique ids, positive lengths, comps in order, arrangement tiling, VCAs and keys that exist, delay compensation that matches the plug-ins); some are undone and redone with renders; every 50 the project saves and reopens with the same render; at the end undoing everything gives the first render back bit for bit. |
@@ -225,9 +225,9 @@ folder is kept when anything failed.
 | `undo_check` | audio file | Undo and redo through a sequence of edits. |
 | `import_check` | project dir, files... | Imports files onto new tracks and reports what was created. |
 | `test_tone` | output `.wav` path | Not a check: writes the test tone the checks play (3 s of 440 Hz at -21.5 dBFS, stereo, 32-bit float, 48 kHz). |
-| `demo_project` | output `.fermata` path | Writes a small demo project (synthesized drums, a plucked part, a MIDI region) for trying the UI. |
-| `sampler_check` | scratch dir | Fermata Sampler through the real session: files at several rates and depths mapped by their names or chromatically, renders in tune and repeating, velocity layers, edits with undo and redo, old maps freed, recording from a simulated input (through `feed_input_for_checks`, as a device's callback would call the engine: this shows the path from the engine's input to a playable zone, not a real interface), trimming, Convert to Sampler Track whole and sliced, save and reopen, originals deleted, the project moved, Save As, a missing sample, reusable instruments, Freeze, Track Off, copying, an SFZ it generates. Sets its own HOME inside the scratch folder. |
-| `sampler_bench` | scratch dir, optional seconds per measurement (default 3) | Not a check: times Fermata Sampler per block at full polyphony, at 512 and 128 frames, and how long loads take. Run it with `--release`. |
+| `demo_project` | output `.marbble` path | Writes a small demo project (synthesized drums, a plucked part, a MIDI region) for trying the UI. |
+| `sampler_check` | scratch dir | Marbble Sampler through the real session: files at several rates and depths mapped by their names or chromatically, renders in tune and repeating, velocity layers, edits with undo and redo, old maps freed, recording from a simulated input (through `feed_input_for_checks`, as a device's callback would call the engine: this shows the path from the engine's input to a playable zone, not a real interface), trimming, Convert to Sampler Track whole and sliced, save and reopen, originals deleted, the project moved, Save As, a missing sample, reusable instruments, Freeze, Track Off, copying, an SFZ it generates. Sets its own HOME inside the scratch folder. |
+| `sampler_bench` | scratch dir, optional seconds per measurement (default 3) | Not a check: times Marbble Sampler per block at full polyphony, at 512 and 128 frames, and how long loads take. Run it with `--release`. |
 | `instrument_bench` | optional seconds per measurement (default 4) | Not a check: times the built-in instruments per block, at 512 and 128 frames, with one voice and many. Run it with `--release`. |
 | `fx_bench` | optional block size (default 512) | Not a check: times every built-in effect per block at 48 kHz (worst and average) against the block's real-time budget. Run it with `--release`. |
 | `hosts` | none | Lists every audio host and its devices. |
@@ -366,14 +366,14 @@ instead and enforce rules that would otherwise only fail in the running app.
   outside the app. Settings › Plug-ins shows the last scan's report, including bundles that
   crashed or timed out. The cache is `plugins.json` in the config folder; delete it (or use
   Rescan) to force a new scan.
-- **Settings and projects**: `settings.json` and `recent.json` are in `~/.config/fermata`
-  (`$XDG_CONFIG_HOME/fermata`, `%APPDATA%\fermata` on Windows). A project is plain JSON in
+- **Settings and projects**: `settings.json` and `recent.json` are in `~/.config/marbble`
+  (`$XDG_CONFIG_HOME/marbble`, `%APPDATA%\marbble` on Windows). A project is plain JSON in
   `project.json`; it is safe to read, and editing it by hand works if the app is closed.
 - **Engine state**: everything the UI knows is in the `Snapshot` (`getState().snap` in
   `src/store.ts`) and the last `Tick` (`currentTick()`); a headless example is usually the
   quickest way to check what the engine does.
 - **Never test with your real projects folder**: headless checks write into the scratch
-  directory you pass; keep it away from `~/Music/Fermata`.
+  directory you pass; keep it away from `~/Music/Marbble`.
 
 ## Where things live
 
@@ -683,13 +683,13 @@ For a canvas colour:
 ## Packaging
 
 ```sh
-nix build .               # result/bin/fermata, result/share/applications/Fermata.desktop, icons
+nix build .               # result/bin/marbble, result/share/applications/Marbble.desktop, icons
 pnpm tauri build          # native bundles for the current platform (deb, rpm, AppImage, NSIS, dmg, ...)
 ```
 
 - The Nix package (`nix/package.nix`) builds the frontend with npm in the sandbox, vendors the
   Rust crates from `Cargo.lock`, runs `cargo tauri build`, runs the engine unit tests
-  (`cargo test -p daw-engine --lib`), and installs the result with a `fermata` symlink to the
+  (`cargo test -p daw-engine --lib`), and installs the result with a `marbble` symlink to the
   `daw` binary and a desktop entry in the audio categories.
 - npm dependencies come straight from `package-lock.json` through nixpkgs' `importNpmLock`,
   so there's no npm hash to refresh. Keep `package-lock.json` in step with `package.json`
@@ -697,14 +697,14 @@ pnpm tauri build          # native bundles for the current platform (deb, rpm, A
 
 - The package source is a file set (Cargo files, `crates`, `src-tauri`, `src`, `index.html`,
   `LICENSE`, the npm and TypeScript configs), so editing docs doesn't trigger a rebuild.
-- The bundles (and so the Nix package, in `lib/Fermata`) carry a copy of `LICENSE`, through
+- The bundles (and so the Nix package, in `lib/Marbble`) carry a copy of `LICENSE`, through
   `bundle.resources` in `src-tauri/tauri.conf.json`.
 - `nix/package.nix` has its own `version` string; `scripts/set-version.sh` keeps it in step
   (see below).
 
 ## Versioning and releases
 
-Fermata follows [semantic versioning](https://semver.org). Prereleases carry a suffix
+Marbble follows [semantic versioning](https://semver.org). Prereleases carry a suffix
 (`0.1.0-alpha.1`, `0.1.0-alpha.2`, ...), and every release is tagged `v<version>`.
 [CHANGELOG.md](../CHANGELOG.md) records each release in the Keep a Changelog format.
 
@@ -725,7 +725,7 @@ To make a release:
 
 Pushing a `v*` tag runs `.github/workflows/release.yml`:
 
-1. `create-release` makes a draft GitHub release named "Fermata v<version>", with the version's
+1. `create-release` makes a draft GitHub release named "Marbble v<version>", with the version's
    CHANGELOG section plus download and unsigned-build notes. A version with a `-` suffix is
    marked as a prerelease.
 2. `build` runs `tauri-action` on five runners and uploads the bundles to the draft:
@@ -749,4 +749,4 @@ separate `nix` job runs `nix flake check`, which builds the Nix package. `pdc_ch
 `freeze_check` and the plug-in parts of the other checks need real plug-ins, so they don't run
 in CI; run them locally.
 
-The main branch is `main` on <https://github.com/JackMechem/fermata>.
+The main branch is `main` on <https://github.com/JackMechem/marbble>.

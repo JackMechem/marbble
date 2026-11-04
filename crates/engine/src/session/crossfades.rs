@@ -219,7 +219,7 @@ mod tests {
     fn session() -> (Session, Id, Id) {
         let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
         let mut s = Session::new(cfg, Vec::new());
-        s.dir = std::env::temp_dir().join(format!("fermata-crossfades-{}", std::process::id()));
+        s.dir = std::env::temp_dir().join(format!("marbble-crossfades-{}", std::process::id()));
         let t = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
         let frames = 480_000;
         let ramp: Vec<f32> = (0..frames).map(|i| i as f32 / frames as f32).collect();

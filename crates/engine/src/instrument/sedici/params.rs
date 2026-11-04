@@ -1,4 +1,4 @@
-//! The parameters of Fermata Sedici. The ids are stable forever: projects and presets store them.
+//! The parameters of Marbble Sedici. The ids are stable forever: projects and presets store them.
 //! Six operators, each with the same fields: `O1 + LEVEL` and so on. The values run in the
 //! instrument's own 0..99 steps, and the voice rounds them.
 

@@ -1,4 +1,4 @@
-//! Times Fermata Sampler per block against the block's real-time budget, up to full polyphony, and
+//! Times Marbble Sampler per block against the block's real-time budget, up to full polyphony, and
 //! how long a load takes. Build with --release; a debug build says little.
 //! usage: sampler_bench <scratch dir> [seconds per measurement]
 use std::path::Path;

@@ -70,7 +70,7 @@ struct Rig {
 fn rig(desc: &PluginDescriptor, param: &str, v1: f64, tone: &Path, scratch: &Path, audible: bool) -> Rig {
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg, vec![desc.clone()]);
-    s.dir = scratch.join(format!("{}.fermata", desc.name.replace(' ', "_")));
+    s.dir = scratch.join(format!("{}.marbble", desc.name.replace(' ', "_")));
     std::fs::create_dir_all(&s.dir).unwrap();
     let track = s.add_track(TrackKind::Audio, InputSel::None, None, None).unwrap();
     s.import_audio(tone, track, 0).unwrap();

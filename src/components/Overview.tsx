@@ -34,7 +34,7 @@ import {
 
 // ---- showing and hiding (View › Show Overview), remembered per machine -----------------------
 
-const KEY = "fermata.showOverview";
+const KEY = "marbble.showOverview";
 
 export function savedShowOverview(): boolean {
   try {

@@ -1,4 +1,4 @@
-//! Factory presets of Fermata Tre. Parameters a preset doesn't list go to their defaults, so
+//! Factory presets of Marbble Tre. Parameters a preset doesn't list go to their defaults, so
 //! these read as what each sound changes from the panel's starting point.
 
 use super::params::param::*;

@@ -12,15 +12,15 @@ use vst3_host::PluginDescriptor;
 
 pub const SCAN_ARG: &str = "--scan-vst3";
 
-/// Fermata's config folder: `$XDG_CONFIG_HOME/fermata` (usually `~/.config/fermata`), and
-/// `%APPDATA%\fermata` on Windows.
+/// Marbble's config folder: `$XDG_CONFIG_HOME/marbble` (usually `~/.config/marbble`), and
+/// `%APPDATA%\marbble` on Windows.
 pub fn config_dir() -> PathBuf {
     let base = std::env::var_os("XDG_CONFIG_HOME")
         .map(PathBuf::from)
         .or_else(|| std::env::var_os("APPDATA").map(PathBuf::from))
         .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".config")))
         .unwrap_or_else(|| PathBuf::from("."));
-    base.join("fermata")
+    base.join("marbble")
 }
 
 fn cache_path() -> PathBuf {

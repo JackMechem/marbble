@@ -89,7 +89,7 @@ interface BouncePrefs {
   format: AudioFormat;
 }
 
-const BOUNCE_PREFS = "fermata.bounce";
+const BOUNCE_PREFS = "marbble.bounce";
 const RATES = [44100, 48000, 88200, 96000];
 
 const kHz = (r: number) => `${(r / 1000).toFixed(1).replace(/\.0$/, "")} kHz`;
@@ -263,7 +263,7 @@ export function BounceDialog() {
   );
 }
 
-const BIP_PREFS = "fermata.bounce-in-place";
+const BIP_PREFS = "marbble.bounce-in-place";
 const SOURCES: [BipSource, string][] = [
   ["leave", "Leave"],
   ["mute", "Mute"],

@@ -1,21 +1,21 @@
 ---
-// The site title, with the alpha badge that's on every page of the docs. It leads to the landing
-// page. The mark is inline so that its dot can follow the theme.
+// The app icon and site title, with the alpha badge that's on every page of the docs. The title
+// leads to the landing page.
 import anchors from "../generated/anchors.json";
 const { siteTitle, siteTitleHref } = Astro.locals.starlightRoute;
 const limitations = `${import.meta.env.BASE_URL.replace(/\/$/, "")}${anchors["docs/USER_GUIDE.md"]["20-known-limitations"]}`;
 ---
 
-<div class="fm-title">
+<div class="mb-title">
   <a class="site-title" href={siteTitleHref}>
-    <svg viewBox="0 0 64 44" width="28" height="19" aria-hidden="true"><path d="M6 36a26 26 0 0 1 52 0" fill="none" stroke="#f2c230" stroke-width="7"></path><circle cx="32" cy="35" r="6.5" fill="currentColor"></circle></svg>
+    <img src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/favicon.svg`} width="26" height="26" alt="" />
     <span translate="no">{siteTitle}</span>
   </a>
-  <a class="fm-alpha" href={limitations} title="Fermata is alpha software: see the known limitations">Alpha</a>
+  <a class="mb-alpha" href={limitations} title="Marbble is alpha software: see the known limitations">Alpha</a>
 </div>
 
 <style>
-  .fm-title {
+  .mb-title {
     display: flex;
     align-items: center;
     gap: 0.65rem;
@@ -31,14 +31,14 @@ const limitations = `${import.meta.env.BASE_URL.replace(/\/$/, "")}${anchors["do
     color: var(--sl-color-white);
     text-decoration: none;
   }
-  .fm-alpha {
+  .mb-alpha {
     flex: none;
     font: 600 0.625rem/1 var(--sl-font-mono);
     letter-spacing: 0.1em;
     text-transform: uppercase;
     text-decoration: none;
-    color: var(--fm-badge-ink);
-    background: var(--fm-badge);
+    color: var(--mb-badge-ink);
+    background: var(--mb-badge);
     padding: 0.28rem 0.4rem;
     border-radius: 2px;
   }

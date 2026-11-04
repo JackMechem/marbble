@@ -52,12 +52,12 @@ export function recoveryIntro(list: Recovery[]): string {
   const single = list.length === 1;
   const recording = list.some((r) => r.recording);
   if (single && recording && !list[0].has_autosave)
-    return "Fermata quit while this project was recording. The audio recorded up to that moment can be put back on its tracks, where it was recorded.";
+    return "Marbble quit while this project was recording. The audio recorded up to that moment can be put back on its tracks, where it was recorded.";
   if (single)
     return recording
-      ? "This project has autosaved changes that were never saved, and audio that was still being recorded when Fermata quit."
-      : "This project has changes that were autosaved but never saved — most likely Fermata quit before you could save them.";
+      ? "This project has autosaved changes that were never saved, and audio that was still being recorded when Marbble quit."
+      : "This project has changes that were autosaved but never saved — most likely Marbble quit before you could save them.";
   return recording
-    ? "These projects have unsaved work — autosaved changes, or audio that was still being recorded — most likely because Fermata quit."
-    : "These projects have autosaved changes that were never saved — most likely Fermata quit before you could save them.";
+    ? "These projects have unsaved work — autosaved changes, or audio that was still being recorded — most likely because Marbble quit."
+    : "These projects have autosaved changes that were never saved — most likely Marbble quit before you could save them.";
 }

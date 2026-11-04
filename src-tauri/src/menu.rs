@@ -12,11 +12,11 @@ pub fn install<R: Runtime>(app: &App<R>) -> tauri::Result<()> {
     let item = |id: &str, label: &str, accel: Option<&str>| MenuItem::with_id(app, id, label, true, accel);
 
     let about = AboutMetadata {
-        name: Some("Fermata".into()),
+        name: Some("Marbble".into()),
         version: Some(app.package_info().version.to_string()),
         comments: Some("A digital audio workstation with VST3 hosting, modelled on Logic Pro.".into()),
         license: Some("MIT".into()),
-        website: Some("https://github.com/JackMechem/fermata".into()),
+        website: Some("https://github.com/JackMechem/marbble".into()),
         ..Default::default()
     };
     // Logic Pro › Control Surfaces. The keys live in the keymap.
@@ -24,15 +24,15 @@ pub fn install<R: Runtime>(app: &App<R>) -> tauri::Result<()> {
         .item(&item("learn-assignment", "Learn Assignment for Last Touched Parameter", None)?)
         .item(&item("controller-assignments", "Controller Assignments…", None)?)
         .build()?;
-    let app_menu = SubmenuBuilder::new(app, "Fermata")
-        .item(&PredefinedMenuItem::about(app, Some("About Fermata"), Some(about))?)
+    let app_menu = SubmenuBuilder::new(app, "Marbble")
+        .item(&PredefinedMenuItem::about(app, Some("About Marbble"), Some(about))?)
         .separator()
         .item(&item("settings", "Settings…", Some("CmdOrCtrl+,"))?)
         .item(&item("settings-appearance", "Appearance…", None)?)
         .item(&item("settings-keys", "Key Commands…", None)?)
         .item(&control_surfaces)
         .separator()
-        .item(&PredefinedMenuItem::quit(app, Some("Quit Fermata"))?)
+        .item(&PredefinedMenuItem::quit(app, Some("Quit Marbble"))?)
         .build()?;
     // Filled in by set_project_menus once a project is open.
     let alternatives = SubmenuBuilder::new(app, "Project Alternatives").build()?;

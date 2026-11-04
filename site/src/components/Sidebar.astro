@@ -7,7 +7,7 @@ const area = Astro.locals.starlightRoute.id.split("/")[0];
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 ---
 
-<nav class="fm-zones" aria-label="Documentation sections">
+<nav class="mb-zones" aria-label="Documentation sections">
   {
     ZONES.map((z) => (
       <a href={`${base}${z.href}`} aria-current={z.areas.includes(area) ? "true" : undefined}>
@@ -20,7 +20,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 <Default />
 
 <style>
-  .fm-zones {
+  .mb-zones {
     display: grid;
     gap: 1px;
     margin: 0 0 1rem;
@@ -29,7 +29,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
     border-radius: 4px;
     overflow: hidden;
   }
-  .fm-zones a {
+  .mb-zones a {
     display: grid;
     gap: 0.2rem;
     padding: 0.5rem 0.7rem 0.55rem;
@@ -37,19 +37,19 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
     color: var(--sl-color-gray-2);
     text-decoration: none;
   }
-  .fm-zones a:hover {
+  .mb-zones a:hover {
     background: var(--sl-color-gray-5);
   }
-  .fm-zones span {
+  .mb-zones span {
     font-weight: 600;
     font-size: var(--sl-text-sm);
   }
-  .fm-zones small {
+  .mb-zones small {
     font: 500 0.625rem/1 var(--sl-font-mono);
     letter-spacing: 0.04em;
     color: var(--sl-color-gray-3);
   }
-  .fm-zones a[aria-current] {
+  .mb-zones a[aria-current] {
     box-shadow: inset 3px 0 0 var(--sl-color-accent);
     color: var(--sl-color-white);
   }

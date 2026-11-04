@@ -76,7 +76,7 @@ fn main() {
     std::fs::create_dir_all(&scratch).unwrap();
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg, Vec::new());
-    s.dir = scratch.join("TempoCheck.fermata");
+    s.dir = scratch.join("TempoCheck.marbble");
     let sr = s.project.sample_rate as i64;
     let srf = sr as f64;
     let settle = || std::thread::sleep(Duration::from_millis(60));
@@ -242,7 +242,7 @@ fn main() {
     );
 
     s.new_project();
-    s.dir = scratch.join("TempoCheckImport.fermata");
+    s.dir = scratch.join("TempoCheckImport.marbble");
     let fresh = &mut s;
     let made = fresh.import_midi(&file, None, 0, None).unwrap();
     let fm = fresh.tempo_map();

@@ -16,7 +16,7 @@ function detectMac(): boolean {
   return /Mac|iPhone|iPad/i.test(platform);
 }
 
-/** Whether Fermata runs on macOS, detected once. */
+/** Whether Marbble runs on macOS, detected once. */
 export const IS_MAC = detectMac();
 
 const MAC_MODS: Record<string, string> = { Ctrl: "⌃", Alt: "⌥", Shift: "⇧", Mod: "⌘" };

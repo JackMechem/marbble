@@ -161,7 +161,7 @@ fn check_effect(s: &mut Session, info: &EffectInfo, tone: &str, scratch: &Path) 
     );
     s.redo();
     check(&format!("{}: redo sets it again", info.name), (value(s, uid, p.id) - target).abs() < 1e-4 && diff(&render(s, len, None), &set) < 1e-4);
-    let dir = scratch.join(format!("FxCheck {}.fermata", info.name));
+    let dir = scratch.join(format!("FxCheck {}.marbble", info.name));
     let _ = std::fs::remove_dir_all(&dir);
     s.save(Some(dir.clone())).unwrap();
     let text = std::fs::read_to_string(dir.join("project.json")).unwrap_or_default();
@@ -424,7 +424,7 @@ fn main() {
     std::env::set_var("XDG_CONFIG_HOME", &config);
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg.clone(), plugins.clone());
-    s.dir = scratch.join("FxCheck.fermata");
+    s.dir = scratch.join("FxCheck.marbble");
     std::fs::create_dir_all(&s.dir).unwrap();
 
     let list = daw_engine::session::builtin_effects();
@@ -461,7 +461,7 @@ fn main() {
     drop(s);
     // User presets are global: a new session (any project) sees them.
     let mut s = Session::new(cfg, plugins);
-    s.dir = scratch.join("FxCheck2.fermata");
+    s.dir = scratch.join("FxCheck2.marbble");
     let list = daw_engine::presets::list(&daw_engine::presets::user_root(), "builtin:noise-gate");
     check("user presets outlive the session", list.user.contains(&"Fx Check Kick".to_string()));
     let a = s.add_track(TrackKind::Audio, InputSel::None, None, None).unwrap();

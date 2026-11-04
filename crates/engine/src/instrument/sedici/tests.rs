@@ -1,4 +1,4 @@
-//! Fermata Sedici measured through its public contract, and what's specific to it: the algorithms
+//! Marbble Sedici measured through its public contract, and what's specific to it: the algorithms
 //! against the published diagrams, the envelope and its scalings, and feedback.
 use super::*;
 use crate::instrument::test_kit::*;

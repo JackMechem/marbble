@@ -1,7 +1,7 @@
 // Draggable dividers between panes. Sizes live in the store and are remembered per machine.
 import { getState, setState, useStore, type PaneSizes } from "../store";
 
-const KEY = "fermata.paneSizes";
+const KEY = "marbble.paneSizes";
 
 export const PANE_DEFAULTS: PaneSizes = { library: 230, inspector: 222, browser: 230, mixer: 400, editor: 300, headers: 296, fx: 420 };
 

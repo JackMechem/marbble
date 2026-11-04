@@ -212,7 +212,7 @@ mod tests {
     fn session() -> (Session, Id) {
         let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
         let mut s = Session::new(cfg, Vec::new());
-        s.dir = std::env::temp_dir().join(format!("fermata-drag-modes-{}", std::process::id()));
+        s.dir = std::env::temp_dir().join(format!("marbble-drag-modes-{}", std::process::id()));
         let t = s.add_track(TrackKind::Instrument, InputSel::Mono(0), None, None).unwrap();
         (s, t)
     }

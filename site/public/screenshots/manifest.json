@@ -6,7 +6,7 @@
       "file": "main-window.png",
       "width": "2400 px or more, about 16:10",
       "section": "After the hero",
-      "alt": "Fermata's main window with an arrangement of audio and instrument tracks.",
+      "alt": "Marbble's main window with an arrangement of audio and instrument tracks.",
       "caption": "The main window.",
       "shows": "The whole main window on a project with a dozen or so tracks: control bar and LCD at the top, Inspector open on the left, audio and MIDI regions in the tracks area, the Mixer or nothing in the bottom section. The picture that says what the app is."
     },
@@ -17,16 +17,16 @@
       "section": "Instruments",
       "alt": "A built-in instrument's panel docked in the bottom section, its sections in one row.",
       "caption": "A built-in instrument, docked in the bottom section.",
-      "shows": "Fermata Tre or Sei with its panel docked in the bottom section in Row layout, with the small keyboard and the preset pop-up visible. Crop to the bottom section, or show enough of the tracks area above to give it context."
+      "shows": "Marbble Tre or Sei with its panel docked in the bottom section in Row layout, with the small keyboard and the preset pop-up visible. Crop to the bottom section, or show enough of the tracks area above to give it context."
     },
     {
       "id": "sampler",
       "file": "sampler.png",
       "width": "1600 px or more, about 16:9",
       "section": "Sampler (takes the place of the zone diagram)",
-      "alt": "Fermata Sampler's panel with zones mapped across the keyboard.",
-      "caption": "Fermata Sampler with zones mapped across the keys.",
-      "shows": "Fermata Sampler with several zones mapped (a multi-sampled instrument, ideally velocity layers too), one zone selected so that its waveform and loop show."
+      "alt": "Marbble Sampler's panel with zones mapped across the keyboard.",
+      "caption": "Marbble Sampler with zones mapped across the keys.",
+      "shows": "Marbble Sampler with several zones mapped (a multi-sampled instrument, ideally velocity layers too), one zone selected so that its waveform and loop show."
     },
     {
       "id": "mixer",

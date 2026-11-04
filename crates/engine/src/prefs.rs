@@ -1,6 +1,6 @@
 //! Options chosen in Settings and Project Settings.
 //!
-//! [`Prefs`] are app-wide: the Tauri side keeps them in `~/.config/fermata/settings.json` and
+//! [`Prefs`] are app-wide: the Tauri side keeps them in `~/.config/marbble/settings.json` and
 //! hands them to the session with [`crate::Session::set_prefs`]. [`ClickSettings`] and
 //! [`BitDepth`] also appear in the project document, so they are saved with each project, as
 //! Logic does with its metronome and recording settings.
@@ -25,7 +25,7 @@ pub enum BitDepth {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ClickSound {
-    /// A short sine tick (Fermata's original click).
+    /// A short sine tick (Marbble's original click).
     #[default]
     Classic,
     /// A bright, very short transient that cuts through a dense mix.
@@ -163,7 +163,7 @@ impl VelocityCurve {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct GeneralPrefs {
-    /// Where new projects go; None = ~/Music/Fermata.
+    /// Where new projects go; None = ~/Music/Marbble.
     pub project_folder: Option<String>,
     /// Minutes between autosaves of a project with unsaved changes; 0 = off.
     pub autosave_minutes: u32,

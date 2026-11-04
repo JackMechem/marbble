@@ -38,7 +38,7 @@ fn autosave(s: &mut Session) {
 }
 
 fn main() {
-    // Child-process plug-in scanner: `fermata --scan-vst3 <bundle>`.
+    // Child-process plug-in scanner: `marbble --scan-vst3 <bundle>`.
     let args: Vec<String> = std::env::args().collect();
     if let Some(i) = args.iter().position(|a| a == plugin_db::SCAN_ARG) {
         let code = args.get(i + 1).map(|p| plugin_db::scan_child_main(p.as_ref())).unwrap_or(2);
@@ -57,6 +57,7 @@ fn main() {
     #[cfg(target_os = "linux")]
     vst3_host::editor::set_event_loop(Box::new(glib_loop::GlibLoop));
 
+    daw_engine::old_name::migrate();
     let plugins = plugin_db::load_cache().unwrap_or_else(|| {
         log::info!("scanning plug-ins for the first time");
         std::env::current_exe().map(|exe| plugin_db::scan_with(&exe, &settings::extra_plugin_folders())).unwrap_or_default()
@@ -65,8 +66,8 @@ fn main() {
     let mut session = Session::new(prefs.audio, plugins);
     session.set_prefs(prefs.prefs);
     session.load_controller_assignments(plugin_db::config_dir().join("controller-assignments.json"));
-    // `fermata path/to/Song.fermata` opens a project at launch.
-    if let Some(path) = args.iter().skip(1).find(|a| a.trim_end_matches('/').ends_with(".fermata")) {
+    // `marbble path/to/Song.marbble` opens a project at launch.
+    if let Some(path) = args.iter().skip(1).find(|a| daw_engine::old_name::is_project(std::path::Path::new(a.trim_end_matches('/')))) {
         match session.open(std::path::Path::new(path)) {
             Ok(()) => recent::add(&session.project_path()),
             Err(e) => log::error!("could not open {path}: {e}"),
@@ -135,7 +136,7 @@ fn main() {
             });
 
             if let Some(w) = app.get_webview_window("main") {
-                let _ = w.set_title("Fermata");
+                let _ = w.set_title("Marbble");
             }
             Ok(())
         })
@@ -398,5 +399,5 @@ fn main() {
             commands::add_output_aux,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running Fermata");
+        .expect("error while running Marbble");
 }

@@ -29,11 +29,11 @@ export function GeneralPane({ close }: { close: () => void }) {
       </Section>
       <Section title="Projects">
         <Row label="Project Folder:" note="Where new projects are saved. The Project Chooser starts here.">
-          <FolderField value={g.project_folder} placeholder={root || "~/Music/Fermata"} title="Choose the folder for new projects" onChange={(v) => setPrefs("general", { project_folder: v })} />
+          <FolderField value={g.project_folder} placeholder={root || "~/Music/Marbble"} title="Choose the folder for new projects" onChange={(v) => setPrefs("general", { project_folder: v })} />
         </Row>
         <Row
           label="Autosave:"
-          note="Unsaved changes are written to project.autosave.json inside the project folder, never over your saved project. If Fermata quits unexpectedly, it offers to recover them at the next launch, along with anything that was being recorded."
+          note="Unsaved changes are written to project.autosave.json inside the project folder, never over your saved project. If Marbble quits unexpectedly, it offers to recover them at the next launch, along with anything that was being recorded."
         >
           <Select
             value={g.autosave_minutes}
@@ -50,7 +50,7 @@ export function GeneralPane({ close }: { close: () => void }) {
         </Row>
         <Row
           label="After Recording:"
-          note="Takes are protected the moment you stop: if Fermata quits before you save, they come back at the next launch. Works with the interval autosave off too. Your saved project only changes when you save."
+          note="Takes are protected the moment you stop: if Marbble quits before you save, they come back at the next launch. Works with the interval autosave off too. Your saved project only changes when you save."
         >
           <Check checked={g.autosave_after_recording} onChange={(v) => setPrefs("general", { autosave_after_recording: v })}>
             Autosave as soon as a recording, Bounce in Place, Freeze or import finishes

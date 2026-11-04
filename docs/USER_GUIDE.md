@@ -1,16 +1,16 @@
-# Fermata User Guide
+# Marbble User Guide
 
-Fermata is a digital audio workstation modelled on Logic Pro. This guide is organised like
+Marbble is a digital audio workstation modelled on Logic Pro. This guide is organised like
 Logic's manual: it starts with setting up and recording, then covers editing, the editors,
 mixing, exporting, project management, and ends with a complete reference of settings and key
 commands.
 
-**Keyboard convention.** Fermata runs on Linux, Windows and macOS. In this guide **Ctrl means
+**Keyboard convention.** Marbble runs on Linux, Windows and macOS. In this guide **Ctrl means
 ⌘ (Command) and Alt means ⌥ (Option) on macOS**; Shift is Shift everywhere. So "Ctrl+D" is
 Ctrl+D on Linux and Windows and ⌘D on macOS. A few commands use the Control key on macOS, as
 Logic does; for those both forms are given, for example "Ctrl+R (Control+R on macOS)".
 
-Fermata shows shortcuts the way your platform does: "Ctrl+Shift+Z" on Linux and Windows, "⇧⌘Z"
+Marbble shows shortcuts the way your platform does: "Ctrl+Shift+Z" on Linux and Windows, "⇧⌘Z"
 on macOS. That applies to menus, tooltips and Settings › Key Commands, and tooltips follow any
 keys you reassign there.
 
@@ -28,7 +28,7 @@ Contents:
    [Autopunch](#autopunch) · [Recording MIDI](#recording-midi) ·
    [Latency compensation](#latency-compensation)
 4. [Software instruments and Musical Typing](#4-software-instruments-and-musical-typing):
-   [Fermata Tre](#fermata-tre) · [The other synth models](#the-other-synth-models) · [Fermata Sampler](#fermata-sampler) · [Musical Typing](#musical-typing) · [Step Input](#step-input)
+   [Marbble Tre](#marbble-tre) · [The other synth models](#the-other-synth-models) · [Marbble Sampler](#marbble-sampler) · [Musical Typing](#musical-typing) · [Step Input](#step-input)
 5. [Editing in the tracks area](#5-editing-in-the-tracks-area):
    [Selecting regions](#selecting-regions) ·
    [Moving, trimming and snapping](#moving-trimming-and-snapping) · [Drag modes](#drag-modes) ·
@@ -115,13 +115,13 @@ Contents:
 
 ### First launch
 
-1. On first launch Fermata scans your VST3 plug-ins. Each bundle is loaded in a separate
-   process, so a plug-in that crashes can't take Fermata down. The result is cached; rescan
+1. On first launch Marbble scans your VST3 plug-ins. Each bundle is loaded in a separate
+   process, so a plug-in that crashes can't take Marbble down. The result is cached; rescan
    from Settings › Plug-ins or the Library.
 2. The **Project Chooser** opens (unless Settings › General › At Launch says otherwise). Pick a
    template, give the project a name and a location, and click **Create**. The project is saved
    to its folder straight away, so recordings land in the right place.
-3. Open **Settings › Audio** (Fermata › Settings…, Ctrl+,) and choose your driver and devices
+3. Open **Settings › Audio** (Marbble › Settings…, Ctrl+,) and choose your driver and devices
    (below).
 
 ### Choosing a driver and devices
@@ -156,17 +156,17 @@ size, or "Audio stopped" with the reason. Click it to open Settings › Audio.
 ### The input level check (Linux)
 
 PipeWire and PulseAudio have their own volume control for each recording device, and it is
-often below 100%. That lowers everything you record before Fermata sees it, and at 0% or
+often below 100%. That lowers everything you record before Marbble sees it, and at 0% or
 muted you record silence. With PipeWire or PulseAudio, Settings › Audio checks this level
 (using `wpctl`) and warns when the input is muted or turned down, with a **Set to 100%** button.
-Fermata also shows a notice at launch when the level is low. Set your recording level with the
+Marbble also shows a notice at launch when the level is low. Set your recording level with the
 gain knob on your interface instead.
 
 The check is not available with JACK, with direct `hw:` ALSA devices, or on Windows and macOS.
 
 ### Monitoring
 
-- A track's **I** button (Input Monitoring) plays its input through Fermata and its plug-ins.
+- A track's **I** button (Input Monitoring) plays its input through Marbble and its plug-ins.
 - Settings › Audio › **Monitoring: "Hear record-enabled tracks without pressing I"** (off by
   default) makes armed audio tracks monitor automatically. Leave it off if your interface or
   pedal monitors directly, or you will hear a delayed second copy.
@@ -314,7 +314,7 @@ status, the audio devices, and the number of MIDI inputs.
 
 | Menu | Items |
 |---|---|
-| Fermata | About Fermata (shows the version), Settings…, Appearance…, Key Commands…, Control Surfaces › (Learn Assignment for Last Touched Parameter, Controller Assignments…), Quit Fermata |
+| Marbble | About Marbble (shows the version), Settings…, Appearance…, Key Commands…, Control Surfaces › (Learn Assignment for Last Touched Parameter, Controller Assignments…), Quit Marbble |
 | File | New…, Open Recent…, Open…, Save, Save As…, Save as Template…, Revert to Saved, Revert to ›, Project Alternatives ›, Project Settings…, Import Audio File…, Bounce Project or Section…, Export Selected Tracks as Audio Files…, Export All Tracks as Audio Files…, Import MIDI File…, Export Selection as MIDI File… |
 | Edit | Undo, Redo, Cut / Copy / Paste Regions, Paste at Original Position, Paste Replace, Duplicate, Repeat Regions, Split Regions at Playhead, Join Regions, Join Regions per Track, Loop Regions, Convert Loops to Real Copies, Pack Take Folder, Set Locators by Regions, Snap Edits to Zero Crossings, Strip Silence…, Section Between Locators ›, Trim ›, Move ›, Name and Color ›, Select All, Select ›, Delete (see [Arranging commands](#arranging-commands)) |
 | Track | New Tracks…, New Aux, Duplicate Track, New Track with Same Settings, New Pattern Region, Bounce in Place…, Freeze Track, Unfreeze Track, Toggle Track On/Off, Create Folder Stack, Create Summing Stack, Group Selected Tracks, Show Output Track, Hide Track, Unhide All Tracks, Delete Track, Delete Unused Tracks, Track Alternatives › |
@@ -369,7 +369,7 @@ be opened in a window of their own, for example to put the Mixer on a second mon
 - **Remembered:** each kind of window (the Mixer, the Editors, the Channel EQ, each type of
   effect) reopens where it was last, with its size, on the same monitor if it is still
   connected (otherwise on the nearest one, moved and shrunk to fit). The Mixer and the Editors
-  reopen in their own windows at the next launch if they were detached when Fermata quit.
+  reopen in their own windows at the next launch if they were detached when Marbble quit.
   Separate windows close with the main window.
 
 ---
@@ -471,10 +471,10 @@ says what happens over an existing MIDI region:
 
 ### Latency compensation
 
-Fermata measures the input and output latency of the devices while running and moves every
+Marbble measures the input and output latency of the devices while running and moves every
 recording earlier by the round trip, so it lines up with what you heard:
 
-- audio is moved by input latency + output latency + the audio waiting in Fermata's input
+- audio is moved by input latency + output latency + the audio waiting in Marbble's input
   buffer + the manual **Recording Delay** (Settings › Audio, -500 to 500 ms, positive moves
   recordings earlier) + the plug-in delay compensation total;
 - MIDI is moved by the output latency plus the plug-in delay compensation total.
@@ -488,9 +488,9 @@ adjust Recording Delay.
 ## 4. Software instruments and Musical Typing
 
 - Create an instrument track (New Tracks › **Software Instrument**). Its **Instrument** slot
-  holds Fermata Synth by default, a built-in polyphonic synthesizer that responds to pitch bend,
+  holds Marbble Synth by default, a built-in polyphonic synthesizer that responds to pitch bend,
   sustain, modulation (vibrato) and expression. Choose another built-in instrument (see
-  [Fermata Tre](#fermata-tre) and [the other synth models](#the-other-synth-models)) or a VST3 instrument in the New Tracks dialog, the Library, or the
+  [Marbble Tre](#marbble-tre) and [the other synth models](#the-other-synth-models)) or a VST3 instrument in the New Tracks dialog, the Library, or the
   strip's Instrument slot.
 - **MIDI input:** every connected MIDI input is routed to the selected instrument track (if
   the selected track isn't an instrument track, to the first armed one). Devices plugged in
@@ -499,9 +499,9 @@ adjust Recording Delay.
   sound) and sets a velocity curve.
 - **VST3 instruments** receive controllers and pitch bend through their MIDI mapping.
 
-### Fermata Sampler
+### Marbble Sampler
 
-Your own instrument from your own sounds. Put **Fermata Sampler** on a software instrument track, from the
+Your own instrument from your own sounds. Put **Marbble Sampler** on a software instrument track, from the
 instrument slot, the New Tracks dialog or the Library (under Samplers). Its panel docks at the bottom: zones on the
 left, the selected zone's waveform and settings next, then the instrument's sections in a row, scrolling sideways if the
 dock is narrow. It has been tested by measurement only: nobody has listened to it yet.
@@ -515,11 +515,11 @@ dock is narrow. It has been tested by measurement only: nobody has listened to i
   the name (`v1`, `v2`, or `pp`, `mf`, `ff`), and `rr1`, `rr2` become round-robin turns. Otherwise they go up one key each.
 - **Record:** choose an input, press **Record**, play or sing, and press **Stop**. It's playable at once. **Trim** moves
   the zone's start and end in past the silence; the file keeps everything. The transport doesn't start. You don't hear the input through
-  Fermata while this runs. A take with nothing on it is refused, and says so.
+  Marbble while this runs. A take with nothing on it is refused, and says so.
 - **From the arrangement:** an audio region's menu has **Convert to Sampler Track**. **Whole Region** puts one key in
   charge of it, with a MIDI note playing it where it was, and mutes the original. **Slice at Transients** gives each
   hit its own key from C1 up, with MIDI playing them in time, so you can rearrange them. The region's gain comes along; its fades and playback parameters don't.
-- **An SFZ file:** drop or choose it, and it replaces the zones. Fermata reads regions, groups, key and velocity ranges,
+- **An SFZ file:** drop or choose it, and it replaces the zones. Marbble reads regions, groups, key and velocity ranges,
   loops, tune, volume, pan, envelopes and sequence positions. Whatever else the file asks for is ignored and listed under the
   zone map, for instance filters, key switches and release samples. SoundFonts (.sf2) aren't read.
 
@@ -541,7 +541,7 @@ dock is narrow. It has been tested by measurement only: nobody has listened to i
 **Keeping it**
 
 - **Save Preset…** in the panel's preset menu saves the instrument with a copy of all its samples, in a folder of its own at
-  `~/Music/Fermata Instruments`, made the first time. It's then listed under User in every project, and loading it copies the samples into that project.
+  `~/Music/Marbble Instruments`, made the first time. It's then listed under User in every project, and loading it copies the samples into that project.
   Share the folder to share the instrument.
 - **In a project,** samples are copied into its `Samples` folder when they arrive, so moving the project or deleting the
   original changes nothing. A library takes its size on disk again.
@@ -554,10 +554,10 @@ dock is narrow. It has been tested by measurement only: nobody has listened to i
 Samples play from memory, with no disk streaming, up to 4 GB for the session (about 6 hours of 48 kHz stereo, with the panel showing how much is used). Past that a
 sample refuses to load and says why, and the rest play. Files at any sample rate and bit depth play in tune. Full polyphony, 64 stereo voices, took about 10 % of one core in a test, 27 % through the ladder filter. Playing far above a sample's pitch costs more: 8 voices at 4 octaves up took about 5.5 %.
 
-### Fermata Tre
+### Marbble Tre
 
 A three-oscillator monophonic synth, modelled on the behaviour of a classic 1970s synth (the
-Minimoog Model D; Fermata isn't affiliated with its maker, and this hasn't been compared with one). Choose it
+Minimoog Model D; Marbble isn't affiliated with its maker, and this hasn't been compared with one). Choose it
 under **Vintage Synths** in the instrument slot, the Library or New Tracks. Clicking the slot's name
 opens its panel in the bottom section, whatever Open Effect Panels says, with the presets in its header and
 a small keyboard along the bottom (− and + move it by octaves). The button in the header floats the panel.
@@ -589,29 +589,29 @@ own preset, in every project.
 ### The other synth models
 
 Four more models of old instruments are under **Vintage Synths**, and a wavetable synth is under **Modern Synths**. Each works
-like Tre: a panel, presets, automation, MIDI learn, undo and saving. None of them has been compared with what it's modelled on (and Fermata isn't
+like Tre: a panel, presets, automation, MIDI learn, undo and saving. None of them has been compared with what it's modelled on (and Marbble isn't
 affiliated with any of those makers); each has factory presets to start from.
 
-**Fermata Sei** (modelled on the Roland Juno-106 family): six voices of one oscillator each, with a saw, a pulse and a sub an octave down.
+**Marbble Sei** (modelled on the Roland Juno-106 family): six voices of one oscillator each, with a saw, a pulse and a sub an octave down.
 
 - One envelope drives the filter and the **VCA** (set the VCA to **Gate** for an organ-like note). One **LFO** moves everything together, with a **Delay** from the first key down.
 - **HPF:** position 0 lifts the bass, 1 is flat, 2 and 3 thin it.
 - **Chorus:** the stereo chorus is half of its sound. **I** and **II** are slow and deep, **I+II** fast and shallow. **Chorus Noise** is its hiss, which comes with the notes.
 - **Assign:** **Poly 1** moves on to the next voice, so released notes ring on, **Poly 2** takes the lowest free one, and **Unison** plays all six on one note (they don't beat unless you add **Unison Detune**).
 
-**Fermata Cinque** (modelled on the Sequential Prophet-5): five voices of two oscillators each.
+**Marbble Cinque** (modelled on the Sequential Prophet-5): five voices of two oscillators each.
 
 - **Poly Mod** is what to try first: **Filter Env** and **Osc B** are its sources, and **Freq A**, **PW A** and **Filter** say where they go, separately in each voice. Osc B still runs with its mixer knob down, so it can be only a modulator. With **Sync** on Osc A and Filter Env into Freq A you get the sweeping sync lead this kind of synth is known for.
 - **Wheel Mod:** the mod wheel (or **Mod Amount**, where it rests) brings in the LFO, or noise, by **LFO / Noise**, at whichever of the five switches are on.
 - **Filter Chip** chooses between two filter characters. **Slop** is how much each voice wanders and differs.
 
-**Fermata Uno** (modelled on the Roland TB-303): one voice, one oscillator, and few knobs, made for a bass line played from a MIDI region.
+**Marbble Uno** (modelled on the Roland TB-303): one voice, one oscillator, and few knobs, made for a bass line played from a MIDI region.
 
 - **Overlapping notes slide:** make a note end just after the next begins. Neither the filter nor the volume restarts. With any gap between them, the next is a fresh note.
 - **High velocity accents:** a note at or above **Accent at Velocity** (110) is louder and snappier, whatever Decay says. How far is **Accent**. With **Resonance** up, accents close together climb: that's the instrument's trick.
 - The filter doesn't follow the keyboard, and a held note fades away by itself after a few seconds, as on the original.
 
-**Fermata Sedici** (modelled on the Yamaha DX7): sixteen voices of six-operator FM.
+**Marbble Sedici** (modelled on the Yamaha DX7): sixteen voices of six-operator FM.
 
 - **Algorithm** chooses which of the 32 ways the operators connect, numbered as on the original's panel. An operator that goes to the output is heard; others change its tone, more as their **Level** goes up.
 - Each operator has its own envelope of four **Rates** and **Levels**: it runs to Level 1, then 2, then 3 and holds, and to Level 4 on key up. **Scaling** makes it louder, softer or faster across the keyboard.
@@ -619,7 +619,7 @@ affiliated with any of those makers); each has factory presets to start from.
 - **Converter Grit** turns the original's low-resolution sine and converter on or off. It runs at the original's own sample rate whatever your project's is, so high FM sounds fold just as they do there.
 - **Level 4** above zero keeps a note sounding after key up, as on the original, until the transport stops.
 
-**Fermata Onda** (a modern wavetable synth): two oscillators reading tables made into it, with position, unison, and modulation you route yourself.
+**Marbble Onda** (a modern wavetable synth): two oscillators reading tables made into it, with position, unison, and modulation you route yourself.
 
 - **Table** chooses the sound, and **Position** moves through it. Each oscillator has up to 7 detuned **Unison** copies, spread in stereo by **Width**.
 - **Type** chooses the filter. **Env 1** is the volume.
@@ -682,7 +682,7 @@ While the window is open, **1** to **8** choose the note value (1/1 to 1/128), *
 commands without keys. All of them are in Settings › Key Commands › Step Input (see the
 [key reference](#step-input-keyboard)).
 
-Logic uses ⌥⌘K for the Step Input Keyboard; in Fermata that opens the Marker List, so the
+Logic uses ⌥⌘K for the Step Input Keyboard; in Marbble that opens the Marker List, so the
 window has Ctrl+Alt+Shift+K (⌥⇧⌘K on macOS).
 
 ---
@@ -1076,7 +1076,7 @@ Track** (Alt+Shift+C: the regions drop their own colour) and **Color Tracks by R
   at the project's sample rate is used where it is; anything else is converted (with
   high-quality resampling) into the project's `Audio Files/`.
 - The silence an encoder adds at the start and end of MP3 and AAC files is trimmed, so the
-  audio starts exactly on time. For M4A/MP4 files Fermata reads it from the file's iTunes
+  audio starts exactly on time. For M4A/MP4 files Marbble reads it from the file's iTunes
   gapless tag (`iTunSMPB`) or, without one, from its edit list.
 - **File › Import Audio File…** (Ctrl+Shift+I) imports one WAV file at the playhead onto the
   selected audio track (or the first audio track). The lane menu's Import Audio File Here…
@@ -1733,7 +1733,7 @@ From top to bottom:
 | Part | What it does |
 |---|---|
 | **Setting** | The channel strip settings menu (see [Channel strip settings](#channel-strip-settings)). |
-| **Input** | Audio tracks: the mono/stereo button and the input ("No Input", "Input 1"..., "Input 1–2"...). Instrument tracks: the **instrument slot** (No Plug-in, Fermata Synth, other built-in instruments by group, or a VST3 instrument by category or vendor). Auxes show their bus ("Bus 1"), or the instrument output they're on ("Drums: Direct out 0", see [Multi-output instruments](#multi-output-instruments)); summing stacks show "Subtracks". |
+| **Input** | Audio tracks: the mono/stereo button and the input ("No Input", "Input 1"..., "Input 1–2"...). Instrument tracks: the **instrument slot** (No Plug-in, Marbble Synth, other built-in instruments by group, or a VST3 instrument by category or vendor). Auxes show their bus ("Bus 1"), or the instrument output they're on ("Drums: Direct out 0", see [Multi-output instruments](#multi-output-instruments)); summing stacks show "Subtracks". |
 | **EQ thumbnail** | The Channel EQ curve; click to open the editor. |
 | **Audio FX** | Insert slots: the filled ones plus one empty slot (up to 8). The label shows the strip's plug-in latency. |
 | **Sends** | Up to 8 send slots. |
@@ -1804,8 +1804,8 @@ When the strip is one of several selected tracks, Paste, Reset and loading apply
 them, as one undo step. A folder stack has no channel strip settings. A VST3 that isn't
 installed on this computer comes along as a missing plug-in (its slot keeps its settings, as
 in a project from another computer). Saved settings are files, one `<name>.json` each, in the
-`channel-strips` folder of the settings folder (`~/.config/fermata/channel-strips` on Linux
-and macOS, `%APPDATA%\fermata\channel-strips` on Windows).
+`channel-strips` folder of the settings folder (`~/.config/marbble/channel-strips` on Linux
+and macOS, `%APPDATA%\marbble\channel-strips` on Windows).
 
 ### Plug-ins
 
@@ -1844,13 +1844,13 @@ and macOS, `%APPDATA%\fermata\channel-strips` on Windows).
   load them). It also takes extra VST3 folders and shows the last scan's report, including each
   bundle that failed and why.
 
-Fermata hosts **VST3** plug-ins only. Plug-in editor windows are available on Linux (X11;
+Marbble hosts **VST3** plug-ins only. Plug-in editor windows are available on Linux (X11;
 see [Troubleshooting](#plug-in-windows-dont-open-on-wayland)) and macOS, where they float
-above Fermata's windows like Logic's and hide while another app is in front.
+above Marbble's windows like Logic's and hide while another app is in front.
 
 ### Built-in effects
 
-Fermata's own effects load in any Audio FX slot like a plug-in: **Compressor**, **Limiter**,
+Marbble's own effects load in any Audio FX slot like a plug-in: **Compressor**, **Limiter**,
 **Noise Gate** and **De-Esser** (Dynamics), **Reverb**, **Delay**, **Chorus**, **Flanger**,
 **Phaser** and **Tremolo** (Modulation), **Overdrive** and **Distortion** (Distortion), **Linear
 Phase EQ** (EQ), **Gain** (Utility), and **Tuner** and **Loudness Meter** (Metering). They are listed first, by category,
@@ -1868,7 +1868,7 @@ in the slot menu and the Library.
   - **Floating** (the default): the float button at the right of the dock's bar takes a panel
     out into a window of its own (and the dock button in a window's header puts it back). Drag
     a window by its title; drag its sides or bottom corners to resize it. A window can't be
-    made smaller than its controls; Fermata remembers the last size for each kind of effect.
+    made smaller than its controls; Marbble remembers the last size for each kind of effect.
   - **Separate windows:** each panel opens in an OS window of its own, which you can move to
     another monitor (see [Separate windows](#separate-windows)). Clicking the slot again closes
     it; the pop-in button in its bar puts it in the main window, floating.
@@ -2154,18 +2154,18 @@ Every built-in effect has a preset pop-up in its panel's header, and the Channel
 its toolbar. It shows the preset loaded last, with "(edited)" once something changed ("Default"
 or "Manual" before any preset). The arrows step to the previous and next preset.
 
-- **Factory** presets come with Fermata (the Channel EQ has Flat, Low Cut 80 Hz, Vocal
+- **Factory** presets come with Marbble (the Channel EQ has Flat, Low Cut 80 Hz, Vocal
   Presence, Vocal Air, Kick Punch, Snare Crack, Bass Clarity, Acoustic Guitar, Telephone and
   Master Polish). **User**
   presets are yours, and every project sees them: they are files in the `presets/<effect>/`
-  folder of the settings folder (`~/.config/fermata/presets` on Linux and macOS,
-  `%APPDATA%\fermata\presets` on Windows), one `<name>.json` each.
+  folder of the settings folder (`~/.config/marbble/presets` on Linux and macOS,
+  `%APPDATA%\marbble\presets` on Windows), one `<name>.json` each.
 - **Save Preset…** names and saves the current settings (or updates the user preset that is
   loaded); **Save Preset As…** saves a copy under a new name. Saving over an existing name asks
   first. **Rename Preset…** and **Delete Preset** work on the user preset that is loaded.
 - **Revert** goes back to the loaded preset; **Default** (Flat for the EQ) resets everything.
 - Loading a preset is one undo step.
-- VST3 plug-ins use their own preset browsers; Fermata saves their state with the project and
+- VST3 plug-ins use their own preset browsers; Marbble saves their state with the project and
   copies it with Copy Plug-in, but has no preset files for them.
 
 ### Sends and aux buses
@@ -2252,7 +2252,7 @@ strips keep their own fader positions (and their balance), and the VCA moves the
 
 ### Plug-in delay compensation
 
-Plug-ins that look ahead (limiters, linear-phase EQs, some amp models) output late. Fermata
+Plug-ins that look ahead (limiters, linear-phase EQs, some amp models) output late. Marbble
 compensates every path, as Logic's default "All" mode does, so tracks, summing stacks, auxes
 and sends line up at Stereo Out.
 
@@ -2377,9 +2377,9 @@ a transport button, as with Logic's Control Surfaces › Learn Assignment.
 
 ### Learning an assignment
 
-1. Move the control in Fermata: a fader, pan knob, send knob, Mute, Solo or Record button, a
+1. Move the control in Marbble: a fader, pan knob, send knob, Mute, Solo or Record button, a
    Channel EQ setting, a built-in effect's knob, or a parameter in a plug-in's own window.
-2. Press **Ctrl+L** (Fermata › Control Surfaces › Learn Assignment for Last Touched
+2. Press **Ctrl+L** (Marbble › Control Surfaces › Learn Assignment for Last Touched
    Parameter). A banner says "Move a controller to assign it to …".
 3. Move a knob or fader (or press a button) on your controller. The banner closes and a message
    names the assignment. **Cancel** or Esc stops learning without assigning anything; Ctrl+L
@@ -2414,7 +2414,7 @@ controller drives one parameter: learning it again moves it to the new one.
 
 ### The Controller Assignments window
 
-**Fermata › Control Surfaces › Controller Assignments…** (Ctrl+Shift+L) lists every assignment:
+**Marbble › Control Surfaces › Controller Assignments…** (Ctrl+Shift+L) lists every assignment:
 the controller (CC number or Pitch Bend, channel and input port) and the parameter. For each
 one:
 
@@ -2458,7 +2458,7 @@ The file name defaults to the project's, next to the project folder, with the fo
 offered yet.
 
 Every format holds exactly the same samples: a 16-bit FLAC decodes to the same numbers as a
-16-bit WAV of the same bounce, dither included. AIFF and FLAC files import back into Fermata
+16-bit WAV of the same bounce, dither included. AIFF and FLAC files import back into Marbble
 like any other audio file.
 
 ### Export All Tracks as Audio Files
@@ -2520,9 +2520,10 @@ track's Channel EQ and plug-ins, before the fader. It uses the same format optio
 
 ## 16. Projects
 
-A project is a folder ending in `.fermata`, holding `project.json` and an `Audio Files/` folder
+A project is a folder ending in `.marbble`, holding `project.json` and an `Audio Files/` folder
 (and `Freeze Files/` once a track is frozen, `Alternatives/` once it has project alternatives,
-and `Backups/` once it has been saved twice).
+and `Backups/` once it has been saved twice). Projects from before Marbble was renamed end in
+`.fermata`; they open and save as they are.
 
 ### The Project Chooser
 
@@ -2532,22 +2533,22 @@ Opens at launch (by default) and from **File › New…** (Ctrl+N) and **File �
 - **New Project:** four templates:
   - **Empty Project**;
   - **Record Audio**: one audio track on input 1, record-enabled;
-  - **Software Instrument**: one instrument track with Fermata Synth, record-enabled;
+  - **Software Instrument**: one instrument track with Marbble Synth, record-enabled;
   - **Songwriter**: Vocals and Guitar audio tracks on inputs 1 and 2, plus a Keys instrument
     track, all record-enabled.
 
-  Set the name, location (default `~/Music/Fermata`, or Settings › General › Project Folder),
+  Set the name, location (default `~/Music/Marbble`, or Settings › General › Project Folder),
   tempo (20 to 400 BPM), time signature and key. Double-click a template to create it at once.
 - **My Templates:** the templates you saved, below the built-in ones (see
   [Project templates](#project-templates)). Right-click one to **Rename…** or **Delete** it.
 - **Recent:** the last 20 projects you saved or opened, with track count, tempo and how long
   ago each was saved. Missing projects are marked and can be removed from the list (×).
-- **Open…:** choose any `.fermata` folder.
+- **Open…:** choose any `.marbble` folder.
 - **Show at launch:** untick it to start straight into an empty project.
 
 ### Open, save and close
 
-- **File › Open…** (Ctrl+O): choose a `.fermata` folder. **Save** (Ctrl+S) and **Save As…**
+- **File › Open…** (Ctrl+O): choose a `.marbble` folder. **Save** (Ctrl+S) and **Save As…**
   (Ctrl+Shift+S). Save As to a new folder copies the audio files that were in the old project
   folder.
 - You're asked before unsaved changes are discarded (when quitting, opening or creating
@@ -2555,7 +2556,7 @@ Opens at launch (by default) and from **File › New…** (Ctrl+N) and **File �
   deletes the autosave.
 - A project whose sample rate differs from the audio device switches the device to the
   project's rate when opened.
-- You can open a project from the command line: `fermata path/to/Song.fermata`.
+- You can open a project from the command line: `marbble path/to/Song.marbble`.
 - **File › Revert to Saved** goes back to the last saved version, after asking (the changes
   since, and their autosave, are dropped).
 
@@ -2569,8 +2570,8 @@ replacing it.
 Your templates appear under **My Templates** in the [Project Chooser](#the-project-chooser),
 where a project made from one starts with all of that and no regions. Right-click a template
 there to **Rename…** or **Delete** it. Templates are files in the `templates` folder of the
-settings folder (`~/.config/fermata/templates` on Linux and macOS,
-`%APPDATA%\fermata\templates` on Windows), one `<name>.json` each.
+settings folder (`~/.config/marbble/templates` on Linux and macOS,
+`%APPDATA%\marbble\templates` on Windows), one `<name>.json` each.
 
 ### Project alternatives
 
@@ -2600,7 +2601,7 @@ undoes the revert.
 
 ### Autosave and recovery
 
-- While a project has unsaved changes, Fermata writes `project.autosave.json` into its folder
+- While a project has unsaved changes, Marbble writes `project.autosave.json` into its folder
   every 2 minutes (Settings › General › Autosave: Off, or every 1, 2, 5, 10 or 15 minutes). It
   isn't written while recording. Saving removes it.
 - **Every take is autosaved the moment you stop recording**, as is the result of Bounce in
@@ -2609,13 +2610,13 @@ undoes the revert.
   `project.json` only changes when you save, so **Don't Save** still returns to the last saved
   version. Starting to record also autosaves unsaved changes, so new tracks are recoverable along
   with their takes.
-- **Crashes while recording:** while you record, Fermata keeps each take's file valid on disk
+- **Crashes while recording:** while you record, Marbble keeps each take's file valid on disk
   every 2 seconds and keeps a small journal (`recording-….journal.json`) in the project folder.
-  If Fermata crashes, is killed or the computer loses power mid-take, the audio recorded up to
+  If Marbble crashes, is killed or the computer loses power mid-take, the audio recorded up to
   that moment is recovered: the file is repaired and the take goes back on its track where it
   was recorded (cycle recordings as a take folder). If the track itself was never saved, it is
   recreated. The journal goes away once the take is in the autosave or the project is saved.
-- At launch, Fermata looks in the recent projects and the projects folder for autosaves newer
+- At launch, Marbble looks in the recent projects and the projects folder for autosaves newer
   than their `project.json`, and for interrupted recordings, and offers to **Recover** them (or
   Discard, or decide Later; projects you don't recover are offered again next time). The sheet
   says which takes on which tracks were being recorded. Opening such a project asks the same.
@@ -2625,7 +2626,7 @@ undoes the revert.
 - **Damaged files:** saves are written to a temporary file and then renamed into place, so a
   crash during a save leaves the previous version intact, and each save keeps the previous
   version as a backup (above). If `project.json` is missing, cut short or damaged when you
-  open a project, Fermata opens the autosave instead, or failing that the newest backup, and
+  open a project, Marbble opens the autosave instead, or failing that the newest backup, and
   says so; save to repair it. A damaged autosave isn't offered for recovery.
 
 ### Project Settings
@@ -2647,10 +2648,10 @@ rate change is applied to the audio device and is not an undo step.
 
 ## 17. Settings reference
 
-Open Settings with **Fermata › Settings…** (Ctrl+,), which opens on the Audio tab;
-Fermata › Appearance… and Fermata › Key Commands… (Alt+K) open those tabs. Most changes apply
-at once and are kept in `settings.json` (`~/.config/fermata` on Linux and macOS,
-`%APPDATA%\fermata` on Windows). The exceptions are the Audio devices (Apply Changes) and the
+Open Settings with **Marbble › Settings…** (Ctrl+,), which opens on the Audio tab;
+Marbble › Appearance… and Marbble › Key Commands… (Alt+K) open those tabs. Most changes apply
+at once and are kept in `settings.json` (`~/.config/marbble` on Linux and macOS,
+`%APPDATA%\marbble` on Windows). The exceptions are the Audio devices (Apply Changes) and the
 Metronome tab (saved with the project).
 
 ### General
@@ -2658,7 +2659,7 @@ Metronome tab (saved with the project).
 | Setting | Choices | Default |
 |---|---|---|
 | At Launch | Show the Project Chooser; Open the most recent project; Start with an empty project | Project Chooser |
-| Project Folder | Any folder (Choose…, Default) | `~/Music/Fermata` |
+| Project Folder | Any folder (Choose…, Default) | `~/Music/Marbble` |
 | Autosave | Off; every 1, 2, 5, 10 or 15 minutes | Every 2 minutes |
 | After Recording | Autosave as soon as a recording, Bounce in Place, Freeze or import finishes | On |
 | Backups | Versions of each project alternative that saves keep, 0 to 100 (0 keeps one, as `project.json.bak`) | 10 |
@@ -2903,7 +2904,7 @@ The keys other than the first work while the Step Input Keyboard is open (see
 
 | Key | Menu › Command |
 |---|---|
-| Ctrl+, | Fermata › Settings… |
+| Ctrl+, | Marbble › Settings… |
 | Ctrl+N | File › New… |
 | Ctrl+Shift+O | File › Open Recent… |
 | Ctrl+O | File › Open… |
@@ -3035,10 +3036,10 @@ octave, C / V the velocity, Tab is the sustain pedal.
 ### Recordings are very quiet (or silent)
 
 On Linux, the sound server (PipeWire or PulseAudio) has its own volume for each recording
-device, and it often isn't at 100%. Fermata receives the signal after that volume, so a source
+device, and it often isn't at 100%. Marbble receives the signal after that volume, so a source
 at 40% lowers everything you record by about 24 dB, and a muted source records silence.
 
-- Settings › Audio shows a warning with **Set to 100%** when the level is low; Fermata also
+- Settings › Audio shows a warning with **Set to 100%** when the level is low; Marbble also
   shows a notice at launch.
 - Or set it yourself: `wpctl get-volume @DEFAULT_AUDIO_SOURCE@` shows it, and
   `wpctl set-volume @DEFAULT_AUDIO_SOURCE@ 1.0` sets it to 100% (use the node id from
@@ -3055,12 +3056,12 @@ at 40% lowers everything you record by about 24 dB, and a muted source records s
 - Make sure real-time scheduling is available: on Linux, rtkit must be running
   (`security.rtkit.enable = true;` on NixOS). PipeWire's own quantum can also be raised.
 - Use **PipeWire** as the driver on Linux. Direct ALSA (`hw:`) devices lock the interface for
-  Fermata alone.
+  Marbble alone.
 
 ### Plug-in windows don't open on Wayland
 
 Plug-in editors are X11 windows, and GLX-based plug-in GUIs fail when GTK runs natively on
-Wayland in the same process. Fermata therefore runs its interface through XWayland on Linux
+Wayland in the same process. Marbble therefore runs its interface through XWayland on Linux
 by default (it sets `GDK_BACKEND=x11` unless you set it). If you set `GDK_BACKEND=wayland`
 yourself, plug-in GUIs may fail to open; unset it. On Windows plug-in editor windows are not
 implemented yet; plug-ins still load and play, and their parameters can be automated.
@@ -3073,7 +3074,7 @@ and monitoring can feed back.
 
 - Check the device's own settings or editor app for a **loopback**, "USB playback to input" or
   "re-amp" option and turn it off, or choose an input channel that doesn't carry the loopback.
-- Make sure only one of Fermata's monitoring and the device's direct monitoring is on (Settings
+- Make sure only one of Marbble's monitoring and the device's direct monitoring is on (Settings
   › Audio › Monitoring, and the track's I button).
 - Use a different device for output than for input (Settings › Audio lets them differ), or
   turn down the device's computer-playback level.
@@ -3103,22 +3104,22 @@ limit. Hover over the meter for the numbers and how many threads are playing jus
   meter, so you probably heard a dropout. The tooltip counts them; click the meter to clear it.
 
 A red label on its own is a dropout, and playback carries on. ["System overload"](#system-overload-and-playback-stops)
-is something else: blocks ran late back to back for more than about 60 ms, so Fermata also stops
+is something else: blocks ran late back to back for more than about 60 ms, so Marbble also stops
 playback. Every overload shows on the meter too, but most late blocks never become an overload.
 
 ### "System overload" and playback stops
 
 When the computer can't produce audio as fast as the device plays it for more than about 60 ms
-in a row, Fermata silences the output for a quarter of a second so the audio thread can catch
+in a row, Marbble silences the output for a quarter of a second so the audio thread can catch
 up, stops playback or recording, and shows "System overload: the audio engine couldn't keep
-up…". (Without this, the system would kill Fermata for holding the processor.) Raise the I/O
+up…". (Without this, the system would kill Marbble for holding the processor.) Raise the I/O
 Buffer Size, bypass or freeze heavy plug-ins, and see
 [Crackles, clicks or dropouts](#crackles-clicks-or-dropouts). Bounces and other offline renders
 are not affected.
 
 ### "… put out invalid audio" and a plug-in goes quiet
 
-Fermata checks the output of every plug-in, built-in or VST3, each block. NaNs are silenced
+Marbble checks the output of every plug-in, built-in or VST3, each block. NaNs are silenced
 and levels above +60 dBFS are clamped, so one unstable plug-in can't blow up the rest of the
 mix or your speakers. When that happens, a message names the plug-in and the track (at most
 every few seconds while it continues). A built-in effect is also reset so it recovers. Bypass
@@ -3159,7 +3160,7 @@ blank, because WebKit then draws on the CPU.
   silent. Load the plug-in again, or close and reopen the project.
 - **Platforms:** plug-in editor windows open on Linux (X11) and macOS; Windows (HWND)
   embedding is planned. On macOS, keys a plug-in's window doesn't use itself (Space, R, other
-  key commands, Musical Typing) go to Fermata, while typing into the plug-in's own fields stays
+  key commands, Musical Typing) go to Marbble, while typing into the plug-in's own fields stays
   there; Esc doesn't close the window. On Linux only menu shortcuts work while a plug-in's
   window is in front. The input level check is Linux only. On Windows and macOS only the
   system's default audio driver is available (no ASIO).
@@ -3193,7 +3194,7 @@ blank, because WebKit then draws on the CPU.
   plug-ins, so latency on the source's own plug-ins makes the key arrive that much late.
 - **Built-in effects:** bounces keep the tail length set in the Bounce dialog whatever an
   effect's own tail; Freeze stretches its tail to the longest one. VST3 user presets aren't
-  saved by Fermata (use the plug-in's own). The Linear Phase EQ follows automation in steps of
+  saved by Marbble (use the plug-in's own). The Linear Phase EQ follows automation in steps of
   about 25 ms.
 - **Separate windows:** the analyzer follows one strip, so a Channel EQ in a separate window
   and another strip's Channel EQ in the main window take turns showing it. On Linux under
@@ -3215,7 +3216,7 @@ blank, because WebKit then draws on the CPU.
 - **Piano Roll:** no Score. Controller curves are drawn as ramps of points; a curve between
   two points isn't kept as a shape that can be bent later.
 - **Event List:** lists MIDI regions only (not the regions of the project, or audio), on one
-  track at a time. Fermata stores no MIDI channel, program changes, polyphonic aftertouch,
+  track at a time. Marbble stores no MIDI channel, program changes, polyphonic aftertouch,
   release velocity or SysEx, so the Ch column always reads 1 and those types have no filter.
 - **Step Sequencer and Step Input:** the Piano Roll and the Event List don't show a pattern
   region's notes (convert it to a MIDI region to edit them there). Step Input works only while

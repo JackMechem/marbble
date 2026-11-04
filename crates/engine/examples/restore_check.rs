@@ -115,7 +115,7 @@ fn main() {
     let scratch = PathBuf::from(std::env::args().nth(1).expect("scratch dir"));
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg.clone(), Vec::new());
-    s.dir = scratch.join("Restore.fermata");
+    s.dir = scratch.join("Restore.marbble");
     let mut w = base(&mut s, &scratch);
 
     let first = render(&mut s);
@@ -163,7 +163,7 @@ fn main() {
     check(&format!("and the last render ({})", describe(diff(&render(&mut s), &last))), diff(&render(&mut s), &last).is_none());
 
     // Save and reopen, in this session and in a new one.
-    let saved = s.save(Some(scratch.join("All.fermata"))).unwrap();
+    let saved = s.save(Some(scratch.join("All.marbble"))).unwrap();
     s.open(&saved).unwrap();
     // Save As names the project after its new folder.
     let named = |mut v: serde_json::Value| {
@@ -179,7 +179,7 @@ fn main() {
     check(&format!("a new session renders it the same ({})", describe(diff(&render(&mut t), &last))), diff(&render(&mut t), &last).is_none());
 
     // An older project: the first document without this release's fields.
-    let old_dir = scratch.join("Old.fermata");
+    let old_dir = scratch.join("Old.marbble");
     std::fs::create_dir_all(&old_dir).unwrap();
     let mut v = first_doc.clone();
     strip_new_fields(&mut v);
@@ -187,7 +187,7 @@ fn main() {
     for c in v["clips"].as_array_mut().unwrap() {
         let p = c["path"].as_str().unwrap().to_string();
         if !std::path::Path::new(&p).is_absolute() {
-            c["path"] = serde_json::json!(scratch.join("Base.fermata").join(p).to_string_lossy());
+            c["path"] = serde_json::json!(scratch.join("Base.marbble").join(p).to_string_lossy());
         }
     }
     let text = serde_json::to_string_pretty(&v).unwrap();

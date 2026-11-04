@@ -38,7 +38,7 @@ fn main() {
     let scratch = args.next().expect("scratch dir");
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg, Vec::new());
-    s.dir = std::path::PathBuf::from(&scratch).join("LoopCheck.fermata");
+    s.dir = std::path::PathBuf::from(&scratch).join("LoopCheck.marbble");
     std::fs::create_dir_all(s.dir.join("Audio Files")).unwrap();
     let sr = s.sample_rate() as i64;
     let mut ok = true;

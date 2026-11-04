@@ -712,7 +712,7 @@ mod tests {
             0.0
         }
         fn process(&mut self, l: &mut [f32], r: &mut [f32], k: Key, c: &FxContext) {
-            if std::thread::current().name().is_some_and(|n| n.starts_with("fermata-dsp")) {
+            if std::thread::current().name().is_some_and(|n| n.starts_with("marbble-dsp")) {
                 self.0.process(l, r, k, c);
             }
         }

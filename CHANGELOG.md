@@ -1,17 +1,25 @@
 # Changelog
 
-All notable changes to Fermata are recorded here. The format follows
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and Fermata uses
+All notable changes to Marbble are recorded here. The format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and Marbble uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Changed
+
+- **Fermata is now Marbble,** with a new icon. New projects are `.marbble` folders, and `.fermata`
+  projects open and save as they are. At the first launch, settings, recent projects, the plug-in
+  list, presets, saved instruments and view preferences move across from their old folders. An
+  existing `~/Music/Fermata` stays the projects folder until a `~/Music/Marbble` exists. The
+  website moves to <https://jackmechem.github.io/marbble/>.
 
 ## [0.1.0-alpha.5] - 2026-11-02
 
 ### Added
 
 - **Website:** a landing page and the User Guide, Architecture, Developing and Changelog as searchable
-  pages, at <https://jackmechem.github.io/fermata/>. They're built from the Markdown in this repository,
+  pages, at <https://jackmechem.github.io/marbble/>. They're built from the Markdown in this repository,
   so they stay in step with it.
 
 ### Changed
@@ -34,29 +42,29 @@ All notable changes to Fermata are recorded here. The format follows
 
 ### Added
 
-- **Fermata Sampler:** make instruments from your own sounds. Drop or choose audio files and play them across the
+- **Marbble Sampler:** make instruments from your own sounds. Drop or choose audio files and play them across the
   keyboard at once, record straight into it from the audio input, or turn an audio region into one with Convert to
   Sampler Track, whole or sliced at its transients. Map samples across keys and velocities with loops and
   crossfades, one-shot, reverse, velocity layers and round robin, an amp envelope, filter with envelope, LFO, glide and
   polyphony. Several files map themselves by the note in their names, or chromatically. Save an instrument with its
-  samples to use in any project; it appears in the preset menu, from `~/Music/Fermata Instruments`. A useful subset of SFZ loads, and what it
+  samples to use in any project; it appears in the preset menu, from `~/Music/Marbble Instruments`. A useful subset of SFZ loads, and what it
   doesn't do is listed. Samples are copied into the project, so it survives being moved or the originals deleted, and a
   missing sample shows plainly while the rest play. Samples are held in memory, up to 4 GB. It hasn't been heard or seen yet.
-- **Built-in instruments and Fermata Tre:** a framework for instruments with settings, on the same
+- **Built-in instruments and Marbble Tre:** a framework for instruments with settings, on the same
   footing as the built-in effects: a panel with sections and a small keyboard, docked or floating, factory
   and user presets, automation, MIDI learn, undo, saving, Freeze, Bounce and copy and paste. The first is
-  Fermata Tre, a three-oscillator monophonic synth with a mixer that overdrives, a 24 dB transistor-ladder
+  Marbble Tre, a three-oscillator monophonic synth with a mixer that overdrives, a 24 dB transistor-ladder
   filter that self-oscillates in tune, two contours with a Decay switch, glide, oscillator drift, and osc 3 and noise as
   modulators, plus Unison and Poly. Modelled on the Minimoog Model D's documented behaviour (no affiliation), with
-  19 factory presets; it hasn't been compared with the hardware. Fermata Synth stays the default for new instrument
+  19 factory presets; it hasn't been compared with the hardware. Marbble Synth stays the default for new instrument
   tracks, and its projects render exactly as before.
-- **Five more synth models:** under Vintage Synths, **Fermata Sei** (six voices of one DCO with saw, pulse and sub, a 24 dB
+- **Five more synth models:** under Vintage Synths, **Marbble Sei** (six voices of one DCO with saw, pulse and sub, a 24 dB
   filter, one envelope with VCA gate, a four-position high-pass and a stereo bucket-brigade chorus with modes I, II and I+II;
-  modelled on the Juno-106 family), **Fermata Cinque** (five voices of two oscillators with Poly Mod from the filter envelope and Osc B to
-  Osc A's pitch and width and the filter; modelled on the Prophet-5), **Fermata Uno** (one oscillator, a diode ladder, accent with its sweep, and slide; from a MIDI region overlapping notes slide and high velocity accents;
-  modelled on the TB-303) and **Fermata Sedici** (six-operator FM with the 32 algorithms, four-rate envelopes, keyboard scaling, 16 voices, at the original's 49.096 kHz with an optional converter character; modelled on the DX7). Under
-  Modern Synths, **Fermata Onda**: two wavetable oscillators with position scan, band-limited tables generated in code, unison, seven filters, three envelopes,
-  two LFOs and eight modulation slots. 14 to 16 factory presets each. Fermata isn't affiliated with any of those makers, and none has been compared with the hardware or heard yet.
+  modelled on the Juno-106 family), **Marbble Cinque** (five voices of two oscillators with Poly Mod from the filter envelope and Osc B to
+  Osc A's pitch and width and the filter; modelled on the Prophet-5), **Marbble Uno** (one oscillator, a diode ladder, accent with its sweep, and slide; from a MIDI region overlapping notes slide and high velocity accents;
+  modelled on the TB-303) and **Marbble Sedici** (six-operator FM with the 32 algorithms, four-rate envelopes, keyboard scaling, 16 voices, at the original's 49.096 kHz with an optional converter character; modelled on the DX7). Under
+  Modern Synths, **Marbble Onda**: two wavetable oscillators with position scan, band-limited tables generated in code, unison, seven filters, three envelopes,
+  two LFOs and eight modulation slots. 14 to 16 factory presets each. Marbble isn't affiliated with any of those makers, and none has been compared with the hardware or heard yet.
 - **Multi-core track processing:** independent tracks play at the same time on a small pool of
   real-time threads, with the audio thread working too, so a heavy project finishes each buffer
   sooner. Settings › Audio › Processing Threads chooses Automatic (the default) or a number; 1 keeps
@@ -144,7 +152,7 @@ All notable changes to Fermata are recorded here. The format follows
 - **Autosave after recording** (Settings › General › After Recording, on by default): the
   autosave is written as soon as a take is placed, and after Bounce in Place, Freeze and
   imports.
-- **Recovering an interrupted recording:** takes being recorded when Fermata crashed, was
+- **Recovering an interrupted recording:** takes being recorded when Marbble crashed, was
   killed or lost power are repaired and offered in the Recover sheet, placed where they would
   have landed (cycle takes as a take folder).
 - Saves are atomic; a damaged project file falls back to the autosave, then the newest backup
@@ -244,7 +252,7 @@ All notable changes to Fermata are recorded here. The format follows
 - **Controller curves** in the Piano Roll's controller lane: the Line tool draws ramps along a
   Linear, Exponential, Logarithmic or S-Curve shape at a chosen Ramp Density, joins the
   points it starts and ends on, and Create Ramp and Thin Out fill and thin the selected points.
-- **MIDI Learn and controller assignments** (Fermata › Control Surfaces): Learn Assignment
+- **MIDI Learn and controller assignments** (Marbble › Control Surfaces): Learn Assignment
   for Last Touched Parameter (Ctrl+L) or a control's right-click Learn MIDI Assignment assigns
   the next control change or pitch bend to a fader, pan, send, Mute, Solo, Record, Stereo Out,
   Channel EQ setting, built-in effect or VST3 parameter, or a transport button. Assigned
@@ -311,8 +319,8 @@ All notable changes to Fermata are recorded here. The format follows
   default), or open in separate OS windows. Floating panels resize from their sides and bottom corners, their graphs and meters
   grow with them, and each effect type remembers its last size.
 - **VST3 editor windows on macOS:** a plug-in's own interface opens in a window that floats
-  above Fermata's, resizes within the plug-in's limits and hides while another app is in front.
-  Keys the plug-in doesn't use (Space, key commands, Musical Typing) reach Fermata.
+  above Marbble's, resizes within the plug-in's limits and hides while another app is in front.
+  Keys the plug-in doesn't use (Space, key commands, Musical Typing) reach Marbble.
 - A plug-in whose window can't open when it's inserted now says why, instead of only logging it.
 - **Missing plug-ins:** a project opened where a plug-in isn't installed opens and plays
   without it, says which are missing, shows their slots struck through and keeps their
@@ -364,7 +372,7 @@ All notable changes to Fermata are recorded here. The format follows
 - On macOS, renaming a region, take, comp, marker or arrangement marker, Save Channel Strip
   Setting As… and the Piano Roll's Transpose by…, Set Velocity…, Scale Velocity…, Custom
   Humanize… and Other Controller… did nothing: macOS's web view has no `window.prompt`. They now
-  ask in Fermata's own name sheet (which detached windows show too).
+  ask in Marbble's own name sheet (which detached windows show too).
 - Key commands reached the app behind an open sheet once the focus was outside its text fields:
   Backspace deleted regions while Strip Silence was open after clicking its slider. Sheets
   (Strip Silence, Group Settings, the name sheet, Settings, Bounce…) now hold back key
@@ -416,7 +424,7 @@ All notable changes to Fermata are recorded here. The format follows
 - The `takes_check` headless check "autopunch trims the take" fails about one run in five,
   from the null audio device's timing.
 
-The full list is in the User Guide, [Known limitations](https://github.com/JackMechem/fermata/blob/main/docs/USER_GUIDE.md#20-known-limitations).
+The full list is in the User Guide, [Known limitations](https://github.com/JackMechem/marbble/blob/main/docs/USER_GUIDE.md#20-known-limitations).
 
 ## [0.1.0-alpha.1] - 2026-10-29
 
@@ -447,7 +455,7 @@ The first prerelease. Everything below is new.
 - **Automation:** volume, pan, mute, send levels and plug-in parameters, in Off, Read, Touch,
   Latch and Write modes.
 - **Plug-ins:** VST3 instruments and effects, scanned out of process with a scan report;
-  Fermata Synth; copy and paste of plug-ins (VST3 state included) and Channel EQ settings from
+  Marbble Synth; copy and paste of plug-ins (VST3 state included) and Channel EQ settings from
   the right-click menus; dragging plug-ins between Audio FX slots to reorder them, move them to
   another strip, or copy them with Alt.
 - **Built-in effects:** Compressor (Platinum Digital, Studio VCA, Studio FET, Classic Opto and
@@ -458,7 +466,7 @@ The first prerelease. Everything below is new.
   presets are files in the config folder's `presets/` and are shared by every project.
 - **Bounce and export:** offline Bounce of the project or a section, Export All Tracks, Export
   Region, Bounce in Place; 16-bit dithered, 24-bit or 32-bit float WAV.
-- **Projects:** `.fermata` folders with readable `project.json`; Project Chooser with templates;
+- **Projects:** `.marbble` folders with readable `project.json`; Project Chooser with templates;
   autosave and crash recovery; undo for every edit (100 steps by default).
 - **Interface:** Logic Pro 11's layout; five themes; interface scaling from 90 to 200 %; four
   waveform styles; rebindable key commands, shown the way each platform writes them; Musical
@@ -474,7 +482,7 @@ The first prerelease. Everything below is new.
   exempt.
 - **Tuner:** gates on its DC-blocked level, so an interface's DC offset doesn't run the
   detector.
-- **About Fermata** in the Fermata menu, with the version.
+- **About Marbble** in the Marbble menu, with the version.
 - **Platforms and packaging:** Linux x86_64 and aarch64 (AppImage and .deb; .rpm from the first
   stable release, since RPM versions can't carry a prerelease suffix) and a Nix
   flake, Windows (NSIS installer, x64) and macOS (.dmg for Apple Silicon and Intel), built and
@@ -500,9 +508,9 @@ The first prerelease. Everything below is new.
 - The `takes_check` headless check "autopunch trims the take" fails about one run in five,
   from the null audio device's timing.
 
-[Unreleased]: https://github.com/JackMechem/fermata/compare/v0.1.0-alpha.5...HEAD
-[0.1.0-alpha.5]: https://github.com/JackMechem/fermata/compare/v0.1.0-alpha.4...v0.1.0-alpha.5
-[0.1.0-alpha.4]: https://github.com/JackMechem/fermata/compare/v0.1.0-alpha.3...v0.1.0-alpha.4
-[0.1.0-alpha.3]: https://github.com/JackMechem/fermata/compare/v0.1.0-alpha.2...v0.1.0-alpha.3
-[0.1.0-alpha.2]: https://github.com/JackMechem/fermata/compare/v0.1.0-alpha.1...v0.1.0-alpha.2
-[0.1.0-alpha.1]: https://github.com/JackMechem/fermata/releases/tag/v0.1.0-alpha.1
+[Unreleased]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.5...HEAD
+[0.1.0-alpha.5]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.4...v0.1.0-alpha.5
+[0.1.0-alpha.4]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.3...v0.1.0-alpha.4
+[0.1.0-alpha.3]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.2...v0.1.0-alpha.3
+[0.1.0-alpha.2]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.1...v0.1.0-alpha.2
+[0.1.0-alpha.1]: https://github.com/JackMechem/marbble/releases/tag/v0.1.0-alpha.1

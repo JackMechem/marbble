@@ -1,4 +1,4 @@
-//! The parameters of Fermata Tre. The ids are stable forever: projects and presets store them.
+//! The parameters of Marbble Tre. The ids are stable forever: projects and presets store them.
 
 use crate::fx::{ParamKind, ParamSpec, Unit};
 use crate::instrument::Section;

@@ -58,7 +58,7 @@ fn main() {
     let scratch = args.next().expect("scratch dir");
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg, Vec::new());
-    s.dir = std::path::PathBuf::from(&scratch).join("EditingCheck.fermata");
+    s.dir = std::path::PathBuf::from(&scratch).join("EditingCheck.marbble");
     let sr = s.project.sample_rate as i64;
     let window = sr * 5 / 1000;
 

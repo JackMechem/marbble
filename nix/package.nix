@@ -1,4 +1,4 @@
-# Fermata as a Nix package: the frontend is built with npm in the sandbox, Rust crates are
+# Marbble as a Nix package: the frontend is built with npm in the sandbox, Rust crates are
 # vendored from Cargo.lock, and `cargo tauri build` produces a .deb whose contents land in $out.
 {
   lib,
@@ -22,7 +22,7 @@
 }:
 
 rustPlatform.buildRustPackage (finalAttrs: {
-  pname = "fermata";
+  pname = "marbble";
   version = "0.1.0-alpha.5";
 
   # Only what the build reads, so editing docs doesn't trigger a rebuild.
@@ -87,10 +87,10 @@ rustPlatform.buildRustPackage (finalAttrs: {
 
   postInstall = ''
     # The Cargo binary is called `daw`; offer the product name as the command too.
-    ln -s daw $out/bin/fermata
+    ln -s daw $out/bin/marbble
 
     # Tauri leaves the categories empty; list it with the audio apps.
-    substituteInPlace $out/share/applications/Fermata.desktop \
+    substituteInPlace $out/share/applications/Marbble.desktop \
       --replace-fail "Categories=" "Categories=AudioVideo;Audio;Music;Recorder;" \
       --replace-fail "Type=Application" "Type=Application
     Comment=Record, mix and produce music with VST3 plug-ins
@@ -100,7 +100,7 @@ rustPlatform.buildRustPackage (finalAttrs: {
   meta = {
     description = "Cross-platform DAW with VST3 hosting, modelled on Logic Pro's workflow";
     license = lib.licenses.mit;
-    mainProgram = "fermata";
+    mainProgram = "marbble";
     platforms = lib.platforms.linux;
   };
 })

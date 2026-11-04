@@ -41,7 +41,7 @@ pub struct SfzFile {
 
 type Opcodes = BTreeMap<String, String>;
 
-/// SFZ's note names: C4 is 60, unlike the rest of Fermata's C3.
+/// SFZ's note names: C4 is 60, unlike the rest of Marbble's C3.
 fn sfz_note(v: &str) -> Option<i32> {
     if let Ok(n) = v.trim().parse::<i32>() {
         return Some(n);
@@ -422,7 +422,7 @@ mod tests {
 
     #[test]
     fn reads_regions_groups_and_lists_what_it_ignores() {
-        let dir = std::env::temp_dir().join(format!("fermata-sfz-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("marbble-sfz-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join("Samples")).unwrap();
         for n in ["a.wav", "b c.wav", "d.wav", "e1.wav", "e2.wav"] {

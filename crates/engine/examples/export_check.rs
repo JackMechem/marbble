@@ -46,7 +46,7 @@ fn main() {
     let _ = std::fs::remove_dir_all(&out);
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg, Vec::new());
-    s.dir = scratch.join("ExportCheck.fermata");
+    s.dir = scratch.join("ExportCheck.marbble");
     let _ = std::fs::remove_dir_all(&s.dir);
     let sr = s.sample_rate() as u32;
     println!("audio: {:?}", s.audio_status);

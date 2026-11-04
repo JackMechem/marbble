@@ -1,4 +1,4 @@
-//! One voice of Fermata Sei: a DCO's saw, pulse and sub from one clock, noise, an OTA 4-pole filter
+//! One voice of Marbble Sei: a DCO's saw, pulse and sub from one clock, noise, an OTA 4-pole filter
 //! and a VCA, ticking at the oversampled rate.
 
 use crate::synth_dsp::alloc::unison_spread;

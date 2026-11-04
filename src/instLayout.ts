@@ -5,7 +5,7 @@ export type SectionLayout = "row" | "grid";
 export type PanelPlace = "docked" | "floating";
 export type SectionLayouts = Partial<Record<PanelPlace, SectionLayout>>;
 
-const KEY = "fermata.instSectionLayout";
+const KEY = "marbble.instSectionLayout";
 
 /** What a place shows until it's been chosen: the bottom section is wide and short. */
 export const defaultLayout = (place: PanelPlace): SectionLayout => (place === "docked" ? "row" : "grid");

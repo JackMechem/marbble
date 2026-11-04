@@ -13,7 +13,7 @@ use vst3::{Class, ComPtr, ComWrapper, Interface};
 
 use crate::util::{copy_utf16, utf16_ptr};
 
-pub const HOST_NAME: &str = "Fermata";
+pub const HOST_NAME: &str = "Marbble";
 
 /// `IHostApplication`: what a plug-in gets as its host context.
 pub struct HostApp;

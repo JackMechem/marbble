@@ -667,7 +667,7 @@ mod tests {
     fn midi_recordings_become_take_folders() {
         let cfg = crate::audio_io::AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
         let mut s = Session::new(cfg, Vec::new());
-        s.dir = std::env::temp_dir().join(format!("fermata-midi-takes-{}", std::process::id()));
+        s.dir = std::env::temp_dir().join(format!("marbble-midi-takes-{}", std::process::id()));
         let t = s.add_track(TrackKind::Instrument, InputSel::None, None, None).unwrap();
         let pass = |pitch: u8, at: i64| (vec![Note { start: at, length: 100, pitch, velocity: 100, muted: false }], Vec::new());
         // One pass over nothing: a plain region.

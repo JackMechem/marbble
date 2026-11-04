@@ -89,7 +89,7 @@ fn main() {
     std::env::set_var("XDG_CONFIG_HOME", &config);
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg, daw_engine::plugin_db::load_cache().unwrap_or_default());
-    s.dir = scratch.join("PdcGlideCheck.fermata");
+    s.dir = scratch.join("PdcGlideCheck.marbble");
     std::fs::create_dir_all(&s.dir).unwrap();
 
     // Three seconds of a 440 Hz sine.

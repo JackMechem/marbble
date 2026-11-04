@@ -1,4 +1,4 @@
-//! The parameters of Fermata Uno. The ids are stable forever: projects and presets store them.
+//! The parameters of Marbble Uno. The ids are stable forever: projects and presets store them.
 
 use crate::fx::{ParamSpec, Unit};
 use crate::instrument::common::{choice, cont, percent, ten, time_ms};

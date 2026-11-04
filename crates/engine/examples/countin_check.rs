@@ -12,7 +12,7 @@ fn main() {
     let scratch = std::env::args().nth(1).expect("scratch dir");
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg, Vec::new());
-    s.dir = std::path::PathBuf::from(&scratch).join("CountIn.fermata");
+    s.dir = std::path::PathBuf::from(&scratch).join("CountIn.marbble");
     let t = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
     s.update_track(t, TrackPatch { armed: Some(true), ..Default::default() });
     s.set_count_in(true);

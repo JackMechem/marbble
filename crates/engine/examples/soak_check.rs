@@ -721,7 +721,7 @@ fn main() {
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg.clone(), Vec::new());
     s.prefs.general.undo_limit = 100_000;
-    s.dir = scratch.join("Soak.fermata");
+    s.dir = scratch.join("Soak.marbble");
     let mut w = base(&mut s, &scratch);
     for (name, step) in steps() {
         s.checkpoint(name, None, true);
@@ -834,7 +834,7 @@ fn main() {
         }
         if i % every == every - 1 && i >= from {
             let now = render(&mut s);
-            let dir = scratch.join(format!("Soak{i}.fermata"));
+            let dir = scratch.join(format!("Soak{i}.marbble"));
             let saved = s.save(Some(dir)).unwrap();
             let mut t = Session::new(cfg.clone(), Vec::new());
             pool_on(&mut t);

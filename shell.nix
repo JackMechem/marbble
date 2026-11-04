@@ -5,5 +5,5 @@
 
 import ./nix/shell.nix {
   inherit pkgs;
-  fermata = pkgs.callPackage ./nix/package.nix { };
+  marbble = pkgs.callPackage ./nix/package.nix { };
 }

@@ -1,4 +1,4 @@
-//! Fermata Synth (`crate::synth::BasicSynth`, untouched) in the instrument registry: no parameters,
+//! Marbble Synth (`crate::synth::BasicSynth`, untouched) in the instrument registry: no parameters,
 //! no panel. Its id and sound are what every existing project holds, so it stays as it always was.
 //! It renders what it did before this contract existed: `silence` still keeps the mod wheel,
 //! expression and its LFO's phase, for instance, unlike the contract's `reset`, because changing
@@ -34,8 +34,8 @@ impl Instrument for Basic {
 pub fn info() -> InstrumentInfo {
     InstrumentInfo {
         id: crate::session::BUILTIN_SYNTH,
-        name: "Fermata Synth",
-        group: "Fermata",
+        name: "Marbble Synth",
+        group: "Marbble",
         about: "A small polyphonic synth with no settings",
         params: &[],
         sections: &[],
@@ -49,7 +49,7 @@ pub fn info() -> InstrumentInfo {
 mod tests {
     use super::*;
 
-    /// The registry's Fermata Synth is the old one, sample for sample, through everything the
+    /// The registry's Marbble Synth is the old one, sample for sample, through everything the
     /// engine does to it: notes past the 16 voices, bend, wheel, pedal, expression, stops and
     /// renders starting.
     #[test]

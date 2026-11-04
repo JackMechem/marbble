@@ -1,4 +1,4 @@
-//! Fermata Uno measured through its public contract, and what's specific to it: slide and accent.
+//! Marbble Uno measured through its public contract, and what's specific to it: slide and accent.
 use super::*;
 use crate::instrument::test_kit::*;
 use crate::synth_dsp::test_util::*;

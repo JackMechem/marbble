@@ -46,7 +46,7 @@ fn main() {
     };
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg, plugins);
-    s.dir = scratch.join("OnOffVstCheck.fermata");
+    s.dir = scratch.join("OnOffVstCheck.marbble");
     std::fs::create_dir_all(&s.dir).unwrap();
 
     let step = daw_engine::decode::decode(&tone).unwrap().channels[0].len() as i64;

@@ -1,13 +1,13 @@
-# Fermata
+# Marbble
 
 A digital audio workstation modelled on Logic Pro's workflow and layout. The audio engine and
 VST3 host are written in Rust; the interface is Tauri 2 with React and TypeScript.
 
-Fermata is in alpha. It is developed and tested on Linux; the Windows and macOS builds pass their
+Marbble is in alpha. It is developed and tested on Linux; the Windows and macOS builds pass their
 headless checks on a stand-in device but haven't been run on a real machine yet (see
 [Platform support](#platform-support)).
 
-**Website, User Guide and developer docs:** <https://jackmechem.github.io/fermata/>
+**Website, User Guide and developer docs:** <https://jackmechem.github.io/marbble/>
 
 ## Features
 
@@ -48,15 +48,15 @@ headless checks on a stand-in device but haven't been run on a real machine yet 
   plug-ins to reorder them or move them to another strip (Alt copies).
 - **Built-in synths:** six models with panels, factory presets, automation, MIDI learn, undo,
   Freeze and Bounce. Under Vintage Synths, modelled on the documented behaviour of real instruments
-  (no affiliation, and none has been compared with the hardware): **Fermata Tre** (three oscillators
+  (no affiliation, and none has been compared with the hardware): **Marbble Tre** (three oscillators
   into a transistor ladder, after the Minimoog Model D), **Sei** (six voices with a stereo chorus,
   after the Juno-106 family), **Cinque** (five voices with Poly Mod, after the Prophet-5), **Uno**
   (diode ladder, accent and slide, after the TB-303) and **Sedici** (six-operator FM with 32
   algorithms, after the DX7). Under Modern Synths, **Onda**, two wavetable oscillators with eight
-  modulation slots. The simple Fermata Synth stays the default on new instrument tracks. Panels
+  modulation slots. The simple Marbble Synth stays the default on new instrument tracks. Panels
   open in the bottom section with their sections in one row, or in a grid (Row and Grid, beside
   the panel's keyboard).
-- **Fermata Sampler:** make instruments from your own sounds. Drop files on it (several map
+- **Marbble Sampler:** make instruments from your own sounds. Drop files on it (several map
   themselves by the note in their names), record straight in from an audio input, or convert an
   audio region, whole or sliced at its transients. Zones across keys and velocities, loops with
   crossfades, one-shot, reverse, velocity layers, round robin, an amp envelope, a filter with
@@ -76,7 +76,7 @@ headless checks on a stand-in device but haven't been run on a real machine yet 
   32-bit float.
 - **Tempo and signature:** tempo changes and smooth ramps, time signature changes, in Tempo and
   Signature global tracks; the grid, click, quantize, plug-ins and MIDI files all follow them.
-- **Projects:** `.fermata` folders, a Project Chooser with built-in and your own templates,
+- **Projects:** `.marbble` folders, a Project Chooser with built-in and your own templates,
   project alternatives, backups with Revert to, autosave and crash recovery (interrupted
   recordings included), and undo for every edit (100 steps by default).
 - **Interface:** Logic Pro 11's layout, the Mixer, editors and effect panels in separate
@@ -90,11 +90,11 @@ headless checks on a stand-in device but haven't been run on a real machine yet 
 
 The [User Guide](docs/USER_GUIDE.md) describes all of it in detail.
 [LOGIC_FEATURES.md](LOGIC_FEATURES.md) lists every Logic Pro feature by stage and marks what
-Fermata already has.
+Marbble already has.
 
 ## Install
 
-Prebuilt binaries are on the [GitHub Releases page](https://github.com/JackMechem/fermata/releases):
+Prebuilt binaries are on the [GitHub Releases page](https://github.com/JackMechem/marbble/releases):
 
 - **Linux** (x86_64 and aarch64): `.AppImage` (any distribution), `.deb` (Debian, Ubuntu) and
   `.rpm` (Fedora, openSUSE; stable releases only, since RPM can't version a prerelease).
@@ -106,7 +106,7 @@ Prebuilt binaries are on the [GitHub Releases page](https://github.com/JackMeche
 The builds are not signed yet, so the system warns about them:
 
 - **macOS:** the first time, right-click the app and choose Open, or run
-  `xattr -cr /Applications/Fermata.app`.
+  `xattr -cr /Applications/Marbble.app`.
 - **Windows:** in the SmartScreen prompt, choose **More info › Run anyway**.
 
 On NixOS or with Nix, use the flake instead (below).
@@ -135,7 +135,7 @@ tried on real hardware yet ([TODO.md](TODO.md) lists what to try).
 On NixOS or any system with Nix flakes:
 
 ```sh
-git clone https://github.com/JackMechem/fermata && cd fermata
+git clone https://github.com/JackMechem/marbble && cd marbble
 nix run .                                 # build and launch
 ```
 
@@ -164,18 +164,18 @@ for Windows and macOS, tests and packaging.
 
 | Document | For |
 |---|---|
-| [Website](https://jackmechem.github.io/fermata/) | The three documents below as a searchable site, built from them by [site/](site/) (`cd site && npm ci && npm run build`). |
-| [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Using Fermata: recording, instruments, editing, mixing, exporting, every setting and key command, troubleshooting. |
+| [Website](https://jackmechem.github.io/marbble/) | The three documents below as a searchable site, built from them by [site/](site/) (`cd site && npm ci && npm run build`). |
+| [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Using Marbble: recording, instruments, editing, mixing, exporting, every setting and key command, troubleshooting. |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the code works: threads, real-time rules, the project model, the engine graph, undo, persistence, the VST3 host, the frontend, built-in effects and instruments, and a map of every source file. |
 | [docs/DEVELOPING.md](docs/DEVELOPING.md) | Building, testing, debugging, conventions, and recipes for common changes. |
 | [docs/logic-reference.md](docs/logic-reference.md) | The Logic Pro research behind the layout and behaviour. |
-| [LOGIC_FEATURES.md](LOGIC_FEATURES.md) | The feature scope: every Logic Pro feature by stage, with Fermata's status. |
+| [LOGIC_FEATURES.md](LOGIC_FEATURES.md) | The feature scope: every Logic Pro feature by stage, with Marbble's status. |
 | [TODO.md](TODO.md) | What's still open, by topic, and the roadmap in stages. |
 | [CHANGELOG.md](CHANGELOG.md) | What changed in each release. |
 
 ## Status and known limitations
 
-Fermata is alpha software under active development; keep backups of projects that matter. The
+Marbble is alpha software under active development; keep backups of projects that matter. The
 main limitations:
 
 - Plug-in editor windows open on Linux (X11) and macOS, not yet on Windows. On Linux the
@@ -197,11 +197,11 @@ contains.
 
 ## Versions
 
-Fermata uses [semantic versioning](https://semver.org). Prereleases are tagged
+Marbble uses [semantic versioning](https://semver.org). Prereleases are tagged
 `vX.Y.Z-alpha.N` (the first is `v0.1.0-alpha.1`) and published as prereleases on GitHub; see
 [DEVELOPING.md](docs/DEVELOPING.md#versioning-and-releases) for how a release is made.
 
 ## Licence
 
-Fermata is released under the MIT licence; see [LICENSE](LICENSE). The release bundles include
+Marbble is released under the MIT licence; see [LICENSE](LICENSE). The release bundles include
 a copy.
