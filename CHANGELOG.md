@@ -6,6 +6,8 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0-alpha.6] - 2026-11-03
+
 ### Changed
 
 - **Fermata is now Marbble,** with a new icon. New projects are `.marbble` folders, and `.fermata`
@@ -514,7 +516,8 @@ The first prerelease. Everything below is new.
 - The `takes_check` headless check "autopunch trims the take" fails about one run in five,
   from the null audio device's timing.
 
-[Unreleased]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.5...HEAD
+[Unreleased]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.6...HEAD
+[0.1.0-alpha.6]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.5...v0.1.0-alpha.6
 [0.1.0-alpha.5]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.4...v0.1.0-alpha.5
 [0.1.0-alpha.4]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.3...v0.1.0-alpha.4
 [0.1.0-alpha.3]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.2...v0.1.0-alpha.3
