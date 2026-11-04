@@ -1,5 +1,5 @@
 // The side and bottom panes that aren't editors: Inspector, Mixer, Library and Browser.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { act, BUILTIN_SYNTH, call, INSTRUMENT_SLOT, SEND_SLOTS, type Project, type Region, type Track } from "../api";
 import { Icon } from "../icons";
 import { isAudioPath, startFileDrag } from "../dnd";
@@ -21,7 +21,7 @@ import { loadPlugin } from "../fxHost";
 import { DetachButton } from "./DetachButton";
 import { createVca, useVcas, VcaStrip } from "./Vca";
 import { openMenuAt } from "./Menu";
-import { stripRows, stripWants, type SlotRows } from "../stripRows";
+import { fitStripRows, SLOT_ROW_H, stripRows, stripWants, type SlotRows } from "../stripRows";
 
 /** The insert and send rows shared by `tracks`' strips and Stereo Out's. */
 function rowsFor(project: Project, tracks: Track[]): SlotRows {
@@ -128,6 +128,52 @@ const STRIP_KINDS: [StripKind, string, string][] = [
   ["aux", "Aux", "Aux"],
 ];
 
+/**
+ * Fits the Mixer's strips to its height: fewer slot rows when it's short, so the faders keep
+ * their room (fitStripRows), and when even one row each doesn't fit, the strips scroll from the
+ * bottom, so the faders, meters and names show first. The view stays at the bottom while it was
+ * there; once scrolled up it stays where it was put.
+ */
+function useStripFit() {
+  const ref = useRef<HTMLDivElement>(null);
+  const shown = useRef<SlotRows>({ inserts: 1, sends: 1 });
+  const atBottom = useRef(true);
+  const [room, setRoom] = useState<{ viewH: number; fixedH: number; faderMin: number } | null>(null);
+  const measure = () => {
+    const el = ref.current;
+    const fader = el?.querySelector<HTMLElement>(".strip-fader");
+    const strip = fader?.closest<HTMLElement>(".strip");
+    if (!el || !fader || !strip) return;
+    const faderMin = parseFloat(getComputedStyle(fader).minHeight) || 0;
+    // The strip without its slot rows and with its fader at its least: the fader takes the
+    // strip's spare height, and the slot boxes are SLOT_ROW_H a row.
+    const fixedH = strip.offsetHeight - fader.offsetHeight + faderMin - (shown.current.inserts + shown.current.sends) * SLOT_ROW_H;
+    const next = { viewH: el.clientHeight, fixedH, faderMin };
+    setRoom((r) => (r && r.viewH === next.viewH && Math.abs(r.fixedH - next.fixedH) < 1 && r.faderMin === next.faderMin ? r : next));
+    if (atBottom.current) el.scrollTop = el.scrollHeight;
+  };
+  useLayoutEffect(measure);
+  // The strips' box comes and goes with the project, so it's observed once it's there.
+  const observed = useRef<{ el: Element; ro: ResizeObserver } | null>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || observed.current?.el === el) return;
+    observed.current?.ro.disconnect();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    observed.current = { el, ro };
+  });
+  useEffect(() => () => observed.current?.ro.disconnect(), []);
+  return {
+    ref,
+    onScroll: (e: React.UIEvent<HTMLDivElement>) => {
+      const el = e.currentTarget;
+      atBottom.current = el.scrollTop + el.clientHeight >= el.scrollHeight - 2;
+    },
+    rows: (wanted: SlotRows) => (shown.current = room ? fitStripRows(wanted, room.viewH, room.fixedH, room.faderMin) : wanted),
+  };
+}
+
 export function Mixer() {
   const project = useStore((s) => s.snap?.project);
   const selected = useStore((s) => s.snap?.selected);
@@ -135,11 +181,12 @@ export function Mixer() {
   const flip = (k: StripKind) => setFilter((f) => ({ ...f, [k]: !f[k] }));
   const showHidden = useStore((s) => s.showHidden);
   const vcas = useVcas();
+  const fit = useStripFit();
   if (!project) return null;
   const shown = project.tracks.filter((t) => (t.hidden ? showHidden : true) && (t.kind === "audio" || t.kind === "instrument" || t.kind === "aux" ? filter[t.kind] : true));
   // Auxes come after the tracks, as in Logic's mixer.
   const tracks = [...shown.filter((t) => t.kind !== "aux"), ...shown.filter((t) => t.kind === "aux")];
-  const rows = rowsFor(project, tracks);
+  const rows = fit.rows(rowsFor(project, tracks));
   return (
     <div className="mixer">
       <div className="local-bar">
@@ -173,7 +220,7 @@ export function Mixer() {
           <DetachButton panel="mixer" />
         </div>
       </div>
-      <div className="mixer-strips">
+      <div className="mixer-strips" ref={fit.ref} onScroll={fit.onScroll}>
         <div className="mixer-row">
           {tracks.map((t) => (
             <ChannelStrip key={t.id} track={t} selected={t.id === selected} rows={rows} />

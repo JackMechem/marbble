@@ -3,13 +3,14 @@
 import { useSyncExternalStore } from "react";
 import * as me from "../../midiEdit";
 import { type CurveShape, type Density } from "../../ccCurves";
-import type { Tool } from "../../pianoRollModel";
+import { LANE_SHARE, type Tool } from "../../pianoRollModel";
 
 export interface Prefs {
   /** Horizontal zoom, pixels per beat. */
   pxPerBeat: number;
   noteH: number;
-  laneH: number;
+  /** The lane's share of the height under the ruler (pianoRollModel's LANE_SHARE). */
+  laneShare: number;
   showLane: boolean;
   /** "velocity", "cc:<n>", "pb" or "at". */
   lane: string;
@@ -34,7 +35,7 @@ const PREFS_KEY = "marbble.pianoRoll";
 const DEFAULT_PREFS: Prefs = {
   pxPerBeat: 80,
   noteH: 12,
-  laneH: 110,
+  laneShare: LANE_SHARE.initial,
   showLane: true,
   lane: "velocity",
   tool: "pointer",

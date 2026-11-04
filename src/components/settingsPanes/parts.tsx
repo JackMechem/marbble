@@ -6,6 +6,7 @@ import { updateSettings, type Prefs, type UiPrefs } from "../../prefs";
 import { setState } from "../../store";
 import { sheetKey } from "../Form";
 import { useSheetKeys } from "../../sheetKeys";
+import { PathText } from "../PathText";
 
 export const toast = (text: string, ms = 3000) => setState({ toast: { text, at: Date.now(), ms } });
 
@@ -140,9 +141,7 @@ export function setUi(patch: Partial<UiPrefs>) {
 export function FolderField({ value, placeholder, onChange, title }: { value: string | null; placeholder: string; onChange: (v: string | null) => void; title: string }) {
   return (
     <div className="row-inline">
-      <span className={"path-field pref-path" + (value ? "" : " placeholder")} title={value ?? placeholder}>
-        <bdi>{value ?? placeholder}</bdi>
-      </span>
+      <PathText className={"path-field pref-path" + (value ? "" : " placeholder")} path={value ?? placeholder} />
       <button
         className="push"
         onClick={async () => {

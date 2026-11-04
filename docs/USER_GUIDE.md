@@ -236,7 +236,7 @@ From left to right:
   (\`, on by default: the view follows the playhead), **Scroll to Playhead** (shows the
   playhead without moving it), the **Left-click Tool** and **Ctrl-click Tool** pop-ups (see
   [Tools and the marquee](#tools-and-the-marquee)), the **Snap** pop-up (Smart, Bar, Beat,
-  Off; Smart follows the zoom), the **Drag** pop-up (see [Drag modes](#drag-modes)), the
+  Division, Ticks, Off; Smart follows the zoom), the **Drag** pop-up (see [Drag modes](#drag-modes)), the
   **Height** slider (track height) and the **Zoom** slider (horizontal zoom).
 - **Ruler**, from the top:
   - the **cycle strip** (yellow): drag to make a cycle range, drag it or its edges to move or
@@ -247,7 +247,8 @@ From left to right:
 
   Right-click the cycle strip, the bar numbers or the Autopunch strip for **Move Playhead
   Here** and **Create Marker Here** (at the click, snapped to beats at least), **Cycle** (C),
-  **Autopunch**, **Set Locators by Regions** (U) and **Snap** (Smart, Bar, Beat, Off). The
+  **Autopunch**, **Set Locators by Regions** (U) and **Snap** (Smart, Bar, Beat, Division,
+  Ticks, Off). The
   marker lane has its own menu.
 - **Track headers:** colour, number, icon, name with the power button
   ([On/Off](#turning-tracks-off), grey while the track plays) at its end, the M (Mute), S (Solo), R (Record Enable,
@@ -818,8 +819,10 @@ The pointer changes over a region's hot zones:
 | Top right corner of the name bar | Set where a loop stops (see Loops). |
 | The gain handle at the top centre of the name bar (audio, shown on hover) | Change the region gain (see Gain and reverse). |
 
-- Moves, trims and loop ends follow the **Snap** setting (Smart, Bar, Beat or Off). Smart
-  snaps to sixteenths, beats or bars depending on the zoom. Fades are never snapped.
+- Moves, trims and loop ends follow the **Snap** setting (Smart, Bar, Beat, Division, Ticks or
+  Off). **Division** is a quarter of a beat, the third number of the position display: a
+  sixteenth in 4/4, a thirty-second in 6/8. **Ticks** is 1/240 of a division (960 to a beat).
+  Smart snaps to divisions, beats or bars depending on the zoom. Fades are never snapped.
 - **Across tempo changes**, a snapped move counts in bars and beats: the region you drag snaps
   to the grid where it lands, and the others in the selection keep their distance from it in
   bars and beats, so a region dragged from a 120 BPM section into a 90 BPM one still lands on
@@ -1499,6 +1502,11 @@ region in the Tracks area opens the editor for it. The Piano Roll is
 modelled on Logic's, with ideas from Ableton's MIDI editor, Cubase's Key Editor and FL
 Studio's piano roll.
 
+The editors' bars fit their pane at any width and interface size. When the pane is narrow the
+captions (Quantize, Grid, Vel, Height, Zoom; Gain, Wave and Zoom in the Audio Track Editor;
+Length, Rate and Swing in the Step Sequencer) give way first, and each control keeps its
+tooltip; then the sliders get shorter; what still doesn't fit moves to a second row of the bar.
+
 ### View
 
 - Every MIDI region on the track is shown in project time, with bars and beats. The region
@@ -1513,6 +1521,9 @@ Studio's piano roll.
 - **Zoom:** Ctrl+wheel or the **Zoom** slider zooms in time, Alt+wheel or the **Height** slider
   changes the row height; Ctrl+Right / Ctrl+Left and Ctrl+Down / Ctrl+Up do the same from the
   keyboard. **Z** (View › Zoom to Fit Region) fits the focused region and its pitch range.
+- **Opening a region** scrolls to its notes: their pitch range is centred, with a couple of rows
+  of room when there is space for them; a range taller than the view shows from its highest note
+  down.
 - **Scroll:** over the notes the wheel scrolls the pitches and Shift+wheel scrolls through time;
   with Settings › Editing › Mouse Wheel Scrolls set to Horizontally it's the other way round.
   Over the ruler and the controller lane the wheel always scrolls through time.
@@ -1605,8 +1616,9 @@ on regions.
 
 ### Velocity and controller lane
 
-The lane below the notes shows velocity or a controller. Drag the bar above it to resize it
-(40 to 420 px); choose what it shows with the lane button: **Velocity**, **Modulation (CC 1)**,
+The lane below the notes shows velocity or a controller. It takes a third of the height under
+the ruler at first and keeps its share as the editor is resized; drag the bar above it to change
+the share (from a tenth to four fifths, and never under 40 px). Choose what it shows with the lane button: **Velocity**, **Modulation (CC 1)**,
 **Expression (CC 11)**, **Sustain (CC 64)**, **Pitch Bend**, **Aftertouch**, **Volume (CC 7)**,
 **Pan (CC 10)**, any other controller already used, or **Other Controller…** (any number 0 to
 127). Lanes that hold data are marked with a dot.
@@ -1705,10 +1717,18 @@ regions**, MIDI regions that play the notes their pattern makes.
   track, at the bar of the playhead), right-click an instrument track's empty space › Create
   Pattern Region (at the bar clicked), or the button the Step Sequencer shows when no pattern
   region is selected. Made at the playhead, it goes in the first bar from there that no region
-  on the track covers, so it never lands on top of one. A new one is a bar long, with sixteen 1/16 steps and rows for a General MIDI drum kit: Kick
-  (C1), Snare (D1), Clap (D♯1), Closed Hi-Hat (F♯1), Open Hi-Hat (A♯1), Low Tom, Hi-Mid Tom
-  and Crash. In the Tracks area a pattern region shows its rows, with a dot wherever a note
-  plays.
+  on the track covers, so it never lands on top of one. A new one is a bar long, with sixteen
+  1/16 steps. Its rows suit the instrument:
+  - if the track already plays notes (in MIDI or pattern regions), a row for each pitch it
+    plays, up to 16 of the most played;
+  - otherwise, on a **kit** (the Sampler, or an instrument or track named like one: Drums, Kit,
+    Perc, Beat, 808…), rows for a General MIDI drum kit: Kick (C1), Snare (D1), Clap (D♯1),
+    Closed Hi-Hat (F♯1), Open Hi-Hat (A♯1), Low Tom, Hi-Mid Tom and Crash;
+  - on any other instrument, an octave of the project key's scale from C3, highest at the top.
+
+  A kit's rows are named for their drums and list from the lowest up; a pitched instrument's
+  rows are named by note, and + adds the next note down. In the Tracks area a pattern region
+  shows its rows, with a dot wherever a note plays.
 - **Opening it:** double-click a pattern region, or click the **Step Sequencer** tab beside
   Piano Roll and Event List on the editors' bar. Selecting a pattern region while the Piano
   Roll is shown switches to the Step Sequencer, and selecting a MIDI region there switches
@@ -1841,8 +1861,15 @@ needs the most (its plug-ins or sends plus an empty slot), up to 6 Audio FX rows
 rows, so faders, meters, pan knobs and automation buttons sit on one line. A strip with more
 than that scrolls its slots (scroll over them), and its section label shows how many filled
 slots are out of view, for example **Audio FX +2**. The Inspector's two strips line up with each
-other the same way. When the strips don't fit, the Mixer scrolls sideways
-(and up and down when it's shorter than the strips); the rest of the window stays as it is.
+other the same way. When the strips don't fit, the Mixer scrolls sideways; the rest of the window
+stays as it is.
+
+The Mixer opens tall enough for a whole strip with its fader. Made shorter, it keeps the faders
+first: the Audio FX and Sends sections show fewer rows (down to one each, sends first; the rest
+scroll in their box, with **+N** on the label), and when even that doesn't fit, the strips
+scroll up and down from the bottom, so the faders, meters and names stay in view and Setting and
+Input are scrolled up. The selected track's strip has its name plate lit, with an accent line
+under the name.
 
 ### The channel strip
 
@@ -2894,7 +2921,7 @@ The velocity curve applies to MIDI inputs, not to Musical Typing.
 
 | Setting | Choices | Default |
 |---|---|---|
-| Snap | Smart (follows the zoom), Bar, Beat, Off | Smart |
+| Snap | Smart (follows the zoom), Bar, Beat, Division (a quarter of a beat), Ticks, Off | Smart |
 | Nudge Value | Bar, Beat, 1/8 note, 1/16 note, 1/32 note, 10 ms, 1 ms | 1/16 note |
 | Click Moves Playhead | Anywhere in the tracks; Empty space only; Never (a click without a drag moves the playhead there, snapped to the grid) | Empty space only (Anywhere before 0.1.0-alpha.7, which earlier settings keep) |
 | Anti-click Fades | 0 to 100 ms, for new recordings and imports | 0 |
@@ -2935,7 +2962,12 @@ Tracks, Editing, Windows, Control Surfaces and Step Input.
 The whole window scales, and the canvas views render at the matching resolution so they stay
 sharp. The window's own theme follows the one you choose: with Light, Marbble asks the system for
 the light look of the menu bar and title bar (GTK's light variant on Linux), and with the others
-for the dark one. On Linux the menu bar takes the theme's background colour too.
+for the dark one. On Linux the menu bar takes the theme's background colour too. In every theme the secondary text (captions, section labels, empty-slot marks)
+has a contrast of at least 4.5:1 against what it sits on.
+
+Long folder paths (the Project Chooser's Location, Settings › General › Project Folder) are
+shortened from the start at a folder boundary, as in **…/Music/Marbble**; hover for the whole
+path. Pop-up menus in Settings and the dialogs look like the ones in the toolbars.
 
 ---
 

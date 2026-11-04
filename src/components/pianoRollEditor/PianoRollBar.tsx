@@ -34,7 +34,7 @@ export function PianoRollBar({ pr, title, toolBtn, qBtn, qOpen, setQOpen, selNot
   const { quantizeNow, zoomX, zoomY } = commands;
   const { editItems, functionItems, viewItems, toolItems } = menus;
   return (
-    <div className="local-bar">
+    <div className="local-bar editor-bar pr-bar">
       <EditorTabs current="editor" />
       <div className="local-menus">
         <button className="local-menu" onMouseDown={(e) => openMenuAt(e.currentTarget, editItems())}>

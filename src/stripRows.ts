@@ -44,3 +44,26 @@ export function stripWants(kind: string | null, inserts: readonly unknown[] | un
   const fx = slotsWanted(inserts, inserts?.length ?? 0);
   return { inserts: fx, sends: kind === null ? 0 : slotsWanted(sends, sendSlots) };
 }
+
+/** One slot row: a 20 px slot and the 2 px gap under it (strip.css, .strip-slots). */
+export const SLOT_ROW_H = 22;
+/** The fader height the Mixer keeps before it shows every slot row: enough to set a level. */
+export const FADER_WANTED = 120;
+
+/**
+ * The rows the Mixer's strips show in a view `viewH` tall. `fixedH` is a strip's height with no
+ * slot rows and its fader at its least (`faderMin`). While the fader would get less than
+ * `FADER_WANTED`, rows go, sends first (the larger section first), down to one in each; a strip
+ * with more slots than rows scrolls them in their own box and shows "+N", as it does past the
+ * maximum. Still too short with one row each: the strips scroll (see Mixer).
+ */
+export function fitStripRows(rows: SlotRows, viewH: number, fixedH: number, faderMin: number): SlotRows {
+  let { inserts, sends } = rows;
+  const fader = () => viewH - fixedH - (inserts + sends) * SLOT_ROW_H + faderMin;
+  while (fader() < FADER_WANTED && (inserts > 1 || sends > 1)) {
+    if (sends > 1 && sends >= inserts) sends--;
+    else if (inserts > 1) inserts--;
+    else sends--;
+  }
+  return { inserts, sends };
+}

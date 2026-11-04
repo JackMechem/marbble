@@ -53,6 +53,14 @@ Things that pass their checks but want a person.
 
 Nothing here has been checked by eye yet.
 
+- **Editors, Mixer and narrow windows (round 7, 2026-11-04).** Measured in headless Chromium with the harness, not in
+  the app (WebKitGTK has container queries from 2.40; the Nix shell has 2.50). At 1280×800 with the Inspector, the
+  Piano Roll's bar on one row without captions; at 125 % (View › Larger Interface) its tools on a second row and the
+  control bar's right-hand buttons in the window. The Mixer at its default 560 px with 2 Audio FX rows, 1 Sends row and
+  a 105 px fader at 1480×920; at 125 % scrolled to the bottom. The selected strip's lit name plate. A new pattern
+  region on Bass (Uno) in the showcase: the eight pitches it plays, A2 down to E1, named by note; on a new Uno track,
+  C4 down to C3; on Drums-named or Sampler tracks, the kit. Snap › Division and Ticks. The dimmer text in Light and Studio.
+
 - **UI audit fixes, layout (2026-11-04).** Measured in headless Chromium against the real stylesheet (a harness with
   the showcase project), not in the app. The Mixer's and Inspector's faders, pan knobs and Read buttons on one line,
   Stereo Out, folder and VCA strips included; a strip with more than 6 inserts scrolling them with "+N"; track header
@@ -214,10 +222,7 @@ they use there (simulated on Linux), but none of this has run on a real machine.
 
 What's left from the reviews and the UI audits of 2026-11-04. An independent re-audit after the round-6 fixes
 graded the UI **7/10** (41 findings; report at `~/Desktop/marbble-ui-audit/ui-audit-2.html` on the owner's
-machine). Its top items:
-
-- The Piano Roll's toolbar runs off the edge at 1280 px (Height, Zoom and the detach button out of reach); the
-  docked Mixer cuts off its faders at 1480×920.
+machine). Round 7 addressed all 41; what's left of them is listed below with the rest.
 
 - **Design system, round 6 (not seen in the app yet):** a six-size type scale (body 11.5 → 12 px, small text
   9–10.5 → 11 px), every hex colour in a token, a focus ring for Tab, knobs and faders as keyboard sliders,
@@ -252,7 +257,18 @@ machine). Its top items:
 - **From the UI audit of 2026-11-04** (all menus, Settings, dialogs, Mixer, editors, Light theme):
   - The menu bar on macOS doesn't show the key commands' keys (R, X, Space…): AppKit can't draw a key without binding
     it, and a bound bare letter would be taken from text fields. Linux and Windows show them (menu.rs).
-  - Two pop-up styles (Settings vs toolbars).
+- **Round 7, editors and narrow windows (not seen in the app yet):** the editors' bars drop captions, shorten
+  sliders and then wrap (`editor-bars.css`); the control bar tightens below 1150 px; the Mixer fits its slot rows
+  to its height and scrolls from the bottom; the Piano Roll's lane is a third of the height. Left over:
+  - The control bar at 125 % and 1280 px fits with no spare pixel, measured with the LCD in bars and beats;
+    the time display, a long key name or a fifth mode button would push the right-hand buttons out again.
+  - Snap has Division and Ticks but not Logic's "Snap Regions to Relative Value".
+  - From the audit's truncation finding (P2), outside the editors: the automation parameter pop-up in a
+    default-width track header reads "Volu…", instrument tabs repeat "Marbble" ("Marbble Uno B…"), and
+    Cinque's preset pop-up runs "Warm Analog Brass" into its chevron. `text-fit.css` has the shared
+    `.truncate` rule for them.
+  - The Sampler's input and zone pickers are native `<select>`s, the last dropdowns not in the shared style.
+  - The Inspector's strip pair doesn't fit its slot rows to the height the way the Mixer does.
 
 ### Larger
 

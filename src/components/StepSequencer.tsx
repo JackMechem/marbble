@@ -72,6 +72,8 @@ export function StepSequencer() {
   const [, bump] = useReducer((x: number) => x + 1, 0);
   const at = patternRegion(project, selected);
   const region = at?.region ?? null;
+  // A kit's rows are named for its drums; a synth's for their notes.
+  const kit = at ? ss.isKitTrack(at.track) : true;
   useEditorFollow(project?.tracks.flatMap((t) => t.regions).find((r) => r.id === selected[0]) ?? null, "steps");
 
   // Edits are shown at once and sent in the background. While any are on their way (or a drag
@@ -241,13 +243,16 @@ export function StepSequencer() {
         .filter((n) => n <= 127)
         .map((n) => ({ label: ss.noteName(n), checked: n === cur, onClick: () => set(n) })),
     }));
+    const drums: MenuItem[] = [
+      { label: "General MIDI Drums", header: true },
+      ...Object.entries(ss.GM_DRUMS).map(([n, name]) => ({ label: `${name} (${ss.noteName(Number(n))})`, checked: Number(n) === cur, onClick: () => set(Number(n)) })),
+    ];
+    const notes: MenuItem = { label: "Notes", children: octaves };
+    // A kit offers its drums first; a synth its notes, with the drums in a submenu.
     return [
       { label: "Learn (play a note)", checked: learnRow === r, onClick: () => setLearnRow(learnRow === r ? null : r) },
       { separator: true },
-      { label: "General MIDI Drums", header: true },
-      ...Object.entries(ss.GM_DRUMS).map(([n, name]) => ({ label: `${name} (${ss.noteName(Number(n))})`, checked: Number(n) === cur, onClick: () => set(Number(n)) })),
-      { separator: true },
-      { label: "Notes", children: octaves },
+      ...(kit ? [...drums, { separator: true }, notes] : [notes, { label: "General MIDI Drums", children: drums.slice(1) }]),
     ];
   };
 
@@ -262,7 +267,7 @@ export function StepSequencer() {
   ];
 
   const rowMenu = (r: number): MenuItem[] => [
-    { label: "Add Row Below", disabled: (pattern?.rows.length ?? 0) >= ss.MAX_ROWS, onClick: () => edit("Add Row", (p) => ss.addRow(p, r)) },
+    { label: "Add Row Below", disabled: (pattern?.rows.length ?? 0) >= ss.MAX_ROWS, onClick: () => edit("Add Row", (p) => ss.addRow(p, r, ss.newRowPitch(p, kit))) },
     { label: "Duplicate Row", disabled: (pattern?.rows.length ?? 0) >= ss.MAX_ROWS, onClick: () => edit("Duplicate Row", (p) => ({ ...p, rows: [...p.rows.slice(0, r + 1), p.rows[r], ...p.rows.slice(r + 1)] })) },
     { label: "Clear Row", onClick: () => edit("Clear Row", (p) => ss.clearSteps(p, r)) },
     { separator: true },
@@ -270,7 +275,7 @@ export function StepSequencer() {
   ];
 
   const functionsMenu = (): MenuItem[] => [
-    { label: "Add Row", disabled: !pattern || pattern.rows.length >= ss.MAX_ROWS, onClick: () => edit("Add Row", (p) => ss.addRow(p)) },
+    { label: "Add Row", disabled: !pattern || pattern.rows.length >= ss.MAX_ROWS, onClick: () => edit("Add Row", (p) => ss.addRow(p, undefined, ss.newRowPitch(p, kit))) },
     { label: "Clear Pattern", disabled: !pattern, onClick: () => edit("Clear Pattern", (p) => ss.clearSteps(p)) },
     { separator: true },
     { label: "Convert to MIDI Region", disabled: !region, onClick: () => region && act("convert_patterns_to_midi", { ids: [region.id] }).then(() => setState({ bottom: "editor" })) },
@@ -278,7 +283,7 @@ export function StepSequencer() {
 
   // ---- the view ---------------------------------------------------------------------------
   const bar = (
-    <div className="local-bar">
+    <div className="local-bar editor-bar">
       <EditorTabs current="steps" />
       <div className="local-menus">
         <button className="local-menu" disabled={!region} onMouseDown={(e) => openMenuAt(e.currentTarget, functionsMenu())}>
@@ -319,7 +324,7 @@ export function StepSequencer() {
   return (
     <div className="editor step-seq" {...focusProps}>
       {bar}
-      <div className="ss-tools">
+      <div className="ss-tools editor-bar">
         <div className="editor-tabs ss-modes">
           {ss.EDIT_MODES.map((m) => (
             <button key={m.id} className={"filter" + (mode === m.id ? " on" : "")} title={m.title} onClick={() => setMode(m.id)}>
@@ -336,14 +341,14 @@ export function StepSequencer() {
           {ss.rateLabel(pattern.rate)} <Icon.chevron />
         </button>
         <span className="lb-label">Swing</span>
-        <NumberField value={pattern.swing} min={0} max={100} width={70} onChange={(swing) => edit("Swing", (p) => ({ ...p, swing }), `swing:${region.id}`)} />
+        <NumberField value={pattern.swing} min={0} max={100} width={70} title="Swing (%)" onChange={(swing) => edit("Swing", (p) => ({ ...p, swing }), `swing:${region.id}`)} />
         <button className={"filter" + (pattern.looped !== false ? " on" : "")} title="Loop: the pattern repeats to the end of the region" onClick={() => edit("Pattern Loop", (p) => ({ ...p, looped: p.looped === false }))}>
           Loop
         </button>
-        <button className="lb-btn ss-add" title="Add Row" aria-label="Add Row" disabled={pattern.rows.length >= ss.MAX_ROWS} onClick={() => edit("Add Row", (p) => ss.addRow(p))}>
+        <button className="lb-btn ss-add" title="Add Row" aria-label="Add Row" disabled={pattern.rows.length >= ss.MAX_ROWS} onClick={() => edit("Add Row", (p) => ss.addRow(p, undefined, ss.newRowPitch(p, kit)))}>
           <Icon.plus />
         </button>
-        {learnRow !== null && <span className="ss-learn">Play a note for {ss.rowName(pattern.rows[learnRow]?.pitch ?? 0)}…</span>}
+        {learnRow !== null && <span className="ss-learn">Play a note for {ss.rowName(pattern.rows[learnRow]?.pitch ?? 0, kit)}…</span>}
         {frozen && <span className="ss-learn">The track is frozen.</span>}
       </div>
       <div className="editor-body ss-body">
@@ -369,8 +374,8 @@ export function StepSequencer() {
                     S
                   </button>
                   <button className="ss-name" title="Row pitch: choose a drum or note, or Learn one from a MIDI keyboard" onMouseDown={(e) => openMenuAt(e.currentTarget, pitchItems(r))}>
-                    <span className="ss-name-text">{ss.rowName(row.pitch)}</span>
-                    <span className="ss-note">{ss.noteName(row.pitch)}</span>
+                    <span className="ss-name-text">{ss.rowName(row.pitch, kit)}</span>
+                    {kit && <span className="ss-note">{ss.noteName(row.pitch)}</span>}
                   </button>
                   <button className={"ss-opt" + (row.rate != null ? " set" : "")} title="Row step rate" onMouseDown={(e) => openMenuAt(e.currentTarget, rateItems(row.rate, (v) => edit("Row Rate", (p) => ss.setRow(p, r, { rate: v })), `Pattern (${ss.rateLabel(pattern.rate)})`))}>
                     {ss.rateLabel(rate)}

@@ -3,6 +3,7 @@
 import * as ops from "../ops";
 import { Icon } from "../icons";
 import { getState, setState, useStore, type Snap, type State } from "../store";
+import { SNAP_LABELS } from "../rulerMenu";
 import { MAX_TRACK_H, MIN_TRACK_H, zoomTracks } from "../layout";
 import { RULER_H } from "../view";
 import { Splitter } from "./Splitter";
@@ -30,7 +31,6 @@ import { EDIT_MENU, layMenu, menuLabel } from "../menuLabels";
 import { packTakeFolder } from "../takes";
 import { releaseFieldFocus } from "../focusRing";
 
-const SNAP_LABELS: Record<Snap, string> = { smart: "Smart", bar: "Bar", beat: "Beat", off: "Off" };
 /** Logic's Drag pop-up; only Overlap and X-Fade so far. */
 /** In the order of Logic's Drag pop-up. */
 const DRAG_LABELS: Record<DragMode, string> = { overlap: "Overlap", no_overlap: "No Overlap", xfade: "X-Fade", shuffle_r: "Shuffle R", shuffle_l: "Shuffle L" };

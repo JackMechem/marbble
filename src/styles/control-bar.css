@@ -317,3 +317,39 @@
   color: inherit;
 }
 
+
+/* A narrow window (1280 px at 125 % is 1024 px): the bar tightens its gaps and buttons so the
+   view buttons at its right end stay in the window. It needs about 1140 px as drawn above. */
+.control-bar {
+  container: control-bar / inline-size;
+}
+
+@container control-bar (max-width: 1150px) {
+  .cb-center {
+    gap: 6px;
+  }
+
+  .cb-group {
+    gap: 4px;
+  }
+
+  .cb-btn {
+    width: 28px;
+  }
+
+  .tp-btn {
+    width: 30px;
+  }
+
+  .mode-btn {
+    padding: 0 4px;
+  }
+
+  .lcd {
+    min-width: 240px;
+  }
+
+  .lcd-field {
+    padding: 0 8px;
+  }
+}

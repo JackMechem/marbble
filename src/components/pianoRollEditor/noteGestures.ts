@@ -9,7 +9,7 @@ import { ccClipboard, noteClipboard, type Commands } from "./commands";
 import { dragWith, local, type Core } from "./core";
 import type { Menus } from "./menus";
 import { setPrefs } from "./prefs";
-import { cycleGrab, keyAtPoint, noteAt } from "../../pianoRollModel";
+import { cycleGrab, keyAtPoint, laneShareOf, noteAt } from "../../pianoRollModel";
 import type { PNote } from "../../midiEdit";
 
 export function noteGestures(ed: Core, c: Commands, m: Menus) {
@@ -413,9 +413,11 @@ export function noteGestures(ed: Core, c: Commands, m: Menus) {
   const onSplitDown = (e: React.MouseEvent) => {
     e.preventDefault();
     const sy = e.clientY;
-    const h0 = live.current.pr.laneH;
+    // The lane keeps its share of the height under the ruler, so it scales with the editor.
+    const lane = ed.laneWrap.current?.getBoundingClientRect().height ?? 0;
+    const area = lane + (scrollRef.current?.getBoundingClientRect().height ?? 0);
     dragWith(
-      (ev) => setPrefs({ laneH: Math.round(Math.max(40, Math.min(420, h0 + sy - ev.clientY))) }),
+      (ev) => setPrefs({ laneShare: laneShareOf(lane + sy - ev.clientY, area) }),
       () => {},
     );
   };

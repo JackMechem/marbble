@@ -127,3 +127,49 @@ test("a pattern region made at the playhead goes in the first bar no region cove
   // A free bar before a later region is used.
   assert.deepEqual(ss.freePatternBar(map, [at(9 * BAR, BAR)], 5 * BAR), [5 * BAR, BAR]);
 });
+
+// ---- the rows of a new pattern --------------------------------------------------------------
+
+const inst = (plugin_id: string, name: string) => ({ uid: 1, plugin_id, name, bypass: false });
+const midi = (...pitches: number[]) => ({ id: 1, name: "R", start: 0, length: 1, muted: false, content: { type: "midi" as const, notes: pitches.map((pitch) => ({ start: 0, length: 1, pitch, velocity: 100 })) } }) as unknown as Region;
+const trk = (name: string, instrument: ReturnType<typeof inst> | null, ...regions: Region[]) => ({ name, instrument, regions });
+
+test("a kit is a sampler, or an instrument or track named like one; anything else plays pitches", () => {
+  assert.ok(ss.isKitTrack(trk("Drums", inst("builtin:synth", "Marbble Synth"))));
+  assert.ok(ss.isKitTrack(trk("Beat", null)));
+  assert.ok(ss.isKitTrack(trk("Track 3", inst("vst3:abc", "Drum Machine"))));
+  assert.ok(ss.isKitTrack(trk("Bells", inst("builtin:sampler", "Marbble Sampler"))));
+  assert.ok(!ss.isKitTrack(trk("Bass", inst("builtin:uno", "Marbble Uno"))));
+  assert.ok(!ss.isKitTrack(trk("Keys", null)));
+});
+
+test("a new pattern's rows follow the instrument", () => {
+  // A bass synth with nothing played yet: an octave of the key's scale from C3, highest first.
+  assert.deepEqual(ss.templateRows(trk("Bass", inst("builtin:uno", "Marbble Uno")), "C major"), [72, 71, 69, 67, 65, 64, 62, 60]);
+  assert.deepEqual(ss.templateRows(trk("Bass", inst("builtin:uno", "Marbble Uno")), "A minor"), [81, 79, 77, 76, 74, 72, 71, 69]);
+  assert.deepEqual(ss.templateRows(trk("Bass", null), "nonsense"), [72, 71, 69, 67, 65, 64, 62, 60]);
+  // A kit with nothing played yet: the default kit, from the kick up.
+  assert.deepEqual(ss.templateRows(trk("Drums", inst("builtin:sampler", "Marbble Sampler")), "C major"), [...ss.DEFAULT_KIT]);
+  // The notes the track already plays, the most played first when there are too many.
+  assert.deepEqual(ss.templateRows(trk("Bass", inst("builtin:uno", "Uno"), midi(33, 33, 41, 43, 45)), "C major"), [45, 43, 41, 33]);
+  assert.deepEqual(ss.templateRows(trk("Drums", null, midi(42, 36, 38, 42)), "C major"), [36, 38, 42]);
+  const many = ss.templateRows(trk("Keys", null, midi(...Array.from({ length: 30 }, (_, k) => 40 + k), 69, 69)), "C major");
+  assert.equal(many.length, ss.TEMPLATE_ROWS_MAX);
+  assert.ok(many.includes(69), "the most played is kept");
+  // Rows of the track's pattern regions count too.
+  const pat = { ...midi(), pattern: { length: 16, rate: 16, swing: 0, rows: [{ pitch: 50, steps: [{ on: true }] }] } } as unknown as Region;
+  assert.deepEqual(ss.templateRows(trk("Bass", null, pat), "C major"), [50]);
+});
+
+test("a new row on a pitched instrument is the next free note down", () => {
+  const p: Pattern = { length: 16, rate: 16, swing: 0, rows: [72, 71, 69].map((pitch) => ({ pitch, steps: [] })) };
+  assert.equal(ss.newRowPitch(p, false), 68);
+  assert.equal(ss.newRowPitch({ ...p, rows: [{ pitch: 0, steps: [] }] }, false), 1);
+  assert.equal(ss.newRowPitch({ ...p, rows: [] }, false), 60);
+  assert.equal(ss.newRowPitch({ ...p, rows: [] }, true), 36, "a kit starts from the kick");
+});
+
+test("rows on a pitched instrument are named by note, not by drum", () => {
+  assert.equal(ss.rowName(36, false), "C1");
+  assert.equal(ss.rowName(36, true), "Kick");
+});

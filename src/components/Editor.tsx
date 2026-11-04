@@ -32,7 +32,7 @@ export function Editor() {
   if (track?.kind === "audio") return <AudioEditor track={track} region={region} />;
   return (
     <div className="editor">
-      <div className="local-bar">
+      <div className="local-bar editor-bar">
         <div className="local-menus">
           <span className="local-title">Editor</span>
         </div>

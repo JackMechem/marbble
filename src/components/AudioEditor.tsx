@@ -212,7 +212,7 @@ export function AudioEditor({ track, region }: { track: Track; region: Region | 
 
   return (
     <div className="editor audio-editor">
-      <div className="local-bar">
+      <div className="local-bar editor-bar aed-bar">
         <div className="local-menus">
           <button className="local-menu" onMouseDown={(e) => openMenuAt(e.currentTarget, ed.editMenu())}>
             Edit

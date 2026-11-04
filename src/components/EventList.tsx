@@ -641,7 +641,7 @@ export function EventList() {
 
   return (
     <div className="editor event-list" ref={rootRef} tabIndex={-1} onKeyDown={onKeyDown}>
-      <div className="local-bar">
+      <div className="local-bar editor-bar">
         <EditorTabs current="list" />
         <div className="local-menus">
           <button className="local-menu" onMouseDown={(e) => openMenuAt(e.currentTarget, editItems())}>
@@ -666,7 +666,7 @@ export function EventList() {
           <DetachButton panel="list" />
         </div>
       </div>
-      <div className="el-tools">
+      <div className="el-tools editor-bar">
         <button className="lb-btn" title={`Add ${typeName(p.addType)} at Playhead`} aria-label={`Add ${typeName(p.addType)} at Playhead`} disabled={!scope} onClick={() => addEvent()}>
           <Icon.plus />
         </button>

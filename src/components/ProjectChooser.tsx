@@ -12,6 +12,7 @@ import { setState, useStore } from "../store";
 import { NumberField, Select, sheetKey } from "./Form";
 import { useSheetKeys } from "../sheetKeys";
 import { getSettings, openProjectPath, updateSettings, type Startup } from "../prefs";
+import { PathText } from "./PathText";
 
 interface TemplateTrack {
   kind: TrackKind;
@@ -344,9 +345,7 @@ export function ProjectChooser() {
                 />
                 <label>Location</label>
                 <div className="row-inline">
-                  <span className="path-field" title={target}>
-                    <bdi>{location}</bdi>
-                  </span>
+                  <PathText className="path-field" path={location} title={target} />
                   <button className="push" onClick={chooseLocation}>
                     Choose…
                   </button>

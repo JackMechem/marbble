@@ -10,6 +10,8 @@ const SNAPS: [Snap, string][] = [
   ["smart", "Smart (follows the zoom)"],
   ["bar", "Bar"],
   ["beat", "Beat"],
+  ["division", "Division (a quarter of a beat)"],
+  ["ticks", "Ticks"],
   ["off", "Off"],
 ];
 

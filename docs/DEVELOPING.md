@@ -300,7 +300,9 @@ instead and enforce rules that would otherwise only fail in the running app.
 | `eventList.test.ts` | The Event List's positions across tempo and signature changes, typed values and edits. |
 | `noteSelect.test.ts` | Edit › Select on notes and events in the Piano Roll and the Event List. |
 | `stepInput.test.ts` | Step Input: step lengths through the tempo map, the chord and advance state machine, the region edits. |
-| `stepSeq.test.ts` | The Step Sequencer: step edits, rows, paint values for each edit mode, names, the playing step of each row. |
+| `stepSeq.test.ts` | The Step Sequencer: step edits, rows, paint values for each edit mode, names, the rows of a new pattern by instrument, the playing step of each row. |
+| `snap.test.ts` | The snap grid (`snapStep`, `snapPos` in `src/time.ts`): Bar, Beat, Division, Ticks and Smart in each signature. |
+| `textFit.test.ts` | Long paths shortened at a separator (`src/textFit.ts`). |
 | `tempo.test.ts` | `src/tempo.ts`, the mirror of the engine's tempo map. |
 | `musicalMove.test.ts` | Region moves and nudges in bars and beats through the tempo map. |
 | `audioEdit.test.ts` | The Audio Track Editor's range arithmetic (`src/audioRange.ts`). |
@@ -342,7 +344,7 @@ instead and enforce rules that would otherwise only fail in the running app.
 | `storeSelectors.test.ts` | Guard: no `useStore`, `useEd` or `useSettings` selector builds a new array or object on each call (which re-renders forever and blanks the window). |
 | `commands.test.ts` | Guard: every key command and native menu item is handled, and no two key commands share a default key. |
 | `tauriCommands.test.ts` | Guard: every Tauri command the frontend calls is registered, and each call passes its required arguments in camelCase and nothing else. |
-| `pianoRollModel.test.ts` | The Piano Roll's lanes, what a point hits, and its grid sums in musical time. |
+| `pianoRollModel.test.ts` | The Piano Roll's lanes, what a point hits, its grid sums in musical time, where a region opens and the lane's share. |
 | `regionGrab.test.ts` | What a press on a region in the Tracks area grabs: the loop tool, trims and fades. |
 | `audioEditorModel.test.ts` | The Audio Track Editor's layout, zoom range and what a press grabs. |
 | `automationParams.test.ts` | Automation parameters: labels, each strip's list, Stereo Out as a track, the lane's scale. |
@@ -351,6 +353,7 @@ instead and enforce rules that would otherwise only fail in the running app.
 | `dynScale.test.ts` | The dynamics panels' value formatting and knob maths. |
 | `styles.test.ts` | Guard: `src/styles/index.css` imports every stylesheet exactly once with the tokens first, no other file imports CSS, and each file's braces balance; no raw hex colour outside `tokens.css`; every font size from the type scale; `tokens.css` matches Studio in `themes.ts`; the focus ring. |
 | `browserDialogs.test.ts` | Guard: no `window.prompt`, `confirm` or `alert` in `src/` (macOS's web view doesn't implement them; use `askName` or the dialog plug-in). |
+| `contrast.test.ts` | Guard: in every theme of `themes.ts`, `--text`, `--dim` and `--faint` are at least 4.5:1 (WCAG) on each surface text sits on, `--lcd-label` on the LCD, and the three stay in that order. |
 
 ### What to run before sending a change
 

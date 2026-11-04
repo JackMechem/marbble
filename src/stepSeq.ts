@@ -2,7 +2,8 @@
 // each row, and the miniature a pattern region shows in the Tracks area. The pattern itself
 // (and the notes it plays) lives in crates/engine/src/pattern.rs; StepSequencer.tsx is the
 // editor, which sends each edited pattern with `set_pattern`.
-import type { Note, Pattern, PatternRow, PatternStep, Region } from "./api";
+import type { Note, Pattern, PatternRow, PatternStep, Region, Track } from "./api";
+import { scaleOf } from "./midiEdit.ts";
 import type { TempoMap } from "./tempo";
 import { regionEnd } from "./loops.ts";
 
@@ -82,8 +83,65 @@ export const GM_DRUMS: Record<number, string> = {
   81: "Open Triangle",
 };
 
-/** A row's name: the drum it plays in the General MIDI map, else its note name. */
-export const rowName = (pitch: number) => GM_DRUMS[pitch] ?? noteName(pitch);
+/** A row's name: on a kit, the drum it plays in the General MIDI map, else its note name. */
+export const rowName = (pitch: number, kit = true) => (kit ? GM_DRUMS[pitch] : undefined) ?? noteName(pitch);
+
+// ---- the rows of a new pattern --------------------------------------------------------------
+
+/** The engine's kit for a new pattern (pattern.rs DEFAULT_KIT), from the kick up. */
+export const DEFAULT_KIT = [36, 38, 39, 42, 46, 45, 48, 49];
+/** The most rows a new pattern takes from the notes its track already plays. */
+export const TEMPLATE_ROWS_MAX = 16;
+/** Where a pitched instrument's scale rows start: C3, Logic's middle C. */
+export const SCALE_ROOT_OCTAVE = 60;
+
+type KitInfo = Pick<Track, "name" | "regions"> & { instrument: { plugin_id: string; name: string } | null };
+
+/** Whether a track plays a kit, so its rows are named for the drums of the General MIDI map: a
+ *  sampler, or an instrument or track named like a kit. Anything else plays pitches. */
+export function isKitTrack(track: Pick<KitInfo, "name" | "instrument">): boolean {
+  const words = /drum|kit|perc|beat|groove|808|909/i;
+  return track.instrument?.plugin_id === "builtin:sampler" || words.test(track.name) || words.test(track.instrument?.name ?? "");
+}
+
+/** The pitch class (0 = C) of a key's tonic, such as "E♭ major"; C when it can't be read. */
+function keyRoot(key: string): number {
+  const m = /^([A-G])([#♯b♭]?)/i.exec(key.trim());
+  if (!m) return 0;
+  const base = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[m[1].toUpperCase() as "C"]!;
+  const acc = m[2] === "#" || m[2] === "♯" ? 1 : m[2] === "b" || m[2] === "♭" ? -1 : 0;
+  return (base + acc + 12) % 12;
+}
+
+/**
+ * The rows of a new pattern region on `track`, as Logic picks a template by instrument: the
+ * pitches its regions already play (the most played, up to TEMPLATE_ROWS_MAX), else the default
+ * kit for a kit, else an octave of the project's `key` from C3. A kit lists its rows from the
+ * lowest pitch up, as the kit does; pitched rows go from the highest down, as in the Piano Roll.
+ */
+export function templateRows(track: KitInfo, key: string): number[] {
+  const kit = isKitTrack(track);
+  const uses = new Map<number, number>();
+  const use = (pitch: number, n = 1) => uses.set(pitch, (uses.get(pitch) ?? 0) + n);
+  for (const r of track.regions) {
+    if (r.pattern) for (const row of r.pattern.rows) use(row.pitch, 1 + row.steps.filter((s) => s.on).length);
+    else if (r.content.type === "midi") for (const n of r.content.notes) use(n.pitch);
+  }
+  let rows: number[];
+  if (uses.size) {
+    rows = [...uses.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0] - b[0])
+      .slice(0, TEMPLATE_ROWS_MAX)
+      .map(([p]) => p);
+  } else if (kit) {
+    return DEFAULT_KIT.slice();
+  } else {
+    const scale = scaleOf(key);
+    const root = SCALE_ROOT_OCTAVE + keyRoot(key);
+    rows = Array.from({ length: 13 }, (_, k) => root + k).filter((p) => scale.has(p % 12));
+  }
+  return rows.sort((a, b) => (kit ? a - b : b - a));
+}
 
 // ---- steps and rows -------------------------------------------------------------------------
 
@@ -136,18 +194,24 @@ export function setRow(p: Pattern, r: number, patch: Partial<PatternRow>): Patte
   return { ...p, rows: p.rows.map((row, k) => (k === r ? { ...row, ...patch } : row)) };
 }
 
-/** A pitch for a new row: the first of the kit's usual pieces not in use, else the one above
- *  the last row's. */
-export function newRowPitch(p: Pattern): number {
+/** A pitch for a new row: on a kit, the first of the kit's usual pieces not in use, else the one
+ *  above the last row's; on a pitched instrument, the first free note below the last row's. */
+export function newRowPitch(p: Pattern, kit = true): number {
   const used = new Set(p.rows.map((r) => r.pitch));
-  const kit = [36, 38, 39, 42, 46, 45, 48, 49, 51, 37, 44, 50, 41, 43, 47, 54, 56, 70];
-  const free = kit.find((k) => !used.has(k));
+  if (!kit) {
+    const last = p.rows[p.rows.length - 1]?.pitch ?? SCALE_ROOT_OCTAVE + 1;
+    for (let n = last - 1; n >= 0; n--) if (!used.has(n)) return n;
+    for (let n = last + 1; n <= 127; n++) if (!used.has(n)) return n;
+    return last;
+  }
+  const pieces = [36, 38, 39, 42, 46, 45, 48, 49, 51, 37, 44, 50, 41, 43, 47, 54, 56, 70];
+  const free = pieces.find((k) => !used.has(k));
   if (free !== undefined) return free;
   return Math.min(127, (p.rows[p.rows.length - 1]?.pitch ?? 35) + 1);
 }
 
 /** Adds a row below row `after` (at the end when it is absent). */
-export function addRow(p: Pattern, after?: number, pitch = newRowPitch(p)): Pattern {
+export function addRow(p: Pattern, after?: number, pitch = newRowPitch(p, true)): Pattern {
   if (p.rows.length >= MAX_ROWS) return p;
   const rows = p.rows.slice();
   rows.splice(after === undefined ? rows.length : after + 1, 0, { pitch, steps: [] });

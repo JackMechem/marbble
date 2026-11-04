@@ -1,0 +1,44 @@
+/* Text that doesn't fit: the shared rules, used across the app instead of one-off fixes.
+   - .truncate: one line, ending in "…" when cut (never cut mid-word without one).
+   - .path-text: a path shortened from its start at a separator ("…/Music/Marbble"; PathText.tsx
+     and textFit.ts do the shortening, the tooltip has the whole path).
+   - Captions and buttons in bars and dialogs stay on one line.
+   - A checkbox and its label stay together on one line, the label beside the box. */
+
+.truncate {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.path-text {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  direction: ltr;
+}
+
+.path-text > .truncate {
+  flex: 1;
+}
+
+.lb-label,
+.local-menu,
+.filter,
+.popup,
+.mode-btn,
+.push,
+.inline-label {
+  white-space: nowrap;
+}
+
+.check > input {
+  flex: none;
+}
+
+.form-row.checks > label.check {
+  width: auto;
+  text-align: left;
+  white-space: nowrap;
+}

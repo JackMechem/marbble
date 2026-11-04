@@ -15,7 +15,7 @@ import { exportMidi, exportTrackMidi, importMidiFiles } from "./midiFiles";
 import { canFreeze, freezeTracks, unfreezeTracks } from "./freeze";
 import { currentTick, getState, setState } from "./store";
 import { tempoMap } from "./tempo";
-import { freePatternBar } from "./stepSeq";
+import { freePatternBar, templateRows } from "./stepSeq";
 import { TRACK_COLOR_NAMES, TRACK_COLORS } from "./view";
 import { isFolder, packTakeFolder, takeFolderMenu } from "./takes";
 import { followingRegion, shapeOf } from "./fades";
@@ -316,7 +316,10 @@ export async function createPatternRegion(track: Id, pos: number, free = false) 
     start = Math.round(m.barStart(bar));
     length = Math.round(m.barStart(bar + 1)) - start;
   }
-  const made = await actMade("create_pattern_region", { track, start, length });
+  // Rows to suit the instrument: drums for a kit, notes for a synth (stepSeq.ts).
+  const t = p.tracks.find((x) => x.id === track);
+  const rows = t ? templateRows(t, p.key) : null;
+  const made = await actMade("create_pattern_region", { track, start, length, rows });
   if (made) setState({ selectedRegions: made, focus: "regions", bottom: "steps" });
 }
 

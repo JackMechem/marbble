@@ -62,20 +62,43 @@ export function formatTime(p: Project, pos: number): string {
   return `${String(m).padStart(2, "0")}:${s.toFixed(3).padStart(6, "0")}`;
 }
 
+/** Divisions per beat and ticks per division, as the LCD counts them (Bbt, tempo.ts). */
+export const DIVISIONS_PER_BEAT = 4;
+export const TICKS_PER_DIVISION = 240;
+
+/**
+ * The snap grid's step in quarter notes in a bar of `num`/`den`: a bar, a beat (the signature's
+ * denominator), a division (a quarter of a beat, the LCD's third field: a sixteenth in 4/4, a
+ * thirty-second in 6/8), a tick (1/240 of a division), or Smart, which follows the zoom. 0: no
+ * snapping.
+ */
+export function snapStep(mode: string, num: number, den: number, pxPerBeat: number): number {
+  const beat = 4 / den;
+  const division = beat / DIVISIONS_PER_BEAT;
+  switch (mode) {
+    case "off":
+      return 0;
+    case "bar":
+      return beat * num;
+    case "beat":
+      return beat;
+    case "division":
+      return division;
+    case "ticks":
+      return division / TICKS_PER_DIVISION;
+    default:
+      // Smart: follow the visible grid resolution.
+      return pxPerBeat > 60 ? division : pxPerBeat > 14 ? beat : beat * num;
+  }
+}
+
 /** `pos` snapped to the grid, in whole samples: at most tempos a beat isn't a whole number of
  *  samples, and the engine takes positions as integers. */
 export function snapPos(p: Project, pos: number, mode: string, pxPerBeat: number): number {
   if (mode === "off") return Math.round(pos);
   const m = tempoMap(p);
   const [num, den] = m.sigAt(pos);
-  const beat = 4 / den;
-  let step: number;
-  if (mode === "bar") step = beat * num;
-  else if (mode === "beat") step = beat;
-  else {
-    // Smart: follow the visible grid resolution.
-    step = pxPerBeat > 60 ? beat / 4 : pxPerBeat > 14 ? beat : beat * num;
-  }
+  const step = snapStep(mode, num, den, pxPerBeat);
   // Counted from the bar line, so the grid follows tempo and signature changes.
   return Math.round(m.sampleAt(m.snapQ(m.beatsAt(pos), step)));
 }

@@ -297,10 +297,11 @@ pub fn marquee_copy(state: State<AppState>, tracks: Vec<Id>, start: i64, end: i6
 }
 
 /// Track › New Pattern Region, or Create Pattern Region in a lane's menu: a pattern region with
-/// the default drum kit on an instrument track.
+/// the rows the Step Sequencer picked for the track (stepSeq.ts `templateRows`), or the default
+/// drum kit, on an instrument track.
 #[tauri::command]
-pub fn create_pattern_region(state: State<AppState>, track: Id, start: i64, length: i64) -> R<Made> {
-    edit_made(&state, "Create Pattern Region", false, |s| s.create_pattern_region(track, start, length).map(|id| vec![id]))
+pub fn create_pattern_region(state: State<AppState>, track: Id, start: i64, length: i64, rows: Option<Vec<u8>>) -> R<Made> {
+    edit_made(&state, "Create Pattern Region", false, |s| s.create_pattern_region_with(track, start, length, rows.as_deref()).map(|id| vec![id]))
 }
 
 /// The Step Sequencer's edits: replaces a pattern region's pattern. `key` merges a burst of

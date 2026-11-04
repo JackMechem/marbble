@@ -40,7 +40,7 @@ pub struct UiPrefs {
     pub startup: Startup,
     /// Ask before quitting, closing or opening over unsaved changes.
     pub confirm_unsaved: bool,
-    /// Snap mode of new windows: "smart", "bar", "beat" or "off".
+    /// Snap mode of new windows: "smart", "bar", "beat", "division", "ticks" or "off".
     pub snap: String,
     /// Nudge step for the Nudge Left/Right key commands: "bar", "beat", "8", "16", "32",
     /// "ms10" or "ms1".

@@ -124,6 +124,8 @@
   margin: 0;
 }
 
+/* A form's pop-up menu: the toolbars' .popup at form height, one dropdown look across Settings,
+   the dialogs and the toolbars (a neutral button with a small chevron). */
 .select {
   display: flex;
   align-items: center;
@@ -131,10 +133,10 @@
   height: 24px;
   min-width: 180px;
   max-width: 100%;
-  padding: 0 6px 0 9px;
-  border-radius: 5px;
-  background: var(--popup);
-  color: var(--text);
+  padding: 0 7px 0 9px;
+  border-radius: 4px;
+  background: var(--btn);
+  color: var(--btn-text);
   box-shadow: var(--btn-shadow);
   text-align: left;
 }
@@ -153,12 +155,8 @@
 
 .select-arrows {
   flex: none;
-  width: 16px;
-  height: 16px;
   display: grid;
   place-items: center;
-  border-radius: 3px;
-  background: var(--accent);
-  color: var(--accent-ink);
+  color: var(--btn-text);
 }
 

@@ -12,6 +12,15 @@ All notable changes to Marbble are recorded here. The format follows
   Window items (moved from View) and a list of the open windows to bring one to the front. Help
   opens the User Guide, the changelog, a new GitHub issue or the website in the browser, and
   Settings › Key Commands.
+- **Snap: Division and Ticks.** Division is a quarter of a beat (the position display's third
+  number: a sixteenth in 4/4, a thirty-second in 6/8), Ticks 1/240 of that. In the Snap pop-up,
+  the ruler's menu and Settings › Editing.
+- **The Step Sequencer picks rows for the instrument.** A new pattern region on a track that
+  already plays notes gets a row for each pitch it plays (up to 16); on a kit (the Sampler, or an
+  instrument or track named Drums, Kit, Perc…) the General MIDI kit; on any other instrument an
+  octave of the project key's scale from C3. A pitched instrument's rows are named by note, not
+  by drum, and + adds the next note down.
+
 - **HiDPI plug-in editors on Linux:** each editor is told the display's scale as it opens
   (`GDK_SCALE`, the desktop's GTK scale, or `Xft.dpi`), and its window takes the size the plug-in
   gives at that scale. LSP, Dragonfly, Zam, CHOW Tape and TONE3000 draw at 2x; nothing changes at
@@ -54,6 +63,24 @@ All notable changes to Marbble are recorded here. The format follows
   and Reverb don't appear to be listed twice; the VST3 list by vendor is **By Manufacturer**.
 - **A send slot greys out the buses the strip already sends to**, marked "Already sent".
 - **Project Settings keeps one height** on every tab, as Settings does.
+- **The editors' bars fit narrow panes.** At 1280 px, at 125 %, or with the Inspector and Library
+  open, the Piano Roll, Event List, Step Sequencer and Audio Track Editor drop their captions
+  (each control keeps its tooltip), then shorten their sliders, then move what's left to a
+  second row; nothing runs off the edge. The control bar tightens at 1280 px and 125 % so its
+  view buttons stay in the window.
+- **The Mixer opens with its faders.** Its default height is 560 px (was 400), and when it's
+  shorter than a strip the Audio FX and Sends sections show fewer rows before the fader shrinks
+  below 120 px; when even that doesn't fit, the strips scroll from the bottom so faders, meters
+  and names stay in view. The selected track's strip has its name plate lit.
+- **The Piano Roll gives the notes more room.** The Editors pane opens at 360 px (was 300), the
+  velocity lane takes a third of the height and keeps that share as the pane is resized, and
+  opening a region scrolls its whole pitch range into view (it centred on the average pitch,
+  which could leave notes below the view).
+- **Secondary text is easier to read:** the dim and faint text colours are at least 4.5:1 on
+  every surface in every theme (Studio's faint text was 2.4:1 on some), checked by a test.
+- **One pop-up style.** Settings and the dialogs use the toolbars' neutral pop-up instead of a
+  blue chevron box.
+
 - **A type scale.** The interface uses six text sizes (10 to 17 px) instead of twelve with half
   pixels among them. Text is 11 px or more (the body went from 11.5 to 12 px, the smallest
   labels from 9–10.5 to 11 px); 10 px is kept for numbers inside fixed readouts such as meter
@@ -163,6 +190,12 @@ All notable changes to Marbble are recorded here. The format follows
   Velocity, Wheel to Amp) no longer pushes its knob down. Knob names there take two lines' height.
 - **Switching themes clears the last theme's own colours:** after Light, the R and I letters kept
   Light's darker red and orange in the other themes until a restart.
+- **Long paths** in the Project Chooser and Settings › General start with "…/" at a folder
+  boundary instead of being cut mid-name; the tooltip has the whole path.
+- **Labels no longer wrap:** "Record Enable" in New Tracks sits beside its checkbox, Count-in
+  stays on one line at 125 %, and "No notes" in the Piano Roll's bar stays on one line. The
+  Step Sequencer's row names have room for "Closed Hi-Hat" and "Crash Cymbal 1".
+
 - **The Compressor's floating panel opens wide enough** for its knobs; it opened with a sideways
   scrollbar and its Mix and Output knobs cut off. A floating panel that hasn't been resized now
   opens as wide as its controls need, and the Noise Gate's groups wrap in a narrow window.

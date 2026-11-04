@@ -59,12 +59,13 @@
   align-items: stretch;
 }
 
-/* Row headers stay in view while the steps scroll sideways. */
+/* Row headers stay in view while the steps scroll sideways. Wide enough for the General MIDI
+   names with their notes ("Crash Cymbal 1 C♯2"); longer ones end in "…". */
 .ss-head {
   position: sticky;
   left: 0;
   z-index: 1;
-  width: 250px;
+  width: 300px;
   flex: none;
   display: flex;
   align-items: center;

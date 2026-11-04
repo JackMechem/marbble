@@ -1,7 +1,7 @@
 // Unit tests for src/pianoRollModel.ts: the Piano Roll's lanes, what a point hits and its grid sums.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { ccDotAt, cycleGrab, gridFloor, gridSpanAt, inMusicalTime, keyAtPoint, laneKind, laneShort, midiRegions, noteAt, pitchAt, regionForTime, snapToGrid, stalkAt, timeAt, xOf, type PrView } from "../src/pianoRollModel.ts";
+import { ccDotAt, cycleGrab, FIT_MARGIN_ROWS, fitPitchScroll, gridFloor, gridSpanAt, inMusicalTime, keyAtPoint, LANE_SHARE, laneKind, laneShareOf, laneShort, midiRegions, noteAt, pitchAt, regionForTime, snapToGrid, stalkAt, timeAt, xOf, type PrView } from "../src/pianoRollModel.ts";
 import type { PCc, PNote } from "../src/midiEdit.ts";
 import type { Region, Track } from "../src/api.ts";
 import type { Warp } from "../src/tempo.ts";
@@ -144,4 +144,31 @@ test("midiRegions leaves out audio and pattern regions", () => {
   const r = (id: number, type: string, pattern?: object) => ({ id, content: { type }, pattern }) as unknown as Region;
   const t = { regions: [r(1, "midi"), r(2, "audio"), r(3, "midi", {})] } as unknown as Track;
   assert.deepEqual(midiRegions(t).map((x) => x.id), [1]);
+});
+
+test("a region opens with its pitch range in view", () => {
+  const H = 10;
+  const rows = (top: number, view: number) => [127 - Math.floor(top / H), 127 - Math.ceil((top + view) / H) + 1];
+  // A range that fits: centred, every note in view with room around it.
+  const top = fitPitchScroll(40, 52, H, 200);
+  const [hiShown, loShown] = rows(top, 200);
+  assert.ok(hiShown >= 52 + FIT_MARGIN_ROWS && loShown <= 40 - FIT_MARGIN_ROWS, `${loShown}..${hiShown}`);
+  assert.ok(Math.abs(hiShown - 52 - (40 - loShown)) <= 1, "centred");
+  // Fits only without the room around it: still all in view, centred.
+  const tight = fitPitchScroll(33, 49, H, 175);
+  assert.ok(tight <= (127 - 49) * H && tight + 175 >= (127 - 33 + 1) * H, "every note row whole in view");
+  // Taller than the view: from the highest note down.
+  assert.equal(fitPitchScroll(20, 100, H, 200), (127 - 100) * H);
+  // At the ends of the keyboard the scroll stays in range.
+  assert.equal(fitPitchScroll(126, 127, H, 200), 0);
+  assert.equal(fitPitchScroll(0, 1, H, 200), 128 * H - 200);
+  // No notes: middle C in the middle.
+  assert.equal(fitPitchScroll(null, null, H, 200), (127 - 60) * H - 100);
+});
+
+test("the lane keeps a share of the editor's height", () => {
+  assert.equal(laneShareOf(100, 300), 1 / 3);
+  assert.equal(laneShareOf(5, 300), LANE_SHARE.min);
+  assert.equal(laneShareOf(290, 300), LANE_SHARE.max);
+  assert.equal(laneShareOf(100, 0), LANE_SHARE.initial, "not laid out yet");
 });

@@ -27,7 +27,7 @@ import { PianoRollBar } from "./pianoRollEditor/PianoRollBar";
 import { usePrefs } from "./pianoRollEditor/prefs";
 import { QuantizePanel } from "./pianoRollEditor/QuantizePanel";
 import { installWheel } from "./pianoRollEditor/wheel";
-import { laneShort, midiRegions, timeBase } from "../pianoRollModel";
+import { fitPitchScroll, LANE_MIN_PX, laneShort, midiRegions, timeBase } from "../pianoRollModel";
 import type { PCc, PNote } from "../midiEdit";
 
 // App.tsx, DetachedWindow.tsx and TrackTools.tsx import these from here.
@@ -169,10 +169,10 @@ export function PianoRoll({ track, region }: { track: Track; region: Region | nu
       const x0 = xOf(v, r.start);
       if (x0 >= 0 && x0 < v.W - 40) return;
     }
-    const notes = work.current.notes.filter((n) => !r || n.region === r.id);
-    const mid = notes.length ? notes.reduce((a, n) => a + n.pitch, 0) / notes.length : 60;
+    // The region's notes in view: their pitch range centred (pianoRollModel's fitPitchScroll).
+    const pitches = work.current.notes.filter((n) => !r || n.region === r.id).map((n) => n.pitch);
     el.scrollLeft = r ? Math.max(0, r.start * v.pps - 24) : el.scrollLeft;
-    el.scrollTop = Math.max(0, (127 - mid) * v.noteH - v.H / 2);
+    el.scrollTop = fitPitchScroll(pitches.length ? Math.min(...pitches) : null, pitches.length ? Math.max(...pitches) : null, v.noteH, el.clientHeight || v.H);
     requestDraw();
   }, [track.id, focus]);
 
@@ -224,7 +224,7 @@ export function PianoRoll({ track, region }: { track: Track; region: Region | nu
           }}
         />
       )}
-      <div className="pr-body" style={{ gridTemplateColumns: `${KEY_W}px 1fr`, gridTemplateRows: `${PR_RULER_H}px 1fr ${pr.showLane ? `5px ${pr.laneH}px` : "0 0"}` }}>
+      <div className="pr-body" style={{ gridTemplateColumns: `${KEY_W}px 1fr`, gridTemplateRows: `${PR_RULER_H}px 1fr ${pr.showLane ? `5px max(${LANE_MIN_PX}px, calc((100% - ${PR_RULER_H + 5}px) * ${pr.laneShare}))` : "0 0"}` }}>
         <div className="pr-corner" />
         <div className="pr-ruler">
           <canvas ref={rulerCv} onMouseDown={onRulerDown} />

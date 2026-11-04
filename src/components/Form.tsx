@@ -66,6 +66,7 @@ export function NumberField({
   max = Infinity,
   width = 76,
   resolution = step,
+  title,
 }: {
   value: number;
   onChange: (v: number) => void;
@@ -75,6 +76,8 @@ export function NumberField({
   width?: number;
   /** Typed values are rounded to this; by default, to `step`. */
   resolution?: number;
+  /** A tooltip, for a field shown without its caption. */
+  title?: string;
 }) {
   const [text, setText] = useState(String(value));
   useEffect(() => setText(String(value)), [value]);
@@ -90,7 +93,7 @@ export function NumberField({
   };
   const nudge = (d: number) => onChange(clamp(Math.round((value + d) * 1000) / 1000));
   return (
-    <div className="numfield" style={{ width }}>
+    <div className="numfield" style={{ width }} title={title}>
       <button type="button" className="numfield-step" tabIndex={-1} onClick={() => nudge(-step)} aria-label="Decrease">
         −
       </button>

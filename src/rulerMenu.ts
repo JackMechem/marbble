@@ -3,7 +3,7 @@
 import type { MenuItem } from "./components/Menu";
 import type { Snap } from "./store";
 
-export const SNAP_LABELS: Record<Snap, string> = { smart: "Smart", bar: "Bar", beat: "Beat", off: "Off" };
+export const SNAP_LABELS: Record<Snap, string> = { smart: "Smart", bar: "Bar", beat: "Beat", division: "Division", ticks: "Ticks", off: "Off" };
 
 export interface RulerMenuState {
   cycle: boolean;

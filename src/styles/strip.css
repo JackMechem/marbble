@@ -294,3 +294,11 @@
   text-overflow: ellipsis;
 }
 
+
+/* The Mixer's selected track: its name plate lit as the track's header is, with an accent line
+   under the name. (The Inspector's strip is always the selected track's, so it isn't lit.) */
+.mixer .strip.selected .strip-name {
+  background: var(--header-sel);
+  color: var(--text);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}

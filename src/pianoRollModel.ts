@@ -197,3 +197,35 @@ export function regionForTime(regs: Region[], f: Id | null, bar: number, t: numb
   for (const r of regs) if (dist(r) <= d) [best, d] = [r, dist(r)];
   return best?.id ?? null;
 }
+
+// ---- opening a region: the rows in view, the lane's share ------------------------------------
+
+/** Rows kept clear above and below a region's notes when it opens. */
+export const FIT_MARGIN_ROWS = 2;
+
+/**
+ * Where the note area scrolls to when a region opens (`scrollTop`): its notes' pitch range
+ * (`lo`..`hi`) centred, with a little room when there is some, or, when the range is taller than
+ * the view, from its highest note down. No notes: middle C in the middle.
+ */
+export function fitPitchScroll(lo: number | null, hi: number | null, noteH: number, viewH: number): number {
+  const max = Math.max(0, 128 * noteH - viewH);
+  const clamp = (at: number) => Math.round(Math.max(0, Math.min(max, at)));
+  if (lo === null || hi === null) return clamp((127 - 60) * noteH - viewH / 2);
+  const rows = hi - lo + 1;
+  const margin = (rows + 2 * FIT_MARGIN_ROWS) * noteH <= viewH ? FIT_MARGIN_ROWS : 0;
+  const top = (127 - hi - margin) * noteH;
+  const height = (rows + 2 * margin) * noteH;
+  return clamp(height <= viewH ? top - (viewH - height) / 2 : top);
+}
+
+/** The lane's share of the height under the ruler, by default and at the least and most. */
+export const LANE_SHARE = { initial: 1 / 3, min: 0.1, max: 0.8 };
+/** The lane's least height in pixels, however short the editor. */
+export const LANE_MIN_PX = 40;
+
+/** The lane's share after dragging its divider: `laneH` px of `areaH` (lane and notes together). */
+export function laneShareOf(laneH: number, areaH: number): number {
+  if (!(areaH > 0)) return LANE_SHARE.initial;
+  return Math.max(LANE_SHARE.min, Math.min(LANE_SHARE.max, laneH / areaH));
+}

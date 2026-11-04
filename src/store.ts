@@ -11,7 +11,7 @@ import type { WaveStyle } from "./waveform";
 import { DEFAULT_TOOLS, type Tools } from "./tools";
 import type { Marquee } from "./marquee";
 
-export type Snap = "smart" | "bar" | "beat" | "off";
+export type Snap = "smart" | "bar" | "beat" | "division" | "ticks" | "off";
 /** What the bottom section shows; "fx" is the docked plug-in panels (fxDock.ts), "list" the
  *  Event List (D), "steps" the Step Sequencer. */
 export type BottomPane = "none" | "mixer" | "editor" | "fx" | "list" | "steps";

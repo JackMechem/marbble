@@ -1,7 +1,7 @@
 // Unit tests for src/stripRows.ts (the channel strips' shared insert and send rows). Run with `npm test`.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { filledBeyond, FX_ROWS_MAX, SEND_ROWS_MAX, slotsWanted, stripRows, stripWants } from "../src/stripRows.ts";
+import { FADER_WANTED, filledBeyond, fitStripRows, FX_ROWS_MAX, SEND_ROWS_MAX, SLOT_ROW_H, slotsWanted, stripRows, stripWants } from "../src/stripRows.ts";
 
 const slots = (...filled: number[]) => Array.from({ length: 8 }, (_, i) => (filled.includes(i) ? { uid: i } : null));
 
@@ -42,4 +42,21 @@ test("the +N counts filled slots below the shown rows", () => {
   assert.equal(filledBeyond(slots(0, 1, 6, 7), 6), 2);
   assert.equal(filledBeyond(slots(0, 1), 6), 0);
   assert.equal(filledBeyond(undefined, 1), 0);
+});
+
+test("a short Mixer shows fewer slot rows so the fader keeps its height", () => {
+  // A strip 300 px tall without slot rows, its fader at least 60 px.
+  const fixed = 300;
+  const fader = (r: { inserts: number; sends: number }, view: number) => view - fixed - (r.inserts + r.sends) * SLOT_ROW_H + 60;
+  // Room for everything: nothing changes.
+  assert.deepEqual(fitStripRows({ inserts: 3, sends: 2 }, 800, fixed, 60), { inserts: 3, sends: 2 });
+  // Room for a few rows: the larger section gives way first, sends on a tie.
+  const r = fitStripRows({ inserts: 4, sends: 4 }, 430, fixed, 60);
+  assert.deepEqual(r, { inserts: 2, sends: 1 });
+  assert.ok(fader(r, 430) >= FADER_WANTED);
+  assert.ok(fader({ inserts: 2, sends: 2 }, 430) < FADER_WANTED, "one more row would squeeze the fader");
+  assert.deepEqual(fitStripRows({ inserts: 1, sends: 4 }, 430, fixed, 60), { inserts: 1, sends: 2 });
+  // No room at all: one row each, never none (the strips scroll instead).
+  assert.deepEqual(fitStripRows({ inserts: 6, sends: 4 }, 100, fixed, 60), { inserts: 1, sends: 1 });
+  assert.deepEqual(fitStripRows({ inserts: 1, sends: 1 }, 100, fixed, 60), { inserts: 1, sends: 1 });
 });

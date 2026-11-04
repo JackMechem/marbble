@@ -5,7 +5,7 @@
    shrinks, the Tracks area keeps its minimum (see .tracks-area). */
 .mixer,
 .editor {
-  height: var(--mixer-h, 400px);
+  height: var(--mixer-h, 560px);
   flex: 0 1 auto;
   min-height: 0;
   display: flex;
@@ -15,7 +15,7 @@
 }
 
 .editor {
-  height: var(--editor-h, 300px);
+  height: var(--editor-h, 360px);
 }
 
 /* The pane's name: a title, set apart from the Options menu beside it. */

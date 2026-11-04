@@ -1444,7 +1444,15 @@ Audio Track Editor and meters are canvas drawings. The common pattern:
   the order they were written, so an area can come in more than one file (see the comment there).
   `tokens.css` holds Studio's values for the first paint (a test keeps it equal to `studioCss`),
   then the things no theme changes: the six font sizes (`--fs-xs` to `--fs-xxl`) and the focus
-  ring. `tests/styles.test.ts` fails on a hex colour or a font size outside the tokens.
+  ring. `tests/styles.test.ts` fails on a hex colour or a font size outside the tokens, and
+  `tests/contrast.test.ts` on `--text`, `--dim` or `--faint` under 4.5:1 (WCAG) on any surface
+  text sits on, in any theme (it reads `themes.ts` as text and builds each theme's map with its
+  spread), or on the three out of order.
+- **Text that doesn't fit** follows shared rules in `text-fit.css` rather than one-off fixes:
+  `.truncate` (one line ending in "…"), `.path-text` with `PathText.tsx` and `textFit.ts` (a path
+  shortened from its start at a separator, measured with a canvas in the element's font, the
+  whole path in the tooltip), captions and buttons that never wrap, and a checkbox kept beside
+  its label.
 - **Keyboard focus.** `:focus-visible` draws `--focus-ring` (`base.css`). Browsers also count a
   key pressed after a click as keyboard focus, which here would ring the last button clicked as
   soon as a shortcut is pressed, so `focusRing.ts` marks `<html>` with `data-keyboard-focus` on
@@ -1467,6 +1475,17 @@ Audio Track Editor and meters are canvas drawings. The common pattern:
   shrinks and the divider stays on screen. The remembered size isn't changed by this: a larger
   window shows it again. A drag of the divider starts from the height shown and stays within
   `bottomMax` (`src/paneSizes.ts`), so a size remembered too tall never needs a long drag back.
+- **Narrow bars.** The editors' local bars (`.editor-bar`, `editor-bars.css`) and the control bar
+  are CSS size containers (`container-type: inline-size`). Their `@container` rules drop the
+  captions and tighten sliders and gaps below widths measured for each bar, so the rules hold at
+  any interface size (125 % at 1280 px is a 1024 px wide page). An editor bar wraps as a last
+  resort: its tools (`.local-right`) stay beside the tabs and menus while they have 360 px there,
+  wrapping within it, and otherwise take a row of their own; every row is 24 px.
+- **The Mixer's height.** `useStripFit` (`Panels.tsx`) measures a strip with no slot rows and its
+  fader at its least, and `fitStripRows` (`stripRows.ts`) takes slot rows away, sends first,
+  while the fader would get less than 120 px. Below one row each the strips scroll, pinned to the
+  bottom until scrolled up, so faders and names show first. The Mixer's default height is 560 px,
+  the Editors' 360 px.
 
 ### Key commands
 
@@ -2421,7 +2440,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `frame.ts` | The shared animation-frame loop, `framePos`, `coalesced`. |
 | `view.ts` | Shared tracks-area viewport, layout constants, the colour palette. |
 | `layout.ts` | Track heights, depth and positions; per-project height persistence; vertical zoom. |
-| `time.ts` | Samples to bars/beats and back. |
+| `time.ts` | Samples to bars/beats and back; the snap grid (`snapStep`: Bar, Beat, Division, Ticks, Smart). |
 | `transport.ts` | Cycle, Autopunch and locate helpers. |
 | `keymap.ts` | `KEY_COMMANDS`, `MENU_SHORTCUTS`, key normalisation. |
 | `sheetKeys.ts`, `sheetKeysModel.ts` | Key commands while a sheet is open (`useSheetKeys`, `installSheetKeys`, `sheetBlocks`); the rule itself, pure and tested. See [Sheets and key commands](#sheets-and-key-commands). |
@@ -2470,7 +2489,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `musicalMove.ts` | Region moves and nudges in bars and beats through the tempo map; pure, tested. |
 | `regionGain.ts`, `regionGainDrag.ts` | The Tracks area's region gain handle: geometry and arithmetic (pure, tested), and drawing and dragging it. |
 | `zeroCrossings.ts` | The Snap Edits to Zero Crossings toggle and its menu item. |
-| `pianoRollModel.ts` | The Piano Roll's lanes and tools, the note area's mapping, what a point hits, grid sums in musical time; pure, tested. |
+| `pianoRollModel.ts` | The Piano Roll's lanes and tools, the note area's mapping, what a point hits, grid sums in musical time, where a region opens (`fitPitchScroll`) and the lane's share of the height; pure, tested. |
 | `pianoRollDraw.ts` | Piano Roll canvas drawing. |
 | `regionDraw.ts` | Drawing a region on a canvas (body, name bar, waveform or notes, fades, loops), for the Tracks area and the Audio Track Editor; the crossfade handle drag in progress. |
 | `regionGrab.ts` | What a press on a region in the Tracks area grabs; pure, tested. |
@@ -2479,7 +2498,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `eventList.ts` | The Event List's positions, lengths, typed values and edits; pure, tested. |
 | `noteSelect.ts` | Edit › Select on notes and events while the Piano Roll or the Event List has focus; pure, tested. |
 | `stepInput.ts` | Step Input: step lengths through the tempo map, the chord/advance state machine (Rest, Back, Chord, Sustain, Quantize) and the region edits it makes; pure, tested. Also the hook Musical Typing reports its notes through. |
-| `stepSeq.ts` | The Step Sequencer's pattern edits, edit modes, General MIDI drum names, the playing step of each row and the Tracks-area miniature; pure, tested. |
+| `stepSeq.ts` | The Step Sequencer's pattern edits, edit modes, General MIDI drum names, the rows of a new pattern by instrument (`templateRows`, sent with `create_pattern_region`), the playing step of each row and the Tracks-area miniature; pure, tested. |
 | `midiFiles.ts` | MIDI file import and export entry points. |
 | `audioEdit.ts` | Audio Track Editor state and operations: range selection, zoom, transients, keys. |
 | `audioRange.ts` | The Audio Track Editor's range arithmetic; pure, tested. |
@@ -2507,7 +2526,8 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `focusRing.ts` | Shows the focus ring only after Tab (`data-keyboard-focus` on `<html>`); tested. |
 | `stripMeters.ts` | The clip indicator's readout and the gain-reduction meter's scale and fall; pure, tested. |
 | `vca.ts` | VCA offsets and loop checks for drawing the Mixer (mirrors `vca.rs`); pure, tested. |
-| `stripRows.ts` | How many insert and send rows strips side by side share (the Mixer's, the Inspector's pair), so their faders line up; pure, tested. |
+| `stripRows.ts` | How many insert and send rows strips side by side share (the Mixer's, the Inspector's pair), so their faders line up, and how many fit a short Mixer; pure, tested. |
+| `textFit.ts` | Shortening a long path at a separator for `PathText.tsx`; pure, tested. |
 | `slotName.ts` | A plug-in slot's short name (a built-in instrument's model without "Marbble"); pure, tested. |
 | `slotDrag.ts` | Dragging plug-ins between Audio FX slots. |
 | `waveform.ts` | Waveform fetching, caching and the four drawing styles. |

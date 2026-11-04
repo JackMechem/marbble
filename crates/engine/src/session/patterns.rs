@@ -6,7 +6,7 @@ use anyhow::{anyhow, Result};
 
 use super::Session;
 use crate::model::{Id, Region, RegionContent, TrackKind};
-use crate::pattern::{self, Pattern};
+use crate::pattern::{self, Pattern, PatternRow};
 
 impl Session {
     /// The regions with every pattern region turned into the plain MIDI region it plays, or
@@ -21,10 +21,22 @@ impl Session {
 
     /// Adds a pattern region with the default kit (Create Pattern Region) and returns its id.
     pub fn create_pattern_region(&mut self, track: Id, start: i64, length: i64) -> Result<Id> {
+        self.create_pattern_region_with(track, start, length, None)
+    }
+
+    /// Adds a pattern region whose rows play `rows`, top to bottom: the template the Step
+    /// Sequencer picks for the track's instrument (stepSeq.ts `templateRows`). None or no rows:
+    /// the default kit. Pitches past 127 are left out, and at most [`pattern::MAX_ROWS`] kept.
+    pub fn create_pattern_region_with(&mut self, track: Id, start: i64, length: i64, rows: Option<&[u8]>) -> Result<Id> {
         self.check_unfrozen(&[track])?;
         match self.project.track(track) {
             Some(t) if t.kind == TrackKind::Instrument => {}
             _ => return Err(anyhow!("Pattern regions go on software instrument tracks")),
+        }
+        let mut pattern = Pattern::default();
+        let rows: Vec<PatternRow> = rows.unwrap_or_default().iter().filter(|&&p| p <= 127).take(pattern::MAX_ROWS).map(|&p| PatternRow::new(p)).collect();
+        if !rows.is_empty() {
+            pattern.rows = rows;
         }
         let id = self.project.alloc_id();
         let region = Region {
@@ -38,7 +50,7 @@ impl Session {
             loop_end: None,
             takes: None,
             params: Default::default(),
-            pattern: Some(Pattern::default()),
+            pattern: Some(pattern),
         };
         self.project.track_mut(track).unwrap().regions.push(region);
         self.push_regions(track);
@@ -158,8 +170,16 @@ mod tests {
         s.convert_midi_to_patterns(&[id]);
         let r = s.region(id).unwrap();
         assert!(notes_of(r).is_empty());
+
         let p = r.pattern.as_ref().unwrap();
         assert_eq!(p.rows.len(), 1);
         assert!(p.rows[0].step(0).on && p.rows[0].step(8).on);
+
+        // A template's rows, in order; pitches out of range left out; none is the default kit.
+        let made = s.create_pattern_region_with(t, 0, bar, Some(&[72, 200, 60, 48])).unwrap();
+        let pitches: Vec<u8> = s.region(made).unwrap().pattern.as_ref().unwrap().rows.iter().map(|r| r.pitch).collect();
+        assert_eq!(pitches, vec![72, 60, 48]);
+        let made = s.create_pattern_region_with(t, 0, bar, Some(&[])).unwrap();
+        assert_eq!(s.region(made).unwrap().pattern.as_ref().unwrap().rows.len(), pattern::DEFAULT_KIT.len());
     }
 }

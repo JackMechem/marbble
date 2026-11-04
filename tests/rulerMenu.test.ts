@@ -47,6 +47,8 @@ test("toggles show their state, and Set Locators by Regions needs a selection", 
       ["Smart", false],
       ["Bar", true],
       ["Beat", false],
+      ["Division", false],
+      ["Ticks", false],
       ["Off", false],
     ],
   );

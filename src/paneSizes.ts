@@ -5,7 +5,7 @@ import type { PaneSizes } from "./store";
 
 export type PaneKey = keyof PaneSizes;
 
-export const PANE_DEFAULTS: PaneSizes = { library: 230, inspector: 222, browser: 230, mixer: 400, editor: 300, headers: 296, fx: 420 };
+export const PANE_DEFAULTS: PaneSizes = { library: 230, inspector: 222, browser: 230, mixer: 560, editor: 360, headers: 296, fx: 420 };
 
 /** Limits per pane: [min, max] in CSS pixels. The bottom panes are also kept within the window
  *  (`bottomMax`). */
