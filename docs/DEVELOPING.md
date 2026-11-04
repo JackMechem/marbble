@@ -93,7 +93,7 @@ Run them from the repository root (inside `nix develop` on NixOS).
 ```sh
 cargo build -p daw                       # the whole app, including the Tauri crate
 cargo test -p daw-engine --lib           # engine unit tests
-cargo test -p daw                        # Tauri crate tests (settings parsing)
+cargo test -p daw                        # Tauri crate tests (settings parsing, the menu bar)
 cargo run -q -p daw-engine --example <name> -- <args>   # headless checks, below
 cargo clippy --workspace --all-targets -- -D warnings
 cargo fmt --all                          # rustfmt.toml sets the rules
@@ -138,7 +138,8 @@ real-time worker spin without sleeping past RLIMIT_RTTIME's 200 ms: if the pool 
 it, the kernel would kill the test binary (SIGKILL), so a run that ends that way is a failure.
 
 `cargo test -p daw` runs the Tauri crate's tests (old and partly malformed `settings.json`
-files load with defaults).
+files load with defaults; the menu bar's spec, reading key specs, and, on Linux, that GTK draws
+each key in `tests/gtkKeyLabels.json` as the app writes it).
 
 ### Headless examples
 
@@ -326,7 +327,9 @@ instead and enforce rules that would otherwise only fail in the running app.
 | `vca.test.ts` | VCA offsets and loop checks in the Mixer. |
 | `trackOff.test.ts` | Whether a track is off through its stacks (`src/trackOff.ts`), and the power button's tooltip. |
 | `controllers.test.ts` | Controller assignment types and labels (MIDI Learn). |
-| `keyFormat.test.ts` | Shortcuts written as each platform writes them. |
+| `keyFormat.test.ts` | Shortcuts written as each platform's menu bar writes them; on Linux against `gtkKeyLabels.json`, the pairs `menu.rs`'s tests check against GTK. |
+| `menuLabels.test.ts` | Guard: the menu bar (`menu.rs`) uses the names in `src/menuLabels.ts`, both Edit menus have the same layout, right-click short names only drop "Regions", and no key is both an accelerator and a key command (or missing from `MENU_SHORTCUTS`). |
+| `menuBar.test.ts` | The menu bar's item states from the in-app menus and key commands, and sending only what changed (`src/menuBarModel.ts`). |
 | `pluginKeys.test.ts` | Keys forwarded from a plug-in's editor window become the KeyboardEvent the main window would see. |
 | `detach.test.ts` | Detached windows (`src/detachModel.ts`): panel keys and labels, the shared UI state, fitting windows onto the monitors. |
 | `sheetKeys.test.ts` | Which keys reach the app while sheets are open (`src/sheetKeysModel.ts`), and that every sheet registers with `sheetKeys.ts`. |
@@ -608,16 +611,22 @@ Example: a per-project "Notes" field (it exists as `Project::notes`).
 
 ### Add a native menu item
 
-1. `src-tauri/src/menu.rs`: add `.item(&item("my-id", "My Command…", None)?)` next to related
-   items. Use an accelerator (`Some("CmdOrCtrl+Shift+X")`) only for ⌘ shortcuts; plain keys
-   belong in the keymap so they can be changed.
+1. `src-tauri/src/menu.rs` `spec()`: add `item("my-id", "My Command…")` next to related items
+   (`check(…)` for one with a tick). Use an accelerator (`keyed("my-id", "My Command…",
+   "Shift+CmdOrCtrl+X")`) only for ⌘ shortcuts that should work even in text fields; plain keys
+   belong in the keymap so they can be changed, and the menu bar shows them by itself when the
+   key command has the item's id.
 2. `src/App.tsx`: add `case "my-id":` to `handleMenu`.
 3. If you gave it an accelerator, add it to `MENU_SHORTCUTS` in `src/keymap.ts` so Settings
    › Key Commands shows it and refuses conflicting keys.
 4. If the command should also run from a key that the user can change, add a key command
-   (above) whose action calls `handleMenu("my-id")`.
-5. List it in the menu bar table in `docs/USER_GUIDE.md`. `tests/commands.test.ts` checks that
-   `handleMenu` handles the id.
+   (above) with the same id whose action calls `handleMenu("my-id")`.
+5. Ticks and greyed-out states: if the Tracks area's menus have the command, give their item
+   `id: "my-id"` and the name from `src/menuLabels.ts` (add it there); the menu bar follows that
+   item. Otherwise add its condition to `ownStates` in `src/menuBar.ts`.
+6. List it in the menu bar table in `docs/USER_GUIDE.md`. `tests/commands.test.ts` checks that
+   `handleMenu` handles the id; `tests/menuLabels.test.ts` checks the names, the Edit menu's
+   layout against the Tracks area's, and that no key is both an accelerator and a key command.
 
 ### Add a setting
 

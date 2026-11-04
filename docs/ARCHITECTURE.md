@@ -1490,8 +1490,40 @@ Audio Track Editor and meters are canvas drawings. The common pattern:
 
 ### Menus and dialogs
 
-- The native menu bar is built in `src-tauri/src/menu.rs`. Each item emits a `menu` event with
-  its id; `handleMenu` in `App.tsx` dispatches it. Editors get the first look: the Audio Track
+- The native menu bar is described as data in `src-tauri/src/menu.rs` (`spec`) and built from
+  it. Each item emits a `menu` event with its id; `handleMenu` in `App.tsx` dispatches it.
+  Marbble › Quit Marbble is an ordinary item (Tauri's predefined Quit draws disabled on GTK and
+  skips the page on macOS): `menu.rs` closes the main window with it, which raises the same
+  close request as the window's close button, so `onCloseRequested` asks about unsaved changes.
+- The menu bar follows the app through `set_menu_state`, fed by `src/menuBar.ts` from the main
+  window: ticks, enabled states, the Undo/Redo names and the keys of the key commands. The states
+  come from the Tracks area's own menus (`editMenu`, `functionsMenu`, `viewMenu` in
+  `TracksArea.tsx`; their items carry the menu bar's ids) plus a few conditions only the menu bar
+  needs (Record's modes, Track On, Freeze, the theme…). It recomputes after any store or
+  settings change and on focus changes (an editor with focus takes the Edit menu, so its items
+  stay enabled then), sends only the fields that changed (`menuBarModel.ts` `changedStates`),
+  and runs on a zero timeout so a key pressed right after a click finds the item enabled.
+- Two kinds of key. Accelerators in `spec` (Ctrl+S, Ctrl+Z…) belong to the menu: the toolkit
+  runs the item before the page sees the key. Key commands (`keymap.ts`) are handled by the page
+  and only *shown* in the menu bar: on GTK `menu.rs` finds each item's widget by its position
+  (`Entry::path`, separators counted) under the window's `default_vbox` and sets the key on its
+  `GtkAccelLabel` with `set_accel`, which draws a key without binding it (muda does the same for
+  its Cut/Copy/Paste); on Windows the key goes into the label after a tab, which Windows
+  right-aligns. A registered single-letter key would be taken from text fields and Musical
+  Typing and skip the page's key handling; a key is never both, so nothing runs twice
+  (`tests/menuLabels.test.ts`). Panel windows get the keys in their own menu bar when they first
+  come to the front. macOS doesn't show the key commands' keys yet (AppKit has no draw-only
+  key).
+- A check item ticks itself when chosen; `menu.rs` puts the tick back at once and the page sends
+  the new state if the command changed it, so a command that changes nothing leaves the tick
+  right.
+- Names: `src/menuLabels.ts` holds one name per command (`MENU_LABELS`) and the Edit menu's
+  layout (`EDIT_MENU`), used by the Tracks area's menus and checked against `menu.rs` by
+  `tests/menuLabels.test.ts`; a region's right-click menu drops "Regions" (`SHORT_LABELS`).
+- Keys are written as the platform's menu bar draws them (`keyFormat.ts`): GTK's order and names
+  on Linux ("Shift+Ctrl+Z", "Ctrl+Right"), since GTK draws every key in the menu bar itself;
+  `tests/gtkKeyLabels.json` pins the pairs, checked against `gtk_accelerator_get_label` by
+  `menu.rs`'s tests and against `formatKeyFor` by `tests/keyFormat.test.ts`. Editors get the first look: the Audio Track
   Editor (`editorMenuCommand`) and the Piano Roll (`pianoRollMenu`) take Split, Cut, Copy,
   Delete and similar when they have focus or a selection. Menu commands are ignored while a
   render is running (`isBouncing`).
@@ -2317,7 +2349,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `main.rs` | Startup (scan subprocess mode, `GDK_BACKEND`, plug-in cache, settings, CLI project path), the tick thread, the idle timer, MIDI refresh, autosave, command registration. |
 | `commands.rs` | The `Snapshot`, the `edit` / `try_edit` / `edit_made` wrappers, `get_state`, `undo`, `redo`. |
 | `commands/*.rs` | Every other Tauri command, by what it acts on: `transport`, `tracks`, `regions`, `arrangement`, `takes`, `plugins`, `automation`, `project`, `bounce`, `settings`, `sampler`. All are reachable as `commands::<name>`. |
-| `menu.rs` | The native menu bar. |
+| `menu.rs` | The native menu bar: its spec, `set_menu_state` (ticks, enabled, labels, shown keys), Quit. |
 | `settings.rs` | `settings.json`: `Settings`, `UiPrefs`, `PluginPrefs`, tolerant parsing. |
 | `recent.rs` | `recent.json` and the Project Chooser's recent list. |
 | `glib_loop.rs` | Linux: runs plug-in editor file descriptors and timers on GTK's main loop. |
@@ -2343,7 +2375,10 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `wheel.ts` | What the mouse wheel scrolls in the time views (Settings › Editing › Mouse Wheel Scrolls). |
 | `controllers.ts` | Controller assignment types and labels, strip and lane targets; pure, tested. |
 | `learn.ts` | MIDI Learn: Learn Assignment, the right-click Learn menus, `FxLearnContext` for effect panels. |
-| `keyFormat.ts` | Shortcuts written the way each platform does ("Ctrl+Shift+Z", "⇧⌘Z"); pure, tested. |
+| `keyFormat.ts` | Shortcuts written the way each platform's menu bar does ("Shift+Ctrl+Z" on Linux, "Ctrl+Shift+Z" on Windows, "⇧⌘Z"); pure, tested. |
+| `menuBar.ts` | Keeps the native menu bar in step with the app (`installMenuBar`, main window). |
+| `menuBarModel.ts` | The menu bar's item states from the in-app menus and the key commands, and what changed; pure, tested. |
+| `menuLabels.ts` | One name per menu command and the shared Edit menu layout; pure, tested against `menu.rs`. |
 | `tempo.ts` | The UI's mirror of `tempo.rs`, cached per snapshot. |
 | `prefs.ts` | Mirror of the settings, startup behaviour (`runStartup`), recovery offers, nudge sizes. |
 | `ops.ts` | Track and region operations and the right-click menus (`trackMenu`, `regionMenu`, `laneMenu`). |
@@ -2438,7 +2473,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | File | Contents |
 |---|---|
 | `ControlBar.tsx` | Control bar: view buttons, transport, LCD, mode buttons, master volume, CPU. |
-| `TracksArea.tsx` | Tracks area frame: local menu bar (Edit, Functions, View), snap, zoom, height slider; `editMenu`. |
+| `TracksArea.tsx` | Tracks area frame: local menu bar (Edit, Functions, View), snap, zoom, height slider; `editMenu`, `functionsMenu`, `viewMenu`. |
 | `Ruler.tsx` | Ruler: cycle strip, bar numbers, Autopunch strip, marker lane. |
 | `TrackHeaders.tsx` | Track headers: buttons, names, volume, reordering, resizing. |
 | `LevelSlider.tsx` | A track header's volume slider with the level meter as its groove. |

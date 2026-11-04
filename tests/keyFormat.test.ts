@@ -1,12 +1,15 @@
-// Unit tests for src/keyFormat.ts: shortcuts read like native apps on each platform.
+// Unit tests for src/keyFormat.ts: shortcuts read as each platform's menu bar writes them.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { formatKeyFor } from "../src/keyFormat.ts";
 
-const pc = (k: string) => formatKeyFor(k, false);
-const mac = (k: string) => formatKeyFor(k, true);
+const pc = (k: string) => formatKeyFor(k, "windows");
+const gtk = (k: string) => formatKeyFor(k, "gtk");
+const mac = (k: string) => formatKeyFor(k, "mac");
 
-test("Linux and Windows spell modifiers out, Ctrl Alt Shift then the key", () => {
+test("Windows spells modifiers out, Ctrl Alt Shift then the key", () => {
   assert.equal(pc("Mod+D"), "Ctrl+D");
   assert.equal(pc("Mod+Shift+Z"), "Ctrl+Shift+Z");
   assert.equal(pc("Alt+K"), "Alt+K");
@@ -38,6 +41,18 @@ test("macOS uses Logic's glyphs, ⌃⌥⇧⌘ then the key", () => {
   assert.equal(mac("Mod+ArrowRight"), "⌘→");
   assert.equal(mac("Mod+-"), "⌘−");
   assert.equal(mac("Alt+'"), "⌥'");
+});
+
+// The pairs menu.rs's tests check against GTK's own gtk_accelerator_get_label: the keys the
+// menu bar shows beside its items read exactly as the app writes them.
+const GTK_LABELS: [string, string][] = JSON.parse(readFileSync(fileURLToPath(new URL("./gtkKeyLabels.json", import.meta.url)), "utf8"));
+
+test("Linux writes keys as GTK's menus draw them: Shift, Ctrl, Alt, then GTK's key name", () => {
+  assert.ok(GTK_LABELS.length > 20);
+  for (const [spec, label] of GTK_LABELS) assert.equal(gtk(spec), label, spec);
+  // Mod and Ctrl are the same key outside macOS.
+  assert.equal(gtk("Mod+Ctrl+P"), "Ctrl+P");
+  assert.equal(gtk("Alt"), "Alt");
 });
 
 test("a bare modifier names the key, for gestures like Alt-drag", () => {

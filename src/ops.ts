@@ -10,6 +10,7 @@ import { currentLayout, setTrackHeight, stepVisible } from "./layout";
 import { isLooped, regionEnd } from "./loops";
 import { BOUNCE_IN_PLACE_HINT, openBounce, openBounceInPlace } from "./bounce";
 import { fmt, keyHint } from "./keymap";
+import { menuLabel, SHORT_LABELS } from "./menuLabels";
 import { exportMidi, exportTrackMidi, importMidiFiles } from "./midiFiles";
 import { canFreeze, freezeTracks, unfreezeTracks } from "./freeze";
 import { currentTick, getState, setState } from "./store";
@@ -392,18 +393,18 @@ export function regionMenu(r: Region, rename: () => void): MenuItem[] {
   const looped = regs.filter(isLooped);
   const loopedAudio = looped.filter((x) => x.content.type === "audio" && !x.takes);
   const items: MenuItem[] = [
-    { label: "Cut", hint: keyHint("cut"), onClick: () => cutRegions(ids) },
-    { label: "Copy", hint: keyHint("copy"), onClick: () => copyRegions(ids) },
-    { label: "Paste", hint: keyHint("paste"), disabled: !getState().clipboard.length, onClick: () => pasteRegions() },
-    { label: "Duplicate", hint: fmt("Mod+D"), onClick: () => repeatRegions(1, ids) },
+    { label: menuLabel("cut"), hint: keyHint("cut"), onClick: () => cutRegions(ids) },
+    { label: menuLabel("copy"), hint: keyHint("copy"), onClick: () => copyRegions(ids) },
+    { label: menuLabel("paste"), hint: keyHint("paste"), disabled: !getState().clipboard.length, onClick: () => pasteRegions() },
+    { label: menuLabel("duplicate"), hint: fmt("Mod+D"), onClick: () => repeatRegions(1, ids) },
     {
       label: "Repeat",
       children: [2, 3, 4, 8, 16].map((n) => ({ label: `${n} Times`, onClick: () => repeatRegions(n, ids) })),
     },
     { separator: true },
-    { label: "Split at Playhead", hint: fmt("Mod+T"), onClick: () => splitAtPlayhead(ids) },
-    { label: "Join", hint: fmt("Mod+J"), disabled: ids.length < 2, onClick: () => joinRegions(ids) },
-    { label: "Loop", hint: keyHint("loop"), checked: looped.length === regs.length, onClick: () => toggleLoop(ids) },
+    { label: SHORT_LABELS.split, hint: fmt("Mod+T"), onClick: () => splitAtPlayhead(ids) },
+    { label: SHORT_LABELS.join, hint: fmt("Mod+J"), disabled: ids.length < 2, onClick: () => joinRegions(ids) },
+    { label: SHORT_LABELS.loop, hint: keyHint("loop"), checked: looped.length === regs.length, onClick: () => toggleLoop(ids) },
     { label: "Convert Loops to Real Copies", disabled: !looped.length, onClick: () => convertLoops(ids) },
     // Writes the Region inspector's playback parameters into the regions (Logic's Normalize).
     { label: "Apply Region Parameters", disabled: regs.every((x) => isDefault(paramsOf(x))), onClick: () => act("apply_region_params", { ids }) },
@@ -436,7 +437,7 @@ export function regionMenu(r: Region, rename: () => void): MenuItem[] {
     items.push(
       { separator: true },
       ...(isFolder(r) ? [{ label: "Take Folder", children: takeFolderMenu(r) }] : []),
-      { label: "Pack Take Folder", disabled: !packable, onClick: () => packTakeFolder(audio) },
+      { label: menuLabel("pack-takes"), hint: keyHint("pack-takes"), disabled: !packable, onClick: () => packTakeFolder(audio) },
     );
   }
   if (midi.length) {
@@ -495,7 +496,7 @@ export function regionMenu(r: Region, rename: () => void): MenuItem[] {
   items.push(
     { separator: true },
     { label: "Move to New Track", onClick: () => actMade("regions_to_new_track", { ids }).then(select) },
-    { label: "Set Locators by Regions", hint: keyHint("set-locators"), onClick: () => setLocatorsByRegions(ids) },
+    { label: SHORT_LABELS["set-locators"], hint: keyHint("set-locators"), onClick: () => setLocatorsByRegions(ids) },
     {
       label: "Select",
       children: [
@@ -505,7 +506,7 @@ export function regionMenu(r: Region, rename: () => void): MenuItem[] {
       ],
     },
     { separator: true },
-    { label: "Delete", hint: keyHint("delete-regions"), onClick: () => deleteRegions(ids) },
+    { label: menuLabel("delete"), hint: keyHint("delete-regions"), onClick: () => deleteRegions(ids) },
   );
   return items;
 }

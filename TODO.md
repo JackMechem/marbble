@@ -83,6 +83,12 @@ Nothing here has been checked by eye yet.
   slot clicked in a detached Mixer floats there; positions remembered across a relaunch and on a second monitor
   (Retina next to a 1× screen). Open Effect Panels › Separate windows, and each effect type remembering its window size.
 - **The Mixer** scrolling when short, with every strip ending on the same line.
+- **The menu bar (2026-11-04):** the key commands' keys beside their items (R, X, Space, Ctrl+C…) and a reassigned key
+  following; typing R or X in a name field doesn't run Record or the Mixer; ticks following the View panes, Record's
+  modes, Snap Edits to Zero Crossings, Track On and the theme, also after a toggle from the keyboard; Cut, Copy, Join and
+  Delete greyed out with nothing selected and enabled with the Piano Roll focused; Undo naming the edit; the keys in a
+  detached window's menu bar; Quit Marbble (Ctrl+Q) asking about unsaved changes. Checked by tests and a GTK widget
+  check on Xvfb, not yet in the app.
 - **The fixes of 2026-11-04** (checked headless in Chromium on the real stylesheet, not yet in the app): the bottom
   section staying clear of the Tracks area with a Mixer remembered 900 px tall, a shrinking window, and a panel opening;
   a 14-strip Mixer scrolling at 1480 px with the control bar on screen, also detached; a preset loaded by the showcase
@@ -104,7 +110,8 @@ they use there (simulated on Linux), but none of this has run on a real machine.
   and Channel EQ windows opening, closing, re-attaching and coming back in place after a relaunch, on two monitors with
   different scaling; native menu commands reaching the focused detached window; renaming a template or alternative by
   case only (both file systems ignore case); recovery after the app is killed during a take.
-- **Windows:** a detached window opening doesn't hang the app; Alt+` and other Alt key commands don't leave the focus in
+- **Windows:** the key commands' keys right-aligned in the menu bar (they go into the label after a tab);
+  a detached window opening doesn't hang the app; Alt+` and other Alt key commands don't leave the focus in
   the menu bar; the NSIS installer and uninstaller, with LICENSE in the install folder; recording with Settings › Privacy ›
   Microphone off and on.
 - **macOS:** the first recording asks for microphone access with the Info.plist text, in `tauri dev` and in the .app; ⌘ and
@@ -213,11 +220,8 @@ What's left from the reviews and the UI audit of 2026-11-04.
 - **The CPU meter's** red state (a late block) hasn't been seen.
 
 - **From the UI audit of 2026-11-04** (all menus, Settings, dialogs, Mixer, editors, Light theme):
-  - Marbble › Quit Marbble draws greyed out and has no Ctrl+Q (Tauri's predefined Quit item on Linux).
-  - The menu bar disagrees with the in-app menus: most shortcuts missing (Cut/Copy/Paste, all of Record, Navigate and
-    View), no checkmarks on toggles, nothing ever disabled, modifiers written Shift+Ctrl where the app writes Ctrl+Shift,
-    and commands named differently in each menu. The menu bar should take accelerators, names and states from the same
-    command table.
+  - The menu bar on macOS doesn't show the key commands' keys (R, X, Space…): AppKit can't draw a key without binding
+    it, and a bound bare letter would be taken from text fields. Linux and Windows show them (menu.rs).
   - Two pop-up styles (Settings vs toolbars).
 
 ### Larger

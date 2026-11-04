@@ -1,14 +1,15 @@
 // Logic's arranging commands in the Tracks area: Edit › Select, Section Between Locators, Trim
 // and Move, Paste Replace, Paste at Original Position, Join per Track, Delete and Shuffle, Strip
 // Silence, and naming and colouring regions and tracks after each other. They are shared by
-// the native Edit menu (menu.rs ids), the Tracks area's Edit and Functions menus and the key
-// commands (keymap.ts, same ids). The session makes the edits
+// the native Edit menu (menu.rs ids), the Tracks area's Edit menu and the key commands
+// (keymap.ts, same ids). The session makes the edits
 // (crates/engine/src/session/arrange_cmds.rs); the selection criteria are in regionSelect.ts.
 import { act, actMade, call, type Id, type Region, type Track } from "./api";
 import type { MenuItem } from "./components/Menu";
 import { openStripSilence } from "./components/StripSilence";
 import { keyHint } from "./keymap";
 import { regionEnd } from "./loops";
+import { menuLabel, type MenuId } from "./menuLabels";
 import { joinRegions } from "./ops";
 import * as crit from "./regionSelect";
 import { currentTick, getState, setState } from "./store";
@@ -220,83 +221,48 @@ export function runArrangeCommand(id: string): boolean {
   return !!run;
 }
 
-const item = (id: string, label: string, disabled = false): MenuItem => ({ label, hint: keyHint(id), disabled, onClick: ARRANGE_COMMANDS[id] });
+/** A command's menu entry: its name (or `label`), its key and its action. */
+const item = (id: MenuId, disabled = false, label: string = menuLabel(id)): MenuItem => ({ id, label, hint: keyHint(id), disabled, onClick: ARRANGE_COMMANDS[id] });
 
-export function selectMenu(): MenuItem[] {
+/** The entries of these commands in the Edit menus (src/menuLabels.ts EDIT_MENU lays them out),
+ *  with their names and when they're greyed out. Section and Crop name the marquee when there
+ *  is one, as they then act on it. */
+export function arrangeItems(): MenuItem[] {
   const none = !sel().length;
-  return [
-    item("sel-following", "All Following"),
-    item("sel-following-track", "All Following of Same Track"),
-    item("sel-inside-locators", "Inside Locators"),
-    { separator: true },
-    item("sel-muted", "Muted Regions"),
-    item("sel-overlapped", "Overlapped Regions"),
-    item("sel-same-color", "Same Colored Regions", none),
-    item("sel-equal", "Equal Regions", none),
-    item("sel-similar", "Similar Regions", none),
-    { separator: true },
-    item("sel-invert", "Invert Selection"),
-  ];
-}
-
-export function sectionMenu(): MenuItem[] {
-  const where = marquee() ? "Marquee" : "Locators";
-  return [
-    item("section-insert-silence", `Insert Silence Between ${where}`),
-    item("section-cut", `Cut Section Between ${where}`),
-    item("section-repeat", `Repeat Section Between ${where}`),
-    item("section-insert-cut", `Insert Cut Section at ${marquee() ? "Marquee" : "Left Locator"}`),
-  ];
-}
-
-export function trimMenu(): MenuItem[] {
-  const none = !sel().length;
-  return [
-    item("trim-start-playhead", "Trim Region Start to Playhead", none),
-    item("trim-end-playhead", "Trim Region End to Playhead", none),
-    item("trim-end-next", "Trim Region End to Next Region", none),
-    item("fill-locators", "Fill Within Locators"),
-    item("remove-overlaps", "Remove Overlaps", none),
-    item("same-length", "Resize to Same Length", sel().length < 2),
-    { separator: true },
-    item("crop-outside", marquee() ? "Crop Regions Outside Marquee" : "Crop Regions Outside Locators", none && !marquee()),
-  ];
-}
-
-export function moveMenu(): MenuItem[] {
-  const none = !sel().length;
-  return [item("move-to-playhead", "Move Region to Playhead", none), item("remove-gaps", "Remove Gaps", none), item("delete-shuffle", "Delete and Shuffle", none)];
-}
-
-export function nameColorMenu(): MenuItem[] {
-  const none = !sel().length;
-  return [
-    item("name-regions-by-track", "Name Regions by Track", none),
-    item("name-tracks-by-region", "Name Tracks by Region", none),
-    item("color-regions-by-track", "Color Regions by Track", none),
-    item("color-tracks-by-region", "Color Tracks by Region", none),
-  ];
-}
-
-/** The Tracks area Edit menu's Paste variants, after Paste. */
-export function pasteItems(): MenuItem[] {
+  const m = !!marquee();
+  const where = m ? "Marquee" : "Locators";
   const empty = !getState().clipboard.length;
-  return [item("paste-original", "Paste at Original Position", empty), item("paste-replace", "Paste Replace", empty)];
-}
-
-/** The rest of the Tracks area Edit menu's arranging commands. */
-export function arrangeEditItems(): MenuItem[] {
   return [
-    item("join-per-track", "Join Regions per Track", sel().length < 2),
-    { separator: true },
-    { label: "Select", children: selectMenu() },
-    { label: "Section Between Locators", children: sectionMenu() },
-    { label: "Trim", children: trimMenu() },
-    { label: "Move", children: moveMenu() },
+    item("paste-original", empty),
+    item("paste-replace", empty),
+    item("join-per-track", sel().length < 2),
+    item("strip-silence", none),
+    item("sel-following"),
+    item("sel-following-track"),
+    item("sel-inside-locators"),
+    item("sel-muted"),
+    item("sel-overlapped"),
+    item("sel-same-color", none),
+    item("sel-equal", none),
+    item("sel-similar", none),
+    item("sel-invert"),
+    item("section-insert-silence", false, `Insert Silence Between ${where}`),
+    item("section-cut", false, `Cut Section Between ${where}`),
+    item("section-repeat", false, `Repeat Section Between ${where}`),
+    item("section-insert-cut", false, `Insert Cut Section at ${m ? "Marquee" : "Left Locator"}`),
+    item("trim-start-playhead", none),
+    item("trim-end-playhead", none),
+    item("trim-end-next", none),
+    item("fill-locators"),
+    item("remove-overlaps", none),
+    item("same-length", sel().length < 2),
+    item("crop-outside", none && !m, `Crop Regions Outside ${where}`),
+    item("move-to-playhead", none),
+    item("remove-gaps", none),
+    item("delete-shuffle", none),
+    item("name-regions-by-track", none),
+    item("name-tracks-by-region", none),
+    item("color-regions-by-track", none),
+    item("color-tracks-by-region", none),
   ];
-}
-
-/** The Tracks area Functions menu's region commands. */
-export function arrangeFunctionItems(): MenuItem[] {
-  return [item("strip-silence", "Strip Silence…", !sel().length), { label: "Name and Color", children: nameColorMenu() }];
 }

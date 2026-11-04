@@ -31,7 +31,7 @@ import { laneShort, midiRegions, timeBase } from "../pianoRollModel";
 import type { PCc, PNote } from "../midiEdit";
 
 // App.tsx, DetachedWindow.tsx and TrackTools.tsx import these from here.
-export { pianoRollMenu } from "./pianoRollEditor/keys";
+export { pianoRollHasFocus, pianoRollMenu } from "./pianoRollEditor/keys";
 export { ToolIcon } from "./pianoRollEditor/ToolIcon";
 
 /** Piano Roll for a software instrument track; `region` is the one selected in the tracks area. */

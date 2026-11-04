@@ -54,6 +54,19 @@ All notable changes to Marbble are recorded here. The format follows
   Settings window no longer has a Metronome tab holding the same per-project settings.
 - The interface no longer compares Marbble to Logic Pro (the metronome's footer and the About
   box).
+- **The menu bar agrees with the app's own menus.** Every item with a key command shows its key
+  (Space, R, C, K, X, Y, Ctrl+C…), taken from Settings › Key Commands, so a reassigned key shows
+  there too. The keys are only shown, not bound by the menu bar, so typing in a text field or
+  with Musical Typing is untouched and nothing runs twice. Toggles are ticked (View's panes,
+  Record's Cycle, Autopunch, Metronome, Count-in and Low Latency Mode, Snap Edits to Zero
+  Crossings, Track On, the theme), items that don't apply are greyed out as in the Tracks area's
+  menus, and Undo and Redo name the edit. Both Edit menus now have the same items in the same
+  order (Strip Silence, Pack Take Folder and Name and Color in both; Edit › Repeat is a submenu)
+  and the same names (Cut, Copy, Paste; Track › Toggle Track On/Off is now Track On); a region's
+  right-click menu drops "Regions" from them.
+- **Shortcuts are written as the menu bar writes them:** on Linux GTK's order and names
+  ("Shift+Ctrl+Z", "Ctrl+Right"), the same in the menu bar, the in-app menus, tooltips, Settings ›
+  Key Commands and the User Guide.
 - **Processing threads that can't be relied on are left out.** On Linux, a thread the system
   refuses real-time priority no longer plays tracks at normal priority, where it could be late:
   the others play on, or the audio thread alone, and Settings › Audio says so under Processing
@@ -91,6 +104,9 @@ All notable changes to Marbble are recorded here. The format follows
 - **The Inspector no longer shows one track's region over another track.** Choosing a track (its
   header, its Mixer strip, a right-click on its empty lane, Up or Down) deselects the regions on
   other tracks, as a click on an empty lane already did.
+- **Marbble › Quit Marbble works and has Ctrl+Q.** It drew greyed out on Linux; it now closes the
+  main window as its close button does, asking first about unsaved changes (also on macOS, where
+  the old item quit without asking).
 - **The bottom section can no longer cover the Tracks area.** A Mixer, editor or docked panel
   remembered taller than the window allows shows at the height there is room for, so the Tracks
   area keeps its menu bar, ruler, overview and some track rows, and the divider stays in reach.

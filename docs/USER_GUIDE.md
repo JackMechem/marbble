@@ -10,9 +10,11 @@ commands.
 Ctrl+D on Linux and Windows and ⌘D on macOS. A few commands use the Control key on macOS, as
 Logic does; for those both forms are given, for example "Ctrl+R (Control+R on macOS)".
 
-Marbble shows shortcuts the way your platform does: "Ctrl+Shift+Z" on Linux and Windows, "⇧⌘Z"
-on macOS. That applies to menus, tooltips and Settings › Key Commands, and tooltips follow any
-keys you reassign there.
+Marbble writes shortcuts the way your platform's menu bar draws them, so a key reads the same
+in the menu bar, the in-app menus, tooltips and Settings › Key Commands: "Shift+Ctrl+Z" on
+Linux (GTK puts Shift first and names some keys its own way: BackSpace, Return, Ctrl+Right),
+"Ctrl+Shift+Z" on Windows and "⇧⌘Z" on macOS. This guide uses the Linux order. Everything
+follows any keys you reassign in Settings › Key Commands, the menu bar included.
 
 Contents:
 
@@ -337,13 +339,24 @@ status, the audio devices, and the number of MIDI inputs.
 
 | Menu | Items |
 |---|---|
-| Marbble | About Marbble (shows the version), Settings…, Appearance…, Key Commands…, Control Surfaces › (Learn Assignment for Last Touched Parameter, Controller Assignments…), Quit Marbble |
+| Marbble | About Marbble (shows the version), Settings…, Appearance…, Key Commands…, Control Surfaces › (Learn Assignment for Last Touched Parameter, Controller Assignments…), Quit Marbble (Ctrl+Q) |
 | File | New…, Open Recent…, Open…, Save, Save As…, Save as Template…, Revert to Saved, Revert to ›, Project Alternatives ›, Project Settings…, Import Audio File…, Bounce Project or Section…, Export Selected Tracks as Audio Files…, Export All Tracks as Audio Files…, Import MIDI File…, Export Selection as MIDI File… |
-| Edit | Undo, Redo, Cut / Copy / Paste Regions, Paste at Original Position, Paste Replace, Duplicate, Repeat Regions, Split Regions at Playhead, Join Regions, Join Regions per Track, Loop Regions, Convert Loops to Real Copies, Pack Take Folder, Set Locators by Regions, Snap Edits to Zero Crossings, Strip Silence…, Section Between Locators ›, Trim ›, Move ›, Name and Color ›, Select All, Select ›, Delete (see [Arranging commands](#arranging-commands)) |
-| Track | New Tracks…, New Aux, Duplicate Track, New Track with Same Settings, New Pattern Region, Bounce in Place…, Freeze Track, Unfreeze Track, Toggle Track On/Off, Create Folder Stack, Create Summing Stack, Group Selected Tracks, Show Output Track, Hide Track, Unhide All Tracks, Delete Track, Delete Unused Tracks, Track Alternatives › |
+| Edit | Undo, Redo, Cut, Copy, Paste, Paste at Original Position, Paste Replace, Duplicate, Repeat › (Once to 16 Times), Split Regions at Playhead, Join Regions, Join Regions per Track, Loop Regions, Convert Loops to Real Copies, Pack Take Folder, Set Locators by Regions, Strip Silence…, Section Between Locators ›, Trim ›, Move ›, Name and Color ›, Snap Edits to Zero Crossings, Select All, Select ›, Delete (see [Arranging commands](#arranging-commands)) |
+| Track | New Tracks…, New Aux, Duplicate Track, New Track with Same Settings, New Pattern Region, Bounce in Place…, Freeze Track, Unfreeze Track, Track On, Create Folder Stack, Create Summing Stack, Group Selected Tracks, Show Output Track, Hide Track, Unhide All Tracks, Delete Track, Delete Unused Tracks, Track Alternatives › |
 | Record | Play / Stop, Record, Cycle, Autopunch, Metronome, Count-in, Low Latency Mode |
 | Navigate | Create Marker, Delete Marker, Go to Previous Marker, Go to Next Marker, Open Marker List |
 | View | Library, Inspector, Mixer, Editors, List Editors, Mixer in Separate Window, Editor in Separate Window, Event List in Separate Window, Browsers, Show Automation, Show Used Automation, Show Global Tracks, Show Overview, Musical Typing, Step Input Keyboard, Show Hidden Tracks, Zoom In, Zoom Out, Larger Interface, Smaller Interface, Actual Size, Theme › |
+
+Each item shows its key beside it: the fixed keys below, and the key commands' keys as set in
+Settings › Key Commands (R for Record, X for the Mixer…), which change in the menu when you
+reassign them. Settings and modes that are on are ticked (View's panes, Record's Cycle,
+Autopunch, Metronome, Count-in and Low Latency Mode, Snap Edits to Zero Crossings, Track On,
+the theme), and items that don't apply are greyed out, as in the Tracks area's menus: Cut,
+Copy, Join or Delete with no regions selected, Paste with nothing copied, Unfreeze Track with no
+frozen track selected. The Edit menu is the Tracks area's Edit menu, item for item, and both use
+the same names; a region's right-click menu drops "Regions" from them (Split at Playhead, Join,
+Loop, Set Locators). **Quit Marbble** (Ctrl+Q) closes the main window as its close button does,
+so it asks first when the project has unsaved changes.
 
 The Edit menu acts on what has focus. In the Piano Roll, Cut, Copy, Paste, Duplicate, Delete
 and Select All act on notes, and Edit › Select's All Following, Inside Locators, Muted, Same
@@ -356,7 +369,7 @@ commands are ignored.
 value to type, Settings, Bounce…), key commands don't reach the tracks or editors behind it,
 even after you click one of its sliders or buttons: **Esc** closes it and **Return** presses
 its default (highlighted) button. Controller Assignments is the exception, as Logic's window
-is: Learn Assignment (Ctrl+L), Controller Assignments (Ctrl+Shift+L) and the transport keys
+is: Learn Assignment (Ctrl+L), Controller Assignments (Shift+Ctrl+L) and the transport keys
 still work while it is open, while editing keys (Delete, Cut, Paste…) don't.
 
 ### Using the keyboard
@@ -713,7 +726,7 @@ position, so it works on any keyboard layout:
 
 ### Step Input
 
-The **Step Input Keyboard** (View › Step Input Keyboard, Ctrl+Alt+Shift+K, or the button with
+The **Step Input Keyboard** (View › Step Input Keyboard, Shift+Ctrl+Alt+K, or the button with
 the note and arrow in the Piano Roll's bar) enters notes one step at a time, as in Logic: each
 note goes in at the playhead, as long as the chosen note value, and the playhead moves on by
 that value. Notes go into the track the Piano Roll shows (the selected region's track, or the
@@ -744,7 +757,7 @@ commands without keys. All of them are in Settings › Key Commands › Step Inp
 [key reference](#step-input-keyboard)).
 
 Logic uses ⌥⌘K for the Step Input Keyboard; in Marbble that opens the Marker List, so the
-window has Ctrl+Alt+Shift+K (⌥⇧⌘K on macOS).
+window has Shift+Ctrl+Alt+K (⌥⇧⌘K on macOS).
 
 ---
 
@@ -1043,7 +1056,7 @@ New Tracks….
 ### Arranging commands
 
 Logic's arranging commands are in the menu bar's Edit menu and in the Tracks area's own Edit
-menu (Strip Silence and Name and Color are in its Functions menu). Each is one undo step. All
+menu, which are the same. Each is one undo step. All
 key commands can be changed in Settings › Key Commands.
 
 **Edit › Select** (on the tracks in view):
@@ -1103,12 +1116,12 @@ and signature tracks stay as they are.
 **Pasting and joining:**
 
 - **Paste at Original Position**: back where the regions were copied from, on their own tracks.
-- **Paste Replace** (Ctrl+Shift+V): pastes as Paste does, first removing whatever lies under the
+- **Paste Replace** (Shift+Ctrl+V): pastes as Paste does, first removing whatever lies under the
   pasted range on the tracks it lands on.
 - **Join Regions per Track**: joins the selection separately on each track (Join Regions does
   the same).
 
-**Strip Silence…** (Edit, or the Tracks area's Functions menu): splits the selected audio
+**Strip Silence…** (Edit menu): splits the selected audio
 regions around the parts that sound, leaving out the silence between them. The sheet shows the
 first selected region's waveform with the parts kept lit, the cuts and the threshold drawn, and
 updates as you change:
@@ -1124,9 +1137,9 @@ The defaults are Logic's (4 %, 0.1 s, 0.02 s, 0.1 s); Defaults puts them back, a
 remembers your last settings. A region that is silent throughout is removed. Take folders are
 left alone.
 
-**Name and Color** (Functions menu, or Edit › Name and Color): **Name Regions by Track**, **Name
+**Name and Color** (Edit › Name and Color): **Name Regions by Track**, **Name
 Tracks by Region** (each track takes the name of its first selected region), **Color Regions by
-Track** (Alt+Shift+C: the regions drop their own colour) and **Color Tracks by Region**.
+Track** (Shift+Alt+C: the regions drop their own colour) and **Color Tracks by Region**.
 
 ### Importing audio and MIDI
 
@@ -1142,7 +1155,7 @@ Track** (Alt+Shift+C: the regions drop their own colour) and **Color Tracks by R
 - The silence an encoder adds at the start and end of MP3 and AAC files is trimmed, so the
   audio starts exactly on time. For M4A/MP4 files Marbble reads it from the file's iTunes
   gapless tag (`iTunSMPB`) or, without one, from its edit list.
-- **File › Import Audio File…** (Ctrl+Shift+I) imports one WAV file at the playhead onto the
+- **File › Import Audio File…** (Shift+Ctrl+I) imports one WAV file at the playhead onto the
   selected audio track (or the first audio track). The lane menu's Import Audio File Here…
   accepts every supported format and several files.
 - MIDI files (`.mid`, `.midi`, `.smf`, `.kar`) can be dropped the same way; see
@@ -1178,7 +1191,7 @@ From the Track menu, the track header's right-click menu, or keys:
 
 ### Undo
 
-Ctrl+Z and Ctrl+Shift+Z undo and redo every edit: regions, tracks, names, colours, volume,
+Ctrl+Z and Shift+Ctrl+Z undo and redo every edit: regions, tracks, names, colours, volume,
 pan, EQ, plug-in slots and settings, sends, automation, recordings, imports, markers, take
 folders and Project Settings. The Edit menus show what will be undone, and a toast confirms it. A
 run of drags on one control counts as one step.
@@ -1204,7 +1217,7 @@ another project is opened or created.
 
 ### Track stacks
 
-Select tracks and choose **Create Folder Stack** (Ctrl+Shift+D) or **Create Summing Stack**
+Select tracks and choose **Create Folder Stack** (Shift+Ctrl+D) or **Create Summing Stack**
 (Track menu, or the track menu › Create Track Stack):
 
 - A **Folder Stack** groups tracks under a collapsible main track. Its fader moves every
@@ -1274,8 +1287,8 @@ heavy tracks you aren't listening to.
 - The plug-ins stay loaded: you can open their editors and change them while the track is off.
   When it's back on they carry on with those settings, their tails cleared, and the track fades
   in without a click. A VST3 that ignores the host's request to clear itself may still ring out.
-- Switch several at once with the track menu (**Track On**) or Track › **Toggle Track On/Off**,
-  which act on the selected tracks. The key command Toggle Track On/Off has no key at first; give it one in
+- Switch several at once with the track menu (**Track On**) or Track › **Track On** (ticked while
+  every selected track is on), which act on the selected tracks. The key command Toggle Track On/Off has no key at first; give it one in
   Settings › Key Commands. In short tracks the button is in the **⋯** menu, and shows in the
   header while the track is off.
 - **Stacks:** turning a folder or summing stack off turns everything in it off too. Each subtrack
@@ -1754,7 +1767,7 @@ the selection, as one undo step:
 | Action | Key | What it does |
 |---|---|---|
 | Split at Selection | Ctrl+T | Splits at both ends (at the playhead without a selection). |
-| Split at Transients | Ctrl+Shift+T | Splits at every transient in the selection (or the selected regions). |
+| Split at Transients | Shift+Ctrl+T | Splits at every transient in the selection (or the selected regions). |
 | Trim Region to Selection | Alt+T | Keeps only the selection. |
 | Silence Selection | Alt+Backspace | Splits and mutes the middle part (unmute it to bring it back). |
 | Delete Selection | Backspace | Removes the middle part and leaves a gap. |
@@ -2503,7 +2516,7 @@ controller drives one parameter: learning it again moves it to the new one.
 
 ### The Controller Assignments window
 
-**Marbble › Control Surfaces › Controller Assignments…** (Ctrl+Shift+L) lists every assignment:
+**Marbble › Control Surfaces › Controller Assignments…** (Shift+Ctrl+L) lists every assignment:
 the controller (CC number or Pitch Bend, channel and input port) and the parameter. For each
 one:
 
@@ -2552,7 +2565,7 @@ like any other audio file.
 
 ### Export All Tracks as Audio Files
 
-**File › Export All Tracks as Audio Files…** (Ctrl+Shift+E) writes one file per track into a
+**File › Export All Tracks as Audio Files…** (Shift+Ctrl+E) writes one file per track into a
 folder, named `<number> <track name>.wav` (or `.aif`, `.flac`) after the track's place in the
 list. It has the same options as Bounce, format included.
 
@@ -2626,7 +2639,7 @@ drives.
 ### The Project Chooser
 
 Opens at launch (by default) and from **File › New…** (Ctrl+N) and **File › Open Recent…**
-(Ctrl+Shift+O).
+(Shift+Ctrl+O).
 
 - **New Project:** four templates:
   - **Empty Project**;
@@ -2647,7 +2660,7 @@ Opens at launch (by default) and from **File › New…** (Ctrl+N) and **File �
 ### Open, save and close
 
 - **File › Open…** (Ctrl+O): choose a `.marbble` folder. **Save** (Ctrl+S) and **Save As…**
-  (Ctrl+Shift+S). Save As to a new folder copies the audio files that were in the old project
+  (Shift+Ctrl+S). Save As to a new folder copies the audio files that were in the old project
   folder.
 - You're asked before unsaved changes are discarded (when quitting, opening or creating
   another project), unless you turn that off in Settings › General. **Don't Save** also
@@ -2949,7 +2962,7 @@ shown.
 | Key | Command |
 |---|---|
 | Ctrl+C / Ctrl+X / Ctrl+V | Copy / Cut / Paste regions (or the marquee's contents) |
-| Ctrl+Shift+V | Paste Replace |
+| Shift+Ctrl+V | Paste Replace |
 | Ctrl+M (Control+M on macOS) | Mute regions |
 | Backspace, Delete | Delete regions (or selected automation points, a marker, a tempo change) |
 | L | Loop regions |
@@ -2970,7 +2983,7 @@ shown.
 | Ctrl+Alt+V (Control+⌘V on macOS) | Insert Cut Section at Left Locator |
 | Alt+[ / Alt+] | Trim Region Start / End to Playhead |
 | ; | Move Region to Playhead |
-| Alt+Shift+C | Color Regions by Track |
+| Shift+Alt+C | Color Regions by Track |
 | (none) | Snap Edits to Zero Crossings, Select All Following of Same Track, Select Overlapped Regions, Trim Region End to Next Region, Fill Within Locators, Remove Overlaps, Resize to Same Length, Crop Regions Outside Locators or Marquee, Remove Gaps, Paste at Original Position, Delete and Shuffle, Join Regions per Track, Strip Silence…, Name Regions by Track, Name Tracks by Region, Color Tracks by Region |
 
 With the Piano Roll or the Event List focused, the Select keys act on notes or events (see
@@ -2988,7 +3001,7 @@ With the Piano Roll or the Event List focused, the Select keys act on notes or e
 | Key | Command |
 |---|---|
 | Ctrl+L | Learn Assignment for Last Touched Parameter (again: cancel) |
-| Ctrl+Shift+L | Controller Assignments… |
+| Shift+Ctrl+L | Controller Assignments… |
 
 ### Step Input Keyboard
 
@@ -2997,7 +3010,7 @@ The keys other than the first work while the Step Input Keyboard is open (see
 
 | Key | Command |
 |---|---|
-| Ctrl+Alt+Shift+K (⌥⇧⌘K on macOS) | Show/Hide Step Input Keyboard |
+| Shift+Ctrl+Alt+K (⌥⇧⌘K on macOS) | Show/Hide Step Input Keyboard |
 | 1 – 8 | Note Value 1/1, 1/2, 1/4, 1/8, 1/16, 1/32, 1/64, 1/128 |
 | 9 | Dotted Note |
 | 0 | Triplet |
@@ -3010,24 +3023,25 @@ The keys other than the first work while the Step Input Keyboard is open (see
 | Key | Menu › Command |
 |---|---|
 | Ctrl+, | Marbble › Settings… |
+| Ctrl+Q | Marbble › Quit Marbble |
 | Ctrl+N | File › New… |
-| Ctrl+Shift+O | File › Open Recent… |
+| Shift+Ctrl+O | File › Open Recent… |
 | Ctrl+O | File › Open… |
 | Ctrl+S | File › Save |
-| Ctrl+Shift+S | File › Save As… |
-| Ctrl+Shift+I | File › Import Audio File… |
+| Shift+Ctrl+S | File › Save As… |
+| Shift+Ctrl+I | File › Import Audio File… |
 | Ctrl+B | File › Bounce Project or Section… |
 | Ctrl+E | File › Export Selected Tracks as Audio Files… |
-| Ctrl+Shift+E | File › Export All Tracks as Audio Files… |
+| Shift+Ctrl+E | File › Export All Tracks as Audio Files… |
 | Ctrl+Z | Edit › Undo |
-| Ctrl+Shift+Z | Edit › Redo |
+| Shift+Ctrl+Z | Edit › Redo |
 | Ctrl+D | Edit › Duplicate |
 | Ctrl+T | Edit › Split Regions at Playhead |
 | Ctrl+J | Edit › Join Regions |
 | Ctrl+A | Edit › Select All |
 | Ctrl+Alt+N | Track › New Tracks… |
 | Ctrl+Alt+B (Control+B on macOS) | Track › Bounce in Place… |
-| Ctrl+Shift+D | Track › Create Folder Stack |
+| Shift+Ctrl+D | Track › Create Folder Stack |
 | Ctrl+G | Track › Group Selected Tracks |
 | Ctrl+Backspace | Track › Delete Track |
 | Ctrl+K | View › Musical Typing |
@@ -3103,7 +3117,7 @@ These apply after you click in the editor; most need a range selection.
 | Key | Action |
 |---|---|
 | Ctrl+T | Split at selection (at the playhead without one) |
-| Ctrl+Shift+T | Split at transients |
+| Shift+Ctrl+T | Split at transients |
 | Backspace, Delete | Delete selection |
 | Alt+Backspace | Silence selection |
 | Alt+T | Trim region to selection |

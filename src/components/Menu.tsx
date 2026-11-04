@@ -4,6 +4,8 @@ import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } fr
 import { Icon } from "../icons";
 
 export interface MenuItem {
+  /** The menu bar item it matches (src/menuLabels.ts ids), so the menu bar can follow its state. */
+  id?: string;
   label?: string;
   onClick?: () => void;
   children?: MenuItem[];

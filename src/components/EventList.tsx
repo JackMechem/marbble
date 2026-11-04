@@ -122,6 +122,10 @@ export function EditorTabs({ current }: { current: "editor" | "list" | "steps" }
 }
 
 let menuHandler: ((id: string) => boolean) | null = null;
+let menuRoot: React.RefObject<HTMLDivElement | null> | null = null;
+
+/** Whether the Event List has keyboard focus, so the Edit menu acts on it (menuBar.ts). */
+export const eventListHasFocus = () => !!menuRoot?.current?.contains(document.activeElement);
 
 /** Edit menu commands (Select All, Delete) for the Event List while it has focus. */
 export function eventListMenu(id: string): boolean {
@@ -492,8 +496,12 @@ export function EventList() {
       return true;
     };
     menuHandler = h;
+    menuRoot = rootRef;
     return () => {
-      if (menuHandler === h) menuHandler = null;
+      if (menuHandler === h) {
+        menuHandler = null;
+        menuRoot = null;
+      }
     };
   });
 

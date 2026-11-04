@@ -364,6 +364,7 @@ fn main() {
             commands::delete_comp,
             commands::set_loop_crossfade,
             menu::set_project_menus,
+            menu::set_menu_state,
             commands::set_marker_length,
             commands::add_arrangement_marker,
             commands::rename_arrangement_marker,

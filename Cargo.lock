@@ -786,6 +786,7 @@ dependencies = [
  "env_logger",
  "gdk",
  "glib",
+ "gtk",
  "log",
  "parking_lot",
  "serde",

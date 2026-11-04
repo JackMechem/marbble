@@ -1,241 +1,686 @@
 //! The native menu bar. Items emit a `menu` event carrying their id to the frontend (to the
-//! focused detached panel window, if any; see windows.rs).
+//! focused detached panel window, if any; see windows.rs). The bar is described once, as data
+//! (`spec`), and the frontend keeps it in step with the app through `set_menu_state`
+//! (src/menuBar.ts): ticks, greyed-out items, the Undo/Redo names, and the keys of the key
+//! commands beside their items.
+//!
+//! Two kinds of key. The accelerators in `spec` (Ctrl+S, Ctrl+Z…) belong to the menu: GTK,
+//! AppKit or Win32 runs the item when the key is pressed, before the page sees it. Every other
+//! key is a key command (src/keymap.ts) that the window handles itself and the user can
+//! reassign; the menu bar only shows those keys and never registers them. A registered key
+//! would be taken before the page sees it: R or X would stop reaching text fields and Musical
+//! Typing, and the page's own handling (key repeat, the editors' keys, sheets that block
+//! keys) would be skipped. So nothing can run twice either: a key either belongs to the menu
+//! or to the page.
 
+use std::collections::HashMap;
+
+use parking_lot::Mutex;
 use serde::Deserialize;
-use tauri::menu::{AboutMetadata, CheckMenuItem, MenuBuilder, MenuItem, PredefinedMenuItem, Submenu, SubmenuBuilder};
+use tauri::menu::{AboutMetadata, CheckMenuItem, Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::{App, AppHandle, Manager, Runtime};
 
 /// Logic's ⌃B. Elsewhere Ctrl+B is already Bounce Project (⌘B), so Bounce in Place adds Alt.
 const BOUNCE_IN_PLACE_KEY: &str = if cfg!(target_os = "macos") { "Ctrl+B" } else { "Ctrl+Alt+B" };
 
+/// One entry of the menu bar.
+enum Spec {
+    /// id, label, accelerator.
+    Item(&'static str, &'static str, Option<&'static str>),
+    /// A ticked item: the frontend sends its state.
+    Check(&'static str, &'static str, Option<&'static str>),
+    Sep,
+    Sub(&'static str, Vec<Spec>),
+    /// File › Revert to and File › Project Alternatives, filled in by `set_project_menus`.
+    Revert,
+    Alternatives,
+    About,
+}
+
+use Spec::{Check, Item, Sep, Sub};
+
+const fn item(id: &'static str, label: &'static str) -> Spec {
+    Item(id, label, None)
+}
+
+const fn keyed(id: &'static str, label: &'static str, accel: &'static str) -> Spec {
+    Item(id, label, Some(accel))
+}
+
+const fn check(id: &'static str, label: &'static str) -> Spec {
+    Check(id, label, None)
+}
+
+/// The menu bar, menu by menu. The Edit menu is the Tracks area's Edit menu (src/components/
+/// TracksArea.tsx `editMenu`), item for item; the names are src/menuLabels.ts's.
+fn spec() -> Vec<Spec> {
+    vec![
+        Sub(
+            "Marbble",
+            vec![
+                Spec::About,
+                Sep,
+                keyed("settings", "Settings…", "CmdOrCtrl+,"),
+                item("settings-appearance", "Appearance…"),
+                item("settings-keys", "Key Commands…"),
+                // Logic Pro › Control Surfaces.
+                Sub(
+                    "Control Surfaces",
+                    vec![item("learn-assignment", "Learn Assignment for Last Touched Parameter"), item("controller-assignments", "Controller Assignments…")],
+                ),
+                Sep,
+                // Not the predefined Quit: GTK draws that one greyed out, and on macOS it would
+                // end the app without asking about unsaved changes. This closes the main window,
+                // as its close button does (`quit`).
+                keyed("quit", "Quit Marbble", "CmdOrCtrl+Q"),
+            ],
+        ),
+        Sub(
+            "File",
+            vec![
+                keyed("new", "New…", "CmdOrCtrl+N"),
+                keyed("chooser-recent", "Open Recent…", "Shift+CmdOrCtrl+O"),
+                keyed("open", "Open…", "CmdOrCtrl+O"),
+                Sep,
+                keyed("save", "Save", "CmdOrCtrl+S"),
+                keyed("save-as", "Save As…", "Shift+CmdOrCtrl+S"),
+                item("save-template", "Save as Template…"),
+                item("revert-saved", "Revert to Saved"),
+                Spec::Revert,
+                Sep,
+                Spec::Alternatives,
+                Sep,
+                item("project-settings", "Project Settings…"),
+                Sep,
+                keyed("import-audio", "Import Audio File…", "Shift+CmdOrCtrl+I"),
+                Sep,
+                keyed("bounce", "Bounce Project or Section…", "CmdOrCtrl+B"),
+                keyed("export-selected-tracks", "Export Selected Tracks as Audio Files…", "CmdOrCtrl+E"),
+                keyed("export-tracks", "Export All Tracks as Audio Files…", "Shift+CmdOrCtrl+E"),
+                item("import-midi", "Import MIDI File…"),
+                item("export-midi", "Export Selection as MIDI File…"),
+            ],
+        ),
+        Sub(
+            "Edit",
+            vec![
+                keyed("undo", "Undo", "CmdOrCtrl+Z"),
+                keyed("redo", "Redo", "Shift+CmdOrCtrl+Z"),
+                Sep,
+                // Cut/Copy/Paste are key commands, not accelerators, so text fields keep the
+                // clipboard keys.
+                item("cut", "Cut"),
+                item("copy", "Copy"),
+                item("paste", "Paste"),
+                item("paste-original", "Paste at Original Position"),
+                item("paste-replace", "Paste Replace"),
+                keyed("duplicate", "Duplicate", "CmdOrCtrl+D"),
+                Sub(
+                    "Repeat",
+                    vec![
+                        item("repeat:1", "Once"),
+                        item("repeat:2", "2 Times"),
+                        item("repeat:3", "3 Times"),
+                        item("repeat:4", "4 Times"),
+                        item("repeat:8", "8 Times"),
+                        item("repeat:16", "16 Times"),
+                    ],
+                ),
+                Sep,
+                keyed("split", "Split Regions at Playhead", "CmdOrCtrl+T"),
+                keyed("join", "Join Regions", "CmdOrCtrl+J"),
+                item("join-per-track", "Join Regions per Track"),
+                check("loop", "Loop Regions"),
+                item("convert-loops", "Convert Loops to Real Copies"),
+                item("pack-takes", "Pack Take Folder"),
+                item("set-locators", "Set Locators by Regions"),
+                item("strip-silence", "Strip Silence…"),
+                Sep,
+                // Logic's arranging commands (src/arrangeCmds.ts).
+                Sub(
+                    "Section Between Locators",
+                    vec![
+                        item("section-insert-silence", "Insert Silence Between Locators"),
+                        item("section-cut", "Cut Section Between Locators"),
+                        item("section-repeat", "Repeat Section Between Locators"),
+                        item("section-insert-cut", "Insert Cut Section at Left Locator"),
+                    ],
+                ),
+                Sub(
+                    "Trim",
+                    vec![
+                        item("trim-start-playhead", "Trim Region Start to Playhead"),
+                        item("trim-end-playhead", "Trim Region End to Playhead"),
+                        item("trim-end-next", "Trim Region End to Next Region"),
+                        item("fill-locators", "Fill Within Locators"),
+                        item("remove-overlaps", "Remove Overlaps"),
+                        item("same-length", "Resize to Same Length"),
+                        Sep,
+                        item("crop-outside", "Crop Regions Outside Locators"),
+                    ],
+                ),
+                Sub(
+                    "Move",
+                    vec![item("move-to-playhead", "Move Region to Playhead"), item("remove-gaps", "Remove Gaps"), item("delete-shuffle", "Delete and Shuffle")],
+                ),
+                Sub(
+                    "Name and Color",
+                    vec![
+                        item("name-regions-by-track", "Name Regions by Track"),
+                        item("name-tracks-by-region", "Name Tracks by Region"),
+                        item("color-regions-by-track", "Color Regions by Track"),
+                        item("color-tracks-by-region", "Color Tracks by Region"),
+                    ],
+                ),
+                Sep,
+                check("zero-crossings", "Snap Edits to Zero Crossings"),
+                Sep,
+                keyed("select-all", "Select All", "CmdOrCtrl+A"),
+                Sub(
+                    "Select",
+                    vec![
+                        item("sel-following", "All Following"),
+                        item("sel-following-track", "All Following of Same Track"),
+                        item("sel-inside-locators", "Inside Locators"),
+                        Sep,
+                        item("sel-muted", "Muted Regions"),
+                        item("sel-overlapped", "Overlapped Regions"),
+                        item("sel-same-color", "Same Colored Regions"),
+                        item("sel-equal", "Equal Regions"),
+                        item("sel-similar", "Similar Regions"),
+                        Sep,
+                        item("sel-invert", "Invert Selection"),
+                    ],
+                ),
+                Sep,
+                item("delete", "Delete"),
+            ],
+        ),
+        Sub(
+            "Track",
+            vec![
+                keyed("new-tracks", "New Tracks…", "Alt+CmdOrCtrl+N"),
+                item("new-aux", "New Aux"),
+                item("duplicate-track", "Duplicate Track"),
+                item("same-settings", "New Track with Same Settings"),
+                item("new-pattern-region", "New Pattern Region"),
+                Sep,
+                keyed("bounce-in-place", "Bounce in Place…", BOUNCE_IN_PLACE_KEY),
+                item("freeze-track", "Freeze Track"),
+                item("unfreeze-track", "Unfreeze Track"),
+                check("track-on-off", "Track On"),
+                Sep,
+                keyed("folder-stack", "Create Folder Stack", "Shift+CmdOrCtrl+D"),
+                item("summing-stack", "Create Summing Stack"),
+                keyed("group", "Group Selected Tracks", "CmdOrCtrl+G"),
+                Sep,
+                check("output-track", "Show Output Track"),
+                item("hide-tracks", "Hide Track"),
+                item("unhide-all", "Unhide All Tracks"),
+                Sep,
+                keyed("delete-track", "Delete Track", "CmdOrCtrl+Backspace"),
+                item("delete-unused", "Delete Unused Tracks"),
+                Sep,
+                Sub(
+                    "Track Alternatives",
+                    vec![
+                        item("track-alt-new", "New Alternative"),
+                        item("track-alt-duplicate", "Duplicate Alternative"),
+                        item("track-alt-rename", "Rename Alternative…"),
+                        item("track-alt-delete", "Delete Alternative"),
+                    ],
+                ),
+            ],
+        ),
+        Sub(
+            "Record",
+            vec![
+                item("play", "Play / Stop"),
+                item("record", "Record"),
+                Sep,
+                check("cycle", "Cycle"),
+                check("autopunch", "Autopunch"),
+                check("metronome", "Metronome"),
+                check("count-in", "Count-in"),
+                Sep,
+                check("low-latency", "Low Latency Mode"),
+            ],
+        ),
+        // Logic's Navigate menu, for the Marker track.
+        Sub(
+            "Navigate",
+            vec![
+                item("create-marker", "Create Marker"),
+                item("delete-marker", "Delete Marker"),
+                Sep,
+                item("previous-marker", "Go to Previous Marker"),
+                item("next-marker", "Go to Next Marker"),
+                Sep,
+                item("marker-list", "Open Marker List"),
+            ],
+        ),
+        Sub(
+            "View",
+            vec![
+                check("library", "Library"),
+                check("inspector", "Inspector"),
+                check("mixer", "Mixer"),
+                check("editor", "Editors"),
+                check("list-editors", "List Editors"),
+                // A detached panel's own window, or back into the main window.
+                check("detach:mixer", "Mixer in Separate Window"),
+                check("detach:editor", "Editor in Separate Window"),
+                check("detach:list", "Event List in Separate Window"),
+                check("browser", "Browsers"),
+                check("automation", "Show Automation"),
+                item("used-automation", "Show Used Automation"),
+                check("global-tracks", "Show Global Tracks"),
+                check("overview", "Show Overview"),
+                Check("musical-typing", "Musical Typing", Some("CmdOrCtrl+K")),
+                check("step-input", "Step Input Keyboard"),
+                Sep,
+                check("show-hidden", "Show Hidden Tracks"),
+                Sep,
+                item("zoom-in", "Zoom In"),
+                item("zoom-out", "Zoom Out"),
+                Sep,
+                keyed("ui-larger", "Larger Interface", "CmdOrCtrl+Equal"),
+                keyed("ui-smaller", "Smaller Interface", "CmdOrCtrl+Minus"),
+                keyed("ui-actual", "Actual Size", "CmdOrCtrl+Digit0"),
+                Sep,
+                Sub(
+                    "Theme",
+                    vec![
+                        check("theme:studio", "Studio"),
+                        check("theme:flat", "Flat"),
+                        check("theme:midnight", "Midnight"),
+                        check("theme:light", "Light"),
+                        check("theme:contrast", "High Contrast"),
+                    ],
+                ),
+            ],
+        ),
+    ]
+}
+
+enum Handle<R: Runtime> {
+    Item(MenuItem<R>),
+    Check(CheckMenuItem<R>),
+}
+
+/// A built item: its handle, its label in `spec`, and where it sits (its index in the menu bar,
+/// then in each submenu down to it, separators counted), which finds its GTK widget.
+struct Entry<R: Runtime> {
+    handle: Handle<R>,
+    label: &'static str,
+    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+    path: Vec<usize>,
+}
+
+/// What the frontend last sent, by item id.
+#[derive(Default)]
+struct Shown {
+    /// The key command's key shown beside an item, as keymap.ts writes it ("Mod+Shift+V").
+    keys: HashMap<String, String>,
+    /// The same, as the platform writes it ("Ctrl+Shift+V"); Windows shows it in the label.
+    key_texts: HashMap<String, String>,
+    /// Labels other than the one in `spec` ("Undo Move Region").
+    texts: HashMap<String, String>,
+    checked: HashMap<String, bool>,
+    /// Bumped when `keys` changes; `applied` is what each window's GTK menu bar shows.
+    generation: u64,
+    applied: HashMap<String, u64>,
+}
+
+/// The built menu bar, kept as managed state.
+pub struct MenuBar<R: Runtime> {
+    alternatives: Submenu<R>,
+    revert: Submenu<R>,
+    items: HashMap<String, Entry<R>>,
+    shown: Mutex<Shown>,
+}
+
+struct Builder<'a, R: Runtime> {
+    app: &'a App<R>,
+    items: HashMap<String, Entry<R>>,
+    alternatives: Option<Submenu<R>>,
+    revert: Option<Submenu<R>>,
+}
+
+impl<R: Runtime> Builder<'_, R> {
+    fn fill(&mut self, parent: &Submenu<R>, specs: &[Spec], path: &mut Vec<usize>) -> tauri::Result<()> {
+        for (i, s) in specs.iter().enumerate() {
+            path.push(i);
+            match s {
+                Item(id, label, accel) => {
+                    let m = MenuItem::with_id(self.app, *id, *label, true, *accel)?;
+                    parent.append(&m)?;
+                    self.items.insert(id.to_string(), Entry { handle: Handle::Item(m), label, path: path.clone() });
+                }
+                Check(id, label, accel) => {
+                    let m = CheckMenuItem::with_id(self.app, *id, *label, true, false, *accel)?;
+                    parent.append(&m)?;
+                    self.items.insert(id.to_string(), Entry { handle: Handle::Check(m), label, path: path.clone() });
+                }
+                Sep => parent.append(&PredefinedMenuItem::separator(self.app)?)?,
+                Sub(label, children) => {
+                    let sub = Submenu::new(self.app, *label, true)?;
+                    self.fill(&sub, children, path)?;
+                    parent.append(&sub)?;
+                }
+                Spec::Revert | Spec::Alternatives => {
+                    let revert = matches!(s, Spec::Revert);
+                    let sub = Submenu::new(self.app, if revert { "Revert to" } else { "Project Alternatives" }, true)?;
+                    parent.append(&sub)?;
+                    if revert { &mut self.revert } else { &mut self.alternatives }.replace(sub);
+                }
+                Spec::About => {
+                    let about = AboutMetadata {
+                        name: Some("Marbble".into()),
+                        version: Some(self.app.package_info().version.to_string()),
+                        comments: Some("A digital audio workstation with VST3 hosting.".into()),
+                        license: Some("MIT".into()),
+                        website: Some("https://github.com/JackMechem/marbble".into()),
+                        ..Default::default()
+                    };
+                    parent.append(&PredefinedMenuItem::about(self.app, Some("About Marbble"), Some(about))?)?;
+                }
+            }
+            path.pop();
+        }
+        Ok(())
+    }
+}
+
 pub fn install<R: Runtime>(app: &App<R>) -> tauri::Result<()> {
-    let item = |id: &str, label: &str, accel: Option<&str>| MenuItem::with_id(app, id, label, true, accel);
-
-    let about = AboutMetadata {
-        name: Some("Marbble".into()),
-        version: Some(app.package_info().version.to_string()),
-        comments: Some("A digital audio workstation with VST3 hosting.".into()),
-        license: Some("MIT".into()),
-        website: Some("https://github.com/JackMechem/marbble".into()),
-        ..Default::default()
-    };
-    // Logic Pro › Control Surfaces. The keys live in the keymap.
-    let control_surfaces = SubmenuBuilder::new(app, "Control Surfaces")
-        .item(&item("learn-assignment", "Learn Assignment for Last Touched Parameter", None)?)
-        .item(&item("controller-assignments", "Controller Assignments…", None)?)
-        .build()?;
-    let app_menu = SubmenuBuilder::new(app, "Marbble")
-        .item(&PredefinedMenuItem::about(app, Some("About Marbble"), Some(about))?)
-        .separator()
-        .item(&item("settings", "Settings…", Some("CmdOrCtrl+,"))?)
-        .item(&item("settings-appearance", "Appearance…", None)?)
-        .item(&item("settings-keys", "Key Commands…", None)?)
-        .item(&control_surfaces)
-        .separator()
-        .item(&PredefinedMenuItem::quit(app, Some("Quit Marbble"))?)
-        .build()?;
-    // Filled in by set_project_menus once a project is open.
-    let alternatives = SubmenuBuilder::new(app, "Project Alternatives").build()?;
-    let revert = SubmenuBuilder::new(app, "Revert to").build()?;
+    let mut b = Builder { app, items: HashMap::new(), alternatives: None, revert: None };
+    let menu = Menu::new(app)?;
+    for (i, top) in spec().iter().enumerate() {
+        let Sub(label, children) = top else { unreachable!("the menu bar holds menus") };
+        let sub = Submenu::new(app, *label, true)?;
+        b.fill(&sub, children, &mut vec![i])?;
+        menu.append(&sub)?;
+    }
+    let (Some(alternatives), Some(revert)) = (b.alternatives, b.revert) else { unreachable!("File has both lists") };
     fill_project_menus(app.handle(), &alternatives, &revert, &[], "", &[])?;
-    let file = SubmenuBuilder::new(app, "File")
-        .item(&item("new", "New…", Some("CmdOrCtrl+N"))?)
-        .item(&item("chooser-recent", "Open Recent…", Some("Shift+CmdOrCtrl+O"))?)
-        .item(&item("open", "Open…", Some("CmdOrCtrl+O"))?)
-        .separator()
-        .item(&item("save", "Save", Some("CmdOrCtrl+S"))?)
-        .item(&item("save-as", "Save As…", Some("Shift+CmdOrCtrl+S"))?)
-        .item(&item("save-template", "Save as Template…", None)?)
-        .item(&item("revert-saved", "Revert to Saved", None)?)
-        .item(&revert)
-        .separator()
-        .item(&alternatives)
-        .separator()
-        .item(&item("project-settings", "Project Settings…", None)?)
-        .separator()
-        .item(&item("import-audio", "Import Audio File…", Some("Shift+CmdOrCtrl+I"))?)
-        .separator()
-        .item(&item("bounce", "Bounce Project or Section…", Some("CmdOrCtrl+B"))?)
-        .item(&item("export-selected-tracks", "Export Selected Tracks as Audio Files…", Some("CmdOrCtrl+E"))?)
-        .item(&item("export-tracks", "Export All Tracks as Audio Files…", Some("Shift+CmdOrCtrl+E"))?)
-        .item(&item("import-midi", "Import MIDI File…", None)?)
-        .item(&item("export-midi", "Export Selection as MIDI File…", None)?)
-        .build()?;
-    // Logic's arranging commands (src/arrangeCmds.ts); their keys live in the keymap.
-    let select = SubmenuBuilder::new(app, "Select")
-        .item(&item("sel-following", "All Following", None)?)
-        .item(&item("sel-following-track", "All Following of Same Track", None)?)
-        .item(&item("sel-inside-locators", "Inside Locators", None)?)
-        .separator()
-        .item(&item("sel-muted", "Muted Regions", None)?)
-        .item(&item("sel-overlapped", "Overlapped Regions", None)?)
-        .item(&item("sel-same-color", "Same Colored Regions", None)?)
-        .item(&item("sel-equal", "Equal Regions", None)?)
-        .item(&item("sel-similar", "Similar Regions", None)?)
-        .separator()
-        .item(&item("sel-invert", "Invert Selection", None)?)
-        .build()?;
-    let section = SubmenuBuilder::new(app, "Section Between Locators")
-        .item(&item("section-insert-silence", "Insert Silence Between Locators", None)?)
-        .item(&item("section-cut", "Cut Section Between Locators", None)?)
-        .item(&item("section-repeat", "Repeat Section Between Locators", None)?)
-        .item(&item("section-insert-cut", "Insert Cut Section at Left Locator", None)?)
-        .build()?;
-    let trim = SubmenuBuilder::new(app, "Trim")
-        .item(&item("trim-start-playhead", "Trim Region Start to Playhead", None)?)
-        .item(&item("trim-end-playhead", "Trim Region End to Playhead", None)?)
-        .item(&item("trim-end-next", "Trim Region End to Next Region", None)?)
-        .item(&item("fill-locators", "Fill Within Locators", None)?)
-        .item(&item("remove-overlaps", "Remove Overlaps", None)?)
-        .item(&item("same-length", "Resize to Same Length", None)?)
-        .separator()
-        .item(&item("crop-outside", "Crop Regions Outside Locators or Marquee", None)?)
-        .build()?;
-    let move_menu = SubmenuBuilder::new(app, "Move")
-        .item(&item("move-to-playhead", "Move Region to Playhead", None)?)
-        .item(&item("remove-gaps", "Remove Gaps", None)?)
-        .item(&item("delete-shuffle", "Delete and Shuffle", None)?)
-        .build()?;
-    let name_color = SubmenuBuilder::new(app, "Name and Color")
-        .item(&item("name-regions-by-track", "Name Regions by Track", None)?)
-        .item(&item("name-tracks-by-region", "Name Tracks by Region", None)?)
-        .item(&item("color-regions-by-track", "Color Regions by Track", None)?)
-        .item(&item("color-tracks-by-region", "Color Tracks by Region", None)?)
-        .build()?;
-    let edit = SubmenuBuilder::new(app, "Edit")
-        .item(&item("undo", "Undo", Some("CmdOrCtrl+Z"))?)
-        .item(&item("redo", "Redo", Some("Shift+CmdOrCtrl+Z"))?)
-        .separator()
-        // Cut/Copy/Paste carry no accelerators so text fields keep the clipboard keys; the
-        // window handles ⌘X/C/V itself.
-        .item(&item("cut", "Cut Regions", None)?)
-        .item(&item("copy", "Copy Regions", None)?)
-        .item(&item("paste", "Paste Regions", None)?)
-        .item(&item("paste-original", "Paste at Original Position", None)?)
-        .item(&item("paste-replace", "Paste Replace", None)?)
-        .item(&item("duplicate", "Duplicate", Some("CmdOrCtrl+D"))?)
-        .item(&item("repeat", "Repeat Regions", None)?)
-        .separator()
-        .item(&item("split", "Split Regions at Playhead", Some("CmdOrCtrl+T"))?)
-        .item(&item("join", "Join Regions", Some("CmdOrCtrl+J"))?)
-        .item(&item("join-per-track", "Join Regions per Track", None)?)
-        .item(&item("loop", "Loop Regions", None)?)
-        .item(&item("convert-loops", "Convert Loops to Real Copies", None)?)
-        .item(&item("pack-takes", "Pack Take Folder", None)?)
-        .item(&item("set-locators", "Set Locators by Regions", None)?)
-        .item(&item("zero-crossings", "Snap Edits to Zero Crossings", None)?)
-        .item(&item("strip-silence", "Strip Silence…", None)?)
-        .separator()
-        .item(&section)
-        .item(&trim)
-        .item(&move_menu)
-        .item(&name_color)
-        .separator()
-        .item(&item("select-all", "Select All", Some("CmdOrCtrl+A"))?)
-        .item(&select)
-        .separator()
-        .item(&item("delete", "Delete", None)?)
-        .build()?;
-    let track_alternatives = SubmenuBuilder::new(app, "Track Alternatives")
-        .item(&item("track-alt-new", "New Alternative", None)?)
-        .item(&item("track-alt-duplicate", "Duplicate Alternative", None)?)
-        .item(&item("track-alt-rename", "Rename Alternative…", None)?)
-        .item(&item("track-alt-delete", "Delete Alternative", None)?)
-        .build()?;
-    let track = SubmenuBuilder::new(app, "Track")
-        .item(&item("new-tracks", "New Tracks…", Some("Alt+CmdOrCtrl+N"))?)
-        .item(&item("new-aux", "New Aux", None)?)
-        .item(&item("duplicate-track", "Duplicate Track", None)?)
-        .item(&item("same-settings", "New Track with Same Settings", None)?)
-        .item(&item("new-pattern-region", "New Pattern Region", None)?)
-        .separator()
-        .item(&item("bounce-in-place", "Bounce in Place…", Some(BOUNCE_IN_PLACE_KEY))?)
-        .item(&item("freeze-track", "Freeze Track", None)?)
-        .item(&item("unfreeze-track", "Unfreeze Track", None)?)
-        .item(&item("track-on-off", "Toggle Track On/Off", None)?)
-        .separator()
-        .item(&item("folder-stack", "Create Folder Stack", Some("Shift+CmdOrCtrl+D"))?)
-        .item(&item("summing-stack", "Create Summing Stack", None)?)
-        .item(&item("group", "Group Selected Tracks", Some("CmdOrCtrl+G"))?)
-        .separator()
-        .item(&item("output-track", "Show Output Track", None)?)
-        .item(&item("hide-tracks", "Hide Track", None)?)
-        .item(&item("unhide-all", "Unhide All Tracks", None)?)
-        .separator()
-        .item(&item("delete-track", "Delete Track", Some("CmdOrCtrl+Backspace"))?)
-        .item(&item("delete-unused", "Delete Unused Tracks", None)?)
-        .separator()
-        .item(&track_alternatives)
-        .build()?;
-    let record = SubmenuBuilder::new(app, "Record")
-        .item(&item("play", "Play / Stop", None)?)
-        .item(&item("record", "Record", None)?)
-        .separator()
-        .item(&item("cycle", "Cycle", None)?)
-        .item(&item("autopunch", "Autopunch", None)?)
-        .item(&item("metronome", "Metronome", None)?)
-        .item(&item("count-in", "Count-in", None)?)
-        .separator()
-        .item(&item("low-latency", "Low Latency Mode", None)?)
-        .build()?;
-    // Logic's Navigate menu, for the Marker track. The keys live in the keymap.
-    let navigate = SubmenuBuilder::new(app, "Navigate")
-        .item(&item("create-marker", "Create Marker", None)?)
-        .item(&item("delete-marker", "Delete Marker", None)?)
-        .separator()
-        .item(&item("previous-marker", "Go to Previous Marker", None)?)
-        .item(&item("next-marker", "Go to Next Marker", None)?)
-        .separator()
-        .item(&item("marker-list", "Open Marker List", None)?)
-        .build()?;
-    let themes = SubmenuBuilder::new(app, "Theme")
-        .item(&item("theme:studio", "Studio", None)?)
-        .item(&item("theme:flat", "Flat", None)?)
-        .item(&item("theme:midnight", "Midnight", None)?)
-        .item(&item("theme:light", "Light", None)?)
-        .item(&item("theme:contrast", "High Contrast", None)?)
-        .build()?;
-    let view = SubmenuBuilder::new(app, "View")
-        .item(&item("library", "Library", None)?)
-        .item(&item("inspector", "Inspector", None)?)
-        .item(&item("mixer", "Mixer", None)?)
-        .item(&item("editor", "Editors", None)?)
-        .item(&item("list-editors", "List Editors", None)?)
-        // Toggles: a detached panel's own window, or back into the main window.
-        .item(&item("detach:mixer", "Mixer in Separate Window", None)?)
-        .item(&item("detach:editor", "Editor in Separate Window", None)?)
-        .item(&item("detach:list", "Event List in Separate Window", None)?)
-        .item(&item("browser", "Browsers", None)?)
-        .item(&item("automation", "Show Automation", None)?)
-        .item(&item("used-automation", "Show Used Automation", None)?)
-        .item(&item("global-tracks", "Show Global Tracks", None)?)
-        .item(&item("overview", "Show Overview", None)?)
-        .item(&item("musical-typing", "Musical Typing", Some("CmdOrCtrl+K"))?)
-        .item(&item("step-input", "Step Input Keyboard", None)?)
-        .separator()
-        .item(&item("show-hidden", "Show Hidden Tracks", None)?)
-        .separator()
-        .item(&item("zoom-in", "Zoom In", None)?)
-        .item(&item("zoom-out", "Zoom Out", None)?)
-        .separator()
-        .item(&item("ui-larger", "Larger Interface", Some("CmdOrCtrl+Equal"))?)
-        .item(&item("ui-smaller", "Smaller Interface", Some("CmdOrCtrl+Minus"))?)
-        .item(&item("ui-actual", "Actual Size", Some("CmdOrCtrl+Digit0"))?)
-        .separator()
-        .item(&themes)
-        .build()?;
-
-    let menu = MenuBuilder::new(app).items(&[&app_menu, &file, &edit, &track, &record, &navigate, &view]).build()?;
     app.set_menu(menu)?;
-    app.manage(ProjectMenus { alternatives, revert });
-    app.on_menu_event(|app, ev| crate::windows::route_menu(app, ev.id().0.clone()));
+    app.manage(MenuBar { alternatives, revert, items: b.items, shown: Mutex::new(Shown::default()) });
+    app.on_menu_event(|app, ev| {
+        let id = ev.id().0.clone();
+        if id == "quit" {
+            return quit(app);
+        }
+        // A check item ticks or unticks itself when chosen. Put the tick back: the frontend
+        // sends the new state once the command has run, so a command that changes nothing
+        // (or fails) leaves the tick right.
+        if let Some(bar) = app.try_state::<MenuBar<R>>() {
+            bar.restore_check(&id);
+        }
+        crate::windows::route_menu(app, id)
+    });
     Ok(())
 }
 
-/// The File menu's lists that change with the project: Project Alternatives and Revert to.
-struct ProjectMenus<R: Runtime> {
-    alternatives: Submenu<R>,
-    revert: Submenu<R>,
+/// Marbble › Quit Marbble: closes the main window as its close button does, so the page can
+/// ask about unsaved changes (App.tsx `onCloseRequested`); the panel windows go with it.
+fn quit<R: Runtime>(app: &AppHandle<R>) {
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.close();
+    }
+}
+
+impl<R: Runtime> MenuBar<R> {
+    fn restore_check(&self, id: &str) {
+        let Some(Entry { handle: Handle::Check(m), .. }) = self.items.get(id) else { return };
+        // Built unticked; the frontend sends a tick only when it differs.
+        let was = self.shown.lock().checked.get(id).copied().unwrap_or(false);
+        let _ = m.set_checked(was);
+    }
+
+    /// The label to show: the frontend's (Undo Move Region) or `spec`'s, and on Windows the key
+    /// after a tab, which Windows right-aligns as it does an accelerator.
+    fn label(&self, shown: &Shown, id: &str, e: &Entry<R>) -> String {
+        let text = shown.texts.get(id).map_or(e.label, String::as_str);
+        match shown.key_texts.get(id) {
+            Some(k) if cfg!(windows) && !k.is_empty() => format!("{text}\t{k}"),
+            _ => text.to_string(),
+        }
+    }
+
+    /// Shows the key commands' keys in a window's GTK menu bar, unless it already shows them.
+    /// GTK draws a key set on the item's label without binding it (`gtk_accel_label_set_accel`).
+    #[cfg(target_os = "linux")]
+    fn show_keys_in(&self, window: &tauri::WebviewWindow<R>) {
+        use gtk::prelude::*;
+        let (generation, keys) = {
+            let shown = self.shown.lock();
+            if shown.applied.get(window.label()) == Some(&shown.generation) {
+                return;
+            }
+            let keys: Vec<_> = shown.keys.iter().filter_map(|(id, k)| Some((self.items.get(id)?.path.clone(), gtk_key(k)))).collect();
+            (shown.generation, keys)
+        };
+        let Some(bar) = window.default_vbox().ok().and_then(|b| b.children().into_iter().find_map(|w| w.downcast::<gtk::MenuBar>().ok())) else { return };
+        for (path, key) in keys {
+            let label = gtk_item(&bar, &path).and_then(|i| i.child()).and_then(|c| c.downcast::<gtk::AccelLabel>().ok());
+            if let Some(label) = label {
+                let (key, mods) = key.unwrap_or((0, gdk::ModifierType::empty()));
+                label.set_accel(key, mods);
+            }
+        }
+        self.shown.lock().applied.insert(window.label().to_string(), generation);
+    }
+}
+
+/// A GDK keyval and its modifiers.
+#[cfg(target_os = "linux")]
+type GtkKey = (u32, gdk::ModifierType);
+
+/// The item at `path` in a GTK menu bar (see `Entry::path`).
+#[cfg(target_os = "linux")]
+fn gtk_item(bar: &gtk::MenuBar, path: &[usize]) -> Option<gtk::MenuItem> {
+    use gtk::prelude::*;
+    let (first, rest) = path.split_first()?;
+    let mut item = bar.children().get(*first)?.clone().downcast::<gtk::MenuItem>().ok()?;
+    for i in rest {
+        let menu = item.submenu()?.downcast::<gtk::Menu>().ok()?;
+        item = menu.children().get(*i)?.clone().downcast::<gtk::MenuItem>().ok()?;
+    }
+    Some(item)
+}
+
+/// A key spec from keymap.ts as GDK's keyval and modifiers; None for no key or one GDK can't name.
+#[cfg(target_os = "linux")]
+fn gtk_key(spec: &str) -> Option<GtkKey> {
+    let k = parse_key(spec)?;
+    let keyval = match k.key {
+        Key::Named(name) => *gdk::keys::Key::from_name(name),
+        Key::Char(c) => *gdk::keys::Key::from_unicode(c),
+    };
+    if keyval == 0 || keyval == *gdk::keys::constants::VoidSymbol {
+        return None;
+    }
+    let mut mods = gdk::ModifierType::empty();
+    mods.set(gdk::ModifierType::CONTROL_MASK, k.ctrl);
+    mods.set(gdk::ModifierType::MOD1_MASK, k.alt);
+    mods.set(gdk::ModifierType::SHIFT_MASK, k.shift);
+    Some((keyval, mods))
+}
+
+/// A key as GDK names it.
+#[derive(Debug, PartialEq)]
+enum Key {
+    /// A keyval name ("space", "BackSpace", "comma").
+    Named(&'static str),
+    /// A character with no name of its own here.
+    Char(char),
+}
+
+#[derive(Debug, PartialEq)]
+struct ParsedKey {
+    ctrl: bool,
+    alt: bool,
+    shift: bool,
+    key: Key,
+}
+
+const F_KEYS: [&str; 12] = ["F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12"];
+
+/// Reads a key spec as keymap.ts writes it: modifiers then the key, joined with "+" ("Mod" is
+/// Ctrl outside macOS, where this is used; "Mod++" is the + key). None for an empty spec.
+fn parse_key(spec: &str) -> Option<ParsedKey> {
+    let (mods, key) = match spec.strip_suffix("++") {
+        Some(m) => (m, "+"),
+        None if spec == "+" => ("", "+"),
+        None => spec.rsplit_once('+').unwrap_or(("", spec)),
+    };
+    if key.is_empty() {
+        return None;
+    }
+    let has = |m: &str| mods.split('+').any(|x| x == m);
+    let named = match key {
+        "Space" => "space",
+        "Enter" => "Return",
+        "Backspace" => "BackSpace",
+        "Delete" => "Delete",
+        "Escape" => "Escape",
+        "Tab" => "Tab",
+        "Home" => "Home",
+        "End" => "End",
+        "PageUp" => "Page_Up",
+        "PageDown" => "Page_Down",
+        "ArrowUp" => "Up",
+        "ArrowDown" => "Down",
+        "ArrowLeft" => "Left",
+        "ArrowRight" => "Right",
+        "," => "comma",
+        "." => "period",
+        "'" => "apostrophe",
+        ";" => "semicolon",
+        "`" => "grave",
+        "[" => "bracketleft",
+        "]" => "bracketright",
+        "=" => "equal",
+        "-" => "minus",
+        "/" => "slash",
+        "\\" => "backslash",
+        "+" => "plus",
+        _ => "",
+    };
+    let key = if !named.is_empty() {
+        Key::Named(named)
+    } else if let Some(f) = F_KEYS.iter().find(|f| **f == key) {
+        Key::Named(f)
+    } else {
+        let mut chars = key.chars();
+        let c = chars.next()?;
+        if chars.next().is_some() {
+            return None;
+        }
+        // GDK binds letters by their lower-case keyval and shows them upper case.
+        Key::Char(c.to_ascii_lowercase())
+    };
+    Some(ParsedKey { ctrl: has("Mod") || has("Ctrl"), alt: has("Alt"), shift: has("Shift"), key })
+}
+
+/// An item's state from the frontend (src/menuBar.ts). Each field is sent only when it changed.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ItemState {
+    id: String,
+    enabled: Option<bool>,
+    checked: Option<bool>,
+    /// The label, when it isn't `spec`'s (or back to it).
+    text: Option<String>,
+    /// The key command's key, as keymap.ts writes it; "" for none.
+    key: Option<String>,
+    /// The same key as the platform writes it, for the label on Windows.
+    key_text: Option<String>,
+}
+
+/// Brings the menu bar's items in step with the app: enabled, ticked, their label and the key
+/// shown beside them. Ids the bar doesn't have are ignored.
+#[tauri::command]
+pub fn set_menu_state<R: Runtime>(app: AppHandle<R>, items: Vec<ItemState>) -> Result<(), String> {
+    let Some(bar) = app.try_state::<MenuBar<R>>() else { return Ok(()) };
+    let mut keys_changed = false;
+    // The lock isn't held while the menu changes: those calls run on the main thread, where
+    // `restore_check` takes it too.
+    let mut changes = Vec::new();
+    {
+        let mut shown = bar.shown.lock();
+        for it in items {
+            let Some(e) = bar.items.get(&it.id) else { continue };
+            if let Some(c) = it.checked {
+                shown.checked.insert(it.id.clone(), c);
+            }
+            let relabel = it.text.is_some() || (cfg!(windows) && it.key_text.is_some());
+            if let Some(t) = it.text {
+                if t == e.label {
+                    shown.texts.remove(&it.id);
+                } else {
+                    shown.texts.insert(it.id.clone(), t);
+                }
+            }
+            if let Some(k) = it.key_text {
+                shown.key_texts.insert(it.id.clone(), k);
+            }
+            if let Some(k) = it.key {
+                keys_changed |= shown.keys.get(&it.id) != Some(&k);
+                shown.keys.insert(it.id.clone(), k);
+            }
+            let label = relabel.then(|| bar.label(&shown, &it.id, e));
+            changes.push((e, it.enabled, it.checked, label));
+        }
+        if keys_changed {
+            shown.generation += 1;
+        }
+    }
+    for (e, enabled, checked, label) in changes {
+        let r = match &e.handle {
+            Handle::Item(m) => enabled.map_or(Ok(()), |on| m.set_enabled(on)).and_then(|_| label.map_or(Ok(()), |t| m.set_text(t))),
+            Handle::Check(m) => enabled
+                .map_or(Ok(()), |on| m.set_enabled(on))
+                .and_then(|_| checked.map_or(Ok(()), |c| m.set_checked(c)))
+                .and_then(|_| label.map_or(Ok(()), |t| m.set_text(t))),
+        };
+        r.map_err(|e| e.to_string())?;
+    }
+    #[cfg(target_os = "linux")]
+    if keys_changed {
+        show_keys(&app);
+    }
+    Ok(())
+}
+
+/// Shows the current keys in every window's menu bar (GTK, on the main thread).
+#[cfg(target_os = "linux")]
+fn show_keys<R: Runtime>(app: &AppHandle<R>) {
+    let handle = app.clone();
+    let _ = app.run_on_main_thread(move || {
+        let Some(bar) = handle.try_state::<MenuBar<R>>() else { return };
+        for w in handle.webview_windows().values() {
+            bar.show_keys_in(w);
+        }
+    });
+}
+
+/// A window came to the front: a panel window opened since the keys last changed gets them
+/// in its menu bar (windows.rs `on_window_event`).
+pub fn on_window_focused<R: Runtime>(window: &tauri::Window<R>) {
+    #[cfg(target_os = "linux")]
+    if let (Some(bar), Some(w)) = (window.app_handle().try_state::<MenuBar<R>>(), window.app_handle().get_webview_window(window.label())) {
+        bar.show_keys_in(&w);
+    }
+    #[cfg(not(target_os = "linux"))]
+    let _ = window;
+}
+
+/// A window closed: one opened later under its label (a panel window) has a new menu bar.
+pub fn on_window_destroyed<R: Runtime>(window: &tauri::Window<R>) {
+    if let Some(bar) = window.app_handle().try_state::<MenuBar<R>>() {
+        bar.shown.lock().applied.remove(window.label());
+    }
 }
 
 /// A backup in File › Revert to: its file (the item's id is `revert:<file>`) and its label in
@@ -282,6 +727,93 @@ fn fill_project_menus<R: Runtime>(
 /// saved state changes (src/projectFiles.ts).
 #[tauri::command]
 pub fn set_project_menus<R: Runtime>(app: AppHandle<R>, alternatives: Vec<String>, active: String, backups: Vec<BackupItem>) -> Result<(), String> {
-    let Some(menus) = app.try_state::<ProjectMenus<R>>() else { return Ok(()) };
+    let Some(menus) = app.try_state::<MenuBar<R>>() else { return Ok(()) };
     fill_project_menus(&app, &menus.alternatives, &menus.revert, &alternatives, &active, &backups).map_err(|e| e.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn walk<'a>(specs: &'a [Spec], out: &mut Vec<(&'a str, bool, Option<&'a str>)>) {
+        for s in specs {
+            match s {
+                Item(id, _, accel) => out.push((id, false, *accel)),
+                Check(id, _, accel) => out.push((id, true, *accel)),
+                Sub(_, children) => walk(children, out),
+                _ => {}
+            }
+        }
+    }
+
+    #[test]
+    fn ids_are_unique() {
+        let bar = spec();
+        let mut all = Vec::new();
+        walk(&bar, &mut all);
+        assert!(all.len() > 120, "only {} items", all.len());
+        let mut ids: Vec<_> = all.iter().map(|(id, ..)| *id).collect();
+        ids.sort();
+        ids.dedup();
+        assert_eq!(ids.len(), all.len(), "two items share an id");
+    }
+
+    #[test]
+    fn the_bar_holds_menus_and_one_of_each_list() {
+        let bar = spec();
+        assert!(bar.iter().all(|s| matches!(s, Sub(..))));
+        let Sub("File", file) = &bar[1] else { panic!("File is second") };
+        assert_eq!(file.iter().filter(|s| matches!(s, Spec::Revert)).count(), 1);
+        assert_eq!(file.iter().filter(|s| matches!(s, Spec::Alternatives)).count(), 1);
+    }
+
+    #[test]
+    fn quit_is_an_ordinary_item_with_ctrl_q() {
+        let bar = spec();
+        let mut all = Vec::new();
+        walk(&bar, &mut all);
+        assert!(all.contains(&("quit", false, Some("CmdOrCtrl+Q"))));
+    }
+
+    #[test]
+    fn key_specs_read_as_gdk_names() {
+        let k = |ctrl, alt, shift, key| Some(ParsedKey { ctrl, alt, shift, key });
+        assert_eq!(parse_key("R"), k(false, false, false, Key::Char('r')));
+        assert_eq!(parse_key("Shift+K"), k(false, false, true, Key::Char('k')));
+        assert_eq!(parse_key("Mod+Shift+V"), k(true, false, true, Key::Char('v')));
+        assert_eq!(parse_key("Mod+Alt+Shift+K"), k(true, true, true, Key::Char('k')));
+        assert_eq!(parse_key("Ctrl+H"), k(true, false, false, Key::Char('h')));
+        assert_eq!(parse_key("Space"), k(false, false, false, Key::Named("space")));
+        assert_eq!(parse_key("Alt+,"), k(false, true, false, Key::Named("comma")));
+        assert_eq!(parse_key("Alt+'"), k(false, true, false, Key::Named("apostrophe")));
+        assert_eq!(parse_key("Mod+ArrowRight"), k(true, false, false, Key::Named("Right")));
+        assert_eq!(parse_key("Backspace"), k(false, false, false, Key::Named("BackSpace")));
+        assert_eq!(parse_key("Mod++"), k(true, false, false, Key::Named("plus")));
+        assert_eq!(parse_key("F5"), k(false, false, false, Key::Named("F5")));
+        assert_eq!(parse_key("F13"), None);
+        assert_eq!(parse_key("1"), k(false, false, false, Key::Char('1')));
+        assert_eq!(parse_key(""), None);
+        assert_eq!(parse_key("Mod+Banana"), None);
+    }
+
+    /// GTK draws the shown keys itself, in its own order and names; src/keyFormat.ts writes
+    /// keys the same way on Linux. Both check the pairs in tests/gtkKeyLabels.json.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn gtk_draws_keys_as_the_app_writes_them() {
+        let pairs: Vec<(String, String)> = serde_json::from_str(include_str!("../../tests/gtkKeyLabels.json")).unwrap();
+        assert!(pairs.len() > 20);
+        for (spec, label) in pairs {
+            let (key, mods) = gtk_key(&spec).unwrap_or_else(|| panic!("{spec} has no GDK key"));
+            // gtk::accelerator_get_label wants gtk::init, which needs a display; the C function
+            // only formats.
+            let drawn = unsafe {
+                let p = gtk::ffi::gtk_accelerator_get_label(key, glib::translate::IntoGlib::into_glib(mods));
+                let s = std::ffi::CStr::from_ptr(p).to_string_lossy().into_owned();
+                glib::ffi::g_free(p.cast());
+                s
+            };
+            assert_eq!(drawn, label, "{spec}");
+        }
+    }
 }

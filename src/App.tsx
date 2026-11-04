@@ -64,6 +64,7 @@ import { sheetBlocks } from "./sheetKeys";
 import { AlternativesSheet } from "./components/AlternativesSheet";
 import { ARRANGE_COMMANDS, runArrangeCommand } from "./arrangeCmds";
 import { StripSilenceHost } from "./components/StripSilence";
+import { installMenuBar } from "./menuBar";
 
 function selectedTrack() {
   const s = getState().snap;
@@ -243,9 +244,6 @@ function handleMenu(id: string) {
     case "paste":
       if (!marqueePaste()) ops.pasteRegions();
       break;
-    case "repeat":
-      ops.repeatRegions(1);
-      break;
     case "join":
       ops.joinRegions();
       break;
@@ -371,6 +369,7 @@ function handleMenu(id: string) {
       else if (id.startsWith("detach:")) toggleDetached(id.slice(7));
       else if (id.startsWith("alternative:")) switchAlternative(id.slice(12));
       else if (id.startsWith("revert:")) revertToBackup(id.slice(7));
+      else if (id.startsWith("repeat:")) ops.repeatRegions(Number(id.slice(7)));
       break;
     case "zoom-in":
       setState({ pxPerBeat: Math.min(400, s.pxPerBeat * 1.4) });
@@ -602,6 +601,7 @@ export default function App() {
     ];
     window.addEventListener("keydown", onKey);
     const offDrop = installNativeDrop();
+    const offMenuBar = installMenuBar();
     // Detached panel windows: their key commands run here, as if pressed in this window.
     const offDetach = installDetach({
       key: (id, repeat) => {
@@ -615,6 +615,7 @@ export default function App() {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("contextmenu", ctx);
       offDrop();
+      offMenuBar();
       offDetach();
     };
   }, []);

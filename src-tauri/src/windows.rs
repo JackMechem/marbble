@@ -121,8 +121,14 @@ pub fn route_menu<R: Runtime>(app: &AppHandle<R>, id: String) {
 
 /// Panel windows close with the main window, so quitting doesn't leave them behind (and the
 /// app exits when the last one goes, as it did with one window). Their detached state is kept
-/// for the next launch: being destroyed, they don't ask to be attached.
+/// for the next launch: being destroyed, they don't ask to be attached. A window coming to the
+/// front gets the keys its menu bar should show (menu.rs).
 pub fn on_window_event<R: Runtime>(window: &Window<R>, event: &WindowEvent) {
+    match event {
+        WindowEvent::Focused(true) => crate::menu::on_window_focused(window),
+        WindowEvent::Destroyed => crate::menu::on_window_destroyed(window),
+        _ => {}
+    }
     if window.label() == "main" && matches!(event, WindowEvent::Destroyed) {
         for (label, w) in window.app_handle().webview_windows() {
             if is_panel_label(&label) {

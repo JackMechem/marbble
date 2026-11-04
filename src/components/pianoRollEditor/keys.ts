@@ -10,6 +10,10 @@ import { setPrefs } from "./prefs";
 import { TOOLS } from "../../pianoRollModel";
 
 let menuHandler: ((id: string) => boolean) | null = null;
+let menuRoot: Core["rootRef"] | null = null;
+
+/** Whether the Piano Roll has keyboard focus, so the Edit menu acts on it (menuBar.ts). */
+export const pianoRollHasFocus = () => !!menuRoot?.current?.contains(document.activeElement);
 
 /**
  * Lets the Piano Roll take Edit menu commands (Select All, Copy, Duplicate…) while it has
@@ -37,8 +41,12 @@ export function installMenuHandler(rootRef: Core["rootRef"], c: Commands) {
       return true;
     };
     menuHandler = h;
+    menuRoot = rootRef;
     return () => {
-      if (menuHandler === h) menuHandler = null;
+      if (menuHandler === h) {
+        menuHandler = null;
+        menuRoot = null;
+      }
     };
 }
 

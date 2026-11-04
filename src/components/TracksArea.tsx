@@ -25,7 +25,9 @@ import { ToolPopups } from "./TrackTools";
 import { marqueeCopy, marqueeCut, marqueeDelete, marqueePaste } from "../trackTools";
 import { showUsedAutomation } from "../automation";
 import { zeroCrossingsItem } from "../zeroCrossings";
-import { arrangeEditItems, arrangeFunctionItems, pasteItems } from "../arrangeCmds";
+import { arrangeItems } from "../arrangeCmds";
+import { EDIT_MENU, layMenu, menuLabel } from "../menuLabels";
+import { packTakeFolder } from "../takes";
 
 const SNAP_LABELS: Record<Snap, string> = { smart: "Smart", bar: "Bar", beat: "Beat", off: "Off" };
 /** Logic's Drag pop-up; only Overlap and X-Fade so far. */
@@ -39,34 +41,108 @@ const DRAG_TIPS: Record<DragMode, string> = {
   shuffle_l: "Shuffle L: regions stay butted together, closing gaps towards the left",
 };
 
+/** A submenu, greyed out when none of its items applies. */
+const submenu = (label: string, children: MenuItem[]): MenuItem => ({ label, children, disabled: children.every((c) => c.disabled || c.separator) });
+
+/** The Tracks area's Edit menu, the menu bar's Edit menu item for item (src/menuLabels.ts
+ *  EDIT_MENU); the menu bar follows its states (src/menuBar.ts). */
 export function editMenu(): MenuItem[] {
-  const sel = getState().selectedRegions;
-  const marquee = getState().marquee;
-  const snap = getState().snap;
+  const s = getState();
+  const sel = s.selectedRegions;
+  const marquee = s.marquee;
+  const snap = s.snap;
   const regs = snap?.project.tracks.flatMap((t) => t.regions).filter((r) => sel.includes(r.id)) ?? [];
-  return [
-    { label: snap?.undo ? `Undo ${snap.undo}` : "Undo", hint: fmt("Mod+Z"), disabled: !snap?.undo, onClick: () => undoRedo("undo") },
-    { label: snap?.redo ? `Redo ${snap.redo}` : "Redo", hint: fmt("Mod+Shift+Z"), disabled: !snap?.redo, onClick: () => undoRedo("redo") },
-    { separator: true },
+  const L = menuLabel;
+  const own: MenuItem[] = [
+    { id: "undo", label: snap?.undo ? `Undo ${snap.undo}` : L("undo"), hint: fmt("Mod+Z"), disabled: !snap?.undo, onClick: () => undoRedo("undo") },
+    { id: "redo", label: snap?.redo ? `Redo ${snap.redo}` : L("redo"), hint: fmt("Mod+Shift+Z"), disabled: !snap?.redo, onClick: () => undoRedo("redo") },
     // With a marquee, Cut, Copy, Paste and Delete act on the part of the regions inside it.
-    { label: "Cut", hint: keyHint("cut"), disabled: !sel.length && !marquee, onClick: () => marqueeCut() || ops.cutRegions() },
-    { label: "Copy", hint: keyHint("copy"), disabled: !sel.length && !marquee, onClick: () => marqueeCopy() || ops.copyRegions() },
-    { label: "Paste", hint: keyHint("paste"), disabled: !getState().clipboard.length, onClick: () => marqueePaste() || ops.pasteRegions() },
-    ...pasteItems(),
-    { label: "Duplicate", hint: fmt("Mod+D"), onClick: ops.duplicate },
-    { label: "Repeat", disabled: !sel.length, children: [1, 2, 3, 4, 8, 16].map((n) => ({ label: n === 1 ? "Once" : `${n} Times`, onClick: () => ops.repeatRegions(n) })) },
+    { id: "cut", label: L("cut"), hint: keyHint("cut"), disabled: !sel.length && !marquee, onClick: () => marqueeCut() || ops.cutRegions() },
+    { id: "copy", label: L("copy"), hint: keyHint("copy"), disabled: !sel.length && !marquee, onClick: () => marqueeCopy() || ops.copyRegions() },
+    { id: "paste", label: L("paste"), hint: keyHint("paste"), disabled: !s.clipboard.length, onClick: () => marqueePaste() || ops.pasteRegions() },
+    { id: "duplicate", label: L("duplicate"), hint: fmt("Mod+D"), onClick: ops.duplicate },
+    ...REPEAT_TIMES.map((n): MenuItem => ({ id: `repeat:${n}`, label: L(`repeat:${n}`), disabled: !sel.length, onClick: () => ops.repeatRegions(n) })),
+    { id: "split", label: L("split"), hint: fmt("Mod+T"), onClick: () => ops.splitAtPlayhead() },
+    { id: "join", label: L("join"), hint: fmt("Mod+J"), disabled: sel.length < 2, onClick: () => ops.joinRegions() },
+    { id: "loop", label: L("loop"), hint: keyHint("loop"), disabled: !sel.length, checked: regs.length > 0 && regs.every(isLooped), onClick: () => ops.toggleLoop() },
+    { id: "convert-loops", label: L("convert-loops"), disabled: !regs.some(isLooped), onClick: () => ops.convertLoops() },
+    { id: "pack-takes", label: L("pack-takes"), hint: keyHint("pack-takes"), disabled: sel.length < 2, onClick: () => packTakeFolder() },
+    { id: "set-locators", label: L("set-locators"), hint: keyHint("set-locators"), disabled: !sel.length, onClick: () => ops.setLocatorsByRegions() },
+    { ...zeroCrossingsItem(), id: "zero-crossings" },
+    { id: "select-all", label: L("select-all"), hint: fmt("Mod+A"), onClick: ops.selectAllRegions },
+    { id: "delete", label: L("delete"), hint: keyHint("delete-regions"), disabled: !sel.length && !marquee, onClick: () => marqueeDelete() || ops.deleteRegions() },
+  ];
+  const byId = new Map([...own, ...arrangeItems()].map((it) => [it.id, it]));
+  return layMenu<MenuItem>(EDIT_MENU, (id) => byId.get(id) ?? null, submenu, { separator: true });
+}
+
+const REPEAT_TIMES = [1, 2, 3, 4, 8, 16] as const;
+
+/** The Tracks area's Functions menu: the track commands of the menu bar's Track menu, and
+ *  importing and exporting. */
+export function functionsMenu(): MenuItem[] {
+  const s = getState();
+  const L = menuLabel;
+  const none = !ops.selectedTracks().length;
+  return [
+    { id: "new-tracks", label: L("new-tracks"), hint: fmt("Mod+Alt+N"), onClick: () => setState({ dialog: "new-tracks" }) },
+    { id: "duplicate-track", label: L("duplicate-track"), disabled: none, onClick: () => ops.duplicateTracks(true) },
+    { id: "same-settings", label: L("same-settings"), disabled: none, onClick: () => ops.duplicateTracks(false) },
     { separator: true },
-    { label: "Split Regions at Playhead", hint: fmt("Mod+T"), onClick: () => ops.splitAtPlayhead() },
-    { label: "Join Regions", hint: fmt("Mod+J"), disabled: sel.length < 2, onClick: () => ops.joinRegions() },
-    { label: "Loop Regions", hint: keyHint("loop"), disabled: !sel.length, checked: regs.length > 0 && regs.every(isLooped), onClick: () => ops.toggleLoop() },
-    { label: "Convert Loops to Real Copies", disabled: !regs.some(isLooped), onClick: () => ops.convertLoops() },
-    { label: "Set Locators by Regions", hint: keyHint("set-locators"), disabled: !sel.length, onClick: () => ops.setLocatorsByRegions() },
-    ...arrangeEditItems(),
+    { id: "folder-stack", label: L("folder-stack"), hint: fmt("Mod+Shift+D"), disabled: none, onClick: () => ops.createStack(false) },
+    { id: "summing-stack", label: L("summing-stack"), disabled: none, onClick: () => ops.createStack(true) },
+    { id: "group", label: L("group"), hint: fmt("Mod+G"), disabled: none, onClick: () => ops.groupTracks() },
     { separator: true },
-    zeroCrossingsItem(),
+    { id: "import-audio", label: L("import-audio"), hint: fmt("Mod+Shift+I"), onClick: importAudioDialog },
+    { id: "import-midi", label: L("import-midi"), onClick: importMidiDialog },
+    { id: "export-midi", label: L("export-midi"), onClick: exportSelectionMidi },
     { separator: true },
-    { label: "Select All", hint: fmt("Mod+A"), onClick: ops.selectAllRegions },
-    { label: "Delete", hint: keyHint("delete-regions"), disabled: !sel.length && !marquee, onClick: () => marqueeDelete() || ops.deleteRegions() },
+    { id: "output-track", label: L("output-track"), checked: s.showOutput, onClick: () => setState({ showOutput: !getState().showOutput }) },
+    { id: "hide-tracks", label: L("hide-tracks"), hint: keyHint("hide-tracks"), disabled: none, onClick: () => ops.hideTracks() },
+    { id: "unhide-all", label: L("unhide-all"), disabled: !s.snap?.project.tracks.some((t) => t.hidden), onClick: ops.unhideAllTracks },
+    { separator: true },
+    { id: "delete-track", label: L("delete-track"), hint: fmt("Mod+Backspace"), disabled: none, onClick: () => ops.deleteTracks() },
+    { id: "delete-unused", label: L("delete-unused"), onClick: ops.deleteUnusedTracks },
+  ];
+}
+
+/** The Tracks area's View menu: the menu bar's View items for the main window's areas, in the
+ *  same order, and the track heights. */
+export function viewMenu(): MenuItem[] {
+  const s = getState();
+  const L = menuLabel;
+  return [
+    { id: "library", label: L("library"), hint: keyHint("library"), checked: s.showLibrary, onClick: () => setState({ showLibrary: !s.showLibrary }) },
+    { id: "inspector", label: L("inspector"), hint: keyHint("inspector"), checked: s.showInspector, onClick: () => setState({ showInspector: !s.showInspector }) },
+    { id: "mixer", label: L("mixer"), hint: keyHint("mixer"), checked: s.bottom === "mixer", onClick: () => setState({ bottom: s.bottom === "mixer" ? "none" : "mixer" }) },
+    { id: "browser", label: L("browser"), hint: keyHint("browser"), checked: s.showBrowser, onClick: () => setState({ showBrowser: !s.showBrowser }) },
+    { id: "automation", label: L("automation"), hint: keyHint("automation"), checked: s.showAutomation, onClick: () => setState({ showAutomation: !s.showAutomation }) },
+    { id: "used-automation", label: L("used-automation"), hint: keyHint("used-automation"), onClick: showUsedAutomation },
+    { id: "global-tracks", label: L("global-tracks"), hint: keyHint("global-tracks"), checked: s.showGlobalTracks, onClick: () => setState({ showGlobalTracks: !s.showGlobalTracks }) },
+    { id: "overview", label: L("overview"), checked: s.showOverview, onClick: toggleOverview },
+    { separator: true },
+    { id: "show-hidden", label: L("show-hidden"), hint: keyHint("show-hidden"), checked: s.showHidden, onClick: ops.toggleShowHidden },
+    { separator: true },
+    { id: "zoom-in", label: L("zoom-in"), hint: keyHint("zoom-in"), onClick: () => setState({ pxPerBeat: Math.min(400, s.pxPerBeat * 1.4) }) },
+    { id: "zoom-out", label: L("zoom-out"), hint: keyHint("zoom-out"), onClick: () => setState({ pxPerBeat: Math.max(2, s.pxPerBeat / 1.4) }) },
+    { separator: true },
+    { label: "Taller Tracks", hint: keyHint("taller-tracks"), onClick: () => zoomTracks(1.2) },
+    { label: "Shorter Tracks", hint: keyHint("shorter-tracks"), onClick: () => zoomTracks(1 / 1.2) },
+    {
+      label: "Track Height",
+      children: [
+        ["Mini", 24],
+        ["Compact", 36],
+        ["Small", 52],
+        ["Medium", 64],
+        ["Large", 96],
+        ["Extra Large", 150],
+      ].map(([label, h]) => ({
+        label: label as string,
+        checked: s.trackHeight === h && Object.keys(s.trackHeights).length === 0,
+        onClick: () => setState({ trackHeight: h as number, trackHeights: {} }),
+      })),
+    },
   ];
 }
 
@@ -88,65 +164,6 @@ export function TracksArea() {
   // Menus read the rest of the state when they open.
   const s = { ...getState(), pxPerBeat, catchPlayhead, snapMode, trackHeight };
   const zoom = Math.log(s.pxPerBeat / 2) / Math.log(200);
-
-  const functionsMenu = (): MenuItem[] => [
-    { label: "New Tracks…", hint: fmt("Mod+Alt+N"), onClick: () => setState({ dialog: "new-tracks" }) },
-    { label: "Duplicate Track", onClick: () => ops.duplicateTracks(true) },
-    { label: "New Track with Same Settings", onClick: () => ops.duplicateTracks(false) },
-    { separator: true },
-    { label: "Create Folder Stack", hint: fmt("Mod+Shift+D"), onClick: () => ops.createStack(false) },
-    { label: "Create Summing Stack", onClick: () => ops.createStack(true) },
-    { label: "Group Selected Tracks", hint: fmt("Mod+G"), onClick: () => ops.groupTracks() },
-    { separator: true },
-    { label: "Import Audio File…", hint: fmt("Mod+Shift+I"), onClick: importAudioDialog },
-    { label: "Import MIDI File…", onClick: importMidiDialog },
-    { label: "Export Selection as MIDI File…", onClick: exportSelectionMidi },
-    { separator: true },
-    ...arrangeFunctionItems(),
-    { separator: true },
-    { label: "Show Output Track", checked: getState().showOutput, onClick: () => setState({ showOutput: !getState().showOutput }) },
-    { label: "Hide Track", hint: keyHint("hide-tracks"), onClick: () => ops.hideTracks() },
-    { label: "Unhide All Tracks", disabled: !getState().snap?.project.tracks.some((t) => t.hidden), onClick: ops.unhideAllTracks },
-    { separator: true },
-    { label: "Delete Track", hint: fmt("Mod+Backspace"), onClick: () => ops.deleteTracks() },
-    { label: "Delete Unused Tracks", onClick: ops.deleteUnusedTracks },
-  ];
-  const viewMenu = (): MenuItem[] => {
-    const s = getState();
-    return [
-    { label: "Inspector", hint: keyHint("inspector"), checked: s.showInspector, onClick: () => setState({ showInspector: !s.showInspector }) },
-    { label: "Library", hint: keyHint("library"), checked: s.showLibrary, onClick: () => setState({ showLibrary: !s.showLibrary }) },
-    { label: "Mixer", hint: keyHint("mixer"), checked: s.bottom === "mixer", onClick: () => setState({ bottom: s.bottom === "mixer" ? "none" : "mixer" }) },
-    { label: "Browsers", hint: keyHint("browser"), checked: s.showBrowser, onClick: () => setState({ showBrowser: !s.showBrowser }) },
-    { label: "Show Automation", hint: keyHint("automation"), checked: s.showAutomation, onClick: () => setState({ showAutomation: !s.showAutomation }) },
-    { label: "Show Used Automation", hint: keyHint("used-automation"), onClick: showUsedAutomation },
-    { label: "Show Global Tracks", hint: keyHint("global-tracks"), checked: s.showGlobalTracks, onClick: () => setState({ showGlobalTracks: !s.showGlobalTracks }) },
-    { label: "Show Overview", checked: s.showOverview, onClick: toggleOverview },
-    { separator: true },
-    { label: "Show Hidden Tracks", hint: keyHint("show-hidden"), checked: s.showHidden, onClick: ops.toggleShowHidden },
-    { separator: true },
-    { label: "Zoom In", hint: keyHint("zoom-in"), onClick: () => setState({ pxPerBeat: Math.min(400, s.pxPerBeat * 1.4) }) },
-    { label: "Zoom Out", hint: keyHint("zoom-out"), onClick: () => setState({ pxPerBeat: Math.max(2, s.pxPerBeat / 1.4) }) },
-    { separator: true },
-    { label: "Taller Tracks", hint: keyHint("taller-tracks"), onClick: () => zoomTracks(1.2) },
-    { label: "Shorter Tracks", hint: keyHint("shorter-tracks"), onClick: () => zoomTracks(1 / 1.2) },
-    {
-      label: "Track Height",
-      children: [
-        ["Mini", 24],
-        ["Compact", 36],
-        ["Small", 52],
-        ["Medium", 64],
-        ["Large", 96],
-        ["Extra Large", 150],
-      ].map(([label, h]) => ({
-        label: label as string,
-        checked: s.trackHeight === h && Object.keys(s.trackHeights).length === 0,
-        onClick: () => setState({ trackHeight: h as number, trackHeights: {} }),
-      })),
-    },
-    ];
-  };
 
   return (
     <div className="tracks-area" style={{ minHeight }}>

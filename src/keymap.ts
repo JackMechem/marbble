@@ -7,7 +7,7 @@
 // "Shift". Letters are upper case ("Shift+K"); other keys use their KeyboardEvent.key name
 // ("Space", "ArrowUp", "Enter", ",").
 import { getSettings } from "./prefs";
-import { formatKeyFor, IS_MAC } from "./keyFormat";
+import { formatKeyFor, IS_MAC, KEY_STYLE } from "./keyFormat";
 
 export interface KeyCommand {
   id: string;
@@ -130,6 +130,7 @@ export const KEY_COMMANDS: KeyCommand[] = [
 /** Accelerators of the native menu (src-tauri/src/menu.rs); they can't be changed here. */
 export const MENU_SHORTCUTS: { label: string; menu: string; key: string }[] = [
   { label: "Settings…", menu: "Marbble", key: "Mod+," },
+  { label: "Quit Marbble", menu: "Marbble", key: "Mod+Q" },
   { label: "New…", menu: "File", key: "Mod+N" },
   { label: "Open Recent…", menu: "File", key: "Mod+Shift+O" },
   { label: "Open…", menu: "File", key: "Mod+O" },
@@ -194,9 +195,9 @@ export function eventKey(e: KeyboardEvent): string | null {
   return parts.join("+");
 }
 
-/** Display form of a key, as the platform writes it: "⇧⌘Z" on macOS, "Ctrl+Shift+Z" elsewhere. */
+/** Display form of a key, as the platform's menus write it: "⇧⌘Z" on macOS, "Shift+Ctrl+Z" on Linux, "Ctrl+Shift+Z" on Windows. */
 export function formatKey(k: string): string {
-  return formatKeyFor(normalizeKey(k), IS_MAC);
+  return formatKeyFor(normalizeKey(k), KEY_STYLE);
 }
 
 /**

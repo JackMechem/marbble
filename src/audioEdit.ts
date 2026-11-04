@@ -390,6 +390,9 @@ export function selectionMenu(): MenuItem[] {
 
 /** Native menu items the editor takes over while it has focus and a selection: Split acts at
  *  the selection's edges, Cut/Copy/Delete on the selected part. Returns true if handled. */
+/** Whether the editor has focus and a range, so Cut, Copy, Delete and Split act on it. */
+export const editorTakesEdit = () => focused && !!rangeSel();
+
 export function editorMenuCommand(id: string): boolean {
   if (!focused || !rangeSel()) return false;
   if (id === "split") rangeEdit("split");

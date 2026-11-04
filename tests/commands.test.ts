@@ -120,20 +120,21 @@ test("every key command does something", () => {
 
 /** Every id the menu bar can send: its items, and the generated `alternative:`/`revert:` ones. */
 function menuIds(): string[] {
-  return [...menuRs.matchAll(/(?:item\(|MenuItem::with_id\(app, |CheckMenuItem::with_id\(app, )(?:"([^"]+)"|format!\("([a-z-]+:)\{)/g)].map((m) => m[1] ?? m[2]);
+  return [...menuRs.matchAll(/(?:\b(?:item|keyed|check|Check|Item)\(|MenuItem::with_id\(app, |CheckMenuItem::with_id\(app, )(?:"([^"]+)"|format!\("([a-z-]+:)\{)/g)].map((m) => m[1] ?? m[2]);
 }
 
 test("every native menu item is handled", () => {
   const ids = menuIds();
   assert.ok(ids.length > 100, `only ${ids.length} menu ids`);
-  assert.ok(ids.includes("alternative:") && ids.includes("revert:"));
+  assert.ok(ids.includes("alternative:") && ids.includes("revert:") && ids.includes("quit"));
+  assert.match(menuRs, /if id == "quit" \{\s*return quit\(app\);/);
   const handler = slice(app, "function handleMenu", "\n/** What each key command does");
   const cases = new Set([...handler.matchAll(/case "([^"]+)":/g)].map((m) => m[1]));
   const prefixes = [...handler.matchAll(/id\.startsWith\("([^"]+)"\)/g)].map((m) => m[1]);
   assert.match(handler, /if \(runArrangeCommand\(id\)\) return;/);
   const arranged = new Set(objectKeys(slice(arrange, "export const ARRANGE_COMMANDS", "\n};")));
-  // "No Backups" is a disabled placeholder.
-  const unhandled = ids.filter((id) => id !== "revert-none" && !cases.has(id) && !arranged.has(id) && !prefixes.some((p) => id.startsWith(p)));
+  // "No Backups" is a disabled placeholder; Quit is menu.rs's own (it closes the main window).
+  const unhandled = ids.filter((id) => id !== "revert-none" && id !== "quit" && !cases.has(id) && !arranged.has(id) && !prefixes.some((p) => id.startsWith(p)));
   assert.deepEqual(unhandled, []);
 });
 
