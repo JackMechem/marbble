@@ -89,7 +89,14 @@
   width: 66px;
 }
 
+/* Two lines high whether the name takes one line or two, with the text at the bottom, so the
+   knobs in a row sit level. A longer name shows its last two lines; the knob's tooltip has it all. */
 .inst-section .fx-label {
+  height: calc(2em * 1.15);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
   white-space: normal;
   text-align: center;
   line-height: 1.15;

@@ -159,6 +159,7 @@ impl BuiltinDsp {
         b.fx.reset();
         b.fx.set_offline(false);
         b.publish();
+        b.publish_meters();
         b
     }
 
@@ -238,11 +239,18 @@ impl BuiltinDsp {
     /// rather than freezing at their last values, since it won't run again until it's back on.
     pub fn sleep(&mut self) {
         self.reset();
+        self.publish_meters();
+        self.shared.gr.store(0, Ordering::Relaxed);
+    }
+
+    /// Shows the effect's meters as they read now, whether or not its panel is open. Called when
+    /// it hasn't run (or won't): until the audio thread runs it, the panel reads these, so a
+    /// silent level meter reads −∞ and not the 0.0 (0 dBFS) the shared values start at.
+    fn publish_meters(&mut self) {
         self.fx.meters(&mut self.meter_buf);
         for (m, v) in self.shared.meters.iter().zip(&self.meter_buf) {
             m.store(v.to_bits(), Ordering::Relaxed);
         }
-        self.shared.gr.store(0, Ordering::Relaxed);
     }
 
     /// Tells the effect whether the engine is rendering offline (see `Effect::set_offline`).
@@ -279,6 +287,7 @@ impl InstrumentDsp {
         }
         b.inst.reset();
         b.publish();
+        b.publish_meters();
         b
     }
 
@@ -356,6 +365,11 @@ impl InstrumentDsp {
     /// Clears the instrument for a track going Off, meters included.
     pub fn sleep(&mut self) {
         self.reset();
+        self.publish_meters();
+    }
+
+    /// Shows the instrument's meters as they read now, as `BuiltinDsp::publish_meters` does.
+    fn publish_meters(&mut self) {
         self.inst.meters(&mut self.meter_buf);
         for (m, v) in self.shared.meters.iter().zip(&self.meter_buf) {
             m.store(v.to_bits(), Ordering::Relaxed);
@@ -409,6 +423,38 @@ mod tests {
         for id in ["builtin:limiter", "builtin:noise-gate", "builtin:deesser"] {
             let info = crate::fx::find(id).unwrap();
             assert!(BuiltinDsp::new(&info, 48000.0, &[]).shared().take_gain_reduction().is_some(), "{id}");
+        }
+    }
+    /// The bits of what a panel would read, so a NaN compares too.
+    fn bits(v: &[f32]) -> Vec<u32> {
+        v.iter().map(|x| x.to_bits()).collect()
+    }
+
+    #[test]
+    fn meters_read_idle_before_the_first_block() {
+        // A panel reads the shared meters before the audio thread has run the effect (no audio
+        // device, a slot just filled): they are the effect's own idle readings, not zeros, which
+        // a level meter would show as 0 dBFS.
+        for info in crate::fx::registry() {
+            let shared = BuiltinDsp::new(&info, 48000.0, &[]).shared();
+            let mut fresh = (info.new)(48000.0);
+            fresh.reset();
+            let mut want = [0.0; MAX_METERS];
+            fresh.meters(&mut want);
+            assert_eq!(bits(&shared.meters()), bits(&want[..info.meters.len().min(MAX_METERS)]), "{}", info.id);
+            for (name, v) in info.meters.iter().zip(shared.meters()) {
+                if ["Input", "Output", "Level"].contains(name) {
+                    assert!(v <= -100.0, "{} {name}: {v}", info.id);
+                }
+            }
+        }
+        for info in crate::instrument::registry() {
+            let shared = InstrumentDsp::new(&info, 48000.0, 1, &[]).shared();
+            let mut fresh = (info.new)(48000.0, 1);
+            fresh.reset();
+            let mut want = [0.0; MAX_METERS];
+            fresh.meters(&mut want);
+            assert_eq!(bits(&shared.meters()), bits(&want[..info.meters.len().min(MAX_METERS)]), "{}", info.id);
         }
     }
 }

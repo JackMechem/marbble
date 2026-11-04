@@ -1884,9 +1884,10 @@ Every strip, Stereo Out included, has a built-in eight-band EQ modelled on Logic
 It processes before the Audio FX inserts and costs nothing while flat.
 
 - Click the thumbnail above the Audio FX slots to open the editor. It opens like a built-in
-  effect's panel (see [Built-in effects](#built-in-effects)): floating by default, or docked
-  in the bottom section, and it can be moved between the two and resized. Click the thumbnail
-  again, press Esc or click × to close it. One strip's Channel EQ is open at a time.
+  effect's panel, with the same header (see [Built-in effects](#built-in-effects)): floating
+  by default, or docked in the bottom section, and it can be moved between the two and resized.
+  Click the thumbnail again, press Esc or click × to close it. One strip's Channel EQ is open
+  at a time.
 - Bands: **Low Cut** (off by default, 30 Hz), **Low Shelf** (80 Hz), **Bell 1–4** (160, 500,
   1500, 5000 Hz), **High Shelf** (10 kHz) and **High Cut** (off by default, 18 kHz). The cuts
   have 12, 24 (default) or 48 dB/oct slopes; click the slope to change it.
@@ -1895,13 +1896,15 @@ It processes before the Audio FX inserts and costs nothing while flat.
   to reset its gain.
 - **Below the graph:** each band's on/off switch, frequency, gain and Q can be dragged (Shift
   for fine) and double-clicked to reset.
-- **Toolbar:** On / Bypassed, **Analyzer** (a live post-EQ spectrum, on by default), **Reset**,
-  the **preset** pop-up (see [Presets](#presets)), **Copy** and **Paste**, and **Output** gain
+- **Header:** the power button switches the EQ on or off (off, the graph and bands dim), and the
+  **preset** pop-up (see [Presets](#presets)) has **Reset to “Flat”**, **Copy Channel EQ** and
+  **Paste Channel EQ** at the end of its menu.
+- **Toolbar:** **Analyzer** (a live post-EQ spectrum, on by default) and **Output** gain
   (±24 dB).
-- **Copy and paste:** right-click the thumbnail for **Copy Channel EQ** and **Paste Channel EQ**
-  (with several tracks selected, also **Paste Channel EQ to Selected Tracks**). Pasting replaces
-  the strip's EQ settings, Stereo Out included, as one undo step. The copy survives opening
-  another project.
+- **Copy and paste:** in the preset menu, or right-click the thumbnail for **Copy Channel EQ**
+  and **Paste Channel EQ** (with several tracks selected, also **Paste Channel EQ to Selected
+  Tracks**). Pasting replaces the strip's EQ settings, Stereo Out included, as one undo step.
+  The copy survives opening another project.
 
 ### Channel strip settings
 
@@ -1979,27 +1982,39 @@ Phase EQ** (EQ), **Gain** (Utility), and **Tuner** and **Loudness Meter** (Meter
 in the slot menu and the Library.
 
 - **The panel:** click the effect's name in its slot to open its panel; click again, press Esc
-  or click × to close it. There is one panel per slot. The panel's header has the power (bypass)
-  button, the effect and track names, the preset pop-up and, for effects with a side-chain, the
-  **Side Chain** pop-up.
+  or click × to close it. There is one panel per slot. Every plug-in panel (effects,
+  instruments, the Sampler and the Channel EQ) has the same header, docked, floating or in a
+  window of its own, in this order: the power (bypass) button, the effect and track names, the
+  preset pop-up, the **Side Chain** pop-up for effects with a side-chain, and at the right end
+  the window buttons and ×. The window buttons keep their order: **Float in Main Window** (in
+  the dock) or **Dock in Bottom Section** (floating), then **Open in Separate Window** (or
+  **Attach to Main Window** in that window), then **Close**. A panel's own switches, such as
+  the Channel EQ's Analyzer, are in its toolbar under the header.
   - **Docked** (see [General](#general) settings): panels open in the bottom
-    section, where the Mixer and the Editors show, with a tab for each open panel. Drag the
-    divider above to make the section taller; graphs and meters grow with it. Showing the Mixer
-    or an Editor hides the panels but keeps them open: click a slot again to bring them back.
-    Closing the last tab gives the section back to what it showed before.
-  - **Floating** (the default): the float button at the right of the dock's bar takes a panel
-    out into a window of its own (and the dock button in a window's header puts it back). Drag
-    a window by its title; drag its sides or bottom corners to resize it. A window can't be
-    made smaller than its controls; Marbble remembers the last size for each kind of effect.
-    Until you resize one, a window opens wide enough for its controls.
+    section, where the Mixer and the Editors show, with a tab for each open panel in place of
+    the name. Drag the divider above to make the section taller; graphs and meters grow with
+    it. Showing the Mixer or an Editor hides the panels but keeps them open: click a slot again
+    to bring them back. Closing the last tab gives the section back to what it showed before.
+  - **Docked tabs:** the × at the right end of the header closes the panel shown (the front
+    tab); Shift-click it to close every docked panel. The other tabs show their own × when you
+    point at them, a middle-click closes a tab, and a tab's right-click menu has **Close**,
+    **Close Other Tabs** and **Close All Tabs**. Up to five panels stay docked: opening a sixth
+    closes the one you looked at longest ago. Tabs that don't fit scroll sideways (the mouse
+    wheel scrolls them), with a fade on the side that has more.
+  - **Floating** (the default): Float in Main Window takes a docked panel out into a window
+    over the main window (and Dock in Bottom Section puts it back). Drag a window by its title;
+    drag its sides or bottom corners to resize it. A window can't be made smaller than its
+    controls; Marbble remembers the last size for each kind of effect. Until you resize one, a
+    window opens wide enough for its controls.
   - **Separate windows:** each panel opens in an OS window of its own, which you can move to
     another monitor (see [Separate windows](#separate-windows)). Clicking the slot again closes
-    it; the pop-in button in its bar puts it in the main window, floating.
+    it; Attach to Main Window in its header puts it in the main window, floating.
   - **Esc** closes the frontmost floating panel first, then the docked one on screen.
 - **Knobs:** drag up and down (Shift for fine); double-click or Alt-click for the default;
   double-click the value under a knob to type one ("2.5k", "-6 dB", "1.2 s"). Every change is
   undoable, and a drag is one undo step.
-- **Meters** show the effect's levels; gain reduction meters hang down from the top.
+- **Meters** show the effect's levels; gain reduction meters hang down from the top. Until audio
+  runs through the effect (no audio device, or a slot just filled) they read −∞.
 - **Automation:** every parameter appears in the track's automation lane menu under the effect's
   name, and Touch, Latch and Write record moves of the panel's knobs. While automation plays,
   the panel follows it.
@@ -2273,8 +2288,8 @@ untouched; put it last on Stereo Out to measure the mix.
 
 #### Presets
 
-Every built-in effect has a preset pop-up in its panel's header, and the Channel EQ has one in
-its toolbar. It shows the preset loaded or saved last, with "(edited)" once something changed
+Every built-in effect and instrument, and the Channel EQ, has a preset pop-up in its panel's
+header. It shows the preset loaded or saved last, with "(edited)" once something changed
 ("Default" or "Manual" before any preset). Which preset that was is saved with the project, so
 it shows again when the project reopens, and undoing a preset load takes it back. The arrows
 step to the previous and next preset.
@@ -2288,7 +2303,8 @@ step to the previous and next preset.
 - **Save Preset…** names and saves the current settings (or updates the user preset that is
   loaded); **Save Preset As…** saves a copy under a new name. Saving over an existing name asks
   first. **Rename Preset…** and **Delete Preset** work on the user preset that is loaded.
-- **Revert** goes back to the loaded preset; **Default** (Flat for the EQ) resets everything.
+- **Revert** goes back to the loaded preset; **Reset to “Default”** (“Flat” for the EQ) resets
+  everything.
 - Loading a preset is one undo step.
 - VST3 plug-ins use their own preset browsers; Marbble saves their state with the project and
   copies it with Copy Plug-in, but has no preset files for them.

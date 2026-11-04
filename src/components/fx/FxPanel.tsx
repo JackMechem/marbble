@@ -1,6 +1,6 @@
 // A plug-in panel's content and header controls, wherever the panel shows: docked in the bottom
 // section (FxDock), floating in a window of its own (FxWindows), or anywhere else that renders
-// it. Everything here works from the panel key alone (fxDock.ts), fills the box it is given and
+// it. The header itself, which places these controls, is PanelHeader.tsx. Everything here works from the panel key alone (fxDock.ts), fills the box it is given and
 // scrolls when the box is smaller than the panel.
 import { useEffect, useRef, useState } from "react";
 import { act, api, call, MASTER_ID, type Id, type Project } from "../../api";
@@ -9,7 +9,7 @@ import { parseKey, type PanelKey } from "../../fxDock";
 import { valuesOf } from "../../fxFormat";
 import { CHANNEL_EQ, findFxSlot, fxInfo } from "../../fxHost";
 import { onTick, useStore } from "../../store";
-import { EqPanel } from "../Eq";
+import { EqPanel, EqPower, EqPresets } from "../Eq";
 import { FxControl, FxMeter, FxSideChain, isReductionMeter } from "./common";
 import { InstrumentPanel } from "./Instrument";
 import { PresetButton, type Preset } from "./Presets";
@@ -56,16 +56,20 @@ export function PanelContent({ panelKey }: { panelKey: PanelKey }) {
   return null;
 }
 
-/** The header controls before the name: the power button (effects only). */
+/** The header control before the name (PanelHeader.tsx): the power button. */
 export function PanelLead({ panelKey }: { panelKey: PanelKey }) {
   const ref = parseKey(panelKey);
-  return ref?.kind === "fx" ? <FxPower uid={ref.uid} /> : null;
+  if (ref?.kind === "fx") return <FxPower uid={ref.uid} />;
+  if (ref?.kind === "eq") return <EqPower track={ref.track} />;
+  return null;
 }
 
-/** The header controls after the name: presets and the side chain (effects only; the Channel EQ has them in its toolbar). */
+/** The header controls after the name (PanelHeader.tsx): presets, and the side chain for effects with one. */
 export function PanelTools({ panelKey }: { panelKey: PanelKey }) {
   const ref = parseKey(panelKey);
-  return ref?.kind === "fx" ? <FxTools uid={ref.uid} /> : null;
+  if (ref?.kind === "fx") return <FxTools uid={ref.uid} />;
+  if (ref?.kind === "eq") return <EqPresets track={ref.track} />;
+  return null;
 }
 
 function useFx(uid: Id): { at: NonNullable<ReturnType<typeof findFxSlot>>; info: FxInfo } | null {
@@ -82,8 +86,9 @@ export function FxPower({ uid }: { uid: Id }) {
   const fx = useFx(uid);
   if (!fx) return null;
   const { at } = fx;
+  const label = at.plugin.bypass ? "Turn On" : "Bypass";
   return (
-    <button className={"fx-power" + (at.plugin.bypass ? "" : " on")} title={at.plugin.bypass ? "Turn on" : "Bypass"} aria-label={at.plugin.bypass ? "Turn on" : "Bypass"} onClick={() => api.setBypass(at.track, at.slot, !at.plugin.bypass)}>
+    <button className={"fx-power" + (at.plugin.bypass ? "" : " on")} title={label} aria-label={label} onClick={() => api.setBypass(at.track, at.slot, !at.plugin.bypass)}>
       ⏻
     </button>
   );
@@ -203,25 +208,5 @@ export function GenericPanel({ info, values, set, touch, meters }: FxPanelProps)
         </div>
       )}
     </div>
-  );
-}
-
-/** The header button that puts a floating panel in the bottom section: a window with its lower part filled. */
-export function DockGlyph() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3">
-      <rect x="1.5" y="2" width="11" height="10" rx="1.5" />
-      <rect x="1.5" y="8" width="11" height="4" rx="1" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
-
-/** The header button that takes a docked panel out into its own window: a window over another. */
-export function FloatGlyph() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3">
-      <rect x="1.5" y="4.5" width="8" height="8" rx="1.3" />
-      <path d="M5 3V2.8A1.3 1.3 0 0 1 6.3 1.5h5A1.3 1.3 0 0 1 12.5 2.8v5A1.3 1.3 0 0 1 11.2 9.1H11" />
-    </svg>
   );
 }

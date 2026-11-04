@@ -515,7 +515,9 @@ These keep the code maintainable and the merges clean.
 Tauri or React at run time. Its own relative imports carry the extension (`from "./midiEdit.ts"`,
 which Vite and TypeScript accept too), `import type` can stay as it is, and it can't use syntax
 Node has to transform, such as a TypeScript `enum` (use a `const` object). The test imports it
-from `../src/<module>.ts`.
+from `../src/<module>.ts`. `tests/themes.test.ts` shows the way round for a module that imports
+the store: it registers a resolve hook that adds the extensions, stubs `document`, and imports
+`themes.ts` after.
 
 **A canvas editor is a component and its parts.** `PianoRoll.tsx`, `Arrange.tsx` and
 `AudioEditor.tsx` own the refs and the effects and lay out the panes; drawing and event handling

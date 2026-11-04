@@ -10,12 +10,12 @@ import { closePanel, dockPatch, panelMode, savedPanelSize } from "./fxDockState"
 import { CHANNEL_EQ, findFxSlot, fxInfo } from "./fxHost";
 import type { BottomPane, State } from "./store";
 import { getState } from "./store";
-import { DetachButton } from "./components/DetachButton";
 import { Editor } from "./components/Editor";
 import { EventList, eventListTitle } from "./components/EventList";
 import { StepSequencer, stepSequencerTitle } from "./components/StepSequencer";
 import { FxWindows } from "./components/fx/FxWindow";
-import { PanelContent, PanelLead, PanelTools, panelExists, usePanelTitle } from "./components/fx/FxPanel";
+import { PanelContent, panelExists, usePanelTitle } from "./components/fx/FxPanel";
+import { PanelHeader } from "./components/fx/PanelHeader";
 import { Mixer } from "./components/Panels";
 
 const projectName = (s: State) => s.snap?.project.name || "Untitled";
@@ -141,7 +141,7 @@ registerPanelKind(
   plugPanel("eq", (arg, s) => `Channel EQ — ${stripName(s.snap?.project, Number(arg))}`, { w: 820, h: 520 }),
 );
 
-/** An effect panel or Channel EQ filling its own window, with the dock's bar above it. */
+/** An effect panel or Channel EQ filling its own window, under the same header as anywhere else. */
 function OwnPlugPanel({ panelKey }: { panelKey: string }) {
   const title = usePanelTitle(panelKey);
 
@@ -161,22 +161,7 @@ function OwnPlugPanel({ panelKey }: { panelKey: string }) {
   if (!title) return null;
   return (
     <div className="fx-dock panel-plug">
-      <div className="local-bar fx-dock-bar">
-        <div className="local-menus">
-          <PanelLead panelKey={panelKey} />
-          <span className="local-title">{title.name}</span>
-          <span className="panel-plug-track">{title.track}</span>
-        </div>
-        <div className="fx-dock-tools">
-          <PanelTools panelKey={panelKey} />
-        </div>
-        <div className="local-right">
-          <DetachButton panel={panelKey} />
-          <button className="eq-close fx-dock-close" title="Close (Esc)" aria-label="Close (Esc)" onClick={() => closePanel(panelKey)}>
-            ×
-          </button>
-        </div>
-      </div>
+      <PanelHeader panelKey={panelKey} place="window" />
       <PanelContent panelKey={panelKey} />
     </div>
   );

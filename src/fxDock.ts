@@ -36,6 +36,9 @@ export interface DockPanels {
   active: PanelKey | null;
   /** What the bottom section showed before the panels took it, to go back to. */
   ret: BottomPane;
+  /** Docked panels by when they were last shown, the latest last: the oldest goes first when
+   *  there are more than MAX_DOCKED. */
+  recent: PanelKey[];
 }
 
 /** The panels plus the bottom section they share with the Mixer and the Editors. */
@@ -43,7 +46,14 @@ export interface DockState extends DockPanels {
   bottom: BottomPane;
 }
 
-export const NO_PANELS: DockPanels = { open: [], floating: [], active: null, ret: "none" };
+export const NO_PANELS: DockPanels = { open: [], floating: [], active: null, ret: "none", recent: [] };
+
+/**
+ * The most panels docked at once. Opening another closes the one shown longest ago, so the tabs
+ * never pile up past what the bar can show with their names whole (each instrument slot opens
+ * docked, so clicking through tracks would otherwise add a tab per track).
+ */
+export const MAX_DOCKED = 5;
 
 /** The docked panels, in tab order. */
 export const dockedPanels = (s: DockPanels): PanelKey[] => s.open.filter((k) => !s.floating.includes(k));
@@ -54,7 +64,23 @@ export const isShown = (s: DockState, key: PanelKey): boolean =>
 
 /** The bottom section now shows the panels, remembering what it showed before. */
 function showDock(s: DockState, key: PanelKey): DockState {
-  return { ...s, active: key, bottom: "fx", ret: s.bottom === "fx" ? s.ret : s.bottom };
+  const recent = [...(s.recent ?? []).filter((k) => k !== key), key];
+  return { ...s, active: key, bottom: "fx", ret: s.bottom === "fx" ? s.ret : s.bottom, recent };
+}
+
+/** Closes the docked panels shown longest ago (never `keep`) until at most MAX_DOCKED are left. */
+function capDocked(s: DockState, keep: PanelKey): DockState {
+  let st = s;
+  for (;;) {
+    const docked = dockedPanels(st);
+    if (docked.length <= MAX_DOCKED) return st;
+    const recent = st.recent ?? [];
+    // By when each was last shown; one never shown counts as the oldest.
+    const age = (k: PanelKey) => recent.indexOf(k);
+    const oldest = docked.filter((k) => k !== keep).sort((a, b) => age(a) - age(b))[0];
+    if (oldest === undefined) return st;
+    st = closePanel(st, oldest);
+  }
 }
 
 /** `active` has gone: show the most recently opened other docked panel, or give the section back. */
@@ -82,12 +108,20 @@ export function openPanel(s: DockState, key: PanelKey, mode: PanelMode): DockSta
   }
   st = { ...st, open: [...st.open, key] };
   if (mode === "floating") return { ...st, floating: [...st.floating, key] };
-  return showDock(st, key);
+  return capDocked(showDock(st, key), key);
 }
 
 export function closePanel(s: DockState, key: PanelKey): DockState {
   if (!s.open.includes(key)) return s;
-  return reactivate({ ...s, open: s.open.filter((k) => k !== key), floating: s.floating.filter((k) => k !== key) });
+  const drop = (l: PanelKey[] | undefined) => (l ?? []).filter((k) => k !== key);
+  return reactivate({ ...s, open: drop(s.open), floating: drop(s.floating), recent: drop(s.recent) });
+}
+
+/** Closes every docked panel but `keep` (null: all of them); floating ones stay. */
+export function closeDocked(s: DockState, keep: PanelKey | null = null): DockState {
+  let st = s;
+  for (const k of dockedPanels(s)) if (k !== keep) st = closePanel(st, k);
+  return keep === null ? st : selectDocked(st, keep);
 }
 
 /** A slot click: closes the panel if it is on screen, otherwise opens or shows it. */
@@ -104,7 +138,7 @@ export function floatPanel(s: DockState, key: PanelKey): DockState {
 /** Puts a floating panel back in the bottom section and shows it there. */
 export function dockPanel(s: DockState, key: PanelKey): DockState {
   if (!s.open.includes(key)) return s;
-  return showDock({ ...s, floating: s.floating.filter((k) => k !== key) }, key);
+  return capDocked(showDock({ ...s, floating: s.floating.filter((k) => k !== key) }, key), key);
 }
 
 /** Brings a floating panel to the front (a click in it). */

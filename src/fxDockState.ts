@@ -46,6 +46,8 @@ export function openPanel(key: PanelKey, mode?: PanelMode) {
   else apply((s) => dock.openPanel(s, key, mode ?? panelMode()));
 }
 export const closePanel = (key: PanelKey) => apply((s) => dock.closePanel(s, key));
+/** Closes every docked panel, or all but `keep`. */
+export const closeDocked = (keep: PanelKey | null = null) => apply((s) => dock.closeDocked(s, keep));
 /** A slot or EQ thumbnail click. With "Separate windows", a panel in its own window closes
  *  (from a panel's window, which doesn't know what is detached, it comes to the front instead);
  *  otherwise a detached panel's window comes to the front (detach.ts). */

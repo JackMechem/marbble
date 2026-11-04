@@ -49,6 +49,7 @@ type Sheet = { mode: "save" | "rename"; text: string; error?: string; replace?: 
  * - `current` and `normalize`: the settings now and a preset's, in one comparable form, which
  *   tells "(edited)" apart.
  * - `defaultName`: the factory preset that resets it ("Default", "Flat").
+ * - `extra`: items for the end of the menu (the Channel EQ's Copy and Paste).
  */
 export function PresetButton({
   effect,
@@ -58,6 +59,7 @@ export function PresetButton({
   current,
   normalize,
   defaultName = "Default",
+  extra,
 }: {
   effect: string;
   track: Id;
@@ -66,6 +68,7 @@ export function PresetButton({
   current: string;
   normalize: (p: Preset) => string;
   defaultName?: string;
+  extra?: MenuItem[];
 }) {
   const [rev, setRev] = useState(revision);
   const [sheet, setSheet] = useState<Sheet>(null);
@@ -143,8 +146,9 @@ export function PresetButton({
       { label: "Delete Preset", disabled: !isUser, onClick: () => setSheet({ mode: "delete" }) },
       { separator: true },
       { label: state ? `Revert to “${state.name}”` : "Revert", disabled: !edited, onClick: () => state && load(state.name, state.factory) },
-      { label: defaultName, onClick: () => load(defaultName, true) },
+      { label: `Reset to “${defaultName}”`, onClick: () => load(defaultName, true) },
     );
+    if (extra?.length) items.push({ separator: true }, ...extra);
     openMenuAt(el, items);
   };
 
@@ -173,14 +177,14 @@ export function PresetButton({
 
   return (
     <span className="fx-presets">
-      <button className="fx-step" title="Previous preset" aria-label="Previous preset" onClick={() => step(-1)}>
+      <button className="fx-step" title="Previous Preset" aria-label="Previous Preset" onClick={() => step(-1)}>
         ‹
       </button>
       <button className="fx-popup fx-preset" onMouseDown={(e) => menu(e.currentTarget)} title="Presets">
         {label}
         {edited && <span className="dim"> (edited)</span>}
       </button>
-      <button className="fx-step" title="Next preset" aria-label="Next preset" onClick={() => step(1)}>
+      <button className="fx-step" title="Next Preset" aria-label="Next Preset" onClick={() => step(1)}>
         ›
       </button>
       {sheet && (

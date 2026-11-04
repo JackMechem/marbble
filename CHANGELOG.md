@@ -128,6 +128,19 @@ All notable changes to Marbble are recorded here. The format follows
   00:08.000" like the Audio Track editor, where it showed only the time.
 - **A single click in the Tempo track adds a tempo change only on the line;** away from it a
   double-click does, so a click that just lands in the lane no longer changes the tempo.
+- **One header for every plug-in panel.** Effects, instruments, the Sampler and the Channel EQ,
+  docked, floating or in their own window, show the same controls in the same order: power,
+  name, track, presets, Side Chain, then the window buttons and ×. The window buttons keep their
+  order and their names say where the panel goes: Float in Main Window or Dock in Bottom Section,
+  then Open in Separate Window or Attach to Main Window, then Close (its tooltip names the
+  panel). The Channel EQ's On button is now the power button, its presets moved into the header,
+  and Reset, Copy and Paste into the preset menu (Reset to “Flat”, Copy Channel EQ, Paste Channel
+  EQ); the Linear Phase EQ's Reset is Reset to “Default” there too.
+- **Docked panels no longer pile up.** Up to five stay docked; opening a sixth closes the one
+  looked at longest ago. Tabs keep their names whole and scroll sideways when they don't fit. The
+  header's × closes the front tab and Shift-click closes them all; the other tabs have their own
+  × on hover, a middle-click closes a tab, and a tab's right-click menu has Close, Close Other
+  Tabs and Close All Tabs.
 
 ### Fixed
 
@@ -142,6 +155,14 @@ All notable changes to Marbble are recorded here. The format follows
 - **About Marbble shows the app icon** instead of a missing-image glyph.
 - **Settings panes open at their top** rather than at the last pane's scroll position, and the
   empty Notes field in Project Settings no longer shows a horizontal scroll bar.
+- **Plug-in meters read −∞ until audio runs.** A built-in effect's or instrument's meters started
+  at zero, which the Compressor's and Limiter's In and Out meters showed as 0.0 dBFS while no
+  audio device was open or before a new effect's first block. Each instance now starts with its
+  own idle readings.
+- **Knobs in a row line up** on instrument and Sampler panels: a name on two lines (Accent at
+  Velocity, Wheel to Amp) no longer pushes its knob down. Knob names there take two lines' height.
+- **Switching themes clears the last theme's own colours:** after Light, the R and I letters kept
+  Light's darker red and orange in the other themes until a restart.
 - **The Compressor's floating panel opens wide enough** for its knobs; it opened with a sideways
   scrollbar and its Mix and Output knobs cut off. A floating panel that hasn't been resized now
   opens as wide as its controls need, and the Noise Gate's groups wrap in a narrow window.

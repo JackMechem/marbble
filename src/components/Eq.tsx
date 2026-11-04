@@ -217,10 +217,10 @@ export interface EqEditorProps {
   sr: number;
   /** Every edit, as the whole new setting. */
   onChange: (eq: ChannelEq) => void;
-  /** Toolbar controls before the Analyzer button, after it, and before the Output level. */
-  lead?: ReactNode;
-  tools?: ReactNode;
+  /** Toolbar controls before the Output level. */
   extra?: ReactNode;
+  /** Switched off: the graph and bands dim, as a bypassed effect's panel does. */
+  bypassed?: boolean;
   /** The strip whose spectrum the analyzer shows; without one there is no analyzer. */
   analyzerTrack?: Id;
   /** A control's right-click handler (Learn MIDI Assignment). */
@@ -230,9 +230,10 @@ export interface EqEditorProps {
 }
 
 /**
- * The Channel EQ editor for one strip (MASTER_ID = Stereo Out): toolbar, graph and bands. It
- * fills the box it is given (docked in the bottom section or in a floating window, see
- * fxDock.ts); the graph takes the height the toolbar and bands leave.
+ * The Channel EQ editor for one strip (MASTER_ID = Stereo Out): the Analyzer and Output toolbar,
+ * graph and bands. Its power button and presets are in the panel's header (fx/PanelHeader.tsx),
+ * as an effect's are. It fills the box it is given (docked in the bottom section or in a
+ * floating window, see fxDock.ts); the graph takes the height the toolbar and bands leave.
  */
 export function EqPanel({ track: trackId }: { track: Id }) {
   const project = useStore((s) => s.snap?.project);
@@ -245,30 +246,42 @@ export function EqPanel({ track: trackId }: { track: Id }) {
       sr={sr}
       onChange={(e) => updateEq(trackId, e)}
       analyzerTrack={trackId}
-      lead={
-        <button className={"eq-toggle" + (eq.on ? " on" : "")} onClick={() => updateEq(trackId, { ...eq, on: !eq.on })} title="Turn the EQ on or off">
-          {eq.on ? "On" : "Bypassed"}
-        </button>
-      }
-      tools={
-        <>
-          <button className="eq-toggle" onClick={() => updateEq(trackId, defaultEq())} title="Reset every band">
-            Reset
-          </button>
-          <PresetButton effect={CHANNEL_EQ} track={trackId} slot={EQ_SLOT} loaded={eqPresetOf(project, trackId)} current={JSON.stringify(eq)} normalize={(p) => JSON.stringify(p.eq)} defaultName="Flat" />
-          <button className="eq-toggle" onClick={() => copyEq(eq)} title="Copy these EQ settings">
-            Copy
-          </button>
-          <button
-            className="eq-toggle"
-            onClick={() => (eqClipboard() ? pasteEq([trackId]) : setState({ toast: { text: "Copy a Channel EQ first", at: Date.now() } }))}
-            title="Paste copied EQ settings onto this strip"
-          >
-            Paste
-          </button>
-        </>
-      }
+      bypassed={!eq.on}
       learn={(c) => learnContext(c.band === null ? { type: "eq_output", track: trackId } : { type: "eq", track: trackId, band: c.band, field: c.field })}
+    />
+  );
+}
+
+/** The Channel EQ's power button, for its panel's header: on, or bypassed. */
+export function EqPower({ track }: { track: Id }) {
+  const eq = useStore((s) => eqOf(s.snap?.project, track));
+  if (!eq) return null;
+  const label = eq.on ? "Bypass" : "Turn On";
+  return (
+    <button className={"fx-power" + (eq.on ? " on" : "")} title={label} aria-label={label} onClick={() => updateEq(track, { ...eq, on: !eq.on })}>
+      ⏻
+    </button>
+  );
+}
+
+/** The Channel EQ's preset pop-up, for its panel's header, with Copy and Paste in its menu. */
+export function EqPresets({ track }: { track: Id }) {
+  const project = useStore((s) => s.snap?.project);
+  const eq = eqOf(project, track);
+  if (!eq) return null;
+  return (
+    <PresetButton
+      effect={CHANNEL_EQ}
+      track={track}
+      slot={EQ_SLOT}
+      loaded={eqPresetOf(project, track)}
+      current={JSON.stringify(eq)}
+      normalize={(p) => JSON.stringify(p.eq)}
+      defaultName="Flat"
+      extra={[
+        { label: "Copy Channel EQ", onClick: () => copyEq(eq) },
+        { label: "Paste Channel EQ", disabled: !eqClipboard(), onClick: () => pasteEq([track]) },
+      ]}
     />
   );
 }
@@ -277,7 +290,7 @@ export function EqPanel({ track: trackId }: { track: Id }) {
  * The graph and band controls of the Channel EQ, for any eight-band setting: a strip's
  * Channel EQ (EqPanel) or the Linear Phase EQ's parameters (fx/LinearPhaseEq.tsx).
  */
-export function EqEditor({ eq, sr, onChange, lead, tools, extra, analyzerTrack, learn, onGrab }: EqEditorProps) {
+export function EqEditor({ eq, sr, onChange, extra, bypassed, analyzerTrack, learn, onGrab }: EqEditorProps) {
   const [sel, setSel] = useState<number | null>(null);
   const [analyzerOn, setAnalyzer] = useState(true);
   const analyzer = analyzerOn && analyzerTrack !== undefined;
@@ -504,15 +517,13 @@ export function EqEditor({ eq, sr, onChange, lead, tools, extra, analyzerTrack, 
 
   const defaults = defaultEq();
   return (
-    <div className="eq-panel">
+    <div className={"eq-panel" + (bypassed ? " bypassed" : "")}>
       <div className="eq-toolbar">
-        {lead}
         {analyzerTrack !== undefined && (
           <button className={"eq-toggle" + (analyzer ? " on" : "")} onClick={() => setAnalyzer(!analyzer)} title="Show the post-EQ spectrum">
             Analyzer
           </button>
         )}
-        {tools}
         <span className="eq-spacer" />
         {extra}
         <span className="dim">Output</span>

@@ -5,11 +5,10 @@
 // went away, for docked panels too.
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { DEFAULT_WIDTH, keepOnScreen, openingX, resizeRect, type Edge, type PanelKey, type Size } from "../../fxDock";
-import { closePanel, dockPanel, escTarget, focusPanel, prunePanels, savedPanelSize, savePanelSize } from "../../fxDockState";
+import { closePanel, escTarget, focusPanel, prunePanels, savedPanelSize, savePanelSize } from "../../fxDockState";
 import { getState, useStore } from "../../store";
-import { isMain } from "../../detach";
-import { DetachButton } from "../DetachButton";
-import { DockGlyph, PanelContent, PanelLead, PanelTools, panelExists, usePanelTitle } from "./FxPanel";
+import { PanelContent, panelExists, usePanelTitle } from "./FxPanel";
+import { PanelHeader } from "./PanelHeader";
 
 /** Where each floating panel was, so floating it again puts it back there. */
 const positions = new Map<PanelKey, { x: number; y: number }>();
@@ -184,23 +183,7 @@ function FloatingPanel({ panelKey, z }: { panelKey: PanelKey; z: number }) {
         focusPanel(panelKey);
       }}
     >
-      <div className="eq-titlebar" onMouseDown={startMove}>
-        <PanelLead panelKey={panelKey} />
-        <span className="eq-title">{title.name}</span>
-        <span className="eq-track">{title.track}</span>
-        <PanelTools panelKey={panelKey} />
-        <span className="fx-title-gap" />
-        <DetachButton panel={panelKey} className="fx-mode" />
-        {/* A detached Mixer's window has no bottom section to dock in. */}
-        {isMain && (
-          <button className="fx-mode" title="Dock in the bottom section" onClick={() => dockPanel(panelKey)}>
-            <DockGlyph />
-          </button>
-        )}
-        <button className="eq-close" title="Close (Esc)" aria-label="Close (Esc)" onClick={() => closePanel(panelKey)}>
-          ×
-        </button>
-      </div>
+      <PanelHeader panelKey={panelKey} place="floating" onMouseDown={startMove} />
       <PanelContent panelKey={panelKey} />
       {EDGES.map((edge) => (
         <div key={edge} className={`fx-resize ${edge}`} onPointerDown={startResize(edge)} />

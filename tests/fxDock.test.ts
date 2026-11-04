@@ -4,7 +4,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  MAX_DOCKED,
   NO_PANELS,
+  closeDocked,
   openingX,
   checkBottom,
   clampSize,
@@ -104,6 +106,42 @@ test("closing a tab shows the last opened other one; the last close gives the se
   assert.equal(s.bottom, "mixer");
   assert.equal(s.ret, "none");
   assert.equal(closePanel(s, C), s, "closing a closed panel changes nothing");
+});
+
+test("the dock keeps at most MAX_DOCKED tabs, closing the one shown longest ago", () => {
+  const keys = Array.from({ length: MAX_DOCKED + 2 }, (_, i) => fxKey(100 + i));
+  let s = start("mixer");
+  for (const k of keys.slice(0, MAX_DOCKED)) s = openPanel(s, k, "docked");
+  assert.equal(dockedPanels(s).length, MAX_DOCKED);
+  // The first tab was looked at again, so the second is now the oldest.
+  s = selectDocked(s, keys[0]);
+  s = openPanel(s, keys[MAX_DOCKED], "docked");
+  assert.equal(dockedPanels(s).length, MAX_DOCKED);
+  assert.ok(!s.open.includes(keys[1]), "the tab shown longest ago closed");
+  assert.ok(s.open.includes(keys[0]));
+  assert.equal(s.active, keys[MAX_DOCKED]);
+  assert.deepEqual(dockedPanels(s), [keys[0], ...keys.slice(2, MAX_DOCKED + 1)], "the others keep their order");
+  // Floating panels don't count, and docking one back counts like opening it.
+  s = openPanel(s, keys[MAX_DOCKED + 1], "floating");
+  assert.equal(dockedPanels(s).length, MAX_DOCKED);
+  s = dockPanel(s, keys[MAX_DOCKED + 1]);
+  assert.equal(dockedPanels(s).length, MAX_DOCKED);
+  assert.ok(!s.open.includes(keys[2]));
+  assert.equal(s.active, keys[MAX_DOCKED + 1]);
+});
+
+test("closeDocked closes every docked tab, or all but one, and leaves floating panels", () => {
+  let s = start("editor");
+  for (const k of [A, B]) s = openPanel(s, k, "docked");
+  s = openPanel(s, C, "floating");
+  const others = closeDocked(s, A);
+  assert.deepEqual(dockedPanels(others), [A]);
+  assert.equal(others.active, A);
+  assert.deepEqual(others.floating, [C]);
+  const none = closeDocked(s);
+  assert.deepEqual(none.open, [C]);
+  assert.equal(none.active, null);
+  assert.equal(none.bottom, "editor", "the section goes back to what it showed");
 });
 
 test("float and dock move a panel between the dock and its own window", () => {

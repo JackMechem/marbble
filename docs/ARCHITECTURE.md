@@ -1721,7 +1721,10 @@ it like any plug-in.
   gliding, so a render's first block already has the automated value.
 - `FxShared` (behind an `Arc`, shared with the session) holds atomics: meters and the values the
   effect runs with, copied after each block only while the panel is `watched`, and the latency
-  and tail, republished on every parameter change. A dynamics effect (one with a meter named
+  and tail, republished on every parameter change. A new instance (and one put to sleep on an
+  Off track) publishes its own idle meter readings (`publish_meters`), so a panel opened before
+  the audio thread has run it, or with no audio device, reads −∞ rather than the atomics' zeros,
+  which a level meter would show as 0 dBFS. `InstrumentDsp` does the same. A dynamics effect (one with a meter named
   "Gain Reduction" or "Reduction") also keeps its largest gain reduction since the last tick,
   panel or not, for the strip's gain-reduction meter (`take_gain_reduction`).
 - `Cmd::FxParam` sets a value; `Cmd::Sidechain` sets the key source (`InsertDsp::key`, for a VST3
@@ -2487,7 +2490,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `paneSizes.ts` | Pane size defaults and limits, reading the saved sizes, the Tracks area's minimum and the bottom section's room; pure, tested. |
 | `presetBox.ts` | What a preset pop-up shows: the loaded preset's name, "(edited)", "Default" or "Manual"; pure, tested. |
 | `fxHost.ts` | Built-in effect registry and panel windows, the plug-in and Channel EQ clipboards (store fields, shared between windows), the slot right-click menu. |
-| `fxDock.ts`, `fxDockState.ts` | Plug-in panels docked, floating or in separate windows: the pure transitions (tested), and applying them to the store with the floating panels' saved sizes. |
+| `fxDock.ts`, `fxDockState.ts` | Plug-in panels docked, floating or in separate windows: the pure transitions (tested), and applying them to the store with the floating panels' saved sizes. At most `MAX_DOCKED` (5) panels are docked: opening another closes the one shown longest ago (`recent`). |
 | `compressorModel.ts`, `dynScale.ts` | The Compressor's parameter ids, circuits and curve (mirrors `compressor.rs`), and the dynamics panels' value formatting and knob maths; pure, tested. |
 | `settingsText.ts` | The words Settings and the Recovery sheet show: MIDI messages, plug-in types, what crashed work left; pure, tested. |
 | `instLayout.ts` | How an instrument panel lays out its sections, chosen apart for docked and floating, and which edge they run on past (for the fade); pure, tested. |
@@ -2570,8 +2573,9 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `GlobalTracks.tsx` | The global tracks: the Arrangement, Tempo and Signature lanes. |
 | `ArrangementTrack.tsx` | The Arrangement track's lane: sections, the name pop-up, menus, move, copy and resize drags. |
 | `Overview.tsx` | The overview strip under the tracks (in place of the horizontal scroll bar): cached region layer, visible-area box, playhead, scroll and zoom drags. |
-| `fx/FxPanel.tsx` | A plug-in panel's content and header controls, wherever it shows, effect or instrument; the generic panel for effects without their own. |
-| `fx/FxDock.tsx` | The bottom section's docked panels, a tab each. |
+| `fx/FxPanel.tsx` | A plug-in panel's content and header controls (power, presets, side chain), wherever it shows, effect, instrument or Channel EQ; the generic panel for effects without their own. |
+| `fx/PanelHeader.tsx` | The one header every plug-in panel has, docked, floating or in its own window: power, name, track, presets, the panel's pop-ups, then the window buttons in a fixed order (float or dock, separate window or attach, close). |
+| `fx/FxDock.tsx` | The bottom section's docked panels: a tab each where the header's name goes (at most `MAX_DOCKED`, scrolling when they don't fit), and the tab menu. |
 | `fx/FxWindow.tsx` | Floating panel windows for built-in effects and the Channel EQ. |
 | `fx/common.tsx` | Shared panel controls: knobs, toggles, choices, meters, the side-chain pop-up. |
 | `fx/Presets.tsx` | The preset pop-up (built-in effects, instruments and Channel EQ). |

@@ -20,15 +20,6 @@
   border-top: none;
 }
 
-/* An effect panel or Channel EQ's own window: the strip's name after the effect's. */
-.panel-plug-track {
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  color: var(--dim);
-}
-
 /* Open in Separate Window / Attach to Main Window, at the end of a panel's bar. */
 .lb-btn.detach-btn {
   color: var(--dim);

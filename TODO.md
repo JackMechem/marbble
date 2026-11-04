@@ -218,8 +218,6 @@ machine). Its top items:
 
 - The Piano Roll's toolbar runs off the edge at 1280 px (Height, Zoom and the detach button out of reach); the
   docked Mixer cuts off its faders at 1480×920.
-- Plug-in panels have three different headers (Compressor/Limiter, Channel EQ, instruments); in the dock, instrument
-  tabs pile up, × closes only the front one, and "Float in its own window" vs "Open in Separate Window" is unclear.
 
 - **Design system, round 6 (not seen in the app yet):** a six-size type scale (body 11.5 → 12 px, small text
   9–10.5 → 11 px), every hex colour in a token, a focus ring for Tab, knobs and faders as keyboard sliders,
@@ -246,6 +244,10 @@ machine). Its top items:
   that uses only the Arrangement track; showing only the ones in use, or a shorter Tempo track, would give
   the tracks back.
 - **The CPU meter's** red state (a late block) hasn't been seen.
+- **Plug-in panels, round 7 (not seen in the app yet):** one header for every panel (Channel EQ included), at most
+  five docked tabs, idle meters at −∞, knob names two lines high. Left over: a plug-in's meters freeze at their last
+  values if the audio device stops while it plays (they read −∞ only before the first block and on an Off track);
+  no Compare or settings Copy/Paste for effects and instruments (the slot menu's Copy Plug-in copies a whole slot).
 
 - **From the UI audit of 2026-11-04** (all menus, Settings, dialogs, Mixer, editors, Light theme):
   - The menu bar on macOS doesn't show the key commands' keys (R, X, Space…): AppKit can't draw a key without binding

@@ -169,7 +169,7 @@ let state: State = {
   instList: [],
   fxPanels: [],
   showOverview: true,
-  fxDock: { open: [], floating: [], active: null, ret: "none" },
+  fxDock: { open: [], floating: [], active: null, ret: "none", recent: [] },
   detached: [],
   midiSelection: { notes: [], cc: [] },
   tools: DEFAULT_TOOLS,

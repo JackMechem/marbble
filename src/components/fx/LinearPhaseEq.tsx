@@ -1,8 +1,8 @@
 // The Linear Phase EQ's panel (crates/engine/src/fx/linear_phase_eq.rs): the Channel EQ's graph
 // and band controls working on the effect's parameters, plus the Quality pop-up, as in Logic.
+// Reset is the preset menu's Reset to “Default”, in the panel's header.
 import { useContext } from "react";
 import type { ChannelEq } from "../../api";
-import { defaultEq } from "../../eqMath";
 import type { FxPanelProps } from "../../fx";
 import { FxLearnContext, learnContext } from "../../learn";
 import { changedParams, eqFromValues, latencyFrames, OUTPUT, paramId, QUALITY, QUALITY_LABELS } from "../../linearPhaseEq";
@@ -33,11 +33,6 @@ export function LinearPhaseEqPanel(p: FxPanelProps) {
       eq={eq}
       sr={sr}
       onChange={apply}
-      tools={
-        <button className="eq-toggle" onClick={() => apply(defaultEq())} title="Reset every band">
-          Reset
-        </button>
-      }
       extra={
         <>
           <span className="dim">Quality</span>
