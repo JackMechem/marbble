@@ -145,7 +145,10 @@ impl Engine {
             }
             // A callback that takes longer than the audio it makes leaves the thread no time
             // to sleep. Kept up, the kernel kills the whole app, so give up a moment of audio.
-            self.behind_secs = if spent > budget && !self.offline { self.behind_secs + spent } else { 0.0 };
+            // A check that plays flat out on a loaded machine (`ParallelTest::patient`) isn't
+            // one either: shedding would make its output depend on the machine's load.
+            let late = spent > budget && !self.offline && !self.parallel.test.patient;
+            self.behind_secs = if late { self.behind_secs + spent } else { 0.0 };
             if self.behind_secs > OVERLOAD_SECS {
                 self.behind_secs = 0.0;
                 self.shedding = (SHED_SECS / budget).ceil() as u32;

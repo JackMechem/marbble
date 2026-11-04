@@ -147,8 +147,8 @@ impl Session {
         let ms = f32::from_bits(self.status.overload_secs.load(Ordering::Relaxed)) * 1000.0;
         let track = self.project.track(self.status.overload_track.load(Ordering::Relaxed)).map(|t| t.name.clone());
         let detail = match (self.status.overload_stuck.load(Ordering::Relaxed), track) {
-            (true, Some(t)) => format!("A processing thread stayed in \"{t}\" for over {ms:.0} ms."),
-            (true, None) => format!("A processing thread didn't finish within {ms:.0} ms."),
+            (true, Some(t)) => format!("A processing thread stayed in \"{t}\" for over {ms:.0} ms, and is left out until the audio engine is reset."),
+            (true, None) => format!("A processing thread didn't finish within {ms:.0} ms, and is left out until the audio engine is reset."),
             (false, Some(t)) => format!("A buffer took {ms:.0} ms; \"{t}\" took longest."),
             (false, None) => format!("A buffer took {ms:.0} ms."),
         };

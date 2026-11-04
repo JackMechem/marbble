@@ -21,10 +21,14 @@
 //!   reports the block unfinished ([`Pool::finish`]).
 //! - **A panic is contained to its task.** It's counted, its dependants still run, and the pool
 //!   carries on.
+//!
+//! Only a worker that is fit to play takes tasks ([`Health`]): one refused the real-time priority it
+//! asked for never does, and one the caller gave up on ([`Pool::retire_stuck`]) is demoted to normal
+//! priority, so the kernel's limit can't end the app, and takes nothing more once it gets out.
 
 use std::cell::UnsafeCell;
 use std::panic::{catch_unwind, AssertUnwindSafe};
-use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU32, AtomicU64, AtomicU8, Ordering};
 use std::sync::{Arc, OnceLock};
 use std::thread::{self, JoinHandle, Thread};
 use std::time::{Duration, Instant};
@@ -66,10 +70,74 @@ pub struct PoolOptions {
     /// Threads including the caller, so it starts this many less one.
     pub threads: usize,
     /// Promote the workers to real time as cpal does its callback's thread, for this buffer size
-    /// and sample rate. If it's refused they stay at normal priority.
+    /// and sample rate. A worker that is refused it plays nothing (see `promote`).
     pub realtime: Option<(u32, u32)>,
     /// Logical CPUs the workers keep to (empty: anywhere). See `threads::Topology::fast`.
     pub cpus: Vec<usize>,
+    /// For checks: the workers whose bit is set (bit 1 for the first) act as if real-time priority
+    /// was refused them, whether or not `realtime` asks for it.
+    #[doc(hidden)]
+    pub refuse_for_checks: u32,
+}
+
+/// A worker's part in the pool. Only an `ACTIVE` one takes tasks.
+const STARTING: u8 = 0;
+const ACTIVE: u8 = 1;
+/// Refused real-time priority, or never started: it has ended.
+const LEFT_OUT: u8 = 2;
+/// The caller gave up on a block while it was in a task: demoted, and it ends once it has helped
+/// finish that block.
+const RETIRED: u8 = 3;
+
+/// How the workers of a pool are doing, for the session and Settings › Audio. Shared, so the session
+/// can read it while the engine owns the pool.
+#[derive(Debug, Default)]
+pub struct Health {
+    workers: u32,
+    active: AtomicU32,
+    /// Workers whose start is over, whichever way it went.
+    started: AtomicU32,
+    refused: AtomicU32,
+    stuck: AtomicU32,
+    realtime: AtomicU32,
+    /// The first refusal's reason, for the log.
+    why: OnceLock<String>,
+}
+
+/// What [`Health`] says right now.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct HealthReport {
+    /// Threads asked for, the caller included.
+    pub threads: u32,
+    /// Threads that play now, the caller included.
+    pub playing: u32,
+    /// Workers still starting (asking for real-time priority).
+    pub starting: u32,
+    /// Workers left out because they were refused real-time priority (or couldn't start).
+    pub refused: u32,
+    /// Workers left out because a block was given up on while they were in it.
+    pub stuck: u32,
+    /// Workers granted real-time priority.
+    pub realtime: u32,
+}
+
+impl Health {
+    pub fn report(&self) -> HealthReport {
+        let started = self.started.load(Ordering::Acquire);
+        HealthReport {
+            threads: self.workers + 1,
+            playing: self.active.load(Ordering::Relaxed) + 1,
+            starting: self.workers.saturating_sub(started),
+            refused: self.refused.load(Ordering::Relaxed),
+            stuck: self.stuck.load(Ordering::Relaxed),
+            realtime: self.realtime.load(Ordering::Relaxed),
+        }
+    }
+
+    /// Why the first worker refused real-time priority was.
+    pub fn refusal(&self) -> Option<&str> {
+        self.why.get().map(String::as_str)
+    }
 }
 
 #[repr(align(64))]
@@ -78,6 +146,23 @@ struct Line<T>(T);
 struct Slot {
     thread: OnceLock<Thread>,
     parked: AtomicBool,
+    /// `STARTING`, `ACTIVE`, `LEFT_OUT` or `RETIRED`.
+    state: AtomicU8,
+    /// In a task, or about to take one: set before the claim, so a worker preempted between taking a
+    /// task and starting it still counts as in it.
+    busy: AtomicBool,
+    /// Granted real-time priority, so a demotion is due if it gets stuck.
+    realtime: AtomicBool,
+    /// The kernel's id for the thread, to demote it from another (Linux).
+    tid: AtomicI32,
+    /// The block it was retired in (`Shared::block`).
+    retired_in: AtomicU32,
+}
+
+impl Slot {
+    fn active(&self) -> bool {
+        self.state.load(Ordering::Relaxed) == ACTIVE
+    }
 }
 
 struct Shared {
@@ -96,7 +181,10 @@ struct Shared {
     workers: Box<[Slot]>,
     panics: AtomicU32,
     shutdown: AtomicBool,
-    realtime: AtomicU32,
+    health: Arc<Health>,
+    /// Counts the blocks started, so a retired worker can tell the block it was given up in from
+    /// the next.
+    block: AtomicU32,
 }
 
 // SAFETY: `job` is the only field that isn't Sync. See its comment; the pointers it holds are only
@@ -136,7 +224,7 @@ impl Shared {
             if count == 0 {
                 break;
             }
-            if w.parked.load(Ordering::SeqCst) && w.parked.swap(false, Ordering::SeqCst) {
+            if w.active() && w.parked.load(Ordering::SeqCst) && w.parked.swap(false, Ordering::SeqCst) {
                 if let Some(t) = w.thread.get() {
                     t.unpark();
                 }
@@ -206,10 +294,21 @@ impl Pool {
             remaining: Line(AtomicU32::new(0)),
             job: UnsafeCell::new(None),
             home,
-            workers: (1..threads).map(|_| Slot { thread: OnceLock::new(), parked: AtomicBool::new(false) }).collect(),
+            workers: (1..threads)
+                .map(|_| Slot {
+                    thread: OnceLock::new(),
+                    parked: AtomicBool::new(false),
+                    state: AtomicU8::new(STARTING),
+                    busy: AtomicBool::new(false),
+                    realtime: AtomicBool::new(false),
+                    tid: AtomicI32::new(0),
+                    retired_in: AtomicU32::new(0),
+                })
+                .collect(),
             panics: AtomicU32::new(0),
             shutdown: AtomicBool::new(false),
-            realtime: AtomicU32::new(0),
+            health: Arc::new(Health { workers: threads as u32 - 1, ..Default::default() }),
+            block: AtomicU32::new(0),
         });
         let mut joins = Vec::with_capacity(threads - 1);
         for index in 1..threads {
@@ -218,20 +317,72 @@ impl Pool {
             match thread::Builder::new().name(format!("marbble-dsp-{index}")).stack_size(STACK_SIZE).spawn(move || worker(sh, index, o)) {
                 Ok(j) => joins.push(j),
                 // The caller can do every task alone, with whichever workers did start.
-                Err(e) => log::error!("no processing thread {index}: {e}"),
+                Err(e) => {
+                    log::error!("no processing thread {index}: {e}");
+                    shared.workers[index - 1].state.store(LEFT_OUT, Ordering::Relaxed);
+                    shared.health.refused.fetch_add(1, Ordering::Relaxed);
+                    shared.health.started.fetch_add(1, Ordering::Release);
+                }
             }
         }
         Pool { shared, joins, threads }
     }
 
-    /// Threads including the caller.
+    /// Threads including the caller, as asked for (see [`Pool::playing`] for those that play).
     pub fn threads(&self) -> usize {
         self.threads
     }
 
+    /// Threads that take tasks now, the caller included.
+    pub fn playing(&self) -> usize {
+        self.shared.health.active.load(Ordering::Relaxed) as usize + 1
+    }
+
+    /// Whether any worker plays or may yet: false once every one was refused or given up on, when
+    /// the pool is only the caller doing the serial loop's work the long way round.
+    pub fn has_workers(&self) -> bool {
+        let h = &*self.shared.health;
+        // A pool made without workers (in tests) is what it was asked to be.
+        h.workers == 0 || h.active.load(Ordering::Relaxed) > 0 || h.started.load(Ordering::Relaxed) < h.workers
+    }
+
+    pub fn health(&self) -> Arc<Health> {
+        self.shared.health.clone()
+    }
+
     /// How many workers were granted real-time priority so far.
     pub fn realtime_workers(&self) -> u32 {
-        self.shared.realtime.load(Ordering::Relaxed)
+        self.shared.health.realtime.load(Ordering::Relaxed)
+    }
+
+    /// After [`Pool::finish`] gave up: every worker still in a task (the one holding the block up)
+    /// loses real-time priority at once, so that a plug-in that never returns can't have the kernel
+    /// end the app at RLIMIT_RTTIME's hard limit, and takes no task of a later block. The block stays
+    /// open: once out of its task the worker helps finish it (the caller has gone, and there may be
+    /// no other worker), then ends. The other workers play on. Returns how many it retired.
+    ///
+    /// On the audio thread: allocates nothing and takes no lock, and makes one `sched_setscheduler`
+    /// call per real-time worker it demotes, only ever here.
+    pub fn retire_stuck(&self) -> u32 {
+        let mut n = 0;
+        let block = self.shared.block.load(Ordering::Relaxed);
+        for w in self.shared.workers.iter() {
+            // Only this thread moves a worker on from `ACTIVE`, and `busy` is only ever set by one.
+            if !w.busy.load(Ordering::SeqCst) || !w.active() {
+                continue;
+            }
+            // Before the state, which the worker reads first (`drain`).
+            w.retired_in.store(block, Ordering::Relaxed);
+            w.state.store(RETIRED, Ordering::SeqCst);
+            let h = &*self.shared.health;
+            h.active.fetch_sub(1, Ordering::Relaxed);
+            h.stuck.fetch_add(1, Ordering::Relaxed);
+            if w.realtime.load(Ordering::Relaxed) {
+                demote(w.tid.load(Ordering::Relaxed));
+            }
+            n += 1;
+        }
+        n
     }
 
     /// Opens a block: the graph's tasks can now be taken. Follow with [`Pool::finish`].
@@ -244,6 +395,8 @@ impl Pool {
         let sh = &*self.shared;
         debug_assert!(self.is_done());
         debug_assert!(graph.len() <= MAX_TASKS);
+        // Before any task can be seen: a worker that takes one sees the new count.
+        sh.block.fetch_add(1, Ordering::SeqCst);
         // SAFETY: `remaining` is zero (the contract), so nobody holds a task, and no bit is set for
         // anyone to take one.
         unsafe { *sh.job.get() = Some((job, graph as *const TaskGraph)) };
@@ -325,7 +478,15 @@ impl Drop for Pool {
 fn worker(sh: Arc<Shared>, index: usize, opts: PoolOptions) {
     let slot = &sh.workers[index - 1];
     let _ = slot.thread.set(thread::current());
-    promote(&sh, index, &opts);
+    #[cfg(target_os = "linux")]
+    // SAFETY: a plain system call about this thread.
+    slot.tid.store(unsafe { libc::gettid() }, Ordering::Relaxed);
+    let fit = promote(&sh, index, &opts);
+    if !fit {
+        slot.state.store(LEFT_OUT, Ordering::Relaxed);
+        sh.health.started.fetch_add(1, Ordering::Release);
+        return;
+    }
     keep_to(&opts.cpus);
     // Flush-to-zero is per thread. It holds for the worker's life, as the thread is ours alone.
     let _ftz = NoDenormals::new();
@@ -333,19 +494,30 @@ fn worker(sh: Arc<Shared>, index: usize, opts: PoolOptions) {
     if let Some(hook) = WORKER_HOOK.get() {
         hook();
     }
+    slot.state.store(ACTIVE, Ordering::SeqCst);
+    sh.health.active.fetch_add(1, Ordering::Relaxed);
+    sh.health.started.fetch_add(1, Ordering::Release);
     let mut slept = Instant::now();
     loop {
         if sh.shutdown.load(Ordering::Acquire) {
             return;
         }
+        // Given up on (`Pool::retire_stuck`): nothing wakes it any more, and it ends.
+        if !slot.active() {
+            drain(&sh, index);
+            return;
+        }
+        slot.busy.store(true, Ordering::SeqCst);
         if let Some(task) = sh.claim(index) {
             sh.run_task(task, index);
+            slot.busy.store(false, Ordering::Release);
             if slept.elapsed() > RT_GUARD {
                 thread::sleep(GUARD_NAP);
                 slept = Instant::now();
             }
             continue;
         }
+        slot.busy.store(false, Ordering::Release);
         if spin_for_work(&sh) {
             continue;
         }
@@ -363,6 +535,31 @@ fn worker(sh: Arc<Shared>, index: usize, opts: PoolOptions) {
         if before.elapsed() >= TRUE_SLEEP {
             slept = Instant::now();
         }
+    }
+}
+
+/// A retired worker's last work: what's left of the block it was given up in, as the caller has
+/// stopped waiting for it and every other worker may be gone. A task of a later block goes back.
+fn drain(sh: &Shared, index: usize) {
+    let slot = &sh.workers[index - 1];
+    // Pairs with `retire_stuck`'s store of the state the worker saw, after `retired_in`.
+    std::sync::atomic::fence(Ordering::Acquire);
+    debug_assert_eq!(slot.state.load(Ordering::Relaxed), RETIRED);
+    let block = slot.retired_in.load(Ordering::Relaxed);
+    let ours = || sh.block.load(Ordering::SeqCst) == block;
+    while ours() && sh.remaining.0.load(Ordering::Acquire) > 0 && !sh.shutdown.load(Ordering::Acquire) {
+        let Some(task) = sh.claim(index) else {
+            thread::sleep(CALLER_NAP);
+            continue;
+        };
+        // A task is only ready once its block has started, so if the count is still ours, so is
+        // the task.
+        if !ours() {
+            sh.ready[task / 64].0.fetch_or(1 << (task % 64), Ordering::SeqCst);
+            sh.wake(1);
+            return;
+        }
+        sh.run_task(task, index);
     }
 }
 
@@ -393,22 +590,60 @@ fn touch_stack() {
 
 /// Real-time priority, the way cpal gets it for its audio callback (rtkit over D-Bus, at
 /// `audio_thread_priority`'s priority), so a worker and the callback preempt each other evenly.
-/// When it's refused the worker runs at normal priority: the callback helps with what's ready, and
-/// its bounded wait keeps a slow worker from hanging it.
-fn promote(sh: &Shared, index: usize, opts: &PoolOptions) {
-    let Some((frames, rate)) = opts.realtime else { return };
+/// False if it was asked for and refused: a worker at normal priority beside a real-time callback
+/// can be late whenever the system is busy, so it plays nothing, and the pool plays on with the
+/// workers that were granted it (or the caller alone). Not asked for (the null device), or away
+/// from Linux, where it isn't tried yet, any worker is fit.
+fn promote(sh: &Shared, index: usize, opts: &PoolOptions) -> bool {
+    // The session logs it, once every worker has started (`Session::sync_parallel`).
+    let refused = |why: String| {
+        let _ = sh.health.why.set(why);
+        sh.health.refused.fetch_add(1, Ordering::Relaxed);
+        false
+    };
+    if opts.refuse_for_checks & (1 << (index - 1)) != 0 {
+        return refused("refused for a check".into());
+    }
+    let Some((frames, rate)) = opts.realtime else { return true };
     #[cfg(target_os = "linux")]
     {
         crate::audio_io::survive_slow_blocks();
         match audio_thread_priority::promote_current_thread_to_real_time(frames, rate) {
             Ok(_) => {
-                sh.realtime.fetch_add(1, Ordering::Relaxed);
+                sh.workers[index - 1].realtime.store(true, Ordering::Relaxed);
+                sh.health.realtime.fetch_add(1, Ordering::Relaxed);
+                true
             }
-            Err(e) => log::warn!("processing thread {index} stays at normal priority: {e}"),
+            Err(e) => refused(e.to_string()),
         }
     }
+    // Workers aren't made real time here yet, so Automatic starts none, and a number chosen by
+    // hand gets workers at normal priority.
     #[cfg(not(target_os = "linux"))]
-    let _ = (sh, index, frames, rate);
+    {
+        let _ = (frames, rate);
+        true
+    }
+}
+
+/// Not in `libc` (rust-lang/libc#1511).
+#[cfg(target_os = "linux")]
+const SCHED_RESET_ON_FORK: libc::c_int = 0x4000_0000;
+
+/// Takes a stuck worker off real-time priority. RLIMIT_RTTIME only counts a thread's time under a
+/// real-time policy, so the plug-in it's in can run on as long as it likes without the kernel
+/// ending the app.
+fn demote(tid: i32) {
+    #[cfg(target_os = "linux")]
+    if tid > 0 {
+        let param = libc::sched_param { sched_priority: 0 };
+        // SAFETY: a plain system call with a valid parameter. A thread may lower the policy of
+        // another of its own process's threads, but not clear the reset-on-fork flag rtkit sets,
+        // which is why it's kept.
+        unsafe { libc::sched_setscheduler(tid, libc::SCHED_OTHER | SCHED_RESET_ON_FORK, &param) };
+    }
+    #[cfg(not(target_os = "linux"))]
+    let _ = tid;
 }
 
 /// Real-time threads aren't placed by a core's speed: left alone they land on efficiency cores too,
@@ -640,5 +875,153 @@ mod tests {
         let t = Instant::now();
         drop(pool(8));
         assert!(t.elapsed() < Duration::from_secs(5));
+    }
+
+    fn started(p: &Pool) -> HealthReport {
+        let t = Instant::now();
+        loop {
+            let r = p.health().report();
+            if r.starting == 0 {
+                return r;
+            }
+            assert!(t.elapsed() < Duration::from_secs(10), "the workers never started");
+            thread::sleep(Duration::from_millis(1));
+        }
+    }
+
+    #[test]
+    fn workers_refused_real_time_priority_play_nothing_and_the_rest_play_on() {
+        let g = wide_graph(40);
+        // Workers 1 and 3 of 4 are refused.
+        let p = Pool::new(PoolOptions { threads: 5, refuse_for_checks: 0b0101, ..Default::default() });
+        let r = started(&p);
+        assert_eq!((r.threads, r.playing, r.refused, r.stuck), (5, 3, 2, 0));
+        assert_eq!(p.playing(), 3);
+        assert!(p.has_workers());
+        assert_eq!(p.health().refusal(), Some("refused for a check"));
+        let job = Arc::new(Log::new(g.clone()));
+        run_blocks(&p, &g, &job, 300);
+        assert_eq!(job.early.load(Ordering::SeqCst), 0);
+        let mut ran = [false; 5];
+        for t in &job.thread {
+            ran[t.load(Ordering::Relaxed)] = true;
+        }
+        assert!(!ran[1] && !ran[3], "a refused worker took a task");
+        // The refused threads have ended.
+        assert!(p.joins.iter().filter(|j| j.is_finished()).count() >= 2);
+    }
+
+    #[test]
+    fn with_every_worker_refused_the_pool_has_none() {
+        let p = Pool::new(PoolOptions { threads: 3, refuse_for_checks: 0b11, ..Default::default() });
+        let r = started(&p);
+        assert_eq!((r.playing, r.refused), (1, 2));
+        assert!(!p.has_workers());
+        // It still works, the caller doing it all.
+        let g = wide_graph(12);
+        let job = Arc::new(Log::new(g.clone()));
+        run_blocks(&p, &g, &job, 3);
+        assert!(job.thread.iter().all(|t| t.load(Ordering::Relaxed) == 0));
+    }
+
+    #[test]
+    fn a_worker_given_up_on_is_retired_and_the_others_play_on() {
+        let ids: Vec<u64> = (0..64).collect();
+        let g = TaskGraph::new(ids, &[], |_| true).unwrap();
+        let job = Arc::new(Sleepy { slow: AtomicUsize::new(1), ran: AtomicUsize::new(0) });
+        let p = pool(3);
+        started(&p);
+        let ptr: *const Sleepy = Arc::as_ptr(&job);
+        let mut stuck = false;
+        for _ in 0..200 {
+            unsafe { p.start(&g, ptr) };
+            if !p.finish(Some(Duration::from_millis(20))) {
+                stuck = true;
+                break;
+            }
+            thread::sleep(Duration::from_millis(2));
+        }
+        assert!(stuck, "no worker ever got a task in 200 blocks");
+        assert_eq!(p.retire_stuck(), 1, "the worker in the slow task");
+        assert_eq!(p.retire_stuck(), 0, "and only once");
+        let r = p.health().report();
+        assert_eq!((r.playing, r.stuck), (2, 1));
+        assert!(p.has_workers());
+        let gone = p.shared.workers.iter().position(|w| w.state.load(Ordering::SeqCst) == RETIRED).unwrap() + 1;
+        while !p.is_done() {
+            thread::sleep(Duration::from_millis(1));
+        }
+        // Out of its task, it ends, and the pool plays on without it.
+        let t = Instant::now();
+        while !p.joins[gone - 1].is_finished() {
+            assert!(t.elapsed() < Duration::from_secs(5), "the retired worker didn't end");
+            thread::sleep(Duration::from_millis(1));
+        }
+        let g = wide_graph(40);
+        let log = Arc::new(Log::new(g.clone()));
+        run_blocks(&p, &g, &log, 300);
+        assert!(log.thread.iter().all(|t| t.load(Ordering::Relaxed) != gone));
+        assert_eq!(log.early.load(Ordering::SeqCst), 0);
+    }
+
+    /// Spins without sleeping on the first worker that gets a task, as a plug-in in an endless loop
+    /// would, until it's told to stop.
+    struct Spinner {
+        spin: AtomicBool,
+        on: AtomicUsize,
+    }
+
+    impl Job for Spinner {
+        fn run(&self, _task: usize, thread: usize) {
+            if thread == 0 {
+                thread::sleep(Duration::from_micros(200));
+                return;
+            }
+            if self.on.compare_exchange(0, thread, Ordering::SeqCst, Ordering::SeqCst).is_ok() {
+                let t = Instant::now();
+                while self.spin.load(Ordering::Relaxed) && t.elapsed() < Duration::from_secs(2) {
+                    std::hint::spin_loop();
+                }
+            }
+        }
+    }
+
+    /// The real thing, where the system grants real-time priority: a real-time worker that never
+    /// sleeps is killed with the whole process at RLIMIT_RTTIME's hard limit (200 ms), unless it's
+    /// demoted first. A failure here ends the test binary with SIGKILL.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn a_real_time_worker_given_up_on_is_demoted_before_the_kernel_kills_it() {
+        let p = Pool::new(PoolOptions { threads: 2, realtime: Some((512, 48000)), ..Default::default() });
+        let r = started(&p);
+        if r.realtime == 0 {
+            eprintln!("skipped: this system doesn't grant real-time priority ({:?})", p.health().refusal());
+            return;
+        }
+        let tid = p.shared.workers[0].tid.load(Ordering::SeqCst);
+        // SAFETY: a plain query about a thread of this process.
+        let policy = || unsafe { libc::sched_getscheduler(tid) } & !SCHED_RESET_ON_FORK;
+        assert_ne!(policy(), libc::SCHED_OTHER, "promoted");
+        let g = TaskGraph::new((0..64).collect(), &[], |_| true).unwrap();
+        let job = Arc::new(Spinner { spin: AtomicBool::new(true), on: AtomicUsize::new(0) });
+        let ptr: *const Spinner = Arc::as_ptr(&job);
+        let mut stuck = false;
+        for _ in 0..200 {
+            unsafe { p.start(&g, ptr) };
+            if !p.finish(Some(Duration::from_millis(40))) {
+                stuck = true;
+                break;
+            }
+        }
+        assert!(stuck, "the worker never got a task");
+        assert_eq!(p.retire_stuck(), 1);
+        assert_eq!(policy(), libc::SCHED_OTHER, "demoted");
+        // Past the hard limit, still spinning, and alive.
+        thread::sleep(Duration::from_millis(400));
+        job.spin.store(false, Ordering::Relaxed);
+        while !p.is_done() {
+            thread::sleep(Duration::from_millis(1));
+        }
+        assert_eq!(p.health().report().stuck, 1);
     }
 }

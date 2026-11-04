@@ -243,6 +243,7 @@ fn play_live(s: &mut Session, e: &Extras, buffer: usize, frames: usize) -> (Vec<
     // reset, and the lock keeps the callback out from here on.
     guard.render(0, 1, 0, None, &mut |_| {});
     let before = status.parallel_blocks.load(Ordering::Relaxed);
+    let overloads_before = status.overloads.load(Ordering::Relaxed);
     s.set_cycle(true, BAR / 2, BAR / 2 + (frames as i64 * 3 / 4));
     s.locate(0);
     s.play();
@@ -294,6 +295,11 @@ fn play_live(s: &mut Session, e: &Extras, buffer: usize, frames: usize) -> (Vec<
         at += buffer;
     }
     let pooled = status.parallel_blocks.load(Ordering::Relaxed) - before;
+    // An overload sheds load, at a block that depends on the machine: the comparison would mean nothing.
+    let overloads = status.overloads.load(Ordering::Relaxed) - overloads_before;
+    if overloads > 0 {
+        check(&format!("{buffer} frames: no overload while playing ({overloads})"), false);
+    }
     let errors = status.engine_errors.load(Ordering::Relaxed) as u64;
     drop(guard);
     s.stop();
@@ -337,7 +343,8 @@ fn main() {
     drop(s);
 
     // `Engine::process` itself, through fresh sessions, as the state playing leaves behind counts.
-    let live = |buffer: usize, threads: u32, name: &str| -> (Vec<f32>, u64, u64) {
+    // `refuse`: the workers (by bit) that act as if refused real-time priority.
+    let live = |buffer: usize, threads: u32, name: &str, refuse: u32| -> (Vec<f32>, u64, u64) {
         for attempt in 0.. {
             let mut s = session(&scratch);
             let e = build(&mut s, &scratch.join(name));
@@ -358,20 +365,54 @@ fn main() {
             s.remove_plugin(e.world.drums, 0);
             s.set_plugin(e.world.drums, 0, "builtin:compressor").unwrap();
             s.set_builtin_param(e.world.drums, 0, daw_engine::fx::compressor::param::LOOKAHEAD, 5.0).unwrap();
-            s.set_threads_for_checks(threads, if threads > 1 { PATIENT } else { ParallelTest::default() });
+            // Patient whatever the threads: a debug build on a busy machine plays blocks slower than
+            // real time, and the engine would shed load, at a moment that depends on the machine.
+            s.set_threads_for_checks(threads, if threads > 1 { PATIENT } else { ParallelTest { patient: true, ..Default::default() } });
+            if refuse != 0 {
+                s.start_workers_for_checks(PoolOptions { threads: threads as usize, refuse_for_checks: refuse, ..Default::default() });
+                s.idle();
+                wait_for_workers(&s);
+                let left = s.thread_choices().left_out;
+                let refused = refuse.count_ones();
+                check(
+                    &format!("Settings › Audio says {refused} of {} threads were refused ({left:?})", threads - 1),
+                    left.is_some_and(|l| l.refused == refused && l.playing == threads - refused && l.stuck == 0),
+                );
+            }
+            if name == "serial2" {
+                // What playing live leaves behind mustn't matter: the transport somewhere else, the
+                // automation (a send's level among it) read there, for as long as the null device
+                // gets through in a moment, which is anything from a few blocks to thousands.
+                s.locate(BAR + BAR / 3);
+                s.play();
+                std::thread::sleep(std::time::Duration::from_millis(150));
+                s.stop();
+                std::thread::sleep(std::time::Duration::from_millis(60));
+            }
             return play_live(&mut s, &e, buffer, frames);
         }
         unreachable!()
     };
     for buffer in [64usize, 128, 512, 1500] {
-        let (base, pooled, _) = live(buffer, 1, "serial");
+        let (base, pooled, _) = live(buffer, 1, "serial", 0);
         check(&format!("{buffer} frames: the serial loop stays off the pool, with sound (peak {:.3})", peak(&base)), pooled == 0 && peak(&base) > 0.01);
         if buffer == 512 {
-            let (twice, _, _) = live(buffer, 1, "serial2");
-            check("two live serial runs are the same", twice == base || twice.iter().zip(&base).all(|(a, b)| a.to_bits() == b.to_bits()));
+            let (twice, _, _) = live(buffer, 1, "serial2", 0);
+            let same_bits = twice.len() == base.len() && twice.iter().zip(&base).all(|(a, b)| a.to_bits() == b.to_bits());
+            check("two live serial runs are the same, whatever played live before", same_bits);
+            if !same_bits {
+                println!("     {}", first_diff(&twice, &base));
+            }
+            // Workers refused real-time priority play nothing; the others play on.
+            let (out, pooled, errors) = live(buffer, 4, "refused", 0b101);
+            let same_bits = out.len() == base.len() && out.iter().zip(&base).all(|(a, b)| a.to_bits() == b.to_bits());
+            check(&format!("2 of 3 workers refused: bit-identical on the other threads ({pooled} blocks on the pool)"), same_bits && pooled > 0 && errors == 0);
+            let (out, pooled, _) = live(buffer, 3, "refused", 0b11);
+            let same_bits = out.len() == base.len() && out.iter().zip(&base).all(|(a, b)| a.to_bits() == b.to_bits());
+            check(&format!("every worker refused: the serial loop plays ({pooled} blocks on the pool)"), same_bits && pooled == 0);
         }
         for threads in [2u32, 3, 8] {
-            let (out, pooled, errors) = live(buffer, threads, "pool");
+            let (out, pooled, errors) = live(buffer, threads, "pool", 0);
             let blocks = (frames / buffer) as u64;
             let same_bits = out.len() == base.len() && out.iter().zip(&base).all(|(a, b)| a.to_bits() == b.to_bits());
             // Blocks of over MAX_BLOCK frames count a pool run per sub-block.
@@ -392,13 +433,22 @@ fn main() {
     }
 }
 
+/// Until every worker has started (been granted or refused real-time priority).
+fn wait_for_workers(s: &Session) {
+    let started = std::time::Instant::now();
+    while s.threads_health_for_checks().is_some_and(|r| r.starting > 0) {
+        assert!(started.elapsed().as_secs() < 10, "the workers never started");
+        std::thread::sleep(std::time::Duration::from_millis(5));
+    }
+}
+
 /// Real-time workers, where the system grants it (rtkit): blocks back to back with nothing else
 /// letting them sleep. The kernel's 200 ms limit would SIGKILL this process if they never did.
 fn realtime_workers(scratch: &Path) {
     let mut s = session(scratch);
     let _e = build(&mut s, &scratch.join("rt"));
     s.set_threads_for_checks(3, ParallelTest { always: true, renders: false, patient: true });
-    s.start_workers_for_checks(PoolOptions { threads: 3, realtime: Some((512, RATE)), cpus: Vec::new() });
+    s.start_workers_for_checks(PoolOptions { threads: 3, realtime: Some((512, RATE)), ..Default::default() });
     s.idle();
     std::thread::sleep(std::time::Duration::from_millis(200));
     let granted = rt_threads();

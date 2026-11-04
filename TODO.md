@@ -37,6 +37,9 @@ Things that pass their checks but want a person.
   - **Not heard:** every check above was silent. Listen for dropouts and clicks, also when switching Processing
     Threads and editing routes (a send, an output, a side-chain) during playback. 128 samples was only measured on
     the null device.
+  - **Left-out threads** (2026-11-04): refused real-time priority and the demotion of a stuck worker are tested headlessly
+    (the demotion with real rtkit priority), not in the app. Not seen: Settings › Audio's note under Processing Threads
+    (it needs rtkit refusing, e.g. with rtkit stopped), and the overload message for a stuck worker.
 - **Track On/Off, drag to a new track, VST3 side-chain inputs, multi-output instruments, surviving SIGXCPU.** Checked in
   the running app on a virtual display: the new-track lane and drop, undo, the Off look, the Side Chain menu and SC
   badge, the "+", an output aux's name and Input slot, and TONE3000's editor opening on a copy of a real project.
@@ -101,12 +104,8 @@ they use there (simulated on Linux), but none of this has run on a real machine.
 
 ### Known bugs and unexplained failures
 
-- `parallel_check` failed once (the two live serial runs differed) while a large build shared its cores; it passed alone.
-
 - `soak_check <dir> 600 22` fails, on one thread as on eight: undoing every edit doesn't give the first document back. Not
   looked into. The default seed passes.
-- The first render after a send was added depends on how many live blocks ran in between, as `snap_gains` doesn't cover
-  send gains. Two renders in a row agree.
 - **Dropouts while other work runs:** with builds and checks running on every core (some taking real-time priority), the
   app ran late, went choppy and hit a System Overload once, while total CPU read about 15%. A later 10 minutes with that
   work kept to the efficiency cores, including about a minute of `stress-ng`, had no PipeWire errors. The cause isn't
@@ -119,6 +118,8 @@ they use there (simulated on Linux), but none of this has run on a real machine.
   reopening the project brings it back. Measured with two samples and our plug-in host only, no engine: 1 load in 300 at
   audio-device pace, 9 in 300 calling `process` flat-out. It hasn't been tried in another host, so whether the fault is LSP's
   or in how we call it is unknown. `multiout_check` and `parallel_check` retry past it and print a line when it happens.
+  `multiout_check` still failed once in a full run (2026-11-04, "undo rewires it … and it plays again", where undo makes a
+  new instance that isn't retried), and passed 3 of 3 alone: likely the same loss.
 - `controller_check` failed once in a full run, counting two MIDI messages too many ("other messages still play the
   instrument (2 -> 6)"), and passed 15 of 15 alone. Cause unknown.
 - An undo that turns a latent track back on during a take can shift where the take lands.
@@ -158,10 +159,13 @@ they use there (simulated on Linux), but none of this has run on a real machine.
 
 ### Multi-core processing
 
-- Workers at normal priority beside a real-time callback are safe but can be late under system load. Nothing yet falls back to
-  one thread when promotion is refused.
-- A plug-in that never returns while on a worker still meets the kernel's 200 ms limit, as on the callback. The callback now
-  gives up on the block, and could demote the worker so the app survives.
+- A plug-in that never returns at all, on a worker, still leaves the engine silent for good: the worker is demoted so the app
+  survives (and the project can be saved), but the block it holds never ends, and commands wait for it. Playing on would need
+  the strip it holds (and everything after it) to be left out of later blocks.
+- A worker retired after a give-up comes back only with Reset Audio Engine or a change of the setting. Bringing it back by
+  itself would need a judgement on whether the plug-in that held it is safe again.
+- Workers refused real-time priority play nothing, even where the callback itself didn't get it (where they would be no worse
+  off than the callback). Whether the callback got it isn't known to the engine.
 - Renders stay on one thread. They could go parallel with workers at normal priority.
 - Automatic is 1 on macOS and Windows until workers get real-time priority there.
 

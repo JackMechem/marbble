@@ -147,7 +147,10 @@ the same tab apply at once.
   threads out if you suspect them. The output is the same sample for sample whatever you choose.
   Apply Changes takes effect at once, without restarting audio. Bounces and other renders always
   play on one thread. On macOS and Windows, Automatic stays on one thread for now, as the extra
-  threads can only get real-time priority on Linux so far.
+  threads can only get real-time priority on Linux so far. On Linux, a thread the system refuses
+  real-time priority (rtkit not running, or its limits reached) plays nothing, as it could be late
+  whenever the computer is busy: tracks play on the threads that got it, or on the audio thread
+  alone, and a note under the setting says so.
 - **Reset Audio Engine** closes and reopens the devices, for example after replugging an
   interface.
 
@@ -3173,6 +3176,12 @@ up…". (Without this, the system would kill Marbble for holding the processor.)
 Buffer Size, bypass or freeze heavy plug-ins, and see
 [Crackles, clicks or dropouts](#crackles-clicks-or-dropouts). Bounces and other offline renders
 are not affected.
+
+When the message says a processing thread "stayed in" a track, a plug-in on that track didn't
+finish its work for a tenth of a second. That thread is left out from then on, so the plug-in
+can't take Marbble down with it even if it never finishes, and the other threads play on. **Reset
+Audio Engine** in Settings › Audio brings it back. Until then Settings › Audio says how many threads
+play.
 
 ### "… put out invalid audio" and a plug-in goes quiet
 

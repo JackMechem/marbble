@@ -18,7 +18,7 @@ use std::cell::UnsafeCell;
 use std::time::Duration;
 
 use super::graph::{TaskGraph, MAX_TASKS};
-use super::pool::{Job, Pool, PoolOptions};
+use super::pool::{Health, Job, Pool, PoolOptions};
 use super::*;
 
 /// Below this share of the buffer the callback plays alone: waking threads costs more than a
@@ -26,7 +26,9 @@ use super::*;
 const ENGAGE_LOAD: f32 = 0.15;
 /// The least the callback waits for a block's last strips before it gives the block up. Only a stuck
 /// plug-in or a worker kept off the CPU gets near it. The callback naps through most of this, so the
-/// kernel's 200 ms real-time limit isn't at stake for it.
+/// kernel's 200 ms real-time limit isn't at stake for it. The stuck worker is demoted then
+/// (`Pool::retire_stuck`), which must come before that limit: this, plus the pool's `RT_GUARD`, is
+/// well under it.
 const GIVE_UP_SECS: f64 = 0.1;
 
 /// How a block in the pool ended.
@@ -100,8 +102,18 @@ impl Workers {
         self.pool.threads()
     }
 
+    /// Threads that play now: the caller and the workers fit to (see [`Pool::playing`]).
+    pub fn playing(&self) -> usize {
+        self.pool.playing()
+    }
+
     pub fn realtime_workers(&self) -> u32 {
         self.pool.realtime_workers()
+    }
+
+    /// How the workers are doing, to be read while the engine has them.
+    pub fn health(&self) -> Arc<Health> {
+        self.pool.health()
     }
 }
 
@@ -112,7 +124,9 @@ impl Workers {
 pub struct ParallelTest {
     pub always: bool,
     pub renders: bool,
-    /// Never give a block up, on a machine too loaded to promise anything about time.
+    /// Never give a block up, and never shed load for a callback that runs late, on a machine too
+    /// loaded to promise anything about time: a check's output must not depend on it. Holds
+    /// whatever the thread count.
     pub patient: bool,
 }
 
@@ -149,7 +163,9 @@ impl Parallel {
 
     /// Whether this block goes through the pool.
     pub fn wanted(&mut self, offline: bool, tracks: &[Box<TrackDsp>]) -> bool {
-        if self.workers.is_none() {
+        // With every worker refused real-time priority or given up on, the serial loop does the
+        // same work without the pool's bookkeeping.
+        if self.workers.as_ref().is_none_or(|w| !w.pool.has_workers()) {
             return false;
         }
         let Some(g) = &self.graph else { return false };
@@ -175,7 +191,7 @@ impl Parallel {
     /// under `ENGAGE_LOAD`: `threads` threads can't have done more than that many times the work.
     pub fn weigh(&mut self, now: f32, average: f32) {
         if self.engaged {
-            let threads = self.workers.as_ref().map_or(1, |w| w.threads()) as f32;
+            let threads = self.workers.as_ref().map_or(1, |w| w.playing()) as f32;
             self.engaged = average * threads >= ENGAGE_LOAD;
         } else {
             self.engaged = now >= ENGAGE_LOAD;
@@ -184,7 +200,7 @@ impl Parallel {
 
     /// Threads the last callback used, when it changed: the callback alone unless `pooled`.
     pub fn threads_now(&mut self, pooled: bool) -> Option<u32> {
-        let n = if pooled { self.workers.as_ref().map_or(1, |w| w.threads() as u32) } else { 1 };
+        let n = if pooled { self.workers.as_ref().map_or(1, |w| w.playing() as u32) } else { 1 };
         (n != self.last_threads).then(|| {
             self.last_threads = n;
             n
@@ -236,6 +252,9 @@ impl Parallel {
         }
         let limit = (!cx.wait).then(|| Duration::from_secs_f64(GIVE_UP_SECS.max(4.0 * cx.n as f64 / cx.sr)));
         if !w.pool.finish(limit) {
+            // The worker holding the block up is demoted and plays no more, so that a plug-in
+            // that never returns can't get the app killed, and the others carry on once it's out.
+            w.pool.retire_stuck();
             return Outcome::Stalled;
         }
         match w.pool.take_panics() {
@@ -406,6 +425,8 @@ mod tests {
     struct Tone {
         phase: f32,
         hz: f32,
+        /// Where `reset` puts the phase back.
+        start: f32,
     }
 
     impl Effect for Tone {
@@ -422,7 +443,9 @@ mod tests {
                 r[i] += s * 0.5 - k;
             }
         }
-        fn reset(&mut self) {}
+        fn reset(&mut self) {
+            self.phase = self.start;
+        }
     }
 
     fn tone(uid: Id, hz: f32, key: Option<Id>, pre: bool) -> InsertDsp {
@@ -434,10 +457,10 @@ mod tests {
             params: &[],
             meters: &[],
             sidechain: true,
-            new: |_| Box::new(Tone { phase: 0.0, hz: 0.0 }),
+            new: |_| Box::new(Tone { phase: 0.0, hz: 0.0, start: 0.0 }),
         };
         let mut b = BuiltinDsp::new(&info, SR as f32, &[]);
-        b.replace_effect_for_tests(Box::new(Tone { phase: uid as f32 * 0.01, hz }));
+        b.replace_effect_for_tests(Box::new(Tone { phase: uid as f32 * 0.01, hz, start: uid as f32 * 0.01 }));
         InsertDsp { uid, bypass: false, plugin: Plugin::Builtin(Box::new(b)), key: KeyRoute::new(key, pre) }
     }
 
@@ -505,6 +528,26 @@ mod tests {
             assert_eq!(blocks, 200, "{threads} threads: every block went through the pool");
             assert!(bits(&out) == bits(&serial), "{threads} threads differ from the serial loop");
         }
+    }
+
+    #[test]
+    fn a_render_after_a_new_send_does_not_depend_on_how_long_it_played_live_first() {
+        let renders: Vec<Vec<Vec<f32>>> = [1, 40]
+            .into_iter()
+            .map(|blocks| {
+                let mut e = rig();
+                project(&mut e);
+                // Track 3 starts sending to aux 6, after the fader and before it.
+                e.tx.push(Cmd::Params(3, params(None, &[(7, 0.6, true), (6, 0.5, false), (6, 0.3, true)]))).ok().unwrap();
+                let mut out = vec![0.0f32; BLOCK * 2];
+                for _ in 0..blocks {
+                    e.engine.process(&[], 0, &mut out, 2);
+                }
+                e.engine.render(0, 4 * BLOCK as i64, 0, None, &mut |_| {})
+            })
+            .collect();
+        assert!(renders[0][0].iter().any(|s| s.abs() > 0.01));
+        assert!(renders[0].iter().zip(&renders[1]).all(|(a, b)| bits(a) == bits(b)), "the sends start at their levels");
     }
 
     #[test]
@@ -592,7 +635,7 @@ mod tests {
             params: &[],
             meters: &[],
             sidechain: false,
-            new: |_| Box::new(Tone { phase: 0.0, hz: 0.0 }),
+            new: |_| Box::new(Tone { phase: 0.0, hz: 0.0, start: 0.0 }),
         };
         let mut b = BuiltinDsp::new(&info, SR as f32, &[]);
         b.replace_effect_for_tests(Box::new(Bomb(armed.clone())));
@@ -658,7 +701,7 @@ mod tests {
             params: &[],
             meters: &[],
             sidechain: false,
-            new: |_| Box::new(Tone { phase: 0.0, hz: 0.0 }),
+            new: |_| Box::new(Tone { phase: 0.0, hz: 0.0, start: 0.0 }),
         };
         let mut b = BuiltinDsp::new(&info, SR as f32, &[]);
         b.replace_effect_for_tests(Box::new(TarOnWorker(Tar(hold.clone()))));
@@ -701,6 +744,57 @@ mod tests {
         e.tx.push(Cmd::Play { from: 0 }).ok().unwrap();
         e.engine.process(&[], 0, &mut out, 2);
         assert!(out.iter().any(|s| s.abs() > 0.01), "and plays again");
+        // Without the worker it was given up on: the only one, so serially from here on.
+        let w = e.engine.parallel.workers.as_ref().unwrap();
+        assert_eq!((w.playing(), w.health().report().stuck), (1, 1));
+        let pooled = e.status.parallel_blocks.load(Ordering::Relaxed);
+        e.engine.process(&[], 0, &mut out, 2);
+        assert_eq!(e.status.parallel_blocks.load(Ordering::Relaxed), pooled);
+    }
+
+    #[test]
+    fn after_a_worker_is_given_up_on_the_others_play_on() {
+        let hold = Arc::new(AtomicU32::new(0));
+        let mut e = rig();
+        let g = project(&mut e);
+        let info = EffectInfo {
+            id: "test:tar",
+            name: "Tar",
+            category: "Utility",
+            params: &[],
+            meters: &[],
+            sidechain: false,
+            new: |_| Box::new(Tone { phase: 0.0, hz: 0.0, start: 0.0 }),
+        };
+        let tar = |hold: &Arc<AtomicU32>| {
+            let mut b = BuiltinDsp::new(&info, SR as f32, &[]);
+            b.replace_effect_for_tests(Box::new(TarOnWorker(Tar(hold.clone()))));
+            Some(InsertDsp { uid: 99, bypass: false, plugin: Plugin::Builtin(Box::new(b)), key: KeyRoute::default() })
+        };
+        e.tx.push(Cmd::Insert { track: 2, slot: 1, insert: tar(&hold) }).ok().unwrap();
+        e.tx.push(Cmd::Graph(Some(Box::new(g)))).ok().unwrap();
+        e.tx.push(Cmd::Workers(Some(Workers::new(PoolOptions { threads: 4, ..Default::default() })))).ok().unwrap();
+        e.tx.push(Cmd::ParallelTest(ParallelTest { always: true, renders: false, patient: false })).ok().unwrap();
+        hold.store(1, Ordering::SeqCst);
+        let mut out = vec![0.0f32; BLOCK * 2];
+        let started = Instant::now();
+        while e.status.overloads.load(Ordering::Relaxed) == 0 {
+            assert!(started.elapsed().as_secs() < 20, "no worker ever got the strip");
+            e.engine.process(&[], 0, &mut out, 2);
+        }
+        hold.store(0, Ordering::SeqCst);
+        while e.engine.parallel.stalled || e.engine.shedding > 0 {
+            e.engine.process(&[], 0, &mut out, 2);
+        }
+        let w = e.engine.parallel.workers.as_ref().unwrap();
+        assert_eq!((w.playing(), w.health().report().stuck), (3, 1));
+        // The stuck plug-in goes (it would hold up any worker now, at once), and the rest plays on.
+        e.tx.push(Cmd::Insert { track: 2, slot: 1, insert: None }).ok().unwrap();
+        let before = e.status.parallel_blocks.load(Ordering::Relaxed);
+        let got = play(&mut e, 40);
+        assert_eq!(e.status.parallel_blocks.load(Ordering::Relaxed) - before, 40, "every block on the pool");
+        assert_eq!(e.status.threads.load(Ordering::Relaxed), 3);
+        assert!(got.iter().any(|s| s.abs() > 0.01));
     }
 
     /// Tar, on worker threads only (the test thread's name tells them apart).

@@ -4,9 +4,9 @@
 
 use super::*;
 use crate::dsp::graph::{GraphError, TaskGraph};
-use crate::dsp::pool::PoolOptions;
+use crate::dsp::pool::{Health, HealthReport, PoolOptions};
 use crate::dsp::{ParallelTest, Workers};
-use crate::threads::{self as setting, ThreadChoices, Topology};
+use crate::threads::{self as setting, LeftOut, ThreadChoices, Topology};
 
 /// Whether a command can change which strips read which.
 pub(super) fn changes_routes(cmd: &Cmd) -> bool {
@@ -35,6 +35,12 @@ pub(super) struct ThreadState {
     pub test: ParallelTest,
     /// A measurement chose the workers itself.
     pub forced: bool,
+    /// How the workers the engine has are doing.
+    pub health: Option<Arc<Health>>,
+    /// What of it has been logged.
+    pub logged: HealthReport,
+    /// Start the workers afresh even if the setting is the same (the audio restarted).
+    pub renew: bool,
 }
 
 impl Session {
@@ -43,8 +49,49 @@ impl Session {
         setting::resolve(self.audio_config.processing_threads, &self.threads.topology)
     }
 
+    /// What Settings › Audio offers, and which threads the running pool left out.
     pub fn thread_choices(&self) -> ThreadChoices {
-        setting::choices(&self.threads.topology)
+        let mut c = setting::choices(&self.threads.topology);
+        c.left_out = self.threads_left_out();
+        c
+    }
+
+    /// Threads the engine's pool asked for but plays without, once they've all started: refused
+    /// real-time priority, or given up on in a plug-in that kept one too long.
+    pub fn threads_left_out(&self) -> Option<LeftOut> {
+        let r = self.threads.health.as_ref()?.report();
+        (r.starting == 0 && r.refused + r.stuck > 0).then_some(LeftOut { playing: r.playing, threads: r.threads, refused: r.refused, stuck: r.stuck })
+    }
+
+    /// Logs, once, what the pool left out since the last look.
+    fn log_threads_left_out(&mut self) {
+        let Some(h) = &self.threads.health else { return };
+        let r = h.report();
+        if r.starting > 0 {
+            return;
+        }
+        let told = &mut self.threads.logged;
+        if r.refused > told.refused {
+            let why = h.refusal().unwrap_or("the thread couldn't start");
+            log::warn!(
+                "processing threads refused real-time priority: {} of {} ({why}); they play nothing, and tracks play on {} threads",
+                r.refused,
+                r.threads - 1,
+                r.playing
+            );
+        }
+        if r.stuck > told.stuck {
+            log::warn!("processing threads given up on in a plug-in, demoted and left out: {}; tracks play on {} threads", r.stuck, r.playing);
+        }
+        *told = r;
+    }
+
+    fn started_workers(&mut self, opts: PoolOptions) {
+        self.threads.renew = false;
+        let w = Workers::new(opts);
+        self.threads.health = Some(w.health());
+        self.threads.logged = HealthReport::default();
+        self.send(Cmd::Workers(Some(w)));
     }
 
     /// Brings the workers and the graph in line with the setting and the project, after an edit.
@@ -53,6 +100,7 @@ impl Session {
     /// a new graph reaches it, the engine notices that the old one doesn't fit the routes and plays
     /// the affected blocks serially, so this only needs to come soon after the edit.
     pub fn sync_parallel(&mut self) {
+        self.log_threads_left_out();
         if !std::mem::take(&mut self.graph_dirty) {
             return;
         }
@@ -76,19 +124,21 @@ impl Session {
         }
         let realtime = self.audio_status.running && self.audio_config.output.as_deref() != Some(audio_io::NULL_OUTPUT);
         let wanted = (threads, realtime);
-        if worth && !self.threads.forced && self.threads.running != Some(wanted) {
+        if worth && !self.threads.forced && (self.threads.running != Some(wanted) || self.threads.renew) {
             let opts = PoolOptions {
                 threads,
                 realtime: realtime.then_some((self.audio_status.buffer_size, self.audio_status.sample_rate)),
                 cpus: self.threads.topology.fast.clone(),
+                ..Default::default()
             };
             self.threads.running = Some(wanted);
-            self.send(Cmd::Workers(Some(Workers::new(opts))));
+            self.started_workers(opts);
         }
     }
 
     fn stop_workers(&mut self) {
         if self.threads.running.take().is_some() {
+            self.threads.health = None;
             self.send(Cmd::Workers(None));
         }
         if self.threads.graph.take().is_some() {
@@ -101,7 +151,13 @@ impl Session {
     pub fn start_workers_for_checks(&mut self, opts: PoolOptions) {
         self.threads.forced = true;
         self.threads.running = Some((opts.threads, opts.realtime.is_some()));
-        self.send(Cmd::Workers(Some(Workers::new(opts))));
+        self.started_workers(opts);
+    }
+
+    /// For checks: how the workers the engine was last sent are doing.
+    #[doc(hidden)]
+    pub fn threads_health_for_checks(&self) -> Option<HealthReport> {
+        self.threads.health.as_ref().map(|h| h.report())
     }
 
     /// For checks: whether the engine would trust its task graph right now.

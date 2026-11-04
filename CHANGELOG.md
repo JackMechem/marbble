@@ -16,6 +16,15 @@ All notable changes to Marbble are recorded here. The format follows
   Plug-in editors still open through XWayland, with their OpenGL kept apart from GTK's, so DPF
   editors (Zam, Dragonfly) open there too. The default stays XWayland.
 
+### Changed
+
+- **Processing threads that can't be relied on are left out.** On Linux, a thread the system
+  refuses real-time priority no longer plays tracks at normal priority, where it could be late:
+  the others play on, or the audio thread alone, and Settings › Audio says so under Processing
+  Threads. A thread given up on in a plug-in that stops responding is taken off real-time priority
+  at once and left out until Reset Audio Engine, so the system can't kill Marbble for it, and the
+  other threads play on once the plug-in returns.
+
 ### Fixed
 
 - **The bottom section can no longer cover the Tracks area.** A Mixer, editor or docked panel
@@ -32,6 +41,13 @@ All notable changes to Marbble are recorded here. The format follows
   show it.
 - An X error raised while a plug-in's editor first opened could end Marbble: the handler that
   logs such errors is now installed before the editor attaches.
+- The first bounce or export after adding a send could differ slightly from the next one, as the
+  send's level was still gliding up from wherever playing had left it. Renders now start every
+  send at its level, as they did the faders.
+- `parallel_check` failed now and then on a busy machine: its live runs play a debug build flat out,
+  slower than real time when the cores are shared, and the engine shed load as for a real overload,
+  at a block that depended on the load. Checks that ask for it (`ParallelTest::patient`) no longer
+  shed load, and the check fails plainly if an overload happens anyway.
 
 ## [0.1.0-alpha.6] - 2026-11-03
 

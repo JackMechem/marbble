@@ -41,8 +41,10 @@ impl Session {
         let rate = if status.running { status.sample_rate } else { self.audio_config.sample_rate };
         self.audio = io;
         self.audio_status = status;
-        // Whether the workers should be real-time threads depends on the device.
+        // Whether the workers should be real-time threads depends on the device. They start afresh,
+        // promoted for its buffer, with any given up on in a stuck plug-in back.
         self.graph_dirty = true;
+        self.threads.renew = true;
         // The command counter restarts with the engine's view of it.
         self.cmds_sent = self.status.cmds_done.load(Ordering::Relaxed);
         self.pending_pos = None;

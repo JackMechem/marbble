@@ -1,7 +1,7 @@
 // The `Sheet` frame dialogs are built on, New Tracks, the Settings window with its Audio and Appearance
 // panes (the rest are in settingsPanes/), Group Settings and the input level warning.
 import { useEffect, useRef, useState } from "react";
-import { threadOptions, type ThreadChoices } from "../threads";
+import { threadNote, threadOptions, type ThreadChoices } from "../threads";
 import { useSheetKeys } from "../sheetKeys";
 import type { SheetMode } from "../sheetKeysModel";
 import { ask } from "@tauri-apps/plugin-dialog";
@@ -227,6 +227,8 @@ function AudioPane({ close }: { close: () => void }) {
     });
     call<ThreadChoices>("thread_choices").then(setThreads);
   }, []);
+  // New threads ask for real-time priority as they start, so what was left out is known a moment later.
+  const refreshThreads = () => setTimeout(() => call<ThreadChoices>("thread_choices").then(setThreads), 500);
   useEffect(() => {
     if (cfg) call<DeviceList>("audio_devices", { host: cfg.host }).then(setDevices);
   }, [cfg?.host]);
@@ -253,6 +255,7 @@ function AudioPane({ close }: { close: () => void }) {
     if (snap) {
       audioDraft = null;
       setApplied(cfg);
+      refreshThreads();
     }
     return !!snap;
   };
@@ -299,6 +302,12 @@ function AudioPane({ close }: { close: () => void }) {
           How many threads play tracks at once. Automatic uses more only when a project needs them; 1 keeps everything on the audio thread. Changes take effect
           without restarting audio.
         </span>
+        {threads && threadNote(threads) && (
+          <>
+            <span />
+            <span className="warn">{threadNote(threads)}</span>
+          </>
+        )}
         <label>Monitoring:</label>
         <label className="check">
           <input type="checkbox" checked={cfg.auto_monitor} onChange={(e) => setCfg({ ...cfg, auto_monitor: e.target.checked })} />
@@ -344,6 +353,7 @@ function AudioPane({ close }: { close: () => void }) {
               setBusy(true);
               await act("restart_audio");
               setBusy(false);
+              refreshThreads();
             }}
           >
             Reset Audio Engine

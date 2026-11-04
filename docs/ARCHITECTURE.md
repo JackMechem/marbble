@@ -63,7 +63,7 @@ flowchart LR
 | **Main / UI thread** | Tauri | Runs synchronous Tauri commands (most edits, including audio import with its decoding and resampling), the native menu, the GTK main loop on Linux, the 30 ms idle timer (`Session::idle`: plug-in controller idle, latency changes, draining `Garbage`, automation follow and writes), and taking autosaves. All VST3 *controllers* and editor windows live here. | Block for long. Renders are async commands for that reason. |
 | **`audio-io`** | `audio_io::start` | Builds and owns the cpal streams, then waits until the device is closed. | |
 | **Audio callback** | cpal (output stream) | Calls `Engine::process` once per device buffer, inside `catch_unwind`; the input stream's callback only fills the input ring. Runs with real-time priority (rtkit on Linux). | Allocate, lock, block, do I/O. See [Real-time rules](#3-real-time-rules). |
-| **`marbble-dsp-N`** | `dsp/pool.rs`, started by `Session::sync_parallel` | Plays strips alongside the audio callback when Settings › Audio › Processing Threads allows it and a project is heavy enough, then blocks until the next block. Real-time like the callback. See [Multi-core processing](#multi-core-processing). | The same as the audio callback. |
+| **`marbble-dsp-N`** | `dsp/pool.rs`, started by `Session::sync_parallel` | Plays strips alongside the audio callback when Settings › Audio › Processing Threads allows it and a project is heavy enough, then blocks until the next block. Real-time like the callback; one refused that plays nothing. See [Multi-core processing](#multi-core-processing). | The same as the audio callback. |
 | **`recorder`** | `recorder.rs` | Every 10 ms, drains the ring buffer of each armed track into its WAV file and an in-memory copy, and keeps a peak preview for the UI. | Touch the engine or the project. |
 | **`ui-tick`** | `src-tauri/src/main.rs` | Every 33 ms: locks the session, builds a `Tick` (playhead, meters, input levels, recording previews, CPU, latency, analyzer spectrum, warnings, meters of open built-in effect panels, the clip indicators' held peaks, each strip's gain reduction) and emits it as the `tick` event. | Edit anything. |
 | **MIDI refresh** | `main.rs` | Every 3 s: `Session::refresh_midi`, so devices plugged in later get connected. | |
@@ -145,8 +145,9 @@ Failures on the audio thread are contained rather than fatal:
 Other conventions inside the engine:
 
 - Gains are smoothed with a one-pole filter of about 5 ms (`smooth` in `process_block`), so
-  fader moves, mutes and send changes don't click. `snap_gains` jumps straight to the target at
-  the start of a render.
+  fader moves, mutes and send changes don't click. `snap_gains` jumps the faders' and sends'
+  gains straight to their targets at the start of a render (and in the first live block after
+  one), so a render doesn't depend on how far a gain had glided live before it.
 - A muted send keeps its slot with gain 0, so it fades out instead of clicking.
 - `Meter::feed` uses `fetch_max` on the float bits (non-negative floats order like their bit
   patterns), and `take` swaps in zero, so the UI reads the peak since its last tick. The
@@ -696,6 +697,21 @@ guarantees:
   commands; then the engine flushes notes and carries on, shedding as after any overload. Anything
   that changes the graph off the audio thread (`replace_graph`, `render`, dropping the engine) first
   waits for it (`Engine::settle`).
+- *A worker given up on is retired.* At the give-up `Pool::retire_stuck` takes every worker still
+  in a task (`Slot::busy`, set before a worker claims, so one preempted between taking a task and
+  starting it counts) out of the pool: it takes no task again and its thread ends once it gets out.
+  A real-time one is demoted to `SCHED_OTHER` there and then, by its kernel thread id. RLIMIT_RTTIME
+  only counts time under a real-time policy, so a plug-in that never returns can now spin on
+  without the kernel killing the app at 200 ms. The callback gives up after 100 ms (four
+  sub-blocks of at most `MAX_BLOCK` take no longer at 44.1 kHz and up), and `RT_GUARD` keeps a
+  worker from having gone more than 50 ms without sleeping when the block started, so the demotion
+  comes in time. That
+  one `sched_setscheduler` call is the only system call the callback makes for this, and only on a
+  give-up. The rest of the pool plays on with the other workers once the block is over, or
+  serially if none is left. The overload message says the thread is left out; Reset Audio Engine
+  (`restart_audio` sets `ThreadState::renew`) starts the pool afresh. A plug-in that never returns
+  at all still leaves the engine silent, as on the callback, but the app stays up to save the
+  project.
 - *A panic stays in its task.* It is caught, counted in `engine_errors`, its dependants still run
   and the block is silenced. The pool isn't poisoned.
 - *Workers really sleep.* A real-time thread that never blocks is killed at RLIMIT_RTTIME's hard limit
@@ -704,11 +720,18 @@ guarantees:
   naps before its next task; the callback does the work meanwhile, and `OVERLOAD_SECS` sheds load as
   ever when the callback itself falls behind. `survive_slow_blocks` covers workers too, and every
   worker's load counts toward the same block, so the meter and the shedding still see a late block.
-  Past that a plug-in that never returns on a worker is what it always was on the callback: the
-  kernel's limit applies.
+  A plug-in that never returns on a worker is demoted before the kernel's limit (above); on the
+  callback the limit still applies.
 
 **Real time.** Workers call `audio_thread_priority::promote_current_thread_to_real_time`, as cpal
-does for its callback (rtkit, the same priority and limits), and stay at normal priority if refused.
+does for its callback (rtkit, the same priority and limits). A worker refused it plays nothing: at
+normal priority beside a real-time callback it would be late whenever the system is busy. Each
+worker starts `STARTING`, takes tasks only once `ACTIVE`, and a refused one ends (`LEFT_OUT`), so the
+pool plays on with the workers that were granted it, and when none was `Parallel::wanted` plays the
+serial loop. The counts are in `pool::Health`, which the session keeps a handle to: it logs once
+what was left out and why, and `thread_choices` carries it (`LeftOut`) for Settings › Audio's note.
+`PoolOptions::refuse_for_checks` refuses chosen workers for tests and `parallel_check`. Away from
+Linux promotion isn't tried yet, so a number chosen by hand gets workers at normal priority.
 On a machine with performance and efficiency cores they keep to the performance cores
 (`Topology::fast`), as the scheduler places real-time threads without regard to a core's speed: measured
 at 128 frames, that took 24 CHOWTapeModels from a mean of 340 µs to 270 µs and the 99th percentile of 5
@@ -727,6 +750,10 @@ Linux too, where workers can't get real-time priority yet.
 **Offline renders** stay serial: their blocks come back to back with no real-time deadline, and
 real-time workers that never sleep would be killed for it. `ParallelTest::renders` sends them through
 the pool for `parallel_check` and `soak_check`, so the route is tested for identity.
+`ParallelTest::patient` is for checks that drive `Engine::process` flat out: no block is given up
+on and no load is shed, as either would land at a block that depends on how busy the machine is (a
+debug build with its cores shared plays slower than real time, which once made `parallel_check`'s
+two serial runs differ).
 
 **What a block touches, and who may:**
 

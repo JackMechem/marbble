@@ -92,11 +92,26 @@ pub struct ThreadChoices {
     pub automatic: u32,
     /// The highest number on offer.
     pub max: u32,
+    /// Threads the running setting asked for that play nothing, when there are any.
+    pub left_out: Option<LeftOut>,
+}
+
+/// Threads playing fewer than the setting asked for, and why.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+pub struct LeftOut {
+    /// Threads that play tracks, the audio thread included.
+    pub playing: u32,
+    /// Threads asked for, the audio thread included.
+    pub threads: u32,
+    /// Refused real-time priority by the system.
+    pub refused: u32,
+    /// Stopped after a plug-in kept one past the time limit.
+    pub stuck: u32,
 }
 
 /// What Settings › Audio › Processing Threads offers on this machine.
 pub fn choices(t: &Topology) -> ThreadChoices {
-    ThreadChoices { automatic: automatic(t) as u32, max: t.logical.clamp(1, MANUAL_MAX) as u32 }
+    ThreadChoices { automatic: automatic(t) as u32, max: t.logical.clamp(1, MANUAL_MAX) as u32, left_out: None }
 }
 
 #[cfg(test)]

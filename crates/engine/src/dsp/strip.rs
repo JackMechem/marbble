@@ -363,6 +363,11 @@ pub(super) fn run_strip<R: Routes>(cx: &BlockCtx<'_>, ti: usize, t: &mut TrackDs
             (Some(s), Some(j)) if j > ti && iso.map(|i| i.feeds(role, routes.id_of(j))).unwrap_or(true) => {
                 if s.pre_fader {
                     let target = if audible { s.gain } else { 0.0 };
+                    // As the fader's gains: a render starts at the level, however long the
+                    // send had to glide there live.
+                    if snap_gains {
+                        t.send_gains[k] = target;
+                    }
                     let tap = &mut t.pdc_taps.sends[k];
                     tap.aim(tap_delay(pdc.sends[k]), pdc_fade);
                     match &t.delay {
@@ -446,6 +451,9 @@ pub(super) fn run_strip<R: Routes>(cx: &BlockCtx<'_>, ti: usize, t: &mut TrackDs
     for k in 0..SEND_SLOTS {
         if let (Some(s), Some(j)) = (p.sends[k], t.send_idx[k]) {
             if !s.pre_fader && j > ti && iso.map(|i| i.feeds(role, routes.id_of(j))).unwrap_or(true) {
+                if snap_gains {
+                    t.send_gains[k] = s.gain;
+                }
                 let tap = &mut t.pdc_taps.sends[k];
                 tap.aim(tap_delay(pdc.sends[k]), pdc_fade);
                 match &t.delay {
