@@ -3,7 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { PluginDesc } from "../src/api.ts";
 import type { Recovery, RecordingRecovery } from "../src/prefs.ts";
-import { describeMidi, pluginType, recordingSummary, recoveryIntro, when } from "../src/settingsText.ts";
+import { describeMidi, oldFolderNote, pluginType, recordingSummary, recoveryIntro, when } from "../src/settingsText.ts";
 
 test("describeMidi names messages, Logic-style with C3 as middle C", () => {
   assert.deepEqual(describeMidi([0x90, 60, 100]), ["Ch 1", "Note On  C3  vel 100"]);
@@ -48,4 +48,13 @@ test("recoveryIntro says what was left", () => {
   assert.match(recoveryIntro([r(true, false)]), /autosaved but never saved/);
   assert.match(recoveryIntro([r(true, false), r(false, true)]), /These projects have unsaved work/);
   assert.match(recoveryIntro([r(true, false), r(true, false)]), /These projects have autosaved changes/);
+});
+
+test("the old projects folder's note says what renaming does, and what holds it", () => {
+  const f = { old: "/h/Music/Fermata", new: "/h/Music/Marbble", open: null };
+  const free = oldFolderNote(f);
+  assert.match(free, /\/h\/Music\/Fermata/);
+  assert.match(free, /\/h\/Music\/Marbble/);
+  assert.doesNotMatch(free, /is open from it/);
+  assert.match(oldFolderNote({ ...f, open: "Song" }), /“Song” is open from it/);
 });

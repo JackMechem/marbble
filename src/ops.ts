@@ -20,6 +20,7 @@ import { followingRegion, shapeOf } from "./fades";
 import { getSettings } from "./prefs";
 import { canHaveAlternatives, trackAltMenu } from "./trackAlternatives";
 import { isDefault, paramsOf } from "./regionParams";
+import { onTracks } from "./regionSelect";
 
 const project = () => getState().snap?.project;
 const tracks = (): Track[] => project()?.tracks ?? [];
@@ -78,8 +79,18 @@ export function clickTrack(id: Id, e: { shiftKey: boolean; ctrlKey: boolean; met
   } else {
     sel = selectedTracks().includes(id) && selectedTracks().length > 1 ? selectedTracks() : [id];
   }
-  setState({ selectedTracks: withGroups(sel), focus: "tracks" });
+  const chosen = withGroups(sel);
+  setState({ selectedTracks: chosen, focus: "tracks" });
+  keepRegionsOn(chosen);
   if (cur !== id) api.selectTrack(id);
+}
+
+/** Choosing tracks by hand deselects the regions on other tracks, as a click on an empty lane
+ *  does, so the Inspector's Region and Track sections always describe the same track. */
+export function keepRegionsOn(trackIds: Id[]) {
+  const sel = getState().selectedRegions;
+  const kept = onTracks(tracks(), sel, trackIds);
+  if (kept.length !== sel.length) setState({ selectedRegions: kept });
 }
 
 // ---- track operations ---------------------------------------------------------------------

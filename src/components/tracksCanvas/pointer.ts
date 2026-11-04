@@ -9,7 +9,7 @@ import { tempoMap } from "../../tempo";
 import { indexAt, visibleSteps } from "../../layout";
 import { viewport } from "../../view";
 import { openMenu } from "../Menu";
-import { laneMenu, linkedRegions, regionMenu, renameRegion } from "../../ops";
+import { keepRegionsOn, laneMenu, linkedRegions, regionMenu, renameRegion } from "../../ops";
 import { isLooped, regionEnd } from "../../loops";
 import { automationHover, automationMenu, automationMouseDown } from "../../automation";
 import { refuseFrozen } from "../../freeze";
@@ -26,6 +26,7 @@ import { onGainHandle, startGainDrag } from "../../regionGainDrag";
 import { activeTool, notePointer, pressOnMarquee, toolHover, toolMouseDown, type ToolView } from "../../trackTools";
 import { regionCrossfades, setCrossfadeDrag } from "../../regionDraw";
 import { grabKind as regionGrabKind } from "../../regionGrab";
+import { editorPaneFor } from "../../regionEditor";
 import { dragNewLanes, dragTarget, type TracksRefs } from "./drag";
 
 /** Logic's loop tool pointer: a circular arrow. */
@@ -139,6 +140,7 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
     if (deselect) return;
     // A frozen track's regions can be selected but not moved, trimmed or faded.
     if (h.track.frozen) {
+      if (e.detail === 2) return openEditor(r);
       refuseFrozen([h.track.id]);
       return;
     }
@@ -200,8 +202,7 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
       dragRef.current = null;
       setCrossfadeDrag(null);
       if (!moved) {
-        // Double-clicking a pattern region opens the Step Sequencer.
-        if (e.detail === 2 && r.pattern) setState({ bottom: "steps" });
+        if (e.detail === 2) openEditor(r);
         clickLocate(e, true);
         requestDraw();
         return;
@@ -247,6 +248,10 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
     window.addEventListener("mousemove", move);
     window.addEventListener("mouseup", up);
   };
+
+  /** A double-click on a region opens it in its editor: the Piano Roll, the Audio Track editor
+   *  or the Step Sequencer (regionEditor.ts). */
+  const openEditor = (r: Region) => setState({ bottom: editorPaneFor(r, getState().bottom) });
 
   /** A click without a drag moves the playhead to it, snapped like a region drag would be
    *  (Settings › Editing › Click Moves Playhead). */
@@ -352,7 +357,10 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
     if (h.row) return openMenu(e.clientX, e.clientY, takeFolderMenu(h.row.region));
     if (!h.region) {
       const pos = Math.max(0, Math.round(snapPos(project, h.sample, getState().snapMode, getState().pxPerBeat)));
-      if (h.track && h.track.id !== getState().snap?.selected) act("select_track", { id: h.track.id });
+      if (h.track && h.track.id !== getState().snap?.selected) {
+        keepRegionsOn([h.track.id]);
+        act("select_track", { id: h.track.id });
+      }
       openMenu(e.clientX, e.clientY, laneMenu(h.track ?? null, pos));
       return;
     }

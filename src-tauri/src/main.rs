@@ -223,6 +223,8 @@ fn main() {
             commands::forget_recent,
             commands::path_exists,
             commands::default_project_dir,
+            commands::old_projects_folder,
+            commands::rename_old_projects_folder,
             commands::set_region_loop,
             commands::set_regions_looped,
             commands::convert_loops,

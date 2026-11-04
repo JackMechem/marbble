@@ -1,7 +1,7 @@
 // Unit tests for src/regionSelect.ts, Edit › Select's criteria.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { following, followingFrom, insideLocators, invert, matching, muted, overlapped, sameColor, sameContent, similarContent } from "../src/regionSelect.ts";
+import { following, followingFrom, insideLocators, invert, matching, muted, onTracks, overlapped, sameColor, sameContent, similarContent } from "../src/regionSelect.ts";
 import type { Note, Region } from "../src/api.ts";
 
 const audio = (id: number, start: number, length: number, clip = 1, offset = 0, extra: Partial<Region> = {}): Region => ({
@@ -66,4 +66,12 @@ test("equal regions play the same; similar ones come from the same file", () => 
   assert.ok(!sameContent(a, { ...b, length: 2000 }));
   assert.ok(!similarContent(midi(5, 0, []), midi(6, 0, [])), "empty regions are like nothing");
   assert.ok(!sameContent(a, audio(9, 0, 1000)));
+});
+
+test("choosing tracks keeps only the selected regions on them", () => {
+  // The Inspector showed "Region: 1" over track 20 after a right-click on 20's empty lane.
+  assert.deepEqual(onTracks(tracks, [1, 2], [20]), []);
+  assert.deepEqual(onTracks(tracks, [1, 4], [20]), [4]);
+  assert.deepEqual(onTracks(tracks, [1, 4, 6], [10, 20]), [1, 4, 6], "regions on every chosen track stay");
+  assert.deepEqual(onTracks(tracks, [], [10]), []);
 });

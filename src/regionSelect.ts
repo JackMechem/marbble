@@ -76,3 +76,11 @@ export function followingFrom(tracks: Lanes, sel: Id[], playhead: number): numbe
   const starts = picked(tracks, sel).map((r) => r.start);
   return starts.length ? Math.min(...starts) : playhead;
 }
+
+/** The selected regions that lie on `trackIds`. Choosing other tracks (a click on a header, a
+ *  strip or an empty lane) keeps only these, so the Inspector never shows a region over a
+ *  different track's settings. */
+export function onTracks(tracks: Lanes, sel: Id[], trackIds: Id[]): Id[] {
+  const on = new Set(tracks.filter((t) => trackIds.includes(t.id)).flatMap((t) => t.regions.map((r) => r.id)));
+  return sel.filter((id) => on.has(id));
+}

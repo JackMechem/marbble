@@ -1,16 +1,36 @@
 // Settings › General.
 import { useEffect, useState } from "react";
-import { call } from "../../api";
-import { useSettings } from "../../prefs";
+import { act, call } from "../../api";
+import { moveFolderKeys } from "../../oldName";
+import { loadSettings, useSettings } from "../../prefs";
+import { oldFolderNote, type OldProjectsFolder } from "../../settingsText";
+import { useStore } from "../../store";
 import { Check, NumberField, Select } from "../Form";
-import { Foot, Row, Section, setPrefs, setUi, FolderField } from "./parts";
+import { Foot, Row, Section, setPrefs, setUi, FolderField, toast } from "./parts";
 
 export function GeneralPane({ close }: { close: () => void }) {
   const s = useSettings((s) => s);
   const [root, setRoot] = useState("");
+  // The projects folder from before the rename, while it can be renamed; asked again when the
+  // open project changes, since that can hold it.
+  const [oldFolder, setOldFolder] = useState<OldProjectsFolder | null>(null);
+  const path = useStore((st) => st.snap?.path);
+  const saved = useStore((st) => st.snap?.saved);
+  const [renamed, setRenamed] = useState(0);
   useEffect(() => {
     call<string>("default_project_dir").then((d) => d && setRoot(d));
-  }, [s.prefs.general.project_folder]);
+  }, [s.prefs.general.project_folder, renamed]);
+  useEffect(() => {
+    call<OldProjectsFolder | null>("old_projects_folder").then(setOldFolder);
+  }, [path, saved, renamed]);
+  const renameOld = async () => {
+    if (!oldFolder || !(await act("rename_old_projects_folder"))) return;
+    moveFolderKeys(oldFolder.old, oldFolder.new);
+    // The backend moved the folder settings with it; take them back before anything saves the old ones.
+    await loadSettings();
+    setRenamed((n) => n + 1);
+    toast(`Renamed to ${oldFolder.new}`);
+  };
   const g = s.prefs.general;
   return (
     <>
@@ -31,6 +51,13 @@ export function GeneralPane({ close }: { close: () => void }) {
         <Row label="Project Folder:" note="Where new projects are saved. The Project Chooser starts here.">
           <FolderField value={g.project_folder} placeholder={root || "~/Music/Marbble"} title="Choose the folder for new projects" onChange={(v) => setPrefs("general", { project_folder: v })} />
         </Row>
+        {oldFolder && (
+          <Row label="Old Folder:" note={oldFolderNote(oldFolder)}>
+            <button className="push" disabled={!!oldFolder.open} onClick={renameOld}>
+              Rename to Marbble
+            </button>
+          </Row>
+        )}
         <Row
           label="Autosave:"
           note="Unsaved changes are written to project.autosave.json inside the project folder, never over your saved project. If Marbble quits unexpectedly, it offers to recover them at the next launch, along with anything that was being recorded."

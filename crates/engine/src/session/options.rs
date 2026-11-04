@@ -5,7 +5,7 @@ use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use serde::Serialize;
 
 use super::{default_projects_root, untitled_dir, Session, AUDIO_DIR, AUTOSAVE_FILE, PROJECT_FILE};
@@ -132,6 +132,30 @@ impl Session {
     /// Where new projects go.
     pub fn projects_root(&self) -> PathBuf {
         self.prefs.general.project_folder.as_deref().filter(|f| !f.trim().is_empty()).map(PathBuf::from).unwrap_or_else(default_projects_root)
+    }
+
+    /// Renames the projects folder from before the rename, `~/Music/Fermata`, to `~/Music/Marbble`
+    /// (see [`crate::old_name::rename_projects`] for when it refuses). An unsaved project that
+    /// would have been saved in it is saved in the new folder instead. Returns the path prefixes
+    /// that stored paths (settings, recent projects) should be moved by.
+    pub fn rename_old_projects_folder(&mut self) -> Result<Vec<(PathBuf, PathBuf)>> {
+        let (old, new) =
+            crate::old_name::projects_rename().ok_or_else(|| anyhow!("There is no ~/Music/Fermata to rename, or ~/Music/Marbble exists already."))?;
+        self.rename_projects_folder(&old, &new)
+    }
+
+    pub(super) fn rename_projects_folder(&mut self, old: &Path, new: &Path) -> Result<Vec<(PathBuf, PathBuf)>> {
+        if self.is_recording() {
+            return Err(anyhow!("Stop recording first."));
+        }
+        // The open project holds the folder once anything of it is on disk (a save, an autosave, a
+        // recording).
+        let open = self.dir.exists().then(|| self.dir.clone());
+        let pairs = crate::old_name::rename_projects(old, new, open.as_deref()).map_err(|e| anyhow!(e))?;
+        if let Some(dir) = pairs.iter().find_map(|(o, n)| crate::old_name::moved(&self.dir, o, n)) {
+            self.dir = dir;
+        }
+        Ok(pairs)
     }
 
     /// Where new recordings go: the project's Audio Files, or a folder per project inside the
@@ -444,6 +468,28 @@ mod tests {
         assert!(s.dirty && s.saved);
         s.discard_autosave();
         assert!(recovery_info(&dir).is_none());
+        let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    #[test]
+    fn renaming_the_old_projects_folder_follows_the_open_project() {
+        let (mut s, scratch) = session("rename");
+        let (old, new) = (scratch.join("Fermata"), scratch.join("Marbble"));
+        std::fs::create_dir_all(old.join("Kept.fermata")).unwrap();
+        // A saved project open from the folder holds it.
+        s.dir = old.join("Song.marbble");
+        s.save(None).unwrap();
+        assert!(s.rename_projects_folder(&old, &new).is_err());
+        assert!(old.join("Song.marbble/project.json").exists() && !new.exists());
+        // An untitled project that isn't on disk yet moves with it, so saving it can't bring the
+        // old folder back.
+        s.new_project();
+        s.dir = old.join("Untitled.marbble");
+        s.rename_projects_folder(&old, &new).unwrap();
+        assert_eq!(s.dir, new.join("Untitled.marbble"));
+        assert!(new.join("Kept.fermata").is_dir() && new.join("Song.marbble/project.json").exists());
+        s.save(None).unwrap();
+        assert!(!old.exists() && new.join("Untitled.marbble/project.json").exists());
         let _ = std::fs::remove_dir_all(&scratch);
     }
 

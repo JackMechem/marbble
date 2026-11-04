@@ -218,11 +218,7 @@ What's left from the reviews and the UI audit of 2026-11-04.
     View), no checkmarks on toggles, nothing ever disabled, modifiers written Shift+Ctrl where the app writes Ctrl+Shift,
     and commands named differently in each menu. The menu bar should take accelerators, names and states from the same
     command table.
-  - Metronome settings are in both Settings and Project Settings; About names Logic.
   - Two pop-up styles (Settings vs toolbars).
-  - Double-clicking a MIDI or audio region doesn't open its editor (pattern regions do).
-  - The ruler has no right-click menu.
-  - The projects folder still shows as `~/Music/Fermata`: offer to rename it.
 
 ### Larger
 

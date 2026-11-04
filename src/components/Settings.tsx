@@ -1,6 +1,6 @@
 // The Settings window (Marbble › Settings…, ⌘,), Project Settings (File › Project
-// Settings…, ⌥P) and the crash-recovery sheet. Modelled on Logic Pro's Settings: a row of
-// icon tabs, each pane a form whose changes apply at once.
+// Settings…, ⌥P) and the crash-recovery sheet: a row of icon tabs, each pane a form whose
+// changes apply at once.
 //
 // The panes are in settingsPanes/, one file each; this file is the window that holds them.
 import { Icon } from "../icons";
@@ -8,7 +8,6 @@ import { setState, useStore, type SettingsTab } from "../store";
 import { EditingPane } from "./settingsPanes/EditingPane";
 import { GeneralPane } from "./settingsPanes/GeneralPane";
 import { KeysPane } from "./settingsPanes/KeysPane";
-import { MetronomePane } from "./settingsPanes/MetronomePane";
 import { MidiPane } from "./settingsPanes/MidiPane";
 import { SheetFrame, TabIcon } from "./settingsPanes/parts";
 import { PluginsPane } from "./settingsPanes/PluginsPane";
@@ -30,7 +29,6 @@ export function SettingsWindow({ audio: AudioPane, appearance: AppearancePane }:
     { id: "general", label: "General", icon: <TabIcon.general />, pane: GeneralPane },
     { id: "audio", label: "Audio", icon: <Icon.waveform />, pane: AudioPane },
     { id: "recording", label: "Recording", icon: <TabIcon.recording />, pane: RecordingPane },
-    { id: "metronome", label: "Metronome", icon: <TabIcon.metronome />, pane: MetronomePane },
     { id: "midi", label: "MIDI", icon: <TabIcon.midi />, pane: MidiPane },
     { id: "editing", label: "Editing", icon: <TabIcon.editing />, pane: EditingPane },
     { id: "plugins", label: "Plug-ins", icon: <TabIcon.plugins />, pane: PluginsPane },

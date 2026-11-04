@@ -1,7 +1,7 @@
 // The Tracks area's ruler: cycle strip, bar numbers, Autopunch strip and marker lane.
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { act } from "../api";
-import { getState, useStore } from "../store";
+import { getState, setState, useStore } from "../store";
 import { coalesced, framePos, onFrame } from "../frame";
 import { samplesPerBeat, snapPos } from "../time";
 import { tempoMap } from "../tempo";
@@ -13,6 +13,10 @@ import { openMenu } from "./Menu";
 import { getSettings } from "../prefs";
 import { scrollTo } from "../view";
 import { timeStripWheel } from "../wheel";
+import { keyHint } from "../keymap";
+import { setLocatorsByRegions } from "../ops";
+import { transport } from "../transport";
+import { rulerMenu } from "../rulerMenu";
 
 const CYCLE_H = 12;
 /** Bottom of the bar numbers; the Autopunch strip and the marker lane are below. */
@@ -320,13 +324,35 @@ export function Ruler() {
   const onContextMenu = (e: React.MouseEvent) => {
     const { project, pxPerBeat } = live.current;
     const rect = ref.current!.getBoundingClientRect();
-    if (!project || e.clientY - rect.top < MARKERS_Y) return;
+    if (!project) return;
     e.preventDefault();
     const pps = pxPerBeat / samplesPerBeat(project);
     const at = (e.clientX - rect.left + viewport().left) / pps;
+    // Snapped as a click in the ruler is: to beats at least.
+    const snapped = Math.round(Math.max(0, snapPos(project, at, getState().snapMode === "off" ? "beat" : getState().snapMode, pxPerBeat)));
+    if (e.clientY - rect.top < MARKERS_Y) {
+      const s = getState();
+      const menu = rulerMenu(
+        {
+          cycle: project.cycle.enabled,
+          autopunch: project.punch.enabled,
+          regions: s.selectedRegions.length > 0,
+          snap: s.snapMode,
+          hints: { cycle: keyHint("cycle"), autopunch: keyHint("autopunch"), setLocators: keyHint("set-locators") },
+        },
+        {
+          locate: () => act("locate", { pos: snapped }),
+          createMarker: () => createMarker(snapped),
+          toggleCycle: () => transport.toggleCycle(),
+          toggleAutopunch: () => transport.togglePunch(),
+          setLocatorsByRegions: () => setLocatorsByRegions(),
+          setSnap: (snapMode) => setState({ snapMode }),
+        },
+      );
+      return openMenu(e.clientX, e.clientY, menu);
+    }
     const m = markerAt(at * pps);
     if (m) selectMarker(m.id);
-    const snapped = Math.max(0, snapPos(project, at, getState().snapMode === "off" ? "beat" : getState().snapMode, pxPerBeat));
     openMenu(e.clientX, e.clientY, m ? markerMenu(m) : markerLaneMenu(snapped));
   };
 

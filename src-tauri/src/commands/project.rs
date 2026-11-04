@@ -47,6 +47,39 @@ pub fn default_project_dir(state: State<AppState>) -> String {
     with(&state, |s| s.projects_root()).to_string_lossy().to_string()
 }
 
+/// The projects folder from before the rename, while it can be renamed (Settings › General).
+#[derive(Serialize)]
+pub struct OldProjectsFolder {
+    old: String,
+    new: String,
+    /// The open project, when it is in the old folder and so holds it.
+    open: Option<String>,
+}
+
+#[tauri::command]
+pub fn old_projects_folder(state: State<AppState>) -> Option<OldProjectsFolder> {
+    let (old, new) = daw_engine::old_name::projects_rename()?;
+    let dir = with(&state, |s| s.project_path());
+    let open = (dir.exists() && dir.starts_with(&old)).then(|| dir.file_stem().map(|n| n.to_string_lossy().to_string()).unwrap_or_default());
+    Some(OldProjectsFolder { old: old.to_string_lossy().to_string(), new: new.to_string_lossy().to_string(), open })
+}
+
+/// Renames `~/Music/Fermata` to `~/Music/Marbble`, then points the recent projects and the
+/// folder settings at the new place.
+#[tauri::command]
+pub fn rename_old_projects_folder(state: State<AppState>) -> R<Snapshot> {
+    with(&state, |s| {
+        let pairs = s.rename_old_projects_folder().map_err(|e| e.to_string())?;
+        crate::recent::rebase(&pairs);
+        let mut all = crate::settings::load();
+        if daw_engine::old_name::rebase_prefs(&mut all.prefs, &pairs) {
+            crate::settings::save(&all);
+            s.set_prefs(all.prefs);
+        }
+        Ok(snapshot(s))
+    })
+}
+
 #[derive(Serialize)]
 pub struct DirEntry {
     name: String,

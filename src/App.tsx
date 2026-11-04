@@ -79,6 +79,7 @@ function moveSelection(d: number) {
   const from = i < 0 ? stepVisible(l, -1, 1) : i;
   const n = i < 0 ? from : stepVisible(l, from, d);
   if (n < 0 || l.heights[n] === 0) return;
+  ops.keepRegionsOn([s.project.tracks[n].id]);
   api.selectTrack(s.project.tracks[n].id);
 }
 

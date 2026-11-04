@@ -14,7 +14,7 @@ pub fn install<R: Runtime>(app: &App<R>) -> tauri::Result<()> {
     let about = AboutMetadata {
         name: Some("Marbble".into()),
         version: Some(app.package_info().version.to_string()),
-        comments: Some("A digital audio workstation with VST3 hosting, modelled on Logic Pro.".into()),
+        comments: Some("A digital audio workstation with VST3 hosting.".into()),
         license: Some("MIT".into()),
         website: Some("https://github.com/JackMechem/marbble".into()),
         ..Default::default()

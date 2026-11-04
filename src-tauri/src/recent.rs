@@ -38,6 +38,27 @@ pub fn paths() -> Vec<String> {
     load()
 }
 
+/// Points the entries inside a renamed folder at its new place: each `(old, new)` pair is a
+/// path prefix and what it became.
+pub fn rebase(pairs: &[(PathBuf, PathBuf)]) {
+    let list = load();
+    let moved = rebased(&list, pairs);
+    if moved != list {
+        store(&moved);
+    }
+}
+
+fn rebased(list: &[String], pairs: &[(PathBuf, PathBuf)]) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    for p in list {
+        let p = daw_engine::old_name::moved_str(p, pairs).unwrap_or_else(|| p.clone());
+        if !out.contains(&p) {
+            out.push(p);
+        }
+    }
+    out
+}
+
 pub fn remove(path: &str) {
     let mut list = load();
     list.retain(|x| x != path);
@@ -74,4 +95,17 @@ fn describe(path: &str) -> RecentProject {
 
 pub fn list() -> Vec<RecentProject> {
     load().iter().map(|p| describe(p)).collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn recent_projects_follow_a_renamed_folder() {
+        let pairs = vec![(PathBuf::from("/h/Music/Fermata"), PathBuf::from("/h/Music/Marbble"))];
+        let list = ["/h/Music/Fermata/A.fermata", "/elsewhere/B.marbble", "/h/Music/Marbble/A.fermata"].map(String::from);
+        // A path already listed under the new name isn't listed twice; the newer entry's place wins.
+        assert_eq!(rebased(&list, &pairs), ["/h/Music/Marbble/A.fermata", "/elsewhere/B.marbble"]);
+    }
 }

@@ -7,7 +7,7 @@ import { setState, useStore } from "../../store";
 import { Check, NumberField, Select } from "../Form";
 import { Foot, Row, Section, SheetFrame, TabIcon } from "./parts";
 import { BIT_DEPTHS } from "./RecordingPane";
-import { MetronomeFields } from "./MetronomePane";
+import { MetronomeDefaults, MetronomeFields } from "./MetronomePane";
 
 const KEYS = ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
 const SIGNATURES: [number, number][] = [
@@ -190,7 +190,12 @@ export function ProjectSettingsSheet() {
       <div className="settings-body">
         {tab === "general" && <ProjectGeneral />}
         {tab === "recording" && <ProjectRecording />}
-        {tab === "metronome" && <MetronomeFields />}
+        {tab === "metronome" && (
+          <>
+            <MetronomeFields />
+            <MetronomeDefaults />
+          </>
+        )}
         {tab === "notes" && <ProjectNotes />}
         <Foot close={close} note="Saved with the project. Changes can be undone." />
       </div>

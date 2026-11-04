@@ -23,6 +23,14 @@ All notable changes to Marbble are recorded here. The format follows
   slider with its name and value, and buttons that show only an icon by their tooltip.
 - **A keyboard focus ring.** What Tab reaches shows a ring in the accent colour; clicks never do.
 - **The CPU meter shows its load as a percentage** beside the label.
+- **Double-click a region to open its editor:** the Piano Roll for a MIDI region, the Audio Track
+  Editor for an audio region, as the Step Sequencer already opened for a pattern region.
+- **The ruler has a right-click menu:** Move Playhead Here, Create Marker Here, Cycle, Autopunch,
+  Set Locators by Regions and Snap.
+- **Rename the old projects folder:** while `~/Music/Fermata` is the projects folder, Settings ›
+  General offers Rename to Marbble. It refuses while a project from it is open or anything is
+  called `~/Music/Marbble`, never copies or overwrites, and takes Recent Projects, the folder
+  settings and the projects' track heights along.
 
 ### Changed
 
@@ -41,7 +49,11 @@ All notable changes to Marbble are recorded here. The format follows
   theme variables. In High Contrast, text on a selection, a menu highlight, a default button and
   the Mute button is black for legibility; the effect panels' peak-hold lines show on the Light
   theme; Marbble Sampler's record and level colours follow the theme's red and green.
-
+- **The metronome has one home, Project Settings › Metronome,** with its defaults for new
+  projects (Use for New Projects, Revert to Default, Factory Settings) under New Projects. The
+  Settings window no longer has a Metronome tab holding the same per-project settings.
+- The interface no longer compares Marbble to Logic Pro (the metronome's footer and the About
+  box).
 - **Processing threads that can't be relied on are left out.** On Linux, a thread the system
   refuses real-time priority no longer plays tracks at normal priority, where it could be late:
   the others play on, or the audio thread alone, and Settings › Audio says so under Processing
@@ -76,6 +88,9 @@ All notable changes to Marbble are recorded here. The format follows
   the Light theme. The R and I buttons' letters are darker there, so the I no longer fades into
   its button.
 - **Stereo Out** no longer shows an empty Input slot.
+- **The Inspector no longer shows one track's region over another track.** Choosing a track (its
+  header, its Mixer strip, a right-click on its empty lane, Up or Down) deselects the regions on
+  other tracks, as a click on an empty lane already did.
 - **The bottom section can no longer cover the Tracks area.** A Mixer, editor or docked panel
   remembered taller than the window allows shows at the height there is room for, so the Tracks
   area keeps its menu bar, ruler, overview and some track rows, and the divider stays in reach.

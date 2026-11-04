@@ -61,3 +61,17 @@ export function recoveryIntro(list: Recovery[]): string {
     ? "These projects have unsaved work — autosaved changes, or audio that was still being recorded — most likely because Marbble quit."
     : "These projects have autosaved changes that were never saved — most likely Marbble quit before you could save them.";
 }
+
+/** The projects folder from before the rename (the `old_projects_folder` command). */
+export interface OldProjectsFolder {
+  old: string;
+  new: string;
+  /** The open project, when it is in the old folder. */
+  open: string | null;
+}
+
+/** Settings › General's note under Rename to Marbble. */
+export function oldFolderNote(f: OldProjectsFolder): string {
+  const where = `Your projects are in ${f.old}, the folder from before Fermata was renamed. Renaming it to ${f.new} keeps everything in it and updates Recent Projects and these settings.`;
+  return f.open ? `${where} “${f.open}” is open from it: open a project from somewhere else, or start a new one, to rename it.` : where;
+}

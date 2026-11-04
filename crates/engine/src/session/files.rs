@@ -106,7 +106,13 @@ impl Session {
     pub(super) fn open_from(&mut self, dir: &Path, file: &str) -> Result<()> {
         let dir = if dir.is_file() { dir.parent().unwrap_or(dir).to_path_buf() } else { dir.to_path_buf() };
         let text = std::fs::read_to_string(dir.join(file)).with_context(|| format!("reading {}", dir.display()))?;
-        let project: Project = serde_json::from_str(&text)?;
+        let mut project: Project = serde_json::from_str(&text)?;
+        // Files from the projects folder's old name are found under its new one.
+        for c in &mut project.clips {
+            if let Some(p) = Path::new(&c.path).is_absolute().then(|| crate::old_name::relocated(Path::new(&c.path))).flatten() {
+                c.path = p.to_string_lossy().to_string();
+            }
+        }
         if self.rec_punch.is_some() {
             self.stop();
         }

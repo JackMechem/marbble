@@ -82,9 +82,10 @@ Contents:
     [Open, save and close](#open-save-and-close) · [Project templates](#project-templates) ·
     [Project alternatives](#project-alternatives) ·
     [Backups and Revert to](#backups-and-revert-to) ·
-    [Autosave and recovery](#autosave-and-recovery) · [Project Settings](#project-settings)
+    [Autosave and recovery](#autosave-and-recovery) · [Project Settings](#project-settings) ·
+    [Metronome](#metronome)
 17. [Settings reference](#17-settings-reference): [General](#general) · [Audio](#audio) ·
-    [Recording](#recording) · [Metronome](#metronome) · [MIDI](#midi) · [Editing](#editing) ·
+    [Recording](#recording) · [MIDI](#midi) · [Editing](#editing) ·
     [Plug-ins](#plug-ins-1) · [Key Commands](#key-commands) · [Appearance](#appearance)
 18. [Key command reference](#18-key-command-reference): [Transport](#transport) ·
     [Navigation](#navigation) · [View](#view-1) · [Tracks](#tracks-1) · [Editing](#editing-1) ·
@@ -240,6 +241,11 @@ From left to right:
   - the **bar numbers**: click or drag to move the playhead;
   - the **Autopunch strip** (red): works like the cycle strip, for the punch range;
   - the **marker lane** (see [Markers](#markers)).
+
+  Right-click the cycle strip, the bar numbers or the Autopunch strip for **Move Playhead
+  Here** and **Create Marker Here** (at the click, snapped to beats at least), **Cycle** (C),
+  **Autopunch**, **Set Locators by Regions** (U) and **Snap** (Smart, Bar, Beat, Off). The
+  marker lane has its own menu.
 - **Track headers:** colour, number, icon, name with the power button
   ([On/Off](#turning-tracks-off), grey while the track plays) at its end, the M (Mute), S (Solo), R (Record Enable,
   audio and instrument tracks), I (Input Monitoring, audio tracks) buttons, the Freeze
@@ -308,7 +314,9 @@ audio regions gain and the fade rows described under
 [Fades and crossfades](#fades-and-crossfades)) and a
 **Track** section (type, input, instrument, region or subtrack
 count, group), both collapsed by default, followed by the selected track's channel strip and
-the Stereo Out strip.
+the Stereo Out strip. Choosing a track (clicking its header or its strip in the Mixer,
+right-clicking its empty lane, or Up and Down) deselects the regions on other tracks, so the
+Region section never describes a region on a different track from the Track section.
 
 ### Library and Browser
 
@@ -746,6 +754,9 @@ window has Ctrl+Alt+Shift+K (⌥⇧⌘K on macOS).
 
 - Click a region to select it; Shift+click adds or removes regions. Clicking empty lane space
   deselects. Ctrl+A (Edit › Select All) selects all regions.
+- Double-click a region to open it in its editor: the Piano Roll for a MIDI region, the Audio
+  Track Editor for an audio region, the Step Sequencer for a pattern region. With the Event
+  List showing, a MIDI region stays in it.
 - With a group whose Editing setting is on, clicking a region also selects the regions at the
   same place on the other members.
 - Drag across empty lane space to draw a rubber band: every region it touches is selected.
@@ -1448,7 +1459,8 @@ the notes using the file's own timing. Export writes the project's tempo map and
 The Editors pane (E or P) follows the selection: it shows the Piano Roll for a software
 instrument track and the Audio Track Editor for an audio track. MIDI regions have two more
 editors, the [Event List](#event-list) and the [Step Sequencer](#step-sequencer) (for pattern
-regions); the tabs at the left of the editor's bar switch between the three. The Piano Roll is
+regions); the tabs at the left of the editor's bar switch between the three. Double-clicking a
+region in the Tracks area opens the editor for it. The Piano Roll is
 modelled on Logic's, with ideas from Ableton's MIDI editor, Cubase's Key Editor and FL
 Studio's piano roll.
 
@@ -2602,6 +2614,15 @@ A project is a folder ending in `.marbble`, holding `project.json` and an `Audio
 and `Backups/` once it has been saved twice). Projects from before Marbble was renamed end in
 `.fermata`; they open and save as they are.
 
+Before the rename the projects folder was `~/Music/Fermata`, and it stays the projects folder
+until a `~/Music/Marbble` exists. Settings › General › Old Folder › **Rename to Marbble**
+renames it: everything in it moves, Recent Projects and the Project Folder and Recording Folder
+settings follow, and a project that uses audio files from another project in it finds them at
+the new place. It refuses, moving nothing, while a project from that folder is open (open one
+from elsewhere, or start a new one, first), while recording, or if anything called
+`~/Music/Marbble` exists; it never copies, so it also refuses if the two are on different
+drives.
+
 ### The Project Chooser
 
 Opens at launch (by default) and from **File › New…** (Ctrl+N) and **File › Open Recent…**
@@ -2715,11 +2736,32 @@ project:
 |---|---|
 | General | Tempo (5 to 990 BPM), Time Signature, Key, Sample Rate (with a warning when existing audio would play at the wrong speed). |
 | Recording | Bit Depth: Use Settings, 24-bit integer or 32-bit float; Count-in on or off. |
-| Metronome | The metronome settings (see [Settings › Metronome](#metronome)). |
+| Metronome | The metronome settings and the defaults for new projects (see [Metronome](#metronome) below). |
 | Notes | Free-form notes (lyrics, session notes, who played what). |
 
 Tempo, time signature, key, bit depth, metronome settings and notes can be undone. The sample
 rate change is applied to the audio device and is not an undo step.
+
+### Metronome
+
+Project Settings › Metronome holds the project's metronome; it is saved with the project, and
+changes can be undone.
+
+| Setting | Choices | Default |
+|---|---|---|
+| Click | Metronome on (K) | Off |
+| Sound | Classic, Click, Woodblock, Beep | Classic |
+| Volume | -40 to +6 dB | 0 dB |
+| Accent | Higher and louder on the first beat of each bar | On |
+| Pitch | Bar and Beat, -12 to +12 semitones | 0, 0 |
+| Subdivision | Off (beats only), Eighth notes, Triplets, Sixteenth notes | Off |
+| Playing | Click while playing | On |
+| Recording | Click while recording; Only during the count-in | On; off |
+
+The count-in always clicks, even with the metronome off. Under **New Projects**, **Use for New
+Projects** makes the current settings the default for new projects (kept in `settings.json`),
+**Revert to Default** brings those defaults back to this project, and **Factory Settings**
+brings back Marbble's own.
 
 ---
 
@@ -2728,10 +2770,10 @@ rate change is applied to the audio device and is not an undo step.
 Open Settings with **Marbble › Settings…** (Ctrl+,), which opens on the Audio tab;
 Marbble › Appearance… and Marbble › Key Commands… (Alt+K) open those tabs. Most changes apply
 at once and are kept in `settings.json` (`~/.config/marbble` on Linux and macOS,
-`%APPDATA%\marbble` on Windows). The exceptions are the Audio devices (Apply Changes) and the
-Metronome tab (saved with the project). The window keeps one size whichever tab is showing: a
-long tab scrolls, and the footer stays at the bottom with a note on how that tab's changes apply
-and **Done** on the right.
+`%APPDATA%\marbble` on Windows). The exception is the Audio devices (Apply Changes). The
+metronome is set per project, in [Project Settings › Metronome](#metronome). The window keeps one size whichever
+tab is showing: a long tab scrolls, and the footer stays at the bottom with a note on how that
+tab's changes apply and **Done** on the right.
 
 ### General
 
@@ -2739,6 +2781,7 @@ and **Done** on the right.
 |---|---|---|
 | At Launch | Show the Project Chooser; Open the most recent project; Start with an empty project | Project Chooser |
 | Project Folder | Any folder (Choose…, Default) | `~/Music/Marbble` |
+| Old Folder | Rename to Marbble (shown only while `~/Music/Fermata` is there and `~/Music/Marbble` isn't) | |
 | Autosave | Off; every 1, 2, 5, 10 or 15 minutes | Every 2 minutes |
 | After Recording | Autosave as soon as a recording, Bounce in Place, Freeze or import finishes | On |
 | Backups | Versions of each project alternative that saves keep, 0 to 100 (0 keeps one, as `project.json.bak`) | 10 |
@@ -2779,25 +2822,6 @@ compensation rows needs **Apply Changes**, or **Done**, which applies them and c
 
 With a Recording Folder outside the project, Save As does not copy those recordings into the
 new project folder; the project refers to them where they are.
-
-### Metronome
-
-These settings are saved with the **project**, as in Logic, and changes can be undone.
-
-| Setting | Choices | Default |
-|---|---|---|
-| Click | Metronome on (K) | Off |
-| Sound | Classic, Click, Woodblock, Beep | Classic |
-| Volume | -40 to +6 dB | 0 dB |
-| Accent | Higher and louder on the first beat of each bar | On |
-| Pitch | Bar and Beat, -12 to +12 semitones | 0, 0 |
-| Subdivision | Off (beats only), Eighth notes, Triplets, Sixteenth notes | Off |
-| Playing | Click while playing | On |
-| Recording | Click while recording; Only during the count-in | On; off |
-
-The count-in always clicks, even with the metronome off. **Use for New Projects** makes the
-current settings the default for new projects; **Revert to Default** brings back those
-defaults.
 
 ### MIDI
 

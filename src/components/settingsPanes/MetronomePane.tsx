@@ -1,10 +1,10 @@
-// Settings › Metronome, and the fields Project Settings shows too.
+// Project Settings › Metronome: the project's metronome, and the defaults new projects take.
 import { act, type ClickSettings, type ClickSound } from "../../api";
 import { keyHint } from "../../keymap";
 import { DEFAULT_CLICK, useSettings } from "../../prefs";
 import { useStore } from "../../store";
 import { Check, NumberField, Select, Slider } from "../Form";
-import { Foot, Row, Section, setPrefs, toast } from "./parts";
+import { Row, Section, setPrefs, toast } from "./parts";
 
 const SOUNDS: { id: ClickSound; name: string; description: string }[] = [
   { id: "classic", name: "Classic", description: "A short sine tick" },
@@ -13,7 +13,7 @@ const SOUNDS: { id: ClickSound; name: string; description: string }[] = [
   { id: "beep", name: "Beep", description: "A longer electronic tone" },
 ];
 
-/** The metronome form, shared by Settings and Project Settings. */
+/** The metronome form: the settings saved with the project. */
 export function MetronomeFields() {
   const click = useStore((s) => s.snap?.project.click) ?? DEFAULT_CLICK;
   const on = useStore((s) => s.snap?.project.metronome ?? false);
@@ -87,31 +87,34 @@ export function MetronomeFields() {
   );
 }
 
-export function MetronomePane({ close }: { close: () => void }) {
+/** Project Settings › Metronome's last section: the settings new projects start with, kept in
+ *  Settings (`prefs.click`) rather than in the project. */
+export function MetronomeDefaults() {
   const click = useStore((s) => s.snap?.project.click) ?? DEFAULT_CLICK;
   const deflt = useSettings((s) => s.prefs.click);
   const isDefault = JSON.stringify(click) === JSON.stringify(deflt);
   return (
-    <>
-      <MetronomeFields />
-      <Foot close={close} note="Saved with the project.">
-        <button className="push" title="The settings new projects start with" onClick={() => act("set_click", { click: deflt })} disabled={isDefault}>
-          Revert to Default
-        </button>
-        <button className="push" title="Marbble's original metronome settings" onClick={() => act("set_click", { click: DEFAULT_CLICK })} disabled={JSON.stringify(click) === JSON.stringify(DEFAULT_CLICK)}>
-          Factory Settings
-        </button>
-        <button
-          className="push"
-          disabled={isDefault}
-          onClick={() => {
-            setPrefs("click", click);
-            toast("New projects will use these metronome settings");
-          }}
-        >
-          Use for New Projects
-        </button>
-      </Foot>
-    </>
+    <Section title="New Projects">
+      <Row label="Defaults:" note="New projects start with the default settings. Use for New Projects makes this project's settings the default; Revert to Default brings the default back here.">
+        <div className="row-inline" style={{ flexWrap: "wrap" }}>
+          <button
+            className="push"
+            disabled={isDefault}
+            onClick={() => {
+              setPrefs("click", click);
+              toast("New projects will use these metronome settings");
+            }}
+          >
+            Use for New Projects
+          </button>
+          <button className="push" title="The settings new projects start with" onClick={() => act("set_click", { click: deflt })} disabled={isDefault}>
+            Revert to Default
+          </button>
+          <button className="push" title="Marbble's original metronome settings" onClick={() => act("set_click", { click: DEFAULT_CLICK })} disabled={JSON.stringify(click) === JSON.stringify(DEFAULT_CLICK)}>
+            Factory Settings
+          </button>
+        </div>
+      </Row>
+    </Section>
   );
 }

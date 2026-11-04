@@ -987,7 +987,14 @@ launch, moves the old config folder, `~/Music/Fermata Instruments` and the webvi
 (named after the old identifier `studio.fermata.daw`) to their new names, never over anything
 already there. `src/oldName.ts` then renames the `fermata.` localStorage keys. An existing
 `~/Music/Fermata` stays the default projects folder until `~/Music/Marbble` exists, since recent
-projects point into it.
+projects point into it. Settings › General offers to rename it (`old_projects_folder`,
+`rename_old_projects_folder`): `old_name::rename_projects` refuses while the open project is on
+disk inside it or anything is called `~/Music/Marbble`, then does one `fs::rename` (no copy, so a
+cross-device move fails cleanly). The command rewrites `recent.json` and the Project Folder and
+Recording Folder settings by the returned path prefixes (plain and canonical), an unsaved
+project's folder moves with it, the frontend moves the per-project track heights in
+localStorage, and `Session::open_from` finds an absolute clip path that was inside the old folder
+at its new place (`old_name::relocated`).
 
 | File | Written by | Contents |
 |---|---|---|
@@ -2359,7 +2366,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `regionParams.ts` | The Region inspector's playback parameter values and how they show; pure, tested. |
 | `tools.ts`, `marquee.ts` | Tracks-area tools (list, Tool menu keys, Scissors and Fade tool geometry) and the marquee's geometry; pure. |
 | `trackTools.ts` | The tools at work: the Tool menu (T), presses with each tool, the marquee's commands, tool cursors and overlay drawing. |
-| `arrangeCmds.ts`, `regionSelect.ts` | The arranging commands (Edit › Select, Section Between Locators, Trim, Move, Paste Replace…) by menu and key-command id, and their menus; `regionSelect.ts` holds the selection criteria (pure). `components/StripSilence.tsx` is the Strip Silence sheet. |
+| `arrangeCmds.ts`, `regionSelect.ts` | The arranging commands (Edit › Select, Section Between Locators, Trim, Move, Paste Replace…) by menu and key-command id, and their menus; `regionSelect.ts` holds the selection criteria (pure), and `onTracks`, which `ops.keepRegionsOn` uses to deselect regions on other tracks when tracks are chosen by hand. `components/StripSilence.tsx` is the Strip Silence sheet. |
 | `markers.ts` | The marker lane (bars over each marker's length, selection, length drags) and marker commands. |
 | `arrangement.ts` | The Arrangement track's names, colours, drop slots and resize preview; pure. `components/ArrangementTrack.tsx` draws the lane (in `GlobalTracks`) and handles its menus and drags. |
 | `freeze.ts` | Freeze and Unfreeze from the UI. |
@@ -2377,6 +2384,8 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `pianoRollDraw.ts` | Piano Roll canvas drawing. |
 | `regionDraw.ts` | Drawing a region on a canvas (body, name bar, waveform or notes, fades, loops), for the Tracks area and the Audio Track Editor; the crossfade handle drag in progress. |
 | `regionGrab.ts` | What a press on a region in the Tracks area grabs; pure, tested. |
+| `regionEditor.ts` | Which bottom pane a double-clicked region opens (Piano Roll, Audio Track Editor, Step Sequencer); pure, tested. |
+| `rulerMenu.ts` | The ruler's right-click menu above the marker lane, built from state and commands passed in; pure, tested. |
 | `eventList.ts` | The Event List's positions, lengths, typed values and edits; pure, tested. |
 | `noteSelect.ts` | Edit › Select on notes and events while the Piano Roll or the Event List has focus; pure, tested. |
 | `stepInput.ts` | Step Input: step lengths through the tempo map, the chord/advance state machine (Rest, Back, Chord, Sustain, Quantize) and the region edits it makes; pure, tested. Also the hook Musical Typing reports its notes through. |
@@ -2462,7 +2471,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `StepSequencer.tsx` | The Step Sequencer (bottom pane "steps"): the step grid, row headers, edit modes, Learn; edits ahead of the snapshot while they are on their way. |
 | `Dialogs.tsx` | New Tracks, the Settings window frame, Group Settings, the input level warning. |
 | `Settings.tsx` | The Settings window. |
-| `settingsPanes/` | One file per pane (`GeneralPane.tsx`, `RecordingPane.tsx`, `MetronomePane.tsx`, `MidiPane.tsx`, `EditingPane.tsx`, `PluginsPane.tsx`, `KeysPane.tsx`), `ProjectSettings.tsx`, `RecoverySheet.tsx`, and `parts.tsx` with what they share. |
+| `settingsPanes/` | One file per pane (`GeneralPane.tsx`, `RecordingPane.tsx`, `MetronomePane.tsx` (shown in Project Settings, not Settings), `MidiPane.tsx`, `EditingPane.tsx`, `PluginsPane.tsx`, `KeysPane.tsx`), `ProjectSettings.tsx`, `RecoverySheet.tsx`, and `parts.tsx` with what they share. |
 | `ProjectChooser.tsx` | Project Chooser. |
 | `Bounce.tsx` | Bounce, Export and Bounce in Place dialogs. |
 | `MarkerList.tsx` | Marker List. |

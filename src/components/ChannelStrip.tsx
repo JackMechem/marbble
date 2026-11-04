@@ -24,6 +24,7 @@ import { stripLearnMenu } from "../learn";
 import { canAssignVca, vcaOffset } from "../vca";
 import { isTrackOff, powerTitle } from "../trackOff";
 import { auxInput, hasExtraOutputs, nextOutput } from "../multiOut";
+import { keepRegionsOn } from "../ops";
 import { useVcas, VcaSlot } from "./Vca";
 import { slotName } from "../slotName";
 import { BlankButtons, BlankEq, BlankRow, BlankSlots, MoreBadge, SlotBox } from "./StripSlots";
@@ -222,7 +223,11 @@ export function ChannelStrip({ track, selected, rows }: { track: Track | null; s
   };
 
   return (
-    <div className={"strip" + (selected ? " selected" : "") + (off ? " is-off" : "")} onMouseDown={() => track && !selected && api.selectTrack(track.id)} onContextMenu={(e) => stripLearnMenu(e, isMaster ? null : id)}>
+    <div className={"strip" + (selected ? " selected" : "") + (off ? " is-off" : "")} onMouseDown={() => {
+        if (!track || selected) return;
+        keepRegionsOn([track.id]);
+        api.selectTrack(track.id);
+      }} onContextMenu={(e) => stripLearnMenu(e, isMaster ? null : id)}>
       <div className="strip-section">
         {folder ? (
           <div className="slot static" />
