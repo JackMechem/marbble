@@ -706,9 +706,17 @@ function windowTheme(kind: "light" | "dark") {
   }
 }
 
+/** The custom properties other themes set that this one doesn't. A theme only lists what it
+ *  changes, so these must be cleared when switching to it, or the last theme's values stay. */
+export function staleThemeKeys(id: string): string[] {
+  const own = new Set(Object.keys((THEMES.find((t) => t.id === id) ?? THEMES[0]).css));
+  return [...new Set(THEMES.flatMap((t) => Object.keys(t.css)))].filter((k) => !own.has(k));
+}
+
 export function applyTheme(id: string, persist = true) {
   const t = THEMES.find((t) => t.id === id) ?? THEMES[0];
   const root = document.documentElement;
+  for (const k of staleThemeKeys(t.id)) root.style.removeProperty(k);
   for (const [k, v] of Object.entries(t.css)) root.style.setProperty(k, v);
   root.dataset.theme = t.id;
   root.style.colorScheme = t.id === "light" ? "light" : "dark";

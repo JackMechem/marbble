@@ -197,7 +197,20 @@ they use there (simulated on Linux), but none of this has run on a real machine.
 
 ### UI and design
 
-What's left from the reviews and the UI audit of 2026-11-04.
+What's left from the reviews and the UI audits of 2026-11-04. An independent re-audit after the round-6 fixes
+graded the UI **7/10** (41 findings; report at `~/Desktop/marbble-ui-audit/ui-audit-2.html` on the owner's
+machine). Its top items:
+
+- The Inspector's Region rows (Delay, Gain, Fade In, Curve, Fade Out) overlap with an audio region selected:
+  `.insp-row` is 19 px tall and the steppers about 22 px.
+- File › Save As aborted a raw debug binary run outside the dev shell (`GLib-GIO-ERROR: Settings schema
+  'org.gtk.Settings.FileChooser' is not installed`). Likely the environment, but a missing schema shouldn't end
+  the session: check before opening a GTK file dialog.
+- The Piano Roll's toolbar runs off the edge at 1280 px (Height, Zoom and the detach button out of reach); the
+  docked Mixer cuts off its faders at 1480×920.
+- Plug-in panels have three different headers (Compressor/Limiter, Channel EQ, instruments); in the dock, instrument
+  tabs pile up, × closes only the front one, and "Float in its own window" vs "Open in Separate Window" is unclear.
+- No Help menu.
 
 - **Design system, round 6 (not seen in the app yet):** a six-size type scale (body 11.5 → 12 px, small text
   9–10.5 → 11 px), every hex colour in a token, a focus ring for Tab, knobs and faders as keyboard sliders,
