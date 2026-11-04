@@ -256,7 +256,7 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
   /** A click without a drag moves the playhead to it, snapped like a region drag would be
    *  (Settings › Editing › Click Moves Playhead). */
   const clickLocate = (e: React.MouseEvent, onRegion: boolean) => {
-    const mode = getSettings().ui.click_locates ?? "anywhere";
+    const mode = getSettings().ui.click_locates ?? "empty";
     if (mode === "off" || (onRegion && mode === "empty")) return;
     const { project, pps } = live.current;
     if (!project) return;

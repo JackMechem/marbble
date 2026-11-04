@@ -16,8 +16,9 @@ pub struct Settings {
     /// Behaviour of the engine session (General, Recording, MIDI, Editing).
     #[serde(default)]
     pub prefs: Prefs,
-    /// Options only the interface uses.
-    #[serde(default)]
+    /// Options only the interface uses. A file without them is from an earlier version, which
+    /// gets the defaults it had (`UiPrefs::earlier`).
+    #[serde(default = "UiPrefs::earlier")]
     pub ui: UiPrefs,
     #[serde(default)]
     pub plugins: PluginPrefs,
@@ -52,7 +53,9 @@ pub struct UiPrefs {
     pub ui_scale: Option<f64>,
     pub wave_style: Option<String>,
     /// Settings › Editing: what a click in the tracks area does to the playhead: "anywhere"
-    /// (empty space and regions), "empty" (empty space only) or "off".
+    /// (empty space and regions), "empty" (empty space only) or "off". New installs start
+    /// with "empty"; a settings file without the field keeps "anywhere", the earlier default.
+    #[serde(default = "earlier_click_locates")]
     pub click_locates: String,
     /// Settings › Editing: what the mouse wheel scrolls in the Tracks area and Piano Roll:
     /// "vertical" (tracks, Shift for time) or "horizontal" (time, Shift for tracks).
@@ -73,10 +76,24 @@ impl Default for UiPrefs {
             theme: None,
             ui_scale: None,
             wave_style: None,
-            click_locates: "anywhere".into(),
+            click_locates: "empty".into(),
             wheel_scrolls: "vertical".into(),
             fx_panels: "floating".into(),
         }
+    }
+}
+
+/// Click Moves Playhead's default before 2026-11: "anywhere". Settings files written since it
+/// existed hold the choice; one without it keeps behaving as it did.
+fn earlier_click_locates() -> String {
+    "anywhere".into()
+}
+
+impl UiPrefs {
+    /// The defaults for a settings file from an earlier version that has no `ui` section: the
+    /// defaults that version had.
+    fn earlier() -> Self {
+        UiPrefs { click_locates: earlier_click_locates(), ..UiPrefs::default() }
     }
 }
 
@@ -108,7 +125,8 @@ fn parse(text: &str) -> Option<Settings> {
     fn section<T: serde::de::DeserializeOwned + Default>(v: &serde_json::Value, k: &str) -> T {
         v.get(k).cloned().and_then(|x| serde_json::from_value(x).ok()).unwrap_or_default()
     }
-    Some(Settings { audio: section(&v, "audio"), prefs: section(&v, "prefs"), ui: section(&v, "ui"), plugins: section(&v, "plugins") })
+    let ui = v.get("ui").cloned().and_then(|x| serde_json::from_value(x).ok()).unwrap_or_else(UiPrefs::earlier);
+    Some(Settings { audio: section(&v, "audio"), prefs: section(&v, "prefs"), ui, plugins: section(&v, "plugins") })
 }
 
 pub fn save(s: &Settings) {
@@ -132,7 +150,8 @@ mod tests {
         let s = parse(r#"{"audio":{"host":null,"input":null,"output":null,"sample_rate":44100,"buffer_size":128,"input_enabled":true}}"#).unwrap();
         assert_eq!(s.audio.sample_rate, 44100);
         assert_eq!(s.prefs, Prefs::default());
-        assert_eq!(s.ui, UiPrefs::default());
+        // Every interface default, except that Click Moves Playhead keeps its earlier default.
+        assert_eq!(s.ui, UiPrefs { click_locates: "anywhere".into(), ..UiPrefs::default() });
         assert!(s.ui.confirm_unsaved);
         assert_eq!(s.plugins, PluginPrefs::default());
     }
@@ -146,6 +165,20 @@ mod tests {
         assert_eq!(s.ui.wheel_scrolls, "vertical");
         assert_eq!(s.ui.fx_panels, "floating");
         assert_eq!(s.audio.sample_rate, AudioConfig::default().sample_rate);
+    }
+
+    #[test]
+    fn click_moves_playhead_defaults_to_empty_space_only_on_new_installs() {
+        // No settings file: a new install.
+        assert_eq!(Settings::default().ui.click_locates, "empty");
+        // A file from before the setting existed behaves as it did: anywhere.
+        assert_eq!(parse(r#"{"ui":{"startup":"chooser"}}"#).unwrap().ui.click_locates, "anywhere");
+        assert_eq!(parse(r#"{"ui":{"startup":"oops"},"audio":{}}"#).unwrap().ui.click_locates, "anywhere");
+        // A choice that was saved is kept, whichever it is.
+        for v in ["anywhere", "empty", "off"] {
+            let s = parse(&format!(r#"{{"ui":{{"click_locates":"{v}"}}}}"#)).unwrap();
+            assert_eq!(s.ui.click_locates, v);
+        }
     }
 
     #[test]

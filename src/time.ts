@@ -48,6 +48,13 @@ export function lengthBbt(p: Project, start: number, len: number): Bbt {
   return { bar, beat, div, tick };
 }
 
+/** A region's or range's length as Logic shows it everywhere (Inspector, help tags, Event List,
+ *  editors' info): bars, beats, divisions and ticks counted from zero, e.g. "4 0 0 0". */
+export function formatLengthBbt(p: Project, start: number, len: number): string {
+  const b = lengthBbt(p, start, len);
+  return `${b.bar} ${b.beat} ${b.div} ${b.tick}`;
+}
+
 export function formatTime(p: Project, pos: number): string {
   const secs = Math.max(0, pos) / p.sample_rate;
   const m = Math.floor(secs / 60);

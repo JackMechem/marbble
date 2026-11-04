@@ -253,15 +253,19 @@ From left to right:
   audio and instrument tracks), I (Input Monitoring, audio tracks) buttons, the Freeze
   (snowflake) button, a group badge, and a volume slider whose groove is the track's level
   meter. Short tracks put it all on one line (see below). The **+** button above the headers
-  opens New Tracks; the **H** button turns on hide mode.
+  opens New Tracks; the **H** button turns on hide mode. Under them, level with the ruler's
+  marker lane, is the **Marker** row. A muted track's regions are drawn grey, as a muted
+  region is; a track that is off is dimmed.
 - **Tracks:** regions on lanes. Scroll with the wheel (Shift+wheel or a sideways trackpad swipe
   scrolls through time); Ctrl+wheel zooms horizontally around the pointer, Alt+wheel changes
   track heights. With a mouse that has only a vertical wheel, set Settings › Editing › Mouse
   Wheel Scrolls to **Horizontally (time)**: the wheel then scrolls through time and Shift+wheel
   scrolls the tracks. Over the track headers the wheel always scrolls the tracks, and over the
-  ruler and global tracks it always scrolls through time. A click without a drag, on a region
-  or on empty space, also moves the playhead there (snapped to the grid). Settings › Editing ›
-  Click Moves Playhead can limit this to empty space or turn it off.
+  ruler and global tracks it always scrolls through time. A click without a drag on empty space
+  in a lane also moves the playhead there (snapped to the grid); clicking a region only selects
+  it. Settings › Editing › Click Moves Playhead sets this: **Anywhere in the tracks** (regions
+  too), **Empty space only** (the default) or **Never**. Before 0.1.0-alpha.7 the default was
+  Anywhere; an install that has settings from then keeps that unless you change it.
 - **Overview:** the strip along the bottom, in place of a horizontal scroll bar, shows the
   whole project in miniature: a row per track (a closed stack is one row), each region as a
   bar in its colour, the cycle range and markers along the top edge, the playhead, and the end
@@ -280,7 +284,7 @@ From left to right:
 Track headers:
 
 - **Select** a track by clicking its header; Ctrl+click adds or removes a track; Shift+click
-  selects a range.
+  selects a range. Up and Down select the track above or below, scrolling it into view.
 - **Rename** by double-clicking the name.
 - **Reorder** by dragging the track number or icon (just the number on the shortest tracks,
   which have no icon). A track dropped among a stack's subtracks
@@ -295,6 +299,10 @@ Track headers:
   them with check marks (and their keys), plus the lane's parameter while automation is shown.
   A switch that is on stays in the header, so a muted, soloed, armed, monitored or frozen track
   still shows it; click it to turn it off.
+- **With Show Automation on** (A), headers 76 px or taller add a line with the automation mode,
+  the lane's parameter and a **+** for another lane. On shorter headers these take the volume
+  slider's place (the mode and + above the parameter), so M, S, R and I stay where they are;
+  the lane itself, the Inspector's strip and the Mixer still set the volume.
 - **Button columns:** each button has its column, the same on every header, with a gap where a
   track has no such button (an instrument track has no I, an aux no R, I or Freeze). On one-line
   headers the columns are those of the switches that are on somewhere, so one track's M lines up
@@ -314,9 +322,17 @@ The Inspector shows a **Region** section (mute, position, length, loop, the play
 parameters described under [Region playback parameters](#region-playback-parameters), and for
 audio regions gain and the fade rows described under
 [Fades and crossfades](#fades-and-crossfades)) and a
-**Track** section (type, input, instrument, region or subtrack
-count, group), both collapsed by default, followed by the selected track's channel strip and
-the Stereo Out strip. Choosing a track (clicking its header or its strip in the Mixer,
+**Track** section, both collapsed by default, followed by the selected track's channel strip and
+the Stereo Out strip.
+
+- **Length** is in bars, beats, divisions and ticks counted from zero, like the Event List, the
+  Audio Track editor and the help tags while dragging (4 0 0 0 is four bars), with the time in
+  minutes and seconds after it. Position is in bars and beats counted from one, as on the LCD.
+- The **Track** section has the track's **Name** (type a new one and press Return; Esc puts
+  the old one back), **Color** (click the swatch for the colour grid), type, **Input** (audio
+  tracks: a pop-up, as on the channel strip) or instrument, **Output** (a pop-up: Stereo Out,
+  the stack, or an aux), **Freeze** (as the snowflake button), the region or subtrack count
+  and the group. Choosing a track (clicking its header or its strip in the Mixer,
 right-clicking its empty lane, or Up and Down) deselects the regions on other tracks, so the
 Region section never describes a region on a different track from the Track section.
 
@@ -1173,7 +1189,7 @@ From the Track menu, the track header's right-click menu, or keys:
 - **Duplicate Track** copies settings, plug-ins with their current settings, automation and
   regions. **New Track with Same Settings** copies everything except the regions and
   automation.
-- **Rename Track**, **Track Color**, Track On, Mute, Solo, Record Enable, Select All Regions on Track,
+- **Rename Track**, **Track Color** (a grid of 20 colours, named in their tooltips), Track On, Mute, Solo, Record Enable, Select All Regions on Track,
   Export Track as MIDI File…, Reset Track Height.
 - **Track Alternatives** (Track › Track Alternatives, or the right-click menu): other sets of
   regions for an audio or instrument track, as in Logic. **New Alternative** starts an empty
@@ -1423,8 +1439,9 @@ Show them with View › Show Global Tracks (G); they sit between the ruler and t
 
 ### Tempo track
 
-- Click empty space to add a tempo change at the snapped position, starting at the tempo in
-  effect there, and drag straight away to set it.
+- Click the tempo line (or double-click anywhere in the lane) to add a tempo change at the
+  snapped position, starting at the tempo in effect there, and drag straight away to set it. A
+  single click away from the line adds nothing.
 - Drag a point up or down to change its tempo (Shift for 0.01 BPM steps), or sideways to move
   it. A drag locks to whichever direction you move first.
 - Double-click a point, or select it and press Delete, to remove it. The first point can't be
@@ -1681,8 +1698,9 @@ regions**, MIDI regions that play the notes their pattern makes.
 
 - **Creating a pattern region:** Track › New Pattern Region (on the selected software instrument
   track, at the bar of the playhead), right-click an instrument track's empty space › Create
-  Pattern Region, or the button the Step Sequencer shows when no pattern region is selected. A
-  new one is a bar long, with sixteen 1/16 steps and rows for a General MIDI drum kit: Kick
+  Pattern Region (at the bar clicked), or the button the Step Sequencer shows when no pattern
+  region is selected. Made at the playhead, it goes in the first bar from there that no region
+  on the track covers, so it never lands on top of one. A new one is a bar long, with sixteen 1/16 steps and rows for a General MIDI drum kit: Kick
   (C1), Snare (D1), Clap (D♯1), Closed Hi-Hat (F♯1), Open Hi-Hat (A♯1), Low Tom, Hi-Mid Tom
   and Crash. In the Tracks area a pattern region shows its rows, with a dot wherever a note
   plays.
@@ -2854,7 +2872,7 @@ The velocity curve applies to MIDI inputs, not to Musical Typing.
 |---|---|---|
 | Snap | Smart (follows the zoom), Bar, Beat, Off | Smart |
 | Nudge Value | Bar, Beat, 1/8 note, 1/16 note, 1/32 note, 10 ms, 1 ms | 1/16 note |
-| Click Moves Playhead | Anywhere in the tracks; Empty space only; Never (a click without a drag moves the playhead there, snapped to the grid) | Anywhere |
+| Click Moves Playhead | Anywhere in the tracks; Empty space only; Never (a click without a drag moves the playhead there, snapped to the grid) | Empty space only (Anywhere before 0.1.0-alpha.7, which earlier settings keep) |
 | Anti-click Fades | 0 to 100 ms, for new recordings and imports | 0 |
 | Move Automation with Regions | Never; Always; Ask (whether moving a region along its track takes its automation along) | Never |
 | Crossfade Time | 0 to 1000 ms: take folder comp boundaries, X-Fade crossfades between regions that touch, and the Crossfade menu's first entry | 20 ms |

@@ -21,6 +21,8 @@ import { TrackAltButton } from "./TrackAlternatives";
 import { showsTrackAlts } from "../alternativesModel";
 
 const INDENT = 12;
+/** Smallest full header with room for the automation controls on a line of their own. */
+const AUTO_ROW_H = 76;
 
 function StackIcon({ summing }: { summing: boolean }) {
   return (
@@ -113,9 +115,12 @@ function Header({
   // Short headers put everything on one line and move the buttons into a "⋯" menu.
   const tier = headerTier(height);
   const full = tier === "full";
-  // The automation row takes a third line on tall tracks, or the buttons' place.
+  // The automation controls take a third line on tall tracks. On shorter ones they take the
+  // volume slider's place, so M, S, R and I stay in the header.
   const automation = useStore((s) => s.showAutomation) && automatable(track);
-  const autoRow = full && automation && height >= 76;
+  const autoRow = full && automation && height >= AUTO_ROW_H;
+  const autoInVolume = full && automation && !autoRow;
+  const sliderW = Math.max(56, 88 - depth * INDENT);
   const allTracks = useStore((s) => s.snap?.project.tracks) ?? [];
   const off = isTrackOff(allTracks, track);
   // "On" here means lit, which for this button is the track being off. Its menu entry reads the
@@ -254,8 +259,7 @@ function Header({
           {/* On the name's line: the button row has no room to spare at the usual widths. */}
           {full && btn(power)}
         </div>
-        {full && automation && !autoRow && <AutomationControls track={track} />}
-        <div className="th-buttons" hidden={full && automation && !autoRow}>
+        <div className="th-buttons">
           {/* Short headers keep only the switches that are on, so a muted, soloed, armed or
               frozen track still shows it; the rest are in the "⋯" menu. */}
           {(full ? columns.full : columns.compact).map(column)}
@@ -292,15 +296,19 @@ function Header({
         {autoRow && <AutomationControls track={track} />}
       </div>
       <div className="th-volume">
-        <LevelSlider
-          db={volume}
-          onChange={(db) => api.updateTrack(track.id, { volume_db: db })}
-          width={Math.max(56, 88 - depth * INDENT)}
-          tier={tier}
-          track={track.kind === "folder" ? null : track.id}
-          label={track.kind === "folder" ? "Folder volume (moves every subtrack)" : "Volume"}
-          {...volumeTouch}
-        />
+        {autoInVolume ? (
+          <AutomationControls track={track} width={sliderW} />
+        ) : (
+          <LevelSlider
+            db={volume}
+            onChange={(db) => api.updateTrack(track.id, { volume_db: db })}
+            width={sliderW}
+            tier={tier}
+            track={track.kind === "folder" ? null : track.id}
+            label={track.kind === "folder" ? "Folder volume (moves every subtrack)" : "Volume"}
+            {...volumeTouch}
+          />
+        )}
       </div>
       <div
         className="th-resize"

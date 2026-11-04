@@ -998,7 +998,7 @@ at its new place (`old_name::relocated`).
 
 | File | Written by | Contents |
 |---|---|---|
-| `settings.json` | `src-tauri/src/settings.rs` | Sections `audio` (`AudioConfig`), `prefs` (`daw_engine::prefs::Prefs`: general, recording, midi, editing, latency, click defaults), `ui` (`UiPrefs`: startup, confirm_unsaved, snap, nudge, keymap overrides, theme, ui_scale, wave_style, click_locates) and `plugins` (`disabled` ids, extra `folders`). Every field defaults, and a malformed section is replaced by defaults without losing the others. Written atomically. |
+| `settings.json` | `src-tauri/src/settings.rs` | Sections `audio` (`AudioConfig`), `prefs` (`daw_engine::prefs::Prefs`: general, recording, midi, editing, latency, click defaults), `ui` (`UiPrefs`: startup, confirm_unsaved, snap, nudge, keymap overrides, theme, ui_scale, wave_style, click_locates) and `plugins` (`disabled` ids, extra `folders`). Every field defaults, and a malformed section is replaced by defaults without losing the others. A default that changed keeps its old value for files written before: `click_locates` is `"empty"` with no settings file, `"anywhere"` (the earlier default) when an existing file lacks it (`earlier_click_locates`, `UiPrefs::earlier`). Written atomically. |
 | `recent.json` | `src-tauri/src/recent.rs` | Up to 20 canonical project paths, newest first (not written atomically). |
 | `plugins.json` | `plugin_db.rs` | The plug-in scan cache. |
 | `plugin-scan.json` | `plugin_db.rs` | The last scan's report (bundles, plug-ins, failures with reasons), for Settings › Plug-ins. |
@@ -2484,6 +2484,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `TrackTools.tsx` | The Left-click and Command-click Tool pop-ups and the tools' icons. |
 | `Panels.tsx` | Inspector, Mixer, Library, Browser. |
 | `FadeRows.tsx`, `RegionParamRows.tsx` | The Region inspector's fade rows and playback parameter rows. |
+| `TrackInspector.tsx` | The Inspector's Track section: name, colour, input, output and freeze, editable; type, instrument, regions and group. |
 | `ChannelStrip.tsx` | A mixer channel strip. |
 | `StripSlots.tsx` | The strips' slot boxes (shared row count, scrolling past it, "+N") and blank stand-ins for sections a strip doesn't have, which keep strips level. |
 | `Sends.tsx` | The channel strip's Sends section and Output slot. |

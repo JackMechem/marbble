@@ -10,14 +10,29 @@
   position: relative;
 }
 
+/* A row of its own, like the other global tracks: level with the ruler's marker lane (its
+   line at 36 px, Ruler.tsx MARKERS_Y), under the + and H buttons. */
 .global-label {
   position: absolute;
-  left: 10px;
-  bottom: 2px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 15px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  border-top: 1px solid var(--edge);
   font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--dim);
   pointer-events: none;
+}
+
+/* The + and H buttons, centred in the rows above the marker lane. */
+.headers-top {
+  align-items: flex-start;
+  padding-top: 9px;
 }
 
 .marker-list {

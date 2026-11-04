@@ -2,11 +2,12 @@
 // Global Tracks, G), under the Arrangement track (ArrangementTrack.tsx). They scroll and zoom
 // with the arrange area.
 //
-// Tempo lane: click to add a tempo change at the snapped position (dragging it right away),
-// drag a point up or down to change its tempo (Shift: fine) or sideways to move it,
-// double-click it or press Delete to remove it, right-click for Ramp to Next Tempo and Move
-// MIDI Regions with Tempo. Signature lane: double-click to add or edit a signature in a
-// small popover; right-click a signature to delete it.
+// Tempo lane: click the line (or double-click anywhere in the lane) to add a tempo change at
+// the snapped position (dragging it right away), drag a point up or down to change its tempo
+// (Shift: fine) or sideways to move it, double-click it or press Delete to remove it,
+// right-click for Ramp to Next Tempo and Move MIDI Regions with Tempo. Signature lane:
+// double-click to add or edit a signature in a small popover; right-click a signature to
+// delete it.
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { act, type Project } from "../api";
 import { coalesced, framePos, onFrame } from "../frame";
@@ -28,6 +29,8 @@ export const TEMPO_MIN_H = 32;
 export const TEMPO_MAX_H = 240;
 /** Inset of the tempo graph from the lane's top and bottom. */
 const PAD = 7;
+/** How near the tempo line (px) a single click adds a tempo change. */
+const LINE_HIT = 6;
 /** The tempo graph's colour, Logic's green. */
 const TEMPO_COLOR = "#8cc63f";
 
@@ -305,6 +308,16 @@ export function GlobalTracks() {
       const s = getState();
       const pos = Math.round(snapPos(p, sampleAt(e.clientX), s.snapMode, s.pxPerBeat));
       if (pos <= 0) return;
+      // A single click adds one only on (or near) the line; away from it a double-click does,
+      // so a click that just lands in the lane doesn't change the tempo.
+      const lineY = SIG_H + PAD + ((range[1] - map.bpmAt(pos)) / Math.max(1e-6, range[1] - range[0])) * (live.current.laneH - 2 * PAD);
+      if (e.detail < 2 && Math.abs(y - lineY) > LINE_HIT) {
+        if (selectedTempo !== null) {
+          selectedTempo = null;
+          draw();
+        }
+        return;
+      }
       const at = map.eventIndexAt(pos);
       if (events[at].pos === pos) {
         i = at;

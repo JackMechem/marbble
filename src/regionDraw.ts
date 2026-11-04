@@ -24,6 +24,9 @@ export function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w
   ctx.closePath();
 }
 
+/** A muted region's colour, and every region's on a muted track (the Tracks area). */
+export const MUTED_COLOR = "#6c6c70";
+
 export function drawRegion(
   ctx: CanvasRenderingContext2D,
   r: Region,
@@ -45,7 +48,7 @@ export function drawRegion(
   /** Amplitude scale for the waveform (the Audio Track editor's gain and waveform zoom). */
   waveScale = 1,
 ) {
-  const color = r.muted ? "#6c6c70" : r.color ?? t.color;
+  const color = r.muted ? MUTED_COLOR : r.color ?? t.color;
   // Short tracks get a slimmer name bar, so the body keeps a strip of its own.
   const geom = regionBar(h);
   const headerH = geom.bar;

@@ -1,10 +1,6 @@
 /* Automation in the track headers, and the headers while Hide is on. */
 /* ---- automation ------------------------------------------------------------------------- */
 
-.th-buttons[hidden] {
-  display: none;
-}
-
 .th-auto {
   display: flex;
   gap: 4px;
@@ -44,3 +40,29 @@
   opacity: 0.45;
 }
 
+
+/* A short header's automation controls, in the volume slider's column: the mode and + on the
+   first line, the parameter under them. */
+.th-auto.stacked {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20px;
+  grid-template-areas:
+    "mode add"
+    "param param";
+  gap: 4px;
+}
+
+.th-auto.stacked .auto-mode {
+  grid-area: mode;
+  width: auto;
+}
+
+.th-auto.stacked .auto-param {
+  grid-area: param;
+  min-width: 0;
+}
+
+.th-auto.stacked .auto-lane-btn {
+  grid-area: add;
+  width: 20px;
+}

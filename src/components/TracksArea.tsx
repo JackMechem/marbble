@@ -28,6 +28,7 @@ import { zeroCrossingsItem } from "../zeroCrossings";
 import { arrangeItems } from "../arrangeCmds";
 import { EDIT_MENU, layMenu, menuLabel } from "../menuLabels";
 import { packTakeFolder } from "../takes";
+import { releaseFieldFocus } from "../focusRing";
 
 const SNAP_LABELS: Record<Snap, string> = { smart: "Smart", bar: "Bar", beat: "Beat", off: "Off" };
 /** Logic's Drag pop-up; only Overlap and X-Fade so far. */
@@ -251,6 +252,8 @@ export function TracksArea() {
       </div>
       <div
         className={"tracks-body" + (showOverview ? " with-overview" : "")}
+        // A press anywhere here, global tracks and ruler included, ends typing in a text field.
+        onMouseDownCapture={(e) => releaseFieldFocus(e.target)}
         style={{
           gridTemplateColumns: `${headerW}px 1fr`,
           gridTemplateRows: (globalH ? `${RULER_H}px ${globalH}px 1fr` : `${RULER_H}px 1fr`) + (showOverview ? ` ${OVERVIEW_H + 1}px` : ""),

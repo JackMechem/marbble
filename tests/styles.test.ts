@@ -100,3 +100,19 @@ test("keyboard focus shows a ring from the token, and only for the keyboard", ()
   assert.match(base, /html:not\(\[data-keyboard-focus\]\) :focus-visible/);
   assert.match(css(read("tokens.css")), /--focus-ring:/);
 });
+
+// ---- the Inspector -----------------------------------------------------------------------------
+
+test("Inspector rows grow to fit their controls (a fixed height made the Region rows overlap)", () => {
+  // A number field is 24 px tall; rows of a fixed height smaller than that drew each one over the
+  // next row's label.
+  for (const f of ["inspector.css", "inspector-regions.css", "region-params.css"]) {
+    for (const m of css(read(f)).matchAll(/([^{}]*\.insp-row[^{}]*)\{([^}]*)\}/g)) {
+      assert.ok(!/(^|[;\s])height\s*:/.test(m[2]), `${f}: "${m[1].trim()}" sets a fixed height; use min-height`);
+    }
+  }
+  const field = /\.numfield\s*\{([^}]*)\}/.exec(css(read("form-controls.css")))![1];
+  const fieldH = Number(/height:\s*(\d+)px/.exec(field)![1]);
+  const row = /\.insp-row\.rp-row\s*\{([^}]*)\}/.exec(css(read("region-params.css")))![1];
+  assert.ok(Number(/min-height:\s*(\d+)px/.exec(row)![1]) >= fieldH, "a parameter row holds a number field");
+});

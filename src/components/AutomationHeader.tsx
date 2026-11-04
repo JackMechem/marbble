@@ -23,11 +23,13 @@ export function AutoModeButton({ track, compact }: { track: Track; compact?: boo
   );
 }
 
-/** A track header's automation row: which parameter the lane shows, and the mode. */
-export function AutomationControls({ track }: { track: Track }) {
+/** A track header's automation row: which parameter the lane shows, and the mode. `width`
+ *  stacks them in a column that wide instead (the mode and + above the parameter), where a
+ *  short header's volume slider was. */
+export function AutomationControls({ track, width }: { track: Track; width?: number }) {
   const param = useStore((s) => s.autoLane[track.id]) ?? VOLUME;
   return (
-    <div className="th-auto" onMouseDown={(e) => e.stopPropagation()}>
+    <div className={"th-auto" + (width ? " stacked" : "")} style={width ? { width } : undefined} onMouseDown={(e) => e.stopPropagation()}>
       <AutoModeButton track={track} compact />
       <button
         className="popup auto-param"

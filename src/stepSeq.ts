@@ -4,6 +4,7 @@
 // editor, which sends each edited pattern with `set_pattern`.
 import type { Note, Pattern, PatternRow, PatternStep, Region } from "./api";
 import type { TempoMap } from "./tempo";
+import { regionEnd } from "./loops.ts";
 
 /** Step rates as steps per whole note: 1/4 to 1/32, then their triplets (as pattern.rs). */
 export const RATES = [4, 8, 16, 32, 6, 12, 24, 48] as const;
@@ -262,4 +263,28 @@ export function drawPatternMini(
       }
     }
   }
+}
+
+/**
+ * Where a new bar-long pattern region goes when it's made at the playhead: the bar holding `pos`,
+ * or the first bar after it that no region on the track covers (a looped region counts to its
+ * loop end), so it never lands on top of one. Returns [start, length] in samples.
+ */
+export function freePatternBar(map: Pick<TempoMap, "barAt" | "barStart">, regions: readonly Pick<Region, "start" | "length" | "loop_end">[], pos: number): [number, number] {
+  const span = (bar: number): [number, number] => {
+    const start = Math.round(map.barStart(bar));
+    return [start, Math.round(map.barStart(bar + 1)) - start];
+  };
+  let bar = map.barAt(Math.max(0, pos));
+  // Each step moves past a region, so this ends within regions.length + 1 steps.
+  for (let guard = 0; guard <= regions.length; guard++) {
+    const [start, length] = span(bar);
+    const hit = regions.filter((r) => r.start < start + length && regionEnd(r) > start);
+    if (!hit.length) return [start, length];
+    const end = Math.max(...hit.map(regionEnd));
+    // The bar holding the end of what's in the way; the next one if it ends on a bar line.
+    const next = map.barAt(end);
+    bar = Math.round(map.barStart(next)) >= end ? next : next + 1;
+  }
+  return span(bar);
 }

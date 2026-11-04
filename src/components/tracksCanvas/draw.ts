@@ -1,7 +1,7 @@
 // Painting the Tracks area's canvas. Arrange.tsx calls this at most once per display frame; it reads the
 // store and the theme itself, so nothing here is React state.
 import { pixelRatio } from "../../uiScale";
-import { type Id, type Project, type Region } from "../../api";
+import { type Id, type Project, type Region, type Track } from "../../api";
 import { getState, liveTakes } from "../../store";
 import { offTracks } from "../../trackOff";
 import { drawWave } from "../../waveform";
@@ -19,7 +19,7 @@ import { movedStart } from "../../musicalMove";
 import { newLaneId } from "../../newTrackDrag";
 import { drawGainHandle, gainDragging, withLiveGain } from "../../regionGainDrag";
 import { drawToolOverlay } from "../../trackTools";
-import { drawLoops, drawNewLane, drawRegion, roundRect } from "../../regionDraw";
+import { drawLoops, drawNewLane, drawRegion, MUTED_COLOR, roundRect } from "../../regionDraw";
 import { dragNewLanes, dragTarget, type TracksRefs } from "./drag";
 import type { Viewport } from "../../view";
 
@@ -169,6 +169,8 @@ export function drawTracks({ canvasRef, live, dragRef, swipeRef, marqueeRef, hov
       outcome = dragOutcome(mode, lanes, { kind: "resize", id: drag.grabbed, start: drag.start, len });
     }
   }
+  // A muted track's regions are drawn grey, as a muted region is (without "(muted)" in the name).
+  const shown = (r: Region, t: Track): Region => (t.mute && !r.muted ? { ...r, color: MUTED_COLOR } : r);
   // Loop repetitions first: region bodies cover them, as they do in playback.
   // A copy drag (Alt) leaves the originals in place and draws the copies where they'll land.
   const passes = (r: Region) => (drag?.copy && drag.ids.includes(r.id) ? [true, false] : [false]);
@@ -181,7 +183,7 @@ export function drawTracks({ canvasRef, live, dragRef, swipeRef, marqueeRef, hov
       const x1 = loopEnd(g.start, g.length, g.loop) * pps - vp.left;
       if (g.th === 0 || x0 > W || x1 < 0 || g.y > H || g.y + g.th < 0) continue;
       ctx.globalAlpha = g.hidden ? 0.4 : 1;
-      drawLoops(ctx, withLiveGain(r), t, -vp.left, g.start, g.length, g.loop, g.y, g.th - 3, selectedRegions.includes(r.id), pps, W, g.shift);
+      drawLoops(ctx, shown(withLiveGain(r), t), t, -vp.left, g.start, g.length, g.loop, g.y, g.th - 3, selectedRegions.includes(r.id), pps, W, g.shift);
       ctx.globalAlpha = 1;
     }
   });
@@ -193,7 +195,7 @@ export function drawTracks({ canvasRef, live, dragRef, swipeRef, marqueeRef, hov
       if (gone || th === 0 || x > W || x + w < 0 || y > H || y + th < 0) continue;
       const sel = selectedRegions.includes(r.id);
       ctx.globalAlpha = hidden ? 0.4 : 1;
-      drawRegion(ctx, withLiveGain(r), t, x, y, w, th - 3, sel, pps, W, shift, fades, r.content.type === "audio" && (sel || hoverRef.current === r.id) && !t.frozen);
+      drawRegion(ctx, shown(withLiveGain(r), t), t, x, y, w, th - 3, sel, pps, W, shift, fades, r.content.type === "audio" && (sel || hoverRef.current === r.id) && !t.frozen);
       if (!t.frozen && !drag && (hoverRef.current === r.id || gainDragging(r.id))) drawGainHandle(ctx, withLiveGain(r), x, y, w, th - 3, W);
       if (t.frozen) {
         // Frozen: a frosted veil over the region, which can't be edited.
@@ -216,7 +218,7 @@ export function drawTracks({ canvasRef, live, dragRef, swipeRef, marqueeRef, hov
       const w = Math.max(2, r.length * pps);
       if (x > W || x + w < 0) continue;
       const sw = swipeRef.current;
-      drawTakeRows(ctx, r, r.muted ? "#6c6c70" : r.color ?? t.color, x, w, rowsTop, pps, W, sw && sw.region === r.id ? sw : null);
+      drawTakeRows(ctx, r, r.muted || t.mute ? MUTED_COLOR : r.color ?? t.color, x, w, rowsTop, pps, W, sw && sw.region === r.id ? sw : null);
     }
   });
 

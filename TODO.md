@@ -201,8 +201,6 @@ What's left from the reviews and the UI audits of 2026-11-04. An independent re-
 graded the UI **7/10** (41 findings; report at `~/Desktop/marbble-ui-audit/ui-audit-2.html` on the owner's
 machine). Its top items:
 
-- The Inspector's Region rows (Delay, Gain, Fade In, Curve, Fade Out) overlap with an audio region selected:
-  `.insp-row` is 19 px tall and the steppers about 22 px.
 - File › Save As aborted a raw debug binary run outside the dev shell (`GLib-GIO-ERROR: Settings schema
   'org.gtk.Settings.FileChooser' is not installed`). Likely the environment, but a missing schema shouldn't end
   the session: check before opening a GTK file dialog.
@@ -227,6 +225,12 @@ machine). Its top items:
 - **Instrument panels are generic grids:** labels repeat their section ("Osc 1 Range" inside "Oscillator
   1"), toggles read "Osc 1 On", and sections leave large gaps (Tre's Grid at the docked height scrolls to its
   Voices and Touch rows). Custom panels (Tre next) fix this one instrument at a time.
+- **Track inspector, what's left:** Logic's also has per-track MIDI transpose, velocity offset, key and
+  velocity limits, delay, Q-reference and a freeze mode (Pre/Source); none of these exist in the engine yet, so the
+  section shows what the track has (name, colour, input, output, freeze). The instrument is picked on the strip
+  below it, not in the Track section. Track icons follow the track's kind and can't be chosen.
+- **The Tempo track adds a point on a click near the line** (6 px) or a double-click anywhere; a double-click on
+  the line still adds and then removes a point (the second click finds the new one). Worth a look in the app.
 - **The global tracks take about 200 px by default** (Marker, Arrangement, Signature, Tempo) on a project
   that uses only the Arrangement track; showing only the ones in use, or a shorter Tempo track, would give
   the tracks back.

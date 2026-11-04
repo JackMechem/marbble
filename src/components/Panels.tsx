@@ -1,14 +1,15 @@
 // The side and bottom panes that aren't editors: Inspector, Mixer, Library and Browser.
 import { useEffect, useMemo, useState } from "react";
-import { act, BUILTIN_SYNTH, call, INSTRUMENT_SLOT, isStack, SEND_SLOTS, type Project, type Region, type Track } from "../api";
+import { act, BUILTIN_SYNTH, call, INSTRUMENT_SLOT, SEND_SLOTS, type Project, type Region, type Track } from "../api";
 import { Icon } from "../icons";
 import { isAudioPath, startFileDrag } from "../dnd";
 import { importMidiFiles, isMidiPath } from "../midiFiles";
 import { currentTick, getState, setState, useStore } from "../store";
-import { formatTime, inputLabel, toBbt } from "../time";
+import { formatLengthBbt, formatTime, toBbt } from "../time";
 import { ChannelStrip } from "./ChannelStrip";
 import { FadeRows } from "./FadeRows";
 import { RegionParamRows } from "./RegionParamRows";
+import { TrackRows } from "./TrackInspector";
 import { NumberField } from "./Form";
 import { useSelectedTrack } from "./TrackHeaders";
 import { isLooped } from "../loops";
@@ -75,7 +76,12 @@ export function Inspector() {
                 <input type="checkbox" checked={region.muted} onChange={(e) => act("set_region_muted", { id: region.id, muted: e.target.checked })} />
               </Row>
               <Row label="Position">{bbt(region.start)}</Row>
-              <Row label="Length">{formatTime(project, region.length)}</Row>
+              <Row label="Length">
+                {/* Bars and beats like Position, the help tags and the Event List; the clock time after it. */}
+                <span title={`${formatTime(project, region.length)} (minutes:seconds)`}>
+                  {formatLengthBbt(project, region.start, region.length)} <span className="dim">· {formatTime(project, region.length)}</span>
+                </span>
+              </Row>
               <Row label="Loop">
                 <input type="checkbox" checked={isLooped(region)} onChange={() => toggleLoop([region.id])} />
               </Row>
@@ -99,18 +105,7 @@ export function Inspector() {
         </Disclosure>
         <Disclosure title={`Track: ${track?.name ?? "—"}`} initial={false}>
           {track ? (
-            <>
-              <Row label="Type">{{ audio: "Audio", instrument: "Software Instrument", folder: "Folder Stack", summing: "Summing Stack", aux: "Aux" }[track.kind]}</Row>
-              {track.kind === "aux" && <Row label="Input">Bus {track.bus}</Row>}
-              {track.kind === "audio" && <Row label="Input">{inputLabel(track.input)}</Row>}
-              {track.kind === "instrument" && <Row label="Instrument">{track.instrument?.name ?? "None"}</Row>}
-              {track.kind === "aux" ? null : isStack(track.kind) ? (
-                <Row label="Subtracks">{project.tracks.filter((t) => t.parent === track.id).length}</Row>
-              ) : (
-                <Row label="Regions">{track.regions.length}</Row>
-              )}
-              {track.group !== null && <Row label="Group">{project.groups.find((g) => g.id === track.group)?.name ?? "—"}</Row>}
-            </>
+            <TrackRows project={project} track={track} />
           ) : (
             <div className="insp-empty">No track selected</div>
           )}

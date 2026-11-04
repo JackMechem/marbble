@@ -16,6 +16,39 @@ export interface MenuItem {
   hint?: string;
   /** Renders a colour swatch instead of the label text. */
   color?: string;
+  /** Renders a grid of colour swatches (named in their tooltips) instead of a row. */
+  swatches?: Swatch[];
+}
+
+/** One colour of a swatch grid. */
+export interface Swatch {
+  color: string;
+  name: string;
+  checked?: boolean;
+  onClick: () => void;
+}
+
+/** A compact grid of colours, five to a row, each a button named for screen readers. */
+function SwatchGrid({ swatches }: { swatches: Swatch[] }) {
+  return (
+    <div className="menu-swatches" role="group" aria-label="Colors">
+      {swatches.map((sw) => (
+        <button
+          key={sw.color}
+          type="button"
+          className={"menu-swatch-btn" + (sw.checked ? " on" : "")}
+          style={{ background: sw.color }}
+          title={sw.name}
+          aria-label={sw.name}
+          aria-pressed={!!sw.checked}
+          onClick={() => {
+            closeMenu();
+            sw.onClick();
+          }}
+        />
+      ))}
+    </div>
+  );
 }
 
 interface Open {
@@ -76,6 +109,8 @@ function List({ items, x, y, minWidth, depth }: { items: MenuItem[]; x: number; 
         {items.map((it, i) =>
           it.separator ? (
             <div key={i} className="menu-sep" />
+          ) : it.swatches ? (
+            <SwatchGrid key={i} swatches={it.swatches} />
           ) : it.header ? (
             <div key={i} className="menu-header">
               {it.label}

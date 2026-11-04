@@ -91,3 +91,28 @@
   box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.6);
 }
 
+
+/* A colour menu's swatch grid (Track Color, region and marker colours). */
+.menu-swatches {
+  display: grid;
+  grid-template-columns: repeat(5, 22px);
+  gap: 4px;
+  padding: 4px 10px;
+}
+
+.menu-swatch-btn {
+  width: 22px;
+  height: 16px;
+  border-radius: 3px;
+  box-shadow: 0 0 0 0.5px var(--edge);
+}
+
+.menu-swatch-btn:hover {
+  box-shadow: 0 0 0 2px var(--text);
+}
+
+.menu-swatch-btn.on {
+  box-shadow:
+    0 0 0 1px var(--menu-bg),
+    0 0 0 3px var(--accent);
+}

@@ -63,7 +63,7 @@ export function EditingPane({ close }: { close: () => void }) {
           <Select value={ui.nudge} options={NUDGES} onChange={(v) => setUi({ nudge: v })} />
         </Row>
         <Row label="Click Moves Playhead:" note="Clicking without dragging puts the playhead there, snapped to the grid. Dragging still moves regions or draws a selection.">
-          <Select value={ui.click_locates ?? "anywhere"} options={CLICK_LOCATES} onChange={(v) => setUi({ click_locates: v })} />
+          <Select value={ui.click_locates ?? "empty"} options={CLICK_LOCATES} onChange={(v) => setUi({ click_locates: v })} />
         </Row>
         <Row label="Anti-click Fades:" note="A short fade-in and fade-out on new recordings and imported audio, so region edges don't click. 0 = none.">
           <div className="row-inline">

@@ -1,9 +1,10 @@
 // Unit tests for the scrolling helpers: src/wheel.ts (Settings › Editing › Mouse Wheel
-// Scrolls) and revealLeft in src/view.ts (bringing the playhead into view).
+// Scrolls), revealLeft in src/view.ts (bringing the playhead into view) and revealTop (bringing
+// a track selected with the arrow keys into view).
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { timeStripWheel, timeWheel } from "../src/wheel.ts";
-import { onRevealPlayhead, revealLeft, revealPlayhead } from "../src/view.ts";
+import { onRevealPlayhead, revealLeft, revealPlayhead, revealTop, TRACK_COLOR_NAMES, TRACK_COLORS } from "../src/view.ts";
 
 const wheel = (deltaY: number, deltaX = 0, shiftKey = false, deltaMode = 0) => ({ deltaX, deltaY, deltaMode, shiftKey });
 
@@ -63,4 +64,27 @@ test("revealPlayhead reaches every subscribed view until it unsubscribes", () =>
   off();
   revealPlayhead(7);
   assert.deepEqual(got, [42]);
+});
+
+test("revealTop leaves a track in full view alone", () => {
+  assert.equal(revealTop(100, 64, 0, 400), null);
+  assert.equal(revealTop(336, 64, 0, 400), null, "touching the bottom edge");
+  assert.equal(revealTop(200, 64, 200, 400), null, "touching the top edge");
+});
+
+test("revealTop scrolls as little as it can", () => {
+  // Below the view (↓ past the last visible track): its bottom edge at the view's bottom.
+  assert.equal(revealTop(400, 64, 0, 400), 64);
+  assert.equal(revealTop(380, 64, 0, 400), 44, "partly visible");
+  // Above the view (↑): its top edge at the view's top.
+  assert.equal(revealTop(64, 64, 300, 400), 64);
+  assert.equal(revealTop(0, 64, 30, 400), 0);
+  // Taller than the view: its top edge, whichever side it's on.
+  assert.equal(revealTop(900, 500, 0, 400), 900);
+  assert.equal(revealTop(0, 500, 200, 400), 0);
+});
+
+test("every track colour has a name for its swatch", () => {
+  assert.equal(TRACK_COLOR_NAMES.length, TRACK_COLORS.length);
+  assert.equal(new Set(TRACK_COLOR_NAMES).size, TRACK_COLOR_NAMES.length);
 });

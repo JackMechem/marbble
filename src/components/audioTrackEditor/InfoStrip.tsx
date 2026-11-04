@@ -2,14 +2,7 @@
 import { useEffect, useState } from "react";
 import { call, type Id, type Project, type Region, type Track } from "../../api";
 import * as ed from "../../audioEdit";
-import { formatDb, formatTime, lengthBbt as lengthAt, toBbt } from "../../time";
-
-/** A length from `start` as bars, beats, divisions and ticks, counted from zero like Logic's
- *  length field (through the tempo map). */
-function lengthBbt(p: Project, start: number, len: number): string {
-  const b = lengthAt(p, start, len);
-  return `${b.bar} ${b.beat} ${b.div} ${b.tick}`;
-}
+import { formatDb, formatLengthBbt, formatTime, toBbt } from "../../time";
 
 const bbt = (p: Project, pos: number) => {
   const b = toBbt(p, pos);
@@ -43,7 +36,7 @@ export function InfoStrip({ project, track, region, sel }: { project: Project; t
             Start <b>{bbt(project, region.start)}</b>
           </span>
           <span>
-            Length <b>{lengthBbt(project, region.start, region.length)}</b> · {formatTime(project, region.length)}
+            Length <b>{formatLengthBbt(project, region.start, region.length)}</b> · {formatTime(project, region.length)}
           </span>
           {region.content.type === "audio" && (
             <span>

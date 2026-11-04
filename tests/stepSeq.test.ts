@@ -110,3 +110,20 @@ test("the playing step follows each row's rate and length, and the region's loop
   const once = { ...p, looped: false, length: 8 };
   assert.equal(ss.playingStep(map, r, once, once.rows[0], r.start + 9 * S16, end), null);
 });
+
+test("a pattern region made at the playhead goes in the first bar no region covers", () => {
+  const BAR = 4 * Q;
+  const at = (start: number, length: number, loop_end: number | null = null) => ({ start, length, loop_end });
+  // An empty track: the bar holding the playhead.
+  assert.deepEqual(ss.freePatternBar(map, [], 5 * BAR + Q), [5 * BAR, BAR]);
+  // The playhead inside a region (bars 1 to 8 here): the bar after its end.
+  assert.deepEqual(ss.freePatternBar(map, [at(0, 8 * BAR)], 5 * BAR + Q), [8 * BAR, BAR]);
+  // A region ending inside a bar: the next whole bar.
+  assert.deepEqual(ss.freePatternBar(map, [at(0, 8 * BAR + Q)], 5 * BAR), [9 * BAR, BAR]);
+  // Regions one after another: past all of them; a loop counts to its loop end.
+  assert.deepEqual(ss.freePatternBar(map, [at(4 * BAR, 2 * BAR), at(6 * BAR, BAR, 10 * BAR)], 4 * BAR), [10 * BAR, BAR]);
+  // A region starting later in the playhead's bar is in the way too.
+  assert.deepEqual(ss.freePatternBar(map, [at(5 * BAR + 2 * Q, Q)], 5 * BAR), [6 * BAR, BAR]);
+  // A free bar before a later region is used.
+  assert.deepEqual(ss.freePatternBar(map, [at(9 * BAR, BAR)], 5 * BAR), [5 * BAR, BAR]);
+});

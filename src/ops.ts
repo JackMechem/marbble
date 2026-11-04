@@ -15,7 +15,8 @@ import { exportMidi, exportTrackMidi, importMidiFiles } from "./midiFiles";
 import { canFreeze, freezeTracks, unfreezeTracks } from "./freeze";
 import { currentTick, getState, setState } from "./store";
 import { tempoMap } from "./tempo";
-import { TRACK_COLORS } from "./view";
+import { freePatternBar } from "./stepSeq";
+import { TRACK_COLOR_NAMES, TRACK_COLORS } from "./view";
 import { isFolder, packTakeFolder, takeFolderMenu } from "./takes";
 import { followingRegion, shapeOf } from "./fades";
 import { getSettings } from "./prefs";
@@ -302,21 +303,28 @@ async function createMidiRegion(track: Id, pos: number) {
 }
 
 /** Create Pattern Region: a bar-long pattern region at the bar containing `pos`, selected and
- *  open in the Step Sequencer. */
-export async function createPatternRegion(track: Id, pos: number) {
+ *  open in the Step Sequencer. With `free` (made at the playhead rather than where the user
+ *  clicked), it goes in the first bar from there that no region covers. */
+export async function createPatternRegion(track: Id, pos: number, free = false) {
   const p = project();
   if (!p) return;
   const m = tempoMap(p);
-  const bar = m.barAt(pos);
-  const start = Math.round(m.barStart(bar));
-  const made = await actMade("create_pattern_region", { track, start, length: Math.round(m.barStart(bar + 1)) - start });
+  let start: number, length: number;
+  if (free) [start, length] = freePatternBar(m, p.tracks.find((t) => t.id === track)?.regions ?? [], pos);
+  else {
+    const bar = m.barAt(pos);
+    start = Math.round(m.barStart(bar));
+    length = Math.round(m.barStart(bar + 1)) - start;
+  }
+  const made = await actMade("create_pattern_region", { track, start, length });
   if (made) setState({ selectedRegions: made, focus: "regions", bottom: "steps" });
 }
 
-/** Track › New Pattern Region: on the selected software instrument track, at the playhead. */
+/** Track › New Pattern Region: on the selected software instrument track, at the playhead (or
+ *  the first free bar after it). */
 export function newPatternRegion() {
   const t = tracks().find((x) => x.id === getState().snap?.selected);
-  if (t?.kind === "instrument") createPatternRegion(t.id, playhead());
+  if (t?.kind === "instrument") createPatternRegion(t.id, playhead(), true);
   else toast("Select a software instrument track for the pattern region");
 }
 
@@ -341,10 +349,12 @@ async function importMidiAt(track: Track, pos: number) {
 
 const ms = (p: { sample_rate: number }, v: number) => Math.round((v / 1000) * p.sample_rate);
 
+/** A colour menu: a five-by-four grid of the track colours, after a "default" item when
+ *  `defaultLabel` is given. */
 export function colorMenu(current: string | null | undefined, set: (c: string | null) => void, defaultLabel?: string): MenuItem[] {
-  const items: MenuItem[] = TRACK_COLORS.map((c) => ({ label: c, color: c, checked: c === current, onClick: () => set(c) }));
-  if (defaultLabel) return [{ label: defaultLabel, checked: !current, onClick: () => set(null) }, { separator: true }, ...items];
-  return items;
+  const grid: MenuItem = { swatches: TRACK_COLORS.map((c, i) => ({ color: c, name: TRACK_COLOR_NAMES[i], checked: c === current, onClick: () => set(c) })) };
+  if (defaultLabel) return [{ label: defaultLabel, checked: !current, onClick: () => set(null) }, { separator: true }, grid];
+  return [grid];
 }
 
 /** Rename… in a region's menu. */

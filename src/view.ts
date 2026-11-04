@@ -41,6 +41,13 @@ export const TRACK_COLORS = [
   "#d9546e", "#a0745a", "#8e8e93", "#6b7a8f",
 ];
 
+/** TRACK_COLORS' names, for tooltips and screen readers. */
+export const TRACK_COLOR_NAMES = [
+  "Red", "Orange", "Amber", "Yellow", "Lime", "Light Green", "Green", "Emerald",
+  "Teal", "Cyan", "Sky Blue", "Blue", "Indigo", "Violet", "Purple", "Magenta",
+  "Rose", "Brown", "Grey", "Slate",
+];
+
 // ---- revealing the playhead -------------------------------------------------------------------
 
 const revealSubs = new Set<(pos: number) => void>();
@@ -67,4 +74,16 @@ export function onRevealPlayhead(f: (pos: number) => void): () => void {
 export function revealLeft(x: number, left: number, width: number, margin = 60): number | null {
   if (x >= left && x <= left + width - 30) return null;
   return Math.max(0, x - margin);
+}
+
+/**
+ * The vertical scroll that shows a track lane `top`..`top + height` (px from the first track)
+ * in a view scrolled to `scrollTop` and `viewH` px tall, or null when it's already in full view.
+ * Scrolls as little as it can: a lane above comes in at the top edge, one below at the bottom
+ * edge (its top edge, when it's taller than the view).
+ */
+export function revealTop(top: number, height: number, scrollTop: number, viewH: number): number | null {
+  if (top >= scrollTop && top + height <= scrollTop + viewH) return null;
+  if (top < scrollTop || height >= viewH) return Math.max(0, top);
+  return Math.max(0, top + height - viewH);
 }

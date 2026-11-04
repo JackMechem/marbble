@@ -129,7 +129,8 @@ export function PluginSlotView({
   );
 }
 
-function inputMenu(track: Track, channels: number): MenuItem[] {
+/** An audio track's Input menu (the strip's input slot and the Track inspector). */
+export function inputMenu(track: Track, channels: number): MenuItem[] {
   const n = Math.max(channels, 2);
   const set = (input: InputSel) => api.updateTrack(track.id, { input });
   const items: MenuItem[] = [{ label: "No Input", checked: track.input.type === "none", onClick: () => set({ type: "none" }) }, { separator: true }];

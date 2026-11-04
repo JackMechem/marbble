@@ -31,6 +31,8 @@ All notable changes to Marbble are recorded here. The format follows
   General offers Rename to Marbble. It refuses while a project from it is open or anything is
   called `~/Music/Marbble`, never copies or overwrites, and takes Recent Projects, the folder
   settings and the projects' track heights along.
+- **The Inspector's Track section edits the track:** Name, Color (the colour grid), Input (audio
+  tracks) and Output pop-ups, and Freeze, besides the type, instrument, region count and group.
 
 ### Changed
 
@@ -91,6 +93,23 @@ All notable changes to Marbble are recorded here. The format follows
   themes fit in one row.
 - **Instrument panels** show a fade on the edge where the sections go on out of view (below in
   Grid, to the right in Row), with a line above the keyboard bar.
+- **Click Moves Playhead defaults to Empty space only** for new installs, so clicking a region
+  selects it without moving the playhead (Split at Playhead after a selection click works as in
+  Logic). Settings saved before keep their choice; Anywhere and Never are still in Settings ›
+  Editing.
+- **Show Automation keeps M, S, R and I in the track headers.** On headers under 76 px the
+  automation mode, the lane's parameter (no longer cut to "Volu…") and + take the volume
+  slider's place instead of the buttons'.
+- **Track Color is a grid** of 20 swatches, five to a row, each named in its tooltip and for
+  screen readers, instead of a 20-row list. Region, marker, VCA and arrangement colours use it
+  too.
+- **The Marker row** above the track headers is a row of its own, level with the ruler's marker
+  lane, like the other global tracks, with + and H above it.
+- **A muted track's regions are drawn grey,** as a muted region is.
+- **Region length is in bars and beats everywhere:** the Inspector's Length shows "4 0 0 0 ·
+  00:08.000" like the Audio Track editor, where it showed only the time.
+- **A single click in the Tempo track adds a tempo change only on the line;** away from it a
+  double-click does, so a click that just lands in the lane no longer changes the tempo.
 
 ### Fixed
 
@@ -128,6 +147,15 @@ All notable changes to Marbble are recorded here. The format follows
   slower than real time when the cores are shared, and the engine shed load as for a real overload,
   at a block that depended on the load. Checks that ask for it (`ParallelTest::patient`) no longer
   shed load, and the check fails plainly if an overload happens anyway.
+- **The Region inspector's rows no longer overlap** with an audio region selected: the rows
+  (Delay, Gain, Fade In, Curve, Fade Out) were 19 px tall around 24 px number fields. Rows now
+  fit their controls, "Fade Out" keeps to one line, and a style test guards it.
+- **Clicking the global tracks or the ruler ends typing in a text field,** so the next key is a
+  key command again (Y after the Library's search typed "y" into it).
+- **Up and Down scroll the newly selected track into view.**
+- **A pattern region made at the playhead no longer lands on top of a region:** Track › New
+  Pattern Region and the Step Sequencer's Create Pattern Region use the first free bar from the
+  playhead.
 
 ## [0.1.0-alpha.6] - 2026-11-03
 

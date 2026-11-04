@@ -37,6 +37,7 @@ import { transport } from "./transport";
 import { applyTheme } from "./themes";
 import { applyUiScale, stepUiScale } from "./uiScale";
 import { currentLayout, loadHeights, saveHeights, stepVisible, zoomTracks } from "./layout";
+import { revealTop, scrollTo, viewport } from "./view";
 import { installNativeDrop } from "./dnd";
 import { newAux } from "./routing";
 import { editorMenuCommand } from "./audioEdit";
@@ -82,6 +83,10 @@ function moveSelection(d: number) {
   if (n < 0 || l.heights[n] === 0) return;
   ops.keepRegionsOn([s.project.tracks[n].id]);
   api.selectTrack(s.project.tracks[n].id);
+  // Bring the newly selected track into view, as Logic does.
+  const vp = viewport();
+  const top = revealTop(l.tops[n], l.heights[n], vp.top, vp.height);
+  if (top !== null) scrollTo(vp.left, top);
 }
 
 function handleMenu(id: string) {

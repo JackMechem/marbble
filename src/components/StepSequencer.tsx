@@ -302,7 +302,7 @@ export function StepSequencer() {
           <div className="editor-empty ss-empty">
             <span>Select a pattern region to edit its steps.</span>
             {canCreate && (
-              <button className="popup" onClick={() => createPatternRegion(track!.id, framePos())}>
+              <button className="popup" onClick={() => createPatternRegion(track!.id, framePos(), true)}>
                 Create Pattern Region on {track!.name}
               </button>
             )}

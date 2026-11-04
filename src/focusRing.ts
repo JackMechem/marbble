@@ -25,3 +25,22 @@ export function installFocusRing(win: EventTarget = window, root: Root = documen
     win.removeEventListener("mousedown", mouse, capture);
   };
 }
+
+interface Focused {
+  tagName: string;
+  contains(other: unknown): boolean;
+  blur(): void;
+}
+
+/**
+ * A press outside a text field takes the keyboard from it, so the next key is a key command
+ * again. Pressing in the Tracks area normally does this by itself, but the global tracks and
+ * the ruler prevent the press's default (to keep text from being selected while dragging), and
+ * that leaves the Library's search field or a name field focused. Leaves the field alone when
+ * the press is inside it.
+ */
+export function releaseFieldFocus(target: unknown, active: Focused | null = document.activeElement as unknown as Focused | null): boolean {
+  if (!active || !["INPUT", "SELECT", "TEXTAREA"].includes(active.tagName) || active.contains(target)) return false;
+  active.blur();
+  return true;
+}

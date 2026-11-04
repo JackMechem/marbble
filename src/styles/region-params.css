@@ -3,7 +3,7 @@
    Rows tall enough for a number field, with the field and its unit on one line. */
 
 .insp-row.rp-row {
-  height: 26px;
+  min-height: 26px;
 }
 
 .insp-row.rp-row .insp-value {
