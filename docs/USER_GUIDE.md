@@ -98,7 +98,8 @@ Contents:
 19. [Troubleshooting](#19-troubleshooting):
     [Recordings are very quiet (or silent)](#recordings-are-very-quiet-or-silent) ·
     [Crackles, clicks or dropouts](#crackles-clicks-or-dropouts) ·
-    [Plug-in windows don't open on Wayland](#plug-in-windows-dont-open-on-wayland) ·
+    [Plug-in windows and Wayland](#plug-in-windows-and-wayland) ·
+    [Plug-in windows are small or blurry on a HiDPI screen](#plug-in-windows-are-small-or-blurry-on-a-hidpi-screen) ·
     [Your computer's audio is recorded, or loops back](#your-computers-audio-is-recorded-or-loops-back) ·
     [Recordings are early or late](#recordings-are-early-or-late) ·
     [The CPU meter](#the-cpu-meter) ·
@@ -1871,7 +1872,7 @@ and macOS, `%APPDATA%\marbble\channel-strips` on Windows).
   bundle that failed and why.
 
 Marbble hosts **VST3** plug-ins only. Plug-in editor windows are available on Linux (X11;
-see [Troubleshooting](#plug-in-windows-dont-open-on-wayland)) and macOS, where they float
+see [Troubleshooting](#plug-in-windows-and-wayland)) and macOS, where they float
 above Marbble's windows like Logic's and hide while another app is in front.
 
 ### Built-in effects
@@ -3088,13 +3089,39 @@ at 40% lowers everything you record by about 24 dB, and a muted source records s
 - Use **PipeWire** as the driver on Linux. Direct ALSA (`hw:`) devices lock the interface for
   Marbble alone.
 
-### Plug-in windows don't open on Wayland
+### Plug-in windows and Wayland
 
-Plug-in editors are X11 windows, and GLX-based plug-in GUIs fail when GTK runs natively on
-Wayland in the same process. Marbble therefore runs its interface through XWayland on Linux
-by default (it sets `GDK_BACKEND=x11` unless you set it). If you set `GDK_BACKEND=wayland`
-yourself, plug-in GUIs may fail to open; unset it. On Windows plug-in editor windows are not
-implemented yet; plug-ins still load and play, and their parameters can be automated.
+Plug-in editors on Linux are X11 windows, which a Wayland desktop shows through XWayland. By
+default Marbble runs its own interface through XWayland too (it sets `GDK_BACKEND=x11` unless
+you set it). To run the interface natively on Wayland, start it with `MARBBLE_WAYLAND=1`
+(`MARBBLE_WAYLAND=1 marbble`); without a Wayland session it falls back to X11. Plug-in editors
+still open as XWayland windows, and Marbble keeps their OpenGL drawing apart from its own, which
+OpenGL editors such as Zam's and Dragonfly's need. It's new and less tried than the default:
+the desktop decides where windows open, so a detached Mixer or Editor doesn't reopen where you
+left it. If something looks wrong, start Marbble without the variable. Setting
+`GDK_BACKEND=wayland` yourself has the same effect.
+
+On Windows plug-in editor windows are not implemented yet; plug-ins still load and play, and
+their parameters can be automated.
+
+### Plug-in windows are small or blurry on a HiDPI screen
+
+On Linux, Marbble tells each plug-in editor the display's scale as it opens, and plug-ins that
+support it draw at that size (all those tried do: LSP, Dragonfly, Zam, CHOW Tape, TONE3000). The
+scale is the one your desktop gives X11 programs: `GDK_SCALE`, then the desktop's GTK scale
+setting, then `Xft.dpi` divided by 96 (so `Xft.dpi: 192` in `~/.Xresources` is 2x). A plug-in
+window opened before you changed it keeps its size until you close and reopen it.
+
+- **Small:** your desktop runs X11 programs at their own resolution without telling them a
+  scale (Hyprland with `xwayland:force_zero_scaling`, for example). Set `Xft.dpi` (and
+  `GDK_SCALE=2` for 2x, which also enlarges Marbble's interface).
+- **Blurry but the right size:** the desktop enlarges X11 windows itself, as Hyprland and
+  GNOME do by default. That's the desktop, not Marbble; switching it to let X11 programs scale
+  themselves, as above, makes them sharp.
+- A few plug-ins with bitmap panels (Zam's) open a larger window but draw at their usual size
+  in its top-left corner; they do the same in any host on a scaled desktop.
+
+On macOS the system handles it, and plug-ins draw at the screen's resolution.
 
 ### Your computer's audio is recorded, or loops back
 
@@ -3188,8 +3215,8 @@ blank, because WebKit then draws on the CPU.
 
 - **LSP's Multi-Sampler:** now and then one of its samples doesn't load, and that instrument stays
   silent. Load the plug-in again, or close and reopen the project.
-- **Platforms:** plug-in editor windows open on Linux (X11) and macOS; Windows (HWND)
-  embedding is planned. On macOS, keys a plug-in's window doesn't use itself (Space, R, other
+- **Platforms:** plug-in editor windows open on Linux (X11, or XWayland with the interface
+  natively on Wayland as an option) and macOS; Windows (HWND) embedding is planned. On macOS, keys a plug-in's window doesn't use itself (Space, R, other
   key commands, Musical Typing) go to Marbble, while typing into the plug-in's own fields stays
   there; Esc doesn't close the window. On Linux only menu shortcuts work while a plug-in's
   window is in front. The input level check is Linux only. On Windows and macOS only the

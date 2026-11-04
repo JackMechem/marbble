@@ -186,7 +186,10 @@ impl Editor {
             if view.isPlatformTypeSupported(kPlatformTypeNSView) != kResultOk {
                 return Err("this plug-in's editor does not support macOS (NSView) embedding".into());
             }
-            // VST3 sizes on macOS are in points, the same units as AppKit's.
+            // VST3 sizes on macOS are in points, the same units as AppKit's. HiDPI is the
+            // view's own business here: it reads its window's backingScaleFactor, and the SDK
+            // says `IPlugViewContentScaleSupport` is for platforms without one (Windows, Linux),
+            // so the host never calls setContentScaleFactor on macOS.
             let mut rect: ViewRect = std::mem::zeroed();
             view.getSize(&mut rect);
             let w = (rect.right - rect.left).max(64) as f64;

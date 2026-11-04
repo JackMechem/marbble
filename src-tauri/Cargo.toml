@@ -21,3 +21,4 @@ anyhow = "1"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 glib = "0.18"
+gdk = "0.18"

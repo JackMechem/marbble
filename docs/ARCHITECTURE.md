@@ -1194,8 +1194,55 @@ stores the pair as base64 in `PluginSlot::state` and restores it straight after 
   which adds them to GTK's main loop (`unix_fd_add_local`, `timeout_add_local`). Source ids are
   kept in a thread-local map, so editors must be created and destroyed on the main thread. The
   X connection's own fd is registered the same way.
-- **GDK_BACKEND:** GLX-based editors fail when GTK runs natively on Wayland in the same
-  process, so `main.rs` sets `GDK_BACKEND=x11` unless the user set it.
+- **HiDPI (`x11_scale.rs`):** before asking its size, `Editor::open` tells a view that
+  implements `IPlugViewContentScaleSupport` the display's scale, and the window is sized from
+  the `getSize` that follows (in pixels at that scale, as the SDK has it on Windows and Linux).
+  X11, XWayland included, has one scale for the whole display, read per editor from where GTK
+  reads Marbble's own: `GDK_SCALE` (a whole number), then the XSETTINGS
+  `Gdk/WindowScalingFactor`; with neither, `Xft.dpi / 96` from the X resources (or XSETTINGS
+  `Xft/DPI`), rounded to a quarter, for setups such as Hyprland's or sway's with
+  `force_zero_scaling` that set only `Xft.dpi`. It's held to 1–4. At 1 nothing is called, so
+  plug-ins that read the display themselves keep doing so: JUCE reads XSETTINGS (TONE3000 does;
+  the older JUCE in CHOW Tape doesn't), DPF reads `Xft.dpi` and `DPF_SCALE_FACTOR`. A changed
+  setting applies to editors opened after it; there's no notification of a change to pass on.
+  Measured on Xvfb (`scripts/editor-scale-check.sh`): at 2, LSP, Dragonfly, Zam, CHOW Tape and
+  TONE3000 all take the scale and their windows double, with no plug-in scaling twice; Zam's
+  bitmap panels then draw at their 1x size in the top-left of the larger window, which is also
+  what they do when they scale themselves from `Xft.dpi`. When a compositor scales XWayland
+  windows itself (Hyprland's and GNOME's default), X clients see a scale of 1 and the compositor
+  enlarges the editor, slightly blurred. On macOS AppKit handles it: the view reads its window's
+  `backingScaleFactor`, and the SDK keeps the interface for platforms without one, so
+  `editor_macos.rs` never calls it.
+- **GDK_BACKEND and native Wayland:** `main.rs` sets `GDK_BACKEND=x11` unless the user set it,
+  or `wayland,x11` when `MARBBLE_WAYLAND=1`. Editors are X11 windows either way (through
+  XWayland on a Wayland desktop). With GTK on Wayland, OpenGL editors failed to open because of
+  libglvnd, not XWayland: GTK leaves its EGL context current on the main thread, and glvnd
+  refuses `glXMakeCurrent` on a thread where another API's context is current, raising a
+  client-side BadAccess (GLX request). DPF/pugl editors (Zam, Dragonfly) then fail to realize
+  their view and stay black. (Xlib's default handler would end the process on such an error; the
+  logging handler is installed before `attached`, so it's logged.) LSP's editors opened as
+  before, and so did JUCE's in CHOW Tape and TONE3000, which don't link OpenGL. So when the
+  setup hook finds a `GdkWaylandDisplay`, it calls
+  `set_gl_isolation(gdk::GLContext::clear_current)`, and every call into an editor on the main
+  thread goes through `gl_isolated`: `Editor::open` and `close`, `onSize` from the window's
+  events, each `IRunLoop` fd and timer callback, and `Session::idle` (controller idle, parameter
+  follow, undo's `getState`). The outermost call clears GDK's context (through GDK, whose cache
+  of the current context would otherwise go stale) and, after the plug-in returns, releases any
+  GLX context it left current (`glXMakeCurrent(dpy, None, NULL)` in each loaded
+  `libGLX`/`libGL`), so GTK's next `eglMakeCurrent` succeeds. On X11 it isn't set and none of
+  this runs. Plug-in calls outside those (a parameter set from a command) aren't wrapped: an
+  editor drawing with GL right there would get a logged BadAccess and skip that frame, and a
+  context it left current is released at the next idle, 30 ms later. GL that plug-ins run on
+  threads of their own is unaffected, the rule being per thread. Tested on headless Weston with
+  XWayland on an AMD GPU (Mesa radeonsi), with a GTK window holding a `GtkGLArea` and a WebKit
+  view next to the editors of LSP, Dragonfly, ZamCompX2, CHOW Tape and TONE3000: without the
+  isolation, every DPF open failed (20 of 20); with it, all five reopened every 0.7 s for 30 s
+  (70 reopenings) with no X errors or failed opens, the GL area read back what it drew each
+  frame, and screenshots showed every editor and the web view drawn. The Tauri app itself hasn't
+  run on native Wayland in a check. Known limits there: the compositor places windows, so
+  detached panels don't reopen where they were; an editor is an XWayland window with no parent
+  relation to the main window; NVIDIA's driver is untested; and a plug-in that runs a GLib main
+  loop of its own inside a call (a GTK dialog) lets GTK draw in the middle of it.
 - **macOS (`editor_macos.rs`):** the plug-in must support `kPlatformTypeNSView`. Each editor is
   an NSWindow (sized from `getSize` in points, resizable only if `canResize`) whose content view
   the plug-in attaches to. The windows float (`NSFloatingWindowLevel`, `FullScreenAuxiliary`)

@@ -243,6 +243,13 @@ folder is kept when anything failed.
 | `probe` | optional name filter | Scans installed VST3 plug-ins, instantiates each and runs a few blocks through it. |
 | `editor` | name substring, seconds | Opens one plug-in's editor with a small `poll()` run loop (no GTK), for debugging editor embedding. |
 
+`scripts/editor-scale-check.sh [plug-in name ...]` runs `editor` on a private Xvfb display at
+scale 1 and with `GDK_SCALE=2` and checks that each editor's window doubles (HiDPI, see
+[Editor windows](ARCHITECTURE.md#editor-windows)). By default it tries LSP's Compressor Mono,
+Dragonfly Hall Reverb, CHOWTapeModel and TONE3000 and skips those not installed. It needs Xvfb
+and xwininfo: `nix shell nixpkgs#xorg.xorgserver nixpkgs#xorg.xwininfo -c nix develop -c
+scripts/editor-scale-check.sh`. It never opens the app.
+
 #### ThreadSanitizer
 
 The worker pool's tests and checks can run under ThreadSanitizer. It takes a toolchain with its runtime
@@ -349,9 +356,15 @@ instead and enforce rules that would otherwise only fail in the running app.
   app replaces the webview's right-click menu with its own.
 - **Blank window on Linux**: some GPU drivers need `WEBKIT_DISABLE_DMABUF_RENDERER=1`. Leave it
   unset otherwise, because WebKit then paints on the CPU at much higher cost.
-- **Wayland**: `main.rs` sets `GDK_BACKEND=x11` unless you set it yourself, because plug-in
-  editors are X11 windows and GLX-based ones fail when GTK runs natively on Wayland in the same
-  process. Set `GDK_BACKEND=wayland` to override (plug-in GUIs may then fail to open).
+- **Wayland**: `main.rs` sets `GDK_BACKEND=x11` unless you set it yourself, so the interface
+  runs through XWayland like the plug-in editors. `MARBBLE_WAYLAND=1` (or `GDK_BACKEND=wayland`)
+  runs it natively; the log then says "running natively on Wayland", and GL contexts are kept
+  apart around plug-in calls (see [Editor windows](ARCHITECTURE.md#editor-windows)). An OpenGL
+  editor that stays black there, with "X11 error from a plug-in GUI ignored (error 10, request
+  N)" in the log where N is the GLX opcode, is a call into the plug-in that isn't wrapped in
+  `gl_isolated`.
+- **Plug-in editor scale**: the log says "plug-in editor scale" with where it came from when an
+  editor opens at a scale other than 1. `GDK_SCALE=2` forces 2x for X11 programs.
 - **Audio problems**: the status line shows the device, rate and buffer; Settings › Audio shows
   the measured latencies. `cargo run -p daw-engine --example hosts` lists what cpal sees.
   The tick carries an `overruns` counter that grows when a recording ring buffer overflowed.

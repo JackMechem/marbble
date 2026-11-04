@@ -51,6 +51,14 @@ Things that pass their checks but want a person.
 
 Nothing here has been checked by eye yet.
 
+- **Plug-in editors at HiDPI and on native Wayland (2026-11-04).** Checked headlessly only (Xvfb, and Weston with
+  XWayland driving GTK and WebKit directly, not the app). At scale 1 nothing should differ: open LSP Compressor,
+  Dragonfly Hall, ZamCompX2, CHOW Tape and TONE3000 as usual. With `GDK_SCALE=2` the same editors should open at twice
+  the size, sharp (Zam's panel draws at 1x in the corner, as it does on its own). Then start with `MARBBLE_WAYLAND=1`:
+  the log says "running natively on Wayland"; every one of those editors should open, draw, resize (CHOW's corner) and
+  close, the Tracks area, Mixer meters and a detached Mixer should keep drawing while they're open, and no "X11 error"
+  lines should appear. Not tried: NVIDIA, and plug-ins other than those five.
+
 - **The round of 2026-10-29:** the Arrangement track (move, copy, delete with content); File › Revert to and Project
   Alternatives submenus updating on Linux; automation curve bending (Ctrl+Shift-drag) and extra lanes; the Output
   track; a looped region's loop-end crossfade; the region gain handle; the Tool menu (T) and Marquee; the Mixer's
@@ -184,6 +192,14 @@ they use there (simulated on Linux), but none of this has run on a real machine.
   no rustfmt configuration (the code uses long lines, so plain `cargo fmt` would rewrite most files). A `rustfmt.toml` with a wide
   `max_width`, one formatting pass and a CI `cargo fmt --check` step would settle it.
 
+- Native Wayland is an opt-in. Before it could be the default: a run of the app itself on Hyprland and on GNOME,
+  NVIDIA's driver, and plug-ins beyond the five tried (anything that draws with GL inside a call that isn't wrapped
+  in `gl_isolated`, or runs a GTK dialog of its own). Editors as native Wayland windows would need plug-ins with a
+  Wayland embedding type, which VST3 doesn't have; out-of-process editors (Bitwig's approach) would sidestep the GL
+  question entirely but are a much larger change.
+- Plug-in editor scale isn't updated while an editor is open (no notification of an XSETTINGS or `Xft.dpi` change is
+  watched); reopening applies it.
+
 ### Website
 
 - `.github/workflows/pages.yml` hasn't run yet: it can only be tested by pushing to `main`, with Settings › Pages › Source on GitHub
@@ -210,8 +226,9 @@ Goal: a VST3 user on Windows or macOS gets the same workflow as on Linux.
 
 - [ ] VST3 editor windows on Windows (HWND embedding)
 - [x] VST3 editor windows on macOS (NSView embedding)
-- [ ] VST3 editors under native Wayland (they run through XWayland now)
-- [ ] HiDPI scaling for plug-in editors (`IPlugViewContentScaleSupport`)
+- [x] VST3 editors with the interface on native Wayland (opt-in, `MARBBLE_WAYLAND=1`; the
+      editors stay XWayland windows)
+- [x] HiDPI scaling for plug-in editors (`IPlugViewContentScaleSupport`, Linux)
 - [ ] ASIO on Windows
 - [x] Side-chain inputs for VST3 plug-ins
 - [x] Multi-output instruments

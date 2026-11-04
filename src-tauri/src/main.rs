@@ -45,11 +45,13 @@ fn main() {
         std::process::exit(code);
     }
 
-    // Plug-in editors are X11 windows, and GLX-based ones fail when GTK runs natively on Wayland
-    // in the same process. Run the UI through XWayland unless the user chose a backend.
+    // Plug-in editors are X11 windows, so the interface runs through XWayland too unless the
+    // user chose a backend. MARBBLE_WAYLAND=1 runs it natively on Wayland (falling back to X11);
+    // editors still open through XWayland, with OpenGL kept apart (`set_gl_isolation` below).
     #[cfg(target_os = "linux")]
     if std::env::var_os("GDK_BACKEND").is_none() {
-        std::env::set_var("GDK_BACKEND", "x11");
+        let native = std::env::var("MARBBLE_WAYLAND").is_ok_and(|v| v == "1");
+        std::env::set_var("GDK_BACKEND", if native { "wayland,x11" } else { "x11" });
     }
 
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info,jack=off")).init();
@@ -81,6 +83,12 @@ fn main() {
         .manage(AppState { session: session.clone() })
         .on_window_event(windows::on_window_event)
         .setup(move |app| {
+            // GTK is up now. On native Wayland its EGL context would stop GLX editors opening.
+            #[cfg(target_os = "linux")]
+            if gdk::Display::default().is_some_and(|d| glib::prelude::ObjectExt::type_(&d).name() == "GdkWaylandDisplay") {
+                log::info!("running natively on Wayland; plug-in editors open through XWayland");
+                vst3_host::editor::set_gl_isolation(gdk::GLContext::clear_current);
+            }
             menu::install(app)?;
             let handle = app.handle().clone();
             windows::forward_plugin_keys(&handle);
@@ -101,7 +109,7 @@ fn main() {
                 let h = handle.clone();
                 glib::timeout_add_local(Duration::from_millis(30), move || {
                     if let Some(mut g) = s.try_lock() {
-                        if g.idle() {
+                        if vst3_host::editor::gl_isolated(|| g.idle()) {
                             let _ = h.emit("project", commands::snapshot(&g));
                         }
                         autosave(&mut g);

@@ -21,6 +21,8 @@ pub mod editor;
 
 #[cfg(target_os = "macos")]
 mod macos;
+#[cfg(target_os = "linux")]
+mod x11_scale;
 
 pub use host::Gesture;
 pub use module::PluginDescriptor;

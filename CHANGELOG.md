@@ -6,6 +6,16 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **HiDPI plug-in editors on Linux:** each editor is told the display's scale as it opens
+  (`GDK_SCALE`, the desktop's GTK scale, or `Xft.dpi`), and its window takes the size the plug-in
+  gives at that scale. LSP, Dragonfly, Zam, CHOW Tape and TONE3000 draw at 2x; nothing changes at
+  1x. `scripts/editor-scale-check.sh` checks it on a private Xvfb display.
+- **Native Wayland, opt-in:** `MARBBLE_WAYLAND=1` runs the interface natively on Wayland.
+  Plug-in editors still open through XWayland, with their OpenGL kept apart from GTK's, so DPF
+  editors (Zam, Dragonfly) open there too. The default stays XWayland.
+
 ### Fixed
 
 - **The bottom section can no longer cover the Tracks area.** A Mixer, editor or docked panel
@@ -20,6 +30,8 @@ All notable changes to Marbble are recorded here. The format follows
   project (it showed "Manual" for presets loaded by an earlier session or by a script), and undo
   takes it back with the settings. Renaming or deleting a user preset updates the slots that
   show it.
+- An X error raised while a plug-in's editor first opened could end Marbble: the handler that
+  logs such errors is now installed before the editor attaches.
 
 ## [0.1.0-alpha.6] - 2026-11-03
 
