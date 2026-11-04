@@ -5,7 +5,7 @@ import { act, call } from "../../api";
 import { recoveryDone, useRecoveries, type Recovery } from "../../prefs";
 import { setState } from "../../store";
 import { SheetFrame, toast } from "./parts";
-import { recordingSummary, recoveryIntro, when } from "../../settingsText";
+import { recordingSummary, recoveryHelp, recoveryIntro, when } from "../../settingsText";
 
 /** Offers unsaved work found in autosaves and interrupted recordings (after a crash, or when
  * opening such a project). */
@@ -88,11 +88,19 @@ export function RecoverySheet() {
           </div>
         ))}
       </div>
+      <div className="pref-note recovery-help">
+        {recoveryHelp(single, items.some((r) => !!r.saved)).map(([name, what]) => (
+          <span key={name}>
+            <b>{name}</b> {what}
+          </span>
+        ))}
+      </div>
       <div className="sheet-foot">
-        <span className="dim">{single ? "" : "Projects you don't recover now are offered again next time."}</span>
+        <span className="dim" />
         <div className="sheet-buttons">
+          {/* Not "Cancel": it keeps the unsaved work for later, which Open Last Saved doesn't. */}
           <button className="push" onClick={later}>
-            {single ? "Cancel" : "Later"}
+            Decide Later
           </button>
         </div>
       </div>

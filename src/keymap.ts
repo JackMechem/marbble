@@ -7,7 +7,7 @@
 // "Shift". Letters are upper case ("Shift+K"); other keys use their KeyboardEvent.key name
 // ("Space", "ArrowUp", "Enter", ",").
 import { getSettings } from "./prefs";
-import { formatKeyFor, IS_MAC, KEY_STYLE } from "./keyFormat";
+import { formatKeyFor, IS_MAC, KEY_STYLE, withKey } from "./keyFormat";
 
 export interface KeyCommand {
   id: string;
@@ -241,3 +241,7 @@ export function keyHint(id: string): string {
   const k = keysFor(id)[0];
   return k ? formatKey(k) : "";
 }
+
+/** A control's tooltip with its command's current key, "Record (R)", which follows the user's
+ *  keymap; just the name while the command has no key. */
+export const tip = (label: string, id: string): string => withKey(label, keyHint(id));

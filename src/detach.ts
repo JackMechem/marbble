@@ -396,7 +396,7 @@ export function closeDetached(key: string) {
   saveMemory();
 }
 
-/** View › "Mixer in Separate Window" and the like. */
+/** Window › "Mixer in Separate Window" and the like. */
 export function toggleDetached(key: string) {
   if (getState().detached.includes(key)) attachPanel(key);
   else detachPanel(key);

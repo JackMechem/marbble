@@ -1,7 +1,7 @@
 // Standard MIDI File import and export: the File menu, the region and track menus, and files
 // dropped onto the tracks area (see dnd.ts).
 import { invoke } from "@tauri-apps/api/core";
-import { open, save } from "@tauri-apps/plugin-dialog";
+import { open, save } from "./fileDialog";
 import { call, type Id, type Made } from "./api";
 import { currentTick, getState, setState } from "./store";
 import { barFloor } from "./time";

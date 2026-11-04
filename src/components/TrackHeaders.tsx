@@ -13,6 +13,7 @@ import { OutputTrackHeader, SubLaneHeaders } from "./AutoLaneHeaders";
 import { canFreeze, toggleFreeze } from "../freeze";
 import { takeRowsHeight } from "../takes";
 import { fmt, keyHint } from "../keymap";
+import { withKey } from "../keyFormat";
 import { headerTier } from "../trackHeader";
 import { headerColumns, type SwitchId } from "../headerColumns";
 import { isTrackOff, powerTitle } from "../trackOff";
@@ -154,7 +155,7 @@ function Header({
     <button
       key={sw.cls}
       className={`tbtn ${sw.cls}` + (sw.on ? " on" : "")}
-      title={sw.title}
+      title={withKey(sw.title, sw.hint ?? "")}
       aria-label={sw.name}
       aria-pressed={sw.checked ?? sw.on}
       onMouseDown={(e) => {

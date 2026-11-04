@@ -120,7 +120,7 @@ test("every key command does something", () => {
 
 /** Every id the menu bar can send: its items, and the generated `alternative:`/`revert:` ones. */
 function menuIds(): string[] {
-  return [...menuRs.matchAll(/(?:\b(?:item|keyed|check|Check|Item)\(|MenuItem::with_id\(app, |CheckMenuItem::with_id\(app, )(?:"([^"]+)"|format!\("([a-z-]+:)\{)/g)].map((m) => m[1] ?? m[2]);
+  return [...menuRs.matchAll(/(?:\b(?:item|keyed|check|radio|Check|Item)\(|MenuItem::with_id\(app, |CheckMenuItem::with_id\(app, )(?:"([^"]+)"|format!\("([a-z-]+:)\{)/g)].map((m) => m[1] ?? m[2]);
 }
 
 test("every native menu item is handled", () => {
@@ -133,9 +133,20 @@ test("every native menu item is handled", () => {
   const prefixes = [...handler.matchAll(/id\.startsWith\("([^"]+)"\)/g)].map((m) => m[1]);
   assert.match(handler, /if \(runArrangeCommand\(id\)\) return;/);
   const arranged = new Set(objectKeys(slice(arrange, "export const ARRANGE_COMMANDS", "\n};")));
-  // "No Backups" is a disabled placeholder; Quit is menu.rs's own (it closes the main window).
-  const unhandled = ids.filter((id) => id !== "revert-none" && id !== "quit" && !cases.has(id) && !arranged.has(id) && !prefixes.some((p) => id.startsWith(p)));
+  // menu.rs's own, which never reach the page: Quit (it closes the main window), Window's
+  // Minimize and list of windows, and Help's web pages. Help › Key Commands goes on as
+  // Marbble › Key Commands.
+  const pages = [...slice(menuRs, "const HELP_PAGES", "];").matchAll(/\("([a-z-]+)", "https:/g)].map((m) => m[1]);
+  assert.ok(pages.length >= 4);
+  assert.match(menuRs, /if id == "minimize" \{/);
+  assert.match(menuRs, /id\.strip_prefix\("window:"\)/);
+  assert.match(menuRs, /if id == "help-keys" \{ "settings-keys"/);
+  assert.ok(cases.has("settings-keys"));
+  const own = new Set(["quit", "minimize", "window:", "help-keys", ...pages]);
+  // "No Backups" is a disabled placeholder.
+  const unhandled = ids.filter((id) => id !== "revert-none" && !own.has(id) && !cases.has(id) && !arranged.has(id) && !prefixes.some((p) => id.startsWith(p)));
   assert.deepEqual(unhandled, []);
+  assert.ok(ids.includes("theme:light") && ids.includes("window:") && ids.includes("help-guide"));
 });
 
 test("the key commands that go through handleMenu name one of its cases", () => {

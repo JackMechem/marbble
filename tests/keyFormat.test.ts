@@ -3,7 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { formatKeyFor } from "../src/keyFormat.ts";
+import { formatKeyFor, setGtkKeyNames, withKey } from "../src/keyFormat.ts";
 
 const pc = (k: string) => formatKeyFor(k, "windows");
 const gtk = (k: string) => formatKeyFor(k, "gtk");
@@ -63,4 +63,25 @@ test("a bare modifier names the key, for gestures like Alt-drag", () => {
   // A plain letter key is not mistaken for a modifier.
   assert.equal(pc("K"), "K");
   assert.equal(mac("Space"), "Space");
+});
+
+test("on Linux the app writes keys with the names its GTK draws, translated", () => {
+  // As English GTK writes them (menu.rs gtk_key_names in an English session).
+  setGtkKeyNames({ keys: { Backspace: "Backspace", Enter: "Return" }, mods: { Shift: "Shift+", Ctrl: "Ctrl+", Alt: "Alt+" } });
+  assert.equal(gtk("Backspace"), "Backspace");
+  assert.equal(gtk("Mod+Backspace"), "Ctrl+Backspace");
+  assert.equal(gtk("Mod+Shift+Z"), "Shift+Ctrl+Z");
+  // A name GTK didn't send keeps the untranslated one.
+  assert.equal(gtk("PageUp"), "Page Up");
+  setGtkKeyNames({ keys: { Backspace: "Rücktaste" }, mods: { Shift: "Umschalt+", Ctrl: "Strg+", Alt: "Alt+" } });
+  assert.equal(gtk("Mod+Alt+Shift+Backspace"), "Umschalt+Strg+Alt+Rücktaste");
+  // Other platforms don't use them.
+  assert.equal(pc("Mod+Backspace"), "Ctrl+Backspace");
+  setGtkKeyNames(null);
+  assert.equal(gtk("Mod+Backspace"), "Ctrl+BackSpace");
+});
+
+test("a tooltip shows the key after the name, and nothing for a command without one", () => {
+  assert.equal(withKey("Record", "R"), "Record (R)");
+  assert.equal(withKey("Input Monitoring", ""), "Input Monitoring");
 });

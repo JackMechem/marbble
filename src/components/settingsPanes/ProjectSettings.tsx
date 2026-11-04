@@ -178,7 +178,8 @@ export function ProjectSettingsSheet() {
     { id: "notes" as const, label: "Notes", icon: <TabIcon.notes /> },
   ];
   return (
-    <SheetFrame title={`Project Settings — ${name}`} onClose={close} width={620}>
+    // One height for every tab, as Settings has (settings-window.css).
+    <SheetFrame title={`Project Settings — ${name}`} onClose={close} width={620} className="settings-sheet project-settings-sheet">
       <div className="settings-tabs">
         {tabs.map((t) => (
           <button key={t.id} className={"settings-tab" + (tab === t.id ? " on" : "")} onClick={() => setTab(t.id)}>
@@ -187,7 +188,7 @@ export function ProjectSettingsSheet() {
           </button>
         ))}
       </div>
-      <div className="settings-body">
+      <div className="settings-body" key={tab}>
         {tab === "general" && <ProjectGeneral />}
         {tab === "recording" && <ProjectRecording />}
         {tab === "metronome" && (

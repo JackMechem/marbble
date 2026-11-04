@@ -111,7 +111,8 @@ Contents:
     ["… put out invalid audio" and a plug-in goes quiet](#-put-out-invalid-audio-and-a-plug-in-goes-quiet) ·
     [The playhead or meters freeze during a bounce](#the-playhead-or-meters-freeze-during-a-bounce) ·
     [Plug-ins are missing](#plug-ins-are-missing) ·
-    [A blank window on Linux](#a-blank-window-on-linux)
+    [A blank window on Linux](#a-blank-window-on-linux) ·
+    ["File Dialogs Unavailable" on Linux](#file-dialogs-unavailable-on-linux)
 20. [Known limitations](#20-known-limitations)
 
 ---
@@ -361,7 +362,9 @@ status, the audio devices, and the number of MIDI inputs.
 | Track | New Tracks…, New Aux, Duplicate Track, New Track with Same Settings, New Pattern Region, Bounce in Place…, Freeze Track, Unfreeze Track, Track On, Create Folder Stack, Create Summing Stack, Group Selected Tracks, Show Output Track, Hide Track, Unhide All Tracks, Delete Track, Delete Unused Tracks, Track Alternatives › |
 | Record | Play / Stop, Record, Cycle, Autopunch, Metronome, Count-in, Low Latency Mode |
 | Navigate | Create Marker, Delete Marker, Go to Previous Marker, Go to Next Marker, Open Marker List |
-| View | Library, Inspector, Mixer, Editors, List Editors, Mixer in Separate Window, Editor in Separate Window, Event List in Separate Window, Browsers, Show Automation, Show Used Automation, Show Global Tracks, Show Overview, Musical Typing, Step Input Keyboard, Show Hidden Tracks, Zoom In, Zoom Out, Larger Interface, Smaller Interface, Actual Size, Theme › |
+| View | Library, Inspector, Mixer, Editors, List Editors, Browsers, Show Automation, Show Used Automation, Show Global Tracks, Show Overview, Musical Typing, Step Input Keyboard, Show Hidden Tracks, Zoom In, Zoom Out, Larger Interface, Smaller Interface, Actual Size, Theme › |
+| Window | Minimize, Mixer in Separate Window, Editor in Separate Window, Event List in Separate Window, then the open windows (the main window and each [separate window](#separate-windows)): choose one to bring it to the front |
+| Help | Marbble User Guide, Key Commands…, What's New in Marbble, Report an Issue…, Marbble Website. Key Commands opens Settings › Key Commands; the others open this guide, the changelog, a new issue on GitHub and the website in your browser |
 
 Each item shows its key beside it: the fixed keys below, and the key commands' keys as set in
 Settings › Key Commands (R for Record, X for the Mixer…), which change in the menu when you
@@ -369,7 +372,9 @@ reassign them. Settings and modes that are on are ticked (View's panes, Record's
 Autopunch, Metronome, Count-in and Low Latency Mode, Snap Edits to Zero Crossings, Track On,
 the theme), and items that don't apply are greyed out, as in the Tracks area's menus: Cut,
 Copy, Join or Delete with no regions selected, Paste with nothing copied, Unfreeze Track with no
-frozen track selected. The Edit menu is the Tracks area's Edit menu, item for item, and both use
+frozen track selected. A submenu whose items all don't apply is greyed out too (Repeat, Move,
+Name and Color with no regions selected). One-of-several choices (View › Theme, File › Project
+Alternatives) show a round radio mark on Linux. The Edit menu is the Tracks area's Edit menu, item for item, and both use
 the same names; a region's right-click menu drops "Regions" from them (Split at Playhead, Join,
 Loop, Set Locators). **Quit Marbble** (Ctrl+Q) closes the main window as its close button does,
 so it asks first when the project has unsaved changes.
@@ -417,8 +422,8 @@ be opened in a window of their own, for example to put the Mixer on a second mon
 
 - **Open in Separate Window:** click the pop-out button at the right end of the panel's bar
   (the Mixer's, the Piano Roll's or the Audio Track Editor's), or in an effect panel's or
-  Channel EQ's title bar, docked or floating. View › Mixer in Separate Window and View › Editor
-  in Separate Window do the same, and the Piano Roll's and Audio Track Editor's View menus have
+  Channel EQ's title bar, docked or floating. Window › Mixer in Separate Window and Window ›
+  Editor in Separate Window do the same, and the Piano Roll's and Audio Track Editor's View menus have
   the item too.
 - **Attach to Main Window:** the same button in the separate window (pop-in), the same menu
   items, or the window's close button. The Mixer and the Editors go back to the bottom
@@ -1686,7 +1691,7 @@ note selection is shared with the Piano Roll: notes selected in one are selected
   Selection, Shift+F All Following…) act on the listed events, as in the Piano Roll.
 - **The playhead:** the event at the playhead is highlighted, and with **Catch** (the button
   and View menu) the list scrolls to keep it in view during playback.
-- **Separate window:** the pop-out button at the right of the bar, the View menu, or View ›
+- **Separate window:** the pop-out button at the right of the bar, the View menu, or Window ›
   Event List in Separate Window; it can then sit beside the Piano Roll on another screen.
 
 Only the lines in view are drawn, so regions with thousands of events stay quick.
@@ -1923,8 +1928,9 @@ and macOS, `%APPDATA%\marbble\channel-strips` on Windows).
 
 ### Plug-ins
 
-- **Loading:** click an empty Audio FX slot, or the arrow on a filled one, for a menu of plug-ins
-  by category and vendor; or click a plug-in in the Library. The instrument slot works the same
+- **Loading:** click an empty Audio FX slot, or the arrow on a filled one, for a menu of plug-ins:
+  the built-in effects under **Marbble**, by category, then the VST3s under **VST3**, by category
+  and **By Manufacturer**; or click a plug-in in the Library. The instrument slot works the same
   way.
 - **Editing:** click the plug-in's name in its slot to open its editor window.
 - **Bypass:** the power button on the slot.
@@ -2295,7 +2301,8 @@ mute/solo and an output. It plays whatever its bus receives.
 - Create one with Track › New Aux, the track menu, or **New Aux** in any send or output menu.
   New auxes are named "Aux N", are fed by "Bus N", and go at the end of the track list.
 - **Sends:** every strip except folders and Stereo Out has eight send slots under Audio FX.
-  Click an empty slot to pick an aux ("Bus 1 → Aux 1") or make a new one. A filled slot shows
+  Click an empty slot to pick an aux ("Bus 1 → Aux 1") or make a new one; a bus another of the
+  strip's slots already sends to is greyed out and marked "Already sent". A filled slot shows
   the bus (or the aux's name) and a level knob: drag it (Shift for fine), double-click for
   0 dB. Click the name for **Pre Fader / Post Fader**, **Mute Send**, **Send to**, and **Remove
   Send**.
@@ -2747,7 +2754,8 @@ undoes the revert.
   recreated. The journal goes away once the take is in the autosave or the project is saved.
 - At launch, Marbble looks in the recent projects and the projects folder for autosaves newer
   than their `project.json`, and for interrupted recordings, and offers to **Recover** them (or
-  Discard, or decide Later; projects you don't recover are offered again next time). The sheet
+  **Discard**, **Open Last Saved**, or **Decide Later**, which changes nothing: projects you
+  don't recover are offered again next time). A line under the list says what each button does. The sheet
   says which takes on which tracks were being recorded. Opening such a project asks the same.
   Recovering puts the takes back as one undo step (Undo: Recover Recording). Discarding keeps the
   recorded files in Audio Files, repaired, so you can still import them by hand.
@@ -2911,7 +2919,7 @@ Tracks, Editing, Windows, Control Surfaces and Step Input.
 The whole window scales, and the canvas views render at the matching resolution so they stay
 sharp. The window's own theme follows the one you choose: with Light, Marbble asks the system for
 the light look of the menu bar and title bar (GTK's light variant on Linux), and with the others
-for the dark one.
+for the dark one. On Linux the menu bar takes the theme's background colour too.
 
 ---
 
@@ -3321,6 +3329,15 @@ after installing plug-ins.
 
 Some GPU drivers need `WEBKIT_DISABLE_DMABUF_RENDERER=1`. Set it only if the window stays
 blank, because WebKit then draws on the CPU.
+
+### "File Dialogs Unavailable" on Linux
+
+GTK's file chooser (Open, Save As, Import, Export, choosing a folder) needs GTK's settings
+schema `org.gtk.Settings.FileChooser`, and without it GTK would end the program. When it isn't
+installed, Marbble says so instead of opening the dialog, and your project stays open. The
+packages (Nix, AppImage, .deb, .rpm) bring the schema; if you see the message, install your
+distribution's GTK 3 package (on Debian and Ubuntu, `libgtk-3-common`), or start Marbble from
+its package rather than a copied binary.
 
 ---
 

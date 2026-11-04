@@ -1517,13 +1517,38 @@ Audio Track Editor and meters are canvas drawings. The common pattern:
 - A check item ticks itself when chosen; `menu.rs` puts the tick back at once and the page sends
   the new state if the command changed it, so a command that changes nothing leaves the tick
   right.
+- A submenu of `spec` (Repeat, Trim, Track Alternatives…) is greyed out while every item in it
+  is (`set_menu_state` keeps each item's enabled state and checks the submenus after each
+  change), as the in-app menus' submenus are.
+- One-of-several items (`radio` in `spec`: View › Theme; and File › Project Alternatives) are
+  check items, as muda has nothing else; on GTK `menu.rs` sets `draw_as_radio` on their widgets,
+  found by path like the keys, whenever a window comes to the front and after the alternatives
+  are rebuilt.
+- Window and Help are handled in `menu.rs` and never reach the page, except Help › Key Commands
+  (sent as `settings-keys`). Window › Minimize minimizes the window in front (muda's predefined
+  Minimize doesn't exist on GTK); the end of Window lists the open windows (`window:<label>`,
+  the main window first, then the panel windows by title), rebuilt on the main thread when a
+  window comes to the front or closes and when the project menus change, and only when the list
+  differs. Help's pages (`HELP_PAGES`) open in the browser through GIO on Linux, `open` on macOS
+  and `explorer` on Windows.
+- About Marbble passes the 128 px icon as the dialog's logo: GTK otherwise looks it up in the
+  icon theme, which a build that isn't installed doesn't have.
+- The window's background is the theme's `--bg` (`themes.ts` `windowTheme`, beside
+  `setTheme`). GTK's menu bar has no background of its own in Adwaita and shows the window's,
+  which Tauri sets from `backgroundColor`; left at the dark default, Light's dark menu text sat
+  on a near-black bar.
 - Names: `src/menuLabels.ts` holds one name per command (`MENU_LABELS`) and the Edit menu's
   layout (`EDIT_MENU`), used by the Tracks area's menus and checked against `menu.rs` by
   `tests/menuLabels.test.ts`; a region's right-click menu drops "Regions" (`SHORT_LABELS`).
 - Keys are written as the platform's menu bar draws them (`keyFormat.ts`): GTK's order and names
   on Linux ("Shift+Ctrl+Z", "Ctrl+Right"), since GTK draws every key in the menu bar itself;
   `tests/gtkKeyLabels.json` pins the pairs, checked against `gtk_accelerator_get_label` by
-  `menu.rs`'s tests and against `formatKeyFor` by `tests/keyFormat.test.ts`. Editors get the first look: the Audio Track
+  `menu.rs`'s tests and against `formatKeyFor` by `tests/keyFormat.test.ts`. GTK translates its
+  key names ("BackSpace" untranslated, "Backspace" in English), so before the first render
+  `main.tsx` asks `gtk_key_names` (`menu.rs`) for the names in the app's language and
+  `setGtkKeyNames` uses them; the pinned pairs are the untranslated names the tests see.
+  Tooltips add a command's current key with `tip(label, id)` (`keymap.ts`), so a reassigned key
+  shows there too. Editors get the first look: the Audio Track
   Editor (`editorMenuCommand`) and the Piano Roll (`pianoRollMenu`) take Split, Cut, Copy,
   Delete and similar when they have focus or a selection. Menu commands are ignored while a
   render is running (`isBouncing`).
@@ -1538,7 +1563,32 @@ Audio Track Editor and meters are canvas drawings. The common pattern:
   `window.prompt`, `confirm` or `alert`: macOS's web view doesn't implement them (prompt
   returns null), and `tests/browserDialogs.test.ts` fails if they appear in `src/`. Detached
   windows show the name sheet too.
-- Native file dialogs and confirmations use `@tauri-apps/plugin-dialog` (`src/files.ts`).
+- Native file dialogs and confirmations use `@tauri-apps/plugin-dialog` (`src/files.ts`); the
+  file dialogs go through `src/fileDialog.ts` (below).
+
+### File dialogs
+
+On Linux the dialog plug-in opens GTK's file chooser, which reads the GSettings schema
+`org.gtk.Settings.FileChooser`, and GLib aborts the process when a schema isn't installed
+(`GLib-GIO-ERROR … is not installed`): a debug binary started outside the dev shell lost the
+session on File › Save As. Two guards, in `src-tauri/src/schemas.rs`:
+
+- **At startup**, before GTK or any thread starts, `ensure_file_chooser_schema` looks for the
+  schema in the directories GLib will read (`XDG_DATA_DIRS`, the user's data directory,
+  `GSETTINGS_SCHEMA_DIR`), each read on its own with `SettingsSchemaSource::from_directory` so
+  GLib's own list, fixed the first time it is read, is left alone. If it isn't there but is in
+  a data directory of the environment Marbble was built in (`option_env!("XDG_DATA_DIRS")`, the
+  dev shell's), that directory is added to `XDG_DATA_DIRS`.
+- **Before each file dialog**, `src/fileDialog.ts` asks `file_dialog_problem`, which looks the
+  schema up in GLib's default list, the one GTK will use. When it is missing the user gets an
+  error message saying what to install, the dialog doesn't open and the call returns null, as a
+  cancel does. `tests/fileDialog.test.ts` fails if a file takes `open` or `save` from the
+  plug-in directly. Message dialogs (`ask`, `message`) don't use the schema.
+
+The packages carry the schema: the Nix package through `wrapGAppsHook3` (GTK's schemas on
+`XDG_DATA_DIRS`), the AppImage through linuxdeploy's GTK plug-in (`GSETTINGS_SCHEMA_DIR` in the
+image), the .deb and .rpm through their GTK dependency (`libgtk-3-0` brings `libgtk-3-common`).
+Other platforms have no GSettings; there the check always passes.
 
 ### Detached windows
 
@@ -2349,7 +2399,8 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `main.rs` | Startup (scan subprocess mode, `GDK_BACKEND`, plug-in cache, settings, CLI project path), the tick thread, the idle timer, MIDI refresh, autosave, command registration. |
 | `commands.rs` | The `Snapshot`, the `edit` / `try_edit` / `edit_made` wrappers, `get_state`, `undo`, `redo`. |
 | `commands/*.rs` | Every other Tauri command, by what it acts on: `transport`, `tracks`, `regions`, `arrangement`, `takes`, `plugins`, `automation`, `project`, `bounce`, `settings`, `sampler`. All are reachable as `commands::<name>`. |
-| `menu.rs` | The native menu bar: its spec, `set_menu_state` (ticks, enabled, labels, shown keys), Quit. |
+| `menu.rs` | The native menu bar: its spec, `set_menu_state` (ticks, enabled, labels, shown keys, greyed submenus), radio items on GTK, Quit, Window and Help, `gtk_key_names`. |
+| `schemas.rs` | Linux: finds GTK's file chooser schema at startup (`ensure_file_chooser_schema`) and `file_dialog_problem`, asked before every file dialog. See [File dialogs](#file-dialogs). |
 | `settings.rs` | `settings.json`: `Settings`, `UiPrefs`, `PluginPrefs`, tolerant parsing. |
 | `recent.rs` | `recent.json` and the Project Chooser's recent list. |
 | `glib_loop.rs` | Linux: runs plug-in editor file descriptors and timers on GTK's main loop. |
@@ -2379,6 +2430,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `menuBar.ts` | Keeps the native menu bar in step with the app (`installMenuBar`, main window). |
 | `menuBarModel.ts` | The menu bar's item states from the in-app menus and the key commands, and what changed; pure, tested. |
 | `menuLabels.ts` | One name per menu command and the shared Edit menu layout; pure, tested against `menu.rs`. |
+| `fileDialog.ts` | `open` and `save`, the dialog plug-in's behind `file_dialog_problem`; the only way to a file dialog (`tests/fileDialog.test.ts`). |
 | `tempo.ts` | The UI's mirror of `tempo.rs`, cached per snapshot. |
 | `prefs.ts` | Mirror of the settings, startup behaviour (`runStartup`), recovery offers, nudge sizes. |
 | `ops.ts` | Track and region operations and the right-click menus (`trackMenu`, `regionMenu`, `laneMenu`). |

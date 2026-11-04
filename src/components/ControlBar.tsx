@@ -10,7 +10,8 @@ import { fmtBpm, tempoMap } from "../tempo";
 import { HSlider } from "./Controls";
 import { openMenuAt, type MenuItem } from "./Menu";
 import { transport } from "../transport";
-import { fmt, keyHint } from "../keymap";
+import { fmt, keyHint, tip } from "../keymap";
+import { withKey } from "../keyFormat";
 import { updateSettings, useSettings } from "../prefs";
 
 const KEYS = ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
@@ -199,19 +200,19 @@ function TransportButtons() {
   useEffect(() => onTick((tk) => setT((p) => (p.playing === tk.playing && p.recording === tk.recording ? p : { playing: tk.playing, recording: tk.recording }))), []);
   return (
     <div className="transport">
-      <button className="tp-btn" title="Rewind (,)" aria-label="Rewind (,)" onClick={() => transport.nudgeBars(-1)}>
+      <button className="tp-btn" title={tip("Rewind", "rewind")} aria-label={tip("Rewind", "rewind")} onClick={() => transport.nudgeBars(-1)}>
         <Icon.rewind />
       </button>
-      <button className="tp-btn" title="Forward (.)" aria-label="Forward (.)" onClick={() => transport.nudgeBars(1)}>
+      <button className="tp-btn" title={tip("Forward", "forward")} aria-label={tip("Forward", "forward")} onClick={() => transport.nudgeBars(1)}>
         <Icon.forward />
       </button>
-      <button className="tp-btn" title="Stop" aria-label="Stop" onClick={() => transport.stop()}>
+      <button className="tp-btn" title={tip("Stop", "play")} aria-label={tip("Stop", "play")} onClick={() => transport.stop()}>
         <Icon.stop />
       </button>
-      <button className={"tp-btn play" + (t.playing && !t.recording ? " on" : "")} title={`Play (${keyHint("play")})`} aria-label={`Play (${keyHint("play")})`} onClick={() => act("play")}>
+      <button className={"tp-btn play" + (t.playing && !t.recording ? " on" : "")} title={tip("Play", "play")} aria-label={tip("Play", "play")} onClick={() => act("play")}>
         <Icon.play />
       </button>
-      <button className={"tp-btn rec" + (t.recording ? " on" : "")} title={`Record (${keyHint("record")})`} aria-label={`Record (${keyHint("record")})`} onClick={() => act("record")}>
+      <button className={"tp-btn rec" + (t.recording ? " on" : "")} title={tip("Record", "record")} aria-label={tip("Record", "record")} onClick={() => act("record")}>
         <Icon.record />
       </button>
     </div>
@@ -263,16 +264,16 @@ export function ControlBar() {
   return (
     <div className="control-bar">
       <div className="cb-group">
-        <ViewButton on={s.showLibrary} title={`Library (${keyHint("library")})`} onClick={() => setState({ showLibrary: !s.showLibrary })}>
+        <ViewButton on={s.showLibrary} title={tip("Library", "library")} onClick={() => setState({ showLibrary: !s.showLibrary })}>
           <Icon.library />
         </ViewButton>
-        <ViewButton on={s.showInspector} title={`Inspector (${keyHint("inspector")})`} onClick={() => setState({ showInspector: !s.showInspector })}>
+        <ViewButton on={s.showInspector} title={tip("Inspector", "inspector")} onClick={() => setState({ showInspector: !s.showInspector })}>
           <Icon.inspector />
         </ViewButton>
-        <ViewButton on={s.bottom === "mixer"} title={`Mixer (${keyHint("mixer")})`} onClick={() => setState({ bottom: s.bottom === "mixer" ? "none" : "mixer" })}>
+        <ViewButton on={s.bottom === "mixer"} title={tip("Mixer", "mixer")} onClick={() => setState({ bottom: s.bottom === "mixer" ? "none" : "mixer" })}>
           <Icon.mixer />
         </ViewButton>
-        <ViewButton on={s.bottom === "editor"} title={`Editors (${keyHint("editor")})`} onClick={() => setState({ bottom: s.bottom === "editor" ? "none" : "editor" })}>
+        <ViewButton on={s.bottom === "editor"} title={tip("Editors", "editor")} onClick={() => setState({ bottom: s.bottom === "editor" ? "none" : "editor" })}>
           <Icon.editors />
         </ViewButton>
       </div>
@@ -281,10 +282,10 @@ export function ControlBar() {
         <TransportButtons />
         <Lcd />
         <div className="cb-modes">
-          <button className={"mode-btn cycle" + (p?.cycle.enabled ? " on" : "")} title={`Cycle (${keyHint("cycle")})`} aria-label={`Cycle (${keyHint("cycle")})`} onClick={() => transport.toggleCycle()}>
+          <button className={"mode-btn cycle" + (p?.cycle.enabled ? " on" : "")} title={tip("Cycle", "cycle")} aria-label={tip("Cycle", "cycle")} onClick={() => transport.toggleCycle()}>
             <Icon.cycle />
           </button>
-          <button className={"mode-btn punch" + (punchOn ? " on" : "")} title={`Autopunch (${keyHint("autopunch")})`} aria-label={`Autopunch (${keyHint("autopunch")})`} onClick={() => transport.togglePunch()}>
+          <button className={"mode-btn punch" + (punchOn ? " on" : "")} title={tip("Autopunch", "autopunch")} aria-label={tip("Autopunch", "autopunch")} onClick={() => transport.togglePunch()}>
             <svg width="18" height="16" viewBox="0 0 18 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
               <path d="M5 3.5H3v9h2M13 3.5h2v9h-2" />
               <path d="M6.5 8h5" strokeWidth="2.6" />
@@ -301,10 +302,10 @@ export function ControlBar() {
               <rect x="5.5" y="4" width="7" height="8" fill="currentColor" stroke="none" />
             </svg>
           </button>
-          <button className={"mode-btn purple countin" + (p?.count_in ? " on" : "")} title={`Count-in (${keyHint("count-in")})`} onClick={() => act("set_count_in", { on: !p?.count_in })}>
+          <button className={"mode-btn purple countin" + (p?.count_in ? " on" : "")} title={tip("Count-in", "count-in")} onClick={() => act("set_count_in", { on: !p?.count_in })}>
             Count-in
           </button>
-          <button className={"mode-btn purple" + (p?.metronome ? " on" : "")} title={`Metronome (${keyHint("metronome")})`} aria-label={`Metronome (${keyHint("metronome")})`} onClick={() => act("set_metronome", { on: !p?.metronome })}>
+          <button className={"mode-btn purple" + (p?.metronome ? " on" : "")} title={tip("Metronome", "metronome")} aria-label={tip("Metronome", "metronome")} onClick={() => act("set_metronome", { on: !p?.metronome })}>
             <Icon.metronome />
           </button>
         </div>
@@ -315,17 +316,17 @@ export function ControlBar() {
       </div>
 
       <div className="cb-group right">
-        <ViewButton on={showTyping} title={`Musical Typing (${fmt("Mod+K")})`} onClick={() => setState({ showTyping: !showTyping })}>
+        <ViewButton on={showTyping} title={withKey("Musical Typing", fmt("Mod+K"))} onClick={() => setState({ showTyping: !showTyping })}>
           <svg width="18" height="16" viewBox="0 0 18 16" fill="none" stroke="currentColor" strokeWidth="1.3">
             <rect x="1.5" y="3" width="15" height="10" rx="1.5" />
             <path d="M5 3v10M9 3v10M13 3v10" />
             <path d="M4 3v5.5h2V3M8 3v5.5h2V3M12 3v5.5h2V3" fill="currentColor" strokeWidth="0" />
           </svg>
         </ViewButton>
-        <ViewButton on={s.bottom === "list"} title={`List Editors (${keyHint("list-editors")})`} onClick={() => setState({ bottom: s.bottom === "list" ? "none" : "list" })}>
+        <ViewButton on={s.bottom === "list"} title={tip("List Editors", "list-editors")} onClick={() => setState({ bottom: s.bottom === "list" ? "none" : "list" })}>
           <Icon.lists />
         </ViewButton>
-        <ViewButton on={s.showBrowser} title={`Browsers (${keyHint("browser")})`} onClick={() => setState({ showBrowser: !s.showBrowser })}>
+        <ViewButton on={s.showBrowser} title={tip("Browsers", "browser")} onClick={() => setState({ showBrowser: !s.showBrowser })}>
           <Icon.browser />
         </ViewButton>
       </div>

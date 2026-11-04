@@ -47,7 +47,8 @@ export function SettingsWindow({ audio: AudioPane, appearance: AppearancePane }:
           </button>
         ))}
       </div>
-      <div className="settings-body">
+      {/* Keyed by pane, so each opens at its top rather than where the last one was scrolled. */}
+      <div className="settings-body" key={current.id}>
         <Pane close={close} />
       </div>
     </SheetFrame>

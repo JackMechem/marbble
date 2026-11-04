@@ -11,7 +11,12 @@
 // - Linux: GTK's spelling, Shift, Ctrl, Alt then GTK's key name ("Shift+Ctrl+Z", "Ctrl+Right",
 //   "BackSpace"). GTK draws every key in the menu bar this way and can't be told otherwise;
 //   tests/gtkKeyLabels.json pins the pairs, checked against GTK itself by menu.rs's tests.
+//   GTK translates its names ("Backspace" in English), so at startup the app asks GTK for them
+//   (`setGtkKeyNames`, menu.rs `gtk_key_names`) and writes keys exactly as the menu bar does.
 // - Windows: Ctrl, Alt, Shift then the key ("Ctrl+Shift+Z"), as its menus write accelerators.
+
+/** A tooltip with a key after the name, "Record (R)"; just the name when there is no key. */
+export const withKey = (label: string, key: string): string => (key ? `${label} (${key})` : label);
 
 /** How a platform writes keys. */
 export type KeyStyle = "mac" | "gtk" | "windows";
@@ -70,6 +75,21 @@ const GTK_KEYS: Record<string, string> = {
   ArrowRight: "Right",
 };
 
+/** GTK's names as the running app's GTK writes them (translated), when it has said. */
+export interface GtkKeyNames {
+  /** A named key's label, by key spec name ("Backspace" → "Backspace" or "BackSpace"). */
+  keys: Record<string, string>;
+  /** What goes before the key for each modifier ("Shift" → "Shift+"). */
+  mods: Record<string, string>;
+}
+
+let gtkNames: GtkKeyNames | null = null;
+
+/** Takes GTK's names for keys (menu.rs `gtk_key_names`); null goes back to the untranslated ones. */
+export function setGtkKeyNames(names: GtkKeyNames | null) {
+  gtkNames = names;
+}
+
 const ARROWS: Record<string, string> = { ArrowUp: "↑", ArrowDown: "↓", ArrowLeft: "←", ArrowRight: "→" };
 
 /**
@@ -91,8 +111,12 @@ export function formatKeyFor(spec: string, style: KeyStyle): string {
   if (!mods.size && key in MAC_MODS) return mac ? MAC_MODS[key] : PC_MODS[key];
   if (mac) return ["Ctrl", "Alt", "Shift", "Mod"].filter((m) => mods.has(m)).map((m) => MAC_MODS[m]).join("") + (ARROWS[key] ?? MAC_KEYS[key] ?? key);
   const ctrl = mods.has("Ctrl") || mods.has("Mod");
-  const order = style === "gtk" ? ["Shift", "Ctrl", "Alt"] : ["Ctrl", "Alt", "Shift"];
+  if (style === "gtk") {
+    const on = ["Shift", "Ctrl", "Alt"].filter((m) => (m === "Ctrl" ? ctrl : mods.has(m)));
+    return on.map((m) => gtkNames?.mods[m] ?? `${PC_MODS[m]}+`).join("") + (gtkNames?.keys[key] ?? GTK_KEYS[key] ?? key);
+  }
+  const order = ["Ctrl", "Alt", "Shift"];
   const names = order.filter((m) => (m === "Ctrl" ? ctrl : mods.has(m))).map((m) => PC_MODS[m]);
-  const name = style === "gtk" ? (GTK_KEYS[key] ?? key) : (ARROWS[key] ?? PC_KEYS[key] ?? key);
+  const name = ARROWS[key] ?? PC_KEYS[key] ?? key;
   return [...names, name].join("+");
 }

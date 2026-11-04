@@ -11,6 +11,7 @@ mod crash;
 mod glib_loop;
 mod menu;
 mod recent;
+mod schemas;
 mod settings;
 mod windows;
 
@@ -55,6 +56,9 @@ fn main() {
     }
 
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info,jack=off")).init();
+
+    // Before GTK starts and anything else runs: it may set XDG_DATA_DIRS.
+    schemas::ensure_file_chooser_schema();
 
     #[cfg(target_os = "linux")]
     vst3_host::editor::set_event_loop(Box::new(glib_loop::GlibLoop));
@@ -365,6 +369,8 @@ fn main() {
             commands::set_loop_crossfade,
             menu::set_project_menus,
             menu::set_menu_state,
+            menu::gtk_key_names,
+            schemas::file_dialog_problem,
             commands::set_marker_length,
             commands::add_arrangement_marker,
             commands::rename_arrangement_marker,

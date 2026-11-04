@@ -58,9 +58,24 @@ Nothing here has been checked by eye yet.
   Stereo Out, folder and VCA strips included; a strip with more than 6 inserts scrolling them with "+N"; track header
   buttons in columns at every height; the Compressor's floating panel opening at 703 px with nothing cut off; the fade
   above Tre's keyboard bar in Grid; Settings at one height with the footer in view on every tab and five theme cards in
-  a row; the faint "+" in empty slots and the slot buttons on hover. Not seen at all: the GTK menu bar turning light
-  with the Light theme (`setTheme`, on Linux GTK's prefer-dark setting), and how the slots' thin scrollbar looks in
-  WebKitGTK.
+  a row; the faint "+" in empty slots and the slot buttons on hover. Not seen at all: how the slots' thin scrollbar
+  looks in WebKitGTK.
+
+- **Menus, dialogs and the app shell, round 7 (2026-11-04).** Tests only, nothing seen. The menu bar in Light: a
+  light bar (the theme's `--bg`, #e7e9ed) with dark titles, and each other theme's background behind the bar (Studio
+  unchanged); switching themes back and forth, also in a detached window. View › Theme and File › Project
+  Alternatives drawn as radio buttons, also after an alternative is added. Edit › Repeat, Move and Name and Color
+  greyed out with nothing selected, enabled with a region selected. Window: Minimize, the three Separate Window items
+  ticking, the list of windows (main window by its title, then each detached panel) updating as panels open and close,
+  choosing one bringing it to the front. Help: each item opening the right page in the browser, Key Commands opening
+  Settings › Key Commands; Help and Window in a detached window's menu bar too. Edit › Delete and the Tracks area's
+  menus both reading "Backspace" (whatever GTK's language makes it). About Marbble with the logo. File › Save As from a
+  debug binary started outside the dev shell: the dialog opens (the log says the schema was found); with
+  `XDG_DATA_DIRS=/nowhere` and the binary built outside the shell, a "File Dialogs Unavailable" message and no crash.
+  Settings: scroll down in Audio, switch to General: at the top. Project Settings: one height on every tab, the empty
+  Notes without a scroll bar. The recovery sheet's Decide Later and its help lines (`kill -9` the app with unsaved
+  changes). Tooltips: Stop, Rewind, Forward, Catch Playhead and the header M, S and R buttons with their keys. A send
+  slot with the bus of another slot greyed out and marked. The Audio FX menu's VST3 heading.
 
 - **Plug-in editors at HiDPI and on native Wayland (2026-11-04).** Checked headlessly only (Xvfb, and Weston with
   XWayland driving GTK and WebKit directly, not the app). At scale 1 nothing should differ: open LSP Compressor,
@@ -201,14 +216,10 @@ What's left from the reviews and the UI audits of 2026-11-04. An independent re-
 graded the UI **7/10** (41 findings; report at `~/Desktop/marbble-ui-audit/ui-audit-2.html` on the owner's
 machine). Its top items:
 
-- File › Save As aborted a raw debug binary run outside the dev shell (`GLib-GIO-ERROR: Settings schema
-  'org.gtk.Settings.FileChooser' is not installed`). Likely the environment, but a missing schema shouldn't end
-  the session: check before opening a GTK file dialog.
 - The Piano Roll's toolbar runs off the edge at 1280 px (Height, Zoom and the detach button out of reach); the
   docked Mixer cuts off its faders at 1480×920.
 - Plug-in panels have three different headers (Compressor/Limiter, Channel EQ, instruments); in the dock, instrument
   tabs pile up, × closes only the front one, and "Float in its own window" vs "Open in Separate Window" is unclear.
-- No Help menu.
 
 - **Design system, round 6 (not seen in the app yet):** a six-size type scale (body 11.5 → 12 px, small text
   9–10.5 → 11 px), every hex colour in a token, a focus ring for Tab, knobs and faders as keyboard sliders,

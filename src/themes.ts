@@ -694,13 +694,16 @@ export function savedThemeId(): string {
   }
 }
 
-/** The window's own theme follows the app's, so on Linux GTK draws the menu bar light or dark to
- *  match (gtk-application-prefer-dark-theme), and on macOS the title bar does. */
-function windowTheme(kind: "light" | "dark") {
+/** The window's own theme follows the app's, so on Linux GTK draws the menu bar's text and menus
+ *  light or dark to match (gtk-application-prefer-dark-theme), and on macOS the title bar does.
+ *  The window's background, which GTK's menu bar is drawn on (it has none of its own in Adwaita),
+ *  is the theme's `--bg`: left at the dark one the window opens with, Light's dark text sat on a
+ *  near-black bar. */
+function windowTheme(kind: "light" | "dark", background: string) {
   try {
-    getCurrentWindow()
-      .setTheme(kind)
-      .catch(() => {});
+    const w = getCurrentWindow();
+    w.setTheme(kind).catch(() => {});
+    w.setBackgroundColor(background).catch(() => {});
   } catch {
     // Not in a Tauri window (a test page): nothing to theme.
   }
@@ -720,7 +723,7 @@ export function applyTheme(id: string, persist = true) {
   for (const [k, v] of Object.entries(t.css)) root.style.setProperty(k, v);
   root.dataset.theme = t.id;
   root.style.colorScheme = t.id === "light" ? "light" : "dark";
-  windowTheme(t.id === "light" ? "light" : "dark");
+  windowTheme(t.id === "light" ? "light" : "dark", t.css["--bg"]);
   Object.assign(theme, t.canvas);
   if (persist) {
     try {

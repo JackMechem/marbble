@@ -3,6 +3,7 @@
 import { act, actMade, MASTER_ID, type Id, type Project, type Send, type Track } from "./api";
 import type { MenuItem } from "./components/Menu";
 import { getState } from "./store";
+import { busesInUse } from "./sendsModel";
 
 const project = () => getState().snap?.project;
 
@@ -75,13 +76,17 @@ export const setSend = (track: Id, slot: number, send: Send | null) => act("set_
 export const setSendLevel = (track: Id, slot: number, levelDb: number) => act("set_send_level", { track, slot, levelDb });
 export const setOutput = (track: Id, output: Id | null) => act("set_output", { track, output });
 
-/** The auxes a send or output could go to, plus New Aux. */
-function auxChoices(t: Track, current: Id | null, pick: (aux: Track) => void, create: () => void): MenuItem[] {
+/** The auxes a send or output could go to, plus New Aux. Those that would make a loop are greyed
+ *  out, and so are the buses in `used` (another send slot's), marked as already sent to. */
+function auxChoices(t: Track, current: Id | null, pick: (aux: Track) => void, create: () => void, used: Id[] = []): MenuItem[] {
   const p = project();
   if (!p) return [];
   const list = auxes(p).filter((a) => a.id !== t.id);
   return [
-    ...list.map((a) => ({ label: auxItemLabel(a), checked: a.id === current, disabled: a.id !== current && !canFeed(p, t, a), onClick: () => pick(a) })),
+    ...list.map((a) => {
+      const sent = a.id !== current && used.includes(a.id);
+      return { label: auxItemLabel(a), checked: a.id === current, hint: sent ? "Already sent" : undefined, disabled: a.id !== current && (sent || !canFeed(p, t, a)), onClick: () => pick(a) };
+    }),
     ...(list.length ? [{ separator: true } as MenuItem] : []),
     { label: "New Aux", onClick: create },
   ];
@@ -94,6 +99,7 @@ export function emptySendMenu(t: Track, slot: number): MenuItem[] {
     null,
     (a) => setSend(t.id, slot, { bus: a.id, level_db: 0, pre_fader: false, muted: false }),
     () => newAux({ send: [t.id, slot] }),
+    busesInUse(t.sends, slot),
   );
 }
 
@@ -107,7 +113,7 @@ export function sendMenu(t: Track, slot: number, s: Send): MenuItem[] {
     { label: "Mute Send", checked: s.muted, onClick: () => set({ muted: !s.muted }) },
     {
       label: "Send to",
-      children: auxChoices(t, s.bus, (a) => set({ bus: a.id }), () => newAux({ send: [t.id, slot] })),
+      children: auxChoices(t, s.bus, (a) => set({ bus: a.id }), () => newAux({ send: [t.id, slot] }), busesInUse(t.sends, slot)),
     },
     { separator: true },
     { label: "Remove Send", onClick: () => setSend(t.id, slot, null) },

@@ -1,6 +1,6 @@
 // Settings › Plug-ins: Logic's Plug-in Manager, with scanning and the extra folders.
 import { useEffect, useState } from "react";
-import { open } from "@tauri-apps/plugin-dialog";
+import { open } from "../../fileDialog";
 import { call, type PluginDesc } from "../../api";
 import { updateSettings, useSettings } from "../../prefs";
 import { setState } from "../../store";

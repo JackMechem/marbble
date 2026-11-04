@@ -28,7 +28,7 @@ function rsSpec(): RsNode[] {
   const body = menuRs.slice(start, end);
   const root: RsNode[] = [];
   const stack: RsNode[][] = [root];
-  const token = /\b(item|keyed|check|Check|Item)\("([^"]+)", "([^"]+)"(?:, (?:Some\()?(?:"([^"]+)"|([A-Z_]+)))?|\bSep\b|\bSub\(\s*"([^"]+)"|\]/g;
+  const token = /\b(item|keyed|check|radio|Check|Item)\("([^"]+)", "([^"]+)"(?:, (?:Some\()?(?:"([^"]+)"|([A-Z_]+)))?|\bSep\b|\bSub\(\s*"([^"]+)"|\]/g;
   for (const m of body.matchAll(token)) {
     const cur = stack[stack.length - 1];
     if (m[0] === "]") stack.pop();
@@ -37,7 +37,7 @@ function rsSpec(): RsNode[] {
       const sub = { sub: m[6], items: [] as RsNode[] };
       cur.push(sub);
       stack.push(sub.items);
-    } else cur.push({ id: m[2], label: m[3], check: /^c|^C/.test(m[1]), accel: m[4] ?? m[5] ?? null });
+    } else cur.push({ id: m[2], label: m[3], check: /^c|^C|^radio/.test(m[1]), accel: m[4] ?? m[5] ?? null });
   }
   return root;
 }
@@ -49,11 +49,19 @@ test("menu.rs is read whole", () => {
   const bar = rsSpec();
   assert.deepEqual(
     bar.map((n) => (typeof n === "object" && "sub" in n ? n.sub : n)),
-    ["Marbble", "File", "Edit", "Track", "Record", "Navigate", "View"],
+    ["Marbble", "File", "Edit", "Track", "Record", "Navigate", "View", "Window", "Help"],
   );
   assert.ok(items(bar).length > 120);
   assert.ok(items(bar).some((i) => i.id === "musical-typing" && i.check && i.accel === "CmdOrCtrl+K"));
   assert.ok(items(bar).some((i) => i.id === "bounce-in-place" && i.accel === "BOUNCE_IN_PLACE_KEY"));
+  assert.ok(items(bar).some((i) => i.id === "theme:light" && i.check));
+});
+
+test("the one-of-several choices are radio items: View › Theme, one per theme, by its name", () => {
+  const radios = [...menuRs.matchAll(/\bradio\("([^"]+)", "([^"]+)"/g)].map((m) => [m[1], m[2]]);
+  const themes = [...read("src/themes.ts").matchAll(/\{ id: "([a-z]+)", name: "([^"]+)"/g)].map((m) => [`theme:${m[1]}`, m[2]]);
+  assert.equal(themes.length, 5);
+  assert.deepEqual(radios, themes);
 });
 
 test("the menu bar uses the menus' names", () => {

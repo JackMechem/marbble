@@ -785,6 +785,7 @@ dependencies = [
  "daw-engine",
  "env_logger",
  "gdk",
+ "gio",
  "glib",
  "gtk",
  "log",

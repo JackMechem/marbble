@@ -4,7 +4,7 @@
 import { regionEnd } from "../loops";
 import { useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { open, save } from "@tauri-apps/plugin-dialog";
+import { open, save } from "../fileDialog";
 import { call, type Id, type Made, type Project } from "../api";
 import {
   bounceRequest,
@@ -337,7 +337,7 @@ export function BounceInPlaceDialog() {
             Cancel
           </button>
           <button className="push default" disabled={busy} onClick={go}>
-            {busy ? `Bouncing… ${Math.round((progress ?? 0) * 100)}%` : "OK"}
+            {busy ? `Bouncing… ${Math.round((progress ?? 0) * 100)}%` : "Bounce"}
           </button>
         </div>
       </div>

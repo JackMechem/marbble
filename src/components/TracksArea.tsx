@@ -13,7 +13,7 @@ import { TrackHeaders } from "./TrackHeaders";
 import { importAudioDialog, undoRedo } from "../files";
 import { isLooped } from "../loops";
 import { exportSelectionMidi, importMidiDialog } from "../midiFiles";
-import { fmt, keyHint } from "../keymap";
+import { fmt, keyHint, tip } from "../keymap";
 import { transport } from "../transport";
 import { GlobalTracks, globalTracksHeight } from "./GlobalTracks";
 import { Overview, toggleOverview } from "./Overview";
@@ -183,8 +183,8 @@ export function TracksArea() {
         <div className="local-right">
           <button
             className={"lb-btn catch" + (s.catchPlayhead ? " on" : "")}
-            title="Catch Playhead (`)"
-            aria-label="Catch Playhead (`)"
+            title={tip("Catch Playhead", "catch-playhead")}
+            aria-label={tip("Catch Playhead", "catch-playhead")}
             onClick={() => setState({ catchPlayhead: !s.catchPlayhead })}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3">
@@ -263,7 +263,7 @@ export function TracksArea() {
           <button className="add-track" title={`New Tracks (${fmt("Mod+Alt+N")})`} aria-label={`New Tracks (${fmt("Mod+Alt+N")})`} onClick={() => setState({ dialog: "new-tracks" })}>
             <Icon.plus />
           </button>
-          <button className={"hide-mode" + (showHidden ? " on" : "")} title={`Show Hidden Tracks (${keyHint("show-hidden")})`} aria-label={`Show Hidden Tracks (${keyHint("show-hidden")})`} onClick={ops.toggleShowHidden}>
+          <button className={"hide-mode" + (showHidden ? " on" : "")} title={tip("Show Hidden Tracks", "show-hidden")} aria-label={tip("Show Hidden Tracks", "show-hidden")} onClick={ops.toggleShowHidden}>
             H
           </button>
           <span className="global-label">Marker</span>

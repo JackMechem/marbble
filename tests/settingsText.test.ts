@@ -3,7 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { PluginDesc } from "../src/api.ts";
 import type { Recovery, RecordingRecovery } from "../src/prefs.ts";
-import { describeMidi, oldFolderNote, pluginType, recordingSummary, recoveryIntro, when } from "../src/settingsText.ts";
+import { describeMidi, oldFolderNote, pluginType, recordingSummary, recoveryHelp, recoveryIntro, when } from "../src/settingsText.ts";
 
 test("describeMidi names messages, Logic-style with C3 as middle C", () => {
   assert.deepEqual(describeMidi([0x90, 60, 100]), ["Ch 1", "Note On  C3  vel 100"]);
@@ -39,6 +39,14 @@ test("recordingSummary", () => {
   assert.equal(recordingSummary(rec({ takes: 1, tracks: ["Vocal"], seconds: 9 })), "1 take (0:09) on Vocal");
   assert.equal(recordingSummary(rec({ tracks: ["A", "B", "C"] })), "2 takes (up to 1:05) on A, B and C");
   assert.equal(recordingSummary(rec({ tracks: [] })), "2 takes (up to 1:05)");
+});
+
+test("recoveryHelp names every button the sheet shows, in its order", () => {
+  const names = (single: boolean, saved: boolean) => recoveryHelp(single, saved).map(([n]) => n);
+  assert.deepEqual(names(true, true), ["Discard", "Open Last Saved", "Recover", "Decide Later"]);
+  assert.deepEqual(names(true, false), ["Discard", "Recover", "Decide Later"]);
+  assert.deepEqual(names(false, true), ["Discard", "Recover", "Decide Later"]);
+  assert.match(recoveryHelp(true, true)[3][1], /offered again/);
 });
 
 test("recoveryIntro says what was left", () => {

@@ -85,6 +85,17 @@ export const MENU_LABELS = {
   "show-hidden": "Show Hidden Tracks",
   "zoom-in": "Zoom In",
   "zoom-out": "Zoom Out",
+  // Window (the menu bar's own; the list of open windows follows).
+  minimize: "Minimize",
+  "detach:mixer": "Mixer in Separate Window",
+  "detach:editor": "Editor in Separate Window",
+  "detach:list": "Event List in Separate Window",
+  // Help: the website's pages, and Settings › Key Commands.
+  "help-guide": "Marbble User Guide",
+  "help-keys": "Key Commands…",
+  "help-whats-new": "What's New in Marbble",
+  "help-report": "Report an Issue…",
+  "help-website": "Marbble Website",
 } as const;
 
 export type MenuId = keyof typeof MENU_LABELS;

@@ -62,6 +62,17 @@ export function recoveryIntro(list: Recovery[]): string {
     : "These projects have autosaved changes that were never saved — most likely Marbble quit before you could save them.";
 }
 
+/** What each of the Recovery sheet's buttons does, one line each, in the order they appear. Open
+ *  Last Saved is offered for a single project that has been saved. */
+export function recoveryHelp(single: boolean, saved: boolean): [string, string][] {
+  return [
+    ["Discard", "deletes the unsaved work; the last saved version stays as it is."],
+    ...(single && saved ? [["Open Last Saved", "deletes the unsaved work and opens the project as last saved."] as [string, string]] : []),
+    ["Recover", "opens the project with the unsaved work put back. Save it to keep it."],
+    ["Decide Later", "changes nothing: the unsaved work is offered again next time."],
+  ];
+}
+
 /** The projects folder from before the rename (the `old_projects_folder` command). */
 export interface OldProjectsFolder {
   old: string;

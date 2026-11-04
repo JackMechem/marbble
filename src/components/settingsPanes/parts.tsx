@@ -1,7 +1,7 @@
 // What every Settings pane is made of: the window's frame and tab glyphs, a pane's footer, rows and
 // sections, and the helpers that write a change to settings.json.
 import { useRef } from "react";
-import { open } from "@tauri-apps/plugin-dialog";
+import { open } from "../../fileDialog";
 import { updateSettings, type Prefs, type UiPrefs } from "../../prefs";
 import { setState } from "../../store";
 import { sheetKey } from "../Form";

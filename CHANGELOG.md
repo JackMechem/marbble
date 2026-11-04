@@ -8,6 +8,10 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Added
 
+- **Window and Help menus.** Window has Minimize, the Mixer, Editor and Event List in Separate
+  Window items (moved from View) and a list of the open windows to bring one to the front. Help
+  opens the User Guide, the changelog, a new GitHub issue or the website in the browser, and
+  Settings › Key Commands.
 - **HiDPI plug-in editors on Linux:** each editor is told the display's scale as it opens
   (`GDK_SCALE`, the desktop's GTK scale, or `Xft.dpi`), and its window takes the size the plug-in
   gives at that scale. LSP, Dragonfly, Zam, CHOW Tape and TONE3000 draw at 2x; nothing changes at
@@ -36,6 +40,20 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Changed
 
+- **One kind of button wording in sheets:** Bounce in Place confirms with **Bounce** and Strip
+  Silence with **Strip Silence** instead of OK; the Project Chooser's dismiss button is
+  **Cancel** at launch too. The recovery sheet's Cancel is **Decide Later**, and a line for each
+  button says what it does.
+- **The menu bar's one-of-several choices are radio items on Linux** (View › Theme, File ›
+  Project Alternatives), and a submenu whose items all don't apply is greyed out (Repeat, Move,
+  Name and Color with no regions selected), as in the Tracks area's menus.
+- **Tooltips show the key of every control that has one**, from Settings › Key Commands, so a
+  reassigned key shows: Stop, Rewind, Forward, Catch Playhead and the track headers' Mute, Solo
+  and Record Enable now do too.
+- **The Audio FX menu has a VST3 heading** over the VST3 categories, so Delay, Dynamics, EQ
+  and Reverb don't appear to be listed twice; the VST3 list by vendor is **By Manufacturer**.
+- **A send slot greys out the buses the strip already sends to**, marked "Already sent".
+- **Project Settings keeps one height** on every tab, as Settings does.
 - **A type scale.** The interface uses six text sizes (10 to 17 px) instead of twelve with half
   pixels among them. Text is 11 px or more (the body went from 11.5 to 12 px, the smallest
   labels from 9–10.5 to 11 px); 10 px is kept for numbers inside fixed readouts such as meter
@@ -113,6 +131,17 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Fixed
 
+- **File › Save As (or any file dialog) no longer ends the app on Linux when GTK's file chooser
+  schema isn't installed.** A binary started outside the dev shell finds the schema itself, and
+  where it can't, a message says what to install and the project stays open.
+- **The Light theme's menu bar on Linux** was near-black with dark, disabled-looking titles: the
+  window's background behind the menu bar now follows the theme.
+- **Keys read the same in the menu bar and the app's own menus on Linux** ("Backspace", not
+  "BackSpace" in one and "Backspace" in the other): the app takes GTK's names, in the
+  interface's language.
+- **About Marbble shows the app icon** instead of a missing-image glyph.
+- **Settings panes open at their top** rather than at the last pane's scroll position, and the
+  empty Notes field in Project Settings no longer shows a horizontal scroll bar.
 - **The Compressor's floating panel opens wide enough** for its knobs; it opened with a sideways
   scrollbar and its Mix and Output knobs cut off. A floating panel that hasn't been resized now
   opens as wide as its controls need, and the Noise Gate's groups wrap in a narrow window.

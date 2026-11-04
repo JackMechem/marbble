@@ -1,14 +1,14 @@
 // The Project Chooser shown at launch and from File › New: start from a template, or reopen a
 // recent project. Modelled on Logic Pro's chooser.
 import { useEffect, useRef, useState } from "react";
-import { open } from "@tauri-apps/plugin-dialog";
+import { open } from "../fileDialog";
 import { invoke } from "@tauri-apps/api/core";
 import { act, call, type InputSel, type RecentProject, type TrackKind, type UserTemplate } from "../api";
 import { openMenu } from "./Menu";
 import { askName } from "./NameSheet";
 import { nameProblem } from "../alternativesModel";
 import { confirmDiscard } from "../files";
-import { getState, setState, useStore } from "../store";
+import { setState, useStore } from "../store";
 import { NumberField, Select, sheetKey } from "./Form";
 import { useSheetKeys } from "../sheetKeys";
 import { getSettings, openProjectPath, updateSettings, type Startup } from "../prefs";
@@ -255,8 +255,6 @@ export function ProjectChooser() {
     setRecent((r) => r?.filter((p) => p.path !== path) ?? null);
   };
 
-  const hasProject = (getState().snap?.project.tracks.length ?? 0) > 0 || getState().snap?.saved;
-
   return (
     <div className="chooser-backdrop">
       <div ref={box} className="chooser" onMouseDown={(e) => e.stopPropagation()} onKeyDown={(e) => sheetKey(e, close)}>
@@ -429,7 +427,7 @@ export function ProjectChooser() {
             <span className="dim">{tab === "new" ? target : selected ?? ""}</span>
             <div className="sheet-buttons">
               <button className="push" onClick={close}>
-                {hasProject ? "Cancel" : "Close"}
+                Cancel
               </button>
               {tab === "new" ? (
                 <button className="push default" disabled={busy} onClick={() => create()}>

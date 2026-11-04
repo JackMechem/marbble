@@ -131,7 +131,7 @@ function StripSilenceSheet({ ids }: { ids: Id[] }) {
             Cancel
           </button>
           <button className="push default" disabled={busy || !getState().snap} onClick={apply}>
-            OK
+            Strip Silence
           </button>
         </div>
       </div>

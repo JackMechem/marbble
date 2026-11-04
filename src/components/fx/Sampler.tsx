@@ -3,7 +3,7 @@
 // a row. It scrolls sideways when the dock is narrower than that, and works floated.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { open } from "@tauri-apps/plugin-dialog";
+import { open } from "../../fileDialog";
 import { act, api, call, type Id, type InputSel, type Snapshot } from "../../api";
 import type { FxPanelProps } from "../../fx";
 import { findFxSlot } from "../../fxHost";

@@ -1,6 +1,6 @@
 // Track and region operations, shared by the right-click menus, the local Edit menu, the native
 // menu bar and the keyboard, plus the context menus themselves.
-import { open } from "@tauri-apps/plugin-dialog";
+import { open } from "./fileDialog";
 import { openFxPanel } from "./fxHost";
 import { act, actMade, api, call, canRecord, isStack, type Group, type Id, type Region, type Snapshot, type Track } from "./api";
 import { newAux } from "./routing";

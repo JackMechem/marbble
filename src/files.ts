@@ -1,5 +1,6 @@
 // Open, Save and Import dialogs, the unsaved-changes question, and undo and redo with their toasts.
-import { ask, open, save } from "@tauri-apps/plugin-dialog";
+import { ask } from "@tauri-apps/plugin-dialog";
+import { open, save } from "./fileDialog";
 import { act, call, type Snapshot } from "./api";
 import { getSettings, openProjectPath } from "./prefs";
 import { currentTick, getState, setState } from "./store";

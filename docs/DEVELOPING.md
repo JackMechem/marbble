@@ -38,7 +38,10 @@ pnpm tauri dev -- -- path/to/Song.marbble   # open a project at launch
 - `nix/shell.nix` takes its inputs from the package (`inputsFrom = [ marbble ]`), so the shell
   and `nix build` use the same libraries. It adds cargo, rustc, clippy, rustfmt, rust-analyzer
   and Node, sets `GIO_MODULE_DIR` and the GSettings schemas for GTK file dialogs, and puts ALSA,
-  JACK, PipeWire and D-Bus on `LD_LIBRARY_PATH` for dev builds.
+  JACK, PipeWire and D-Bus on `LD_LIBRARY_PATH` for dev builds. A dev binary started outside
+  the shell finds the schemas again by itself (it remembers the shell's `XDG_DATA_DIRS` from
+  the build; see ARCHITECTURE.md › File dialogs); where it can't, file dialogs show a message
+  instead of opening, and the app keeps running.
 - `tauri.conf.json` runs `npm run dev` (Vite on port 1420) before a dev build and
   `npm run build` before a release build, whichever package manager you use to start Tauri.
 - Both `package-lock.json` and `pnpm-lock.yaml` are kept. The Nix package installs npm
@@ -139,7 +142,10 @@ it, the kernel would kill the test binary (SIGKILL), so a run that ends that way
 
 `cargo test -p daw` runs the Tauri crate's tests (old and partly malformed `settings.json`
 files load with defaults; the menu bar's spec, reading key specs, and, on Linux, that GTK draws
-each key in `tests/gtkKeyLabels.json` as the app writes it).
+each key in `tests/gtkKeyLabels.json` as the app writes it). On Linux `schemas.rs`'s tests need
+GTK's file chooser schema on the search path, as the dev shell and an Ubuntu with GTK have it;
+two of them rerun the test binary with `XDG_DATA_DIRS` changed, to see that a missing schema
+is reported and that startup finds it again.
 
 ### Headless examples
 
@@ -753,6 +759,10 @@ pnpm tauri build          # native bundles for the current platform (deb, rpm, A
   `LICENSE`, the npm and TypeScript configs), so editing docs doesn't trigger a rebuild.
 - The bundles (and so the Nix package, in `lib/Marbble`) carry a copy of `LICENSE`, through
   `bundle.resources` in `src-tauri/tauri.conf.json`.
+- GTK's file chooser needs the `org.gtk.Settings.FileChooser` GSettings schema at run time:
+  `wrapGAppsHook3` puts GTK's schemas on `XDG_DATA_DIRS` in the Nix package's wrapper, the
+  AppImage gets them from linuxdeploy's GTK plug-in, and the .deb and .rpm from their GTK
+  dependency. A new packaging route must carry them too (ARCHITECTURE.md › File dialogs).
 - `nix/package.nix` has its own `version` string; `scripts/set-version.sh` keeps it in step
   (see below).
 

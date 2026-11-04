@@ -33,6 +33,11 @@
   background: var(--sheet-bg);
 }
 
+/* Project Settings: shorter, as its tabs are. */
+.sheet.project-settings-sheet {
+  height: min(560px, calc(100vh - 80px));
+}
+
 /* Key Commands' list takes the pane's spare height. */
 .settings-sheet .key-table {
   flex: 1 1 0;
