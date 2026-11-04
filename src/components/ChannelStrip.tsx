@@ -88,6 +88,7 @@ export function PluginSlotView({
       <button
         className="slot-power"
         title={plugin.bypass ? "Turn on" : "Bypass"}
+        aria-label={plugin.bypass ? "Turn on" : "Bypass"}
         onMouseDown={(e) => {
           e.stopPropagation();
           if (refuseFrozen([trackId])) return;
@@ -117,7 +118,7 @@ export function PluginSlotView({
       >
         {plugin.name}
       </span>
-      <button className="slot-arrow" onMouseDown={menu}>
+      <button className="slot-arrow" onMouseDown={menu} aria-label="Plug-in menu">
         <Icon.chevron />
       </button>
     </div>
@@ -252,6 +253,7 @@ export function ChannelStrip({ track, selected }: { track: Track | null; selecte
             <button
               className="slot-format"
               title="Mono / Stereo"
+              aria-label={track.input.type === "stereo" ? "Stereo input" : "Mono input"}
               onMouseDown={(e) => {
                 e.stopPropagation();
                 const ch = track.input.type === "none" ? 0 : track.input.ch;
@@ -335,14 +337,14 @@ export function ChannelStrip({ track, selected }: { track: Track | null; selecte
 
       {!isMaster ? (
         <div className="strip-buttons">
-          <button className={"tbtn power" + (track.off ? " on" : "")} title={powerTitle(tracks ?? [], track)} onMouseDown={(e) => { e.stopPropagation(); api.updateTrack(id, { off: !track.off }); }}>
+          <button className={"tbtn power" + (track.off ? " on" : "")} title={powerTitle(tracks ?? [], track)} aria-label={powerTitle(tracks ?? [], track)} onMouseDown={(e) => { e.stopPropagation(); api.updateTrack(id, { off: !track.off }); }}>
             <Icon.power />
           </button>
           <div className="btn-row">
-            <button className={"tbtn mute" + (track.mute ? " on" : "")} onMouseDown={(e) => { e.stopPropagation(); api.updateTrack(id, { mute: !track.mute }); }}>
+            <button className={"tbtn mute" + (track.mute ? " on" : "")} aria-label="Mute" aria-pressed={track.mute} onMouseDown={(e) => { e.stopPropagation(); api.updateTrack(id, { mute: !track.mute }); }}>
               M
             </button>
-            <button className={"tbtn solo" + (track.solo ? " on" : "")} onMouseDown={(e) => { e.stopPropagation(); api.updateTrack(id, { solo: !track.solo }); }}>
+            <button className={"tbtn solo" + (track.solo ? " on" : "")} aria-label="Solo" aria-pressed={track.solo} onMouseDown={(e) => { e.stopPropagation(); api.updateTrack(id, { solo: !track.solo }); }}>
               S
             </button>
           </div>
@@ -350,12 +352,12 @@ export function ChannelStrip({ track, selected }: { track: Track | null; selecte
             {!canRecord(track.kind) ? (
               <span className="tbtn ghost" />
             ) : (
-              <button className={"tbtn rec" + (track.armed ? " on" : "")} onMouseDown={(e) => { e.stopPropagation(); api.updateTrack(id, { armed: !track.armed }); }}>
+              <button className={"tbtn rec" + (track.armed ? " on" : "")} aria-label="Record Enable" aria-pressed={track.armed} onMouseDown={(e) => { e.stopPropagation(); api.updateTrack(id, { armed: !track.armed }); }}>
                 R
               </button>
             )}
             {track.kind === "audio" ? (
-              <button className={"tbtn mon" + (track.monitor ? " on" : "")} onMouseDown={(e) => { e.stopPropagation(); api.updateTrack(id, { monitor: !track.monitor }); }}>
+              <button className={"tbtn mon" + (track.monitor ? " on" : "")} aria-label="Input Monitoring" aria-pressed={track.monitor} onMouseDown={(e) => { e.stopPropagation(); api.updateTrack(id, { monitor: !track.monitor }); }}>
                 I
               </button>
             ) : extraOutputs ? (
@@ -363,6 +365,7 @@ export function ChannelStrip({ track, selected }: { track: Track | null; selecte
                 className="tbtn add-output"
                 disabled={!nextOut}
                 title={nextOut ? `New aux for this instrument's next output: ${nextOut.name}` : "Every output of this instrument has an aux"}
+                aria-label={nextOut ? `New aux for this instrument's next output: ${nextOut.name}` : "Every output of this instrument has an aux"}
                 onMouseDown={(e) => {
                   e.stopPropagation();
                   if (e.button === 0 && nextOut) actMade("add_output_aux", { track: id });

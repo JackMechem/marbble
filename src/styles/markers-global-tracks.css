@@ -2,7 +2,7 @@
 /* ---- markers, Autopunch and take folders ------------------------------------------------- */
 .mode-btn.punch.on {
   background: var(--red);
-  color: #fff;
+  color: var(--red-ink);
 }
 
 /* The marker lane's label, level with the lane at the bottom of the ruler. */
@@ -14,7 +14,7 @@
   position: absolute;
   left: 10px;
   bottom: 2px;
-  font-size: 10px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--dim);
   pointer-events: none;
@@ -64,7 +64,7 @@
   align-items: center;
   box-sizing: border-box;
   padding: 0 10px;
-  font-size: 10px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--dim);
   border-bottom: 1px solid var(--edge);

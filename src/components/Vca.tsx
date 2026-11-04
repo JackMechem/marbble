@@ -108,7 +108,7 @@ export function VcaStrip({ vca }: { vca: Vca }) {
         <span className="readout">{formatDb(vca.level_db)}</span>
       </div>
       <div className="strip-fader" ref={faderBox}>
-        <Fader db={vca.level_db} onChange={(db) => update({ level_db: db })} height={faderHeight} />
+        <Fader db={vca.level_db} onChange={(db) => update({ level_db: db })} height={faderHeight} label={`${vca.name} level`} />
         <div style={{ width: 11 }} />
       </div>
       <div className="strip-buttons">
@@ -116,6 +116,7 @@ export function VcaStrip({ vca }: { vca: Vca }) {
           <button
             className={"tbtn mute" + (vca.mute ? " on" : "")}
             title="Mute every strip on this VCA"
+            aria-label="Mute every strip on this VCA"
             onMouseDown={(e) => {
               e.stopPropagation();
               update({ mute: !vca.mute });

@@ -3,7 +3,7 @@
 
 .strip-latency {
   margin-left: 4px;
-  font-size: 9px;
+  font-size: var(--fs-xs);
   color: var(--accent);
   font-variant-numeric: tabular-nums;
   cursor: default;

@@ -112,6 +112,35 @@ const studioCss: Record<string, string> = {
   "--scroll-thumb": "#4a4a4e",
   "--status-bg": "#222224",
   "--toast-bg": "rgba(54,54,58,0.97)",
+  "--red-ink": "#ffffff",
+  "--mute-ink": "#ffffff",
+  "--green-ink": "#ffffff",
+  "--swatch-ink": "#141416",
+  "--warn": "#f0b43c",
+  "--meter-stops": "#2f9e44, #55c23b 55%, #d8d33a 80%, #e9a23b 90%, #e5483a",
+  "--meter-hold": "#e8e8e8",
+  "--gr-fill": "linear-gradient(to left, #e9a23b, #e5483a)",
+  "--tpl-audio": "#3b8fd9",
+  "--tpl-inst": "#4fae4c",
+  "--vu-face": "radial-gradient(ellipse at 50% 85%, #f4ecd6, #e1d3ad 70%, #cdbb8c)",
+  "--vu-ink": "#2b2620",
+  "--vu-hot": "#b8352a",
+  "--vu-legend": "#5d5446",
+  "--vu-needle": "#1d1a16",
+  "--vu-foot": "#2a2622",
+  "--mt-white": "linear-gradient(#fdfdfd, #e9e9ec)",
+  "--mt-white-shadow": "inset -1px 0 0 #b9bac0, inset 0 -3px 0 #c9cad0",
+  "--mt-white-lit": "#cfe3ff",
+  "--mt-white-typed": "linear-gradient(#ffffff, #e2ecfb)",
+  "--mt-black": "linear-gradient(#3a3b40, #18191c)",
+  "--mt-black-shadow": "inset 0 -3px 0 #050506",
+  "--mt-black-on": "linear-gradient(#5aa9ff, #2f6fd1)",
+  "--mt-label": "#5d6068",
+  "--mt-label-black": "#c9ccd4",
+  "--mt-octave": "#8b8e96",
+  "--inst-key-white": "#e4e4e8",
+  "--inst-key-edge": "#8d9099",
+  "--inst-key-black": "#26272b",
   "--radius": "5px",
 };
 
@@ -475,6 +504,8 @@ const lightCss: Record<string, string> = {
   "--scroll-thumb": "#c3c7cf",
   "--status-bg": "#e9ebef",
   "--toast-bg": "#ffffff",
+  "--warn": "#e39a2b",
+  "--meter-hold": "#1c1f25",
 };
 
 const lightCanvas: CanvasTheme = {
@@ -600,6 +631,9 @@ const contrastCss: Record<string, string> = {
   "--scroll-thumb": "#6a6a6a",
   "--status-bg": "#0a0a0a",
   "--toast-bg": "#121212",
+  "--mute-ink": "#000000",
+  "--green-ink": "#000000",
+  "--meter-hold": "#ffffff",
 };
 
 const contrastCanvas: CanvasTheme = {

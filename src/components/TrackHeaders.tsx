@@ -140,6 +140,8 @@ function Header({
       key={sw.cls}
       className={`tbtn ${sw.cls}` + (sw.on ? " on" : "")}
       title={sw.title}
+      aria-label={sw.name}
+      aria-pressed={sw.checked ?? sw.on}
       onMouseDown={(e) => {
         e.stopPropagation();
         sw.toggle();
@@ -201,6 +203,7 @@ function Header({
         <button
           className="th-disclosure"
           title={track.collapsed ? "Show subtracks" : "Hide subtracks"}
+          aria-label={track.collapsed ? "Show subtracks" : "Hide subtracks"}
           onMouseDown={(e) => {
             e.stopPropagation();
             toggleCollapsed(track);
@@ -252,6 +255,7 @@ function Header({
             <button
               className={"tbtn hide" + (track.hidden ? " on" : "")}
               title={track.hidden ? "Hidden: click to show this track" : "Hide this track"}
+              aria-label={track.hidden ? "Hidden: click to show this track" : "Hide this track"}
               onMouseDown={(e) => {
                 e.stopPropagation();
                 setHidden([track.id], !track.hidden);
@@ -265,6 +269,7 @@ function Header({
             <button
               className="tbtn th-more"
               title="On/Off, Mute, Solo, Record and more"
+              aria-label="On/Off, Mute, Solo, Record and more"
               onMouseDown={(e) => {
                 e.stopPropagation();
                 openMore(e.currentTarget);

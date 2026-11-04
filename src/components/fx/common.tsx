@@ -10,6 +10,8 @@ import { useStore } from "../../store";
 import { openMenuAt } from "../Menu";
 import { keySourceItems } from "../../sideChain";
 import { useFxLearn } from "../../learn";
+import { sliderAria } from "../../sliderKeys";
+import { sliderKeyDown } from "../Controls";
 
 export { formatValue, toNorm, fromNorm, tidy, parseValue, clampValue };
 
@@ -84,7 +86,16 @@ export function FxKnob({
   return (
     <div className="fx-knob" style={{ minWidth: Math.max(size + 16, 64) }}>
       <div className="fx-label">{label ?? spec.name}</div>
-      <div className="knob" style={{ width: size, height: size }} onMouseDown={down} onDoubleClick={() => onChange(spec.default)} onContextMenu={learn} title={`${spec.name}: ${format(spec, value)}`}>
+      <div
+        className="knob"
+        style={{ width: size, height: size }}
+        {...sliderAria({ label: label ?? spec.name, text: format(spec, value), min: spec.min, max: spec.max, now: value })}
+        onKeyDown={sliderKeyDown(n, value, (p) => tidy(spec, fromNorm(spec, p)), onChange, onTouch && { onTouchStart: () => onTouch(true), onTouchEnd: () => onTouch(false) })}
+        onMouseDown={down}
+        onDoubleClick={() => onChange(spec.default)}
+        onContextMenu={learn}
+        title={`${spec.name}: ${format(spec, value)}`}
+      >
         <svg width={size} height={size}>
           <path d={arc(-SWEEP, SWEEP)} className="knob-ring" />
           {Math.abs(a1 - a0) > 0.5 && <path d={arc(Math.min(a0, a1), Math.max(a0, a1))} className="knob-arc" />}

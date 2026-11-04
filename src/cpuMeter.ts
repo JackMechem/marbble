@@ -19,3 +19,14 @@ export function cpuTitle(cpu: number, peak: number, late: number, threads: numbe
   if (late > 0) lines.push(`${late} ${late === 1 ? "block" : "blocks"} over 100%. Click to clear.`);
   return lines.join("\n");
 }
+
+/** The figure beside the meter: the average load as a whole percentage ("14%"; over 100% when
+ *  blocks are late). */
+export function cpuPercent(cpu: number): string {
+  return `${Math.max(0, Math.round(cpu * 100))}%`;
+}
+
+/** The bar's colour band: grey up to half, amber past it, red past 80%. */
+export function cpuLevel(cpu: number): "low" | "mid" | "high" {
+  return cpu > 0.8 ? "high" : cpu > 0.5 ? "mid" : "low";
+}

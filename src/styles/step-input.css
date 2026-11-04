@@ -29,7 +29,7 @@
   background: var(--btn);
   box-shadow: var(--btn-shadow);
   color: var(--btn-text);
-  font-size: 11px;
+  font-size: var(--fs-sm);
   white-space: nowrap;
 }
 
@@ -60,7 +60,7 @@
   min-width: 34px;
   font-style: italic;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 12px;
+  font-size: var(--fs-md);
   font-weight: 600;
 }
 

@@ -15,8 +15,32 @@ All notable changes to Marbble are recorded here. The format follows
 - **Native Wayland, opt-in:** `MARBBLE_WAYLAND=1` runs the interface natively on Wayland.
   Plug-in editors still open through XWayland, with their OpenGL kept apart from GTK's, so DPF
   editors (Zam, Dragonfly) open there too. The default stays XWayland.
+- **Keyboard control of knobs and faders.** Tab reaches the channel strip's fader, pan and send
+  knobs, the track headers' volume sliders, the master volume, VCA faders and the built-in
+  effects' knobs; the arrow keys step them (Shift for fine), Page Up and Page Down step further,
+  Home and End go to the ends. A change goes the way a drag does, so it writes automation in
+  Touch and Latch and a run of presses undoes as one step. Screen readers hear each control as a
+  slider with its name and value, and buttons that show only an icon by their tooltip.
+- **A keyboard focus ring.** What Tab reaches shows a ring in the accent colour; clicks never do.
+- **The CPU meter shows its load as a percentage** beside the label.
 
 ### Changed
+
+- **A type scale.** The interface uses six text sizes (10 to 17 px) instead of twelve with half
+  pixels among them. Text is 11 px or more (the body went from 11.5 to 12 px, the smallest
+  labels from 9–10.5 to 11 px); 10 px is kept for numbers inside fixed readouts such as meter
+  scales and the LCD's captions.
+- **Quieter defaults.** The automation mode button is grey in Read, as in Off, and keeps its
+  colour for Touch, Latch (orange) and Write (red). The track power button is grey while the
+  track plays and stands out only when the track is off.
+- **Labels instead of bare icons:** the Count-in button reads "Count-in" (it read "1234"), the
+  zoom sliders in the Tracks area, Piano Roll and Audio Track Editor read "Height", "Zoom" and
+  "Wave", and the Piano Roll's velocity readout says "No notes" instead of "–" when nothing is
+  selected.
+- **Every colour comes from the theme.** The colours written into the stylesheets moved into
+  theme variables. In High Contrast, text on a selection, a menu highlight, a default button and
+  the Mute button is black for legibility; the effect panels' peak-hold lines show on the Light
+  theme; Marbble Sampler's record and level colours follow the theme's red and green.
 
 - **Processing threads that can't be relied on are left out.** On Linux, a thread the system
   refuses real-time priority no longer plays tracks at normal priority, where it could be late:

@@ -6,7 +6,8 @@ import { theme } from "../theme";
 import { dbToFader, faderToDb, formatDb } from "../time";
 import { fmt } from "../keymap";
 import { levelSliderSize, meterScale, thumbCenter, type HeaderTier } from "../trackHeader";
-import { Meter, useDrag, type TouchProps } from "./Controls";
+import { Meter, sliderKeyDown, useDrag, type TouchProps } from "./Controls";
+import { sliderAria } from "../sliderKeys";
 
 /**
  * A track header's volume slider with the track's level meter as its groove, as in Logic's
@@ -50,6 +51,8 @@ export function LevelSlider({
       className="level-slider"
       style={{ width, height: thumbH }}
       title={`${label}: ${formatDb(db)} dB · double-click or ${fmt("Alt")}-click for 0 dB`}
+      {...sliderAria({ label, text: db <= -96 ? "minus infinity dB" : `${formatDb(db)} dB`, min: -96, max: 6, now: db })}
+      onKeyDown={sliderKeyDown(dbToFader(db), db, (p) => Math.round(faderToDb(p) * 10) / 10, onChange, { onTouchStart, onTouchEnd })}
       onMouseDown={(e) => {
         e.stopPropagation();
         if (e.button !== 0) return;

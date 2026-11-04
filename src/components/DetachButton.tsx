@@ -5,7 +5,7 @@ import { attachPanel, detachPanel, ownPanel } from "../detach";
 export function DetachButton({ panel, className = "lb-btn" }: { panel: string; className?: string }) {
   const own = ownPanel === panel;
   return (
-    <button className={`${className} detach-btn`} title={own ? "Attach to Main Window" : "Open in Separate Window"} onClick={() => (own ? attachPanel(panel) : detachPanel(panel))}>
+    <button className={`${className} detach-btn`} title={own ? "Attach to Main Window" : "Open in Separate Window"} aria-label={own ? "Attach to Main Window" : "Open in Separate Window"} onClick={() => (own ? attachPanel(panel) : detachPanel(panel))}>
       {own ? <AttachGlyph /> : <DetachGlyph />}
     </button>
   );

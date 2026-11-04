@@ -28,7 +28,7 @@
   background: var(--btn);
   color: var(--btn-text);
   box-shadow: var(--btn-shadow);
-  font-size: 10px;
+  font-size: var(--fs-sm);
   font-variant-numeric: tabular-nums;
 }
 

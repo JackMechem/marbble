@@ -9,7 +9,7 @@
   background: var(--sheet-inner);
   color: var(--text);
   user-select: none;
-  font-size: 11px;
+  font-size: var(--fs-sm);
 }
 
 .dyn-comp {
@@ -67,7 +67,7 @@
 
 /* The analogue gain-reduction meter of the vintage circuits: a lit cream face. */
 .dyn-comp:not(.circuit-platinum) .dyn-meter-face {
-  background: radial-gradient(ellipse at 50% 85%, #f4ecd6, #e1d3ad 70%, #cdbb8c);
+  background: var(--vu-face);
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.55), inset 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
@@ -79,43 +79,43 @@
 
 .dyn-vu-arc {
   fill: none;
-  stroke: #2b2620;
+  stroke: var(--vu-ink);
   stroke-width: 1.2;
 }
 
 .dyn-vu-arc.hot {
-  stroke: #b8352a;
+  stroke: var(--vu-hot);
   stroke-width: 3;
 }
 
 .dyn-vu-tick {
-  stroke: #2b2620;
+  stroke: var(--vu-ink);
   stroke-width: 1.2;
 }
 
 .dyn-vu-num {
-  fill: #2b2620;
-  font-size: 10px;
+  fill: var(--vu-ink);
+  font-size: var(--fs-xs);
   text-anchor: middle;
   dominant-baseline: middle;
   font-variant-numeric: tabular-nums;
 }
 
 .dyn-vu-legend {
-  fill: #5d5446;
-  font-size: 8px;
+  fill: var(--vu-legend);
+  font-size: var(--fs-xs);
   letter-spacing: 0.12em;
   text-anchor: middle;
 }
 
 .dyn-vu-needle {
-  stroke: #1d1a16;
+  stroke: var(--vu-needle);
   stroke-width: 1.4;
   stroke-linecap: round;
 }
 
 .dyn-vu-foot {
-  fill: #2a2622;
+  fill: var(--vu-foot);
 }
 
 /* Platinum's digital bar, and the Limiter's. */
@@ -143,15 +143,15 @@
   right: 0;
   bottom: 0;
   width: 0;
-  background: linear-gradient(to left, #e9a23b, #e5483a);
+  background: var(--gr-fill);
 }
 
 .dyn-grbar-scale {
   position: relative;
-  height: 13px;
+  height: 14px;
   margin-top: 3px;
   color: var(--lcd-label);
-  font-size: 9px;
+  font-size: var(--fs-xs);
   font-variant-numeric: tabular-nums;
 }
 
@@ -198,7 +198,7 @@
 
 .tuner-notation button {
   width: 28px;
-  font-size: 13px;
+  font-size: var(--fs-lg);
 }
 
 .tuner-mute,

@@ -22,7 +22,8 @@ Contents:
 2. [The main window](#2-the-main-window): [Control bar](#control-bar) ·
    [Tracks area](#tracks-area) · [Inspector](#inspector) ·
    [Library and Browser](#library-and-browser) · [Status line](#status-line) ·
-   [The menu bar](#the-menu-bar) · [Separate windows](#separate-windows)
+   [The menu bar](#the-menu-bar) · [Using the keyboard](#using-the-keyboard) ·
+   [Separate windows](#separate-windows)
 3. [Recording](#3-recording): [Recording audio](#recording-audio) ·
    [Count-in and pre-roll](#count-in-and-pre-roll) · [Cycle recording](#cycle-recording) ·
    [Autopunch](#autopunch) · [Recording MIDI](#recording-midi) ·
@@ -219,9 +220,10 @@ From left to right:
   - The **chevron** offers "Beats & Project", "Time" (the position as time) and
     "Project Settings…".
 - **Mode buttons:** Cycle (C), Autopunch, **Replace** (red when on: recordings replace what they
-  overlap; see [Overlapping recordings](#recording-audio)), Count-in (the "1234" button,
-  Shift+K), Metronome (K).
-- **Master volume** slider and the **CPU** meter. See [the CPU meter](#the-cpu-meter).
+  overlap; see [Overlapping recordings](#recording-audio)), **Count-in** (Shift+K), Metronome
+  (K).
+- **Master volume** slider and the **CPU** meter with the load as a percentage. See
+  [the CPU meter](#the-cpu-meter).
 - **Musical Typing** (Ctrl+K), **List Editors** (D, the Event List) and **Browsers** (F) buttons.
 
 ### Tracks area
@@ -230,8 +232,8 @@ From left to right:
   (\`, on by default: the view follows the playhead), **Scroll to Playhead** (shows the
   playhead without moving it), the **Left-click Tool** and **Ctrl-click Tool** pop-ups (see
   [Tools and the marquee](#tools-and-the-marquee)), the **Snap** pop-up (Smart, Bar, Beat,
-  Off; Smart follows the zoom), the **Drag** pop-up (see [Drag modes](#drag-modes)), the track
-  height slider and the horizontal zoom slider.
+  Off; Smart follows the zoom), the **Drag** pop-up (see [Drag modes](#drag-modes)), the
+  **Height** slider (track height) and the **Zoom** slider (horizontal zoom).
 - **Ruler**, from the top:
   - the **cycle strip** (yellow): drag to make a cycle range, drag it or its edges to move or
     resize it, click it to switch Cycle on and off;
@@ -239,7 +241,7 @@ From left to right:
   - the **Autopunch strip** (red): works like the cycle strip, for the punch range;
   - the **marker lane** (see [Markers](#markers)).
 - **Track headers:** colour, number, icon, name with the power button
-  ([On/Off](#turning-tracks-off)) at its end, the M (Mute), S (Solo), R (Record Enable,
+  ([On/Off](#turning-tracks-off), grey while the track plays) at its end, the M (Mute), S (Solo), R (Record Enable,
   audio and instrument tracks), I (Input Monitoring, audio tracks) buttons, the Freeze
   (snowflake) button, a group badge, and a volume slider whose groove is the track's level
   meter. Short tracks put it all on one line (see below). The **+** button above the headers
@@ -345,6 +347,28 @@ its default (highlighted) button. Controller Assignments is the exception, as Lo
 is: Learn Assignment (Ctrl+L), Controller Assignments (Ctrl+Shift+L) and the transport keys
 still work while it is open, while editing keys (Delete, Cut, Paste…) don't.
 
+### Using the keyboard
+
+**Tab** moves the keyboard focus through the window's buttons and controls (Shift+Tab goes
+back), and a blue ring shows where it is. The ring appears only once you press Tab: a click
+never shows one, and pressing a key command after a click doesn't either.
+
+**Knobs, faders and sliders** take the keyboard once they have the focus: the channel strip's
+fader, pan knob and send knobs, the track headers' volume sliders, the master volume, VCA
+faders and the knobs of the built-in effects.
+
+| Key | Does |
+|---|---|
+| Up or Right arrow | Raises the value one step (a hundredth of the travel); Shift for a tenth of that |
+| Down or Left arrow | Lowers it one step; Shift for a tenth of that |
+| Page Up / Page Down | Ten steps up or down |
+| Home / End | The lowest or highest value (a fader: -∞ or +6 dB) |
+
+A key change is like a short drag: it writes automation in Touch and Latch, and a run of
+presses on one control undoes as one step. Key commands with Ctrl, Alt or Cmd still reach the
+app. Screen readers hear each control's name and value ("Volume, -6.0 dB", "Pan, L 12"), and
+the buttons that show only an icon read their tooltip.
+
 ### Separate windows
 
 The Mixer, the Editors, the Event List, the Channel EQ and the built-in effect panels can each
@@ -419,7 +443,7 @@ crossfade are the exception: both play across the crossfade.
 
 ### Count-in and pre-roll
 
-- **Count-in** (the "1234" button or Shift+K) plays the click for 1 to 4 bars before recording
+- **Count-in** (the Count-in button in the control bar, or Shift+K) plays the click for 1 to 4 bars before recording
   (Settings › Recording › Count-in). The count-in always clicks, even with the metronome off.
 - With Count-in off, **Pre-roll** (Settings › Recording, in seconds, 0 by default) starts
   playback that far before the playhead so you hear a lead-in; recording still starts at the
@@ -1222,7 +1246,7 @@ with the plug-ins unloaded, so a heavy track stops using CPU.
 ### Turning tracks off
 
 The **power button** at the end of a track's name, or on its Mixer strip, turns the track off,
-as in Logic. Where Mute only silences a track, whose plug-ins go on using the CPU, an Off track
+as in Logic. It's grey while the track plays, and lit (inverted) while the track is off. Where Mute only silences a track, whose plug-ins go on using the CPU, an Off track
 runs nothing at all, so you can keep takes around without paying for their plug-ins. Use it for
 heavy tracks you aren't listening to.
 
@@ -1433,7 +1457,7 @@ Studio's piano roll.
 - **Ruler:** click or drag below the top strip to move the playhead (snapped to the grid when
   Snap is on). In the top strip, drag to create a cycle range, drag inside it to move it or near
   its ends to resize it; click it to switch Cycle on and off.
-- **Zoom:** Ctrl+wheel or the horizontal slider zooms in time, Alt+wheel or the row slider
+- **Zoom:** Ctrl+wheel or the **Zoom** slider zooms in time, Alt+wheel or the **Height** slider
   changes the row height; Ctrl+Right / Ctrl+Left and Ctrl+Down / Ctrl+Up do the same from the
   keyboard. **Z** (View › Zoom to Fit Region) fits the focused region and its pitch range.
 - **Scroll:** over the notes the wheel scrolls the pitches and Shift+wheel scrolls through time;
@@ -1540,7 +1564,8 @@ The lane below the notes shows velocity or a controller. Drag the bar above it t
 - Drag on empty space (or use the Line tool) to ramp the velocities of the selection (or all
   notes) along a line.
 - The Pencil draws velocities freehand.
-- The **Vel** slider in the local bar sets the selection's velocity (it shows their average).
+- The **Vel** slider in the local bar sets the selection's velocity (it shows their average;
+  with no notes selected it reads "No notes").
 
 **Controllers, pitch bend and aftertouch:**
 
@@ -1682,8 +1707,8 @@ tools of Logic's Audio File Editor.
   waveform.
 - The waveform is drawn with the region's gain applied; red marks at its top and bottom show
   where the audio reaches 0 dBFS after that gain.
-- **Zoom:** Ctrl+wheel or the slider zooms in time; the wheel scrolls along the timeline.
-  Alt+wheel, the waveform slider (double-click to reset) or Ctrl+Down / Ctrl+Up zoom the
+- **Zoom:** Ctrl+wheel or the **Zoom** slider zooms in time; the wheel scrolls along the
+  timeline. Alt+wheel, the **Wave** slider (double-click to reset) or Ctrl+Down / Ctrl+Up zoom the
   waveform's amplitude (1× to 32×) to see quiet passages.
 - **Z** zooms to the selection (or the region, or all the track's regions); press it again to
   go back. The editor keeps its own zoom, separate from the tracks area's.
@@ -2371,12 +2396,13 @@ per project, like track heights.
 ### Automation modes
 
 Set the mode in the track header (with automation shown) or above the pan knob on every channel
-strip.
+strip. The mode button is grey in Off and Read, so it only draws the eye when a track writes:
+orange in Touch and Latch, red in Write.
 
 | Mode | Behaviour |
 |---|---|
 | **Off** | Lanes are ignored. |
-| **Read** (default, green) | Lanes play. The fader, pan knob and plug-in editors follow while playing. |
+| **Read** (default) | Lanes play. The fader, pan knob and plug-in editors follow while playing. |
 | **Touch** | Plays the lanes, and writes while you hold a control during playback. When you let go, the parameter glides back to the existing curve (over 0.2 s). |
 | **Latch** | Like Touch, but once you have touched a control it keeps writing, holding the last value, until playback stops. |
 | **Write** | From where playback started, overwrites volume, pan and every existing lane (except send lanes) with the current values. After you stop, the track switches to Latch, as Logic does by default. |
@@ -3156,7 +3182,8 @@ plays arrives too late. Spreading tracks over more threads lowers it, down to wh
 single track (with whatever feeds it) takes on its own, so one very heavy plug-in still sets the
 limit. Hover over the meter for the numbers and how many threads are playing just now.
 
-- **The bar** is the average: amber above 50%, red above 80%.
+- **The bar** and the **figure** beside "CPU" are the average: the bar turns amber above 50% and
+  red above 80%.
 - **The thin tick** is the worst single block lately. It stays for two seconds, then falls. A
   low bar with a high tick means the load comes in bursts, so an average alone looks fine while
   single blocks come close to the limit.

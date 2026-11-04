@@ -31,7 +31,7 @@ export function FxDock() {
             <button className="lb-btn" title="Float in its own window" onClick={() => floatPanel(active)}>
               <FloatGlyph />
             </button>
-            <button className="eq-close fx-dock-close" title="Close (Esc)" onClick={() => closePanel(active)}>
+            <button className="eq-close fx-dock-close" title="Close (Esc)" aria-label="Close (Esc)" onClick={() => closePanel(active)}>
               ×
             </button>
           </div>

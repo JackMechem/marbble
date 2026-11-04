@@ -166,13 +166,14 @@ export function TracksArea() {
           <button
             className={"lb-btn catch" + (s.catchPlayhead ? " on" : "")}
             title="Catch Playhead (`)"
+            aria-label="Catch Playhead (`)"
             onClick={() => setState({ catchPlayhead: !s.catchPlayhead })}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3">
               <path d="M3 2v10M3 7h8M8 4l3 3-3 3" />
             </svg>
           </button>
-          <button className="lb-btn" title={"Scroll to Playhead" + (keyHint("show-playhead") ? ` (${keyHint("show-playhead")})` : "")} onClick={() => transport.showPlayhead()}>
+          <button className="lb-btn" title={"Scroll to Playhead" + (keyHint("show-playhead") ? ` (${keyHint("show-playhead")})` : "")} aria-label={"Scroll to Playhead" + (keyHint("show-playhead") ? ` (${keyHint("show-playhead")})` : "")} onClick={() => transport.showPlayhead()}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3">
               <path d="M7 1v12M2 4h3M2 10h3M9 4h3M9 10h3" />
             </svg>
@@ -204,9 +205,7 @@ export function TracksArea() {
             {DRAG_LABELS[dragMode]} <Icon.chevron />
           </button>
           <span className="lb-label" title="Track height">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.3">
-              <path d="M6 1v10M3.5 3.5 6 1l2.5 2.5M3.5 8.5 6 11l2.5-2.5" />
-            </svg>
+            Height
           </span>
           <input
             className="zoom vzoom"
@@ -219,9 +218,7 @@ export function TracksArea() {
             onChange={(e) => setState({ trackHeight: parseInt(e.target.value), trackHeights: {} })}
           />
           <span className="lb-label" title="Horizontal zoom">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.3">
-              <path d="M1 6h10M3.5 3.5 1 6l2.5 2.5M8.5 3.5 11 6 8.5 8.5" />
-            </svg>
+            Zoom
           </span>
           <input
             className="zoom"
@@ -243,10 +240,10 @@ export function TracksArea() {
         }}
       >
         <div className="headers-top">
-          <button className="add-track" title={`New Tracks (${fmt("Mod+Alt+N")})`} onClick={() => setState({ dialog: "new-tracks" })}>
+          <button className="add-track" title={`New Tracks (${fmt("Mod+Alt+N")})`} aria-label={`New Tracks (${fmt("Mod+Alt+N")})`} onClick={() => setState({ dialog: "new-tracks" })}>
             <Icon.plus />
           </button>
-          <button className={"hide-mode" + (showHidden ? " on" : "")} title={`Show Hidden Tracks (${keyHint("show-hidden")})`} onClick={ops.toggleShowHidden}>
+          <button className={"hide-mode" + (showHidden ? " on" : "")} title={`Show Hidden Tracks (${keyHint("show-hidden")})`} aria-label={`Show Hidden Tracks (${keyHint("show-hidden")})`} onClick={ops.toggleShowHidden}>
             H
           </button>
           <span className="global-label">Marker</span>

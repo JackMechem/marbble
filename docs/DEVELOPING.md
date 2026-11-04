@@ -319,7 +319,9 @@ instead and enforce rules that would otherwise only fail in the running app.
 | `presetBox.test.ts` | The preset pop-up's label (`src/presetBox.ts`): the loaded preset's name, "(edited)", "Default" and "Manual". |
 | `fxDock.test.ts` | Plug-in panels docked or floating: the slot toggle, closing back, one Channel EQ at a time, Esc, pruning, resize maths and saved sizes. |
 | `linearPhaseEq.test.ts` | The Linear Phase EQ's parameters as Channel EQ settings. |
-| `cpuMeter.test.ts` | The CPU meter's tooltip and where its peak tick goes. |
+| `cpuMeter.test.ts` | The CPU meter's tooltip, its figure and colour bands, and where its peak tick goes. |
+| `sliderKeys.test.ts` | Keyboard control of knobs, faders and sliders (`src/sliderKeys.ts`): steps, ends, rounding and switch positions, the ARIA props. |
+| `focusRing.test.ts` | When the keyboard focus ring shows (`src/focusRing.ts`): on after Tab, off after a mouse press. |
 | `stripMeters.test.ts` | The clip indicator readout and the gain-reduction meter. |
 | `vca.test.ts` | VCA offsets and loop checks in the Mixer. |
 | `trackOff.test.ts` | Whether a track is off through its stacks (`src/trackOff.ts`), and the power button's tooltip. |
@@ -338,7 +340,7 @@ instead and enforce rules that would otherwise only fail in the running app.
 | `settingsText.test.ts` | The MIDI monitor's wording, plug-in types and the Recovery sheet's texts. |
 | `compressorModel.test.ts` | The transfer curve's copy of `static_reduction` for each circuit. |
 | `dynScale.test.ts` | The dynamics panels' value formatting and knob maths. |
-| `styles.test.ts` | Guard: `src/styles/index.css` imports every stylesheet exactly once with the tokens first, no other file imports CSS, and each file's braces balance. |
+| `styles.test.ts` | Guard: `src/styles/index.css` imports every stylesheet exactly once with the tokens first, no other file imports CSS, and each file's braces balance; no raw hex colour outside `tokens.css`; every font size from the type scale; `tokens.css` matches Studio in `themes.ts`; the focus ring. |
 | `browserDialogs.test.ts` | Guard: no `window.prompt`, `confirm` or `alert` in `src/` (macOS's web view doesn't implement them; use `askName` or the dialog plug-in). |
 
 ### What to run before sending a change
@@ -461,6 +463,24 @@ These keep the code maintainable and the merges clean.
   to, and the reason goes in a comment.
 - **UI.** Use the existing CSS variables and components (`Form.tsx`, `Controls.tsx`,
   `Menu.tsx`). Follow the Logic-like visual language; don't introduce a new look.
+  - **Colours** come from tokens: no hex colour in an area file (`styles.test.ts` fails on one).
+    A colour that's the same in every theme (a piano key, the VU meter's face) still gets a
+    token; see [Add a theme colour](#add-a-theme-colour).
+  - **Type scale.** Six sizes in `tokens.css`: `--fs-xs` 10 px, `--fs-sm` 11, `--fs-md` 12 (the
+    body), `--fs-lg` 13, `--fs-xl` 15, `--fs-xxl` 17. Text uses `--fs-sm` and up; `--fs-xs` is
+    only for tiny numbers and captions inside fixed-size readouts (meter scales, the CPU figure,
+    the LCD's captions). Display numerals sized to their box (the LCD's digits, the Tuner's note)
+    set a px size of 18 or more. Canvas text (rulers, regions, notes) is sized in its draw code.
+  - **Default states stay quiet.** Colour marks what differs from the default: Read is grey and
+    Touch, Latch and Write are coloured; the power button is grey while the track plays and
+    stands out when it's off.
+  - **Keyboard.** `:focus-visible` draws `--focus-ring` (base.css); a click never shows one, and
+    outside text fields the ring waits for Tab (`src/focusRing.ts`). Don't add a bare
+    `outline: none`: a field with its own focus look (accent border, glow) may turn the outline
+    off, and an editor focused only by a click (tabIndex -1) may too. Custom controls get a role
+    and a name: knobs and faders use `sliderAria` and `sliderKeyDown` (`Controls.tsx`), which go
+    through the same `onChange` and touch path as a drag; an icon-only button gets an
+    `aria-label`, usually its tooltip.
 - **Formatting.** `cargo fmt --all` for Rust, which CI checks. `rustfmt.toml` allows lines up to 160
   columns; `#[rustfmt::skip]` stays on tables that would otherwise fall apart. The one project-wide
   pass is listed in `.git-blame-ignore-revs`, so `git config blame.ignoreRevsFile .git-blame-ignore-revs`
@@ -692,7 +712,10 @@ For a CSS colour:
 1. `src/themes.ts`: add `"--my-colour": "..."` to `studioCss`. Flat, Midnight, Light and High
    Contrast inherit it by spreading, so override it only where it must differ (at least check
    `lightCss` and `contrastCss`).
-2. Use `var(--my-colour)` in the area's file in `src/styles/` (new rules go at the end of it).
+2. `src/styles/tokens.css`: the same value in the first `:root` block, for the first paint
+   (`styles.test.ts` checks the two match).
+3. Use `var(--my-colour)` in the area's file in `src/styles/` (new rules go at the end of it).
+   A hex colour there fails `styles.test.ts`.
 
 For a canvas colour:
 

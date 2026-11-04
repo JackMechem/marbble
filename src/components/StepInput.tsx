@@ -256,7 +256,7 @@ export function StepInput() {
       <div className="eq-titlebar" onMouseDown={startMove}>
         <span className="eq-title">Step Input</span>
         <span className="eq-track">{!track ? "Select a software instrument track" : playing ? "Stop playback to enter notes" : `→ ${track.name}`}</span>
-        <button className="eq-close" title={hint("step-input", "Close")} onClick={() => setState({ showStepInput: false })}>
+        <button className="eq-close" title={hint("step-input", "Close")} aria-label={hint("step-input", "Close")} onClick={() => setState({ showStepInput: false })}>
           ×
         </button>
       </div>
@@ -311,11 +311,11 @@ export function StepInput() {
             </button>
           </div>
           <div className="mt-group si-octave">
-            <button className="mt-step" title="Octave down" onClick={() => setBase((b) => Math.max(0, b - 12))}>
+            <button className="mt-step" title="Octave down" aria-label="Octave down" onClick={() => setBase((b) => Math.max(0, b - 12))}>
               −
             </button>
             <span className="mt-value">{noteName(base)}</span>
-            <button className="mt-step" title="Octave up" onClick={() => setBase((b) => Math.min(84, b + 12))}>
+            <button className="mt-step" title="Octave up" aria-label="Octave up" onClick={() => setBase((b) => Math.min(84, b + 12))}>
               +
             </button>
           </div>

@@ -181,7 +181,7 @@ function FloatingPanel({ panelKey, z }: { panelKey: PanelKey; z: number }) {
             <DockGlyph />
           </button>
         )}
-        <button className="eq-close" title="Close (Esc)" onClick={() => closePanel(panelKey)}>
+        <button className="eq-close" title="Close (Esc)" aria-label="Close (Esc)" onClick={() => closePanel(panelKey)}>
           ×
         </button>
       </div>

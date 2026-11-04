@@ -1,7 +1,7 @@
 /* Track On/Off. */
 /* ---- Track On/Off ---------------------------------------------------------------------------
-   The power glyph is lit while the track plays. "on" on the button means the track is off, shown
-   inverted so it stands out on the dimmed header in every theme. */
+   The power glyph is grey while the track plays, the usual state. "on" on the button means the
+   track is off, shown inverted so it stands out on the dimmed header in every theme. */
 
 .th-name-row {
   display: flex;
@@ -21,8 +21,13 @@
   flex: 1 1 auto;
 }
 
+/* Quiet while the track plays, which is the usual state. */
 .tbtn.power {
-  color: var(--accent);
+  color: var(--dim);
+}
+
+.tbtn.power:hover {
+  color: var(--tbtn-text);
 }
 
 .tbtn.power.on {

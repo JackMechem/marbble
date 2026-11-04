@@ -3,6 +3,6 @@
 
 .mode-btn.replace.on {
   background: var(--red);
-  color: #fff;
+  color: var(--red-ink);
 }
 

@@ -28,7 +28,7 @@
 }
 
 .sheet-title {
-  font-size: 13px;
+  font-size: var(--fs-lg);
   font-weight: 600;
   margin-bottom: 14px;
 }
@@ -63,13 +63,13 @@
 }
 
 .tt-title {
-  font-size: 12px;
+  font-size: var(--fs-md);
   font-weight: 600;
   color: var(--text);
 }
 
 .tt-sub {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--dim);
   line-height: 1.35;
 }

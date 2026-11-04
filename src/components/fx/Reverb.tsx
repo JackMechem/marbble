@@ -7,6 +7,8 @@ import type { FxPanelProps, FxParamSpec } from "../../fx";
 import { openMenuAt } from "../Menu";
 import { pixelRatio } from "../../uiScale";
 import { useStore } from "../../store";
+import { sliderAria } from "../../sliderKeys";
+import { sliderKeyDown } from "../Controls";
 
 // ---- shared controls ------------------------------------------------------------------------
 
@@ -123,7 +125,12 @@ export function SpKnob({
   const r = c - 3;
   const angle = -135 + 270 * n;
   return (
-    <div className={"sp-knob" + (size >= 56 ? " big" : "") + (disabled ? " disabled" : "")} title={`${s.name}: ${formatValue(s, v)}`}>
+    <div
+      className={"sp-knob" + (size >= 56 ? " big" : "") + (disabled ? " disabled" : "")}
+      title={`${s.name}: ${formatValue(s, v)}`}
+      {...(disabled ? {} : sliderAria({ label: label ?? s.name, text: format ? format(v) : formatValue(s, v), min: s.min, max: s.max, now: v }))}
+      onKeyDown={disabled ? undefined : sliderKeyDown(n, v, (q) => fromNorm(s, q), (x) => p.set(id, x), { onTouchStart: () => p.touch(id, true), onTouchEnd: () => p.touch(id, false) })}
+    >
       <div className="sp-knob-label">{label ?? s.name}</div>
       <svg width={size} height={size} onMouseDown={start} onDoubleClick={() => !disabled && p.set(id, s.default)}>
         <path d={arc(c, c, r, -135, 135)} className="sp-knob-track" />

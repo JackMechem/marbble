@@ -11,7 +11,7 @@ body,
   overflow: hidden;
   background: var(--bg);
   color: var(--text);
-  font: 11.5px/1.35 Inter, "SF Pro Text", "Helvetica Neue", "Segoe UI", Cantarell, system-ui, sans-serif;
+  font: var(--fs-md)/1.35 Inter, "SF Pro Text", "Helvetica Neue", "Segoe UI", Cantarell, system-ui, sans-serif;
   font-feature-settings: "tnum" 1, "cv11" 1;
   -webkit-font-smoothing: antialiased;
   user-select: none;
@@ -36,6 +36,20 @@ select {
 
 .dim {
   color: var(--faint);
+}
+
+/* Keyboard focus: a ring on what Tab reached, never on what was clicked. The browser also counts
+   a key pressed after a click (a shortcut, here) as keyboard focus, so outside text fields the
+   ring waits for Tab: focusRing.ts sets data-keyboard-focus on Tab and clears it on a mouse press.
+   Fields that draw their own focus (an accent border or glow) turn the outline off in their rules. */
+:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+:focus:not(:focus-visible),
+html:not([data-keyboard-focus]) :focus-visible:not(input, textarea, select) {
+  outline: none;
 }
 
 ::-webkit-scrollbar {

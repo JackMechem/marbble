@@ -340,7 +340,7 @@ export function StepSequencer() {
         <button className={"filter" + (pattern.looped !== false ? " on" : "")} title="Loop: the pattern repeats to the end of the region" onClick={() => edit("Pattern Loop", (p) => ({ ...p, looped: p.looped === false }))}>
           Loop
         </button>
-        <button className="lb-btn ss-add" title="Add Row" disabled={pattern.rows.length >= ss.MAX_ROWS} onClick={() => edit("Add Row", (p) => ss.addRow(p))}>
+        <button className="lb-btn ss-add" title="Add Row" aria-label="Add Row" disabled={pattern.rows.length >= ss.MAX_ROWS} onClick={() => edit("Add Row", (p) => ss.addRow(p))}>
           <Icon.plus />
         </button>
         {learnRow !== null && <span className="ss-learn">Play a note for {ss.rowName(pattern.rows[learnRow]?.pitch ?? 0)}…</span>}
@@ -362,10 +362,10 @@ export function StepSequencer() {
                     openMenu(e.clientX, e.clientY, rowMenu(r));
                   }}
                 >
-                  <button className={"tbtn mute" + (row.muted ? " on" : "")} title="Mute Row" onClick={() => edit("Mute Row", (p) => ss.setRow(p, r, { muted: !row.muted }))}>
+                  <button className={"tbtn mute" + (row.muted ? " on" : "")} title="Mute Row" aria-label="Mute Row" onClick={() => edit("Mute Row", (p) => ss.setRow(p, r, { muted: !row.muted }))}>
                     M
                   </button>
-                  <button className={"tbtn solo" + (row.solo ? " on" : "")} title="Solo Row" onClick={() => edit("Solo Row", (p) => ss.setRow(p, r, { solo: !row.solo }))}>
+                  <button className={"tbtn solo" + (row.solo ? " on" : "")} title="Solo Row" aria-label="Solo Row" onClick={() => edit("Solo Row", (p) => ss.setRow(p, r, { solo: !row.solo }))}>
                     S
                   </button>
                   <button className="ss-name" title="Row pitch: choose a drum or note, or Learn one from a MIDI keyboard" onMouseDown={(e) => openMenuAt(e.currentTarget, pitchItems(r))}>

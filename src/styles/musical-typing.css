@@ -31,7 +31,7 @@
   background: var(--btn);
   box-shadow: var(--btn-shadow);
   color: var(--btn-text);
-  font-size: 14px;
+  font-size: var(--fs-xl);
   line-height: 1;
 }
 
@@ -50,7 +50,7 @@
   border-radius: 3px;
   background: var(--field);
   color: var(--faint);
-  font-size: 10px;
+  font-size: var(--fs-sm);
   font-weight: 600;
 }
 
@@ -92,47 +92,47 @@
 .mt-white {
   height: 132px;
   border-radius: 0 0 5px 5px;
-  background: linear-gradient(#fdfdfd, #e9e9ec);
-  box-shadow: inset -1px 0 0 #b9bac0, inset 0 -3px 0 #c9cad0;
+  background: var(--mt-white);
+  box-shadow: var(--mt-white-shadow);
   z-index: 1;
 }
 
 .mt-white.on {
-  background: linear-gradient(#cfe3ff, var(--accent));
+  background: linear-gradient(var(--mt-white-lit), var(--accent));
 }
 
 .mt-black {
   height: 82px;
   border-radius: 0 0 4px 4px;
-  background: linear-gradient(#3a3b40, #18191c);
-  box-shadow: inset 0 -3px 0 #050506;
+  background: var(--mt-black);
+  box-shadow: var(--mt-black-shadow);
   z-index: 2;
 }
 
 .mt-black.on {
-  background: linear-gradient(#5aa9ff, #2f6fd1);
+  background: var(--mt-black-on);
 }
 
 .mt-key {
   margin-bottom: 18px;
-  font-size: 10.5px;
+  font-size: var(--fs-sm);
   font-weight: 700;
-  color: #5d6068;
+  color: var(--mt-label);
 }
 
 .mt-black .mt-key {
   margin-bottom: 8px;
-  color: #c9ccd4;
+  color: var(--mt-label-black);
 }
 
 .mt-white.typed:not(.on) {
-  background: linear-gradient(#ffffff, #e2ecfb);
+  background: var(--mt-white-typed);
 }
 
 .mt-c {
   position: absolute;
   bottom: 4px;
-  font-size: 9px;
-  color: #8b8e96;
+  font-size: var(--fs-xs);
+  color: var(--mt-octave);
 }
 

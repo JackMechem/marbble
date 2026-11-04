@@ -188,29 +188,29 @@ export function MusicalTyping() {
       <div className="eq-titlebar" onMouseDown={startMove}>
         <span className="eq-title">Musical Typing</span>
         <span className="eq-track">{target ? `→ ${target}` : "Select a software instrument track"}</span>
-        <button className="eq-close" title={`Close (${fmt("Mod+K")})`} onClick={() => setState({ showTyping: false })}>
+        <button className="eq-close" title={`Close (${fmt("Mod+K")})`} aria-label={`Close (${fmt("Mod+K")})`} onClick={() => setState({ showTyping: false })}>
           ×
         </button>
       </div>
       <div className="mt-toolbar">
         <div className="mt-group">
           <span className="dim">Octave</span>
-          <button className="mt-step" title="Octave down (Z)" onClick={() => setBase((b) => Math.max(0, b - 12))}>
+          <button className="mt-step" title="Octave down (Z)" aria-label="Octave down (Z)" onClick={() => setBase((b) => Math.max(0, b - 12))}>
             −
           </button>
           <span className="mt-value">{noteName(base)}</span>
-          <button className="mt-step" title="Octave up (X)" onClick={() => setBase((b) => Math.min(108, b + 12))}>
+          <button className="mt-step" title="Octave up (X)" aria-label="Octave up (X)" onClick={() => setBase((b) => Math.min(108, b + 12))}>
             +
           </button>
           <span className="mt-hint">Z X</span>
         </div>
         <div className="mt-group">
           <span className="dim">Velocity</span>
-          <button className="mt-step" title="Softer (C)" onClick={() => setVelocity((v) => Math.max(1, v - 10))}>
+          <button className="mt-step" title="Softer (C)" aria-label="Softer (C)" onClick={() => setVelocity((v) => Math.max(1, v - 10))}>
             −
           </button>
           <span className="mt-value">{velocity}</span>
-          <button className="mt-step" title="Louder (V)" onClick={() => setVelocity((v) => Math.min(127, v + 10))}>
+          <button className="mt-step" title="Louder (V)" aria-label="Louder (V)" onClick={() => setVelocity((v) => Math.min(127, v + 10))}>
             +
           </button>
           <span className="mt-hint">C V</span>

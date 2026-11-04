@@ -19,7 +19,7 @@
   background: var(--tbtn);
   color: var(--tbtn-text);
   box-shadow: var(--tbtn-shadow);
-  font-size: 10.5px;
+  font-size: var(--fs-sm);
   font-weight: 700;
 }
 

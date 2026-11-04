@@ -1,6 +1,8 @@
 /* The Piano Roll's panes: corner, ruler, keys, notes, controller lane. */
 /* ---- piano roll --------------------------------------------------------------------------- */
 
+/* Focused by a click to take the editor's keys, never by Tab (tabIndex -1): no ring around the
+   whole editor. */
 .piano-roll {
   position: relative;
   outline: none;

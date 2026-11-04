@@ -43,7 +43,7 @@
   background: var(--btn);
   color: var(--btn-text);
   box-shadow: var(--btn-shadow);
-  font-size: 10px;
+  font-size: var(--fs-sm);
   white-space: nowrap;
   overflow: hidden;
   z-index: 1;
@@ -63,7 +63,7 @@
   background: var(--menu-bg);
   box-shadow: var(--menu-shadow);
   color: var(--text);
-  font-size: 11px;
+  font-size: var(--fs-sm);
   font-variant-numeric: tabular-nums;
   white-space: pre;
   pointer-events: none;
@@ -92,16 +92,21 @@
 .pr-q {
   width: 22px;
   font-weight: 700;
-  font-size: 11px;
+  font-size: var(--fs-sm);
 }
 
 .pr-vel {
   width: 56px;
 }
 
+/* Wide enough for "No notes", so the bar doesn't shift as the selection comes and goes. */
 .pr-vel-val {
-  min-width: 20px;
+  min-width: 48px;
   color: var(--text);
   font-variant-numeric: tabular-nums;
+}
+
+.pr-vel-val.none {
+  color: var(--faint);
 }
 

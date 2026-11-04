@@ -29,7 +29,7 @@
   inset: 0;
   display: grid;
   place-items: center;
-  font-size: 10px;
+  font-size: var(--fs-sm);
   font-weight: 700;
   letter-spacing: 1px;
   color: var(--faint);
@@ -71,7 +71,7 @@
   width: 24px;
   height: 22px;
   border-radius: 5px;
-  font-size: 17px;
+  font-size: var(--fs-xxl);
   line-height: 1;
   color: var(--dim);
 }
@@ -159,13 +159,13 @@
 
 .eq-band-toggle.on {
   background: var(--band);
-  color: #111;
+  color: var(--swatch-ink);
   opacity: 1;
 }
 
 .eq-band-name {
   text-align: center;
-  font-size: 10.5px;
+  font-size: var(--fs-sm);
   color: var(--dim);
   white-space: nowrap;
 }
@@ -177,7 +177,7 @@
   border-radius: 4px;
   background: var(--field);
   box-shadow: var(--field-shadow);
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text);
   cursor: ns-resize;
   white-space: nowrap;
@@ -200,6 +200,6 @@ button.scrub {
 .eq-hint {
   padding: 6px 14px 12px;
   color: var(--faint);
-  font-size: 11px;
+  font-size: var(--fs-sm);
 }
 

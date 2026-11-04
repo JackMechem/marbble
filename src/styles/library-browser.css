@@ -51,7 +51,7 @@
 
 .lib-group {
   padding: 6px 10px 3px;
-  font-size: 10px;
+  font-size: var(--fs-sm);
   font-weight: 700;
   letter-spacing: 0.5px;
   text-transform: uppercase;
@@ -77,7 +77,7 @@
 
 .lib-item.on {
   background: var(--select);
-  color: #fff;
+  color: var(--accent-ink);
 }
 
 .pane-foot {

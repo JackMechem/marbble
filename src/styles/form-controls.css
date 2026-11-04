@@ -23,7 +23,7 @@
 .numfield-step {
   width: 20px;
   color: var(--dim);
-  font-size: 13px;
+  font-size: var(--fs-lg);
   line-height: 1;
 }
 
@@ -117,7 +117,7 @@ input[type="range"]::-webkit-slider-thumb {
   background: var(--push);
   color: var(--text);
   box-shadow: var(--btn-shadow);
-  font-size: 12px;
+  font-size: var(--fs-md);
   white-space: nowrap;
 }
 
@@ -127,7 +127,7 @@ input[type="range"]::-webkit-slider-thumb {
 
 .push.default {
   background: var(--push-default);
-  color: #fff;
+  color: var(--accent-ink);
 }
 
 .push.default:hover {

@@ -192,34 +192,32 @@ type, keyboard access and polish in the dense views.
 - **Track header buttons don't line up.** Audio tracks have M S R I and Freeze, instruments M S R and Freeze,
   so the S button lands at a different x on each kind. Keep fixed columns and leave a gap where a button
   doesn't apply.
-- **No type scale.** The styles use 12 font sizes from 9 to 17 px, half-pixel ones among them (9.5, 10.5,
-  11.5, 12.5), and much of the UI is 10–11 px. Settle on 5 or 6 sizes as tokens with 11 px as the smallest
-  for text.
-- **Colours outside the tokens:** 69 hex colours in area files besides the 98 tokens in `tokens.css`. These
-  are the ones that go wrong in the Light and Contrast themes.
-- **Keyboard and screen reader access is almost absent:** 3 `aria-` attributes and 3 `role`s across 250
-  buttons and many custom controls (knobs, faders, slots built on pointer handlers), no `:focus-visible`
-  style, and `outline: none` in 10 places. Tab focus is invisible. Knobs and faders want `role="slider"`,
-  values and arrow keys.
+- **Design system, round 6 (not seen in the app yet):** a six-size type scale (body 11.5 → 12 px, small text
+  9–10.5 → 11 px), every hex colour in a token, a focus ring for Tab, knobs and faders as keyboard sliders,
+  `aria-label`s on icon-only buttons, a grey Read and power button, labels on Count-in and the zoom sliders, a
+  CPU percentage. Look over the dense views (track headers at all three heights, the Mixer, the effect panels,
+  the control bar) for text that now clips, in Studio, Light and High Contrast. Left over:
+  - Canvas text (ruler, region names, notes, the effect panels' graphs) is drawn at 8–11 px in TypeScript and
+    isn't on the scale.
+  - 36 `rgba()` colours remain in area files (white or black at an opacity: hover tints, zero lines, recessed
+    edges). Some are wrong on Light (white lines on a pale ground); worth tokens of their own.
+  - Only the track switches and the control bar's view buttons say they're pressed (`aria-pressed`): Cycle,
+    Metronome, Catch and the rest don't. Slots, menus and region lanes are still mouse-only.
+  - Autopunch and Replace are still icon-only mode buttons.
 - **Truncated names in the Mixer:** "Marbble ...", "Compre...". An instrument slot can show the model's
   short name (Tre, Sei), and a tooltip the whole.
-- **Too much attention on defaults:** a solid green "Read" on every strip and a blue power button on every
-  track header draw the eye to what is normal. Show a state strongly only when it differs from the default
-  (Logic greys Read and colours Touch, Latch and Write; power off is what should stand out).
 - **Empty slots have no affordance.** Empty insert, send and output slots are plain black bars; a faint "+"
   or a hover state would say they can be clicked.
 - **Instrument panels are generic grids:** labels repeat their section ("Osc 1 Range" inside "Oscillator
   1"), toggles read "Osc 1 On", sections leave large gaps, and on Tre at the docked height the Voices and
   Touch knobs are cut off above the keyboard bar. Custom panels (Tre next) fix this one instrument at a time.
 - **The effect panel can overflow sideways:** the Compressor's panel in the screenshot has a horizontal
-  scrollbar, with the Mix readout touching the edge.
-- **Icon-only controls with unclear meaning:** "1234" (count-in) in the control bar, a bare "–" next to the
-  Piano Roll's Vel slider, two unlabelled zoom sliders. They have tooltips, but a glance doesn't tell.
+  scrollbar, with the Mix readout touching the edge. The type scale made its knob labels and values 11 px
+  (from 10–10.5), which widens a row of knobs by a few px more.
 - **The global tracks take about 200 px by default** (Marker, Arrangement, Signature, Tempo) on a project
   that uses only the Arrangement track; showing only the ones in use, or a shorter Tempo track, would give
   the tracks back.
-- **The CPU meter** is a thin bar with a small label and no number; a value would make it readable at a
-  glance, and its red state hasn't been seen.
+- **The CPU meter's** red state (a late block) hasn't been seen.
 
 - **From the UI audit of 2026-11-04** (all menus, Settings, dialogs, Mixer, editors, Light theme):
   - The Compressor's floating panel opens with a horizontal scrollbar and its Mix knob cut off; check the other panels'

@@ -1,6 +1,8 @@
 /* The Step Sequencer's focus outline. */
 /* ---- Step Sequencer focus (components/StepSequencer.tsx) ---------------------------------- */
 
+/* Focused by a click to take the grid's keys, never by Tab (tabIndex -1): no ring around the
+   whole editor. */
 .step-seq:focus {
   outline: none;
 }

@@ -6,7 +6,7 @@
 .tuner-mute.on,
 .tuner-mute.on:hover {
   background: var(--mute);
-  color: #fff;
+  color: var(--mute-ink);
   box-shadow: none;
 }
 
@@ -43,7 +43,7 @@
   position: absolute;
   right: 2px;
   transform: translateY(50%);
-  font-size: 9px;
+  font-size: var(--fs-xs);
   font-variant-numeric: tabular-nums;
   color: var(--lcd-label);
 }
@@ -87,7 +87,7 @@
 }
 
 .loud-bar-label {
-  font-size: 9.5px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--lcd-label);
 }
@@ -117,7 +117,7 @@
 }
 
 .loud-read-label {
-  font-size: 9.5px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   letter-spacing: 0.6px;
   text-transform: uppercase;
@@ -150,7 +150,7 @@
   right: 0;
   bottom: 0;
   height: 0;
-  background: linear-gradient(to top, #2f9e44, #55c23b 55%, #d8d33a 80%, #e9a23b 90%, #e5483a);
+  background: linear-gradient(to top, var(--meter-stops));
   background-size: 100% var(--dyn-bar-len, 108px);
   background-position: bottom;
 }
@@ -160,7 +160,7 @@
   right: auto;
   width: 0;
   height: auto;
-  background: linear-gradient(to right, #2f9e44, #55c23b 55%, #d8d33a 80%, #e9a23b 90%, #e5483a);
+  background: linear-gradient(to right, var(--meter-stops));
   background-size: var(--dyn-bar-len, 108px) 100%;
   background-position: left;
 }
@@ -179,7 +179,7 @@
   left: 0;
   right: 0;
   height: 1px;
-  background: var(--meter-hold, #e8e8e8);
+  background: var(--meter-hold);
 }
 
 .dyn-level-hold.over {
@@ -196,7 +196,7 @@
 
 .dyn-level-label {
   color: var(--faint);
-  font-size: 9.5px;
+  font-size: var(--fs-sm);
 }
 
 .dyn-level-peak {
@@ -206,13 +206,13 @@
   border-radius: 3px;
   background: var(--readout);
   color: var(--lcd-text);
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
   font-variant-numeric: tabular-nums;
 }
 
 .dyn-level-peak.over {
   background: var(--red);
-  color: #fff;
+  color: var(--red-ink);
 }
 
 /* Transfer curve. */
@@ -322,12 +322,12 @@
 
 .dyn-knob-label {
   color: var(--dim);
-  font-size: 10.5px;
+  font-size: var(--fs-sm);
   white-space: nowrap;
 }
 
 .dyn-big .dyn-knob-label {
-  font-size: 11.5px;
+  font-size: var(--fs-md);
   font-weight: 500;
   color: var(--text);
 }
@@ -338,7 +338,7 @@
   border-radius: 3px;
   background: var(--readout);
   color: var(--lcd-text);
-  font-size: 10px;
+  font-size: var(--fs-sm);
   text-align: center;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -350,7 +350,7 @@
 }
 
 .loud-read-unit {
-  font-size: 10px;
+  font-size: var(--fs-sm);
   color: var(--lcd-label);
 }
 
@@ -363,7 +363,7 @@
 }
 
 .loud-delta {
-  font-size: 10.5px;
+  font-size: var(--fs-sm);
   color: var(--lcd-label);
 }
 
@@ -383,7 +383,7 @@
 }
 
 .loud-read.small .loud-read-value {
-  font-size: 15px;
+  font-size: var(--fs-xl);
 }
 
 .loud-read.over .loud-read-value {

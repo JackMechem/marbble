@@ -26,7 +26,7 @@
   height: 23px;
   padding: 0 8px 0 2px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: var(--fs-md);
   color: var(--text);
   white-space: nowrap;
 }
@@ -34,7 +34,7 @@
 .menu-item:hover,
 .menu-item.open {
   background: var(--select);
-  color: #fff;
+  color: var(--accent-ink);
 }
 
 .menu-item.disabled {
@@ -48,7 +48,7 @@
 .menu-check {
   width: 16px;
   text-align: center;
-  font-size: 11px;
+  font-size: var(--fs-sm);
 }
 
 .menu-label {
@@ -58,7 +58,7 @@
 .menu-hint {
   margin-left: 22px;
   color: var(--dim);
-  font-size: 11px;
+  font-size: var(--fs-sm);
 }
 
 .menu-item:hover .menu-hint,
@@ -80,7 +80,7 @@
 
 .menu-header {
   padding: 4px 18px 2px;
-  font-size: 10.5px;
+  font-size: var(--fs-sm);
   color: var(--faint);
 }
 

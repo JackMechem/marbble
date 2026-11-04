@@ -14,12 +14,14 @@ import { ownPanel } from "./detach";
 import { DetachedWindow } from "./components/DetachedWindow";
 import { installSheetKeys } from "./sheetKeys";
 import { migrateStorage } from "./oldName";
+import { installFocusRing } from "./focusRing";
 
 // Before anything reads its preferences.
 migrateStorage();
 
 // First, so open sheets see every key press before anything else does.
 installSheetKeys();
+installFocusRing();
 
 applyTheme(savedThemeId(), false);
 const scale = savedUiScale();

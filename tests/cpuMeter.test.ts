@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { cpuTitle, shownPeak } from "../src/cpuMeter.ts";
+import { cpuLevel, cpuPercent, cpuTitle, shownPeak } from "../src/cpuMeter.ts";
 
 test("the peak never shows under the average", () => {
   assert.equal(shownPeak(0.2, 0.9), 0.9);
@@ -22,4 +22,18 @@ test("late blocks are counted, and only mentioned when there are some", () => {
 test("the tooltip says how many threads are playing", () => {
   assert.match(cpuTitle(0.1, 0.1, 0, 1), /audio thread alone/);
   assert.match(cpuTitle(0.1, 0.1, 0, 4), /Playing on 4 threads\./);
+});
+
+test("the figure is the average as a whole percentage, past 100% when late", () => {
+  assert.equal(cpuPercent(0), "0%");
+  assert.equal(cpuPercent(0.144), "14%");
+  assert.equal(cpuPercent(1.126), "113%");
+  assert.equal(cpuPercent(-0.01), "0%");
+});
+
+test("the bar turns amber past half and red past 80%", () => {
+  assert.equal(cpuLevel(0.5), "low");
+  assert.equal(cpuLevel(0.51), "mid");
+  assert.equal(cpuLevel(0.8), "mid");
+  assert.equal(cpuLevel(0.81), "high");
 });

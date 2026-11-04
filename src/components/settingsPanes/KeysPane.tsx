@@ -99,7 +99,7 @@ export function KeysPane({ close }: { close: () => void }) {
                       {keys.map((k) => (
                         <span key={k} className="key-chip">
                           {formatKey(k)}
-                          <button title="Remove this shortcut" onClick={() => setKeys(withKeys(overrides, c.id, keys.filter((x) => x !== k)))}>
+                          <button title="Remove this shortcut" aria-label="Remove this shortcut" onClick={() => setKeys(withKeys(overrides, c.id, keys.filter((x) => x !== k)))}>
                             ×
                           </button>
                         </span>
@@ -107,7 +107,7 @@ export function KeysPane({ close }: { close: () => void }) {
                       {capture === c.id ? (
                         <span className="key-chip capturing">Press a key… (Esc cancels)</span>
                       ) : (
-                        <button className="key-add" title="Add a shortcut" onClick={() => setCapture(c.id)}>
+                        <button className="key-add" title="Add a shortcut" aria-label="Add a shortcut" onClick={() => setCapture(c.id)}>
                           +
                         </button>
                       )}

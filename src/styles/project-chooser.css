@@ -36,7 +36,7 @@
   align-items: center;
   gap: 8px;
   padding: 0 8px 18px;
-  font-size: 15px;
+  font-size: var(--fs-xl);
   font-weight: 600;
 }
 
@@ -47,7 +47,7 @@
   padding: 0 10px;
   border-radius: 6px;
   color: var(--text);
-  font-size: 12.5px;
+  font-size: var(--fs-lg);
   font-weight: 500;
   text-align: left;
 }
@@ -58,7 +58,7 @@
 
 .chooser-nav.on {
   background: var(--select);
-  color: #fff;
+  color: var(--accent-ink);
 }
 
 .chooser-count {
@@ -67,7 +67,7 @@
   padding: 0 6px;
   border-radius: 9px;
   background: rgba(0, 0, 0, 0.2);
-  font-size: 10.5px;
+  font-size: var(--fs-sm);
   text-align: center;
 }
 
@@ -85,7 +85,7 @@
 }
 
 .chooser-title {
-  font-size: 14px;
+  font-size: var(--fs-xl);
   font-weight: 600;
   margin-bottom: 14px;
 }
@@ -160,22 +160,22 @@
 
 .tpl-head.a,
 .tpl-region.a {
-  background: #3b8fd9;
+  background: var(--tpl-audio);
 }
 
 .tpl-head.i,
 .tpl-region.i {
-  background: #4fae4c;
+  background: var(--tpl-inst);
 }
 
 .tpl-name {
   font-weight: 600;
-  font-size: 12px;
+  font-size: var(--fs-md);
   color: var(--text);
 }
 
 .tpl-desc {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   line-height: 1.4;
   color: var(--dim);
 }
@@ -204,7 +204,7 @@
   background: var(--field);
   box-shadow: var(--field-shadow);
   color: var(--text);
-  font-size: 12.5px;
+  font-size: var(--fs-lg);
   outline: none;
 }
 
@@ -275,7 +275,7 @@
 
 .recent.on {
   background: var(--select);
-  color: #fff;
+  color: var(--accent-ink);
 }
 
 .recent.on .recent-path,
@@ -301,7 +301,7 @@
 
 .recent.on .recent-icon {
   background: rgba(255, 255, 255, 0.16);
-  color: #fff;
+  color: var(--accent-ink);
 }
 
 .recent-text {
@@ -313,12 +313,12 @@
 }
 
 .recent-name {
-  font-size: 12.5px;
+  font-size: var(--fs-lg);
   font-weight: 600;
 }
 
 .recent-path {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--faint);
   white-space: nowrap;
   overflow: hidden;
@@ -330,7 +330,7 @@
   flex-direction: column;
   align-items: flex-end;
   gap: 2px;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--dim);
   white-space: nowrap;
 }
@@ -343,7 +343,7 @@
   width: 22px;
   height: 22px;
   border-radius: 5px;
-  font-size: 15px;
+  font-size: var(--fs-xl);
   line-height: 1;
   color: var(--faint);
   opacity: 0;

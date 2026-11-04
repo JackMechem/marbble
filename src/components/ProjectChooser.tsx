@@ -415,7 +415,7 @@ export function ProjectChooser() {
                           <span className="warn-text">Missing</span>
                         )}
                       </div>
-                      <button className="recent-forget" title="Remove from list" onMouseDown={(e) => e.stopPropagation()} onClick={() => forget(p.path)}>
+                      <button className="recent-forget" title="Remove from list" aria-label="Remove from list" onMouseDown={(e) => e.stopPropagation()} onClick={() => forget(p.path)}>
                         ×
                       </button>
                     </div>

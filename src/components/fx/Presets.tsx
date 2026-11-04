@@ -173,14 +173,14 @@ export function PresetButton({
 
   return (
     <span className="fx-presets">
-      <button className="fx-step" title="Previous preset" onClick={() => step(-1)}>
+      <button className="fx-step" title="Previous preset" aria-label="Previous preset" onClick={() => step(-1)}>
         ‹
       </button>
       <button className="fx-popup fx-preset" onMouseDown={(e) => menu(e.currentTarget)} title="Presets">
         {label}
         {edited && <span className="dim"> (edited)</span>}
       </button>
-      <button className="fx-step" title="Next preset" onClick={() => step(1)}>
+      <button className="fx-step" title="Next preset" aria-label="Next preset" onClick={() => step(1)}>
         ›
       </button>
       {sheet && (

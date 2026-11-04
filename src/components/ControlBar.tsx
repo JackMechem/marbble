@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { act } from "../api";
 import { Icon } from "../icons";
 import { getState, onTick, setState, useStore } from "../store";
-import { cpuTitle, shownPeak } from "../cpuMeter";
+import { cpuLevel, cpuPercent, cpuTitle, shownPeak } from "../cpuMeter";
 import { framePos, onFrame } from "../frame";
 import { formatTime, toBbt } from "../time";
 import { fmtBpm, tempoMap } from "../tempo";
@@ -17,7 +17,7 @@ const KEYS = ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B�
 
 function ViewButton({ on, title, onClick, children }: { on: boolean; title: string; onClick: () => void; children: React.ReactNode }) {
   return (
-    <button className={"cb-btn" + (on ? " on" : "")} title={title} onClick={onClick}>
+    <button className={"cb-btn" + (on ? " on" : "")} title={title} aria-label={title} aria-pressed={on} onClick={onClick}>
       {children}
     </button>
   );
@@ -182,7 +182,7 @@ function Lcd() {
           {keyMinor ? "min" : "maj"}
         </div>
       </div>
-      <button className="lcd-mode" title="Display mode" onClick={(e) => openMenuAt(e.currentTarget, [
+      <button className="lcd-mode" title="Display mode" aria-label="Display mode" onClick={(e) => openMenuAt(e.currentTarget, [
         { label: "Beats & Project", checked: mode === "beats", onClick: () => setMode("beats") },
         { label: "Time", checked: mode === "time", onClick: () => setMode("time") },
         { separator: true },
@@ -199,19 +199,19 @@ function TransportButtons() {
   useEffect(() => onTick((tk) => setT((p) => (p.playing === tk.playing && p.recording === tk.recording ? p : { playing: tk.playing, recording: tk.recording }))), []);
   return (
     <div className="transport">
-      <button className="tp-btn" title="Rewind (,)" onClick={() => transport.nudgeBars(-1)}>
+      <button className="tp-btn" title="Rewind (,)" aria-label="Rewind (,)" onClick={() => transport.nudgeBars(-1)}>
         <Icon.rewind />
       </button>
-      <button className="tp-btn" title="Forward (.)" onClick={() => transport.nudgeBars(1)}>
+      <button className="tp-btn" title="Forward (.)" aria-label="Forward (.)" onClick={() => transport.nudgeBars(1)}>
         <Icon.forward />
       </button>
-      <button className="tp-btn" title="Stop" onClick={() => transport.stop()}>
+      <button className="tp-btn" title="Stop" aria-label="Stop" onClick={() => transport.stop()}>
         <Icon.stop />
       </button>
-      <button className={"tp-btn play" + (t.playing && !t.recording ? " on" : "")} title={`Play (${keyHint("play")})`} onClick={() => act("play")}>
+      <button className={"tp-btn play" + (t.playing && !t.recording ? " on" : "")} title={`Play (${keyHint("play")})`} aria-label={`Play (${keyHint("play")})`} onClick={() => act("play")}>
         <Icon.play />
       </button>
-      <button className={"tp-btn rec" + (t.recording ? " on" : "")} title={`Record (${keyHint("record")})`} onClick={() => act("record")}>
+      <button className={"tp-btn rec" + (t.recording ? " on" : "")} title={`Record (${keyHint("record")})`} aria-label={`Record (${keyHint("record")})`} onClick={() => act("record")}>
         <Icon.record />
       </button>
     </div>
@@ -234,9 +234,11 @@ function CpuMeter() {
   const late = lateBlocks - cleared;
   return (
     <div className={"cpu" + (late > 0 ? " over" : "")} title={cpuTitle(cpu, peak, late, threads)} onClick={() => setCleared(lateBlocks)}>
-      <span>CPU</span>
+      <span className="cpu-label">
+        CPU <span className="cpu-pct">{cpuPercent(cpu)}</span>
+      </span>
       <div className="cpu-bar">
-        <div style={{ width: `${Math.min(100, cpu * 100)}%`, background: cpu > 0.8 ? "#f0524a" : cpu > 0.5 ? "#f0b43c" : "#8d9099" }} />
+        <div className={"cpu-fill " + cpuLevel(cpu)} style={{ width: `${Math.min(100, cpu * 100)}%` }} />
         <div className="cpu-peak" style={{ left: `${Math.min(100, peak * 100)}%` }} />
       </div>
     </div>
@@ -279,10 +281,10 @@ export function ControlBar() {
         <TransportButtons />
         <Lcd />
         <div className="cb-modes">
-          <button className={"mode-btn cycle" + (p?.cycle.enabled ? " on" : "")} title={`Cycle (${keyHint("cycle")})`} onClick={() => transport.toggleCycle()}>
+          <button className={"mode-btn cycle" + (p?.cycle.enabled ? " on" : "")} title={`Cycle (${keyHint("cycle")})`} aria-label={`Cycle (${keyHint("cycle")})`} onClick={() => transport.toggleCycle()}>
             <Icon.cycle />
           </button>
-          <button className={"mode-btn punch" + (punchOn ? " on" : "")} title={`Autopunch (${keyHint("autopunch")})`} onClick={() => transport.togglePunch()}>
+          <button className={"mode-btn punch" + (punchOn ? " on" : "")} title={`Autopunch (${keyHint("autopunch")})`} aria-label={`Autopunch (${keyHint("autopunch")})`} onClick={() => transport.togglePunch()}>
             <svg width="18" height="16" viewBox="0 0 18 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
               <path d="M5 3.5H3v9h2M13 3.5h2v9h-2" />
               <path d="M6.5 8h5" strokeWidth="2.6" />
@@ -291,6 +293,7 @@ export function ControlBar() {
           <button
             className={"mode-btn replace" + (replace ? " on" : "")}
             title="Replace: recordings replace what they overlap, audio and MIDI"
+            aria-label="Replace: recordings replace what they overlap, audio and MIDI"
             onClick={() => updateSettings((st) => ({ ...st, prefs: { ...st.prefs, recording: { ...st.prefs.recording, replace: !replace } } }))}
           >
             <svg width="18" height="16" viewBox="0 0 18 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round">
@@ -299,14 +302,14 @@ export function ControlBar() {
             </svg>
           </button>
           <button className={"mode-btn purple countin" + (p?.count_in ? " on" : "")} title={`Count-in (${keyHint("count-in")})`} onClick={() => act("set_count_in", { on: !p?.count_in })}>
-            1234
+            Count-in
           </button>
-          <button className={"mode-btn purple" + (p?.metronome ? " on" : "")} title={`Metronome (${keyHint("metronome")})`} onClick={() => act("set_metronome", { on: !p?.metronome })}>
+          <button className={"mode-btn purple" + (p?.metronome ? " on" : "")} title={`Metronome (${keyHint("metronome")})`} aria-label={`Metronome (${keyHint("metronome")})`} onClick={() => act("set_metronome", { on: !p?.metronome })}>
             <Icon.metronome />
           </button>
         </div>
         <div className="cb-master" title="Master volume">
-          <HSlider db={p?.master.volume_db ?? 0} onChange={(db) => act("set_master_volume", { db })} width={92} />
+          <HSlider db={p?.master.volume_db ?? 0} onChange={(db) => act("set_master_volume", { db })} width={92} label="Master volume" />
         </div>
         <CpuMeter />
       </div>

@@ -8,11 +8,8 @@
   background: var(--tbtn-hi);
 }
 
-/* As in Logic: green while reading, orange to red while writing. */
-.auto-mode.read {
-  background: var(--green);
-  color: #fff;
-}
+/* Read, the default, and Off look like any other button; colour is kept for the modes that
+   write: orange for Touch and Latch, red for Write. */
 
 .auto-mode.touch,
 .auto-mode.latch {
@@ -22,14 +19,14 @@
 
 .auto-mode.write {
   background: var(--red);
-  color: #fff;
+  color: var(--red-ink);
 }
 
 .auto-param {
   min-width: 68px;
   flex: 1;
   height: 19px;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   justify-content: space-between;
 }
 

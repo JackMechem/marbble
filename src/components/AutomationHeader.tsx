@@ -53,6 +53,7 @@ export function AddLaneButton({ track }: { track: Track }) {
     <button
       className="tbtn auto-lane-btn"
       title="Show another automation lane"
+      aria-label="Show another automation lane"
       onMouseDown={(e) => {
         e.stopPropagation();
         addLane(track);

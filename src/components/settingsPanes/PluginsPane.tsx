@@ -103,7 +103,7 @@ export function PluginsPane({ close }: { close: () => void }) {
               <div key={f} className={"pm-folder" + (extra.has(f) ? "" : " std")}>
                 <span title={f}>{f}</span>
                 {extra.has(f) && (
-                  <button className="pm-remove" title="Remove folder" onClick={() => setFolders(pp.folders.filter((x) => x !== f)).then(load)}>
+                  <button className="pm-remove" title="Remove folder" aria-label="Remove folder" onClick={() => setFolders(pp.folders.filter((x) => x !== f)).then(load)}>
                     ×
                   </button>
                 )}

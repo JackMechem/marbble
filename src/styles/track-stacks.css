@@ -40,8 +40,8 @@
   margin-left: 2px;
   border-radius: 4px;
   border: 1px solid transparent;
-  color: #16161a;
-  font-size: 10.5px;
+  color: var(--swatch-ink);
+  font-size: var(--fs-sm);
   font-weight: 700;
 }
 
@@ -53,7 +53,7 @@
 
 .strip-folder-note {
   color: var(--faint);
-  font-size: 10.5px;
+  font-size: var(--fs-sm);
   text-align: center;
   padding: 10px 4px;
   line-height: 1.35;
@@ -76,7 +76,7 @@
   flex: 1;
   height: 26px;
   padding: 0 8px;
-  font-size: 13px;
+  font-size: var(--fs-lg);
   font-weight: 600;
   background: var(--field);
   border: 1px solid var(--field-border, var(--header-line));

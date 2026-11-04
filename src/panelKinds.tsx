@@ -172,7 +172,7 @@ function OwnPlugPanel({ panelKey }: { panelKey: string }) {
         </div>
         <div className="local-right">
           <DetachButton panel={panelKey} />
-          <button className="eq-close fx-dock-close" title="Close (Esc)" onClick={() => closePanel(panelKey)}>
+          <button className="eq-close fx-dock-close" title="Close (Esc)" aria-label="Close (Esc)" onClick={() => closePanel(panelKey)}>
             ×
           </button>
         </div>

@@ -1433,6 +1433,17 @@ Audio Track Editor and meters are canvas drawings. The common pattern:
 - `src/styles/` uses only the variables, never literal theme colours. `src/styles/index.css`
   imports one stylesheet per area, and its order is the cascade: `tokens.css` first, the rest in
   the order they were written, so an area can come in more than one file (see the comment there).
+  `tokens.css` holds Studio's values for the first paint (a test keeps it equal to `studioCss`),
+  then the things no theme changes: the six font sizes (`--fs-xs` to `--fs-xxl`) and the focus
+  ring. `tests/styles.test.ts` fails on a hex colour or a font size outside the tokens.
+- **Keyboard focus.** `:focus-visible` draws `--focus-ring` (`base.css`). Browsers also count a
+  key pressed after a click as keyboard focus, which here would ring the last button clicked as
+  soon as a shortcut is pressed, so `focusRing.ts` marks `<html>` with `data-keyboard-focus` on
+  Tab and clears it on a mouse press, and the ring outside text fields waits for it. Knobs,
+  faders and sliders are `role="slider"` with their value as text (`sliderAria` in
+  `sliderKeys.ts`); `sliderKeyDown` (`Controls.tsx`) maps the arrow, Page, Home and End keys to
+  a new value and sends it through the control's `onChange` between its touch start and end, as
+  a drag would, so automation writing and undo coalescing treat it as one.
 
 ### The window's layout
 
@@ -2389,7 +2400,9 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `fxShapes.ts` | The curves the modulation, distortion and Gain panels draw, mirroring the engine; pure, tested. |
 | `linearPhaseEq.ts` | The Linear Phase EQ's parameters as Channel EQ settings, so its panel reuses the EQ editor; pure, tested. |
 | `stripSettings.ts` | The channel strip Setting menu: the strip clipboard (a store field), Reset, saving and loading; resetting clip indicators. |
-| `cpuMeter.ts` | The CPU meter's tooltip and where its peak tick goes; pure, tested. |
+| `cpuMeter.ts` | The CPU meter's tooltip, figure, colour bands and where its peak tick goes; pure, tested. |
+| `sliderKeys.ts` | Keyboard steps for knobs, faders and sliders, and their ARIA props; pure, tested. |
+| `focusRing.ts` | Shows the focus ring only after Tab (`data-keyboard-focus` on `<html>`); tested. |
 | `stripMeters.ts` | The clip indicator's readout and the gain-reduction meter's scale and fall; pure, tested. |
 | `vca.ts` | VCA offsets and loop checks for drawing the Mixer (mirrors `vca.rs`); pure, tested. |
 | `slotDrag.ts` | Dragging plug-ins between Audio FX slots. |

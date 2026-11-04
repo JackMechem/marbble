@@ -35,10 +35,10 @@ export function ToolPopups() {
   const hint = keyHint("tool-menu");
   return (
     <>
-      <button className="popup tool-popup left" title={`Left-click Tool${hint ? ` (${hint})` : ""}`} onMouseDown={(e) => openMenuAt(e.currentTarget, toolMenuItems("left"))}>
+      <button className="popup tool-popup left" title={`Left-click Tool${hint ? ` (${hint})` : ""}`} aria-label={`Left-click Tool${hint ? ` (${hint})` : ""}`} onMouseDown={(e) => openMenuAt(e.currentTarget, toolMenuItems("left"))}>
         <TrackToolIcon tool={tools.left} /> <Icon.chevron />
       </button>
-      <button className="popup tool-popup cmd" title={`${fmt("Mod")}-click Tool`} onMouseDown={(e) => openMenuAt(e.currentTarget, toolMenuItems("cmd"))}>
+      <button className="popup tool-popup cmd" title={`${fmt("Mod")}-click Tool`} aria-label={`${fmt("Mod")}-click Tool`} onMouseDown={(e) => openMenuAt(e.currentTarget, toolMenuItems("cmd"))}>
         <TrackToolIcon tool={tools.cmd} /> <Icon.chevron />
       </button>
     </>

@@ -26,7 +26,7 @@
 
 .pref-group-title {
   margin-bottom: 9px;
-  font-size: 10px;
+  font-size: var(--fs-sm);
   font-weight: 700;
   letter-spacing: 0.5px;
   text-transform: uppercase;

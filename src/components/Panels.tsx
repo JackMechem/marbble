@@ -315,7 +315,7 @@ export function Browser() {
     <div className="browser">
       <div className="pane-title">All Files</div>
       <div className="browser-path">
-        <button className="small-btn icon" disabled={!dir?.parent} onClick={() => dir?.parent && load(dir.parent)} title="Enclosing folder">
+        <button className="small-btn icon" disabled={!dir?.parent} onClick={() => dir?.parent && load(dir.parent)} title="Enclosing folder" aria-label="Enclosing folder">
           <Icon.up />
         </button>
         <span title={dir?.path}>{dir?.path.split("/").pop() || dir?.path}</span>

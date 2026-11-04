@@ -363,7 +363,7 @@ export function TunerPanel({ info, values, set, touch, meters }: FxPanelProps) {
         <div className="tuner-field">
           <label>Reference</label>
           <div className="tuner-stepper">
-            <button className="tuner-step" onClick={() => set(REFERENCE, Math.max(400, Math.round(reference - 1)))} title="Down 1 Hz">
+            <button className="tuner-step" onClick={() => set(REFERENCE, Math.max(400, Math.round(reference - 1)))} title="Down 1 Hz" aria-label="Down 1 Hz">
               −
             </button>
             <DragValue
@@ -379,7 +379,7 @@ export function TunerPanel({ info, values, set, touch, meters }: FxPanelProps) {
               onTouch={(on) => touch(REFERENCE, on)}
               title="Reference pitch for A4 — drag (Shift for fine), double-click for 440 Hz"
             />
-            <button className="tuner-step" onClick={() => set(REFERENCE, Math.min(480, Math.round(reference + 1)))} title="Up 1 Hz">
+            <button className="tuner-step" onClick={() => set(REFERENCE, Math.min(480, Math.round(reference + 1)))} title="Up 1 Hz" aria-label="Up 1 Hz">
               +
             </button>
           </div>
@@ -398,10 +398,10 @@ export function TunerPanel({ info, values, set, touch, meters }: FxPanelProps) {
         <div className="tuner-field">
           <label>Notation</label>
           <div className="segmented tuner-notation">
-            <button className={flats ? "" : "on"} onClick={() => set(NOTATION, 0)} title="Sharps">
+            <button className={flats ? "" : "on"} onClick={() => set(NOTATION, 0)} title="Sharps" aria-label="Sharps">
               ♯
             </button>
-            <button className={flats ? "on" : ""} onClick={() => set(NOTATION, 1)} title="Flats">
+            <button className={flats ? "on" : ""} onClick={() => set(NOTATION, 1)} title="Flats" aria-label="Flats">
               ♭
             </button>
           </div>

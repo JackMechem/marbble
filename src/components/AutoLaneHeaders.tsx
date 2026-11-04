@@ -31,6 +31,7 @@ export function SubLaneHeader({ track, index, param, height, indent }: { track: 
         <button
           className="tbtn auto-lane-btn"
           title="Close this lane"
+          aria-label="Close this lane"
           onMouseDown={(e) => {
             e.stopPropagation();
             closeLane(track, index);

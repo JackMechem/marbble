@@ -6,6 +6,8 @@ import { onFrame } from "../../frame";
 import { useStore } from "../../store";
 import { theme } from "../../theme";
 import { arc, formatDyn, fromNorm, KNOB_SWEEP, polar, toNorm } from "../../dynScale";
+import { sliderAria } from "../../sliderKeys";
+import { sliderKeyDown } from "../Controls";
 
 export function cssVar(name: string, fallback = "#888"): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
@@ -69,7 +71,12 @@ export function DynKnob({ label, value, min, max, log = false, def, format, onCh
     window.addEventListener("mouseup", up);
   };
   return (
-    <div className={"dyn-knob" + (disabled ? " disabled" : "")} title={title ?? `${label} · drag · Shift for fine · double-click to reset`}>
+    <div
+      className={"dyn-knob" + (disabled ? " disabled" : "")}
+      title={title ?? `${label} · drag · Shift for fine · double-click to reset`}
+      {...(disabled ? {} : sliderAria({ label, text: format(value), min, max, now: value }))}
+      onKeyDown={disabled ? undefined : sliderKeyDown(n, value, (p) => snap(fromNorm(p, min, max, log)), onChange, onGrab && { onTouchStart: () => onGrab(true), onTouchEnd: () => onGrab(false) })}
+    >
       <svg
         width={size}
         height={size}

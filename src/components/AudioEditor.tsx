@@ -226,7 +226,7 @@ export function AudioEditor({ track, region }: { track: Track; region: Region | 
           <span className="local-title">Audio Track: {track.name}</span>
         </div>
         <div className="local-right">
-          <button className={"lb-btn" + (showTransients ? " on" : "")} title="Show Transients" onClick={() => ed.setEd({ showTransients: !showTransients })}>
+          <button className={"lb-btn" + (showTransients ? " on" : "")} title="Show Transients" aria-label="Show Transients" onClick={() => ed.setEd({ showTransients: !showTransients })}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3">
               <path d="M1 7h2l1.2-4 1.6 8L7 5l1 3.5L9 7h4" />
               <path d="M4.2 1.5v1M9 1.5v1" strokeLinecap="round" />
@@ -235,9 +235,7 @@ export function AudioEditor({ track, region }: { track: Track; region: Region | 
           <span className="lb-label">Gain</span>
           <GainField region={focus} />
           <span className="lb-label" title="Waveform zoom">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.3">
-              <path d="M1 6h1.5l1-3 1.5 6 1.5-7 1.5 6 1-2H11" />
-            </svg>
+            Wave
           </span>
           <input
             className="zoom vzoom"
@@ -251,9 +249,7 @@ export function AudioEditor({ track, region }: { track: Track; region: Region | 
             onDoubleClick={() => ed.setAmp(1)}
           />
           <span className="lb-label" title="Horizontal zoom">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.3">
-              <path d="M1 6h10M3.5 3.5 1 6l2.5 2.5M8.5 3.5 11 6 8.5 8.5" />
-            </svg>
+            Zoom
           </span>
           <input
             className="zoom"

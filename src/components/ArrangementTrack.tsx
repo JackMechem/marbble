@@ -72,7 +72,7 @@ export function ArrangementHeader() {
   return (
     <div className="global-name arrangement-name" style={{ height: ARR_H }}>
       Arrangement
-      <button className="arrangement-add" title="Add Arrangement Marker" onClick={() => addSection()}>
+      <button className="arrangement-add" title="Add Arrangement Marker" aria-label="Add Arrangement Marker" onClick={() => addSection()}>
         <Icon.plus />
       </button>
     </div>

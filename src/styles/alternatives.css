@@ -15,7 +15,7 @@
 .name-sheet-problem {
   margin-top: 8px;
   color: var(--red);
-  font-size: 11.5px;
+  font-size: var(--fs-md);
 }
 
 .alt-list {
@@ -42,7 +42,7 @@
 
 .alt-row.on {
   background: var(--select);
-  color: #fff;
+  color: var(--accent-ink);
 }
 
 .alt-row.on .dim {
@@ -75,7 +75,7 @@
   background: var(--tbtn);
   color: var(--tbtn-text);
   box-shadow: var(--tbtn-shadow);
-  font-size: 10.5px;
+  font-size: var(--fs-sm);
   font-weight: 700;
 }
 
@@ -101,7 +101,7 @@
 .tpl-section {
   grid-column: 1 / -1;
   margin-top: 6px;
-  font-size: 12px;
+  font-size: var(--fs-md);
   font-weight: 600;
   color: var(--dim);
 }

@@ -244,7 +244,7 @@
   place-items: center;
   margin-left: auto;
   border-radius: 3px;
-  font-size: 13px;
+  font-size: var(--fs-lg);
   line-height: 1;
   color: var(--dim);
   visibility: hidden;

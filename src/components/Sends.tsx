@@ -8,6 +8,8 @@ import { useStore } from "../store";
 import { dbToFader, faderToDb, formatDb } from "../time";
 import { openMenuAt } from "./Menu";
 import { learnContext } from "../learn";
+import { sliderAria } from "../sliderKeys";
+import { sliderKeyDown } from "./Controls";
 
 /** A small unipolar level knob, on the fader's taper. Shift-drag adjusts finely; double-click
  *  is 0 dB. */
@@ -48,6 +50,8 @@ function SendKnob({ db, pre, onChange, onDrag }: { db: number; pre: boolean; onC
   return (
     <div
       className={"send-knob" + (pre ? " pre" : "")}
+      {...sliderAria({ label: "Send level", text: db <= -96 ? "minus infinity dB" : `${formatDb(db)} dB`, min: -96, max: 6, now: db })}
+      onKeyDown={sliderKeyDown(dbToFader(db), db, (p) => Math.round(faderToDb(p) * 10) / 10, onChange, { onTouchStart: () => onDrag(true), onTouchEnd: () => onDrag(false) })}
       onMouseDown={start}
       onDoubleClick={(e) => {
         e.stopPropagation();

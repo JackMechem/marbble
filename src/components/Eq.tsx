@@ -540,6 +540,7 @@ export function EqEditor({ eq, sr, onChange, lead, tools, extra, analyzerTrack, 
                 onClick={() => setBand(i, { on: !b.on })}
                 onContextMenu={learn?.({ band: i, field: "on" })}
                 title={`${BAND_NAMES[i]} on/off`}
+                aria-label={`${BAND_NAMES[i]} on/off`}
               >
                 <BandIcon kind={b.kind} />
               </button>

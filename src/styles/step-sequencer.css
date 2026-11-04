@@ -101,7 +101,7 @@
 
 .ss-note {
   color: var(--faint);
-  font-size: 10.5px;
+  font-size: var(--fs-sm);
   flex: none;
 }
 
@@ -118,7 +118,7 @@
   background: var(--btn);
   box-shadow: var(--btn-shadow);
   color: var(--dim);
-  font-size: 10.5px;
+  font-size: var(--fs-sm);
   font-variant-numeric: tabular-nums;
 }
 

@@ -39,3 +39,64 @@ test("main.tsx is what loads the stylesheet, and nothing else loads CSS", () => 
   assert.deepEqual(loaders, ["main.tsx"]);
   assert.match(readFileSync(join(SRC, "main.tsx"), "utf8"), /import "\.\/styles\/index\.css";/);
 });
+
+// ---- the design rules: colours from tokens, the type scale, the focus ring ------------------------
+
+/** Raw hex colours allowed outside tokens.css, as "file: colour" with the reason. None so far: a
+ *  colour that's the same in every theme (a piano key, the VU meter's face) still gets a token. */
+const HEX_EXCEPTIONS: Record<string, string> = {};
+
+test("colours come from tokens: no raw hex colour outside tokens.css", () => {
+  const found: string[] = [];
+  for (const f of files.filter((f) => f !== "tokens.css")) {
+    for (const m of css(read(f)).matchAll(/#[0-9a-fA-F]{3,8}\b/g)) {
+      const at = `${f}: ${m[0]}`;
+      if (!(at in HEX_EXCEPTIONS)) found.push(at);
+    }
+  }
+  assert.deepEqual(found, [], "use a token from tokens.css (and themes.ts) instead");
+});
+
+/** The type scale in tokens.css. */
+const FONT_TOKENS = ["--fs-xs", "--fs-sm", "--fs-md", "--fs-lg", "--fs-xl", "--fs-xxl"];
+/** Display numerals sized to their box (the LCD's digits, the Tuner's note) may set px sizes from here up. */
+const DISPLAY_PX = 18;
+
+test("font sizes come from the type scale, smallest text 11 px", () => {
+  const tokens = css(read("tokens.css"));
+  const px = (name: string) => Number(new RegExp(`${name}:\\s*([\\d.]+)px;`).exec(tokens)?.[1]);
+  assert.deepEqual(FONT_TOKENS.map(px), [10, 11, 12, 13, 15, 17]);
+  const bad: string[] = [];
+  for (const f of files) {
+    const src = css(read(f));
+    for (const m of src.matchAll(/font-size:\s*([^;]+);/g)) {
+      const v = m[1].trim();
+      const lit = /^([\d.]+)px$/.exec(v);
+      if (lit ? Number(lit[1]) < DISPLAY_PX : !FONT_TOKENS.some((t) => v === `var(${t})`)) bad.push(`${f}: font-size: ${v}`);
+    }
+    for (const m of src.matchAll(/\bfont:\s*([^;]+);/g)) {
+      const v = m[1].trim();
+      if (v !== "inherit" && !FONT_TOKENS.some((t) => v.startsWith(`var(${t})`))) bad.push(`${f}: font: ${v}`);
+    }
+  }
+  assert.deepEqual(bad, []);
+});
+
+test("tokens.css holds Studio's values from themes.ts, so the first paint matches", () => {
+  const themes = readFileSync(fileURLToPath(new URL("../src/themes.ts", import.meta.url)), "utf8");
+  const studio = themes.slice(themes.indexOf("const studioCss"), themes.indexOf("const studioCanvas"));
+  const ts = Object.fromEntries([...studio.matchAll(/"(--[\w-]+)":\s*"([^"]+)"/g)].map((m) => [m[1], m[2]]));
+  const tokens = css(read("tokens.css"));
+  const first = tokens.slice(0, tokens.indexOf("}"));
+  const root = Object.fromEntries([...first.matchAll(/(--[\w-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2]]));
+  const norm = (v: string) => v.replace(/\s+/g, "");
+  assert.deepEqual(Object.keys(root).sort(), Object.keys(ts).sort());
+  for (const k of Object.keys(ts)) assert.equal(norm(root[k]), norm(ts[k]), k);
+});
+
+test("keyboard focus shows a ring from the token, and only for the keyboard", () => {
+  const base = css(read("base.css"));
+  assert.match(base, /:focus-visible\s*\{\s*outline:\s*var\(--focus-ring\);/);
+  assert.match(base, /html:not\(\[data-keyboard-focus\]\) :focus-visible/);
+  assert.match(css(read("tokens.css")), /--focus-ring:/);
+});

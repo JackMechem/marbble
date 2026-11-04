@@ -88,7 +88,7 @@
 }
 
 .tuner-oct {
-  font-size: 17px;
+  font-size: var(--fs-xxl);
   color: var(--lcd-label);
 }
 
@@ -106,7 +106,7 @@
 
 .tuner-readout {
   min-width: 96px;
-  font-size: 17px;
+  font-size: var(--fs-xxl);
   font-weight: 500;
 }
 
@@ -116,7 +116,7 @@
 
 .tuner-readout small,
 .tuner-muted {
-  font-size: 9.5px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   letter-spacing: 0.6px;
   text-transform: uppercase;
@@ -128,7 +128,7 @@
 }
 
 .tuner-ref-badge {
-  font-size: 10.5px;
+  font-size: var(--fs-sm);
   color: var(--lcd-label);
   white-space: nowrap;
 }
@@ -180,7 +180,7 @@
 }
 
 .tuner-field > label {
-  font-size: 10.5px;
+  font-size: var(--fs-sm);
   color: var(--dim);
 }
 

@@ -14,7 +14,7 @@
   border-radius: 7px;
   background: var(--toast-bg);
   box-shadow: var(--menu-shadow);
-  font-size: 12px;
+  font-size: var(--fs-md);
 }
 
 .learn-banner b {
@@ -32,7 +32,7 @@
 .ctl-head {
   padding: 0 16px 6px;
   color: var(--dim);
-  font-size: 11px;
+  font-size: var(--fs-sm);
 }
 
 .ctl-list {

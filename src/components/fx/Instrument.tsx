@@ -92,7 +92,7 @@ function PanelKeyboard({ track }: { track: Id }) {
   const keys = keyboardKeys(base, 25);
   return (
     <div className="inst-keyboard" onPointerUp={off} onPointerLeave={off} onPointerCancel={off}>
-      <button className="fx-toggle" title="An octave down" disabled={base <= 12} onClick={() => setBase(base - 12)}>
+      <button className="fx-toggle" title="An octave down" aria-label="An octave down" disabled={base <= 12} onClick={() => setBase(base - 12)}>
         −
       </button>
       <div className="inst-keys" style={{ width: `${keys.whites * 22}px` }}>
@@ -114,7 +114,7 @@ function PanelKeyboard({ track }: { track: Id }) {
           />
         ))}
       </div>
-      <button className="fx-toggle" title="An octave up" disabled={base >= 84} onClick={() => setBase(base + 12)}>
+      <button className="fx-toggle" title="An octave up" aria-label="An octave up" disabled={base >= 84} onClick={() => setBase(base + 12)}>
         +
       </button>
     </div>

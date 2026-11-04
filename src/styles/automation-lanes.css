@@ -19,7 +19,7 @@
 .tbtn.auto-lane-btn {
   flex: none;
   height: 19px;
-  font-size: 13px;
+  font-size: var(--fs-lg);
   font-weight: 600;
 }
 

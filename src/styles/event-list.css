@@ -81,7 +81,7 @@
 
 .el-row.sel {
   background: var(--select);
-  color: #fff;
+  color: var(--accent-ink);
 }
 
 .el-cell {

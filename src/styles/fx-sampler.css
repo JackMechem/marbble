@@ -106,15 +106,15 @@
   flex: none;
   min-width: 0;
   max-width: 100%;
-  font-size: 11px;
+  font-size: var(--fs-sm);
 }
 
 .smp-rec.on {
-  color: #ff6a5e;
+  color: var(--red);
 }
 
 .smp-rec-time {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   font-variant-numeric: tabular-nums;
 }
 
@@ -129,11 +129,11 @@
 .smp-rec-level > span {
   display: block;
   height: 100%;
-  background: #5fd38d;
+  background: var(--green);
 }
 
 .smp-rec-level > span.over {
-  background: #ff6a5e;
+  background: var(--red);
 }
 
 .smp-map-box {
@@ -169,7 +169,7 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  font-size: 12px;
+  font-size: var(--fs-md);
   color: var(--dim);
   pointer-events: none;
 }
@@ -181,7 +181,7 @@
 
 .smp-status {
   flex: none;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   line-height: 14px;
   color: var(--dim);
   white-space: nowrap;
@@ -190,7 +190,7 @@
 }
 
 .smp-status.bad {
-  color: #ff7d72;
+  color: var(--red);
 }
 
 .smp-fields {
@@ -204,7 +204,7 @@
 .smp-field {
   display: flex;
   flex-direction: column;
-  font-size: 10px;
+  font-size: var(--fs-sm);
   color: var(--dim);
 }
 
@@ -212,7 +212,7 @@
   box-sizing: border-box;
   height: 18px;
   padding: 0 3px;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   font-variant-numeric: tabular-nums;
 }
 
@@ -220,7 +220,7 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   white-space: nowrap;
 }
 

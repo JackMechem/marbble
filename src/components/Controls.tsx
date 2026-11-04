@@ -8,6 +8,7 @@ import { theme } from "../theme";
 import { dbToFader, faderToDb, formatDb, gainToDb } from "../time";
 import { effectiveDb } from "../vca";
 import { grFraction, isClip, nextGr } from "../stripMeters";
+import { keyValue, SLIDER_KEYS, sliderAria } from "../sliderKeys";
 
 /** Shared vertical/horizontal drag helper. Shift gives fine control, like Logic. */
 export function useDrag(onDelta: (d: number, fine: boolean) => void, onEnd?: () => void) {
@@ -36,9 +37,34 @@ export interface TouchProps {
   onTouchEnd?: () => void;
 }
 
+/**
+ * The key handler of a knob, fader or slider (see sliderKeys.ts): arrows step (Shift for fine),
+ * Page Up and Down step further, Home and End go to the ends. The new value goes to `apply`, the
+ * path a drag takes, as a grab and a release so automation writing and undo treat it as a drag.
+ * Keys with Ctrl, Cmd or Alt are left to the app's shortcuts.
+ */
+export function sliderKeyDown(pos: number, current: number, value: (pos: number) => number, apply: (v: number) => void, touch?: TouchProps) {
+  return (e: React.KeyboardEvent) => {
+    if (e.ctrlKey || e.metaKey || e.altKey || !(SLIDER_KEYS as readonly string[]).includes(e.key)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const v = keyValue(e.key, pos, current, value, e.shiftKey);
+    if (v === null) return;
+    touch?.onTouchStart?.();
+    apply(v);
+    touch?.onTouchEnd?.();
+  };
+}
+
+/** A fader position (0..1) as the 0.1 dB a fader reports. */
+const faderDb = (p: number) => Math.round(faderToDb(p) * 10) / 10;
+
+/** The screen reader's text for a level in dB. */
+const dbText = (db: number) => (db <= -96 ? "minus infinity dB" : `${formatDb(db)} dB`);
+
 /** A channel fader. `vca` is the offset (dB) of the VCA the strip is assigned to: an outline
  *  cap marks where the strip really plays, as in Logic. */
-export function Fader({ db, onChange, height = 180, onTouchStart, onTouchEnd, vca }: { db: number; onChange: (db: number) => void; height?: number; vca?: number } & TouchProps) {
+export function Fader({ db, onChange, height = 180, onTouchStart, onTouchEnd, vca, label = "Volume" }: { db: number; onChange: (db: number) => void; height?: number; vca?: number; label?: string } & TouchProps) {
   const pos = useRef(dbToFader(db));
   pos.current = dbToFader(db);
   const travel = height - 18;
@@ -51,6 +77,8 @@ export function Fader({ db, onChange, height = 180, onTouchStart, onTouchEnd, vc
     <div
       className="fader"
       style={{ height }}
+      {...sliderAria({ label, text: dbText(db), min: -96, max: 6, now: db })}
+      onKeyDown={sliderKeyDown(dbToFader(db), db, faderDb, onChange, { onTouchStart, onTouchEnd })}
       onMouseDown={(e) => {
         onTouchStart?.();
         start(e, "y");
@@ -66,7 +94,13 @@ export function Fader({ db, onChange, height = 180, onTouchStart, onTouchEnd, vc
   );
 }
 
-export function Knob({ value, onChange, size = 26, onTouchStart, onTouchEnd }: { value: number; onChange: (v: number) => void; size?: number } & TouchProps) {
+/** A pan position (-1..1) as the knob shows it: "Centre", "L 12", "R 12". */
+export function panText(v: number): string {
+  const n = Math.round(v * 64);
+  return n === 0 ? "Centre" : n < 0 ? `L ${-n}` : `R ${n}`;
+}
+
+export function Knob({ value, onChange, size = 26, onTouchStart, onTouchEnd, label = "Pan" }: { value: number; onChange: (v: number) => void; size?: number; label?: string } & TouchProps) {
   const v = useRef(value);
   v.current = value;
   const start = useDrag((d, fine) => {
@@ -85,6 +119,8 @@ export function Knob({ value, onChange, size = 26, onTouchStart, onTouchEnd }: {
     <div
       className="knob"
       style={{ width: size, height: size }}
+      {...sliderAria({ label, text: panText(value), min: -64, max: 64, now: Math.round(value * 64) })}
+      onKeyDown={sliderKeyDown((value + 1) / 2, value, (p) => Math.round((p * 2 - 1) * 64) / 64, onChange, { onTouchStart, onTouchEnd })}
       onMouseDown={(e) => {
         onTouchStart?.();
         start(e, "y");
@@ -110,7 +146,7 @@ export function Knob({ value, onChange, size = 26, onTouchStart, onTouchEnd }: {
   );
 }
 
-export function HSlider({ db, onChange, width = 90, onTouchStart, onTouchEnd }: { db: number; onChange: (db: number) => void; width?: number } & TouchProps) {
+export function HSlider({ db, onChange, width = 90, onTouchStart, onTouchEnd, label = "Volume" }: { db: number; onChange: (db: number) => void; width?: number; label?: string } & TouchProps) {
   const pos = useRef(dbToFader(db));
   pos.current = dbToFader(db);
   const start = useDrag((d, fine) => {
@@ -122,6 +158,8 @@ export function HSlider({ db, onChange, width = 90, onTouchStart, onTouchEnd }: 
     <div
       className="hslider"
       style={{ width }}
+      {...sliderAria({ label, text: dbText(db), min: -96, max: 6, now: db })}
+      onKeyDown={sliderKeyDown(dbToFader(db), db, faderDb, onChange, { onTouchStart, onTouchEnd })}
       onMouseDown={(e) => {
         e.stopPropagation();
         onTouchStart?.();
