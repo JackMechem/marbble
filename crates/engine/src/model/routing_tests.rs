@@ -35,6 +35,7 @@ fn track(p: &mut Project, kind: TrackKind) -> Id {
         alternative: String::new(),
         auto_lanes: Vec::new(),
         instrument_output: None,
+        eq_preset: None,
         off: false,
     });
     id
@@ -93,6 +94,7 @@ fn keyed(p: &mut Project, track: Id, source: Id) {
         params: Vec::new(),
         sidechain: Some(source),
         sidechain_pre: false,
+        preset: None,
     };
     p.track_mut(track).unwrap().inserts = vec![Some(slot)];
 }

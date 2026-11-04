@@ -122,6 +122,7 @@ mod tests {
             params: Vec::new(),
             sidechain: source,
             sidechain_pre: false,
+            preset: None,
         }
     }
 

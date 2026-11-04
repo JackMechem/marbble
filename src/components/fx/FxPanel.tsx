@@ -101,7 +101,7 @@ export function FxTools({ uid }: { uid: Id }) {
         effect={info.id}
         track={at.track}
         slot={at.slot}
-        instance={String(uid)}
+        loaded={at.plugin.preset}
         current={norm(valuesOf(info.params, at.plugin.params))}
         normalize={(p: Preset) => norm(valuesOf(info.params, p.values))}
       />

@@ -1,6 +1,8 @@
 /* The Tracks area: local menu bar, ruler, track headers, the canvas, the playhead. */
 /* ---- tracks area ---------------------------------------------------------------------------- */
 
+/* TracksArea.tsx sets min-height to what it keeps beside the bottom section (tracksAreaMinOf):
+   the bottom pane gives way instead, so its divider stays in reach. */
 .tracks-area {
   flex: 1;
   display: flex;

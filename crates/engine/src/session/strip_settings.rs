@@ -265,6 +265,7 @@ mod tests {
             params: Vec::new(),
             sidechain: None,
             sidechain_pre: false,
+            preset: None,
         };
         let st = StripSetting {
             inserts: vec![
@@ -278,6 +279,7 @@ mod tests {
                     params: Vec::new(),
                     sidechain: Some(a),
                     sidechain_pre: false,
+                    preset: None,
                 }),
             ],
             ..Default::default()

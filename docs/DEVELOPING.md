@@ -118,7 +118,8 @@ Files; bounce trimming, normalizing and 16-bit dither; range edits; autosave and
 undo limits and recording placement (`session/options.rs`); crash-recovery journals,
 recovering interrupted takes, atomic saves with a backup and falling back from a damaged
 project.json (`session/recovery.rs`); repairing the WAV headers a crash leaves, for every format
-the recorder writes (`wav_repair.rs`); preferences parsing; the recorder's bit depths; the tempo map; `contain()`; preset files and names (`presets.rs`);
+the recorder writes (`wav_repair.rs`); preferences parsing; the recorder's bit depths; the tempo map; `contain()`; preset files and names (`presets.rs`)
+and the preset a slot or Channel EQ has loaded, through undo, saving and renamed or deleted user presets (`session/preset_tests.rs`);
 parameter normalization and dynamics effects' gain reduction (`dsp/builtin.rs`); channel
 strip settings (copy and paste through JSON, onto audio and instrument tracks, missing plug-ins,
 Reset, setting files: `strip_settings.rs`, `session/strip_settings.rs`); the clip indicators'
@@ -302,6 +303,8 @@ instead and enforce rules that would otherwise only fail in the running app.
 | `bounceFormat.test.ts` | The Bounce dialog's formats, resolutions and file names. |
 | `fxFormat.test.ts` | Built-in effect readouts and control mapping. |
 | `fxShapes.test.ts` | The curves the modulation, distortion and Gain panels draw, against the engine's values. |
+| `paneSizes.test.ts` | Pane sizes (`src/paneSizes.ts`): limits, malformed saved sizes, the Tracks area's minimum and the bottom section's room; guards that the window's grid column can't grow with its content and that the bottom panes shrink. |
+| `presetBox.test.ts` | The preset pop-up's label (`src/presetBox.ts`): the loaded preset's name, "(edited)", "Default" and "Manual". |
 | `fxDock.test.ts` | Plug-in panels docked or floating: the slot toggle, closing back, one Channel EQ at a time, Esc, pruning, resize maths and saved sizes. |
 | `linearPhaseEq.test.ts` | The Linear Phase EQ's parameters as Channel EQ settings. |
 | `cpuMeter.test.ts` | The CPU meter's tooltip and where its peak tick goes. |

@@ -113,6 +113,8 @@ pub use sampler::{prepare_files, PreparedFile, SamplerAdded, SamplerRecording, S
 mod held_notes;
 #[cfg(test)]
 mod instrument_tests;
+#[cfg(test)]
+mod preset_tests;
 
 /// A partial edit of a track, as the frontend sends it: fields left out don't change.
 #[derive(Debug, Default, Clone, Deserialize)]

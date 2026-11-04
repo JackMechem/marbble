@@ -190,7 +190,10 @@ The window is laid out like Logic Pro 11:
 | Status line | bottom edge | always |
 
 Drag the dividers between panes to resize them; double-click a divider to reset it. Pane
-sizes are remembered.
+sizes are remembered. The bottom section never takes the whole window: the Tracks area keeps
+its menu bar, ruler, global tracks, overview and a little of the track list, so the divider
+above the section stays in reach. A section remembered taller than the window allows (after
+the window was made smaller, say) shows at the height there is room for.
 
 ### Control bar
 
@@ -1746,7 +1749,8 @@ The editor's own keys apply after you click in it; elsewhere the usual ones do. 
 Open the Mixer with X. It shows a channel strip for every track (stacks included), then the
 auxes, then the [VCA strips](#vca-faders), then Stereo Out. The **Audio**, **Inst** and **Aux**
 buttons filter the strips. Hidden tracks appear only in hide mode. The Inspector shows the
-selected track's strip and Stereo Out.
+selected track's strip and Stereo Out. When the strips don't fit, the Mixer scrolls sideways
+(and up and down when it's shorter than the strips); the rest of the window stays as it is.
 
 ### The channel strip
 
@@ -2175,8 +2179,10 @@ untouched; put it last on Stereo Out to measure the mix.
 #### Presets
 
 Every built-in effect has a preset pop-up in its panel's header, and the Channel EQ has one in
-its toolbar. It shows the preset loaded last, with "(edited)" once something changed ("Default"
-or "Manual" before any preset). The arrows step to the previous and next preset.
+its toolbar. It shows the preset loaded or saved last, with "(edited)" once something changed
+("Default" or "Manual" before any preset). Which preset that was is saved with the project, so
+it shows again when the project reopens, and undoing a preset load takes it back. The arrows
+step to the previous and next preset.
 
 - **Factory** presets come with Marbble (the Channel EQ has Flat, Low Cut 80 Hz, Vocal
   Presence, Vocal Air, Kick Punch, Snare Crack, Bass Clarity, Acoustic Guitar, Telephone and

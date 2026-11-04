@@ -64,6 +64,10 @@ Nothing here has been checked by eye yet.
   slot clicked in a detached Mixer floats there; positions remembered across a relaunch and on a second monitor
   (Retina next to a 1× screen). Open Effect Panels › Separate windows, and each effect type remembering its window size.
 - **The Mixer** scrolling when short, with every strip ending on the same line.
+- **The fixes of 2026-11-04** (checked headless in Chromium on the real stylesheet, not yet in the app): the bottom
+  section staying clear of the Tracks area with a Mixer remembered 900 px tall, a shrinking window, and a panel opening;
+  a 14-strip Mixer scrolling at 1480 px with the control bar on screen, also detached; a preset loaded by the showcase
+  project showing by name, and after reopening.
 - **macOS VST3 editors in the app** (Surge XT, Keyscape): open, raise, close, resize, cascade, hiding while another app is
   in front; Space, R and Musical Typing with a plug-in window in front; typing into a plug-in's text field; ⌘S running
   once; a project with a missing plug-in showing it struck through.
@@ -90,14 +94,6 @@ they use there (simulated on Linux), but none of this has run on a real machine.
 
 ### Known bugs and unexplained failures
 
-- **The bottom section can cover the tracks area** (seen 2026-11-03 while taking screenshots): dragging its divider high, or
-  opening an instrument, the Sampler or an editor after the Mixer was made tall, lets the panel overlap the tracks area and the
-  overview, and the divider can't then be dragged back. Its height isn't clamped to the window, and it's remembered. Clearing
-  `marbble.paneSizes` in localStorage recovers.
-- **A wide Mixer widens the whole window's layout** instead of scrolling: with 12 tracks, a VCA and the Stereo Out at
-  1480 px wide, the control bar and the right-hand strips go off screen.
-- An instrument preset loaded from the engine (`load_preset`, as the showcase project does) shows as **Manual** in the panel's
-  preset box until it's chosen again from the menu.
 - `parallel_check` failed once (the two live serial runs differed) while a large build shared its cores; it passed alone.
 
 - `soak_check <dir> 600 22` fails, on one thread as on eight: undoing every edit doesn't give the first document back. Not

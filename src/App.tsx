@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { act, api, call, type InputLevel, type PluginDesc, type Snapshot, type Tick } from "./api";
 import { ControlBar } from "./components/ControlBar";
@@ -27,7 +27,8 @@ import { runStepInputCommand, StepInput } from "./components/StepInput";
 import { MenuHost } from "./components/Menu";
 import { loadPaneSizes, Splitter } from "./components/Splitter";
 import { Browser, Inspector, Library, Mixer } from "./components/Panels";
-import { TracksArea } from "./components/TracksArea";
+import { TracksArea, tracksAreaMinOf } from "./components/TracksArea";
+import { bottomMax, bottomPaneSize } from "./paneSizes";
 import { toggleOverview } from "./components/Overview";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { confirmDiscard, importAudioDialog, openProjectDialog, saveProject, undoRedo } from "./files";
@@ -559,6 +560,10 @@ export default function App() {
   const showControllerAssignments = useStore((s) => s.showControllerAssignments);
   const panes = useStore((s) => s.paneSizes);
   useEffect(loadPaneSizes, []);
+  // The bottom section's room: the centre column less what the Tracks area keeps.
+  const centerRef = useRef<HTMLDivElement>(null);
+  const bottomRoom = () => (centerRef.current ? bottomMax(centerRef.current.clientHeight, tracksAreaMinOf(getState())) : Infinity);
+  const bottomSize = bottomPaneSize(s.bottom);
   useEffect(() => {
     act("get_state").then(async (snap) => {
       await loadSettings();
@@ -635,10 +640,9 @@ export default function App() {
         {s.showLibrary && <Splitter pane="library" dir="x" sign={1} />}
         {s.showInspector && <Inspector />}
         {s.showInspector && <Splitter pane="inspector" dir="x" sign={1} />}
-        <div className="center">
+        <div className="center" ref={centerRef}>
           <TracksArea />
-          {/* The Event List and the Step Sequencer take the Editors' height, so switching between them doesn't jump. */}
-          {s.bottom !== "none" && <Splitter pane={s.bottom === "list" || s.bottom === "steps" ? "editor" : s.bottom} dir="y" sign={-1} />}
+          {bottomSize && <Splitter pane={bottomSize} dir="y" sign={-1} room={bottomRoom} />}
           {s.bottom === "mixer" && <Mixer />}
           {s.bottom === "editor" && <Editor />}
           {s.bottom === "list" && <EventList />}

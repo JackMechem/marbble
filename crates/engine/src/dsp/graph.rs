@@ -238,6 +238,7 @@ mod tests {
             alternative: String::new(),
             auto_lanes: Vec::new(),
             instrument_output: None,
+            eq_preset: None,
             off: false,
         }
     }
@@ -258,6 +259,7 @@ mod tests {
             params: Vec::new(),
             sidechain,
             sidechain_pre: false,
+            preset: None,
         }
     }
 

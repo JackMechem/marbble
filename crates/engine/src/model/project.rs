@@ -69,6 +69,9 @@ pub struct Master {
     /// Extra lanes shown below the Output track's main lane.
     #[serde(default)]
     pub auto_lanes: Vec<AutoParam>,
+    /// The preset last loaded into the Channel EQ or saved from it (see `PluginSlot::preset`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub eq_preset: Option<PresetRef>,
 }
 
 /// The cycle range between the locators, in frames.
@@ -167,6 +170,7 @@ impl Project {
                 automation: Vec::new(),
                 auto_mode: AutoMode::Read,
                 auto_lanes: Vec::new(),
+                eq_preset: None,
             },
             cycle: Cycle { enabled: false, start: 0, end: 0 },
             metronome: false,
@@ -510,5 +514,30 @@ impl Project {
         }
         p.master.inserts.iter_mut().for_each(strip);
         p
+    }
+
+    /// Points what refers to the user preset `old` of `effect` (a built-in plug-in's id, or
+    /// `presets::CHANNEL_EQ`) at `new`, or forgets it with `None` when the preset was deleted.
+    /// Returns whether anything changed.
+    pub fn retarget_user_preset(&mut self, effect: &str, old: &str, new: Option<&str>) -> bool {
+        let mut changed = false;
+        let mut fix = |of: &str, r: &mut Option<PresetRef>| {
+            if of == effect && r.as_ref().is_some_and(|p| !p.factory && p.name == old) {
+                *r = new.map(|n| PresetRef { name: n.into(), factory: false });
+                changed = true;
+            }
+        };
+        let eq = crate::presets::CHANNEL_EQ;
+        for t in &mut self.tracks {
+            fix(eq, &mut t.eq_preset);
+            for s in t.instrument.iter_mut().chain(t.inserts.iter_mut().flatten()) {
+                fix(&s.plugin_id, &mut s.preset);
+            }
+        }
+        fix(eq, &mut self.master.eq_preset);
+        for s in self.master.inserts.iter_mut().flatten() {
+            fix(&s.plugin_id, &mut s.preset);
+        }
+        changed
     }
 }

@@ -28,6 +28,14 @@ export interface PluginSlot {
   /** A VST3's state, only in what `copy_plugin` returns (for the clipboard). In a snapshot, a
    * sampler's has a fingerprint of its zones, which tells its panel when to read them again. */
   state?: string | null;
+  /** The preset a built-in plug-in last loaded or saved, for its preset box. */
+  preset?: PresetRef | null;
+}
+
+/** A preset by name: a factory one or one of the user's. */
+export interface PresetRef {
+  name: string;
+  factory: boolean;
 }
 
 export interface Note {
@@ -219,6 +227,8 @@ export interface Track {
   inserts: (PluginSlot | null)[];
   regions: Region[];
   eq: ChannelEq;
+  /** The preset the Channel EQ last loaded or saved. */
+  eq_preset?: PresetRef | null;
   /** The track stack this track is in. */
   parent: Id | null;
   /** For stack main tracks: subtracks hidden. */
@@ -331,6 +341,7 @@ export interface Project {
     volume_db: number;
     inserts: (PluginSlot | null)[];
     eq: ChannelEq;
+    eq_preset?: PresetRef | null;
     /** Stereo Out's automation (volume and plug-in parameters), shown on the Output track. */
     automation?: AutoLane[];
     auto_mode?: AutoMode;

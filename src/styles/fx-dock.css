@@ -169,9 +169,11 @@
 }
 
 /* The bottom section's dock: tabs for the docked panels, then the shown one. */
+/* Shrinks when the window has no room for its height, as the Mixer does (mixer-editor.css). */
 .fx-dock {
   height: var(--fx-h, 420px);
-  flex: none;
+  flex: 0 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   border-top: 1px solid var(--edge);

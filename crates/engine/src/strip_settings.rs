@@ -124,6 +124,7 @@ mod tests {
             params: vec![(1, 2.5)],
             sidechain: Some(7),
             sidechain_pre: false,
+            preset: None,
         }
     }
 

@@ -980,7 +980,7 @@ Interface-only state lives in the webview's `localStorage`:
 | `marbble.theme` | `themes.ts` | Theme id (a copy of `ui.theme`, for the first paint). |
 | `marbble.uiScale` | `uiScale.ts` | Interface scale, 0.9 to 2 (a copy of `ui.ui_scale`). |
 | `marbble.waveStyle` | `waveform.ts` | Waveform drawing style (a copy of `ui.wave_style`). |
-| `marbble.paneSizes` | `components/Splitter.tsx` | Library, Inspector, Browser, Mixer, Editor and header sizes. |
+| `marbble.paneSizes` | `components/Splitter.tsx` | Library, Inspector, Browser, Mixer, Editor, docked-panel and header sizes, read through `paneSizes.ts` (within limits; malformed values are the defaults). |
 | `marbble.trackHeights:<project path>` | `layout.ts` | `{ base, heights, output }` for one project (`output`: the Output track shown). |
 | `marbble.bounce` | `components/Bounce.tsx` | Tail, format, resolution, sample rate and normalize of the bounce and export dialogs. |
 | `marbble.bounce-in-place` | `components/Bounce.tsx` | Bounce in Place options. |
@@ -1360,6 +1360,20 @@ Audio Track Editor and meters are canvas drawings. The common pattern:
   imports one stylesheet per area, and its order is the cascade: `tokens.css` first, the rest in
   the order they were written, so an area can come in more than one file (see the comment there).
 
+### The window's layout
+
+- `.app` is a grid of one column, `minmax(0, 1fr)`: exactly the window's width. (An implicit
+  column is as wide as its widest content, so a Mixer with more strips than fit widened the
+  whole layout, control bar included.) Wide content scrolls in its own pane: the Mixer's
+  `.mixer-strips`, the editors' bodies. `.center` has `min-width: 0` for the same reason.
+- The centre column is the Tracks area, the divider and the bottom pane. The Tracks area's
+  `min-height` is `tracksAreaMinOf` (its menu bar, ruler, global tracks, overview and 48 px of
+  track rows); the bottom panes (`.mixer`, `.editor`, `.fx-dock`) are their remembered height
+  with `flex: 0 1 auto; min-height: 0`, so when the window has no room for that height the pane
+  shrinks and the divider stays on screen. The remembered size isn't changed by this: a larger
+  window shows it again. A drag of the divider starts from the height shown and stays within
+  `bottomMax` (`src/paneSizes.ts`), so a size remembered too tall never needs a long drag back.
+
 ### Key commands
 
 - `src/keymap.ts` lists every rebindable command (`KEY_COMMANDS`: id, label, group, default
@@ -1573,6 +1587,14 @@ it like any plug-in.
 - Commands: `list_presets`, `get_preset`, `load_preset` (one undo step), `save_preset`,
   `rename_preset`, `delete_preset`. The Channel EQ is addressed as slot `EQ_SLOT`
   (`usize::MAX - 1`). The pop-up is `src/components/fx/Presets.tsx`.
+- **Which preset is loaded** is in the project, the one place the pop-up reads it from:
+  `PluginSlot::preset` and a strip's `eq_preset` (Stereo Out's on `Master`), each a
+  `PresetRef { name, factory }`, left out of the file when there is none. `load_preset` and
+  `save_preset` set it; `rename_preset` and `delete_preset` rename or clear what refers to that
+  user preset in the open project (`Project::retarget_user_preset`), and return a snapshot.
+  Undo, copy, paste and duplicating a track carry it with the slot. The parameters can change
+  after a load: the pop-up reads the preset with `get_preset` and compares its values with the
+  slot's (`src/presetBox.ts`) to add "(edited)".
 
 ### Built-in instruments
 
@@ -2278,6 +2300,8 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `overview.ts` | The Tracks area overview strip's mapping: time and tracks to strip pixels, the visible-area box, edge-drag zoom; pure, tested. |
 | `fx.ts` | Built-in effect descriptions (`FxInfo`, `FxParamSpec`) and `FX_PANELS`. |
 | `fxFormat.ts` | Built-in effect value formatting and control mapping; pure, tested. |
+| `paneSizes.ts` | Pane size defaults and limits, reading the saved sizes, the Tracks area's minimum and the bottom section's room; pure, tested. |
+| `presetBox.ts` | What a preset pop-up shows: the loaded preset's name, "(edited)", "Default" or "Manual"; pure, tested. |
 | `fxHost.ts` | Built-in effect registry and panel windows, the plug-in and Channel EQ clipboards (store fields, shared between windows), the slot right-click menu. |
 | `fxDock.ts`, `fxDockState.ts` | Plug-in panels docked, floating or in separate windows: the pure transitions (tested), and applying them to the store with the floating panels' saved sizes. |
 | `compressorModel.ts`, `dynScale.ts` | The Compressor's parameter ids, circuits and curve (mirrors `compressor.rs`), and the dynamics panels' value formatting and knob maths; pure, tested. |

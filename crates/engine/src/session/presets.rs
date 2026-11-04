@@ -113,10 +113,54 @@ impl Session {
 
     /// Applies a preset to a built-in effect's slot, or to the strip's Channel EQ when `slot`
     /// is [`EQ_SLOT`]. A built-in effect's parameters the preset doesn't list go to their
-    /// defaults.
+    /// defaults. The slot remembers the preset's name for its preset box.
     pub fn load_preset(&mut self, track: Id, slot: usize, effect: &str, name: &str, factory: bool) -> Result<()> {
         let p = presets::get(&presets::user_root(), effect, name, factory)?;
-        self.apply_preset(track, slot, &p)
+        self.apply_preset(track, slot, &p)?;
+        self.set_preset_ref(track, slot, Some(PresetRef { name: name.into(), factory }));
+        Ok(())
+    }
+
+    /// The preset a slot (or, with [`EQ_SLOT`], a strip's Channel EQ) last loaded or saved.
+    pub fn preset_ref(&self, track: Id, slot: usize) -> Option<&PresetRef> {
+        if slot == EQ_SLOT {
+            return if track == MASTER_ID { self.project.master.eq_preset.as_ref() } else { self.project.track(track)?.eq_preset.as_ref() };
+        }
+        self.slot_get(track, slot)?.preset.as_ref()
+    }
+
+    fn set_preset_ref(&mut self, track: Id, slot: usize, preset: Option<PresetRef>) {
+        let at = if slot == EQ_SLOT {
+            if track == MASTER_ID {
+                Some(&mut self.project.master.eq_preset)
+            } else {
+                self.project.track_mut(track).map(|t| &mut t.eq_preset)
+            }
+        } else {
+            self.slot_ref(track, slot).and_then(|s| s.as_mut()).map(|s| &mut s.preset)
+        };
+        if let Some(at) = at.filter(|at| **at != preset) {
+            *at = preset;
+            self.dirty = true;
+        }
+    }
+
+    /// Renames one of the user's presets, and what in the project refers to it. Returns the new name.
+    pub fn rename_user_preset(&mut self, effect: &str, old: &str, new: &str) -> Result<String> {
+        let renamed = presets::rename_user(&presets::user_root(), effect, old, new)?;
+        if self.project.retarget_user_preset(effect, old, Some(&renamed)) {
+            self.dirty = true;
+        }
+        Ok(renamed)
+    }
+
+    /// Deletes one of the user's presets; what in the project refers to it forgets it.
+    pub fn delete_user_preset(&mut self, effect: &str, name: &str) -> Result<()> {
+        presets::delete_user(&presets::user_root(), effect, name)?;
+        if self.project.retarget_user_preset(effect, name, None) {
+            self.dirty = true;
+        }
+        Ok(())
     }
 
     pub fn apply_preset(&mut self, track: Id, slot: usize, p: &Preset) -> Result<()> {
@@ -154,8 +198,15 @@ impl Session {
     }
 
     /// Saves the settings of a built-in effect's or instrument's slot (or the strip's Channel EQ, with
-    /// [`EQ_SLOT`]) as a user preset. Returns the name it was saved under.
-    pub fn save_preset(&self, track: Id, slot: usize, name: &str, overwrite: bool) -> Result<String> {
+    /// [`EQ_SLOT`]) as a user preset, which the slot then shows as loaded. Returns the name it
+    /// was saved under.
+    pub fn save_preset(&mut self, track: Id, slot: usize, name: &str, overwrite: bool) -> Result<String> {
+        let saved = self.write_preset(track, slot, name, overwrite)?;
+        self.set_preset_ref(track, slot, Some(PresetRef { name: saved.clone(), factory: false }));
+        Ok(saved)
+    }
+
+    fn write_preset(&self, track: Id, slot: usize, name: &str, overwrite: bool) -> Result<String> {
         let p = if slot == EQ_SLOT {
             let eq = self.eq_of(track).ok_or_else(|| anyhow!("no such track"))?;
             Preset { name: name.into(), effect: CHANNEL_EQ.into(), version: 0, values: Vec::new(), eq: Some(eq), state: None, base: None }

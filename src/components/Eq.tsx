@@ -1,6 +1,6 @@
 // The Channel EQ: the thumbnail on a channel strip and the editor, in a window or an effect panel.
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { call, EQ_SLOT, MASTER_ID, type ChannelEq, type EqBand, type Id, type Project } from "../api";
+import { call, EQ_SLOT, MASTER_ID, type ChannelEq, type EqBand, type Id, type PresetRef, type Project } from "../api";
 import { BAND_COLORS, bandSections, defaultEq, eqSections, formatFreq, isFlat, responseDb } from "../eqMath";
 import { getState, onTick, setState, useStore } from "../store";
 import { eqKey, toggleEqPanel, usePanelShown } from "../fxDockState";
@@ -17,6 +17,12 @@ import { learnContext } from "../learn";
 export function eqOf(project: Project | undefined, id: Id): ChannelEq | undefined {
   if (!project) return undefined;
   return id === MASTER_ID ? project.master.eq : project.tracks.find((t) => t.id === id)?.eq;
+}
+
+/** The preset a strip's Channel EQ last loaded or saved. */
+function eqPresetOf(project: Project | undefined, id: Id): PresetRef | null {
+  if (!project) return null;
+  return (id === MASTER_ID ? project.master.eq_preset : project.tracks.find((t) => t.id === id)?.eq_preset) ?? null;
 }
 
 let pending: { track: Id; eq: ChannelEq } | null = null;
@@ -249,7 +255,7 @@ export function EqPanel({ track: trackId }: { track: Id }) {
           <button className="eq-toggle" onClick={() => updateEq(trackId, defaultEq())} title="Reset every band">
             Reset
           </button>
-          <PresetButton effect={CHANNEL_EQ} track={trackId} slot={EQ_SLOT} instance={`eq:${trackId}`} current={JSON.stringify(eq)} normalize={(p) => JSON.stringify(p.eq)} defaultName="Flat" />
+          <PresetButton effect={CHANNEL_EQ} track={trackId} slot={EQ_SLOT} loaded={eqPresetOf(project, trackId)} current={JSON.stringify(eq)} normalize={(p) => JSON.stringify(p.eq)} defaultName="Flat" />
           <button className="eq-toggle" onClick={() => copyEq(eq)} title="Copy these EQ settings">
             Copy
           </button>

@@ -77,6 +77,17 @@ pub struct PluginSlot {
     /// instead of after it.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub sidechain_pre: bool,
+    /// The preset last loaded into this built-in plug-in or saved from it, which its panel's
+    /// preset box shows. The parameters may have changed since; the panel compares them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub preset: Option<PresetRef>,
+}
+
+/// A preset by name: one of the factory presets or one of the user's (see `crate::presets`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PresetRef {
+    pub name: String,
+    pub factory: bool,
 }
 
 /// The shape of a Channel EQ band.
@@ -224,6 +235,9 @@ pub struct Track {
     /// bus (see `session/multi_out.rs`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub instrument_output: Option<InstrumentOutput>,
+    /// The preset last loaded into the Channel EQ or saved from it (see `PluginSlot::preset`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub eq_preset: Option<PresetRef>,
 }
 
 /// An output of a multi-output instrument, as an aux's input.

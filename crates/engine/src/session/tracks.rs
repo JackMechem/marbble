@@ -48,6 +48,7 @@ impl Session {
             alternative: String::new(),
             auto_lanes: Vec::new(),
             instrument_output: None,
+            eq_preset: None,
             off: false,
         };
         if kind == TrackKind::Instrument {
@@ -68,6 +69,7 @@ impl Session {
                 params,
                 sidechain: None,
                 sidechain_pre: false,
+                preset: None,
             });
         }
         let dsp = self.build_track(&track);

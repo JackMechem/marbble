@@ -1,9 +1,13 @@
 // The preset pop-up in built-in effect panels and the Channel EQ window: factory and user
 // presets (shared by every project, see crates/engine/src/presets.rs), saving, renaming and
-// deleting user presets, and stepping through them.
+// deleting user presets, and stepping through them. Which preset is loaded comes from the
+// project (`PluginSlot.preset`, a strip's `eq_preset`): the engine sets it when a preset is
+// loaded or saved, so it is saved with the project and follows undo.
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { act, call, type ChannelEq, type Id } from "../../api";
+import { act, call, type ChannelEq, type Id, type PresetRef, type Snapshot } from "../../api";
+import { presetBoxLabel } from "../../presetBox";
+import { setState } from "../../store";
 import { openMenuAt, type MenuItem } from "../Menu";
 
 /** A preset as the engine stores it. */
@@ -20,13 +24,18 @@ interface PresetList {
   user: string[];
 }
 
-/** The preset each instance last loaded or saved (by instance key), and its settings then. */
-const loaded = new Map<string, { name: string; factory: boolean; norm: string }>();
+/** What saving or renaming a preset returns: its name, and the project showing it. */
+interface NamedPreset {
+  snapshot: Snapshot;
+  name: string;
+}
+
+// Bumped when user presets are saved, renamed or deleted, so every box reads its preset again.
+let revision = 0;
 const listeners = new Set<() => void>();
 
-function remember(key: string, v: { name: string; factory: boolean; norm: string } | null) {
-  if (v) loaded.set(key, v);
-  else loaded.delete(key);
+function presetsChanged() {
+  revision++;
   listeners.forEach((l) => l());
 }
 
@@ -36,7 +45,7 @@ type Sheet = { mode: "save" | "rename"; text: string; error?: string; replace?: 
  * The preset pop-up.
  * - `effect`: the preset id ("builtin:deesser", "builtin:channel-eq").
  * - `track`/`slot`: where presets load to and save from (`EQ_SLOT` for the Channel EQ).
- * - `instance`: a key for the instance (its uid, or the EQ's track), remembering what it loaded.
+ * - `loaded`: the preset the project has as loaded there.
  * - `current` and `normalize`: the settings now and a preset's, in one comparable form, which
  *   tells "(edited)" apart.
  * - `defaultName`: the factory preset that resets it ("Default", "Flat").
@@ -45,7 +54,7 @@ export function PresetButton({
   effect,
   track,
   slot,
-  instance,
+  loaded,
   current,
   normalize,
   defaultName = "Default",
@@ -53,16 +62,20 @@ export function PresetButton({
   effect: string;
   track: Id;
   slot: number;
-  instance: string;
+  loaded: PresetRef | null | undefined;
   current: string;
   normalize: (p: Preset) => string;
   defaultName?: string;
 }) {
-  const [, setTick] = useState(0);
+  const [rev, setRev] = useState(revision);
   const [sheet, setSheet] = useState<Sheet>(null);
   const [defaultNorm, setDefaultNorm] = useState<string | null>(null);
+  // The loaded preset's settings, by which preset they are ("f:Name" or "u:Name").
+  const [presetNorm, setPresetNorm] = useState<{ key: string; norm: string | null } | null>(null);
+  const state = loaded ?? null;
+  const key = state ? `${state.factory ? "f" : "u"}:${state.name}` : null;
   useEffect(() => {
-    const l = () => setTick((n) => n + 1);
+    const l = () => setRev(revision);
     listeners.add(l);
     return () => {
       listeners.delete(l);
@@ -72,22 +85,28 @@ export function PresetButton({
     call<Preset>("get_preset", { effect, name: defaultName, factory: true }).then((p) => p && setDefaultNorm(normalize(p)));
     // `normalize` only depends on the effect.
   }, [effect, defaultName]);
+  useEffect(() => {
+    if (!state || !key) return;
+    let live = true;
+    // Quietly: a project can name a user preset that isn't on this computer.
+    invoke<Preset>("get_preset", { effect, name: state.name, factory: state.factory })
+      .then((p) => live && setPresetNorm({ key, norm: normalize(p) }))
+      .catch(() => live && setPresetNorm({ key, norm: null }));
+    return () => {
+      live = false;
+    };
+    // `normalize` only depends on the effect.
+  }, [effect, key, rev]);
 
-  const state = loaded.get(instance);
-  const edited = !!state && state.norm !== current;
-  const label = state ? state.name : current === defaultNorm ? defaultName : "Manual";
+  const { label, edited } = presetBoxLabel(state, current, presetNorm?.key === key ? presetNorm.norm : null, defaultNorm, defaultName);
 
-  const load = async (name: string, factory: boolean) => {
-    const snap = await act("load_preset", { track, slot, effect, name, factory });
-    if (!snap) return;
-    const p = await call<Preset>("get_preset", { effect, name, factory });
-    if (p) remember(instance, { name, factory, norm: normalize(p) });
-  };
+  const load = (name: string, factory: boolean) => act("load_preset", { track, slot, effect, name, factory });
 
   const save = async (name: string, overwrite: boolean): Promise<string | null> => {
     try {
-      const saved = await invoke<string>("save_preset", { track, slot, name, overwrite });
-      remember(instance, { name: saved, factory: false, norm: current });
+      const res = await invoke<NamedPreset>("save_preset", { track, slot, name, overwrite });
+      setState({ snap: res.snapshot });
+      presetsChanged();
       return null;
     } catch (e) {
       return typeof e === "string" ? e : String(e);
@@ -138,17 +157,17 @@ export function PresetButton({
       else setSheet({ ...sheet, error: err, replace: /already exists/.test(err) });
       return;
     }
-    const renamed = await call<string>("rename_preset", { effect, old: state!.name, new: sheet.text });
+    const renamed = await call<NamedPreset>("rename_preset", { effect, old: state!.name, new: sheet.text });
     if (renamed) {
-      remember(instance, { ...state!, name: renamed });
+      setState({ snap: renamed.snapshot });
+      presetsChanged();
       setSheet(null);
     }
   };
 
   const remove = async () => {
     if (!state) return;
-    const ok = await call("delete_preset", { effect, name: state.name });
-    if (ok !== null) remember(instance, null);
+    if (await act("delete_preset", { effect, name: state.name })) presetsChanged();
     setSheet(null);
   };
 

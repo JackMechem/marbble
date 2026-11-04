@@ -6,6 +6,21 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **The bottom section can no longer cover the Tracks area.** A Mixer, editor or docked panel
+  remembered taller than the window allows shows at the height there is room for, so the Tracks
+  area keeps its menu bar, ruler, overview and some track rows, and the divider stays in reach.
+  Dragging the divider starts from the height shown. This holds when the window is made smaller
+  and when a panel opens, and a size saved too tall recovers without clearing anything.
+- **A wide Mixer scrolls** instead of widening the whole window's layout: with more strips than
+  fit, the control bar and the rest of the window stay on screen.
+- **A preset loaded before shows by name.** Which preset a built-in instrument, effect or Channel
+  EQ has loaded is now saved in the project, so the preset box shows it after reopening the
+  project (it showed "Manual" for presets loaded by an earlier session or by a script), and undo
+  takes it back with the settings. Renaming or deleting a user preset updates the slots that
+  show it.
+
 ## [0.1.0-alpha.6] - 2026-11-03
 
 ### Changed

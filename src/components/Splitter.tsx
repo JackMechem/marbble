@@ -1,32 +1,18 @@
-// Draggable dividers between panes. Sizes live in the store and are remembered per machine.
-import { getState, setState, useStore, type PaneSizes } from "../store";
+// Draggable dividers between panes. Sizes live in the store and are remembered per machine;
+// their limits and arithmetic are in paneSizes.ts.
+import { clampPane, PANE_DEFAULTS, parsePaneSizes, type PaneKey } from "../paneSizes";
+import { getState, setState, useStore } from "../store";
 
 const KEY = "marbble.paneSizes";
 
-export const PANE_DEFAULTS: PaneSizes = { library: 230, inspector: 222, browser: 230, mixer: 400, editor: 300, headers: 296, fx: 420 };
-
-/** Limits per pane: [min, max] in CSS pixels. */
-const LIMITS: Record<keyof PaneSizes, [number, number]> = {
-  library: [170, 480],
-  inspector: [200, 460],
-  browser: [180, 520],
-  mixer: [180, 900],
-  editor: [140, 900],
-  headers: [220, 520],
-  fx: [160, 900],
-};
-
 export function loadPaneSizes() {
+  let text: string | null = null;
   try {
-    const v = JSON.parse(localStorage.getItem(KEY) ?? "{}") as Partial<PaneSizes>;
-    const sizes = { ...PANE_DEFAULTS };
-    for (const k of Object.keys(PANE_DEFAULTS) as (keyof PaneSizes)[]) {
-      if (typeof v[k] === "number") sizes[k] = clamp(k, v[k]!);
-    }
-    setState({ paneSizes: sizes });
+    text = localStorage.getItem(KEY);
   } catch {
     // Defaults are fine.
   }
+  setState({ paneSizes: parsePaneSizes(text) });
 }
 
 function save() {
@@ -37,18 +23,19 @@ function save() {
   }
 }
 
-const clamp = (k: keyof PaneSizes, v: number) => Math.round(Math.min(LIMITS[k][1], Math.max(LIMITS[k][0], v)));
-
-export function setPaneSize(k: keyof PaneSizes, v: number) {
-  setState({ paneSizes: { ...getState().paneSizes, [k]: clamp(k, v) } });
+/** Sets a pane's size within its limits and within `max`, the room there is for it. */
+export function setPaneSize(k: PaneKey, v: number, max = Infinity) {
+  setState({ paneSizes: { ...getState().paneSizes, [k]: clampPane(k, v, max) } });
 }
 
 /**
  * A divider that resizes `pane`. `dir` is the drag axis; `sign` is +1 when dragging right/down
  * grows the pane (it sits on the pane's right/bottom edge) and -1 when it shrinks it.
- * Double-click restores the default size.
+ * `room`, when given, is the most the pane can take now (the bottom section's, which leaves
+ * the Tracks area its minimum): a drag starts from the size the pane shows at and stays
+ * within it. Double-click restores the default size.
  */
-export function Splitter({ pane, dir, sign }: { pane: keyof PaneSizes; dir: "x" | "y"; sign: 1 | -1 }) {
+export function Splitter({ pane, dir, sign, room }: { pane: PaneKey; dir: "x" | "y"; sign: 1 | -1; room?: () => number }) {
   useStore((s) => s.paneSizes[pane]);
   const start = (e: React.PointerEvent) => {
     if (e.button !== 0) return;
@@ -56,10 +43,11 @@ export function Splitter({ pane, dir, sign }: { pane: keyof PaneSizes; dir: "x" 
     const el = e.currentTarget as HTMLElement;
     el.setPointerCapture(e.pointerId);
     const from = dir === "x" ? e.clientX : e.clientY;
-    const base = getState().paneSizes[pane];
+    const max = room?.() ?? Infinity;
+    const base = Math.min(getState().paneSizes[pane], max);
     document.body.style.cursor = dir === "x" ? "col-resize" : "row-resize";
     el.classList.add("dragging");
-    const move = (ev: PointerEvent) => setPaneSize(pane, base + sign * ((dir === "x" ? ev.clientX : ev.clientY) - from));
+    const move = (ev: PointerEvent) => setPaneSize(pane, base + sign * ((dir === "x" ? ev.clientX : ev.clientY) - from), max);
     const up = () => {
       el.removeEventListener("pointermove", move);
       el.removeEventListener("pointerup", up);
@@ -77,7 +65,7 @@ export function Splitter({ pane, dir, sign }: { pane: keyof PaneSizes; dir: "x" 
       className={`splitter splitter-${dir}`}
       onPointerDown={start}
       onDoubleClick={() => {
-        setPaneSize(pane, PANE_DEFAULTS[pane]);
+        setPaneSize(pane, PANE_DEFAULTS[pane], room?.());
         save();
       }}
       title="Drag to resize · double-click to reset"

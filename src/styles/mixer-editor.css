@@ -1,10 +1,13 @@
 /* The Mixer and the bottom editor pane's frames. */
 /* ---- mixer & editor ---------------------------------------------------------------------- */
 
+/* A bottom pane is its remembered height, or less when the window has no room for it: it
+   shrinks, the Tracks area keeps its minimum (see .tracks-area). */
 .mixer,
 .editor {
   height: var(--mixer-h, 400px);
-  flex: none;
+  flex: 0 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   border-top: 1px solid var(--edge);

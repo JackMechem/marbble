@@ -2,7 +2,7 @@
 // around the ruler, headers and canvas.
 import * as ops from "../ops";
 import { Icon } from "../icons";
-import { getState, setState, useStore, type Snap } from "../store";
+import { getState, setState, useStore, type Snap, type State } from "../store";
 import { MAX_TRACK_H, MIN_TRACK_H, zoomTracks } from "../layout";
 import { RULER_H } from "../view";
 import { Splitter } from "./Splitter";
@@ -18,6 +18,7 @@ import { transport } from "../transport";
 import { GlobalTracks, globalTracksHeight } from "./GlobalTracks";
 import { Overview, toggleOverview } from "./Overview";
 import { OVERVIEW_H } from "../overview";
+import { tracksAreaMin } from "../paneSizes";
 import { act } from "../api";
 import type { DragMode } from "../fades";
 import { ToolPopups } from "./TrackTools";
@@ -69,6 +70,10 @@ export function editMenu(): MenuItem[] {
   ];
 }
 
+/** The least height the Tracks area keeps beside the bottom section: its fixed rows (ruler,
+ *  global tracks, overview) and a little of the track list. */
+export const tracksAreaMinOf = (s: State) => tracksAreaMin(RULER_H + globalTracksHeight(s) + (s.showOverview ? OVERVIEW_H + 1 : 0));
+
 export function TracksArea() {
   const pxPerBeat = useStore((s) => s.pxPerBeat);
   const catchPlayhead = useStore((s) => s.catchPlayhead);
@@ -78,6 +83,7 @@ export function TracksArea() {
   const showHidden = useStore((s) => s.showHidden);
   const globalH = useStore(globalTracksHeight);
   const showOverview = useStore((s) => s.showOverview);
+  const minHeight = useStore(tracksAreaMinOf);
   const dragMode = useStore((s) => s.snap?.project.drag_mode) ?? "overlap";
   // Menus read the rest of the state when they open.
   const s = { ...getState(), pxPerBeat, catchPlayhead, snapMode, trackHeight };
@@ -143,7 +149,7 @@ export function TracksArea() {
   };
 
   return (
-    <div className="tracks-area">
+    <div className="tracks-area" style={{ minHeight }}>
       <div className="local-bar">
         <div className="local-menus">
           <button className="local-menu" onMouseDown={(e) => openMenuAt(e.currentTarget, editMenu())}>

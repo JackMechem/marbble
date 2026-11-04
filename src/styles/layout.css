@@ -1,9 +1,13 @@
 /* The main window's frame: control bar on top, the panes below it. */
 /* ---- layout ------------------------------------------------------------------------------- */
 
+/* One column exactly as wide as the window. An implicit column would be sized by its content,
+   so anything wide in the panes (a Mixer with many strips) would widen the whole layout, control
+   bar included, instead of scrolling where it is. */
 .app {
   display: grid;
   grid-template-rows: auto 1fr auto;
+  grid-template-columns: minmax(0, 1fr);
   height: 100vh;
 }
 

@@ -40,7 +40,8 @@ impl Session {
         let specs = builtin.map(|i| i.params).or(instrument.map(|i| i.params)).unwrap_or_default();
         let params = specs.iter().map(|p| (p.id, p.default)).collect();
         let uid = self.project.alloc_id();
-        let new_slot = PluginSlot { uid, plugin_id: plugin_id.to_string(), name, bypass: false, state: None, params, sidechain: None, sidechain_pre: false };
+        let new_slot =
+            PluginSlot { uid, plugin_id: plugin_id.to_string(), name, bypass: false, state: None, params, sidechain: None, sidechain_pre: false, preset: None };
         let ins = self.instantiate_slot(&new_slot)?;
         let old = self.slot_ref(track, slot).ok_or_else(|| anyhow!("no such slot"))?.replace(new_slot);
         if let Some(o) = old {

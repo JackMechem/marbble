@@ -147,22 +147,37 @@ pub fn load_preset(state: State<AppState>, track: Id, slot: i64, effect: String,
     try_edit(&state, "Load Preset", None, false, |s| s.load_preset(track, preset_slot(slot), &effect, &name, factory))
 }
 
-/// Saves a slot's (or, slot -2, the Channel EQ's) settings as a user preset. Refuses to replace
-/// an existing one unless `overwrite`. Returns the name it was saved under.
-#[tauri::command]
-pub fn save_preset(state: State<AppState>, track: Id, slot: i64, name: String, overwrite: Option<bool>) -> R<String> {
-    with(&state, |s| s.save_preset(track, preset_slot(slot), &name, overwrite.unwrap_or(false)).map_err(|e| e.to_string()))
+/// A preset's name as saved or renamed, and the snapshot showing it in the slots that refer to it.
+#[derive(Serialize)]
+pub struct NamedPreset {
+    snapshot: Snapshot,
+    name: String,
 }
 
+/// Saves a slot's (or, slot -2, the Channel EQ's) settings as a user preset, which the slot then
+/// shows as loaded. Refuses to replace an existing one unless `overwrite`. Returns the name it
+/// was saved under.
 #[tauri::command]
-pub fn delete_preset(effect: String, name: String) -> R<()> {
-    daw_engine::presets::delete_user(&daw_engine::presets::user_root(), &effect, &name).map_err(|e| e.to_string())
+pub fn save_preset(state: State<AppState>, track: Id, slot: i64, name: String, overwrite: Option<bool>) -> R<NamedPreset> {
+    with(&state, |s| {
+        let name = s.save_preset(track, preset_slot(slot), &name, overwrite.unwrap_or(false)).map_err(|e| e.to_string())?;
+        Ok(NamedPreset { snapshot: snapshot(s), name })
+    })
 }
 
-/// Renames a user preset; returns the new name.
+/// Deletes a user preset; slots that showed it as loaded forget it.
 #[tauri::command]
-pub fn rename_preset(effect: String, old: String, new: String) -> R<String> {
-    daw_engine::presets::rename_user(&daw_engine::presets::user_root(), &effect, &old, &new).map_err(|e| e.to_string())
+pub fn delete_preset(state: State<AppState>, effect: String, name: String) -> R<Snapshot> {
+    try_snap(&state, |s| s.delete_user_preset(&effect, &name))
+}
+
+/// Renames a user preset, and the slots that show it as loaded; returns the new name.
+#[tauri::command]
+pub fn rename_preset(state: State<AppState>, effect: String, old: String, new: String) -> R<NamedPreset> {
+    with(&state, |s| {
+        let name = s.rename_user_preset(&effect, &old, &new).map_err(|e| e.to_string())?;
+        Ok(NamedPreset { snapshot: snapshot(s), name })
+    })
 }
 
 /// Drags a plug-in to another Audio FX slot: on the same strip it moves (the plug-ins between
