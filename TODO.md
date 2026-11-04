@@ -221,6 +221,22 @@ type, keyboard access and polish in the dense views.
 - **The CPU meter** is a thin bar with a small label and no number; a value would make it readable at a
   glance, and its red state hasn't been seen.
 
+- **From the UI audit of 2026-11-04** (all menus, Settings, dialogs, Mixer, editors, Light theme):
+  - The Compressor's floating panel opens with a horizontal scrollbar and its Mix knob cut off; check the other panels'
+    default sizes.
+  - Marbble › Quit Marbble draws greyed out and has no Ctrl+Q (Tauri's predefined Quit item on Linux).
+  - The menu bar disagrees with the in-app menus: most shortcuts missing (Cut/Copy/Paste, all of Record, Navigate and
+    View), no checkmarks on toggles, nothing ever disabled, modifiers written Shift+Ctrl where the app writes Ctrl+Shift,
+    and commands named differently in each menu. The menu bar should take accelerators, names and states from the same
+    command table.
+  - Metronome settings are in both Settings and Project Settings; UI text names Logic (Metronome footer, About).
+  - Settings changes height and footer from pane to pane; two pop-up styles (Settings vs toolbars).
+  - Double-clicking a MIDI or audio region doesn't open its editor (pattern regions do).
+  - The ruler has no right-click menu; Stereo Out shows an empty Input slot; the Mixer's Audio/Inst/Aux filters show no
+    state and Options has one item.
+  - Light theme: the GTK menu bar stays dark, and the I button is nearly invisible on track headers.
+  - The projects folder still shows as `~/Music/Fermata`: offer to rename it.
+
 ### Larger
 
 - The settings folder is `~/.config/marbble` on macOS too; `~/Library/Application Support` is the native place, but moving it
