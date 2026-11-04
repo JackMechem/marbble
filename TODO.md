@@ -15,10 +15,9 @@ Things that pass their checks but want a person.
 
 - **Synth models (Tre, Sei, Cinque, Uno, Sedici, Onda).** Unit tests, `instrument_check`, `rt_alloc_check` and
   `parallel_check` pass, as does a before-and-after render of Marbble Synth. Their panels have been seen in the
-  docked row, and the owner has heard them briefly ("oh this is sick"), but **none has been tuned or compared with
-  the hardware.** Tre's likeness to the Model D is from documented behaviour only.
-  - Every preset wants hearing (19 on Tre, 14 to 16 on the others), and Tre's fatness judging against what it's
-    modelled on.
+  docked row, and on 2026-11-04 the owner had listened to every preset and found them good, so they stay as they
+  are. **None has been tuned or compared with the hardware,** which is deferred: Tre's likeness to the Model D is
+  from documented behaviour only.
   - Every constant marked as a guess in [ARCHITECTURE](docs/ARCHITECTURE.md#built-in-instruments) and
     [Marbble Tre](docs/ARCHITECTURE.md#marbble-tre) wants tuning by ear.
   - The published figures in the Sei, Uno and Sedici sections came from memory of those sources: worth a check
@@ -175,6 +174,48 @@ they use there (simulated on Linux), but none of this has run on a real machine.
 - MIDI Learn has no VCA level target.
 - The Compressor's "Lookahead" and the Classic Opto's "Peak Reduction" labels may overlap their knobs by a pixel or two.
 - Only one Channel EQ analyzer per session: a detached EQ and another strip's EQ take turns.
+
+### UI and design
+
+A review on 2026-11-04 from the website's screenshots of the showcase project and the frontend's styles,
+not from use. Grade: **6/10**: a familiar, coherent layout with good pieces, let down by alignment,
+type, keyboard access and polish in the dense views.
+
+- **The Mixer's rows don't line up.** Each strip stacks its slots as they come, so a strip with more Audio FX
+  or sends pushes its Sends header, output, automation button, pan and fader lower than its neighbours'
+  (Drums' fader sits about 30 px below Shaker's). A console reads across: fixed rows for inserts and sends
+  (scrolling or a "+N" past a count) would keep every fader and meter on one line.
+- **Track header buttons don't line up.** Audio tracks have M S R I and Freeze, instruments M S R and Freeze,
+  so the S button lands at a different x on each kind. Keep fixed columns and leave a gap where a button
+  doesn't apply.
+- **No type scale.** The styles use 12 font sizes from 9 to 17 px, half-pixel ones among them (9.5, 10.5,
+  11.5, 12.5), and much of the UI is 10–11 px. Settle on 5 or 6 sizes as tokens with 11 px as the smallest
+  for text.
+- **Colours outside the tokens:** 69 hex colours in area files besides the 98 tokens in `tokens.css`. These
+  are the ones that go wrong in the Light and Contrast themes.
+- **Keyboard and screen reader access is almost absent:** 3 `aria-` attributes and 3 `role`s across 250
+  buttons and many custom controls (knobs, faders, slots built on pointer handlers), no `:focus-visible`
+  style, and `outline: none` in 10 places. Tab focus is invisible. Knobs and faders want `role="slider"`,
+  values and arrow keys.
+- **Truncated names in the Mixer:** "Marbble ...", "Compre...". An instrument slot can show the model's
+  short name (Tre, Sei), and a tooltip the whole.
+- **Too much attention on defaults:** a solid green "Read" on every strip and a blue power button on every
+  track header draw the eye to what is normal. Show a state strongly only when it differs from the default
+  (Logic greys Read and colours Touch, Latch and Write; power off is what should stand out).
+- **Empty slots have no affordance.** Empty insert, send and output slots are plain black bars; a faint "+"
+  or a hover state would say they can be clicked.
+- **Instrument panels are generic grids:** labels repeat their section ("Osc 1 Range" inside "Oscillator
+  1"), toggles read "Osc 1 On", sections leave large gaps, and on Tre at the docked height the Voices and
+  Touch knobs are cut off above the keyboard bar. Custom panels (Tre next) fix this one instrument at a time.
+- **The effect panel can overflow sideways:** the Compressor's panel in the screenshot has a horizontal
+  scrollbar, with the Mix readout touching the edge.
+- **Icon-only controls with unclear meaning:** "1234" (count-in) in the control bar, a bare "–" next to the
+  Piano Roll's Vel slider, two unlabelled zoom sliders. They have tooltips, but a glance doesn't tell.
+- **The global tracks take about 200 px by default** (Marker, Arrangement, Signature, Tempo) on a project
+  that uses only the Arrangement track; showing only the ones in use, or a shorter Tempo track, would give
+  the tracks back.
+- **The CPU meter** is a thin bar with a small label and no number; a value would make it readable at a
+  glance, and its red state hasn't been seen.
 
 ### Larger
 
