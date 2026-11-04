@@ -15,9 +15,54 @@
       "file": "instrument-panel.png",
       "width": "2400 px or more, wide and short",
       "section": "Instruments",
-      "alt": "A built-in instrument's panel docked in the bottom section, its sections in one row.",
-      "caption": "A built-in instrument, docked in the bottom section.",
-      "shows": "Marbble Tre or Sei with its panel docked in the bottom section in Row layout, with the small keyboard and the preset pop-up visible. Crop to the bottom section, or show enough of the tracks area above to give it context."
+      "alt": "Marbble Tre's panel docked in the bottom section, its sections in a grid.",
+      "caption": "Marbble Tre, docked in the bottom section.",
+      "shows": "Marbble Tre with its panel docked in the bottom section, preset pop-up and small keyboard visible, cropped to the panel."
+    },
+    {
+      "id": "synth-sei",
+      "file": "synth-sei.png",
+      "width": "1600 px or more, wide",
+      "section": "Instruments (the gallery under the Tre panel)",
+      "alt": "Marbble Sei's panel with its Velvet Strings preset loaded.",
+      "caption": "Marbble Sei.",
+      "shows": "Marbble Sei's panel, docked or floating, cropped to the panel."
+    },
+    {
+      "id": "synth-cinque",
+      "file": "synth-cinque.png",
+      "width": "1600 px or more, wide",
+      "section": "Instruments (the gallery under the Tre panel)",
+      "alt": "Marbble Cinque's panel with its Warm Analog Brass preset loaded.",
+      "caption": "Marbble Cinque.",
+      "shows": "Marbble Cinque's panel, docked or floating, cropped to the panel."
+    },
+    {
+      "id": "synth-uno",
+      "file": "synth-uno.png",
+      "width": "1600 px or more, wide",
+      "section": "Instruments (the gallery under the Tre panel)",
+      "alt": "Marbble Uno's panel with its Round Bottom preset loaded.",
+      "caption": "Marbble Uno.",
+      "shows": "Marbble Uno's panel, docked or floating, cropped to the panel."
+    },
+    {
+      "id": "synth-sedici",
+      "file": "synth-sedici.png",
+      "width": "1600 px or more, wide",
+      "section": "Instruments (the gallery under the Tre panel)",
+      "alt": "Marbble Sedici's panel with its Tine Keys preset loaded.",
+      "caption": "Marbble Sedici.",
+      "shows": "Marbble Sedici's panel, docked or floating, cropped to the panel."
+    },
+    {
+      "id": "synth-onda",
+      "file": "synth-onda.png",
+      "width": "1600 px or more, wide",
+      "section": "Instruments (the gallery under the Tre panel)",
+      "alt": "Marbble Onda's panel with its Glass Sync Pluck preset loaded.",
+      "caption": "Marbble Onda.",
+      "shows": "Marbble Onda's panel, docked or floating, cropped to the panel."
     },
     {
       "id": "sampler",

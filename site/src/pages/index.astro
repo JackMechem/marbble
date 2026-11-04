@@ -256,6 +256,10 @@ const description = "A digital audio workstation modelled on Logic Pro's workflo
         </ol>
         <p class="fine">The traces are textbook waveforms of each kind of engine, drawn for this page, not recordings of the instruments. Five of the six follow a specific instrument's documented behaviour: <a href={doc("guide", "the-other-synth-models")}>the Guide says which</a>, and how far that goes. None has been compared with the original, and every constant marked as a guess in the <a href={doc("arch", "built-in-instruments")}>architecture notes</a> is still to be tuned by ear.</p>
         <Shot id="instrument-panel" />
+        <div class="shot-grid">
+          {["sei", "cinque", "sedici", "onda"].map((id) => <Shot id={`synth-${id}`} />)}
+          <div class="wide"><Shot id="synth-uno" /></div>
+        </div>
       </section>
 
       <section class="panel split" id="sampler" aria-labelledby="sampler-title">

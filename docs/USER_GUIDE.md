@@ -175,6 +175,8 @@ The check is not available with JACK, with direct `hw:` ALSA devices, or on Wind
 
 ## 2. The main window
 
+![The main window: control bar, Inspector, track headers and the tracks area with arrangement markers](../site/public/screenshots/main-window.png)
+
 The window is laid out like Logic Pro 11:
 
 | Area | Where | Show or hide |
@@ -501,6 +503,8 @@ adjust Recording Delay.
 
 ### Marbble Sampler
 
+![Marbble Sampler's panel: zones across the keyboard in two velocity layers, the selected zone's waveform, and the Main section](../site/public/screenshots/sampler.png)
+
 Your own instrument from your own sounds. Put **Marbble Sampler** on a software instrument track, from the
 instrument slot, the New Tracks dialog or the Library (under Samplers). Its panel docks at the bottom: zones on the
 left, the selected zone's waveform and settings next, then the instrument's sections in a row, scrolling sideways if the
@@ -556,6 +560,8 @@ sample refuses to load and says why, and the rest play. Files at any sample rate
 
 ### Marbble Tre
 
+![Marbble Tre's panel docked in the bottom section, in Grid layout](../site/public/screenshots/instrument-panel.png)
+
 A three-oscillator monophonic synth, modelled on the behaviour of a classic 1970s synth (the
 Minimoog Model D; Marbble isn't affiliated with its maker, and this hasn't been compared with one). Choose it
 under **Vintage Synths** in the instrument slot, the Library or New Tracks. Clicking the slot's name
@@ -592,6 +598,8 @@ Four more models of old instruments are under **Vintage Synths**, and a wavetabl
 like Tre: a panel, presets, automation, MIDI learn, undo and saving. None of them has been compared with what it's modelled on (and Marbble isn't
 affiliated with any of those makers); each has factory presets to start from.
 
+![Marbble Sei's panel](../site/public/screenshots/synth-sei.png)
+
 **Marbble Sei** (modelled on the Roland Juno-106 family): six voices of one oscillator each, with a saw, a pulse and a sub an octave down.
 
 - One envelope drives the filter and the **VCA** (set the VCA to **Gate** for an organ-like note). One **LFO** moves everything together, with a **Delay** from the first key down.
@@ -599,17 +607,23 @@ affiliated with any of those makers); each has factory presets to start from.
 - **Chorus:** the stereo chorus is half of its sound. **I** and **II** are slow and deep, **I+II** fast and shallow. **Chorus Noise** is its hiss, which comes with the notes.
 - **Assign:** **Poly 1** moves on to the next voice, so released notes ring on, **Poly 2** takes the lowest free one, and **Unison** plays all six on one note (they don't beat unless you add **Unison Detune**).
 
+![Marbble Cinque's panel](../site/public/screenshots/synth-cinque.png)
+
 **Marbble Cinque** (modelled on the Sequential Prophet-5): five voices of two oscillators each.
 
 - **Poly Mod** is what to try first: **Filter Env** and **Osc B** are its sources, and **Freq A**, **PW A** and **Filter** say where they go, separately in each voice. Osc B still runs with its mixer knob down, so it can be only a modulator. With **Sync** on Osc A and Filter Env into Freq A you get the sweeping sync lead this kind of synth is known for.
 - **Wheel Mod:** the mod wheel (or **Mod Amount**, where it rests) brings in the LFO, or noise, by **LFO / Noise**, at whichever of the five switches are on.
 - **Filter Chip** chooses between two filter characters. **Slop** is how much each voice wanders and differs.
 
+![Marbble Uno's panel](../site/public/screenshots/synth-uno.png)
+
 **Marbble Uno** (modelled on the Roland TB-303): one voice, one oscillator, and few knobs, made for a bass line played from a MIDI region.
 
 - **Overlapping notes slide:** make a note end just after the next begins. Neither the filter nor the volume restarts. With any gap between them, the next is a fresh note.
 - **High velocity accents:** a note at or above **Accent at Velocity** (110) is louder and snappier, whatever Decay says. How far is **Accent**. With **Resonance** up, accents close together climb: that's the instrument's trick.
 - The filter doesn't follow the keyboard, and a held note fades away by itself after a few seconds, as on the original.
+
+![Marbble Sedici's panel](../site/public/screenshots/synth-sedici.png)
 
 **Marbble Sedici** (modelled on the Yamaha DX7): sixteen voices of six-operator FM.
 
@@ -618,6 +632,8 @@ affiliated with any of those makers); each has factory presets to start from.
 - **Coarse** and **Fine** give a ratio to the note's pitch. **Feedback** makes an operator gritter or buzzier.
 - **Converter Grit** turns the original's low-resolution sine and converter on or off. It runs at the original's own sample rate whatever your project's is, so high FM sounds fold just as they do there.
 - **Level 4** above zero keeps a note sounding after key up, as on the original, until the transport stops.
+
+![Marbble Onda's panel](../site/public/screenshots/synth-onda.png)
 
 **Marbble Onda** (a modern wavetable synth): two oscillators reading tables made into it, with position, unison, and modulation you route yourself.
 
@@ -1233,6 +1249,8 @@ heavy tracks you aren't listening to.
 
 ## 7. Take folders and comping
 
+![An audio take folder opened in the tracks area, with a comp swiped across its three takes](../site/public/screenshots/take-folder.png)
+
 Take folders follow Logic's Quick Swipe Comping.
 
 - **Making one.** Record with Cycle on (each pass becomes a take), or select several audio
@@ -1387,6 +1405,8 @@ the notes using the file's own timing. Export writes the project's tempo map and
 ---
 
 ## 10. The Piano Roll, Event List and Step Sequencer
+
+![The Piano Roll with a melody and its velocity lane](../site/public/screenshots/piano-roll.png)
 
 The Editors pane (E or P) follows the selection: it shows the Piano Roll for a software
 instrument track and the Audio Track Editor for an audio track. MIDI regions have two more
@@ -1721,6 +1741,8 @@ The editor's own keys apply after you click in it; elsewhere the usual ones do. 
 
 ## 12. Mixing
 
+![The Mixer during playback: inserts, sends, two aux returns, a VCA and the Stereo Out](../site/public/screenshots/mixer.png)
+
 Open the Mixer with X. It shows a channel strip for every track (stacks included), then the
 auxes, then the [VCA strips](#vca-faders), then Stereo Out. The **Audio**, **Inst** and **Aux**
 buttons filter the strips. Hidden tracks appear only in hide mode. The Inspector shows the
@@ -1849,6 +1871,8 @@ see [Troubleshooting](#plug-in-windows-dont-open-on-wayland)) and macOS, where t
 above Marbble's windows like Logic's and hide while another app is in front.
 
 ### Built-in effects
+
+![The Compressor's panel, showing gain reduction during playback](../site/public/screenshots/effect-panel.png)
 
 Marbble's own effects load in any Audio FX slot like a plug-in: **Compressor**, **Limiter**,
 **Noise Gate** and **De-Esser** (Dynamics), **Reverb**, **Delay**, **Chorus**, **Flanger**,

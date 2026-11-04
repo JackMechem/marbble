@@ -1072,6 +1072,16 @@ a:hover {
 .shot {
   margin-block: clamp(1.5rem, 3vw, 2.5rem);
 }
+/* The other synth models' panels, side by side under Tre's. */
+.shot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr));
+  gap: 0 clamp(1rem, 2vw, 1.5rem);
+}
+/* Uno's panel is one short row, so it gets the full width under the others. */
+.shot-grid .wide {
+  grid-column: 1 / -1;
+}
 .shot-grid .shot {
   margin-block: 0 clamp(1rem, 2vw, 1.5rem);
 }

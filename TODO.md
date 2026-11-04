@@ -90,6 +90,16 @@ they use there (simulated on Linux), but none of this has run on a real machine.
 
 ### Known bugs and unexplained failures
 
+- **The bottom section can cover the tracks area** (seen 2026-11-03 while taking screenshots): dragging its divider high, or
+  opening an instrument, the Sampler or an editor after the Mixer was made tall, lets the panel overlap the tracks area and the
+  overview, and the divider can't then be dragged back. Its height isn't clamped to the window, and it's remembered. Clearing
+  `marbble.paneSizes` in localStorage recovers.
+- **A wide Mixer widens the whole window's layout** instead of scrolling: with 12 tracks, a VCA and the Stereo Out at
+  1480 px wide, the control bar and the right-hand strips go off screen.
+- An instrument preset loaded from the engine (`load_preset`, as the showcase project does) shows as **Manual** in the panel's
+  preset box until it's chosen again from the menu.
+- `parallel_check` failed once (the two live serial runs differed) while a large build shared its cores; it passed alone.
+
 - `soak_check <dir> 600 22` fails, on one thread as on eight: undoing every edit doesn't give the first document back. Not
   looked into. The default seed passes.
 - The first render after a send was added depends on how many live blocks ran in between, as `snap_gains` doesn't cover
@@ -182,7 +192,8 @@ they use there (simulated on Linux), but none of this has run on a real machine.
 
 - `.github/workflows/pages.yml` hasn't run yet: it can only be tested by pushing to `main`, with Settings › Pages › Source on GitHub
   Actions.
-- The landing page wants real screenshots: `site/public/screenshots/manifest.json` lists each slot and what it should show.
+- Screenshots are real captures of the showcase project (`cargo run -p daw-engine --example showcase_project -- <out.marbble>`)
+  on a private Xvfb display at 2x; `site/public/screenshots/manifest.json` lists each slot. Retake them when the UI changes.
 
 ## Stage 1: Release hygiene
 

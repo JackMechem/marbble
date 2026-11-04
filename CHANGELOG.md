@@ -14,6 +14,12 @@ All notable changes to Marbble are recorded here. The format follows
   existing `~/Music/Fermata` stays the projects folder until a `~/Music/Marbble` exists. The
   website moves to <https://jackmechem.github.io/marbble/>.
 
+### Added
+
+- **Screenshots** on the website and in the User Guide: the main window, all six synth panels, Marbble Sampler, the Mixer
+  during playback, the Compressor, the Piano Roll and a comped take folder, captured from the new `showcase_project`
+  example. The logo's source is `scripts/logo.py`.
+
 ## [0.1.0-alpha.5] - 2026-11-02
 
 ### Added

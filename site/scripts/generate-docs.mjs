@@ -74,7 +74,7 @@ function describe(lines, fallback) {
   let fence = false;
   for (const line of lines) {
     if (/^\s*(```|~~~)/.test(line)) fence = !fence;
-    if (fence || !line.trim() || /^[#|<>-]/.test(line.trim()) || /^\d+\./.test(line)) continue;
+    if (fence || !line.trim() || /^[#|<>-]/.test(line.trim()) || /^!\[/.test(line.trim()) || /^\d+\./.test(line)) continue;
     const text = line
       .replace(/\]\([^)]*\)/g, "]")
       .replace(/[\[\]*`]/g, "")
@@ -447,6 +447,8 @@ function resolveLink(doc, target, byFile) {
   if (file.startsWith("..")) return { error: "leaves the repository" };
   const full = path.join(repoDir, file);
   if (!fs.existsSync(full)) return { error: `no file ${file}` };
+  // Pictures the docs show (screenshots) are the site's own files, so they display on both.
+  if (file.startsWith("site/public/")) return { url: `${BASE}/${file.slice("site/public/".length)}` };
   if (anchor && /\.md$/.test(file)) {
     const known = headingsOf(fs.readFileSync(full, "utf8").split("\n")).map((h) => h.anchor);
     if (!known.includes(anchor)) return { error: `no heading #${anchor} in ${file}` };
