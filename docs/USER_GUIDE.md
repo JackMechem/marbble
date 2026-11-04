@@ -129,8 +129,8 @@ Contents:
 ### Choosing a driver and devices
 
 Settings › Audio holds the device settings. The driver, devices, sample rate, buffer size,
-Processing Threads, Monitoring and Recording Delay take effect when you click **Apply Changes**; Done, switching
-tabs or closing the window drops changes you haven't applied. The delay compensation options on
+Processing Threads, Monitoring and Recording Delay take effect when you click **Apply Changes** or **Done**. Changes
+you haven't applied stay while you switch tabs; closing the window any other way (Esc, a click outside) drops them. The delay compensation options on
 the same tab apply at once.
 
 - **Driver.** On Linux the choices are **PipeWire** (recommended), PulseAudio, JACK (listed as
@@ -286,7 +286,11 @@ Track headers:
   (below 32 px). The M, S, R, I and Freeze buttons then move into the **⋯** menu, which lists
   them with check marks (and their keys), plus the lane's parameter while automation is shown.
   A switch that is on stays in the header, so a muted, soloed, armed, monitored or frozen track
-  still shows it; click it to turn it off. Regions on short tracks get a slimmer name bar over a
+  still shows it; click it to turn it off.
+- **Button columns:** each button has its column, the same on every header, with a gap where a
+  track has no such button (an instrument track has no I, an aux no R, I or Freeze). On one-line
+  headers the columns are those of the switches that are on somewhere, so one track's M lines up
+  with another's. Regions on short tracks get a slimmer name bar over a
   thin strip of waveform or notes.
 - **Volume:** drag the slider (Shift for fine), double-click or Alt-click it for 0 dB; its
   tooltip shows the level. In a group with volume linked, the other members follow. The meter
@@ -600,7 +604,9 @@ opens its panel in the bottom section, whatever Open Effect Panels says, with th
 a small keyboard along the bottom (− and + move it by octaves). The button in the header floats the panel.
 **Row** and **Grid**, beside the keyboard, choose how the sections are laid out: in one row, which the mouse
 wheel moves along, or in lines that fill the panel. The bottom section starts with Row and a floating panel
-with Grid, and each remembers its own choice. Right-click a control for Learn MIDI Assignment.
+with Grid, and each remembers its own choice. The sections scroll in their own area above the keyboard bar;
+a fade along the bottom edge (or the right edge, in a row) shows there is more to scroll to. Right-click a
+control for Learn MIDI Assignment.
 Everything on it is saved in the project, can be automated in a lane, and undoes.
 
 - **Oscillators:** a range (Lo, 32' to 2'), a wave, and for 2 and 3 a Frequency knob of ±7 semitones.
@@ -1777,8 +1783,17 @@ The editor's own keys apply after you click in it; elsewhere the usual ones do. 
 
 Open the Mixer with X. It shows a channel strip for every track (stacks included), then the
 auxes, then the [VCA strips](#vca-faders), then Stereo Out. The **Audio**, **Inst** and **Aux**
-buttons filter the strips. Hidden tracks appear only in hide mode. The Inspector shows the
-selected track's strip and Stereo Out. When the strips don't fit, the Mixer scrolls sideways
+buttons show or hide those strips; each has a light that is lit while its strips are shown.
+The **Options** menu has Create New VCA, New Aux, the same three filters, Show Hidden Tracks
+(hidden tracks appear only in hide mode) and Reset All Clip Indicators. The Inspector shows the
+selected track's strip and Stereo Out.
+
+The strips line up across the Mixer: each shows as many insert and send slots as the strip that
+needs the most (its plug-ins or sends plus an empty slot), up to 6 Audio FX rows and 4 Sends
+rows, so faders, meters, pan knobs and automation buttons sit on one line. A strip with more
+than that scrolls its slots (scroll over them), and its section label shows how many filled
+slots are out of view, for example **Audio FX +2**. The Inspector's two strips line up with each
+other the same way. When the strips don't fit, the Mixer scrolls sideways
 (and up and down when it's shorter than the strips); the rest of the window stays as it is.
 
 ### The channel strip
@@ -1788,10 +1803,10 @@ From top to bottom:
 | Part | What it does |
 |---|---|
 | **Setting** | The channel strip settings menu (see [Channel strip settings](#channel-strip-settings)). |
-| **Input** | Audio tracks: the mono/stereo button and the input ("No Input", "Input 1"..., "Input 1–2"...). Instrument tracks: the **instrument slot** (No Plug-in, Marbble Synth, other built-in instruments by group, or a VST3 instrument by category or vendor). Auxes show their bus ("Bus 1"), or the instrument output they're on ("Drums: Direct out 0", see [Multi-output instruments](#multi-output-instruments)); summing stacks show "Subtracks". |
+| **Input** | Audio tracks: the mono/stereo button and the input ("No Input", "Input 1"..., "Input 1–2"...). Instrument tracks: the **instrument slot** (No Plug-in, Marbble Synth, other built-in instruments by group, or a VST3 instrument by category or vendor). A built-in instrument shows its model ("Tre", "Sampler"); the tooltip has the full name. Auxes show their bus ("Bus 1"), or the instrument output they're on ("Drums: Direct out 0", see [Multi-output instruments](#multi-output-instruments)); summing stacks show "Subtracks". |
 | **EQ thumbnail** | The Channel EQ curve; click to open the editor. |
-| **Audio FX** | Insert slots: the filled ones plus one empty slot (up to 8). The label shows the strip's plug-in latency. |
-| **Sends** | Up to 8 send slots. |
+| **Audio FX** | Insert slots (8 in all), in the rows the strips share (see above). An empty slot shows a faint **+**; click it to choose a plug-in. A filled slot's power and pop-up buttons show when you point at it. The label shows the strip's plug-in latency. |
+| **Sends** | Send slots (8 in all), in the rows the strips share. Click an empty slot (**+**) to add a send. |
 | **Output** | Stereo Out, the summing stack, or an aux. |
 | **VCA** | The VCA fader that controls the strip (see [VCA faders](#vca-faders)). |
 | **Automation mode** | Off, Read, Touch, Latch, Write (see [Automation](#13-automation)). |
@@ -1807,9 +1822,10 @@ reset them, and they are the same in the Mixer, the Inspector and a Mixer in its
 Opening another project starts them afresh; bounces and exports don't touch them.
 
 A folder stack's strip shows only its fader, buttons and automation mode ("A folder has no audio
-of its own").
+of its own"), with the plug-in sections left blank so its fader lines up with the others.
 Stereo Out has Channel EQ, Audio FX, its fader and meter, and an automation mode pop-up for the
-Output track's lanes.
+Output track's lanes; its Input and Sends rows are left blank. A VCA strip shows its count in the
+Input row and the VCA it is on in the VCA row.
 
 Mono audio tracks pan with a -3 dB compensated pan law (unity in the centre); stereo tracks
 and buses use balance.
@@ -1926,6 +1942,7 @@ in the slot menu and the Library.
     out into a window of its own (and the dock button in a window's header puts it back). Drag
     a window by its title; drag its sides or bottom corners to resize it. A window can't be
     made smaller than its controls; Marbble remembers the last size for each kind of effect.
+    Until you resize one, a window opens wide enough for its controls.
   - **Separate windows:** each panel opens in an OS window of its own, which you can move to
     another monitor (see [Separate windows](#separate-windows)). Clicking the slot again closes
     it; the pop-in button in its bar puts it in the main window, floating.
@@ -2712,7 +2729,9 @@ Open Settings with **Marbble › Settings…** (Ctrl+,), which opens on the Audi
 Marbble › Appearance… and Marbble › Key Commands… (Alt+K) open those tabs. Most changes apply
 at once and are kept in `settings.json` (`~/.config/marbble` on Linux and macOS,
 `%APPDATA%\marbble` on Windows). The exceptions are the Audio devices (Apply Changes) and the
-Metronome tab (saved with the project).
+Metronome tab (saved with the project). The window keeps one size whichever tab is showing: a
+long tab scrolls, and the footer stays at the bottom with a note on how that tab's changes apply
+and **Done** on the right.
 
 ### General
 
@@ -2744,7 +2763,7 @@ Metronome tab (saved with the project).
 
 Below them: the measured input and output latency and how far recordings are shifted, the
 input level check (Linux), and **Reset Audio Engine**. Everything except the two delay
-compensation rows needs **Apply Changes**.
+compensation rows needs **Apply Changes**, or **Done**, which applies them and closes the window.
 
 ### Recording
 
@@ -2835,7 +2854,9 @@ Tracks, Editing, Windows, Control Surfaces and Step Input.
 | Theme | Studio, Flat, Midnight, Light, High Contrast (also View › Theme) | Studio |
 
 The whole window scales, and the canvas views render at the matching resolution so they stay
-sharp.
+sharp. The window's own theme follows the one you choose: with Light, Marbble asks the system for
+the light look of the menu bar and title bar (GTK's light variant on Linux), and with the others
+for the dark one.
 
 ---
 

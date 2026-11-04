@@ -40,7 +40,7 @@ export function SettingsWindow({ audio: AudioPane, appearance: AppearancePane }:
   const current = tabs.find((t) => t.id === tab) ?? tabs[1];
   const Pane = current.pane;
   return (
-    <SheetFrame title={`Settings — ${current.label}`} onClose={close} width={760}>
+    <SheetFrame title={`Settings — ${current.label}`} onClose={close} width={760} className="settings-sheet">
       <div className="settings-tabs wide">
         {tabs.map((t) => (
           <button key={t.id} className={"settings-tab" + (current.id === t.id ? " on" : "")} onClick={() => setState({ settingsTab: t.id })}>

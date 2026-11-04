@@ -47,3 +47,23 @@ export function saveLayout(place: PanelPlace, layout: SectionLayout) {
     // Not critical: the panel opens with the default next time.
   }
 }
+
+/** A scrolling box's position and sizes (an element's scroll* and client* properties). */
+export interface ScrollBox {
+  scrollTop: number;
+  scrollLeft: number;
+  clientWidth: number;
+  clientHeight: number;
+  scrollWidth: number;
+  scrollHeight: number;
+}
+
+/**
+ * Where the sections run on out of view, for the fade that says so: below the box in a grid
+ * (it scrolls down), past its right edge in a row (it scrolls across). Null when the rest is in
+ * view.
+ */
+export function moreBeyond(layout: SectionLayout, b: ScrollBox): "below" | "right" | null {
+  if (layout === "grid") return b.scrollTop + b.clientHeight < b.scrollHeight - 1 ? "below" : null;
+  return b.scrollLeft + b.clientWidth < b.scrollWidth - 1 ? "right" : null;
+}

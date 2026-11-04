@@ -9,6 +9,8 @@ import { colorMenu, selectedTracks } from "../ops";
 import { canNest, vcaSlotLabel } from "../vca";
 import { Fader } from "./Controls";
 import { openMenu, openMenuAt, type MenuItem } from "./Menu";
+import type { SlotRows } from "../stripRows";
+import { BlankEq, BlankRow, BlankSlots } from "./StripSlots";
 
 const NO_VCAS: Vca[] = [];
 
@@ -58,8 +60,12 @@ export function VcaSlot({ track }: { track: Track }) {
   return <Slot label={label} assigned={!!label} title={label ? `Assigned to ${label}: its fader offsets this strip's` : "VCA: assign this strip to a VCA fader"} onOpen={open} />;
 }
 
-/** A VCA strip: fader, level, mute and name. It passes no audio. */
-export function VcaStrip({ vca }: { vca: Vca }) {
+/**
+ * A VCA strip: fader, level, mute and name. It passes no audio. Its count sits in the channel
+ * strips' Input row and its own VCA slot in their VCA row; blank rows fill the rest, so its fader
+ * lines up with theirs (`rows` as for ChannelStrip).
+ */
+export function VcaStrip({ vca, rows }: { vca: Vca; rows: SlotRows }) {
   const faderBox = useRef<HTMLDivElement>(null);
   const [faderHeight, setFaderHeight] = useState(160);
   useLayoutEffect(() => {
@@ -94,16 +100,24 @@ export function VcaStrip({ vca }: { vca: Vca }) {
   const count = members + nested;
   return (
     <div className="strip vca-strip" onContextMenu={menu}>
+      <BlankRow />
       <div className="strip-section">
         <div className="strip-label">VCA</div>
         <div className="slot static" title="Strips whose VCA slot is set to this VCA">
           {count ? `${count} ${count === 1 ? "strip" : "strips"}` : "No strips"}
         </div>
       </div>
+      <BlankEq />
+      <BlankSlots rows={rows.inserts} />
+      <BlankSlots rows={rows.sends} />
+      <BlankRow />
       <div className="strip-section">
         <Slot label={parent} assigned={!!parent} title={parent ? `Controlled by ${parent}` : "VCA: let another VCA control this one"} onOpen={openParent} />
       </div>
-      <div className="vca-spacer" />
+      <div className="strip-pan strip-blank" aria-hidden>
+        <div className="auto-mode-spacer" />
+        <div style={{ height: 26 }} />
+      </div>
       <div className="strip-readouts">
         <span className="readout">{formatDb(vca.level_db)}</span>
       </div>
@@ -112,6 +126,7 @@ export function VcaStrip({ vca }: { vca: Vca }) {
         <div style={{ width: 11 }} />
       </div>
       <div className="strip-buttons">
+        <span className="tbtn power ghost" />
         <div className="btn-row">
           <button
             className={"tbtn mute" + (vca.mute ? " on" : "")}

@@ -1,6 +1,6 @@
 // The side and bottom panes that aren't editors: Inspector, Mixer, Library and Browser.
 import { useEffect, useMemo, useState } from "react";
-import { act, BUILTIN_SYNTH, call, INSTRUMENT_SLOT, isStack, type Region, type Track } from "../api";
+import { act, BUILTIN_SYNTH, call, INSTRUMENT_SLOT, isStack, SEND_SLOTS, type Project, type Region, type Track } from "../api";
 import { Icon } from "../icons";
 import { isAudioPath, startFileDrag } from "../dnd";
 import { importMidiFiles, isMidiPath } from "../midiFiles";
@@ -12,11 +12,20 @@ import { RegionParamRows } from "./RegionParamRows";
 import { NumberField } from "./Form";
 import { useSelectedTrack } from "./TrackHeaders";
 import { isLooped } from "../loops";
-import { toggleLoop } from "../ops";
+import { toggleLoop, toggleShowHidden } from "../ops";
+import { keyHint } from "../keymap";
+import { newAux } from "../routing";
+import { resetClipIndicators } from "../stripSettings";
 import { loadPlugin } from "../fxHost";
 import { DetachButton } from "./DetachButton";
 import { createVca, useVcas, VcaStrip } from "./Vca";
 import { openMenuAt } from "./Menu";
+import { stripRows, stripWants, type SlotRows } from "../stripRows";
+
+/** The insert and send rows shared by `tracks`' strips and Stereo Out's. */
+function rowsFor(project: Project, tracks: Track[]): SlotRows {
+  return stripRows([...tracks.map((t) => stripWants(t.kind, t.inserts, t.sends, SEND_SLOTS)), stripWants(null, project.master.inserts, undefined, SEND_SLOTS)]);
+}
 
 function Disclosure({ title, children, initial = true }: { title: string; children: React.ReactNode; initial?: boolean }) {
   const [open, setOpen] = useState(initial);
@@ -49,6 +58,7 @@ export function Inspector() {
     [project, selectedRegions],
   );
   if (!project) return <div className="inspector" />;
+  const rows = rowsFor(project, track ? [track] : []);
   const region = regions.length === 1 ? regions[0] : null;
   const regionTitle = regions.length > 1 ? `${regions.length} selected` : region ? region.name : "Default Settings";
   const bbt = (s: number) => {
@@ -107,42 +117,62 @@ export function Inspector() {
         </Disclosure>
       </div>
       <div className="inspector-strips">
-        {track ? <ChannelStrip track={track} selected /> : <div className="strip placeholder" />}
-        <ChannelStrip track={null} />
+        {track ? <ChannelStrip track={track} selected rows={rows} /> : <div className="strip placeholder" />}
+        <ChannelStrip track={null} rows={rows} />
       </div>
     </div>
   );
 }
 
+type StripKind = "audio" | "instrument" | "aux";
+
+/** The Mixer's strip filters: kind, button label, name in the Options menu and tooltips. */
+const STRIP_KINDS: [StripKind, string, string][] = [
+  ["audio", "Audio", "Audio"],
+  ["instrument", "Inst", "Instrument"],
+  ["aux", "Aux", "Aux"],
+];
+
 export function Mixer() {
   const project = useStore((s) => s.snap?.project);
   const selected = useStore((s) => s.snap?.selected);
-  const [filter, setFilter] = useState({ audio: true, instrument: true, aux: true });
+  const [filter, setFilter] = useState<Record<StripKind, boolean>>({ audio: true, instrument: true, aux: true });
+  const flip = (k: StripKind) => setFilter((f) => ({ ...f, [k]: !f[k] }));
   const showHidden = useStore((s) => s.showHidden);
   const vcas = useVcas();
   if (!project) return null;
   const shown = project.tracks.filter((t) => (t.hidden ? showHidden : true) && (t.kind === "audio" || t.kind === "instrument" || t.kind === "aux" ? filter[t.kind] : true));
   // Auxes come after the tracks, as in Logic's mixer.
   const tracks = [...shown.filter((t) => t.kind !== "aux"), ...shown.filter((t) => t.kind === "aux")];
+  const rows = rowsFor(project, tracks);
   return (
     <div className="mixer">
       <div className="local-bar">
+        <span className="local-title mixer-title">Mixer</span>
         <div className="local-menus">
-          <button className="local-menu" onMouseDown={(e) => openMenuAt(e.currentTarget, [{ label: "Create New VCA", onClick: () => createVca() }])}>
+          <button
+            className="local-menu"
+            onMouseDown={(e) =>
+              openMenuAt(e.currentTarget, [
+                { label: "Create New VCA", onClick: () => createVca() },
+                { label: "New Aux", onClick: () => newAux() },
+                { separator: true },
+                ...STRIP_KINDS.map(([k, , name]) => ({ label: `Show ${name} Strips`, checked: filter[k], onClick: () => flip(k) })),
+                { label: "Show Hidden Tracks", hint: keyHint("show-hidden"), checked: showHidden, onClick: toggleShowHidden },
+                { separator: true },
+                { label: "Reset All Clip Indicators", hint: keyHint("reset-clips"), onClick: () => resetClipIndicators(null) },
+              ])
+            }
+          >
             Options
           </button>
-          <span className="local-title">Mixer</span>
         </div>
-        <div className="mixer-filters">
-          <button className={"filter" + (filter.audio ? " on" : "")} onClick={() => setFilter({ ...filter, audio: !filter.audio })}>
-            Audio
-          </button>
-          <button className={"filter" + (filter.instrument ? " on" : "")} onClick={() => setFilter({ ...filter, instrument: !filter.instrument })}>
-            Inst
-          </button>
-          <button className={"filter" + (filter.aux ? " on" : "")} onClick={() => setFilter({ ...filter, aux: !filter.aux })}>
-            Aux
-          </button>
+        <div className="mixer-filters" role="group" aria-label="Strips shown">
+          {STRIP_KINDS.map(([k, label, name]) => (
+            <button key={k} className={"filter" + (filter[k] ? " on" : "")} aria-pressed={filter[k]} title={`${filter[k] ? "Hide" : "Show"} ${name.toLowerCase()} strips`} onClick={() => flip(k)}>
+              {label}
+            </button>
+          ))}
         </div>
         <div className="local-right">
           <DetachButton panel="mixer" />
@@ -151,14 +181,14 @@ export function Mixer() {
       <div className="mixer-strips">
         <div className="mixer-row">
           {tracks.map((t) => (
-            <ChannelStrip key={t.id} track={t} selected={t.id === selected} />
+            <ChannelStrip key={t.id} track={t} selected={t.id === selected} rows={rows} />
           ))}
           {/* VCA strips come after the auxes, before Stereo Out, as in Logic. */}
           {vcas.map((v) => (
-            <VcaStrip key={`vca-${v.id}`} vca={v} />
+            <VcaStrip key={`vca-${v.id}`} vca={v} rows={rows} />
           ))}
           <div className="mixer-gap" />
-          <ChannelStrip track={null} />
+          <ChannelStrip track={null} rows={rows} />
         </div>
       </div>
     </div>

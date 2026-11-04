@@ -14,6 +14,7 @@ import { canFreeze, toggleFreeze } from "../freeze";
 import { takeRowsHeight } from "../takes";
 import { fmt, keyHint } from "../keymap";
 import { headerTier } from "../trackHeader";
+import { headerColumns, type SwitchId } from "../headerColumns";
 import { isTrackOff, powerTitle } from "../trackOff";
 import { LevelSlider } from "./LevelSlider";
 import { TrackAltButton } from "./TrackAlternatives";
@@ -90,6 +91,7 @@ function Header({
   depth,
   group,
   hideMode,
+  columns,
   onReorderStart,
 }: {
   track: Track;
@@ -101,6 +103,8 @@ function Header({
   group: Group | undefined;
   /** Hide mode (H) is on: show the H button. */
   hideMode: boolean;
+  /** The button columns every header in view shares (headerColumns.ts). */
+  columns: { full: SwitchId[]; compact: SwitchId[] };
   onReorderStart: (e: React.MouseEvent, index: number) => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -135,6 +139,12 @@ function Header({
       toggle: () => toggleFreeze(selected ? selectedTracks() : [track.id]),
     });
   }
+  // A switch's column, or a gap where this track has no such switch (or, on a one-line header, has
+  // it off), so the buttons line up from header to header.
+  const column = (id: SwitchId) => {
+    const sw = switches.find((x) => x.cls === id);
+    return sw && (full || sw.on) ? btn(sw) : <span key={id} className="tbtn ghost th-gap" aria-hidden />;
+  };
   const btn = (sw: Switch) => (
     <button
       key={sw.cls}
@@ -248,7 +258,7 @@ function Header({
         <div className="th-buttons" hidden={full && automation && !autoRow}>
           {/* Short headers keep only the switches that are on, so a muted, soloed, armed or
               frozen track still shows it; the rest are in the "⋯" menu. */}
-          {(full ? switches.filter((sw) => sw !== power) : switches.filter((sw) => sw.on)).map(btn)}
+          {(full ? columns.full : columns.compact).map(column)}
           {group && <GroupBadge group={group} onClick={() => setState({ groupSheet: group.id })} />}
           {showsTrackAlts(track) && <TrackAltButton track={track} />}
           {hideMode && (
@@ -314,6 +324,8 @@ export function TrackHeaders() {
   const dropTarget = useStore((s) => s.dropTarget);
   const hideMode = useStore((s) => s.showHidden);
   const fileDrop = dropTarget && dropTarget.kind !== "lane" ? dropTarget.index : null;
+  // Button columns from the tracks in view (a collapsed stack's subtracks don't count).
+  const columns = headerColumns(project?.tracks.filter((_, i) => layout.heights[i] > 0) ?? []);
   const inner = useRef<HTMLDivElement>(null);
   const [drop, setDrop] = useState<number | null>(null);
 
@@ -404,6 +416,7 @@ export function TrackHeaders() {
                 depth={layout.depth[i]}
                 group={t.group !== null ? project.groups.find((g) => g.id === t.group) : undefined}
                 hideMode={hideMode}
+                columns={columns}
                 onReorderStart={startReorder}
               />
               {layout.autoRows[i] > 0 && <SubLaneHeaders track={t} height={layout.subLane[i]} indent={layout.depth[i] * INDENT} />}

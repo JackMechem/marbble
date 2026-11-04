@@ -18,10 +18,24 @@
   min-width: 0;
 }
 
+/* The name keeps a few letters; when the line is short of room, the gaps between the buttons
+   narrow rather than push it out. */
+.track-header.tier-compact .th-name,
+.track-header.tier-tiny .th-name {
+  min-width: 44px;
+}
+
 .track-header.tier-compact .th-buttons,
 .track-header.tier-tiny .th-buttons {
-  flex: none;
+  flex: 0 1 auto;
+  min-width: 0;
   align-items: center;
+}
+
+/* Only the gaps narrow: a button keeps its size. */
+.track-header.tier-compact .th-buttons > :not(.th-gap),
+.track-header.tier-tiny .th-buttons > :not(.th-gap) {
+  flex-shrink: 0;
 }
 
 .track-header.tier-compact .th-icon {

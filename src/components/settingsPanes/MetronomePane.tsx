@@ -94,7 +94,7 @@ export function MetronomePane({ close }: { close: () => void }) {
   return (
     <>
       <MetronomeFields />
-      <Foot close={close} note="Saved with the project, like Logic's metronome settings.">
+      <Foot close={close} note="Saved with the project.">
         <button className="push" title="The settings new projects start with" onClick={() => act("set_click", { click: deflt })} disabled={isDefault}>
           Revert to Default
         </button>

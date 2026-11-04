@@ -216,7 +216,7 @@ export function parseSizes(text: string | null): Record<string, Size> {
  * Effects not listed size to their content.
  */
 export const DEFAULT_WIDTH: Record<string, number> = {
-  "builtin:compressor": 628,
+  "builtin:compressor": 704,
   "builtin:limiter": 458,
   "builtin:channel-eq": 820,
   "builtin:linear-phase-eq": 820,

@@ -44,6 +44,66 @@
   background: var(--slot-empty-hi);
 }
 
+/* An empty insert or send slot: a faint "+" that says it can be clicked. */
+.slot-add {
+  flex: 1;
+  align-self: stretch;
+  display: grid;
+  place-items: center;
+  opacity: 0.3;
+  color: var(--dim);
+  pointer-events: none;
+}
+
+.slot-add::before {
+  content: "+";
+  font-size: var(--fs-lg);
+  line-height: 1;
+}
+
+.slot.empty:hover .slot-add {
+  opacity: 0.9;
+}
+
+/* A strip's insert or send slots: as many rows as the strips beside it (stripRows.ts), scrolling
+   when it has more, so the sections below stay level across the strips. */
+.strip-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  height: calc(var(--rows, 1) * 22px - 2px);
+  overflow: hidden auto;
+}
+
+.strip-slots > .slot {
+  flex: none;
+}
+
+.strip-slots::-webkit-scrollbar {
+  width: 4px;
+}
+
+.strip-slots::-webkit-scrollbar-track {
+  background: none;
+}
+
+.strip-slots::-webkit-scrollbar-thumb {
+  border: 0;
+  border-radius: 2px;
+}
+
+/* "+2" beside Audio FX or Sends: filled slots scrolled out of the box. */
+.strip-more {
+  margin-left: 4px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* A section a strip doesn't have, kept as an empty space of the same height. */
+.strip-blank {
+  visibility: hidden;
+}
+
 .slot.filled {
   background: var(--slot-filled);
   color: var(--slot-text);
@@ -95,13 +155,26 @@
   color: var(--faint);
 }
 
+/* The power and pop-up buttons lie over the ends of the name and show on hover, so the name has
+   the slot's whole width ("Compressor", not "Compre..."). */
 .slot-power,
 .slot-arrow {
+  position: absolute;
+  top: 0;
+  bottom: 0;
   width: 14px;
-  height: 100%;
   display: grid;
   place-items: center;
+  background: inherit;
   opacity: 0;
+}
+
+.slot-power {
+  left: 0;
+}
+
+.slot-arrow {
+  right: 0;
 }
 
 .slot.filled:hover .slot-power,
@@ -110,9 +183,13 @@
   opacity: 0.8;
 }
 
+.slot.bypassed .slot-name {
+  padding-left: 14px;
+}
+
 .slot-power:hover,
 .slot-arrow:hover {
-  background: rgba(0, 0, 0, 0.18);
+  box-shadow: inset 0 0 0 20px rgba(0, 0, 0, 0.18);
   opacity: 1 !important;
 }
 

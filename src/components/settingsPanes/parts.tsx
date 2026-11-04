@@ -9,12 +9,12 @@ import { useSheetKeys } from "../../sheetKeys";
 
 export const toast = (text: string, ms = 3000) => setState({ toast: { text, at: Date.now(), ms } });
 
-export function SheetFrame({ title, children, onClose, width }: { title: string; children: React.ReactNode; onClose: () => void; width: number }) {
+export function SheetFrame({ title, children, onClose, width, className }: { title: string; children: React.ReactNode; onClose: () => void; width: number; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   useSheetKeys(ref, onClose);
   return (
     <div className="sheet-backdrop" onMouseDown={onClose}>
-      <div ref={ref} className="sheet" style={{ width }} onMouseDown={(e) => e.stopPropagation()} onKeyDown={(e) => sheetKey(e, onClose)}>
+      <div ref={ref} className={"sheet" + (className ? " " + className : "")} style={{ width }} onMouseDown={(e) => e.stopPropagation()} onKeyDown={(e) => sheetKey(e, onClose)}>
         <div className="sheet-title">{title}</div>
         {children}
       </div>
@@ -88,14 +88,18 @@ export const TabIcon = {
 };
 
 
-/** The usual pane footer: settings save themselves, so there is only Done. */
-export function Foot({ close, note = "Changes apply immediately and are remembered.", children }: { close: () => void; note?: React.ReactNode; children?: React.ReactNode }) {
+/** What most panes' footers say: their settings save themselves. */
+export const APPLIES_AT_ONCE = "Changes apply immediately and are remembered.";
+
+/** A pane's footer: a short note on how its changes apply, the pane's own buttons, and Done on
+ *  the right. In the Settings window it stays at the bottom while the pane scrolls. */
+export function Foot({ close, note = APPLIES_AT_ONCE, children, busy }: { close: () => void; note?: React.ReactNode; children?: React.ReactNode; busy?: boolean }) {
   return (
     <div className="sheet-foot">
       <span className="dim">{note}</span>
       <div className="sheet-buttons">
         {children}
-        <button className="push default" onClick={close}>
+        <button className="push default" disabled={busy} onClick={close}>
           Done
         </button>
       </div>

@@ -5,7 +5,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { api, call, type Id } from "../../api";
 import type { FxPanelProps } from "../../fx";
 import { getState } from "../../store";
-import { savedLayout, saveLayout, type PanelPlace, type SectionLayout } from "../../instLayout";
+import { moreBeyond, savedLayout, saveLayout, type PanelPlace, type SectionLayout } from "../../instLayout";
 import { keyboardKeys } from "../../pianoKeys";
 import { FxControl, FxGroup, FxMeter, isReductionMeter } from "./common";
 
@@ -20,13 +20,15 @@ export function InstrumentPanel({ info, track, values, set, touch, meters }: FxP
     setPlace(here);
     setLayout(savedLayout(here));
   }, []);
+  const sections = useRef<HTMLDivElement>(null);
+  const more = useMoreBeyond(sections, layout);
   const choose = (l: SectionLayout) => {
     setLayout(l);
     saveLayout(place, l);
   };
   return (
     <div ref={ref} className={"fx-panel inst-panel " + layout}>
-      <div className="inst-sections" onWheel={wheelAcross}>
+      <div ref={sections} className="inst-sections" data-more={more ?? undefined} onWheel={wheelAcross}>
         {(info.sections ?? []).map((s) => (
           <FxGroup key={s.title} title={s.title} className={"inst-section " + (s.params.length > 4 ? "two-rows" : "one-row")}>
             {s.params.map((id) => {
@@ -56,6 +58,30 @@ export function InstrumentPanel({ info, track, values, set, touch, meters }: FxP
       </div>
     </div>
   );
+}
+
+/**
+ * Which side of the scrolling sections has more out of view (instLayout.ts), kept up to date as
+ * the box scrolls or resizes, so a fade on that edge shows the sections go on under the keyboard
+ * bar or past the panel's edge.
+ */
+export function useMoreBeyond(ref: React.RefObject<HTMLDivElement | null>, layout: SectionLayout) {
+  const [more, setMore] = useState<"below" | "right" | null>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const check = () => setMore(moreBeyond(layout, el));
+    check();
+    el.addEventListener("scroll", check, { passive: true });
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    for (const c of el.children) ro.observe(c);
+    return () => {
+      el.removeEventListener("scroll", check);
+      ro.disconnect();
+    };
+  }, [ref, layout]);
+  return more;
 }
 
 /** In a row wider than the panel, a wheel moves along the sections. */

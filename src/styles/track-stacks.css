@@ -51,7 +51,17 @@
   border-style: dashed;
 }
 
+/* A folder's strip keeps the plug-in sections' height, with a note in their place. */
+.strip-folder-blank {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .strip-folder-note {
+  position: absolute;
+  inset: 0 0 auto;
   color: var(--faint);
   font-size: var(--fs-sm);
   text-align: center;

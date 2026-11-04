@@ -10,6 +10,8 @@ import { openMenuAt } from "./Menu";
 import { learnContext } from "../learn";
 import { sliderAria } from "../sliderKeys";
 import { sliderKeyDown } from "./Controls";
+import { filledBeyond, slotsWanted } from "../stripRows";
+import { MoreBadge, SlotBox } from "./StripSlots";
 
 /** A small unipolar level knob, on the fader's taper. Shift-drag adjusts finely; double-click
  *  is 0 dB. */
@@ -77,7 +79,12 @@ function SendSlot({ track, slot, send }: { track: Track; slot: number; send: Sen
     const el = (e.currentTarget as HTMLElement).closest(".slot") as HTMLElement;
     openMenuAt(el, send ? sendMenu(track, slot, send) : emptySendMenu(track, slot));
   };
-  if (!send) return <div className="slot empty send" onMouseDown={menu} title="Add a send" />;
+  if (!send)
+    return (
+      <div className="slot empty send" onMouseDown={menu} title="Add a send">
+        <span className="slot-add" />
+      </div>
+    );
   const name = aux ? sendLabel(aux) : "—";
   return (
     <div className={"slot filled send" + (send.muted ? " muted" : "")} onContextMenu={learnContext({ type: "send", track: track.id, slot })}>
@@ -96,17 +103,22 @@ function SendSlot({ track, slot, send }: { track: Track; slot: number; send: Sen
   );
 }
 
-/** The Sends section, under Audio FX. Shows the filled slots plus one empty one. */
-export function SendsSection({ track }: { track: Track }) {
+/** The Sends section, under Audio FX: `rows` slots (shared with the strips beside it, see
+ *  stripRows.ts), scrolling when the filled ones and an empty one need more. */
+export function SendsSection({ track, rows }: { track: Track; rows: number }) {
   const sends = Array.from({ length: SEND_SLOTS }, (_, i) => track.sends?.[i] ?? null);
-  const lastFilled = sends.reduce((acc, s, i) => (s ? i : acc), -1);
-  const shown = Math.min(SEND_SLOTS, Math.max(lastFilled + 2, 1));
+  const shown = Math.max(rows, slotsWanted(sends, SEND_SLOTS));
   return (
     <div className="strip-section">
-      <div className="strip-label">Sends</div>
-      {sends.slice(0, shown).map((s, i) => (
-        <SendSlot key={i} track={track} slot={i} send={s} />
-      ))}
+      <div className="strip-label">
+        Sends
+        <MoreBadge n={filledBeyond(sends, rows)} />
+      </div>
+      <SlotBox rows={rows}>
+        {sends.slice(0, shown).map((s, i) => (
+          <SendSlot key={i} track={track} slot={i} send={s} />
+        ))}
+      </SlotBox>
     </div>
   );
 }

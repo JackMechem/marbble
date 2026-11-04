@@ -62,6 +62,12 @@ function minWidth(el: HTMLElement): number {
   return min;
 }
 
+/** How far the panel's content runs past its box sideways (0 when it fits). */
+function sidewaysOverflow(el: HTMLElement): number {
+  const body = el.querySelector<HTMLElement>(".fx-body, .eq-panel");
+  return body ? Math.max(0, body.scrollWidth - body.clientWidth) : 0;
+}
+
 /** The height the window's content needs at its current width (graphs at their smallest). */
 function naturalHeight(el: HTMLElement): number {
   const h = el.style.height;
@@ -79,6 +85,10 @@ function FloatingPanel({ panelKey, z }: { panelKey: PanelKey; z: number }) {
   // Null until the window is first resized: it then sizes to its content.
   const [size, setSize] = useState<Size | null>(() => (type ? savedPanelSize(type) : null));
   const sizeType = useRef(type);
+  // An unsized window opens at its type's default width, widened by whatever its content runs
+  // past it (a larger interface size, a font that sets wider), so it never opens scrolling
+  // sideways.
+  const [fitW, setFitW] = useState<number | null>(null);
 
   useEffect(() => {
     positions.set(panelKey, pos);
@@ -98,6 +108,12 @@ function FloatingPanel({ panelKey, z }: { panelKey: PanelKey; z: number }) {
       el.style.width = `${s.w}px`;
       const fit = { w: Math.max(s.w, minWidth(el)), h: Math.max(s.h, naturalHeight(el)) };
       if (fit.w !== s.w || fit.h !== s.h || s !== size) setSize(fit);
+    } else {
+      const w = DEFAULT_WIDTH[type];
+      if (w !== undefined) {
+        el.style.width = `${w}px`;
+        setFitW(w + sidewaysOverflow(el) || null);
+      }
     }
     // Only when the panel's type changes; drags keep the size within limits themselves.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -162,7 +178,7 @@ function FloatingPanel({ panelKey, z }: { panelKey: PanelKey; z: number }) {
     <div
       ref={ref}
       className={"eq-window fx-window" + (size ? " sized" : "")}
-      style={{ left: at.x, top: at.y, zIndex: 41 + z, width: size?.w ?? (type ? DEFAULT_WIDTH[type] : undefined), height: size?.h, maxHeight }}
+      style={{ left: at.x, top: at.y, zIndex: 41 + z, width: size?.w ?? fitW ?? (type ? DEFAULT_WIDTH[type] : undefined), height: size?.h, maxHeight }}
       onMouseDown={(e) => {
         e.stopPropagation();
         focusPanel(panelKey);

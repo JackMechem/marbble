@@ -48,9 +48,34 @@ All notable changes to Marbble are recorded here. The format follows
   Threads. A thread given up on in a plug-in that stops responding is taken off real-time priority
   at once and left out until Reset Audio Engine, so the system can't kill Marbble for it, and the
   other threads play on once the plug-in returns.
+- **The Mixer's rows line up.** Strips side by side show the same number of insert and send
+  slots (as many as the strip that needs the most, up to 6 and 4), so faders, meters, pan knobs
+  and automation buttons share one line; a strip with more scrolls its slots and its label shows
+  "+N". Stereo Out, folder and VCA strips keep blank rows in place of sections they don't have.
+  The Inspector's two strips line up the same way.
+- **Track header buttons line up.** Each button has a column, with a gap where a track has no
+  such button (I on instrument tracks, R, I and Freeze on auxes), on one-line headers too.
+- **Mixer header:** the Audio, Inst and Aux filters have a light that shows whether they're on;
+  "Mixer" reads as a title; Options also has New Aux, the filters, Show Hidden Tracks and Reset
+  All Clip Indicators.
+- **Slots show more of their names:** built-in instruments show their model (Tre, Sampler), with
+  the full name in the tooltip, and a filled slot's power and pop-up buttons appear on hover, so
+  "Compressor" fits. Empty insert and send slots show a faint "+".
+- **The Settings window keeps one size:** a long tab scrolls, the footer stays at the bottom
+  with Done on the right, and every tab's footer says how its changes apply. Appearance's five
+  themes fit in one row.
+- **Instrument panels** show a fade on the edge where the sections go on out of view (below in
+  Grid, to the right in Row), with a line above the keyboard bar.
 
 ### Fixed
 
+- **The Compressor's floating panel opens wide enough** for its knobs; it opened with a sideways
+  scrollbar and its Mix and Output knobs cut off. A floating panel that hasn't been resized now
+  opens as wide as its controls need, and the Noise Gate's groups wrap in a narrow window.
+- **Light theme:** the window's own theme follows Marbble's, so the GTK menu bar draws light under
+  the Light theme. The R and I buttons' letters are darker there, so the I no longer fades into
+  its button.
+- **Stereo Out** no longer shows an empty Input slot.
 - **The bottom section can no longer cover the Tracks area.** A Mixer, editor or docked panel
   remembered taller than the window allows shows at the height there is room for, so the Tracks
   area keeps its menu bar, ruler, overview and some track rows, and the divider stays in reach.

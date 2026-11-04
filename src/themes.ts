@@ -1,5 +1,6 @@
 // The themes: a map of CSS variables and canvas colours for each, and `applyTheme`. Flat, Midnight, Light
 // and High Contrast spread the previous theme's maps, so a new variable only needs a value in Studio.
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { setState } from "./store";
 import { theme, type CanvasTheme } from "./theme";
 
@@ -420,6 +421,9 @@ const midnightCanvas: CanvasTheme = {
 
 const lightCss: Record<string, string> = {
   ...flatCss,
+  // The R and I letters on light buttons: the red and orange darkened to read at 4.5:1.
+  "--mon-text": "#9a4f00",
+  "--rec-text": "#b8261e",
   "--bg": "#e7e9ed",
   "--panel": "#f2f3f6",
   "--panel-2": "#e9ebef",
@@ -690,12 +694,25 @@ export function savedThemeId(): string {
   }
 }
 
+/** The window's own theme follows the app's, so on Linux GTK draws the menu bar light or dark to
+ *  match (gtk-application-prefer-dark-theme), and on macOS the title bar does. */
+function windowTheme(kind: "light" | "dark") {
+  try {
+    getCurrentWindow()
+      .setTheme(kind)
+      .catch(() => {});
+  } catch {
+    // Not in a Tauri window (a test page): nothing to theme.
+  }
+}
+
 export function applyTheme(id: string, persist = true) {
   const t = THEMES.find((t) => t.id === id) ?? THEMES[0];
   const root = document.documentElement;
   for (const [k, v] of Object.entries(t.css)) root.style.setProperty(k, v);
   root.dataset.theme = t.id;
   root.style.colorScheme = t.id === "light" ? "light" : "dark";
+  windowTheme(t.id === "light" ? "light" : "dark");
   Object.assign(theme, t.canvas);
   if (persist) {
     try {

@@ -18,10 +18,17 @@
   height: var(--editor-h, 300px);
 }
 
+/* The pane's name: a title, set apart from the Options menu beside it. */
+.mixer-title {
+  padding: 0 10px 0 2px;
+  border-right: 1px solid var(--edge);
+  font-weight: 700;
+}
+
 .mixer-filters {
   display: flex;
   gap: 2px;
-  margin-left: 12px;
+  margin-left: 6px;
 }
 
 .filter {
@@ -34,6 +41,36 @@
 .filter.on {
   background: var(--btn);
   color: var(--text);
+}
+
+/* A Mixer strip filter: a toggle with a light, lit while that kind of strip is shown. */
+.mixer-filters .filter {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding-left: 6px;
+  color: var(--faint);
+}
+
+.mixer-filters .filter::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px var(--faint);
+}
+
+.mixer-filters .filter:hover {
+  background: var(--btn);
+}
+
+.mixer-filters .filter.on {
+  color: var(--text);
+}
+
+.mixer-filters .filter.on::before {
+  background: var(--accent);
+  box-shadow: none;
 }
 
 /* The strips scroll both ways when the Mixer is too small for them. The row is at least as

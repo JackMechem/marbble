@@ -138,7 +138,8 @@ export function KeysPane({ close }: { close: () => void }) {
           </div>
         ))}
       </div>
-      <Foot close={close} note="Shortcuts work in the main window, not while typing in a text field.">
+      <div className="pref-hint">Shortcuts work in the main window, not while typing in a text field.</div>
+      <Foot close={close}>
         <button className="push" disabled={!customized} onClick={() => setKeys({})}>
           Reset All
         </button>

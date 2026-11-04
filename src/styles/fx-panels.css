@@ -491,3 +491,9 @@
   align-self: stretch;
 }
 
+/* The widest of the small panels: in a narrow window its groups wrap instead of scrolling
+   sideways. */
+.fx-gate {
+  flex-wrap: wrap;
+}
+

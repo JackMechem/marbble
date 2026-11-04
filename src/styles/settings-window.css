@@ -1,5 +1,45 @@
 /* The Settings window's tabs and status rows, and the theme previews. */
 /* Settings */
+/* One height for every pane: the pane scrolls inside, its footer stays at the bottom. */
+.sheet.settings-sheet {
+  height: min(660px, calc(100vh - 80px));
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-sheet > .sheet-title,
+.settings-sheet > .settings-tabs {
+  flex: none;
+}
+
+.settings-sheet > .settings-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-sheet > .settings-body > * {
+  flex: none;
+}
+
+.settings-sheet > .settings-body > .sheet-foot {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin: auto -8px 0;
+  padding: 12px 8px 0;
+  background: var(--sheet-bg);
+}
+
+/* Key Commands' list takes the pane's spare height. */
+.settings-sheet .key-table {
+  flex: 1 1 0;
+  height: auto;
+  min-height: 160px;
+}
+
 .settings-tabs {
   display: flex;
   justify-content: center;
@@ -129,9 +169,10 @@
   margin-top: 4px;
 }
 
+/* Five themes in one row at the window's width (three and two when narrower), never one alone. */
 .theme-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 10px;
 }
 

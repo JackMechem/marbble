@@ -1429,7 +1429,9 @@ Audio Track Editor and meters are canvas drawings. The common pattern:
 - `src/themes.ts` defines each theme as a map of CSS custom properties (applied to `:root`)
   plus a `CanvasTheme` for canvas drawing. Flat, Midnight, Light and High Contrast spread the
   previous theme's maps and override what differs, so a new variable only needs a value in
-  Studio to exist everywhere.
+  Studio to exist everywhere. `applyTheme` also sets the window's own theme (`setTheme`, light
+  for Light and dark otherwise; capability `core:window:allow-set-theme`), which on Linux tao
+  turns into GTK's `gtk-application-prefer-dark-theme`, so the native menu bar matches.
 - `src/styles/` uses only the variables, never literal theme colours. `src/styles/index.css`
   imports one stylesheet per area, and its order is the cascade: `tokens.css` first, the rest in
   the order they were written, so an area can come in more than one file (see the comment there).
@@ -2353,6 +2355,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `dragModes.ts` | The drag modes' rules for drawing a drag's outcome (mirrors `drag_modes.rs`); pure, tested. |
 | `regionBar.ts` | A region's name bar and body at a given track height; pure, tested. |
 | `trackHeader.ts` | Track header layouts by height and the volume slider's meter scale; pure, tested. |
+| `headerColumns.ts` | The button columns the track headers share, with gaps where a track has no such button; pure, tested. |
 | `regionParams.ts` | The Region inspector's playback parameter values and how they show; pure, tested. |
 | `tools.ts`, `marquee.ts` | Tracks-area tools (list, Tool menu keys, Scissors and Fade tool geometry) and the marquee's geometry; pure. |
 | `trackTools.ts` | The tools at work: the Tool menu (T), presses with each tool, the marquee's commands, tool cursors and overlay drawing. |
@@ -2391,7 +2394,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `fxDock.ts`, `fxDockState.ts` | Plug-in panels docked, floating or in separate windows: the pure transitions (tested), and applying them to the store with the floating panels' saved sizes. |
 | `compressorModel.ts`, `dynScale.ts` | The Compressor's parameter ids, circuits and curve (mirrors `compressor.rs`), and the dynamics panels' value formatting and knob maths; pure, tested. |
 | `settingsText.ts` | The words Settings and the Recovery sheet show: MIDI messages, plug-in types, what crashed work left; pure, tested. |
-| `instLayout.ts` | How an instrument panel lays out its sections, chosen apart for docked and floating; pure, tested. |
+| `instLayout.ts` | How an instrument panel lays out its sections, chosen apart for docked and floating, and which edge they run on past (for the fade); pure, tested. |
 | `samplerMap.ts`, `samplerDrop.ts` | Marbble Sampler's zones, note names and the sums behind its map (pure, tested); files going into it from its panel or a drop. |
 | `sideChain.ts` | The key sources a side-chain menu offers; pure, tested. |
 | `threads.ts` | Settings › Audio › Processing Threads; pure, tested. |
@@ -2405,6 +2408,8 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `focusRing.ts` | Shows the focus ring only after Tab (`data-keyboard-focus` on `<html>`); tested. |
 | `stripMeters.ts` | The clip indicator's readout and the gain-reduction meter's scale and fall; pure, tested. |
 | `vca.ts` | VCA offsets and loop checks for drawing the Mixer (mirrors `vca.rs`); pure, tested. |
+| `stripRows.ts` | How many insert and send rows strips side by side share (the Mixer's, the Inspector's pair), so their faders line up; pure, tested. |
+| `slotName.ts` | A plug-in slot's short name (a built-in instrument's model without "Marbble"); pure, tested. |
 | `slotDrag.ts` | Dragging plug-ins between Audio FX slots. |
 | `waveform.ts` | Waveform fetching, caching and the four drawing styles. |
 | `eqMath.ts` | Channel EQ frequency response for drawing (mirrors `eq.rs`). |
@@ -2436,6 +2441,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `Panels.tsx` | Inspector, Mixer, Library, Browser. |
 | `FadeRows.tsx`, `RegionParamRows.tsx` | The Region inspector's fade rows and playback parameter rows. |
 | `ChannelStrip.tsx` | A mixer channel strip. |
+| `StripSlots.tsx` | The strips' slot boxes (shared row count, scrolling past it, "+N") and blank stand-ins for sections a strip doesn't have, which keep strips level. |
 | `Sends.tsx` | The channel strip's Sends section and Output slot. |
 | `Vca.tsx` | The Mixer's VCA strips and the channel strip's VCA slot. |
 | `Eq.tsx` | Channel EQ thumbnail and editor window. |

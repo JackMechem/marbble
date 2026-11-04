@@ -1,6 +1,6 @@
 // A mixer channel strip, and the plug-in slot it shows for each insert.
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { act, actMade, api, canRecord, INSTRUMENT_SLOT, isStack, MASTER_ID, type Id, type InputSel, type PluginSlot, type Track } from "../api";
+import { act, actMade, api, canRecord, INSTRUMENT_SLOT, isStack, MASTER_ID, SEND_SLOTS, type Id, type InputSel, type PluginSlot, type Track } from "../api";
 import { Icon } from "../icons";
 import { pluginMenu } from "../pluginMenu";
 import { onTick, peakHold, useStore } from "../store";
@@ -25,6 +25,9 @@ import { canAssignVca, vcaOffset } from "../vca";
 import { isTrackOff, powerTitle } from "../trackOff";
 import { auxInput, hasExtraOutputs, nextOutput } from "../multiOut";
 import { useVcas, VcaSlot } from "./Vca";
+import { slotName } from "../slotName";
+import { BlankButtons, BlankEq, BlankRow, BlankSlots, MoreBadge, SlotBox } from "./StripSlots";
+import { filledBeyond, stripRows, stripWants, type SlotRows } from "../stripRows";
 
 const PAN = { type: "pan" } as const;
 
@@ -77,8 +80,8 @@ export function PluginSlotView({
   const target = instrument ? {} : { "data-track": trackId, "data-slot": slot };
   if (!plugin) {
     return (
-      <div className={"slot empty" + (instrument ? " instrument" : "")} {...target} onMouseDown={menu} onContextMenu={context}>
-        {instrument && <span className="slot-name dim">Instrument</span>}
+      <div className={"slot empty" + (instrument ? " instrument" : "")} {...target} onMouseDown={menu} onContextMenu={context} title={instrument ? "Choose an instrument" : "Add an Audio FX plug-in"}>
+        {instrument ? <span className="slot-name dim">Instrument</span> : <span className="slot-add" />}
       </div>
     );
   }
@@ -113,10 +116,10 @@ export function PluginSlotView({
             api.openEditor(plugin.uid, `${title} — ${plugin.name}`);
           };
           if (instrument || frozen) open();
-          else startSlotDrag(e, trackId, slot, plugin.name, open);
+          else startSlotDrag(e, trackId, slot, slotName(plugin.plugin_id, plugin.name), open);
         }}
       >
-        {plugin.name}
+        {slotName(plugin.plugin_id, plugin.name)}
       </span>
       <button className="slot-arrow" onMouseDown={menu} aria-label="Plug-in menu">
         <Icon.chevron />
@@ -155,8 +158,11 @@ function usePeakHold(key: Id): number {
   return peak;
 }
 
-/** Logic-style channel strip. `track` is null for the Stereo Out strip. */
-export function ChannelStrip({ track, selected }: { track: Track | null; selected?: boolean }) {
+/**
+ * Logic-style channel strip. `track` is null for the Stereo Out strip. `rows` are the insert and
+ * send rows shared by the strips beside it (stripRows.ts); without them it sizes to its own.
+ */
+export function ChannelStrip({ track, selected, rows }: { track: Track | null; selected?: boolean; rows?: SlotRows }) {
   // The fader takes whatever height is left, like Logic's strips.
   const faderBox = useRef<HTMLDivElement>(null);
   const [faderHeight, setFaderHeight] = useState(160);
@@ -175,8 +181,10 @@ export function ChannelStrip({ track, selected }: { track: Track | null; selecte
   useStore((s) => s.fxList);
   const inserts = isMaster ? master?.inserts ?? [] : track.inserts;
   const volume = isMaster ? master?.volume_db ?? 0 : track.volume_db;
-  const lastFilled = inserts.reduce((acc, s, i) => (s ? i : acc), -1);
-  const shown = Math.min(inserts.length, Math.max(lastFilled + 2, 1));
+  const wants = stripWants(isMaster ? null : track.kind, inserts, isMaster ? undefined : track.sends, SEND_SLOTS);
+  const rowsHere = rows ?? stripRows([wants]);
+  // Every strip shows the shared rows (empty slots below its plug-ins); one that wants more scrolls.
+  const shown = Math.min(inserts.length, Math.max(rowsHere.inserts, wants.inserts));
   const name = isMaster ? "Stereo Out" : track.name;
   const folder = track?.kind === "folder";
   // Subtracks of a summing stack play through it (a folder passes them on).
@@ -234,49 +242,57 @@ export function ChannelStrip({ track, selected }: { track: Track | null; selecte
         )}
       </div>
 
-      <div className="strip-section">
-        <div className="strip-label">Input</div>
-        {isMaster ? (
-          <div className="slot static" />
-        ) : isStack(track.kind) ? (
-          <div className="slot static" title={track.kind === "summing" ? "Its subtracks play through this strip" : "Folder: its fader, mute and solo apply to its subtracks"}>
-            {track.kind === "summing" ? "Subtracks" : "Folder"}
-          </div>
-        ) : track.kind === "aux" ? (
-          <div className={"slot static output" + (auxIn?.silent ? " no-output" : "")} title={auxIn?.title}>
-            <span className="aux-input">{auxIn?.label}</span>
-          </div>
-        ) : track.kind === "instrument" ? (
-          <PluginSlotView trackId={id} slot={INSTRUMENT_SLOT} plugin={track.instrument} instrument title={name} />
-        ) : (
-          <div className="slot input-slot">
-            <button
-              className="slot-format"
-              title="Mono / Stereo"
-              aria-label={track.input.type === "stereo" ? "Stereo input" : "Mono input"}
-              onMouseDown={(e) => {
-                e.stopPropagation();
-                const ch = track.input.type === "none" ? 0 : track.input.ch;
-                api.updateTrack(id, { input: track.input.type === "stereo" ? { type: "mono", ch } : { type: "stereo", ch: ch - (ch % 2) } });
-              }}
-            >
-              {track.input.type === "stereo" ? <Icon.stereo /> : <Icon.mono />}
-            </button>
-            <span
-              className="slot-name"
-              onMouseDown={(e) => {
-                e.stopPropagation();
-                openMenuAt(e.currentTarget.parentElement as HTMLElement, inputMenu(track, inputs));
-              }}
-            >
-              {inputLabel(track.input)}
-            </span>
-          </div>
-        )}
-      </div>
+      {isMaster ? (
+        // Stereo Out has no input to choose: the row stays, empty, so the strips line up.
+        <BlankRow label />
+      ) : (
+        <div className="strip-section">
+          <div className="strip-label">Input</div>
+          {isStack(track.kind) ? (
+            <div className="slot static" title={track.kind === "summing" ? "Its subtracks play through this strip" : "Folder: its fader, mute and solo apply to its subtracks"}>
+              {track.kind === "summing" ? "Subtracks" : "Folder"}
+            </div>
+          ) : track.kind === "aux" ? (
+            <div className={"slot static output" + (auxIn?.silent ? " no-output" : "")} title={auxIn?.title}>
+              <span className="aux-input">{auxIn?.label}</span>
+            </div>
+          ) : track.kind === "instrument" ? (
+            <PluginSlotView trackId={id} slot={INSTRUMENT_SLOT} plugin={track.instrument} instrument title={name} />
+          ) : (
+            <div className="slot input-slot">
+              <button
+                className="slot-format"
+                title="Mono / Stereo"
+                aria-label={track.input.type === "stereo" ? "Stereo input" : "Mono input"}
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  const ch = track.input.type === "none" ? 0 : track.input.ch;
+                  api.updateTrack(id, { input: track.input.type === "stereo" ? { type: "mono", ch } : { type: "stereo", ch: ch - (ch % 2) } });
+                }}
+              >
+                {track.input.type === "stereo" ? <Icon.stereo /> : <Icon.mono />}
+              </button>
+              <span
+                className="slot-name"
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  openMenuAt(e.currentTarget.parentElement as HTMLElement, inputMenu(track, inputs));
+                }}
+              >
+                {inputLabel(track.input)}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
 
       {folder ? (
-        <div className="strip-section strip-folder-note">A folder has no audio of its own.</div>
+        <div className="strip-folder-blank">
+          <BlankEq />
+          <BlankSlots rows={rowsHere.inserts} />
+          <BlankSlots rows={rowsHere.sends} />
+          <div className="strip-folder-note">A folder has no audio of its own.</div>
+        </div>
       ) : (
         <>
           <div className="strip-section">
@@ -287,13 +303,16 @@ export function ChannelStrip({ track, selected }: { track: Track | null; selecte
             <div className="strip-label">
               Audio FX
               <StripLatencyBadge id={id} />
+              <MoreBadge n={filledBeyond(inserts, rowsHere.inserts)} />
             </div>
-            {inserts.slice(0, shown).map((p, i) => (
-              <PluginSlotView key={i} trackId={id} slot={i} plugin={p} title={name} />
-            ))}
+            <SlotBox rows={rowsHere.inserts}>
+              {inserts.slice(0, shown).map((p, i) => (
+                <PluginSlotView key={i} trackId={id} slot={i} plugin={p} title={name} />
+              ))}
+            </SlotBox>
           </div>
 
-          {!isMaster && <SendsSection track={track} />}
+          {isMaster ? <BlankSlots rows={rowsHere.sends} /> : <SendsSection track={track} rows={rowsHere.sends} />}
         </>
       )}
 
@@ -379,9 +398,7 @@ export function ChannelStrip({ track, selected }: { track: Track | null; selecte
           </div>
         </div>
       ) : (
-        <div className="strip-buttons">
-          <div className="btn-row" style={{ height: 41 }} />
-        </div>
+        <BlankButtons />
       )}
 
       <div

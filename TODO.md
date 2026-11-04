@@ -53,6 +53,15 @@ Things that pass their checks but want a person.
 
 Nothing here has been checked by eye yet.
 
+- **UI audit fixes, layout (2026-11-04).** Measured in headless Chromium against the real stylesheet (a harness with
+  the showcase project), not in the app. The Mixer's and Inspector's faders, pan knobs and Read buttons on one line,
+  Stereo Out, folder and VCA strips included; a strip with more than 6 inserts scrolling them with "+N"; track header
+  buttons in columns at every height; the Compressor's floating panel opening at 703 px with nothing cut off; the fade
+  above Tre's keyboard bar in Grid; Settings at one height with the footer in view on every tab and five theme cards in
+  a row; the faint "+" in empty slots and the slot buttons on hover. Not seen at all: the GTK menu bar turning light
+  with the Light theme (`setTheme`, on Linux GTK's prefer-dark setting), and how the slots' thin scrollbar looks in
+  WebKitGTK.
+
 - **Plug-in editors at HiDPI and on native Wayland (2026-11-04).** Checked headlessly only (Xvfb, and Weston with
   XWayland driving GTK and WebKit directly, not the app). At scale 1 nothing should differ: open LSP Compressor,
   Dragonfly Hall, ZamCompX2, CHOW Tape and TONE3000 as usual. With `GDK_SCALE=2` the same editors should open at twice
@@ -181,17 +190,8 @@ they use there (simulated on Linux), but none of this has run on a real machine.
 
 ### UI and design
 
-A review on 2026-11-04 from the website's screenshots of the showcase project and the frontend's styles,
-not from use. Grade: **6/10**: a familiar, coherent layout with good pieces, let down by alignment,
-type, keyboard access and polish in the dense views.
+What's left from the reviews and the UI audit of 2026-11-04.
 
-- **The Mixer's rows don't line up.** Each strip stacks its slots as they come, so a strip with more Audio FX
-  or sends pushes its Sends header, output, automation button, pan and fader lower than its neighbours'
-  (Drums' fader sits about 30 px below Shaker's). A console reads across: fixed rows for inserts and sends
-  (scrolling or a "+N" past a count) would keep every fader and meter on one line.
-- **Track header buttons don't line up.** Audio tracks have M S R I and Freeze, instruments M S R and Freeze,
-  so the S button lands at a different x on each kind. Keep fixed columns and leave a gap where a button
-  doesn't apply.
 - **Design system, round 6 (not seen in the app yet):** a six-size type scale (body 11.5 → 12 px, small text
   9–10.5 → 11 px), every hex colour in a token, a focus ring for Tab, knobs and faders as keyboard sliders,
   `aria-label`s on icon-only buttons, a grey Read and power button, labels on Count-in and the zoom sliders, a
@@ -204,35 +204,24 @@ type, keyboard access and polish in the dense views.
   - Only the track switches and the control bar's view buttons say they're pressed (`aria-pressed`): Cycle,
     Metronome, Catch and the rest don't. Slots, menus and region lanes are still mouse-only.
   - Autopunch and Replace are still icon-only mode buttons.
-- **Truncated names in the Mixer:** "Marbble ...", "Compre...". An instrument slot can show the model's
-  short name (Tre, Sei), and a tooltip the whole.
-- **Empty slots have no affordance.** Empty insert, send and output slots are plain black bars; a faint "+"
-  or a hover state would say they can be clicked.
 - **Instrument panels are generic grids:** labels repeat their section ("Osc 1 Range" inside "Oscillator
-  1"), toggles read "Osc 1 On", sections leave large gaps, and on Tre at the docked height the Voices and
-  Touch knobs are cut off above the keyboard bar. Custom panels (Tre next) fix this one instrument at a time.
-- **The effect panel can overflow sideways:** the Compressor's panel in the screenshot has a horizontal
-  scrollbar, with the Mix readout touching the edge. The type scale made its knob labels and values 11 px
-  (from 10–10.5), which widens a row of knobs by a few px more.
+  1"), toggles read "Osc 1 On", and sections leave large gaps (Tre's Grid at the docked height scrolls to its
+  Voices and Touch rows). Custom panels (Tre next) fix this one instrument at a time.
 - **The global tracks take about 200 px by default** (Marker, Arrangement, Signature, Tempo) on a project
   that uses only the Arrangement track; showing only the ones in use, or a shorter Tempo track, would give
   the tracks back.
 - **The CPU meter's** red state (a late block) hasn't been seen.
 
 - **From the UI audit of 2026-11-04** (all menus, Settings, dialogs, Mixer, editors, Light theme):
-  - The Compressor's floating panel opens with a horizontal scrollbar and its Mix knob cut off; check the other panels'
-    default sizes.
   - Marbble › Quit Marbble draws greyed out and has no Ctrl+Q (Tauri's predefined Quit item on Linux).
   - The menu bar disagrees with the in-app menus: most shortcuts missing (Cut/Copy/Paste, all of Record, Navigate and
     View), no checkmarks on toggles, nothing ever disabled, modifiers written Shift+Ctrl where the app writes Ctrl+Shift,
     and commands named differently in each menu. The menu bar should take accelerators, names and states from the same
     command table.
-  - Metronome settings are in both Settings and Project Settings; UI text names Logic (Metronome footer, About).
-  - Settings changes height and footer from pane to pane; two pop-up styles (Settings vs toolbars).
+  - Metronome settings are in both Settings and Project Settings; About names Logic.
+  - Two pop-up styles (Settings vs toolbars).
   - Double-clicking a MIDI or audio region doesn't open its editor (pattern regions do).
-  - The ruler has no right-click menu; Stereo Out shows an empty Input slot; the Mixer's Audio/Inst/Aux filters show no
-    state and Options has one item.
-  - Light theme: the GTK menu bar stays dark, and the I button is nearly invisible on track headers.
+  - The ruler has no right-click menu.
   - The projects folder still shows as `~/Music/Fermata`: offer to rename it.
 
 ### Larger

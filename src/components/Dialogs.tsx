@@ -17,6 +17,7 @@ import { applyTheme, THEMES, type Theme } from "../themes";
 import { applyUiScale, UI_SCALES } from "../uiScale";
 import { applyWaveStyle, WAVE_STYLES } from "../waveform";
 import { SettingsWindow } from "./Settings";
+import { Foot } from "./settingsPanes/parts";
 import { PdcSettings } from "./Latency";
 import { fmt } from "../keymap";
 
@@ -272,6 +273,8 @@ function AudioPane({ close }: { close: () => void }) {
           options={(devices?.hosts ?? []).map((h) => [h.name, hostLabel(h)] as [string, string])}
           onChange={(h) => setCfg({ ...cfg, host: h, input: null, output: null })}
         />
+        <span />
+        <span className="form-note">PipeWire is the recommended driver on Linux.</span>
         <label>Output Device:</label>
         <Select
           value={cfg.output ?? ""}
@@ -342,30 +345,25 @@ function AudioPane({ close }: { close: () => void }) {
         )}
         {audio?.error && audio.running && <div className="warn">{audio.error}</div>}
       </div>
-      <div className="sheet-foot">
-        <span className="dim">PipeWire is the recommended driver on Linux.</span>
-        <div className="sheet-buttons">
-          <button
-            className="push"
-            disabled={busy}
-            title="Close and reopen the audio devices, e.g. after an interface was replugged"
-            onClick={async () => {
-              setBusy(true);
-              await act("restart_audio");
-              setBusy(false);
-              refreshThreads();
-            }}
-          >
-            Reset Audio Engine
-          </button>
-          <button className="push" disabled={busy} onClick={done} title={changed ? "Apply the changes and close" : undefined}>
-            Done
-          </button>
-          <button className="push default" disabled={busy || !changed} onClick={apply}>
-            {busy ? "Applying…" : "Apply Changes"}
-          </button>
-        </div>
-      </div>
+      {/* Done applies the changes too, so it stays on the right as in every pane. */}
+      <Foot close={done} busy={busy} note="Changes apply with Apply Changes or Done.">
+        <button
+          className="push"
+          disabled={busy}
+          title="Close and reopen the audio devices, e.g. after an interface was replugged"
+          onClick={async () => {
+            setBusy(true);
+            await act("restart_audio");
+            setBusy(false);
+            refreshThreads();
+          }}
+        >
+          Reset Audio Engine
+        </button>
+        <button className="push" disabled={busy || !changed} onClick={apply}>
+          {busy ? "Applying…" : "Apply Changes"}
+        </button>
+      </Foot>
     </>
   );
 }
@@ -442,14 +440,7 @@ function AppearancePane({ close }: { close: () => void }) {
           </button>
         ))}
       </div>
-      <div className="sheet-foot">
-        <span className="dim">Changes apply immediately and are remembered.</span>
-        <div className="sheet-buttons">
-          <button className="push default" onClick={close}>
-            Done
-          </button>
-        </div>
-      </div>
+      <Foot close={close} />
     </>
   );
 }

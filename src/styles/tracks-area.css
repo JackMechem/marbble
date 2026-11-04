@@ -270,6 +270,11 @@
   border-radius: 4px;
 }
 
+/* Where this track has no such button: a space, so the buttons line up with other headers'. */
+.th-buttons .th-gap {
+  visibility: hidden;
+}
+
 .th-resize {
   position: absolute;
   left: 0;
@@ -301,12 +306,13 @@
   background: var(--tbtn-hi);
 }
 
+/* The letters can take a darker shade than the lit button (the Light theme's --mon-text). */
 .tbtn.mon {
-  color: var(--mon);
+  color: var(--mon-text, var(--mon));
 }
 
 .tbtn.rec {
-  color: var(--red);
+  color: var(--rec-text, var(--red));
 }
 
 .tbtn.mute.on {
