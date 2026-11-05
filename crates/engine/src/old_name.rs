@@ -260,9 +260,11 @@ mod tests {
             (PathBuf::from("/h/Music/Fermata"), PathBuf::from("/h/Music/Marbble")),
             (PathBuf::from("/data/Music/Fermata"), PathBuf::from("/data/Music/Marbble")),
         ];
-        assert_eq!(moved_str("/h/Music/Fermata/Song.fermata", &pairs).as_deref(), Some("/h/Music/Marbble/Song.fermata"));
-        assert_eq!(moved_str("/data/Music/Fermata/Song.fermata", &pairs).as_deref(), Some("/data/Music/Marbble/Song.fermata"));
-        assert_eq!(moved_str("/h/Music/Fermata", &pairs).as_deref(), Some("/h/Music/Marbble"));
+        // Compared as paths: the moved part is joined with the platform's separator.
+        let path = |s: Option<&str>| s.map(PathBuf::from);
+        assert_eq!(path(moved_str("/h/Music/Fermata/Song.fermata", &pairs).as_deref()), path(Some("/h/Music/Marbble/Song.fermata")));
+        assert_eq!(path(moved_str("/data/Music/Fermata/Song.fermata", &pairs).as_deref()), path(Some("/data/Music/Marbble/Song.fermata")));
+        assert_eq!(path(moved_str("/h/Music/Fermata", &pairs).as_deref()), path(Some("/h/Music/Marbble")));
         // Only whole path components match.
         assert_eq!(moved_str("/h/Music/Fermata Instruments/x", &pairs), None);
         assert_eq!(moved_str("/elsewhere/Song.marbble", &pairs), None);
@@ -272,8 +274,8 @@ mod tests {
         prefs.general.project_folder = Some("/h/Music/Fermata".into());
         prefs.recording.folder = Some("/h/Music/Fermata/Recordings".into());
         assert!(rebase_prefs(&mut prefs, &pairs));
-        assert_eq!(prefs.general.project_folder.as_deref(), Some("/h/Music/Marbble"));
-        assert_eq!(prefs.recording.folder.as_deref(), Some("/h/Music/Marbble/Recordings"));
+        assert_eq!(path(prefs.general.project_folder.as_deref()), path(Some("/h/Music/Marbble")));
+        assert_eq!(path(prefs.recording.folder.as_deref()), path(Some("/h/Music/Marbble/Recordings")));
     }
 
     #[test]
