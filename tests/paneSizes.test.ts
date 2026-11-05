@@ -58,7 +58,8 @@ test("the Event List and the Step Sequencer share the Editors' height", () => {
 });
 
 // Guards on the stylesheet: the rules that keep the panes inside the window.
-const css = (f: string) => readFileSync(new URL(`../src/styles/${f}`, import.meta.url), "utf8");
+// Line endings are normalised: a Windows checkout has CRLF, and the selectors below span lines.
+const css = (f: string) => readFileSync(new URL(`../src/styles/${f}`, import.meta.url), "utf8").replace(/\r\n/g, "\n");
 const rule = (text: string, selector: string) => {
   const at = text.indexOf(`${selector} {`);
   assert.ok(at >= 0, `${selector} has a rule`);
