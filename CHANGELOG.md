@@ -230,6 +230,15 @@ All notable changes to Marbble are recorded here. The format follows
   slower than real time when the cores are shared, and the engine shed load as for a real overload,
   at a block that depended on the load. Checks that ask for it (`ParallelTest::patient`) no longer
   shed load, and the check fails plainly if an overload happens anyway.
+- `parallel_check`'s runs with workers refused real-time priority failed now and then, more often
+  without LSP's plug-ins (as on CI): their output differed from the serial run's from the first
+  block on. Not the pool: every block went through it, and the run with every worker refused,
+  serial throughout, differed the same way. The live runs give a compressor a lookahead, and with
+  an audio device running its latency reaches delay compensation only at the next `idle` after
+  the engine has the new value. The refused runs call `idle` while their workers start, so
+  whether they began with 240 frames of compensation or 76 depended on whether the null device
+  had played a block by then. Every live run now lets the engine take the value and calls `idle`
+  before it plays.
 - **The Region inspector's rows no longer overlap** with an audio region selected: the rows
   (Delay, Gain, Fade In, Curve, Fade Out) were 19 px tall around 24 px number fields. Rows now
   fit their controls, "Fade Out" keeps to one line, and a style test guards it.

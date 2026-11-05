@@ -365,6 +365,13 @@ fn main() {
             s.remove_plugin(e.world.drums, 0);
             s.set_plugin(e.world.drums, 0, "builtin:compressor").unwrap();
             s.set_builtin_param(e.world.drums, 0, daw_engine::fx::compressor::param::LOOKAHEAD, 5.0).unwrap();
+            // With the null device running, the lookahead's latency reaches delay compensation only
+            // once the engine has taken the new value and `idle` then sees it, as in the app. Both
+            // now, for every run: otherwise a run started its compensation without the lookahead
+            // unless its callback happened to play a block before some later `idle` (the refused
+            // runs call one), and its output differed from the first block on.
+            s.engine_for_checks().lock().process(&[], 0, &mut [], 0);
+            s.idle();
             // Patient whatever the threads: a debug build on a busy machine plays blocks slower than
             // real time, and the engine would shed load, at a moment that depends on the machine.
             s.set_threads_for_checks(threads, if threads > 1 { PATIENT } else { ParallelTest { patient: true, ..Default::default() } });
