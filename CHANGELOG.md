@@ -6,6 +6,8 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0-alpha.7] - 2026-11-04
+
 ### Added
 
 - **Window and Help menus.** Window has Minimize, the Mixer, Editor and Event List in Separate
@@ -759,7 +761,8 @@ The first prerelease. Everything below is new.
 - The `takes_check` headless check "autopunch trims the take" fails about one run in five,
   from the null audio device's timing.
 
-[Unreleased]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.6...HEAD
+[Unreleased]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.7...HEAD
+[0.1.0-alpha.7]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.6...v0.1.0-alpha.7
 [0.1.0-alpha.6]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.5...v0.1.0-alpha.6
 [0.1.0-alpha.5]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.4...v0.1.0-alpha.5
 [0.1.0-alpha.4]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.3...v0.1.0-alpha.4
