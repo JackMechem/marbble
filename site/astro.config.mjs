@@ -44,6 +44,7 @@ export default defineConfig({
         Sidebar: "./src/components/Sidebar.astro",
         SiteTitle: "./src/components/SiteTitle.astro",
         Head: "./src/components/Head.astro",
+        Footer: "./src/components/Footer.astro",
       },
       expressiveCode: { themes: ["github-dark", "github-light"], styleOverrides: { borderRadius: "4px" } },
       head: [
