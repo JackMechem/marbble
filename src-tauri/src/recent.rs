@@ -52,7 +52,9 @@ fn rebased(list: &[String], pairs: &[(PathBuf, PathBuf)]) -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
     for p in list {
         let p = daw_engine::old_name::moved_str(p, pairs).unwrap_or_else(|| p.clone());
-        if !out.contains(&p) {
+        // Compared as paths: on Windows the moved part is joined with a backslash, and the same
+        // project may already be listed with forward slashes.
+        if !out.iter().any(|q| Path::new(q) == Path::new(&p)) {
             out.push(p);
         }
     }
@@ -106,6 +108,7 @@ mod tests {
         let pairs = vec![(PathBuf::from("/h/Music/Fermata"), PathBuf::from("/h/Music/Marbble"))];
         let list = ["/h/Music/Fermata/A.fermata", "/elsewhere/B.marbble", "/h/Music/Marbble/A.fermata"].map(String::from);
         // A path already listed under the new name isn't listed twice; the newer entry's place wins.
-        assert_eq!(rebased(&list, &pairs), ["/h/Music/Marbble/A.fermata", "/elsewhere/B.marbble"]);
+        let paths = |l: &[String]| l.iter().map(PathBuf::from).collect::<Vec<_>>();
+        assert_eq!(paths(&rebased(&list, &pairs)), paths(&["/h/Music/Marbble/A.fermata", "/elsewhere/B.marbble"].map(String::from)));
     }
 }
