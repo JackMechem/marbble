@@ -66,10 +66,13 @@ pub(super) fn run_strip<R: Routes>(cx: &BlockCtx<'_>, ti: usize, t: &mut TrackDs
     let mut p = t.params;
     let pdc = t.pdc;
     // A live track (recording, or monitored in Low Latency Mode) skips its delay
-    // compensation, so the performer isn't kept waiting (see session/pdc.rs).
+    // compensation, so the performer isn't kept waiting (see session/pdc.rs). An aux on an
+    // instrument's extra output is monitored with the instrument, so it keeps up with the
+    // instrument's main output.
     let monitored = match t.kind {
         TrackKind::Audio => p.monitor || (p.armed && auto_monitor),
         TrackKind::Instrument => p.armed,
+        TrackKind::Aux if p.instrument_output.is_some() => t.feed.source.and_then(|i| routes.earlier(i)).is_some_and(|s| s.params.armed),
         _ => false,
     };
     let live = (recording && p.armed && t.kind == TrackKind::Audio) || (low_latency && monitored);
@@ -134,7 +137,8 @@ pub(super) fn run_strip<R: Routes>(cx: &BlockCtx<'_>, ti: usize, t: &mut TrackDs
         TrackKind::Summing | TrackKind::Aux => {
             routes.inputs((&mut t.sum_l[..n], &mut t.sum_r[..n]), l, r);
             if let Some(o) = p.instrument_output {
-                let pull = multi_out::Pull { bus: o.bus as usize, smooth, snap: snap_gains, delay: pdc.feed, fade: (pdc::FADE_SECS * sr) as u32 };
+                let delay = if live { 0 } else { pdc.feed };
+                let pull = multi_out::Pull { bus: o.bus as usize, smooth, snap: snap_gains, delay, fade: (pdc::FADE_SECS * sr) as u32 };
                 let src = t.feed.source.and_then(|i| routes.earlier(i));
                 t.feed.pull(src, &pull, &mut t.pdc_taps.feed, (l, r), (&mut sc.tap_l[..n], &mut sc.tap_r[..n]));
                 if contain(l, r) {

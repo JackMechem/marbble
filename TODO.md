@@ -162,8 +162,6 @@ they use there (simulated on Linux), but none of this has run on a real machine.
 - `controller_check` failed once in a full run, counting two MIDI messages too many ("other messages still play the
   instrument (2 -> 6)"), and passed 15 of 15 alone. Cause unknown.
 - An LSP lookahead change didn't reach delay compensation after a render until the next `update_pdc`.
-- In Low Latency Mode a monitored instrument skips its compensation delay but its output auxes keep theirs, so an aux can lag
-  while monitoring.
 - Marbble Synth's renders aren't repeatable with its mod wheel up (its LFO runs free, and `silence` keeps its controllers).
   Left alone, as old projects depend on it; a new default could drop it.
 

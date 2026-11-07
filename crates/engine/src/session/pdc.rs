@@ -24,8 +24,9 @@
 //! changes everyone's delays through the same glide as any other latency change.
 //!
 //! Live playing is the exception: an armed audio track that is recording, and in Low Latency
-//! Mode any monitored track, plays without its compensation delay (and in Low Latency Mode
-//! without plug-ins over the limit), so performers hear themselves as soon as possible.
+//! Mode any monitored track (with the auxes on a monitored instrument's extra outputs), plays
+//! without its compensation delay (and in Low Latency Mode without plug-ins over the limit), so
+//! performers hear themselves as soon as possible.
 //! Recordings are still lined up with what was heard, which reached the performer `total`
 //! late.
 

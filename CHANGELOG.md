@@ -13,6 +13,8 @@ All notable changes to Marbble are recorded here. The format follows
   performer heard it.
 - After Stop, the audio still in the delay compensation follows its automation to the end, as in
   a bounce, instead of playing out at the faders' static levels.
+- In Low Latency Mode, the auxes on a record-enabled instrument's extra outputs skip their
+  compensation delay with the instrument's main output, instead of lagging behind it.
 
 ## [0.1.0-alpha.8] - 2026-11-07
 

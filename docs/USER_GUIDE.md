@@ -2441,8 +2441,9 @@ and sends line up at Stereo Out.
 
 **Low Latency Mode** (Settings › Audio, or Record › Low Latency Mode): while you play live,
 plug-ins with more latency than the limit (5 ms by default) are switched off on record-enabled
-tracks and on monitored audio tracks, and those tracks skip their compensation delay. An armed
-audio track that is recording always skips its own compensation delay. Bounces and exports
+tracks and on monitored audio tracks, and those tracks skip their compensation delay. The auxes
+on a record-enabled instrument's extra outputs do the same, so they stay with its main output. An
+armed audio track that is recording always skips its own compensation delay. Bounces and exports
 ignore Low Latency Mode.
 
 ---

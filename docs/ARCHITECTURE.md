@@ -637,8 +637,9 @@ The solver is in `session/pdc.rs`, the delay lines in `dsp/pdc.rs`:
   whose tap matches the output's shares its read. Side-chain keys leave before the line, so
   they have no compensation to change.
 - **Live tracks** (an armed audio track that is recording; in Low Latency Mode any monitored
-  track) skip their compensation delay, and in Low Latency Mode the plug-ins over the limit
-  (`low_latency_skip` bits) are not run.
+  track, and an aux on a monitored instrument's extra output, which goes live with it) skip their
+  compensation delay (an output aux its `feed` delay too), and in Low Latency Mode the plug-ins
+  over the limit (`low_latency_skip` bits) are not run.
 - Recordings are moved earlier by `total` as well, since the performer heard the song that
   late.
 - **Stop** lets the audio still in the lines come out as the end of a render does: inside the
