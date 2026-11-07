@@ -15,6 +15,9 @@ All notable changes to Marbble are recorded here. The format follows
   a bounce, instead of playing out at the faders' static levels.
 - In Low Latency Mode, the auxes on a record-enabled instrument's extra outputs skip their
   compensation delay with the instrument's main output, instead of lagging behind it.
+- A plug-in's new latency (an LSP lookahead, say) reaches delay compensation at once: a bounce
+  made right after the change plays with it, and playback picks it up within 30 ms instead of
+  when the plug-in gets round to reporting it.
 
 ## [0.1.0-alpha.8] - 2026-11-07
 

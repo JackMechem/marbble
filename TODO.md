@@ -161,7 +161,6 @@ they use there (simulated on Linux), but none of this has run on a real machine.
   new instance that isn't retried), and passed 3 of 3 alone: likely the same loss.
 - `controller_check` failed once in a full run, counting two MIDI messages too many ("other messages still play the
   instrument (2 -> 6)"), and passed 15 of 15 alone. Cause unknown.
-- An LSP lookahead change didn't reach delay compensation after a render until the next `update_pdc`.
 - Marbble Synth's renders aren't repeatable with its mod wheel up (its LFO runs free, and `silence` keeps its controllers).
   Left alone, as old projects depend on it; a new default could drop it.
 

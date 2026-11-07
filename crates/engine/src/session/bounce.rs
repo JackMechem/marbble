@@ -109,14 +109,8 @@ impl Session {
             return Err(anyhow!("Nothing to bounce: the range is empty"));
         }
         self.sync_parallel();
-        let engine = self.engine.clone();
-        // A built-in effect's lookahead may have just changed: let the engine apply it, so
-        // the render's delay compensation is up to date.
-        engine.lock().process(&[], 0, &mut [], 0);
-        if self.builtin_latency_changed() {
-            self.update_pdc();
-        }
-        let audio = engine.lock().render(from, to, tail, isolate, progress);
+        self.settle_latency();
+        let audio = self.engine.lock().render(from, to, tail, isolate, progress);
         Ok(audio)
     }
 
@@ -129,11 +123,8 @@ impl Session {
         if self.audio.is_none() || self.rec_punch.is_some() || to <= from {
             return Err(anyhow!("Can't render: no audio device, recording, or an empty range"));
         }
+        self.settle_latency();
         let engine = self.engine.clone();
-        engine.lock().process(&[], 0, &mut [], 0);
-        if self.builtin_latency_changed() {
-            self.update_pdc();
-        }
         let mut guard = engine.lock();
         let audio = guard.render_with_edit(from, to, at, &mut || edit(self));
         Ok(audio)

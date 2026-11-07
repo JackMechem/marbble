@@ -1213,7 +1213,11 @@ costs nothing.
 
 `PluginController::latency()` calls `getLatencySamples` on the main thread. `restartComponent`
 stores its flags; `idle()` reports `kLatencyChanged`, and `Session::idle` then reruns
-`update_pdc`. `kParamValuesChanged` goes to [undo](#undo-of-editor-edits). Other restart flags are
+`update_pdc`. `Session::idle` also asks every plug-in for its latency (`latency_changed`), since
+LSP's change `getLatencySamples` in the block that takes the new setting but call
+`restartComponent` some 40 ms later. Before a render, `settle_latency` waits (up to 50 ms) for
+VST3 edits to reach their processors and asks again, so a lookahead changed just before a bounce
+is in its delay compensation. `kParamValuesChanged` goes to [undo](#undo-of-editor-edits). Other restart flags are
 ignored, and the component is not reactivated.
 
 ### State

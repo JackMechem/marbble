@@ -17,7 +17,8 @@ impl Session {
             c.idle();
             latency_changed |= c.take_latency_changed();
         }
-        latency_changed |= self.builtin_latency_changed();
+        // Asked as well: a plug-in may change its latency well before it says so.
+        latency_changed |= self.latency_changed();
         if latency_changed {
             self.update_pdc();
         }

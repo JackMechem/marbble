@@ -226,7 +226,7 @@ impl Session {
         self.send(Cmd::FxParam { track, uid, id, value: v });
         // A lookahead may have changed. Without an audio device the engine has already
         // applied the change; otherwise `idle` notices it.
-        if self.builtin_latency_changed() {
+        if self.latency_changed() {
             self.update_pdc();
         }
         self.dirty = true;
@@ -366,15 +366,6 @@ impl Session {
     /// A loaded built-in instance's latency (frames).
     pub(super) fn builtin_latency(&self, uid: Id) -> Option<u32> {
         self.fx.get(&uid).map(|s| s.latency())
-    }
-
-    /// Whether a loaded built-in effect's latency differs from what delay compensation was
-    /// last worked out with.
-    pub(super) fn builtin_latency_changed(&self) -> bool {
-        let used = |uid: Id| self.pdc_report.strips.iter().flat_map(|s| s.slots.iter()).find(|s| s.0 == uid).map(|s| s.1).unwrap_or(0);
-        let p = &self.project;
-        let tracks = p.tracks.iter().filter(|t| t.frozen.is_none()).flat_map(|t| t.inserts.iter());
-        tracks.chain(p.master.inserts.iter()).flatten().any(|s| self.fx.get(&s.uid).map(|f| f.latency() != used(s.uid)).unwrap_or(false))
     }
 
     /// The longest tail of a track's built-in effects and instrument (seconds).

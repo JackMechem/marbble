@@ -2,7 +2,7 @@
 //! delays that bring every path back in line, as Logic's "All" mode does.
 //!
 //! Each strip has a latency: its instrument plus its insert plug-ins, as they report it
-//! (`getLatencySamples`, re-read when a plug-in says it changed). Bypassed plug-ins still
+//! (`getLatencySamples`, asked again whenever the session idles). Bypassed plug-ins still
 //! count, as in Logic: the engine doesn't run them, so the strip's delay line makes up their
 //! latency instead. That keeps the timing of everything else steady while a plug-in is
 //! switched on and off.
@@ -267,6 +267,32 @@ impl Session {
             self.send(Cmd::PdcGlobal(global));
         }
         self.pdc_report = report;
+    }
+
+    /// Whether a plug-in's latency differs from what delay compensation was last worked out
+    /// with. Asked of every plug-in that counts, not left to them to report: a built-in effect
+    /// changes its latency on the audio thread, and LSP's VST3s call
+    /// `restartComponent(kLatencyChanged)` tens of milliseconds after `getLatencySamples` has
+    /// changed.
+    pub(super) fn latency_changed(&self) -> bool {
+        let used = |uid: Id| self.pdc_report.strips.iter().flat_map(|s| s.slots.iter()).find(|s| s.0 == uid).map(|s| s.1).unwrap_or(0);
+        let p = &self.project;
+        let tracks = p.tracks.iter().filter(|t| !p.is_off(t.id)).flat_map(|t| t.inserts.iter().chain(std::iter::once(&t.instrument)));
+        tracks.chain(p.master.inserts.iter()).flatten().any(|s| self.slot_latency(s) != used(s.uid))
+    }
+
+    /// Before a render: the engine takes the edits on their way (a VST3 takes them in the next
+    /// block the device plays), and a latency they changed, such as a lookahead, is in the
+    /// delay compensation the render plays with.
+    pub(super) fn settle_latency(&mut self) {
+        self.engine.lock().process(&[], 0, &mut [], 0);
+        let deadline = Instant::now() + Duration::from_millis(50);
+        while self.audio.is_some() && Instant::now() < deadline && self.controllers.values().any(|c| c.edits_pending()) {
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        if self.latency_changed() {
+            self.update_pdc();
+        }
     }
 
     /// Plug-in latency and compensation, for the channel strips and the status line.
