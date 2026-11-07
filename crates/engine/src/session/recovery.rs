@@ -117,7 +117,8 @@ pub struct JournalTake {
 
 impl RecJournal {
     fn plan(&self) -> RecPlan {
-        RecPlan { from: self.from, cycle: self.cycle, punch: self.punch_range, latency: self.latency, min_take: self.min_take }
+        // Recovery finds no MIDI: it was never written down.
+        RecPlan { from: self.from, cycle: self.cycle, punch: self.punch_range, latency: self.latency, midi_latency: 0, min_take: self.min_take }
     }
 }
 
@@ -547,7 +548,7 @@ mod tests {
         let found = recording_journals(&dir);
         assert_eq!(found.len(), 1);
         assert_eq!(read_journal(&found[0]).unwrap(), j);
-        assert_eq!(j.plan(), RecPlan { from: 96000, cycle: Some((0, 192000)), punch: Some((48000, 144000)), latency: 0, min_take: 24000 });
+        assert_eq!(j.plan(), RecPlan { from: 96000, cycle: Some((0, 192000)), punch: Some((48000, 144000)), latency: 0, midi_latency: 0, min_take: 24000 });
         // Files that merely look similar aren't journals.
         std::fs::write(dir.join("recording-notes.txt"), "x").unwrap();
         assert_eq!(recording_journals(&dir).len(), 1);

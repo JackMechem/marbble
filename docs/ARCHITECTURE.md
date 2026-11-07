@@ -640,10 +640,15 @@ The solver is in `session/pdc.rs`, the delay lines in `dsp/pdc.rs`:
   whose tap matches the output's shares its read. Side-chain keys leave before the line, so
   they have no compensation to change.
 - **Live tracks** (an armed audio track that is recording; in Low Latency Mode any monitored
-  track) skip their compensation delay, and in Low Latency Mode the plug-ins over the limit
-  (`low_latency_skip` bits) are not run.
+  track, and an aux on a monitored instrument's extra output, which goes live with it) skip their
+  compensation delay (an output aux its `feed` delay too), and in Low Latency Mode the plug-ins
+  over the limit (`low_latency_skip` bits) are not run.
 - Recordings are moved earlier by `total` as well, since the performer heard the song that
   late.
+- **Stop** lets the audio still in the lines come out as the end of a render does: inside the
+  engine the transport runs on for `total` frames (`Engine::stopping`, with `draining`), so
+  automation follows that audio and nothing new starts, while the session is shown the
+  transport stopped where it stopped. Play, Record, Locate or a render end it at once.
 
 ### Multi-core processing
 
@@ -694,12 +699,43 @@ guarantees:
   take: it spins for 300 µs, then naps 50 µs at a time, which also lets a worker at normal priority
   run if it shares this core.
 - *A stuck worker can't hang the callback.* After `GIVE_UP_SECS` (0.1 s, or four buffers if that's
-  longer) `process` gives the block up: silence, counted as an overload, so the session stops the
-  transport and says so. The block stays open (`Parallel::stalled`) and the strips and all it reads
-  belong to the threads playing it. Until it ends, each callback plays silence and applies no
-  commands; then the engine flushes notes and carries on, shedding as after any overload. Anything
-  that changes the graph off the audio thread (`replace_graph`, `render`, dropping the engine) first
-  waits for it (`Engine::settle`).
+  longer) `process` gives the block up: silence, counted as an overload. What then depends on
+  where the stuck worker is. Out in a plug-in, it's left there (next point), and the block ends
+  without its strip. Anywhere else, the session stops the transport and says so, and the block
+  stays open (`Parallel::stalled`): the strips and all it reads belong to the threads playing it.
+  Until it ends, each callback plays silence and applies no commands; then the engine flushes notes
+  and carries on, shedding as after any overload. Anything that changes the graph off the audio
+  thread (`replace_graph`, `render`, dropping the engine) first waits for it (`Engine::settle`).
+- *A worker left in a plug-in costs its strip, not the engine.* `run_strip` brackets every call
+  into a plug-in (`Routes::enter` and `leave`, a `pool::Call` per thread, with the call's number
+  and start time), and a call touches only its own strip, its thread's scratch (the side-chain key
+  is copied there first) and what the block reads. At the give-up `Pool::abandon` moves each worker
+  that has been in one such call for three quarters of the limit to `LEFT` (one compare-exchange
+  on the call's number and phase, which the worker's own `leave` loses if the plug-in returns at
+  that moment); a shorter call is more likely a hiccup than a hang. It then counts the worker's
+  task and every task the graph has waiting for it out of `remaining`: none of them ran, and none
+  ever gets ready. The caller finishes the rest of the block (with a quarter of the limit) and
+  plays on. Past that, or with the worker held up outside a plug-in, it falls back to
+  `retire_stuck` and a stalled block, during which each callback (and `Engine::settle`) calls
+  `Parallel::press_on`: a worker retired in that block that has since been in a plug-in for long
+  enough is left after all, and the caller does what's ready of the block, never waiting.
+  `Parallel::leave_out`, once the block is over, swaps the strip in the engine's list for a
+  stand-in made ahead in `Workers::new`, which takes the commands meant for the track, and marks
+  the stand-in and every strip counted out `left_out`: they play nothing in any later block,
+  serial or pooled. `EngineStatus::held` lists the track and plug-in, and `left_events` tells the
+  session, which says so, lets playback go on (stopping a recording), refuses renders while
+  `left_out` counts any strip (they'd be missing), and asks no plug-in a thread is left in for
+  its state (`capture_plugin_states`, the VST3 undo watch), saving the state the project last had.
+  The strip left behind is never touched again until its thread is gone: if the plug-in ever
+  returns, `leave` fails, the strip returns at once, the worker skips its bookkeeping, marks its
+  `Call` `GONE` and ends, and `Parallel::take_released` sends the strip back as garbage and marks
+  its entry in `held` back. The session's `idle` then builds the track a new strip, plug-ins from
+  their state now, and sends `Cmd::Back`, which puts it in the stand-in's place and brings back
+  every strip sitting out but those still fed by a plug-in that hasn't returned (with a fade-in, as
+  for Track On). Reset Audio Engine rebuilds every strip while any sits out. Until a thread is
+  gone, the job it's in (a new cell per time workers are left), its scratch and the graph
+  (`Parallel::graph_held`) stay, and dropping the `Workers` or the pool leaks them and lets the
+  thread go rather than join it.
 - *A worker given up on is retired.* At the give-up `Pool::retire_stuck` takes every worker still
   in a task (`Slot::busy`, set before a worker claims, so one preempted between taking a task and
   starting it counts) out of the pool: it takes no task again and its thread ends once it gets out.
@@ -712,9 +748,9 @@ guarantees:
   one `sched_setscheduler` call is the only system call the callback makes for this, and only on a
   give-up. The rest of the pool plays on with the other workers once the block is over, or
   serially if none is left. The overload message says the thread is left out; Reset Audio Engine
-  (`restart_audio` sets `ThreadState::renew`) starts the pool afresh. A plug-in that never returns
-  at all still leaves the engine silent, as on the callback, but the app stays up to save the
-  project.
+  (`restart_audio` sets `ThreadState::renew`) starts the pool afresh. A worker held up outside a
+  plug-in call that never ends would still leave the engine silent, as a plug-in that never
+  returns on the callback does, but the app stays up to save the project.
 - *A panic stays in its task.* It is caught, counted in `engine_errors`, its dependants still run
   and the block is silenced. The pool isn't poisoned.
 - *Workers really sleep.* A real-time thread that never blocks is killed at RLIMIT_RTTIME's hard limit
@@ -1211,7 +1247,11 @@ costs nothing.
 
 `PluginController::latency()` calls `getLatencySamples` on the main thread. `restartComponent`
 stores its flags; `idle()` reports `kLatencyChanged`, and `Session::idle` then reruns
-`update_pdc`. `kParamValuesChanged` goes to [undo](#undo-of-editor-edits). Other restart flags are
+`update_pdc`. `Session::idle` also asks every plug-in for its latency (`latency_changed`), since
+LSP's change `getLatencySamples` in the block that takes the new setting but call
+`restartComponent` some 40 ms later. Before a render, `settle_latency` waits (up to 50 ms) for
+VST3 edits to reach their processors and asks again, so a lookahead changed just before a bounce
+is in its delay compensation. `kParamValuesChanged` goes to [undo](#undo-of-editor-edits). Other restart flags are
 ignored, and the component is not reactivated.
 
 ### State
@@ -1347,8 +1387,10 @@ stores the pair as base64 in `PluginSlot::state` and restores it straight after 
 `Session::record_latency_frames` = (input latency + output latency) + `ring_frames` +
 Recording Delay + the PDC total. `finish_recording` moves each audio take earlier by that
 amount (trimming anything before zero into the region offset). Recorded MIDI is moved by the
-output latency plus the PDC total only, since MIDI travels one way. Cycle and Autopunch shaping
-use the value in the `RecPlan`, computed when recording starts.
+output latency plus the PDC total only, since MIDI travels one way. Both are worked out when
+recording starts and kept in the `RecPlan` (`latency`, `midi_latency`), which the takes are placed
+and the Cycle and Autopunch passes cut with, so an undo during the take that changes the delay
+compensation (a latent track back on) doesn't move it.
 
 Live MIDI is delivered at offset 0 of the next callback, and recorded MIDI is stamped with the
 block's start position, so both have up to one buffer of timing granularity.

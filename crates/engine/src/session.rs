@@ -34,6 +34,7 @@ use crate::recorder::{FinishedTake, Recorder, TakePreview};
 mod engine_sync;
 mod files;
 mod groups;
+mod left_out;
 mod multi_out;
 mod periodic;
 mod plugins;
@@ -243,6 +244,8 @@ pub struct Session {
     bad_audio_seen: u32,
     bad_audio_at: Instant,
     overloads_seen: u32,
+    /// Times tracks were left out already reported (see `session/left_out.rs`).
+    left_events_seen: u32,
     /// What each loaded built-in effect shares with the session, by instance id (see
     /// `session/builtin.rs`), and the instances whose panels are open.
     fx: HashMap<Id, Arc<FxShared>>,
@@ -399,6 +402,7 @@ impl Session {
             engine_error_at: Instant::now() - Duration::from_secs(60),
             bad_audio_seen: 0,
             overloads_seen: 0,
+            left_events_seen: 0,
             bad_audio_at: Instant::now() - Duration::from_secs(60),
             fx: HashMap::new(),
             fx_watch: Default::default(),

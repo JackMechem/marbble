@@ -17,7 +17,8 @@ impl Session {
             c.idle();
             latency_changed |= c.take_latency_changed();
         }
-        latency_changed |= self.builtin_latency_changed();
+        // Asked as well: a plug-in may change its latency well before it says so.
+        latency_changed |= self.latency_changed();
         if latency_changed {
             self.update_pdc();
         }
@@ -28,6 +29,7 @@ impl Session {
         let written = self.auto_idle();
         let stepped = self.vst_undo_idle();
         let controlled = self.controller_idle();
+        self.bring_back();
         before != self.open_editors().len() || written || latency_changed || controlled || stepped
     }
 
@@ -53,6 +55,7 @@ impl Session {
     /// Builds the [`Tick`], taking what has accumulated since the last one. The `ui-tick` thread calls this.
     pub fn tick(&mut self) -> Tick {
         self.check_overload();
+        self.check_left_out();
         // Keep the newest FFT_SIZE analyzer samples.
         let fresh = self.analyzer_rx.slots();
         let got = fresh > 0;
@@ -132,20 +135,25 @@ impl Session {
     }
 
     /// Like Logic's System Overload: when the engine had to skip audio to keep up, playback
-    /// (and recording) stops and the user hears why.
+    /// (and recording) stops and the user hears why. A plug-in that stopped responding on a
+    /// processing thread only costs its track and what that feeds, so playback goes on without
+    /// them, and `check_left_out` says so.
     fn check_overload(&mut self) {
         let n = self.status.overloads.load(Ordering::Relaxed);
         if n == self.overloads_seen {
             return;
         }
         self.overloads_seen = n;
+        if self.status.overload_left_out.load(Ordering::Relaxed) {
+            return;
+        }
+        let ms = f32::from_bits(self.status.overload_secs.load(Ordering::Relaxed)) * 1000.0;
+        let track = self.project.track(self.status.overload_track.load(Ordering::Relaxed)).map(|t| t.name.clone());
         let was_running = self.is_playing() || self.is_recording();
         if was_running {
             self.stop();
         }
         let what = if was_running { "so playback stopped" } else { "so it skipped a moment of audio" };
-        let ms = f32::from_bits(self.status.overload_secs.load(Ordering::Relaxed)) * 1000.0;
-        let track = self.project.track(self.status.overload_track.load(Ordering::Relaxed)).map(|t| t.name.clone());
         let detail = match (self.status.overload_stuck.load(Ordering::Relaxed), track) {
             (true, Some(t)) => format!("A processing thread stayed in \"{t}\" for over {ms:.0} ms, and is left out until the audio engine is reset."),
             (true, None) => format!("A processing thread didn't finish within {ms:.0} ms, and is left out until the audio engine is reset."),

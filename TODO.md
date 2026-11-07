@@ -40,6 +40,10 @@ Things that pass their checks but want a person.
   - **Left-out threads** (2026-11-04): refused real-time priority and the demotion of a stuck worker are tested headlessly
     (the demotion with real rtkit priority), not in the app. Not seen: Settings › Audio's note under Processing Threads
     (it needs rtkit refusing, e.g. with rtkit stopped), and the overload message for a stuck worker.
+  - **A plug-in left on a worker** (2026-11-07): leaving the worker in it, its track out while the rest plays on, renders
+    refused, and the track back when it returns are tested headlessly with a built-in that blocks, not in the app with a real
+    VST3. Not seen: the "stopped responding" and "responds again" messages, the track sitting out during playback, a refused
+    bounce's message, and Reset Audio Engine bringing it back.
 - **Track On/Off, drag to a new track, VST3 side-chain inputs, multi-output instruments, surviving SIGXCPU.** Checked in
   the running app on a virtual display: the new-track lane and drop, undo, the Off look, the Side Chain menu and SC
   badge, the "+", an output aux's name and Input slot, and TONE3000's editor opening on a copy of a real project.
@@ -163,12 +167,6 @@ they use there (simulated on Linux), but none of this has run on a real machine.
   new instance that isn't retried), and passed 3 of 3 alone: likely the same loss.
 - `controller_check` failed once in a full run, counting two MIDI messages too many ("other messages still play the
   instrument (2 -> 6)"), and passed 15 of 15 alone. Cause unknown.
-- An undo that turns a latent track back on during a take can shift where the take lands.
-- An LSP lookahead change didn't reach delay compensation after a render until the next `update_pdc`.
-- In Low Latency Mode a monitored instrument skips its compensation delay but its output auxes keep theirs, so an aux can lag
-  while monitoring.
-- On a live Stop with delay compensation, the audio still in the compensation delay lines plays out at static levels (renders
-  keep reading automation through it; playback doesn't).
 - Marbble Synth's renders aren't repeatable with its mod wheel up (its LFO runs free, and `silence` keeps its controllers).
   Left alone, as old projects depend on it; a new default could drop it.
 
@@ -200,9 +198,9 @@ they use there (simulated on Linux), but none of this has run on a real machine.
 
 ### Multi-core processing
 
-- A plug-in that never returns at all, on a worker, still leaves the engine silent for good: the worker is demoted so the app
-  survives (and the project can be saved), but the block it holds never ends, and commands wait for it. Playing on would need
-  the strip it holds (and everything after it) to be left out of later blocks.
+- A plug-in that never returns, on a worker, costs only its track and what that feeds, until it returns or Reset Audio Engine.
+  A worker held up outside a plug-in call that never ends (none is known to be) still leaves the engine silent until it's out.
+  Saving meanwhile keeps the stuck plug-in's last saved state, not its latest.
 - A worker retired after a give-up comes back only with Reset Audio Engine or a change of the setting. Bringing it back by
   itself would need a judgement on whether the plug-in that held it is safe again.
 - Workers refused real-time priority play nothing, even where the callback itself didn't get it (where they would be no worse

@@ -303,3 +303,74 @@ fn plugins_get_the_position_in_the_map() {
     assert_eq!((t.sig_num, t.sig_den), (7, 8));
     assert!((t.bar_start_quarters - 4.0).abs() < 1e-9);
 }
+
+#[test]
+fn audio_in_the_compensation_after_a_stop_keeps_following_automation() {
+    use crate::model::AutoPoint;
+    const DELAY: u32 = 4800;
+    // A steady 0.5 that its volume lane takes down to -60 dB at 9600.
+    let mut r = rig();
+    let p = TrackParams {
+        volume: 1.0,
+        pan: 0.0,
+        mute: false,
+        solo: false,
+        armed: false,
+        monitor: false,
+        input: InputSel::None,
+        output: None,
+        sends: [None; SEND_SLOTS],
+        stack_gain: 1.0,
+        stack_mute: false,
+        folder: None,
+        own_gain: 1.0,
+        own_mute: false,
+        bus_mute: false,
+        vca_gain: 1.0,
+        vca_mute: false,
+        off: false,
+        instrument_output: None,
+    };
+    let mut t = TrackDsp::new(1, TrackKind::Audio, p, Arc::new(Meter::default()));
+    let len = 48_000;
+    let clip = Arc::new(Clip::from_channels("dc.wav".into(), 48_000, vec![vec![0.5; len]; 2]));
+    t.set_regions(Arc::new(vec![RegionDsp::Audio {
+        start: 0,
+        length: len as i64,
+        offset: 0,
+        gain: 1.0,
+        clip,
+        fade_in: (0, 0),
+        fade_out: (len as i64, 0),
+        laws: Default::default(),
+    }]));
+    r.tx.push(Cmd::AddTrack(Box::new(t), 0)).ok().unwrap();
+    let point = |pos, value| AutoPoint { pos, value, curve: 0.0 };
+    let lane = LaneDsp { target: AutoTarget::Volume, points: vec![point(0, 0.0), point(9600, 0.0), point(9601, -60.0)] };
+    r.tx.push(Cmd::Automation(1, Arc::new(vec![lane]))).ok().unwrap();
+    // Another track's plug-ins are DELAY late: this one waits that long in its line.
+    let pdc = PdcParams { output: DELAY, output_time: DELAY, ..Default::default() };
+    r.tx.push(Cmd::Pdc { track: 1, params: pdc, line: Some(Box::new(DelayLine::new(8192))), feed_line: None }).ok().unwrap();
+    r.tx.push(Cmd::PdcGlobal(PdcGlobal { total: DELAY, low_latency: false })).ok().unwrap();
+    r.tx.push(Cmd::Play { from: 0 }).ok().unwrap();
+    let run = |r: &mut Rig, frames: usize| {
+        let mut out = vec![0.0f32; frames * 2];
+        for c in out.chunks_mut(256 * 2) {
+            r.engine.process(&[], 0, c, 2);
+        }
+        out.chunks(2).map(|f| f[0]).collect::<Vec<f32>>()
+    };
+    run(&mut r, 12_000);
+    let stopped_at = r.engine.pos;
+    r.tx.push(Cmd::Stop).ok().unwrap();
+    let after = run(&mut r, 256);
+    let status = &r.engine.status;
+    assert!(!status.playing.load(Ordering::Relaxed) && status.pos.load(Ordering::Relaxed) == stopped_at, "the session sees it stopped at once");
+    let after = [after, run(&mut r, DELAY as usize)].concat();
+    // What was on its way: 7200..9600 of the timeline at full level, then the lane's -60 dB.
+    let loud = (9600 - (stopped_at - DELAY as i64)) as usize;
+    let peak = |x: &[f32]| x.iter().fold(0.0f32, |m, s| m.max(s.abs()));
+    assert!(after[..loud - 300].iter().all(|&x| (x - 0.5).abs() < 1e-3), "it plays out");
+    assert!(peak(&after[loud + 1200..DELAY as usize]) < 0.01, "at the lane's level, not the fader's: {}", peak(&after[loud + 1200..DELAY as usize]));
+    assert!(!r.engine.playing && r.engine.pos == stopped_at, "then the transport stops where it stopped");
+}

@@ -5,7 +5,7 @@
 use super::*;
 use crate::dsp::graph::{GraphError, TaskGraph};
 use crate::dsp::pool::{Health, HealthReport, PoolOptions};
-use crate::dsp::{ParallelTest, Workers};
+use crate::dsp::{InsertDsp, ParallelTest, Workers};
 use crate::threads::{self as setting, LeftOut, ThreadChoices, Topology};
 
 /// Whether a command can change which strips read which.
@@ -165,6 +165,13 @@ impl Session {
     pub fn pool_usable_for_checks(&mut self) -> bool {
         self.sync_parallel();
         self.engine.lock().task_graph_fits()
+    }
+
+    /// For checks: puts `insert` straight into a track's slot on the engine, out of the project's
+    /// sight (`dsp::parallel::tar_for_checks`, say).
+    #[doc(hidden)]
+    pub fn insert_for_checks(&mut self, track: Id, slot: usize, insert: InsertDsp) {
+        self.send(Cmd::Insert { track, slot, insert: Some(insert) });
     }
 
     /// For checks: sets the setting and routes blocks through the pool as `test` says (see

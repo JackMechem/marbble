@@ -136,6 +136,40 @@ mod tests {
     }
 
     #[test]
+    fn an_undo_that_turns_a_latent_track_on_during_a_take_leaves_the_take_where_it_was_played() {
+        let mut s = session();
+        let dir = std::env::temp_dir().join(format!("marbble-off-undo-{}", std::process::id()));
+        s.dir = dir.join("OffUndo.marbble");
+        let (a, b) = (audio(&mut s), audio(&mut s));
+        s.set_plugin(a, 0, "builtin:linear-phase-eq").unwrap();
+        s.update_track(b, TrackPatch { armed: Some(true), ..Default::default() });
+        s.checkpoint("Rename", None, false);
+        s.update_track(b, TrackPatch { name: Some("Vox".into()), ..Default::default() });
+        set_off(&mut s, a, true);
+        assert_eq!(s.pdc_total(), 0);
+        let from = 48_000;
+        s.locate(from);
+        s.record().unwrap();
+        let planned = s.rec_plan.unwrap().latency;
+        let wait_past = |s: &Session, pos: i64| {
+            let deadline = Instant::now() + Duration::from_secs(10);
+            while s.position() < pos && Instant::now() < deadline {
+                std::thread::sleep(Duration::from_millis(1));
+            }
+        };
+        wait_past(&s, from + 4800);
+        // Past the take's own step, to the rename, when the latent track was on.
+        assert_eq!(s.undo().as_deref(), Some("Record"));
+        assert_eq!(s.undo().as_deref(), Some("Rename"));
+        assert!(!s.project.track(a).unwrap().off && s.pdc_total() > 0, "the latent track is back on");
+        wait_past(&s, from + 9600);
+        s.stop();
+        let take = s.project.track(b).unwrap().regions.first().cloned().expect("a take");
+        assert_eq!(take.start, from - planned, "placed with the compensation it was played with ({} frames, now {})", planned, s.record_latency_frames());
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
     fn single_track_renders_refuse_an_off_track_and_export_skips_it() {
         let mut s = session();
         let t = s.add_track(TrackKind::Instrument, InputSel::None, None, None).unwrap();
