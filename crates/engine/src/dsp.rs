@@ -134,6 +134,10 @@ pub struct Engine {
     /// comes out: the transport runs on (so automation and Stereo Out's lanes keep following
     /// that audio), but regions, notes and the click start nothing new.
     draining: bool,
+    /// After a Stop while playing with delay compensation: where the transport stopped and the
+    /// frames still to come out of the lines. They drain as at the end of a render, and the
+    /// session is shown the transport stopped there meanwhile (see `Engine::finish_stop`).
+    stopping: Option<(i64, i64)>,
 }
 
 impl Drop for Engine {
@@ -200,6 +204,7 @@ impl Engine {
             capture: None,
             chase: (true, true),
             draining: false,
+            stopping: None,
         }
     }
 

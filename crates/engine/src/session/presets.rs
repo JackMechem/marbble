@@ -190,7 +190,7 @@ impl Session {
         if let Some(state) = &p.state {
             self.sampler_apply_preset(track, state, p.base.as_deref())?;
         }
-        if self.builtin_latency_changed() {
+        if self.latency_changed() {
             self.update_pdc();
         }
         self.dirty = true;

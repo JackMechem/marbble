@@ -8,6 +8,16 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Fixed
 
+- A take lands where it was played when an undo during the recording turns a track with latent
+  plug-ins back on. The take was moved by the delay compensation as it was at Stop, not as the
+  performer heard it.
+- After Stop, the audio still in the delay compensation follows its automation to the end, as in
+  a bounce, instead of playing out at the faders' static levels.
+- In Low Latency Mode, the auxes on a record-enabled instrument's extra outputs skip their
+  compensation delay with the instrument's main output, instead of lagging behind it.
+- A plug-in's new latency (an LSP lookahead, say) reaches delay compensation at once: a bounce
+  made right after the change plays with it, and playback picks it up within 30 ms instead of
+  when the plug-in gets round to reporting it.
 - **A plug-in that stops responding on a processing thread no longer silences everything.**
   Marbble leaves it where it is and, after a moment of silence, plays on without its track and
   anything that track feeds, and a message names the plug-in. Playback keeps going (a recording

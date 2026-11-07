@@ -482,6 +482,8 @@ pub struct RecPlan {
     pub punch: Option<(i64, i64)>,
     /// Recording latency compensation (frames recordings move earlier).
     pub latency: i64,
+    /// The same for recorded MIDI, which only travels one way.
+    pub midi_latency: i64,
     /// A pass stopped part-way through is kept as a take if it got at least this far.
     pub min_take: i64,
 }
@@ -762,7 +764,7 @@ mod tests {
     }
 
     fn plan(cycle: Option<(i64, i64)>, punch: Option<(i64, i64)>, latency: i64) -> RecPlan {
-        RecPlan { from: 0, cycle, punch, latency, min_take: 10 }
+        RecPlan { from: 0, cycle, punch, latency, midi_latency: 0, min_take: 10 }
     }
 
     #[test]

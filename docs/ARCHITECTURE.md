@@ -637,10 +637,15 @@ The solver is in `session/pdc.rs`, the delay lines in `dsp/pdc.rs`:
   whose tap matches the output's shares its read. Side-chain keys leave before the line, so
   they have no compensation to change.
 - **Live tracks** (an armed audio track that is recording; in Low Latency Mode any monitored
-  track) skip their compensation delay, and in Low Latency Mode the plug-ins over the limit
-  (`low_latency_skip` bits) are not run.
+  track, and an aux on a monitored instrument's extra output, which goes live with it) skip their
+  compensation delay (an output aux its `feed` delay too), and in Low Latency Mode the plug-ins
+  over the limit (`low_latency_skip` bits) are not run.
 - Recordings are moved earlier by `total` as well, since the performer heard the song that
   late.
+- **Stop** lets the audio still in the lines come out as the end of a render does: inside the
+  engine the transport runs on for `total` frames (`Engine::stopping`, with `draining`), so
+  automation follows that audio and nothing new starts, while the session is shown the
+  transport stopped where it stopped. Play, Record, Locate or a render end it at once.
 
 ### Multi-core processing
 
@@ -1239,7 +1244,11 @@ costs nothing.
 
 `PluginController::latency()` calls `getLatencySamples` on the main thread. `restartComponent`
 stores its flags; `idle()` reports `kLatencyChanged`, and `Session::idle` then reruns
-`update_pdc`. `kParamValuesChanged` goes to [undo](#undo-of-editor-edits). Other restart flags are
+`update_pdc`. `Session::idle` also asks every plug-in for its latency (`latency_changed`), since
+LSP's change `getLatencySamples` in the block that takes the new setting but call
+`restartComponent` some 40 ms later. Before a render, `settle_latency` waits (up to 50 ms) for
+VST3 edits to reach their processors and asks again, so a lookahead changed just before a bounce
+is in its delay compensation. `kParamValuesChanged` goes to [undo](#undo-of-editor-edits). Other restart flags are
 ignored, and the component is not reactivated.
 
 ### State
@@ -1375,8 +1384,10 @@ stores the pair as base64 in `PluginSlot::state` and restores it straight after 
 `Session::record_latency_frames` = (input latency + output latency) + `ring_frames` +
 Recording Delay + the PDC total. `finish_recording` moves each audio take earlier by that
 amount (trimming anything before zero into the region offset). Recorded MIDI is moved by the
-output latency plus the PDC total only, since MIDI travels one way. Cycle and Autopunch shaping
-use the value in the `RecPlan`, computed when recording starts.
+output latency plus the PDC total only, since MIDI travels one way. Both are worked out when
+recording starts and kept in the `RecPlan` (`latency`, `midi_latency`), which the takes are placed
+and the Cycle and Autopunch passes cut with, so an undo during the take that changes the delay
+compensation (a latent track back on) doesn't move it.
 
 Live MIDI is delivered at offset 0 of the next callback, and recorded MIDI is stamped with the
 block's start position, so both have up to one buffer of timing granularity.

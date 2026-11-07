@@ -312,20 +312,25 @@ fn main() {
     s.set_sidechain_pre(main, 0, true).unwrap();
     let saved_level = level_of(&mut s);
 
-    // A keyed plug-in's latency counts like any other, and the key's switch doesn't lose it.
+    // A keyed plug-in's latency counts like any other, and the key's switch doesn't lose it. LSP
+    // reports a new lookahead tens of milliseconds after its latency has changed: a render right
+    // after the change already plays with it.
     set_param(&mut s, uid, "Sidechain lookahead", 1.0);
     render(&mut s);
+    let lookahead = s.pdc_total();
+    check(&format!("a lookahead changed just before a render is in its delay compensation ({lookahead} frames)"), lookahead > 0);
     s.set_sidechain(main, 0, None).unwrap();
     let unkeyed = s.pdc_total();
     s.set_sidechain(main, 0, Some(key)).unwrap();
     check(
         &format!("a keyed plug-in's latency reaches delay compensation ({} frames, {unkeyed} without the key)", s.pdc_total()),
-        unkeyed > 0 && s.pdc_total() == unkeyed,
+        unkeyed == lookahead && s.pdc_total() == unkeyed,
     );
+    // Playing, the next `idle` finds it, once the device has given the plug-in a block.
     set_param(&mut s, uid, "Sidechain lookahead", 0.0);
-    render(&mut s);
-    s.set_sidechain(main, 0, None).unwrap();
-    s.set_sidechain(main, 0, Some(key)).unwrap();
+    std::thread::sleep(std::time::Duration::from_millis(10));
+    s.idle();
+    check(&format!("and back off, at the next idle ({} frames)", s.pdc_total()), s.pdc_total() == 0);
     let dir = s.save(Some(scratch.join("Saved.marbble"))).unwrap();
     s.open(&dir).unwrap();
     let slot = s.project.track(main).unwrap().inserts[0].clone().unwrap();

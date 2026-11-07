@@ -293,6 +293,44 @@ fn main() {
     in_step(&mut s, "a later send into the aux (the output waits on its own line)");
     s.delete_track(late);
 
+    // Low Latency Mode: monitoring the instrument, its aux skips the compensation with its main
+    // output. Played live (a render leaves Low Latency Mode out), the main output panned left and
+    // the aux right, with another track's latency for the rest of the mix to wait for.
+    let late = s.add_track(TrackKind::Audio, InputSel::None, None, None).unwrap();
+    s.set_plugin(late, 0, "builtin:linear-phase-eq").unwrap();
+    let mut prefs = s.prefs.clone();
+    prefs.latency.low_latency = true;
+    s.set_prefs(prefs.clone());
+    s.update_track(inst, TrackPatch { armed: Some(true), pan: Some(-1.0), ..Default::default() });
+    s.update_track(a1, TrackPatch { pan: Some(1.0), ..Default::default() });
+    s.update_track(a2, TrackPatch { mute: Some(true), ..Default::default() });
+    s.idle();
+    s.locate(0);
+    s.play();
+    let (left, right) = {
+        let engine = s.engine_for_checks();
+        let mut guard = engine.lock();
+        let mut buf = vec![0.0f32; 256 * 2];
+        let (mut left, mut right) = (Vec::new(), Vec::new());
+        while left.len() < A.1 as usize {
+            guard.process(&[], 0, &mut buf, 2);
+            left.extend(buf.as_chunks::<2>().0.iter().map(|f| f[0]));
+            right.extend(buf.as_chunks::<2>().0.iter().map(|f| f[1]));
+        }
+        (left, right)
+    };
+    s.stop();
+    let onset = |x: &[f32]| x.iter().position(|v| v.abs() > 0.01);
+    let (main_at, aux_at) = (onset(&left), onset(&right));
+    println!("     Low Latency Mode, monitored: note A on the main output at {main_at:?}, on the aux at {aux_at:?} (total {} frames)", s.pdc_total());
+    check("Low Latency Mode: a monitored instrument's aux keeps up with its main output", s.pdc_total() > 0 && main_at.is_some() && main_at == aux_at);
+    prefs.latency.low_latency = false;
+    s.set_prefs(prefs);
+    s.update_track(inst, TrackPatch { armed: Some(false), pan: Some(0.0), ..Default::default() });
+    s.update_track(a1, TrackPatch { pan: Some(0.0), ..Default::default() });
+    s.update_track(a2, TrackPatch { mute: Some(false), ..Default::default() });
+    s.delete_track(late);
+
     // Track Off.
     let plain_mix = mix(&mut s);
     let off = |s: &mut Session, id: Id, v: bool| s.update_track(id, TrackPatch { off: Some(v), ..Default::default() });

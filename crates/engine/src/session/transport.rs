@@ -164,7 +164,10 @@ impl Session {
             return;
         }
         let takes = self.recorder.finish_all();
-        let comp = self.record_latency_frames();
+        // The compensation the take started with, as its cycle passes and punch range are cut
+        // with: an undo during the take can change the delay compensation (a latent track back
+        // on), but what was played was heard with the old one.
+        let comp = self.rec_plan.map(|p| p.latency).unwrap_or_else(|| self.record_latency_frames());
         self.place_recording(takes, comp);
         self.recording_finished();
     }
@@ -177,7 +180,7 @@ impl Session {
         let plan = self.rec_plan.take();
         let stop_pos = self.position();
         // MIDI only travels one way: the performer reacts to audio that left late.
-        let midi_comp = (self.status.output_latency_us.load(Ordering::Relaxed) as f64 * self.sample_rate() / 1e6).round() as i64 + self.pdc_global.total as i64;
+        let midi_comp = plan.map(|p| p.midi_latency).unwrap_or_else(|| self.midi_latency_frames());
         let mut touched = Vec::new();
         for (track, take) in takes {
             if let Some(e) = &take.error {
