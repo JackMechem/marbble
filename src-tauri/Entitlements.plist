@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-  Entitlements for signed macOS builds (bundle.macOS.entitlements in tauri.conf.json). They only
-  take effect when the app is code signed; unsigned builds ignore them. The hardened runtime
-  would otherwise refuse what a DAW must do:
+  Entitlements for macOS builds (bundle.macOS.entitlements in tauri.conf.json). The release builds
+  are ad-hoc signed (signingIdentity "-") with the hardened runtime, which would otherwise refuse
+  what a DAW must do:
   - disable-library-validation: load VST3 plug-ins signed by other teams, or not signed at all.
   - allow-jit, allow-unsigned-executable-memory: plug-ins that generate code at run time
     (JIT-compiled DSP, scripting engines, some copy protection).

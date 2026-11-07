@@ -11,6 +11,13 @@ All notable changes to Marbble are recorded here. The format follows
 - **The website is at <https://marbble.dev/>.** Help › User Guide, What's New and Website and the
   About box open it there.
 
+### Fixed
+
+- **The Apple Silicon download opens.** macOS called it damaged and offered only to move it to
+  the Trash, because only its binary was signed, not the app around it. Both macOS builds are now
+  ad-hoc signed and open with the first-launch step under Downloads. The plug-in, JIT and
+  microphone entitlements apply now too.
+
 ## [0.1.0-alpha.7] - 2026-11-04
 
 ### Added

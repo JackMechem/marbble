@@ -34,6 +34,7 @@
       "../LICENSE": "LICENSE"
     },
     "macOS": {
+      "signingIdentity": "-",
       "entitlements": "Entitlements.plist"
     },
     "icon": [

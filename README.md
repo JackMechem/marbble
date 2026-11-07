@@ -103,9 +103,10 @@ Prebuilt binaries are on the [GitHub Releases page](https://github.com/JackMeche
 - **Windows** (x64): the NSIS installer, `_x64-setup.exe`.
 - **macOS:** `_aarch64.dmg` for Apple Silicon, `_x64.dmg` for Intel.
 
-The builds are not signed yet, so the system warns about them:
+The builds are not signed with a developer certificate yet, so the system warns about them:
 
-- **macOS:** the first time, right-click the app and choose Open, or run
+- **macOS:** the first time, right-click the app and choose Open. On macOS 15 or later, open it
+  once, then choose **Open Anyway** in System Settings › Privacy & Security. Or run
   `xattr -cr /Applications/Marbble.app`.
 - **Windows:** in the SmartScreen prompt, choose **More info › Run anyway**.
 

@@ -804,8 +804,11 @@ Pushing a `v*` tag runs `.github/workflows/release.yml`:
 3. `publish` takes the release out of draft once every build has finished.
 
 To try a change to the workflow without releasing anything, push it to the `release-check`
-branch: the same builds run, and nothing is created or published. The bundles are not signed
-or notarized yet.
+branch: the same builds run, and nothing is created or published. The macOS bundles are
+ad-hoc signed (`"signingIdentity": "-"` in `tauri.conf.json`), with the hardened runtime and
+`Entitlements.plist`, and a step checks the signature: Apple Silicon calls an arm64 app whose
+bundle isn't sealed "damaged" and won't open it, though the linker signs the binary itself. No
+build is signed with a developer certificate or notarized yet.
 
 `.github/workflows/ci.yml` runs on pushes to `main`, on pull requests and on demand, on
 `ubuntu-24.04`, `windows-latest` and `macos-latest`: `npm ci`, `npm run build` (type check and

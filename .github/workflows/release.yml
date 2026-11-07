@@ -37,7 +37,7 @@ jobs:
             echo "- **Windows:** \`_x64-setup.exe\`"
             echo "- **macOS:** \`_aarch64.dmg\` (Apple Silicon) or \`_x64.dmg\` (Intel)"
             echo
-            echo "The builds aren't signed yet. On macOS, right-click the app and choose Open the first time (or run \`xattr -cr /Applications/Marbble.app\`); on Windows, choose More info › Run anyway in the SmartScreen prompt."
+            echo "The builds aren't signed with a developer certificate yet. On macOS, right-click the app and choose Open the first time; on macOS 15 or later, open it once, then choose Open Anyway in System Settings › Privacy & Security (or run \`xattr -cr /Applications/Marbble.app\`). On Windows, choose More info › Run anyway in the SmartScreen prompt."
           } >> notes.md
       - id: release
         uses: actions/github-script@v8
@@ -118,6 +118,16 @@ jobs:
           # The repo also has a pnpm lockfile; CI installs with npm.
           tauriScript: npm run tauri
           args: ${{ matrix.args }}${{ env.LINUX_BUNDLES }}
+
+      # Apple Silicon refuses an arm64 app whose bundle isn't sealed by a signature ("is damaged
+      # and can't be opened"), even ad-hoc; the linker's own signature on the binary isn't enough.
+      - name: Check the macOS signature
+        if: runner.os == 'macOS'
+        run: |
+          app=$(find target/${{ matrix.target }}/release/bundle/macos -maxdepth 1 -name '*.app' | head -n 1)
+          codesign --verify --deep --strict --verbose=2 "$app"
+          codesign --display --verbose=2 "$app" 2>&1 | grep -E '^(Identifier|Format|CodeDirectory|Signature)'
+          codesign --display --entitlements - --xml "$app" | grep -q disable-library-validation
 
       # Job logs need admin rights to read through the API; the tail of a failed build as an
       # annotation is visible to anyone looking at the run.
