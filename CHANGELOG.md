@@ -6,10 +6,12 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0-alpha.8] - 2026-11-07
+
 ### Added
 
 - **Update check, with release channels.** At launch Marbble asks GitHub whether a newer version
-  is out on your update channel and, if so, shows "Marbble 0.1.0-alpha.8 is out" at the bottom
+  is out on your update channel and, if so, shows "Marbble 0.1.0-alpha.9 is out" at the bottom
   right with View Release (the release page, in your browser) and Later. It never downloads or
   installs anything, never takes the keyboard, waits while you record, and stays quiet when
   offline. Settings › General has the Update Channel (Stable: final releases; Unstable:
@@ -788,7 +790,8 @@ The first prerelease. Everything below is new.
 - The `takes_check` headless check "autopunch trims the take" fails about one run in five,
   from the null audio device's timing.
 
-[Unreleased]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.7...HEAD
+[Unreleased]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.8...HEAD
+[0.1.0-alpha.8]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.7...v0.1.0-alpha.8
 [0.1.0-alpha.7]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.6...v0.1.0-alpha.7
 [0.1.0-alpha.6]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.5...v0.1.0-alpha.6
 [0.1.0-alpha.5]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.4...v0.1.0-alpha.5
