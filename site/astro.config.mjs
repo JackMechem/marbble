@@ -22,7 +22,7 @@ const regenerate = {
 
 export default defineConfig({
   site: SITE,
-  base: BASE,
+  base: BASE || "/",
   trailingSlash: "always",
   integrations: [
     regenerate,

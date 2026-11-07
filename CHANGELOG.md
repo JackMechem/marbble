@@ -6,6 +6,11 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **The website is at <https://marbble.dev/>.** Help › User Guide, What's New and Website and the
+  About box open it there.
+
 ## [0.1.0-alpha.7] - 2026-11-04
 
 ### Added

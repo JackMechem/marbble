@@ -65,10 +65,10 @@ const fn radio(id: &'static str, label: &'static str) -> Spec {
 
 /// The website's pages that Help opens, by item id.
 const HELP_PAGES: [(&str, &str); 4] = [
-    ("help-guide", "https://jackmechem.github.io/marbble/guide/"),
-    ("help-whats-new", "https://jackmechem.github.io/marbble/changelog/"),
+    ("help-guide", "https://marbble.dev/guide/"),
+    ("help-whats-new", "https://marbble.dev/changelog/"),
     ("help-report", "https://github.com/JackMechem/marbble/issues/new"),
-    ("help-website", "https://jackmechem.github.io/marbble/"),
+    ("help-website", "https://marbble.dev/"),
 ];
 
 /// The menu bar, menu by menu. The Edit menu is the Tracks area's Edit menu (src/components/
@@ -475,7 +475,7 @@ impl<R: Runtime> Builder<'_, R> {
                         version: Some(self.app.package_info().version.to_string()),
                         comments: Some("A digital audio workstation with VST3 hosting.".into()),
                         license: Some("MIT".into()),
-                        website: Some("https://jackmechem.github.io/marbble/".into()),
+                        website: Some("https://marbble.dev/".into()),
                         // GTK's About dialog looks the logo up in the icon theme otherwise,
                         // which a build that isn't installed doesn't have.
                         icon: Some(tauri::include_image!("icons/128x128.png")),

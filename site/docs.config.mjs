@@ -13,8 +13,9 @@
 export const REPO = "JackMechem/marbble";
 export const REPO_URL = `https://github.com/${REPO}`;
 export const BRANCH = "main";
-export const SITE = "https://jackmechem.github.io";
-export const BASE = "/marbble";
+export const SITE = "https://marbble.dev";
+// The site is served from the domain root. A subpath here would be "/name", with no trailing slash.
+export const BASE = "";
 
 // Past this many source lines the build prints a warning: time to add a split.
 export const LONG_PAGE_LINES = 330;

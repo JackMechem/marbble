@@ -7,7 +7,7 @@ Marbble is in alpha. It is developed and tested on Linux; the Windows and macOS 
 headless checks on a stand-in device but haven't been run on a real machine yet (see
 [Platform support](#platform-support)).
 
-**Website, User Guide and developer docs:** <https://jackmechem.github.io/marbble/>
+**Website, User Guide and developer docs:** <https://marbble.dev/>
 
 ## Features
 
@@ -164,7 +164,7 @@ for Windows and macOS, tests and packaging.
 
 | Document | For |
 |---|---|
-| [Website](https://jackmechem.github.io/marbble/) | The three documents below as a searchable site, built from them by [site/](site/) (`cd site && npm ci && npm run build`). |
+| [Website](https://marbble.dev/) | The three documents below as a searchable site, built from them by [site/](site/) (`cd site && npm ci && npm run build`). |
 | [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Using Marbble: recording, instruments, editing, mixing, exporting, every setting and key command, troubleshooting. |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the code works: threads, real-time rules, the project model, the engine graph, undo, persistence, the VST3 host, the frontend, built-in effects and instruments, and a map of every source file. |
 | [docs/DEVELOPING.md](docs/DEVELOPING.md) | Building, testing, debugging, conventions, and recipes for common changes. |
