@@ -641,6 +641,10 @@ The solver is in `session/pdc.rs`, the delay lines in `dsp/pdc.rs`:
   (`low_latency_skip` bits) are not run.
 - Recordings are moved earlier by `total` as well, since the performer heard the song that
   late.
+- **Stop** lets the audio still in the lines come out as the end of a render does: inside the
+  engine the transport runs on for `total` frames (`Engine::stopping`, with `draining`), so
+  automation follows that audio and nothing new starts, while the session is shown the
+  transport stopped where it stopped. Play, Record, Locate or a render end it at once.
 
 ### Multi-core processing
 

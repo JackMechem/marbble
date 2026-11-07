@@ -11,6 +11,8 @@ All notable changes to Marbble are recorded here. The format follows
 - A take lands where it was played when an undo during the recording turns a track with latent
   plug-ins back on. The take was moved by the delay compensation as it was at Stop, not as the
   performer heard it.
+- After Stop, the audio still in the delay compensation follows its automation to the end, as in
+  a bounce, instead of playing out at the faders' static levels.
 
 ## [0.1.0-alpha.8] - 2026-11-07
 

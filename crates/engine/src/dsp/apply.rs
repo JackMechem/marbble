@@ -152,9 +152,31 @@ impl Engine {
         self.master_auto.sent = [f32::NAN; MAX_AUTO_SENT];
     }
 
+    /// Ends a Stop's drain (see `stopping`) now: the transport stops where it was stopped.
+    pub(super) fn finish_stop(&mut self) {
+        if let Some((at, _)) = self.stopping.take() {
+            self.pos = at;
+            self.playing = false;
+            self.draining = false;
+        }
+    }
+
+    /// The transport as the session is told it: stopped, while a Stop's drain runs on.
+    fn shown_transport(&self) -> (i64, bool) {
+        self.stopping.map_or((self.pos, self.playing), |(at, _)| (at, false))
+    }
+
+    /// Publishes the position and whether the transport plays, for the session.
+    pub(super) fn publish_transport(&self) {
+        let (pos, playing) = self.shown_transport();
+        self.status.pos.store(pos, Ordering::Relaxed);
+        self.status.playing.store(playing, Ordering::Relaxed);
+    }
+
     pub(super) fn apply(&mut self, cmd: Cmd) {
         match cmd {
             Cmd::Play { from } => {
+                self.finish_stop();
                 if from != self.pos {
                     self.reset_effects();
                 }
@@ -165,6 +187,7 @@ impl Engine {
                 self.chase_all_cc();
             }
             Cmd::Record { from, punch } => {
+                self.finish_stop();
                 if from != self.pos {
                     self.reset_effects();
                 }
@@ -176,13 +199,23 @@ impl Engine {
                 self.chase_all_cc();
             }
             Cmd::Stop => {
-                self.playing = false;
+                // The audio still in the delay compensation comes out as at the end of a render:
+                // the transport runs on for it, starting nothing new, so automation follows it
+                // to the end instead of leaving it at the static levels.
+                if self.playing && self.stopping.is_none() && self.pdc.total > 0 && !self.offline {
+                    self.stopping = Some((self.pos, self.pdc.total as i64));
+                    self.draining = true;
+                } else {
+                    self.finish_stop();
+                    self.playing = false;
+                }
                 self.recording = false;
                 self.punch_range = None;
                 self.capture = None;
                 self.flush_all_notes();
             }
             Cmd::Locate(p) => {
+                self.finish_stop();
                 if p != self.pos {
                     self.reset_effects();
                 }

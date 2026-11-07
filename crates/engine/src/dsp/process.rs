@@ -35,8 +35,7 @@ impl Engine {
             // Publish the transport as the commands left it before counting them done: once
             // the session sees a locate done, it reads the position from `status.pos`, which
             // must not still hold the old one (see `Session::position`).
-            self.status.pos.store(self.pos, Ordering::Relaxed);
-            self.status.playing.store(self.playing, Ordering::Relaxed);
+            self.publish_transport();
             self.status.recording.store(self.recording, Ordering::Relaxed);
             self.status.cmds_done.fetch_add(applied, Ordering::Release);
         }
@@ -119,6 +118,12 @@ impl Engine {
                     }
                 }
             }
+            if let Some((_, left)) = &mut self.stopping {
+                *left -= n as i64;
+                if *left <= 0 {
+                    self.finish_stop();
+                }
+            }
             done += n;
         }
         let pooled = self.status.parallel_blocks.load(Ordering::Relaxed) != blocks_before;
@@ -126,8 +131,7 @@ impl Engine {
             self.status.threads.store(t, Ordering::Relaxed);
         }
 
-        self.status.pos.store(self.pos, Ordering::Relaxed);
-        self.status.playing.store(self.playing, Ordering::Relaxed);
+        self.publish_transport();
         self.status.recording.store(self.recording, Ordering::Relaxed);
 
         if frames > 0 {
