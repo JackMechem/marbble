@@ -1344,8 +1344,10 @@ stores the pair as base64 in `PluginSlot::state` and restores it straight after 
 `Session::record_latency_frames` = (input latency + output latency) + `ring_frames` +
 Recording Delay + the PDC total. `finish_recording` moves each audio take earlier by that
 amount (trimming anything before zero into the region offset). Recorded MIDI is moved by the
-output latency plus the PDC total only, since MIDI travels one way. Cycle and Autopunch shaping
-use the value in the `RecPlan`, computed when recording starts.
+output latency plus the PDC total only, since MIDI travels one way. Both are worked out when
+recording starts and kept in the `RecPlan` (`latency`, `midi_latency`), which the takes are placed
+and the Cycle and Autopunch passes cut with, so an undo during the take that changes the delay
+compensation (a latent track back on) doesn't move it.
 
 Live MIDI is delivered at offset 0 of the next callback, and recorded MIDI is stamped with the
 block's start position, so both have up to one buffer of timing granularity.

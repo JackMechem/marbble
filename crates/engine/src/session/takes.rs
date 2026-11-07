@@ -61,6 +61,7 @@ impl Session {
             cycle,
             punch: self.project.punch.range(),
             latency: self.record_latency_frames(),
+            midi_latency: self.midi_latency_frames(),
             min_take: self.tempo_map().samples_per_beat_at(punch as f64).round() as i64,
         };
         let Some(capture) = plan.capture(punch) else {
@@ -711,7 +712,7 @@ mod tests {
 
     #[test]
     fn midi_window_follows_cycle_and_punch() {
-        let plan = RecPlan { from: 0, cycle: Some((1000, 2000)), punch: None, latency: 0, min_take: 1 };
+        let plan = RecPlan { from: 0, cycle: Some((1000, 2000)), punch: None, latency: 0, midi_latency: 0, min_take: 1 };
         let w = midi_window(Some(plan), 1000, 1500);
         assert_eq!((w.lo, w.hi), (1000, 2000));
         // Held across the loop point: ends at the cycle end.

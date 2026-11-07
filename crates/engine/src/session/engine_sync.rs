@@ -84,6 +84,12 @@ impl Session {
         (us as f64 * sr / 1e6 + ring + manual + pdc).round() as i64
     }
 
+    /// What recorded MIDI is moved earlier by: it only travels one way, as the performer reacts
+    /// to audio that left late (output latency plus the delay compensation).
+    pub(super) fn midi_latency_frames(&self) -> i64 {
+        (self.status.output_latency_us.load(Ordering::Relaxed) as f64 * self.sample_rate() / 1e6).round() as i64 + self.pdc_global.total as i64
+    }
+
     /// The input and output latency the device last reported, and the compensation recordings get.
     pub fn latency(&self) -> Latency {
         let sr = self.sample_rate().max(1.0);
