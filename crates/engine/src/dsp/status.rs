@@ -62,6 +62,12 @@ pub struct EngineStatus {
     pub overload_secs: AtomicU32,
     pub overload_track: AtomicU64,
     pub overload_stuck: AtomicBool,
+    /// For a stuck worker: the uid of the plug-in it was left in (0: none or unknown), and whether
+    /// its track and what that feeds were left out, the rest playing on (see `Parallel::leave_out`).
+    pub overload_plugin: AtomicU64,
+    pub overload_left_out: AtomicBool,
+    /// Tracks sitting out since a plug-in stopped responding, until the strips are rebuilt.
+    pub left_out: AtomicU32,
     /// Threads playing the strips in the latest block, and how many blocks went through the pool
     /// (see `parallel.rs`).
     pub threads: AtomicU32,
@@ -92,6 +98,9 @@ impl Default for EngineStatus {
             overload_secs: AtomicU32::new(0),
             overload_track: AtomicU64::new(0),
             overload_stuck: AtomicBool::new(false),
+            overload_plugin: AtomicU64::new(0),
+            overload_left_out: AtomicBool::new(false),
+            left_out: AtomicU32::new(0),
             threads: AtomicU32::new(1),
             parallel_blocks: AtomicU64::new(0),
         }

@@ -48,12 +48,17 @@ impl Session {
         // The command counter restarts with the engine's view of it.
         self.cmds_sent = self.status.cmds_done.load(Ordering::Relaxed);
         self.pending_pos = None;
-        if rate != self.project.sample_rate || (self.engine_rate as u32) != rate {
+        let new_rate = rate != self.project.sample_rate || (self.engine_rate as u32) != rate;
+        if new_rate {
             // The project runs at the device's rate, and that's saved with it.
             if rate != self.project.sample_rate {
                 self.dirty = true;
             }
             self.project.sample_rate = rate;
+        }
+        // Tracks left out after a plug-in stopped responding come back with new instances of
+        // their plug-ins.
+        if new_rate || self.status.left_out.load(Ordering::Relaxed) > 0 {
             self.rebuild_graph();
         }
     }

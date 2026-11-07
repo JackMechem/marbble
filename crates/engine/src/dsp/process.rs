@@ -23,7 +23,11 @@ impl Engine {
                 return;
             }
             self.parallel.stalled = false;
+            self.leave_out();
             self.flush_all_notes();
+        }
+        while let Some(t) = self.parallel.take_released() {
+            self.discard(Garbage::Track(t));
         }
 
         let mut applied = 0;
@@ -75,9 +79,17 @@ impl Engine {
                     self.bus_l[..n].fill(0.0);
                     self.bus_r[..n].fill(0.0);
                 }
-                // Counted and sent to silence like an overload. The session stops the transport.
-                BlockEnd::GivenUp => {
-                    self.parallel.stalled = true;
+                // Counted and sent to silence like an overload. The session stops the transport,
+                // unless the strips held up were left out and the rest plays on.
+                end @ (BlockEnd::GivenUp | BlockEnd::LeftOut) => {
+                    let (track, plugin) = self.parallel.stuck_in().unwrap_or_default();
+                    let left_out = matches!(end, BlockEnd::LeftOut);
+                    if left_out {
+                        self.leave_out();
+                        self.flush_all_notes();
+                    } else {
+                        self.parallel.stalled = true;
+                    }
                     output.fill(0.0);
                     let budget = frames as f64 / self.sample_rate;
                     self.block_load.block((started.elapsed().as_secs_f64() / budget) as f32, budget);
@@ -86,8 +98,10 @@ impl Engine {
                     self.behind_secs = 0.0;
                     self.shedding = (SHED_SECS * self.sample_rate / frames.max(1) as f64).ceil() as u32;
                     self.status.overload_secs.store((started.elapsed().as_secs_f32()).to_bits(), Ordering::Relaxed);
-                    self.status.overload_track.store(self.parallel.stuck_track().unwrap_or(0), Ordering::Relaxed);
+                    self.status.overload_track.store(track, Ordering::Relaxed);
                     self.status.overload_stuck.store(true, Ordering::Relaxed);
+                    self.status.overload_plugin.store(plugin, Ordering::Relaxed);
+                    self.status.overload_left_out.store(left_out, Ordering::Relaxed);
                     self.status.overloads.fetch_add(1, Ordering::Relaxed);
                     return;
                 }
@@ -157,6 +171,8 @@ impl Engine {
                 self.status.overload_secs.store((spent as f32).to_bits(), Ordering::Relaxed);
                 self.status.overload_track.store(slowest, Ordering::Relaxed);
                 self.status.overload_stuck.store(false, Ordering::Relaxed);
+                self.status.overload_plugin.store(0, Ordering::Relaxed);
+                self.status.overload_left_out.store(false, Ordering::Relaxed);
                 self.status.overloads.fetch_add(1, Ordering::Relaxed);
             }
         }
@@ -185,7 +201,18 @@ impl Engine {
         while self.parallel.stalled && !self.parallel.open_block_over() {
             std::thread::sleep(std::time::Duration::from_millis(1));
         }
-        self.parallel.stalled = false;
+        if std::mem::take(&mut self.parallel.stalled) {
+            self.leave_out();
+        }
+    }
+
+    /// Once a block in which workers were left in plug-ins is over: their strips give way to
+    /// stand-ins, which sit out from now on with everything they feed (`Parallel::leave_out`).
+    fn leave_out(&mut self) {
+        if self.parallel.leave_out(&mut self.tracks) {
+            // A stand-in has no routes or keys of its own.
+            self.resolve_routes();
+        }
     }
 
     pub(super) fn process_block(&mut self, input: &[f32], in_ch: usize, n: usize) -> BlockEnd {
@@ -300,6 +327,7 @@ impl Engine {
                     end = BlockEnd::Silenced;
                 }
                 parallel::Outcome::Stalled => return BlockEnd::GivenUp,
+                parallel::Outcome::LeftOut => return BlockEnd::LeftOut,
             }
         } else {
             for ti in 0..self.tracks.len() {

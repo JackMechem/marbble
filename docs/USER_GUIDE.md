@@ -108,6 +108,7 @@ Contents:
     [Recordings are early or late](#recordings-are-early-or-late) ·
     [The CPU meter](#the-cpu-meter) ·
     ["System overload" and playback stops](#system-overload-and-playback-stops) ·
+    ["… stopped responding" and a track goes quiet](#-stopped-responding-and-a-track-goes-quiet) ·
     ["… put out invalid audio" and a plug-in goes quiet](#-put-out-invalid-audio-and-a-plug-in-goes-quiet) ·
     [The playhead or meters freeze during a bounce](#the-playhead-or-meters-freeze-during-a-bounce) ·
     [Plug-ins are missing](#plug-ins-are-missing) ·
@@ -3358,6 +3359,18 @@ finish its work for a tenth of a second. That thread is left out from then on, s
 can't take Marbble down with it even if it never finishes, and the other threads play on. **Reset
 Audio Engine** in Settings › Audio brings it back. Until then Settings › Audio says how many threads
 play.
+
+### "… stopped responding" and a track goes quiet
+
+When a plug-in on one of the extra processing threads (Settings › Audio › Processing Threads)
+doesn't return from its work for a tenth of a second, Marbble leaves it there and plays on
+without it. After a moment of silence, the rest of the mix carries on. The plug-in's track, and
+anything that track feeds (an aux it sends to, the summing stack it plays through, a track it
+keys a side-chain for), are silent from then on, and a message names the plug-in and the track.
+Playback doesn't stop, but a recording does, as the take now has a gap. Save the project, then
+**Reset Audio Engine** in Settings › Audio: that loads the plug-ins again and brings the tracks
+back, along with the thread. Until then, a bounce or export leaves those tracks out too. A
+plug-in that stops responding on the audio thread itself can't be left like this.
 
 ### "… put out invalid audio" and a plug-in goes quiet
 

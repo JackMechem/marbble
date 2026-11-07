@@ -39,6 +39,8 @@ impl Engine {
             t.feed.source = source;
         }
         self.resolve_keys();
+        let out = self.tracks.iter().filter(|t| t.left_out).count();
+        self.status.left_out.store(out as u32, Ordering::Relaxed);
     }
 
     /// Finds each insert's side-chain source. A key must come from a track played

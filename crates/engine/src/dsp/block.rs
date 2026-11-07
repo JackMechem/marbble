@@ -137,6 +137,13 @@ pub(crate) trait Routes {
     fn output(&mut self, outs: &mut Outlets, dest: Dest, l: &[f32], r: &[f32]);
     /// The analyzer's feed, when it looks at this strip (None: silence, from an Off track).
     fn analyze(&mut self, outs: &mut Outlets, signal: Option<(&[f32], &[f32])>, n: usize);
+    /// Around a call into the strip's plug-in `uid`, which may never return. False after it if the
+    /// strip was left in it (`pool::Call`): it's no longer this thread's, which must stop at once.
+    /// The serial loop has nobody to leave a strip to.
+    fn enter(&self, _uid: Id) {}
+    fn leave(&self) -> bool {
+        true
+    }
 }
 
 /// The serial loop's routes.

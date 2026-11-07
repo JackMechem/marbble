@@ -251,6 +251,9 @@ pub struct TrackDsp {
     pub(super) spent: f32,
     /// What its folder does to it this block, read before the pool started.
     pub(super) fold_now: auto::FoldState,
+    /// It sits out every block: its plug-in stopped responding on a worker, and this is the stand-in
+    /// for it, or it's fed by one (see `Parallel::leave_out`). Until the strips are rebuilt.
+    pub(super) left_out: bool,
 }
 
 impl TrackDsp {
@@ -301,6 +304,15 @@ impl TrackDsp {
             outs: Outlets::new(),
             spent: 0.0,
             fold_now: Default::default(),
+            left_out: false,
+        }
+    }
+
+    /// Leaves the strip out from now on (`left_out`). What effects keyed from it read goes silent.
+    pub(super) fn sit_out(&mut self) {
+        self.left_out = true;
+        for key in [&mut self.key_l, &mut self.key_r, &mut self.pre_key_l, &mut self.pre_key_r] {
+            key.fill(0.0);
         }
     }
 

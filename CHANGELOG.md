@@ -6,6 +6,14 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **A plug-in that stops responding on a processing thread no longer silences everything.**
+  Marbble leaves it where it is and, after a moment of silence, plays on without its track and
+  anything that track feeds, and a message names the plug-in. Playback keeps going (a recording
+  still stops), and edits work meanwhile. Reset Audio Engine in Settings › Audio brings those
+  tracks back.
+
 ## [0.1.0-alpha.8] - 2026-11-07
 
 ### Added
