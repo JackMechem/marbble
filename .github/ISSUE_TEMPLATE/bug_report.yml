@@ -1,0 +1,67 @@
+name: Bug report
+description: Something in Marbble doesn't work as it should.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting this. Please check the [open issues](https://github.com/JackMechem/marbble/issues) first, and the User Guide's [known limitations](https://marbble.dev/guide/known-limitations/).
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open a new project
+        2. Add an audio track
+        3. ...
+    validations:
+      required: false
+  - type: input
+    id: version
+    attributes:
+      label: Marbble version
+      description: Shown in Marbble › About Marbble.
+      placeholder: 0.1.0-alpha.8
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Linux (x86_64)
+        - Linux (aarch64)
+        - Windows
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: System and audio setup
+      description: Distribution or OS version, audio interface and driver (PipeWire, JACK, ALSA, WASAPI, Core Audio), buffer size.
+    validations:
+      required: false
+  - type: textarea
+    id: plugins
+    attributes:
+      label: Plug-ins involved
+      description: If a VST3 plug-in is part of it, its name and version.
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log output
+      description: Anything printed in the terminal when Marbble is started from one.
+      render: text
+    validations:
+      required: false

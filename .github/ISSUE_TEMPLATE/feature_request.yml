@@ -1,0 +1,22 @@
+name: Feature request
+description: Something Marbble should do that it doesn't yet.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Marbble follows Logic Pro's workflow. [LOGIC_FEATURES.md](https://github.com/JackMechem/marbble/blob/main/LOGIC_FEATURES.md) lists the feature scope and the [milestones](https://github.com/JackMechem/marbble/milestones) the order things are planned in.
+  - type: textarea
+    id: what
+    attributes:
+      label: What you'd like
+      description: What you want to do in Marbble, and what gets in the way today.
+    validations:
+      required: true
+  - type: textarea
+    id: elsewhere
+    attributes:
+      label: How other DAWs do it
+      description: How Logic Pro or another DAW handles it, if you know.
+    validations:
+      required: false

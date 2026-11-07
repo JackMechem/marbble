@@ -189,6 +189,7 @@ for Windows and macOS, tests and packaging.
 | [LOGIC_FEATURES.md](LOGIC_FEATURES.md) | The feature scope: every Logic Pro feature by stage, with Marbble's status. |
 | [TODO.md](TODO.md) | What's still open, by topic, and the roadmap in stages. |
 | [CHANGELOG.md](CHANGELOG.md) | What changed in each release. |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Reporting bugs, testing, how issues and milestones are used, and sending a pull request. |
 
 ## Status and known limitations
 
@@ -209,7 +210,7 @@ main limitations:
   Control; MP3 and AAC aren't offered as bounce formats.
 
 The User Guide's [Known limitations](docs/USER_GUIDE.md#20-known-limitations) has the full list,
-[TODO.md](TODO.md) the staged roadmap, and [CHANGELOG.md](CHANGELOG.md) what each release
+the [issues](https://github.com/JackMechem/marbble/issues) what's open, [TODO.md](TODO.md) the staged roadmap, and [CHANGELOG.md](CHANGELOG.md) what each release
 contains.
 
 ## Versions
