@@ -42,10 +42,13 @@ thread_local! {
 
 /// The workers are being watched: from before a block starts until after it ends.
 static WORKERS_COUNTED: AtomicBool = AtomicBool::new(false);
+/// Only the callback is counted: a worker left in a plug-in is ending, and a thread's end frees
+/// what std set it up with. It's demoted and plays nothing by then.
+static CALLBACK_ONLY: AtomicBool = AtomicBool::new(false);
 static WORKERS_SEEN: AtomicUsize = AtomicUsize::new(0);
 
 fn counted(what: &str) {
-    let worker = WORKERS_COUNTED.load(Ordering::Relaxed) && WORKER.try_with(|c| c.get()).unwrap_or(false);
+    let worker = WORKERS_COUNTED.load(Ordering::Relaxed) && !CALLBACK_ONLY.load(Ordering::Relaxed) && WORKER.try_with(|c| c.get()).unwrap_or(false);
     let on = worker || COUNTING.try_with(|c| c.get()).unwrap_or(false);
     if !on {
         return;
@@ -147,9 +150,9 @@ fn vst_gate(d: &vst3_host::PluginDescriptor) {
 
 /// A plug-in on `track` that stops responding on a worker (`tar_for_checks`), with blocks given up on
 /// when they run that late, as they are live: the worker is left in it, the track and the stack it
-/// plays through sit out, and once the plug-in returns its strip goes back as garbage. None of it
-/// may allocate, in the callback or on the workers. The transport plays on, and the session says
-/// what happened.
+/// plays through sit out, and once the plug-in returns its strip goes back as garbage and the
+/// session brings the track back. None of it may allocate, in the callback or on the workers. The
+/// transport plays on, the session says what happened, and renders are refused meanwhile.
 fn stuck_plugin(
     s: &mut Session,
     guard: &mut parking_lot::MutexGuard<daw_engine::dsp::Engine>,
@@ -168,18 +171,35 @@ fn stuck_plugin(
         run(guard, 1, true);
     }
     let left = guard.status.left_out.load(Ordering::Relaxed);
-    // Past the overload's silence, and the strip coming back.
+    // Past the overload's silence.
     run(guard, 200, true);
-    hold.store(false, Ordering::SeqCst);
-    std::thread::sleep(std::time::Duration::from_millis(20));
-    run(guard, 20, true);
     let n = ALLOCS.load(Ordering::Relaxed) - mark;
-    check(
-        &format!("a plug-in that stops responding on a worker, its track left out and the strip taken back allocate nothing ({n}; {left} tracks left out)"),
-        n == 0 && left >= 2,
-    );
+    check(&format!("a plug-in that stops responding on a worker and its track left out allocate nothing ({n}; {left} tracks left out)"), n == 0 && left >= 2);
     let warning = s.tick().warning.unwrap_or_default();
     check(&format!("the transport plays on, and the session says why ({warning:?})"), s.is_playing() && warning.contains("stopped responding"));
+    s.idle();
+    let refused = parking_lot::MutexGuard::unlocked(guard, || s.render(0, 4800, 0, None, &mut |_| {}));
+    let why = refused.as_ref().err().map(|e| e.to_string()).unwrap_or_default();
+    check(&format!("a render is refused meanwhile ({why:?})"), why.contains("sitting out"));
+
+    // Tar returns: the strip goes back, and the track comes back with a new one.
+    let mark = ALLOCS.load(Ordering::Relaxed);
+    CALLBACK_ONLY.store(true, Ordering::Relaxed);
+    hold.store(false, Ordering::SeqCst);
+    let started = std::time::Instant::now();
+    while !guard.status.held().is_empty() && started.elapsed().as_secs() < 10 {
+        run(guard, 1, true);
+        std::thread::sleep(std::time::Duration::from_millis(1));
+    }
+    std::thread::sleep(std::time::Duration::from_millis(20));
+    CALLBACK_ONLY.store(false, Ordering::Relaxed);
+    s.idle();
+    run(guard, 20, true);
+    let n = ALLOCS.load(Ordering::Relaxed) - mark;
+    let out = guard.status.left_out.load(Ordering::Relaxed);
+    check(&format!("the strip taken back and the track brought back allocate nothing in the callback ({n}; {out} tracks left out)"), n == 0 && out == 0);
+    let warning = s.tick().warning.unwrap_or_default();
+    check(&format!("and the session says so ({warning:?})"), warning.contains("responds again"));
 }
 
 fn s_state(s: &Session, t: Id) -> Option<String> {

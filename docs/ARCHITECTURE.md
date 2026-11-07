@@ -699,26 +699,35 @@ guarantees:
   and carries on, shedding as after any overload. Anything that changes the graph off the audio
   thread (`replace_graph`, `render`, dropping the engine) first waits for it (`Engine::settle`).
 - *A worker left in a plug-in costs its strip, not the engine.* `run_strip` brackets every call
-  into a plug-in (`Routes::enter` and `leave`, a `pool::Call` per thread), and a call touches only
-  its own strip, its thread's scratch and what the block reads. At the give-up `Pool::abandon`
-  moves each worker still in such a call to `LEFT` (one compare-exchange, which the worker's own
-  `leave` loses if the plug-in returns at that moment), then counts its task and every task the
-  graph has waiting for it out of `remaining`: none of them ran, and none ever gets ready. The
-  caller finishes the rest of the block (with a quarter of the limit; past that, it falls back to
-  `retire_stuck` and a stalled block), and plays on. `Parallel::leave_out` then swaps the strip in
-  the engine's list for a stand-in made ahead in `Workers::new`, which takes the commands meant for
-  the track, and marks the stand-in and every strip counted out `left_out`: they play nothing in
-  any later block, serial or pooled, until the strips are rebuilt (Reset Audio Engine rebuilds
-  them when `EngineStatus::left_out` says some sit out). The strip left behind is never touched
-  again until its thread is gone: if the plug-in ever returns, `leave` fails, the strip returns at
-  once, the worker skips its bookkeeping, marks its `Call` `GONE` and ends, and
-  `Parallel::take_released` sends the strip back as garbage. Until then the job it's in (a new
-  cell per left worker), its scratch and the graph (`Parallel::graph_held`) stay, and dropping
-  the `Workers` or the pool leaks them and lets the thread go rather than join it. A plug-in left
-  running may still read its side-chain key, a buffer of another strip that the engine goes on
-  writing: only into audio nobody hears. The overload carries the plug-in's uid
-  (`overload_plugin`, `overload_left_out`), and the session names it and lets playback go on
-  (stopping a recording).
+  into a plug-in (`Routes::enter` and `leave`, a `pool::Call` per thread, with the call's number
+  and start time), and a call touches only its own strip, its thread's scratch (the side-chain key
+  is copied there first) and what the block reads. At the give-up `Pool::abandon` moves each worker
+  that has been in one such call for three quarters of the limit to `LEFT` (one compare-exchange
+  on the call's number and phase, which the worker's own `leave` loses if the plug-in returns at
+  that moment); a shorter call is more likely a hiccup than a hang. It then counts the worker's
+  task and every task the graph has waiting for it out of `remaining`: none of them ran, and none
+  ever gets ready. The caller finishes the rest of the block (with a quarter of the limit) and
+  plays on. Past that, or with the worker held up outside a plug-in, it falls back to
+  `retire_stuck` and a stalled block, during which each callback (and `Engine::settle`) calls
+  `Parallel::press_on`: a worker retired in that block that has since been in a plug-in for long
+  enough is left after all, and the caller does what's ready of the block, never waiting.
+  `Parallel::leave_out`, once the block is over, swaps the strip in the engine's list for a
+  stand-in made ahead in `Workers::new`, which takes the commands meant for the track, and marks
+  the stand-in and every strip counted out `left_out`: they play nothing in any later block,
+  serial or pooled. `EngineStatus::held` lists the track and plug-in, and `left_events` tells the
+  session, which says so, lets playback go on (stopping a recording), refuses renders while
+  `left_out` counts any strip (they'd be missing), and asks no plug-in a thread is left in for
+  its state (`capture_plugin_states`, the VST3 undo watch), saving the state the project last had.
+  The strip left behind is never touched again until its thread is gone: if the plug-in ever
+  returns, `leave` fails, the strip returns at once, the worker skips its bookkeeping, marks its
+  `Call` `GONE` and ends, and `Parallel::take_released` sends the strip back as garbage and marks
+  its entry in `held` back. The session's `idle` then builds the track a new strip, plug-ins from
+  their state now, and sends `Cmd::Back`, which puts it in the stand-in's place and brings back
+  every strip sitting out but those still fed by a plug-in that hasn't returned (with a fade-in, as
+  for Track On). Reset Audio Engine rebuilds every strip while any sits out. Until a thread is
+  gone, the job it's in (a new cell per time workers are left), its scratch and the graph
+  (`Parallel::graph_held`) stay, and dropping the `Workers` or the pool leaks them and lets the
+  thread go rather than join it.
 - *A worker given up on is retired.* At the give-up `Pool::retire_stuck` takes every worker still
   in a task (`Slot::busy`, set before a worker claims, so one preempted between taking a task and
   starting it counts) out of the pool: it takes no task again and its thread ends once it gets out.

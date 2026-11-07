@@ -72,9 +72,13 @@ pub trait Job: Sync {
 /// Where a thread's task is: in the pool's own code, or out in a plug-in, which may never return.
 /// Only there can the caller leave a worker it gave up on ([`Pool::abandon`]), since a plug-in call
 /// touches what its own task owns and nothing else of the block's.
-#[derive(Default)]
 pub struct Call {
-    state: AtomicU8,
+    /// The phase in the low byte, and above it the number of the call, so that the caller leaves
+    /// the very call it looked at and not one that began since.
+    state: AtomicU64,
+    /// When the call began, in nanoseconds from `epoch`.
+    since: AtomicU64,
+    epoch: Instant,
     /// What the job said it was calling (a plug-in's uid), for the message.
     what: AtomicU64,
 }
@@ -87,27 +91,66 @@ const LEFT: u8 = 2;
 /// Left, then back out of the plug-in, and done with everything it was given.
 const GONE: u8 = 3;
 
+fn phase(state: u64) -> u8 {
+    state as u8
+}
+
+fn with_phase(state: u64, p: u8) -> u64 {
+    (state & !0xff) | p as u64
+}
+
 impl Call {
-    /// Before a call into a plug-in, `what` naming it.
+    fn new(epoch: Instant) -> Call {
+        Call { state: AtomicU64::new(IN_TASK as u64), since: AtomicU64::new(0), epoch, what: AtomicU64::new(0) }
+    }
+
+    fn now(&self) -> u64 {
+        self.epoch.elapsed().as_nanos() as u64
+    }
+
+    /// Before a call into a plug-in, `what` naming it. Reads the clock (a vDSO call on Linux).
     pub fn enter(&self, what: u64) {
+        // Only this thread moves the state on from `IN_TASK`, the phase it's in now.
+        let s = self.state.load(Ordering::Relaxed);
         self.what.store(what, Ordering::Relaxed);
-        self.state.store(IN_PLUGIN, Ordering::SeqCst);
+        self.since.store(self.now(), Ordering::Relaxed);
+        self.state.store(with_phase(s.wrapping_add(1 << 8), IN_PLUGIN), Ordering::SeqCst);
     }
 
     /// After it. False if the caller left the thread there meanwhile: the task is no longer its own,
     /// and the job must return at once, touching nothing more.
     #[must_use]
     pub fn leave(&self) -> bool {
-        match self.state.compare_exchange(IN_PLUGIN, IN_TASK, Ordering::SeqCst, Ordering::SeqCst) {
-            Ok(_) => true,
+        let s = self.state.load(Ordering::SeqCst);
+        match phase(s) {
+            IN_PLUGIN => self.state.compare_exchange(s, with_phase(s, IN_TASK), Ordering::SeqCst, Ordering::SeqCst).is_ok(),
             // Not in a call at all, which is no harm.
-            Err(s) => s == IN_TASK,
+            p => p == IN_TASK,
         }
     }
 
     /// Whether the caller left the thread in a plug-in.
     pub fn left(&self) -> bool {
-        self.state.load(Ordering::SeqCst) >= LEFT
+        phase(self.state.load(Ordering::SeqCst)) >= LEFT
+    }
+
+    /// The caller's side: leaves the thread in the call it's in, if it has been in it for `least`.
+    fn leave_behind(&self, least: Duration) -> bool {
+        let s = self.state.load(Ordering::SeqCst);
+        if phase(s) != IN_PLUGIN {
+            return false;
+        }
+        // Written before the state: this call's start, or a later call's, whose number then fails
+        // the exchange below.
+        let since = self.since.load(Ordering::Relaxed);
+        if self.now().saturating_sub(since) < least.as_nanos() as u64 {
+            return false;
+        }
+        self.state.compare_exchange(s, with_phase(s, LEFT), Ordering::SeqCst, Ordering::SeqCst).is_ok()
+    }
+
+    fn gone(&self) -> bool {
+        phase(self.state.load(Ordering::SeqCst)) == GONE
     }
 }
 
@@ -297,7 +340,7 @@ impl Shared {
         // A panic can leave the call open. Whichever way it went, a thread left in it has no task
         // any more: the caller counted it out, and the next block may be running.
         if !call.leave() {
-            call.state.store(GONE, Ordering::SeqCst);
+            call.state.store(GONE as u64, Ordering::SeqCst);
             return false;
         }
         if panicked {
@@ -371,7 +414,10 @@ impl Pool {
                     task: AtomicU32::new(0),
                 })
                 .collect(),
-            calls: (0..threads).map(|_| Line(Call::default())).collect(),
+            calls: {
+                let epoch = Instant::now();
+                (0..threads).map(|_| Line(Call::new(epoch))).collect()
+            },
             panics: AtomicU32::new(0),
             shutdown: AtomicBool::new(false),
             health: Arc::new(Health { workers: threads as u32 - 1, ..Default::default() }),
@@ -422,33 +468,41 @@ impl Pool {
         self.shared.health.realtime.load(Ordering::Relaxed)
     }
 
-    /// After [`Pool::finish`] gave up: every worker out in a plug-in ([`Call::enter`]) is left there.
-    /// Its task, and every task that waits for it, are counted out of the block, which ends once the
-    /// rest is done (follow with [`Pool::finish`] again). The worker is demoted and retired as in
+    /// After [`Pool::finish`] gave up: every worker that has been out in one plug-in call
+    /// ([`Call::enter`]) for at least `least` is left there. A call shorter than that is more likely
+    /// a hiccup (a page fault, a slow first block) than a hang, and is for a later look. Its task,
+    /// and every task that waits for it, are counted out of the block, which ends once the rest is
+    /// done (follow with [`Pool::finish`] again). The worker is demoted and retired as in
     /// [`Pool::retire_stuck`], and once out of the plug-in, if ever, it ends, touching nothing of
     /// the pool's but its [`Call`]. `left` hears of each: its thread, its task and what it called.
-    /// Returns how many it left. A worker held up anywhere else is for `retire_stuck`.
+    /// Returns how many it left. A worker held up anywhere else is for `retire_stuck`, and if it
+    /// then goes into a plug-in that doesn't return, a later call here leaves it after all.
     ///
     /// On the audio thread, with `graph` the open block's: allocates nothing and takes no lock, and
-    /// makes one `sched_setscheduler` call per real-time worker it leaves.
-    pub fn abandon(&self, graph: &TaskGraph, mut left: impl FnMut(usize, usize, u64)) -> u32 {
+    /// makes one `sched_setscheduler` call per real-time worker it demotes.
+    pub fn abandon(&self, graph: &TaskGraph, least: Duration, mut left: impl FnMut(usize, usize, u64)) -> u32 {
         let sh = &*self.shared;
         let block = sh.block.load(Ordering::Relaxed);
         let mut dropped = self.dropped.get();
         let mut n = 0;
         for (i, w) in sh.workers.iter().enumerate() {
             let call = &sh.calls[i + 1].0;
-            // Only this thread moves a worker on from `ACTIVE`, and from `IN_PLUGIN` to `LEFT`.
-            if !w.active() || call.state.compare_exchange(IN_PLUGIN, LEFT, Ordering::SeqCst, Ordering::SeqCst).is_err() {
+            // Playing, or retired in this block (`retire_stuck`) and helping finish it. Only this
+            // thread moves a worker on from `ACTIVE`, and a call from `IN_PLUGIN` to `LEFT`.
+            let active = w.active();
+            let draining = w.state.load(Ordering::SeqCst) == RETIRED && w.retired_in.load(Ordering::Relaxed) == block;
+            if !(active || draining) || !call.leave_behind(least) {
                 continue;
             }
-            w.retired_in.store(block, Ordering::Relaxed);
-            w.state.store(RETIRED, Ordering::SeqCst);
-            let h = &*sh.health;
-            h.active.fetch_sub(1, Ordering::Relaxed);
-            h.stuck.fetch_add(1, Ordering::Relaxed);
-            if w.realtime.load(Ordering::Relaxed) {
-                demote(w.tid.load(Ordering::Relaxed));
+            if active {
+                w.retired_in.store(block, Ordering::Relaxed);
+                w.state.store(RETIRED, Ordering::SeqCst);
+                let h = &*sh.health;
+                h.active.fetch_sub(1, Ordering::Relaxed);
+                h.stuck.fetch_add(1, Ordering::Relaxed);
+                if w.realtime.load(Ordering::Relaxed) {
+                    demote(w.tid.load(Ordering::Relaxed));
+                }
             }
             // Stored before the claim's task ran, so before the call it's in.
             let task = w.task.load(Ordering::Relaxed) as usize;
@@ -483,7 +537,7 @@ impl Pool {
     /// Whether a thread left in a plug-in has come back out of it and let go of everything it was
     /// given (false for one never left).
     pub fn gone(&self, thread: usize) -> bool {
-        self.shared.calls.get(thread).is_some_and(|c| c.0.state.load(Ordering::SeqCst) == GONE)
+        self.shared.calls.get(thread).is_some_and(|c| c.0.gone())
     }
 
     /// Whether the caller left `thread` in a plug-in (it may have come back out since).
@@ -610,7 +664,7 @@ impl Drop for Pool {
         for (index, j) in self.joins.drain(..) {
             // One still in the plug-in it was left in may never end: it's let go, holding the
             // shared state it needs.
-            if self.shared.calls[index].0.state.load(Ordering::SeqCst) == LEFT {
+            if phase(self.shared.calls[index].0.state.load(Ordering::SeqCst)) == LEFT {
                 continue;
             }
             let _ = j.join();
@@ -631,6 +685,9 @@ fn worker(sh: Arc<Shared>, index: usize, opts: PoolOptions) {
         return;
     }
     keep_to(&opts.cpus);
+    // Freed now rather than when the worker ends, which for one left in a plug-in is whenever the
+    // plug-in returns, maybe in the middle of a block.
+    drop(opts);
     // Flush-to-zero is per thread. It holds for the worker's life, as the thread is ours alone.
     let _ftz = NoDenormals::new();
     touch_stack();
@@ -1113,22 +1170,38 @@ mod tests {
         assert_eq!(log.early.load(Ordering::SeqCst), 0);
     }
 
-    /// Holds up the first task a worker takes, out in a "plug-in", until it's let go.
+    /// Holds up the first task a worker takes (of the first `to_hold` workers): first in the task
+    /// itself while `in_task` is set, then out in a "plug-in" for `nap` and while `hold` is set.
     struct Hang {
+        to_hold: AtomicU32,
+        in_task: AtomicBool,
         hold: AtomicBool,
+        nap: Duration,
+        /// How long the caller takes over each task.
+        caller_nap: Duration,
+        /// The worker held up last, and its task.
         on: AtomicUsize,
         task: AtomicUsize,
         ran: Vec<AtomicU32>,
+        /// Workers in the call now, out of it either way, and out of it to find they were left.
+        in_call: AtomicU32,
+        done: AtomicU32,
         back: AtomicU32,
     }
 
     impl Hang {
         fn new(n: usize) -> Hang {
             Hang {
+                to_hold: AtomicU32::new(1),
+                in_task: AtomicBool::new(false),
                 hold: AtomicBool::new(true),
+                nap: Duration::ZERO,
+                caller_nap: Duration::from_micros(200),
                 on: AtomicUsize::new(0),
                 task: AtomicUsize::new(0),
                 ran: (0..n).map(|_| AtomicU32::new(0)).collect(),
+                in_call: AtomicU32::new(0),
+                done: AtomicU32::new(0),
                 back: AtomicU32::new(0),
             }
         }
@@ -1137,19 +1210,35 @@ mod tests {
     impl Job for Hang {
         fn run(&self, task: usize, thread: usize, call: &Call) {
             if thread == 0 {
-                thread::sleep(Duration::from_micros(200));
-            } else if self.on.compare_exchange(0, thread, Ordering::SeqCst, Ordering::SeqCst).is_ok() {
+                thread::sleep(self.caller_nap);
+            } else if self.to_hold.try_update(Ordering::SeqCst, Ordering::SeqCst, |n| n.checked_sub(1)).is_ok() {
+                self.on.store(thread, Ordering::SeqCst);
                 self.task.store(task, Ordering::SeqCst);
+                while self.in_task.load(Ordering::SeqCst) {
+                    thread::sleep(Duration::from_millis(1));
+                }
                 call.enter(77);
+                self.in_call.fetch_add(1, Ordering::SeqCst);
+                thread::sleep(self.nap);
                 while self.hold.load(Ordering::SeqCst) {
                     thread::sleep(Duration::from_millis(1));
                 }
-                if !call.leave() {
+                let ours = call.leave();
+                self.done.fetch_add(1, Ordering::SeqCst);
+                if !ours {
                     self.back.fetch_add(1, Ordering::SeqCst);
                     return;
                 }
             }
             self.ran[task].fetch_add(1, Ordering::SeqCst);
+        }
+    }
+
+    fn until(what: &str, ok: impl Fn() -> bool) {
+        let t = Instant::now();
+        while !ok() {
+            assert!(t.elapsed() < Duration::from_secs(10), "{what}");
+            thread::sleep(Duration::from_millis(1));
         }
     }
 
@@ -1183,7 +1272,7 @@ mod tests {
         started(&p);
         hang(&p, &g, Arc::as_ptr(&job));
         let mut left = Vec::new();
-        assert_eq!(p.abandon(&g, |thread, task, what| left.push((thread, task, what))), 1);
+        assert_eq!(p.abandon(&g, Duration::ZERO, |thread, task, what| left.push((thread, task, what))), 1);
         let (on, s) = (job.on.load(Ordering::SeqCst), job.task.load(Ordering::SeqCst));
         assert_eq!(left, [(on, s, 77)]);
         assert!(p.is_left(on) && !p.gone(on));
@@ -1223,12 +1312,127 @@ mod tests {
         let p = pool(2);
         started(&p);
         hang(&p, &g, job);
-        assert_eq!(p.abandon(&g, |_, _, _| {}), 1);
+        assert_eq!(p.abandon(&g, Duration::ZERO, |_, _, _| {}), 1);
         assert!(p.finish(Some(Duration::from_secs(5))));
         let t = Instant::now();
         drop(p);
         assert!(t.elapsed() < Duration::from_secs(5));
         assert_eq!(job.back.load(Ordering::SeqCst), 0);
+    }
+
+    /// Issue #8 again, but from inside the task: given up on before it went into the plug-in, the
+    /// worker is retired, and once in a plug-in that doesn't return it's left there after all.
+    #[test]
+    fn a_worker_retired_in_its_task_is_left_once_it_is_out_in_a_plug_in() {
+        let g = pairs();
+        let mut h = Hang::new(64);
+        h.in_task = AtomicBool::new(true);
+        let job = Arc::new(h);
+        let p = pool(2);
+        started(&p);
+        hang(&p, &g, Arc::as_ptr(&job));
+        assert_eq!(p.abandon(&g, Duration::ZERO, |_, _, _| panic!("left")), 0, "not in a plug-in yet");
+        assert_eq!(p.retire_stuck(), 1);
+        let (on, s) = (job.on.load(Ordering::SeqCst), job.task.load(Ordering::SeqCst));
+        job.in_task.store(false, Ordering::SeqCst);
+        until("it never went into the plug-in", || job.in_call.load(Ordering::SeqCst) == 1);
+        assert_eq!(p.abandon(&g, Duration::from_secs(60), |_, _, _| panic!("left")), 0, "not in it for long enough");
+        let mut left = Vec::new();
+        assert_eq!(p.abandon(&g, Duration::ZERO, |thread, task, what| left.push((thread, task, what))), 1);
+        assert_eq!(left, [(on, s, 77)]);
+        assert!(p.finish(Some(Duration::from_secs(5))), "the rest of the block ends without it");
+        let out = |t: usize| t == s || (s < 32 && t == s + 32);
+        for t in 0..64 {
+            assert_eq!((p.dropped(t), job.ran[t].load(Ordering::SeqCst)), (out(t), !out(t) as u32), "task {t}");
+        }
+        let r = p.health().report();
+        assert_eq!((r.playing, r.stuck), (1, 1), "retired once");
+        job.hold.store(false, Ordering::SeqCst);
+        until("the thread didn't let go", || p.gone(on));
+        assert_eq!(job.back.load(Ordering::SeqCst), 1);
+        run_blocks(&p, &g, &Arc::new(Log::new(g.clone())), 20);
+    }
+
+    /// The plug-in returns at about the moment the caller gives up: whichever wins, the counts hold.
+    #[test]
+    fn a_plug_in_returning_as_the_caller_gives_up_is_either_left_or_not() {
+        let g = pairs();
+        let limit = Duration::from_millis(5);
+        let mut left = 0;
+        for k in 0..60u64 {
+            let mut h = Hang::new(64);
+            h.hold = AtomicBool::new(false);
+            h.caller_nap = Duration::from_micros(20);
+            // Either side of the limit.
+            h.nap = Duration::from_micros(4000 + (k % 9) * 250);
+            let job = Arc::new(h);
+            let p = pool(2);
+            started(&p);
+            let ptr: *const Hang = Arc::as_ptr(&job);
+            let mut done = true;
+            for tries in 0.. {
+                assert!(tries < 200, "the worker never got a task");
+                for r in &job.ran {
+                    r.store(0, Ordering::SeqCst);
+                }
+                unsafe { p.start(&g, ptr) };
+                done = p.finish(Some(limit));
+                if job.on.load(Ordering::SeqCst) != 0 {
+                    break;
+                }
+                assert!(p.finish(None));
+            }
+            let n = if done { 0 } else { p.abandon(&g, Duration::ZERO, |_, _, _| {}) };
+            assert!(done || p.finish(Some(Duration::from_secs(5))));
+            until("the worker never came out of its call", || job.done.load(Ordering::SeqCst) == 1);
+            let s = job.task.load(Ordering::SeqCst);
+            let out = |t: usize| n == 1 && (t == s || (s < 32 && t == s + 32));
+            for t in 0..64 {
+                assert_eq!((p.dropped(t), job.ran[t].load(Ordering::SeqCst)), (out(t), !out(t) as u32), "try {k}, task {t}");
+            }
+            assert_eq!(job.back.load(Ordering::SeqCst), n, "try {k}");
+            let on = job.on.load(Ordering::SeqCst);
+            if n == 1 {
+                until("the thread didn't let go", || p.gone(on));
+            }
+            left += n;
+            run_blocks(&p, &g, &Arc::new(Log::new(g.clone())), 3);
+        }
+        eprintln!("{left} of 60 left");
+    }
+
+    #[test]
+    fn two_workers_can_be_left_in_one_block_or_one_after_the_other() {
+        let g = pairs();
+        let mut h = Hang::new(64);
+        h.to_hold = AtomicU32::new(2);
+        let job = Arc::new(h);
+        let p = pool(3);
+        started(&p);
+        let ptr: *const Hang = Arc::as_ptr(&job);
+        let mut left = 0;
+        for tries in 0.. {
+            if left == 2 {
+                break;
+            }
+            assert!(tries < 400, "only {left} left");
+            unsafe { p.start(&g, ptr) };
+            if p.finish(Some(Duration::from_millis(20))) {
+                thread::sleep(Duration::from_millis(2));
+                continue;
+            }
+            let n = p.abandon(&g, Duration::ZERO, |_, _, _| {});
+            assert!(n >= 1);
+            left += n;
+            assert!(p.finish(Some(Duration::from_secs(5))));
+        }
+        let r = p.health().report();
+        assert_eq!((r.playing, r.stuck), (1, 2));
+        // The caller plays on alone.
+        run_blocks(&p, &g, &Arc::new(Log::new(g.clone())), 20);
+        job.hold.store(false, Ordering::SeqCst);
+        until("a thread didn't let go", || p.gone(1) && p.gone(2));
+        assert_eq!(job.back.load(Ordering::SeqCst), 2);
     }
 
     /// A worker held up in a task but not in a plug-in can't be left: that's for `retire_stuck`.
@@ -1243,7 +1447,7 @@ mod tests {
         for _ in 0..200 {
             unsafe { p.start(&g, ptr) };
             if !p.finish(Some(Duration::from_millis(20))) {
-                assert_eq!(p.abandon(&g, |_, _, _| panic!("left")), 0);
+                assert_eq!(p.abandon(&g, Duration::ZERO, |_, _, _| panic!("left")), 0);
                 assert_eq!(p.retire_stuck(), 1);
                 while !p.is_done() {
                     thread::sleep(Duration::from_millis(1));

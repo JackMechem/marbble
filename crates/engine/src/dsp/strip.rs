@@ -351,9 +351,17 @@ pub(super) fn run_strip<R: Routes>(cx: &BlockCtx<'_>, ti: usize, t: &mut TrackDs
     for (k, slot) in t.inserts.iter_mut().enumerate().filter(|_| fx) {
         let Some(ins) = slot else { continue };
         let ran = !ins.bypass && ll_skip & (1 << k) == 0;
-        // A plug-in left running (`Routes::leave`) may go on reading the key, which its source
-        // overwrites in later blocks: only into audio that nobody hears.
-        let key = if ran { key_signal(ins.key.idx.and_then(|i| routes.earlier(i)), ins.key.pre, iso, n) } else { None };
+        // The plug-in reads its key from this thread's scratch: left in it (`Routes::leave`), it
+        // must not read the source's own buffers, which the engine goes on writing, and frees with
+        // the source's track.
+        let key = match ran.then(|| key_signal(ins.key.idx.and_then(|i| routes.earlier(i)), ins.key.pre, iso, n)).flatten() {
+            Some((a, b)) => {
+                sc.key_l[..n].copy_from_slice(a);
+                sc.key_r[..n].copy_from_slice(b);
+                Some((&sc.key_l[..n], &sc.key_r[..n]))
+            }
+            None => None,
+        };
         routes.enter(ins.uid);
         if ran {
             match &mut ins.plugin {

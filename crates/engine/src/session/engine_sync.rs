@@ -511,24 +511,27 @@ impl Session {
         self.sync_globals();
     }
 
-    /// The project with each plugin's current state embedded (for saving or rebuilding).
+    /// The project with each plugin's current state embedded (for saving or rebuilding). A plug-in
+    /// a processing thread is left in (`session/left_out.rs`) isn't asked, as it may never answer:
+    /// it keeps the state the project last had for it.
     pub(super) fn capture_plugin_states(&self) -> Project {
         let mut p = self.project.clone();
-        let fill = |s: &mut Option<PluginSlot>, ctrls: &HashMap<Id, PluginController>| {
+        let held = self.held();
+        let fill = |track: Id, s: &mut Option<PluginSlot>, ctrls: &HashMap<Id, PluginController>| {
             if let Some(slot) = s {
-                if let Some(c) = ctrls.get(&slot.uid) {
+                if let Some(c) = ctrls.get(&slot.uid).filter(|_| !Self::left_in(&held, track, slot.uid)) {
                     slot.state = Some(encode_state(&c.save_state()));
                 }
             }
         };
         for t in &mut p.tracks {
-            fill(&mut t.instrument, &self.controllers);
+            fill(t.id, &mut t.instrument, &self.controllers);
             for s in &mut t.inserts {
-                fill(s, &self.controllers);
+                fill(t.id, s, &self.controllers);
             }
         }
         for s in &mut p.master.inserts {
-            fill(s, &self.controllers);
+            fill(MASTER_ID, s, &self.controllers);
         }
         p
     }

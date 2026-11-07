@@ -113,6 +113,9 @@ impl Session {
         // A built-in effect's lookahead may have just changed: let the engine apply it, so
         // the render's delay compensation is up to date.
         engine.lock().process(&[], 0, &mut [], 0);
+        if let Some(why) = self.left_out_refusal() {
+            return Err(anyhow!(why));
+        }
         if self.builtin_latency_changed() {
             self.update_pdc();
         }
@@ -131,6 +134,9 @@ impl Session {
         }
         let engine = self.engine.clone();
         engine.lock().process(&[], 0, &mut [], 0);
+        if let Some(why) = self.left_out_refusal() {
+            return Err(anyhow!(why));
+        }
         if self.builtin_latency_changed() {
             self.update_pdc();
         }

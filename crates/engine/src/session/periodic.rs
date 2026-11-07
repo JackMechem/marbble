@@ -28,6 +28,7 @@ impl Session {
         let written = self.auto_idle();
         let stepped = self.vst_undo_idle();
         let controlled = self.controller_idle();
+        self.bring_back();
         before != self.open_editors().len() || written || latency_changed || controlled || stepped
     }
 
@@ -53,6 +54,7 @@ impl Session {
     /// Builds the [`Tick`], taking what has accumulated since the last one. The `ui-tick` thread calls this.
     pub fn tick(&mut self) -> Tick {
         self.check_overload();
+        self.check_left_out();
         // Keep the newest FFT_SIZE analyzer samples.
         let fresh = self.analyzer_rx.slots();
         let got = fresh > 0;
@@ -134,36 +136,18 @@ impl Session {
     /// Like Logic's System Overload: when the engine had to skip audio to keep up, playback
     /// (and recording) stops and the user hears why. A plug-in that stopped responding on a
     /// processing thread only costs its track and what that feeds, so playback goes on without
-    /// them, though a recording, which now has a gap, still stops.
+    /// them, and `check_left_out` says so.
     fn check_overload(&mut self) {
         let n = self.status.overloads.load(Ordering::Relaxed);
         if n == self.overloads_seen {
             return;
         }
         self.overloads_seen = n;
-        let ms = f32::from_bits(self.status.overload_secs.load(Ordering::Relaxed)) * 1000.0;
-        let track = self.project.track(self.status.overload_track.load(Ordering::Relaxed)).map(|t| t.name.clone());
         if self.status.overload_left_out.load(Ordering::Relaxed) {
-            let recording = self.is_recording();
-            if recording {
-                self.stop();
-            }
-            let uid = self.status.overload_plugin.load(Ordering::Relaxed);
-            let t = self.project.track(self.status.overload_track.load(Ordering::Relaxed));
-            let plugin = t.and_then(|t| t.inserts.iter().flatten().chain(t.instrument.iter()).find(|s| s.uid == uid)).map(|s| s.name.clone());
-            let track = track.unwrap_or_else(|| "a track".into());
-            let who = match plugin {
-                Some(p) => format!("{p} on \"{track}\""),
-                None => format!("A plug-in on \"{track}\""),
-            };
-            let stopped = if recording { " Recording stopped." } else { "" };
-            log::warn!("{who} stopped responding for over {ms:.0} ms; its track and what it feeds are left out");
-            let msg = format!(
-                "{who} stopped responding, so that track and anything it feeds are left out, and the rest plays on.{stopped} Save the project, then use Reset Audio Engine in Settings › Audio to bring them back."
-            );
-            self.warning.get_or_insert(msg);
             return;
         }
+        let ms = f32::from_bits(self.status.overload_secs.load(Ordering::Relaxed)) * 1000.0;
+        let track = self.project.track(self.status.overload_track.load(Ordering::Relaxed)).map(|t| t.name.clone());
         let was_running = self.is_playing() || self.is_recording();
         if was_running {
             self.stop();

@@ -212,6 +212,8 @@ impl Engine {
         master_inserts: Vec<Option<InsertDsp>>,
     ) -> (Vec<Box<TrackDsp>>, Vec<Option<InsertDsp>>) {
         self.settle();
+        // New strips throughout: none sits out, and what threads still hold is no track's.
+        self.status.release_all();
         self.sample_rate = sample_rate;
         self.playing = false;
         self.recording = false;

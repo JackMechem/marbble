@@ -11,8 +11,10 @@ All notable changes to Marbble are recorded here. The format follows
 - **A plug-in that stops responding on a processing thread no longer silences everything.**
   Marbble leaves it where it is and, after a moment of silence, plays on without its track and
   anything that track feeds, and a message names the plug-in. Playback keeps going (a recording
-  still stops), and edits work meanwhile. Reset Audio Engine in Settings › Audio brings those
-  tracks back.
+  still stops), and edits work meanwhile. The tracks come back by themselves if the plug-in
+  responds again, or with Reset Audio Engine in Settings › Audio. Until then bounces, exports,
+  Freeze and Bounce in Place are refused rather than leave those tracks out, and saving doesn't
+  ask the stuck plug-in for its settings.
 
 ## [0.1.0-alpha.8] - 2026-11-07
 

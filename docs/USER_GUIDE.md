@@ -3367,10 +3367,14 @@ doesn't return from its work for a tenth of a second, Marbble leaves it there an
 without it. After a moment of silence, the rest of the mix carries on. The plug-in's track, and
 anything that track feeds (an aux it sends to, the summing stack it plays through, a track it
 keys a side-chain for), are silent from then on, and a message names the plug-in and the track.
-Playback doesn't stop, but a recording does, as the take now has a gap. Save the project, then
-**Reset Audio Engine** in Settings › Audio: that loads the plug-ins again and brings the tracks
-back, along with the thread. Until then, a bounce or export leaves those tracks out too. A
-plug-in that stops responding on the audio thread itself can't be left like this.
+Playback doesn't stop, but a recording does, as the take now has a gap.
+
+If the plug-in responds again later, the track comes back by itself, with the plug-in loaded
+afresh, and a message says so. Otherwise **Reset Audio Engine** in Settings › Audio loads the
+plug-ins again and brings the tracks back, along with the thread. Meanwhile bounces, exports,
+Freeze and Bounce in Place are refused, as those tracks would be missing from them, and saving
+keeps the settings the stuck plug-in was last saved with rather than asking it, as it may never
+answer. A plug-in that stops responding on the audio thread itself can't be left like this.
 
 ### "… put out invalid audio" and a plug-in goes quiet
 

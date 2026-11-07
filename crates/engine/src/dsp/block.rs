@@ -7,18 +7,22 @@
 
 use super::*;
 
-/// Space a strip works in, one per thread: a send reading the delay line at its own tap, and the
-/// fader gains of the block, which post-fader sends at another tap apply again.
+/// Space a strip works in, one per thread: a send reading the delay line at its own tap, the
+/// fader gains of the block, which post-fader sends at another tap apply again, and the side-chain
+/// key a plug-in is reading.
 pub(crate) struct Scratch {
     pub(super) tap_l: Vec<f32>,
     pub(super) tap_r: Vec<f32>,
     pub(super) gain_l: Vec<f32>,
     pub(super) gain_r: Vec<f32>,
+    pub(super) key_l: Vec<f32>,
+    pub(super) key_r: Vec<f32>,
 }
 
 impl Default for Scratch {
     fn default() -> Self {
-        Scratch { tap_l: vec![0.0; MAX_BLOCK], tap_r: vec![0.0; MAX_BLOCK], gain_l: vec![0.0; MAX_BLOCK], gain_r: vec![0.0; MAX_BLOCK] }
+        let buf = || vec![0.0; MAX_BLOCK];
+        Scratch { tap_l: buf(), tap_r: buf(), gain_l: buf(), gain_r: buf(), key_l: buf(), key_r: buf() }
     }
 }
 

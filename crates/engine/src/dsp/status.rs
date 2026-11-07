@@ -62,12 +62,17 @@ pub struct EngineStatus {
     pub overload_secs: AtomicU32,
     pub overload_track: AtomicU64,
     pub overload_stuck: AtomicBool,
-    /// For a stuck worker: the uid of the plug-in it was left in (0: none or unknown), and whether
-    /// its track and what that feeds were left out, the rest playing on (see `Parallel::leave_out`).
-    pub overload_plugin: AtomicU64,
+    /// For a stuck worker: whether it was left in a plug-in, its track and what that feeds left out
+    /// and the rest playing on (see `Parallel::leave_out`, which reports that in `left_events`).
     pub overload_left_out: AtomicBool,
-    /// Tracks sitting out since a plug-in stopped responding, until the strips are rebuilt.
+    /// Tracks sitting out since a plug-in stopped responding (see `TrackDsp::left_out`).
     pub left_out: AtomicU32,
+    /// Times tracks were left out, and the track and the plug-in's uid (0: unknown) of the latest.
+    pub left_events: AtomicU32,
+    pub left_track: AtomicU64,
+    pub left_plugin: AtomicU64,
+    /// The strips threads are still holding in plug-ins that stopped responding.
+    pub held: [Held; MAX_HELD],
     /// Threads playing the strips in the latest block, and how many blocks went through the pool
     /// (see `parallel.rs`).
     pub threads: AtomicU32,
@@ -98,11 +103,72 @@ impl Default for EngineStatus {
             overload_secs: AtomicU32::new(0),
             overload_track: AtomicU64::new(0),
             overload_stuck: AtomicBool::new(false),
-            overload_plugin: AtomicU64::new(0),
             overload_left_out: AtomicBool::new(false),
             left_out: AtomicU32::new(0),
+            left_events: AtomicU32::new(0),
+            left_track: AtomicU64::new(0),
+            left_plugin: AtomicU64::new(0),
+            held: std::array::from_fn(|_| Held::default()),
             threads: AtomicU32::new(1),
             parallel_blocks: AtomicU64::new(0),
+        }
+    }
+}
+
+/// The most strips threads can hold at once: one per worker of a pool, and a pool replaced while one
+/// is held keeps it.
+pub const MAX_HELD: usize = 32;
+
+/// A strip a thread holds in a plug-in that stopped responding: its track (0: a free entry), the
+/// plug-in's uid (0: unknown), and whether the thread has let go of it since, for the session to
+/// bring the track back (`EngineStatus::take_back`).
+#[derive(Default)]
+pub struct Held {
+    track: AtomicU64,
+    plugin: AtomicU64,
+    back: AtomicBool,
+}
+
+impl EngineStatus {
+    /// The tracks and plug-ins threads still hold.
+    pub fn held(&self) -> Vec<(Id, Id)> {
+        let held = self.held.iter().filter(|h| h.track.load(Ordering::Acquire) != 0 && !h.back.load(Ordering::Acquire));
+        held.map(|h| (h.track.load(Ordering::Relaxed), h.plugin.load(Ordering::Relaxed))).collect()
+    }
+
+    /// The tracks and plug-ins threads have let go of since the last call, which frees their
+    /// entries. For the session only.
+    pub fn take_back(&self) -> Vec<(Id, Id)> {
+        let mut back = Vec::new();
+        for h in self.held.iter().filter(|h| h.back.load(Ordering::Acquire)) {
+            back.push((h.track.load(Ordering::Relaxed), h.plugin.load(Ordering::Relaxed)));
+            h.back.store(false, Ordering::Relaxed);
+            h.track.store(0, Ordering::Release);
+        }
+        back
+    }
+
+    pub(super) fn hold(&self, track: Id, plugin: Id) {
+        // Full, which takes more pools replaced while threads hold strips than there are: the
+        // track just isn't listed.
+        if let Some(h) = self.held.iter().find(|h| h.track.load(Ordering::Acquire) == 0) {
+            h.plugin.store(plugin, Ordering::Relaxed);
+            h.back.store(false, Ordering::Relaxed);
+            h.track.store(track, Ordering::Release);
+        }
+    }
+
+    pub(super) fn release(&self, track: Id) {
+        if let Some(h) = self.held.iter().find(|h| h.track.load(Ordering::Relaxed) == track && !h.back.load(Ordering::Relaxed)) {
+            h.back.store(true, Ordering::Release);
+        }
+    }
+
+    /// The strips were all rebuilt: whatever threads still hold is no track's any more.
+    pub(super) fn release_all(&self) {
+        for h in &self.held {
+            h.back.store(false, Ordering::Relaxed);
+            h.track.store(0, Ordering::Release);
         }
     }
 }

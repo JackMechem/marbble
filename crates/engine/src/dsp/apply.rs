@@ -444,6 +444,8 @@ impl Engine {
             }
             Cmd::Chase { notes, controllers } => self.chase = (notes, controllers),
             Cmd::Workers(w) => {
+                // Strips their threads have let go of go back first, for the session to bring back.
+                self.release_held();
                 if let Some(old) = self.parallel.set_workers(w) {
                     self.discard(Garbage::Workers(old));
                 }
@@ -454,6 +456,25 @@ impl Engine {
                 }
             }
             Cmd::ParallelTest(t) => self.parallel.test = t,
+            Cmd::Back { track, still_out } => {
+                if let Some(new) = track {
+                    match self.tracks.iter().position(|t| t.id == new.id) {
+                        Some(i) => {
+                            let old = std::mem::replace(&mut self.tracks[i], new);
+                            self.discard(Garbage::Track(old));
+                        }
+                        None => self.discard(Garbage::Track(new)),
+                    }
+                }
+                let fade = track_off::resume_frames(self.sample_rate);
+                for t in &mut self.tracks {
+                    if t.left_out && !t.stand_in && still_out.binary_search(&t.id).is_err() {
+                        t.come_back(fade);
+                    }
+                }
+                self.discard(Garbage::Ids(still_out));
+                self.resolve_routes();
+            }
         }
     }
 }
