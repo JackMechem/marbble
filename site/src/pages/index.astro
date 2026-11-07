@@ -382,13 +382,18 @@ const description = "A digital audio workstation modelled on Logic Pro's workflo
         <p class="fine">Not there yet: Flex Time and Flex Pitch, a Score editor, control surface protocols such as Mackie Control, MP3 and AAC bounces, and ASIO on Windows. <a href={doc("guide", "20-known-limitations")}>The full list</a></p>
       </section>
 
-      <section class="panel" id="download" aria-labelledby="download-title" data-releases={`https://api.github.com/repos/${REPO_URL.replace("https://github.com/", "")}/releases?per_page=5`}>
+      <section class="panel" id="download" aria-labelledby="download-title" data-releases={`https://api.github.com/repos/${REPO_URL.replace("https://github.com/", "")}/releases?per_page=30`}>
         <header class="panel-head">
           <p class="tag">05 Download</p>
           <h2 id="download-title">Get the current alpha.</h2>
           <p>
-            Latest: <a class="mono" data-latest href={releases} rel="noopener">v{meta.version}</a>, a prerelease. Builds aren't signed yet, so your system will warn about them. Each button gets the newest release's file, or opens the <a href={releases} rel="noopener">releases page</a> if GitHub can't be asked.
+            Latest: <a class="mono" data-latest href={releases} rel="noopener">v{meta.version}</a>, <span data-kind>a prerelease</span>. Builds aren't signed yet, so your system will warn about them. Each button gets the newest release's file, or opens the <a href={releases} rel="noopener">releases page</a> if GitHub can't be asked.
           </p>
+          <div class="channels" role="radiogroup" aria-label="Release channel" data-channels hidden>
+            <button type="button" role="radio" aria-checked="false" data-channel="stable">Stable</button>
+            <button type="button" role="radio" aria-checked="false" data-channel="unstable">Unstable</button>
+            <p class="fine" data-channel-note></p>
+          </div>
         </header>
         <div class="dl">
           {

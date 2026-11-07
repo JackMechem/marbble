@@ -96,33 +96,63 @@ interface Release {
   tag_name: string;
   html_url: string;
   draft: boolean;
+  prerelease: boolean;
   assets: { name: string; browser_download_url: string }[];
 }
 
-/** Points the download buttons at the newest release's files, once they're about to be seen. */
+const CHANNEL_NOTES = {
+  stable: "Releases with a plain version: the most tested.",
+  unstable: "Every release, prereleases included: new features sooner, with less testing.",
+};
+
+/**
+ * Points the download buttons at the newest release's files on the chosen channel, once they're
+ * about to be seen. Stable is the newest release that isn't a prerelease, Unstable the newest of
+ * all; the switch starts on Stable when there is one.
+ */
 function watchDownloads() {
   const section = document.querySelector<HTMLElement>("[data-releases]");
   if (!section) return;
+  const show = (latest: Release) => {
+    const label = document.querySelector<HTMLAnchorElement>("[data-latest]");
+    if (label) {
+      label.textContent = latest.tag_name;
+      label.href = latest.html_url;
+    }
+    const kind = document.querySelector<HTMLElement>("[data-kind]");
+    if (kind) kind.textContent = latest.prerelease ? "a prerelease" : "a stable release";
+    section.querySelectorAll<HTMLAnchorElement>("[data-asset]").forEach((link) => {
+      const pattern = new RegExp(link.dataset.asset!);
+      const asset = latest.assets.find((a) => pattern.test(a.name));
+      link.href = asset?.browser_download_url ?? latest.html_url;
+      link.title = asset?.name ?? "";
+    });
+  };
   const load = async () => {
     try {
       const response = await fetch(section.dataset.releases!, { headers: { Accept: "application/vnd.github+json" } });
       if (!response.ok) return;
-      const releases: Release[] = await response.json();
-      const latest = releases.find((r) => !r.draft && r.assets.length);
-      if (!latest) return;
-      const label = document.querySelector<HTMLAnchorElement>("[data-latest]");
-      if (label) {
-        label.textContent = latest.tag_name;
-        label.href = latest.html_url;
-      }
-      section.querySelectorAll<HTMLAnchorElement>("[data-asset]").forEach((link) => {
-        const pattern = new RegExp(link.dataset.asset!);
-        const asset = latest.assets.find((a) => pattern.test(a.name));
-        if (asset) {
-          link.href = asset.browser_download_url;
-          link.title = asset.name;
+      const releases: Release[] = (await response.json()).filter((r: Release) => !r.draft && r.assets.length);
+      const newest = { stable: releases.find((r) => !r.prerelease), unstable: releases[0] };
+      if (!newest.unstable) return;
+      const switcher = section.querySelector<HTMLElement>("[data-channels]");
+      const note = section.querySelector<HTMLElement>("[data-channel-note]");
+      const buttons = [...section.querySelectorAll<HTMLButtonElement>("[data-channel]")];
+      const choose = (channel: keyof typeof newest) => {
+        for (const b of buttons) b.setAttribute("aria-checked", String(b.dataset.channel === channel));
+        if (note) note.textContent = CHANNEL_NOTES[channel] + (newest.stable ? "" : " There's no stable release yet.");
+        show(newest[channel]!);
+      };
+      for (const b of buttons) {
+        const channel = b.dataset.channel as keyof typeof newest;
+        if (!newest[channel]) {
+          b.disabled = true;
+          b.title = "No stable release yet";
         }
-      });
+        b.addEventListener("click", () => choose(channel));
+      }
+      if (switcher) switcher.hidden = false;
+      choose(newest.stable ? "stable" : "unstable");
     } catch {
       // Offline, or over GitHub's rate limit: the links stay on the releases page.
     }

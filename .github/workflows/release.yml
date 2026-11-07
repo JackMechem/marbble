@@ -1,7 +1,8 @@
 # Builds Marbble for Linux, Windows and macOS and publishes the bundles as a GitHub release
 # when a version tag (v1.2.3, or v1.2.3-alpha.1 for a prerelease) is pushed. Pushing the
 # `release-check` branch runs the same builds without releasing anything, to try a change to
-# this workflow first. See docs/DEVELOPING.md, "Versioning and releases".
+# this workflow first. Once a release is published, the `stable` and `unstable` branches move to
+# it (the release channels). See docs/DEVELOPING.md, "Versioning and releases".
 name: Release
 
 on:
@@ -30,6 +31,11 @@ jobs:
             on { print }
           ' CHANGELOG.md > notes.md
           {
+            echo
+            case "$v" in
+              *-*) echo "**Channel:** Unstable (a prerelease)." ;;
+              *) echo "**Channel:** Stable." ;;
+            esac
             echo
             echo "### Downloads"
             echo
@@ -153,3 +159,21 @@ jobs:
               release_id: Number("${{ needs.create-release.outputs.id }}"),
               draft: false,
             });
+
+      # The release channels are branches that point at the newest release on each: `unstable`
+      # at the newest of all, `stable` at the newest without a prerelease suffix. A patch to an
+      # older line (v1.2.3 after v1.3.0) leaves them where they are. Flake inputs and anyone who
+      # clones follow them; nothing is ever committed to them.
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Move the channel branches
+        run: |
+          # versionsort.suffix sorts v1.0.0-rc.1 before v1.0.0.
+          newest() { git -c versionsort.suffix=- tag --list 'v*' --sort=-v:refname | grep -E "$1" | head -n 1; }
+          if [ "$(newest .)" = "$GITHUB_REF_NAME" ]; then
+            git push --force origin "$GITHUB_SHA:refs/heads/unstable"
+          fi
+          if [ "$(newest '^v[0-9]+\.[0-9]+\.[0-9]+$')" = "$GITHUB_REF_NAME" ]; then
+            git push --force origin "$GITHUB_SHA:refs/heads/stable"
+          fi

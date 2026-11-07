@@ -801,7 +801,23 @@ Pushing a `v*` tag runs `.github/workflows/release.yml`:
    Linux x86_64 (`ubuntu-24.04`) and aarch64 (`ubuntu-24.04-arm`): `.deb` and `.AppImage`,
    plus `.rpm` for versions without a prerelease suffix (RPM versions can't contain `-`); Windows (`windows-latest`): the NSIS installer (`_x64-setup.exe`); macOS
    (`macos-latest`): `.app` and `.dmg` for `aarch64-apple-darwin` and `x86_64-apple-darwin`.
-3. `publish` takes the release out of draft once every build has finished.
+3. `publish` takes the release out of draft once every build has finished, then moves the
+   release channels (below).
+
+### Release channels
+
+There are two, and the version decides which a release is on:
+
+- **Stable:** versions without a suffix (`1.2.3`). GitHub marks the newest as the Latest release.
+- **Unstable:** every release, prereleases (`1.2.3-alpha.1`, `-beta.1`, `-rc.1`) included, so
+  Unstable is never behind Stable.
+
+Each channel is also a branch, `stable` and `unstable`, that `publish` moves (force-pushes) to the
+release's commit when the release is the newest on that channel by version; a patch to an older
+line leaves them alone. Nix users pin a flake input to `github:JackMechem/marbble/stable` or
+`/unstable`. Nothing is committed to those branches by hand; `stable` doesn't exist until the
+first stable release. The release notes start with the channel, and the website's Download
+section has a Stable/Unstable switch.
 
 To try a change to the workflow without releasing anything, push it to the `release-check`
 branch: the same builds run, and nothing is created or published. The macOS bundles are

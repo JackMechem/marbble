@@ -94,7 +94,15 @@ Marbble already has.
 
 ## Install
 
-Prebuilt binaries are on the [GitHub Releases page](https://github.com/JackMechem/marbble/releases):
+Prebuilt binaries are on the [GitHub Releases page](https://github.com/JackMechem/marbble/releases),
+in two channels:
+
+- **Stable:** releases with a plain version, `v1.2.3`. GitHub marks the newest as Latest.
+- **Unstable:** every release, prereleases included (`v1.2.3-alpha.1`, `-beta.1`, `-rc.1`): new
+  features sooner, with less testing. Every release so far is a prerelease, so for now only
+  Unstable has any.
+
+Each release has:
 
 - **Linux** (x86_64 and aarch64): `.AppImage` (any distribution), `.deb` (Debian, Ubuntu) and
   `.rpm` (Fedora, openSUSE; stable releases only, since RPM can't version a prerelease).
@@ -138,6 +146,14 @@ On NixOS or any system with Nix flakes:
 ```sh
 git clone https://github.com/JackMechem/marbble && cd marbble
 nix run .                                 # build and launch
+```
+
+To follow a channel from a NixOS or home-manager flake, pin the input to its branch, and
+`nix flake update marbble` moves to the channel's newest release:
+
+```nix
+inputs.marbble.url = "github:JackMechem/marbble/unstable";   # or /stable
+# then: inputs.marbble.packages.${pkgs.stdenv.hostPlatform.system}.default
 ```
 
 To develop:

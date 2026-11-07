@@ -6,6 +6,13 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Release channels: Stable and Unstable.** Stable is releases with a plain version, Unstable
+  every release including prereleases. The website's Download section switches between them,
+  release notes name their channel, and the `stable` and `unstable` branches follow each one's
+  newest release, so a Nix flake input can track a channel.
+
 ### Changed
 
 - **The website is at <https://marbble.dev/>.** Help › User Guide, What's New and Website and the
