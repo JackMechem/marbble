@@ -63,6 +63,11 @@ pub struct UiPrefs {
     /// Settings › General: where a built-in effect's panel opens: "floating" (inside the main
     /// window), "docked" (in its bottom section, like the Mixer) or "window" (an OS window).
     pub fx_panels: String,
+    /// Settings › General: the update channel, "stable" or "unstable". None until one is chosen:
+    /// the check then follows the build (src/updateCheck.ts `effectiveChannel`).
+    pub update_channel: Option<String>,
+    /// Settings › General: ask GitHub at launch whether a newer version is out on the channel.
+    pub check_updates: bool,
 }
 
 impl Default for UiPrefs {
@@ -79,6 +84,8 @@ impl Default for UiPrefs {
             click_locates: "empty".into(),
             wheel_scrolls: "vertical".into(),
             fx_panels: "floating".into(),
+            update_channel: None,
+            check_updates: true,
         }
     }
 }
@@ -164,6 +171,8 @@ mod tests {
         assert_eq!(s.ui.snap, "smart");
         assert_eq!(s.ui.wheel_scrolls, "vertical");
         assert_eq!(s.ui.fx_panels, "floating");
+        assert_eq!(s.ui.update_channel, None);
+        assert!(s.ui.check_updates);
         assert_eq!(s.audio.sample_rate, AudioConfig::default().sample_rate);
     }
 
@@ -187,6 +196,8 @@ mod tests {
         s.ui.keymap.insert("play".into(), vec!["Shift+Space".into()]);
         s.plugins.disabled.push("/x.vst3|abc".into());
         s.prefs.general.autosave_minutes = 7;
+        s.ui.update_channel = Some("stable".into());
+        s.ui.check_updates = false;
         let back = parse(&serde_json::to_string(&s).unwrap()).unwrap();
         assert_eq!(back.ui, s.ui);
         assert_eq!(back.plugins, s.plugins);

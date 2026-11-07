@@ -1,5 +1,5 @@
 //! The Settings window's backend: audio and MIDI devices, the system input level check, the plug-in
-//! manager, and reading and writing `settings.json`.
+//! manager, reading and writing `settings.json`, and the update check's version and release pages.
 
 use super::*;
 
@@ -126,4 +126,26 @@ pub fn midi_ports(state: State<AppState>) -> Vec<daw_engine::midi_io::MidiPort> 
 #[tauri::command]
 pub fn midi_monitor(state: State<AppState>) -> Vec<daw_engine::midi_io::MidiLogEntry> {
     with(&state, |s| s.midi_monitor())
+}
+
+/// The running version, for the update check (src/updates.ts). A debug build takes
+/// `MARBBLE_FAKE_VERSION` in its place, so the check can be tried against the real releases.
+#[tauri::command]
+pub fn app_version(app: tauri::AppHandle) -> String {
+    let fake = if cfg!(debug_assertions) { std::env::var("MARBBLE_FAKE_VERSION").ok().filter(|v| !v.trim().is_empty()) } else { None };
+    fake.map(|v| v.trim().to_string()).unwrap_or_else(|| app.package_info().version.to_string())
+}
+
+/// Where Marbble's release pages are; `open_release_page` opens nothing else.
+const RELEASE_PAGES: &str = "https://github.com/JackMechem/marbble/releases/";
+
+/// The update notice's View Release: opens the release's page in the browser, as Help's pages
+/// open.
+#[tauri::command]
+pub fn open_release_page(url: String) -> R<()> {
+    if !url.starts_with(RELEASE_PAGES) {
+        return Err(format!("{url} isn't a Marbble release page"));
+    }
+    crate::menu::open_url(&url);
+    Ok(())
 }

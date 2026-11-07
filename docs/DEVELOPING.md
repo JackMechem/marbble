@@ -349,6 +349,7 @@ instead and enforce rules that would otherwise only fail in the running app.
 | `audioEditorModel.test.ts` | The Audio Track Editor's layout, zoom range and what a press grabs. |
 | `automationParams.test.ts` | Automation parameters: labels, each strip's list, Stereo Out as a track, the lane's scale. |
 | `settingsText.test.ts` | The MIDI monitor's wording, plug-in types and the Recovery sheet's texts. |
+| `updateCheck.test.ts` | The update check (`src/updateCheck.ts`): reading tags as versions, semver precedence with prereleases, each channel's newest release (drafts and non-version tags skipped), when an update is offered, and what the check says. |
 | `compressorModel.test.ts` | The transfer curve's copy of `static_reduction` for each circuit. |
 | `dynScale.test.ts` | The dynamics panels' value formatting and knob maths. |
 | `styles.test.ts` | Guard: `src/styles/index.css` imports every stylesheet exactly once with the tokens first, no other file imports CSS, and each file's braces balance; no raw hex colour outside `tokens.css`; every font size from the type scale; `tokens.css` matches Studio in `themes.ts`; the focus ring. |

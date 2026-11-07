@@ -8,6 +8,14 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Added
 
+- **Update check, with release channels.** At launch Marbble asks GitHub whether a newer version
+  is out on your update channel and, if so, shows "Marbble 0.1.0-alpha.8 is out" at the bottom
+  right with View Release (the release page, in your browser) and Later. It never downloads or
+  installs anything, never takes the keyboard, waits while you record, and stays quiet when
+  offline. Settings › General has the Update Channel (Stable: final releases; Unstable:
+  prereleases too, so never behind Stable; until you choose, it follows the version you run) and
+  Check for updates at launch, on by default. Help › Check for Updates… checks at any time and
+  says what it found.
 - **Release channels: Stable and Unstable.** Stable is releases with a plain version, Unstable
   every release including prereleases. The website's Download section switches between them,
   release notes name their channel, and the `stable` and `unstable` branches follow each one's

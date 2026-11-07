@@ -1544,12 +1544,23 @@ Audio Track Editor and meters are canvas drawings. The common pattern:
   found by path like the keys, whenever a window comes to the front and after the alternatives
   are rebuilt.
 - Window and Help are handled in `menu.rs` and never reach the page, except Help › Key Commands
-  (sent as `settings-keys`). Window › Minimize minimizes the window in front (muda's predefined
+  (sent as `settings-keys`) and Help › Check for Updates… (`help-updates`, below). Window › Minimize minimizes the window in front (muda's predefined
   Minimize doesn't exist on GTK); the end of Window lists the open windows (`window:<label>`,
   the main window first, then the panel windows by title), rebuilt on the main thread when a
   window comes to the front or closes and when the project menus change, and only when the list
   differs. Help's pages (`HELP_PAGES`) open in the browser through GIO on Linux, `open` on macOS
   and `explorer` on Windows.
+- The update check (`src/updates.ts`, rules in `src/updateCheck.ts`) runs in the main window:
+  once at launch when Settings › General's `ui.check_updates` is on, and from Help › Check for
+  Updates…. It `fetch`es `api.github.com/repos/JackMechem/marbble/releases` from the page (the
+  CSP is off and the API allows CORS, so no HTTP crate), takes the newest non-draft release on
+  the channel (`ui.update_channel`; unset follows the build: Unstable for a prerelease) and
+  compares it with `app_version` by semver precedence. A newer one goes to
+  `components/UpdateNotice.tsx`, a non-modal notice above the status line that never takes focus
+  and waits out a recording; View Release calls `open_release_page`, which opens only pages under
+  the repository's releases with `menu.rs`'s `open_url`. Nothing is downloaded. A debug build's
+  `app_version` returns `MARBBLE_FAKE_VERSION` when set, to try the check against the real
+  releases.
 - About Marbble passes the 128 px icon as the dialog's logo: GTK otherwise looks it up in the
   icon theme, which a build that isn't installed doesn't have.
 - The window's background is the theme's `--bg` (`themes.ts` `windowTheme`, beside
@@ -2420,7 +2431,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 |---|---|
 | `main.rs` | Startup (scan subprocess mode, `GDK_BACKEND`, plug-in cache, settings, CLI project path), the tick thread, the idle timer, MIDI refresh, autosave, command registration. |
 | `commands.rs` | The `Snapshot`, the `edit` / `try_edit` / `edit_made` wrappers, `get_state`, `undo`, `redo`. |
-| `commands/*.rs` | Every other Tauri command, by what it acts on: `transport`, `tracks`, `regions`, `arrangement`, `takes`, `plugins`, `automation`, `project`, `bounce`, `settings`, `sampler`. All are reachable as `commands::<name>`. |
+| `commands/*.rs` | Every other Tauri command, by what it acts on: `transport`, `tracks`, `regions`, `arrangement`, `takes`, `plugins`, `automation`, `project`, `bounce`, `settings` (also the update check's `app_version` and `open_release_page`), `sampler`. All are reachable as `commands::<name>`. |
 | `menu.rs` | The native menu bar: its spec, `set_menu_state` (ticks, enabled, labels, shown keys, greyed submenus), radio items on GTK, Quit, Window and Help, `gtk_key_names`. |
 | `schemas.rs` | Linux: finds GTK's file chooser schema at startup (`ensure_file_chooser_schema`) and `file_dialog_problem`, asked before every file dialog. See [File dialogs](#file-dialogs). |
 | `settings.rs` | `settings.json`: `Settings`, `UiPrefs`, `PluginPrefs`, tolerant parsing. |
@@ -2455,6 +2466,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `fileDialog.ts` | `open` and `save`, the dialog plug-in's behind `file_dialog_problem`; the only way to a file dialog (`tests/fileDialog.test.ts`). |
 | `tempo.ts` | The UI's mirror of `tempo.rs`, cached per snapshot. |
 | `prefs.ts` | Mirror of the settings, startup behaviour (`runStartup`), recovery offers, nudge sizes. |
+| `updates.ts`, `updateCheck.ts` | The update check: asking GitHub at launch and from Help › Check for Updates…, the notice's offer, View Release; the rules (semver order, each channel's newest release, the texts), pure and tested. See [Menus and dialogs](#menus-and-dialogs). |
 | `ops.ts` | Track and region operations and the right-click menus (`trackMenu`, `regionMenu`, `laneMenu`). |
 | `files.ts` | Open, save, import dialogs, unsaved-changes confirmation, undo/redo with toasts. |
 | `dnd.ts` | Dropping files from the desktop or the Browser into the tracks area. |
@@ -2590,6 +2602,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `AlternativesSheet.tsx` | File › Project Alternatives › Edit Alternatives…. |
 | `StripSilence.tsx` | The Strip Silence sheet with its preview. |
 | `ControllerAssignments.tsx` | The Controller Assignments window and the learn banner. |
+| `UpdateNotice.tsx` | "Marbble … is out" with View Release and Later, when the update check finds a newer version. |
 | `GlobalTracks.tsx` | The global tracks: the Arrangement, Tempo and Signature lanes. |
 | `ArrangementTrack.tsx` | The Arrangement track's lane: sections, the name pop-up, menus, move, copy and resize drags. |
 | `Overview.tsx` | The overview strip under the tracks (in place of the horizontal scroll bar): cached region layer, visible-area box, playhead, scroll and zoom drags. |

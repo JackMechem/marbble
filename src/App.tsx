@@ -66,6 +66,8 @@ import { AlternativesSheet } from "./components/AlternativesSheet";
 import { ARRANGE_COMMANDS, runArrangeCommand } from "./arrangeCmds";
 import { StripSilenceHost } from "./components/StripSilence";
 import { installMenuBar } from "./menuBar";
+import { checkForUpdates, checkUpdatesAtLaunch } from "./updates";
+import { UpdateNotice } from "./components/UpdateNotice";
 
 function selectedTrack() {
   const s = getState().snap;
@@ -203,6 +205,9 @@ function handleMenu(id: string) {
       break;
     case "settings-keys":
       setState({ dialog: "settings", settingsTab: "keys" });
+      break;
+    case "help-updates":
+      checkForUpdates(true);
       break;
     case "project-settings":
       setState({ dialog: "project-settings" });
@@ -573,6 +578,7 @@ export default function App() {
     act("get_state").then(async (snap) => {
       await loadSettings();
       restoreAppearance();
+      checkUpdatesAtLaunch();
       // Launched without a project: recover lost work, or open the last project or the Project
       // Chooser, as Settings › General says.
       if (snap && !snap.saved && snap.project.tracks.length === 0) await runStartup();
@@ -678,6 +684,7 @@ export default function App() {
       <MenuHost />
       <NameSheetHost />
       <StripSilenceHost />
+      <UpdateNotice />
       <Toast />
     </div>
   );

@@ -5,6 +5,8 @@ import { moveFolderKeys } from "../../oldName";
 import { loadSettings, useSettings } from "../../prefs";
 import { oldFolderNote, type OldProjectsFolder } from "../../settingsText";
 import { useStore } from "../../store";
+import { effectiveChannel } from "../../updateCheck";
+import { useRunningVersion } from "../../updates";
 import { Check, NumberField, Select } from "../Form";
 import { Foot, Row, Section, setPrefs, setUi, FolderField, toast } from "./parts";
 
@@ -32,6 +34,7 @@ export function GeneralPane({ close }: { close: () => void }) {
     toast(`Renamed to ${oldFolder.new}`);
   };
   const g = s.prefs.general;
+  const version = useRunningVersion();
   return (
     <>
       <Section title="Startup">
@@ -115,6 +118,29 @@ export function GeneralPane({ close }: { close: () => void }) {
             ]}
             onChange={(v) => setUi({ fx_panels: v })}
           />
+        </Row>
+      </Section>
+      <Section title="Updates">
+        <Row
+          label="Update Channel:"
+          note={`Stable offers final releases only. Unstable also offers the alphas, betas and release candidates, so it's never behind Stable. Until you choose one, it follows the version you're running${version ? ` (${version})` : ""}: Unstable for a prerelease, Stable for a final release.`}
+        >
+          <Select
+            value={effectiveChannel(s.ui.update_channel, version ?? "")}
+            options={[
+              ["stable", "Stable"],
+              ["unstable", "Unstable"],
+            ]}
+            onChange={(v) => setUi({ update_channel: v })}
+          />
+        </Row>
+        <Row
+          label="Automatic Check:"
+          note="Asks GitHub whether a newer version is out on your channel and, if so, shows a notice with a link to its release page. Nothing is downloaded or installed. Help › Check for Updates… checks at any time."
+        >
+          <Check checked={s.ui.check_updates ?? true} onChange={(v) => setUi({ check_updates: v })}>
+            Check for updates at launch
+          </Check>
         </Row>
       </Section>
       <Foot close={close} />

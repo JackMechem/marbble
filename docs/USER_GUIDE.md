@@ -365,7 +365,7 @@ status, the audio devices, and the number of MIDI inputs.
 | Navigate | Create Marker, Delete Marker, Go to Previous Marker, Go to Next Marker, Open Marker List |
 | View | Library, Inspector, Mixer, Editors, List Editors, Browsers, Show Automation, Show Used Automation, Show Global Tracks, Show Overview, Musical Typing, Step Input Keyboard, Show Hidden Tracks, Zoom In, Zoom Out, Larger Interface, Smaller Interface, Actual Size, Theme › |
 | Window | Minimize, Mixer in Separate Window, Editor in Separate Window, Event List in Separate Window, then the open windows (the main window and each [separate window](#separate-windows)): choose one to bring it to the front |
-| Help | Marbble User Guide, Key Commands…, What's New in Marbble, Report an Issue…, Marbble Website. Key Commands opens Settings › Key Commands; the others open this guide, the changelog, a new issue on GitHub and the website in your browser |
+| Help | Marbble User Guide, Key Commands…, What's New in Marbble, Check for Updates…, Report an Issue…, Marbble Website. Key Commands opens Settings › Key Commands; Check for Updates… asks GitHub whether a newer version is out on your [update channel](#general) and says what it found; the others open this guide, the changelog, a new issue on GitHub and the website in your browser |
 
 Each item shows its key beside it: the fixed keys below, and the key commands' keys as set in
 Settings › Key Commands (R for Record, X for the Mixer…), which change in the menu when you
@@ -2870,6 +2870,22 @@ tab's changes apply and **Done** on the right.
 | Undo Steps | 10 to 1000 | 100 |
 | Unsaved Changes | Ask before quitting or closing a project with unsaved changes | On |
 | Open Effect Panels | Floating; Docked in the bottom section; Separate windows (VST3 editors always open in their own window) | Floating |
+| Update Channel | Stable (final releases); Unstable (alphas, betas and release candidates too) | Follows the version you run: Unstable for a prerelease, Stable for a final release |
+| Automatic Check | Check for updates at launch | On |
+
+**Updates.** With Check for updates at launch on, Marbble asks GitHub once at each launch for
+its list of releases (`api.github.com/repos/JackMechem/marbble/releases`). The request says
+nothing about your projects or settings; GitHub sees your IP address, as with any web page. When a newer version is out on your channel, a notice at the bottom right
+says so, for example "Marbble 0.1.0-alpha.8 is out": **View Release** opens its release page in
+your browser, where you download it yourself, and **Later** hides the notice until the next
+launch. The notice never takes the keyboard and waits while you record. Marbble never downloads
+or installs anything itself. Offline, or when GitHub can't be reached, the check gives up
+silently. **Help › Check for Updates…** checks whenever you like, whether or not the launch check
+is on, and says when you already have the newest version or why it couldn't check. Stable is the
+final releases; Unstable adds the prereleases, so it is always at least as new as Stable. Until
+you choose a channel it follows the version you're running, so a prerelease such as
+0.1.0-alpha.7 is on Unstable. To stop Marbble contacting GitHub, turn Check for updates at launch
+off: it then asks only when you choose Check for Updates….
 
 ### Audio
 

@@ -14,7 +14,8 @@
 //! or to the page.
 //!
 //! A few items never reach the page: Quit, Window's Minimize and list of open windows, and
-//! Help's web pages (`window_command`, `HELP_PAGES`).
+//! Help's web pages (`window_command`, `HELP_PAGES`). Help › Check for Updates… does: the
+//! frontend asks GitHub (src/updates.ts).
 
 use std::collections::HashMap;
 
@@ -329,7 +330,8 @@ fn spec() -> Vec<Spec> {
                 Spec::Windows,
             ],
         ),
-        // The website's pages open in the browser (`HELP_PAGES`).
+        // The website's pages open in the browser (`HELP_PAGES`); Check for Updates… is the
+        // frontend's (src/updates.ts).
         Sub(
             "Help",
             vec![
@@ -337,6 +339,7 @@ fn spec() -> Vec<Spec> {
                 item("help-keys", "Key Commands…"),
                 Sep,
                 item("help-whats-new", "What's New in Marbble"),
+                item("help-updates", "Check for Updates…"),
                 item("help-report", "Report an Issue…"),
                 item("help-website", "Marbble Website"),
             ],
@@ -560,7 +563,7 @@ fn window_command<R: Runtime>(app: &AppHandle<R>, id: &str) -> bool {
 }
 
 /// Opens a web page in the default browser.
-fn open_url(url: &str) {
+pub fn open_url(url: &str) {
     #[cfg(target_os = "linux")]
     let r = gio::AppInfo::launch_default_for_uri(url, None::<&gio::AppLaunchContext>).map_err(|e| e.to_string());
     #[cfg(target_os = "macos")]
@@ -1074,14 +1077,15 @@ mod tests {
         assert_eq!(names, ["Marbble", "File", "Edit", "Track", "Record", "Navigate", "View", "Window", "Help"]);
         let Sub("Window", window) = &bar[7] else { panic!() };
         assert!(matches!(window.last(), Some(Spec::Windows)), "the list of windows ends Window");
-        // Every Help item but Key Commands opens a page, and every page has its item.
+        // Every Help item but Key Commands and Check for Updates opens a page, and every page has
+        // its item.
         let Sub("Help", help) = &bar[8] else { panic!() };
         let ids = ids_in(help);
         for (id, url) in HELP_PAGES {
             assert!(ids.contains(&id), "{id}");
             assert!(url.starts_with("https://"), "{url}");
         }
-        assert_eq!(ids.len(), HELP_PAGES.len() + 1);
+        assert_eq!(ids.len(), HELP_PAGES.len() + 2);
     }
 
     #[test]

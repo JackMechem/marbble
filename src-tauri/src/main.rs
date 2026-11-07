@@ -414,6 +414,8 @@ fn main() {
             commands::move_regions_to_new_tracks,
             commands::copy_regions_to_new_tracks,
             commands::add_output_aux,
+            commands::app_version,
+            commands::open_release_page,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Marbble");

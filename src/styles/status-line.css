@@ -1,4 +1,4 @@
-/* The status line and toasts. */
+/* The status line, toasts and the update notice. */
 /* ---- status line & toast ------------------------------------------------------------------ */
 
 .status-line {
@@ -34,3 +34,25 @@
   font-size: var(--fs-md);
 }
 
+/* ---- update notice (components/UpdateNotice.tsx) -------------------------------------------- */
+
+/* Bottom right, clear of the toasts in the middle; above sheets (the Project Chooser is often
+   up at launch) and below menus. */
+.update-notice {
+  position: fixed;
+  right: 12px;
+  bottom: 34px;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 6px 6px 14px;
+  border-radius: 7px;
+  background: var(--toast-bg);
+  box-shadow: var(--menu-shadow);
+  font-size: var(--fs-md);
+}
+
+.update-notice > span {
+  margin-right: 6px;
+}

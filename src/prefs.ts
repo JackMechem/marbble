@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 import { act, call, type BitDepth, type ClickSettings, type PluginDesc, type Project, type RecentProject, type Snapshot } from "./api";
 import { getState, setState, type Snap } from "./store";
 import { tempoMap } from "./tempo";
+import type { UpdateChannel } from "./updateCheck";
 import type { WheelScrolls } from "./wheel";
 
 export type AudioOverlap = "on_top" | "new_track" | "replace";
@@ -64,6 +65,11 @@ export interface UiPrefs {
   wheel_scrolls?: WheelScrolls;
   /** Settings › General: where built-in effect panels open (fxDock.ts). */
   fx_panels?: "docked" | "floating" | "window";
+  /** Settings › General: the update channel; null until chosen, when it follows the build
+   * (updateCheck.ts `effectiveChannel`). */
+  update_channel?: UpdateChannel | null;
+  /** Settings › General: check for updates at launch (updates.ts). */
+  check_updates?: boolean;
 }
 
 export interface PluginPrefs {
