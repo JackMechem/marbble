@@ -2520,8 +2520,9 @@ orange in Touch and Latch, red in Write.
 - Moves in a plug-in's own editor are written too (through the plug-in's begin/perform/end edit
   calls). While they are, they undo with the pass, not as steps of their own.
 - Group members that share volume, pan or mute write together.
-- Each pass is one undo step, **Write Automation**. Written passes are thinned to the points the
-  curve needs.
+- Each pass is one undo step, **Write Automation**. Undoing it takes the lane back and returns the
+  control to where it was before the pass. Written passes are thinned to the points the curve
+  needs.
 - Lanes are evaluated every audio block. Volume keeps the fader's smoothing, and plug-in
   parameters are ramped across each block. With plug-in delay compensation, automation follows the
   delayed audio.

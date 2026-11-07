@@ -23,6 +23,7 @@ use std::collections::HashSet;
 
 use vst3_host::ParamInfo;
 
+use super::auto_write::Own;
 use super::*;
 use crate::fx::{self, EffectInfo, ParamKind, ParamSpec, Unit};
 use crate::instrument::{self, InstrumentInfo};
@@ -165,7 +166,7 @@ fn value_of(slot: &PluginSlot, spec: &fx::ParamSpec) -> f32 {
     slot.params.iter().find(|p| p.0 == spec.id).map(|p| p.1).unwrap_or(spec.default)
 }
 
-fn store_value(slot: &mut PluginSlot, id: u32, v: f32) {
+pub(super) fn store_value(slot: &mut PluginSlot, id: u32, v: f32) {
     match slot.params.iter_mut().find(|p| p.0 == id) {
         Some(p) => p.1 = v,
         None => slot.params.push((id, v)),
@@ -219,6 +220,7 @@ impl Session {
         let s = self.slot_ref(track, slot).and_then(|s| s.as_mut()).ok_or_else(|| anyhow!("no plug-in in that slot"))?;
         let (name, specs) = builtin_spec(&s.plugin_id).ok_or_else(|| anyhow!("{} isn't a built-in effect", s.name))?;
         let spec = specs.iter().find(|p| p.id == id).ok_or_else(|| anyhow!("{name} has no parameter {id}"))?;
+        let was = s.params.iter().find(|p| p.0 == id).map(|p| p.1);
         let before = to_normalized(spec, value_of(s, spec));
         let v = crate::dsp::builtin_clamp(spec, value);
         store_value(s, id, v);
@@ -230,7 +232,7 @@ impl Session {
             self.update_pdc();
         }
         self.dirty = true;
-        self.auto_plugin_moved(track, uid, id, before);
+        self.auto_plugin_moved(track, uid, id, before, Some(was.map_or(Own::Unsaved, Own::Value)));
         Ok(())
     }
 
@@ -248,6 +250,14 @@ impl Session {
         let (_, specs) = builtin_spec(&s.plugin_id)?;
         let spec = specs.iter().find(|p| p.id == id)?;
         Some(to_normalized(spec, value_of(s, spec)))
+    }
+
+    /// A parameter's saved value (plain units), inside None when it has none and plays its
+    /// default; None when `uid` has no such parameter.
+    pub(super) fn builtin_saved(&self, uid: Id, id: u32) -> Option<Option<f32>> {
+        let (_, _, s) = self.find_builtin(uid)?;
+        let (_, specs) = builtin_spec(&s.plugin_id)?;
+        specs.iter().any(|p| p.id == id).then(|| s.params.iter().find(|p| p.0 == id).map(|p| p.1))
     }
 
     /// Moves a parameter to a normalized value (automation picking a control up), without

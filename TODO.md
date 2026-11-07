@@ -143,8 +143,10 @@ they use there (simulated on Linux), but none of this has run on a real machine.
 
 ### Known bugs and unexplained failures
 
-- `soak_check <dir> 600 22` fails, on one thread as on eight: undoing every edit doesn't give the first document back. Not
-  looked into. The default seed passes.
+- `soak_check <dir> 600 3 1` fails from edit 540 on: renders in the session stop matching each other (from frame 91, by
+  up to 4), and the project it saves after edit 599 (916 tracks, from duplicating) renders differently the first time
+  after opening than every time after. Undo isn't it: undoing every edit still gives the first render and document back.
+  Not looked into further.
 - **Dropouts while other work runs:** with builds and checks running on every core (some taking real-time priority), the
   app ran late, went choppy and hit a System Overload once, while total CPU read about 15%. A later 10 minutes with that
   work kept to the efficiency cores, including about a minute of `stress-ng`, had no PipeWire errors. The cause isn't

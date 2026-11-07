@@ -493,7 +493,7 @@ impl Session {
                 c.edit_param(param, n as f64);
             }
             if automated {
-                self.auto_plugin_moved(track, uid, param, before as f32);
+                self.auto_plugin_moved(track, uid, param, before as f32, None);
             }
             self.dirty = true;
         }

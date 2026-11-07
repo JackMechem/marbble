@@ -12,7 +12,9 @@
 //! pool too, and every so often one is compared with the serial loop's, bit for bit.
 //! usage: soak_check <scratch dir> [edits] [seed] [threads]
 //! To find the edit that broke a save and reopen, set SOAK_REOPEN_EVERY=1 (and
-//! SOAK_REOPEN_FROM=<edit> to start checking there).
+//! SOAK_REOPEN_FROM=<edit> to start checking there). When undoing them all doesn't give the
+//! first document back, it names the edit whose undo went wrong; SOAK_DUMP=1 also writes the
+//! documents before and after it, and what its undo gave, into the scratch folder.
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::PathBuf;
 
@@ -88,6 +90,15 @@ fn doc(s: &Session) -> serde_json::Value {
     o.remove("drag_mode");
     o.remove("alternative");
     v
+}
+
+/// A document by its hash, and its text when `keep` (SOAK_DUMP), to compare and show later.
+fn print(v: &serde_json::Value, keep: bool) -> (u64, Option<String>) {
+    use std::hash::{Hash, Hasher};
+    let text = v.to_string();
+    let mut h = std::hash::DefaultHasher::new();
+    text.hash(&mut h);
+    (h.finish(), keep.then_some(text))
 }
 
 /// What every edit must leave true. Returns the first problem.
@@ -239,7 +250,8 @@ fn random_points(g: &mut Rng, lo: f32, hi: f32) -> Vec<daw_engine::model::AutoPo
 }
 
 /// One random edit, made as the app makes it: a checkpoint, then the edit (an error abandons
-/// the checkpoint). Returns its name, and whether it left an undo step.
+/// the checkpoint). A move recorded as automation takes none, as in the app: its pass makes the
+/// step. Returns its name, and whether it left an undo step.
 fn edit(s: &mut Session, g: &mut Rng, w: &World) -> (String, bool) {
     let all = regions(s);
     let audio = regions_where(s, |r| matches!(r.content, RegionContent::Audio { .. }));
@@ -261,6 +273,7 @@ fn edit(s: &mut Session, g: &mut Rng, w: &World) -> (String, bool) {
     let plugins = matches!(kind, 40..=42 | 50 | 51);
     let label = format!("edit {kind}");
     s.checkpoint(&label, None, plugins);
+    let mut checkpointed = true;
     let r: anyhow::Result<()> = (|| {
         match kind {
             0 => s.move_region(region, g.range(0, LEN), None),
@@ -566,6 +579,11 @@ fn edit(s: &mut Session, g: &mut Rng, w: &World) -> (String, bool) {
                     if let Some((k, id)) = g.pick(&slots) {
                         if let Some(info) = daw_engine::fx::find(&id) {
                             let p = &info.params[g.below(info.params.len())];
+                            // In Touch, the pass goes into its lane, as one step, straight away.
+                            if s.automation_writing(t) {
+                                s.abandon_checkpoint();
+                                checkpointed = false;
+                            }
                             s.set_builtin_param(t, k, p.id, p.min + (p.max - p.min) * g.unit())?;
                         }
                     }
@@ -700,7 +718,7 @@ fn edit(s: &mut Session, g: &mut Rng, w: &World) -> (String, bool) {
         Ok(())
     })();
     let ok = r.is_ok();
-    if !ok {
+    if !ok && checkpointed {
         s.abandon_checkpoint();
     }
     (format!("{label}{}", r.err().map(|e| format!(" (refused: {e})")).unwrap_or_default()), ok)
@@ -745,6 +763,11 @@ fn main() {
     let mut broken = None;
     let mut checked = 0;
     let mut compared = 0;
+    // The document at each depth of the undo stack, with the edit that made it, to name the
+    // edit whose undo doesn't give back the document before it (SOAK_DUMP writes the three
+    // documents into the scratch folder).
+    let dump = std::env::var_os("SOAK_DUMP").is_some();
+    let mut docs = vec![(print(&first_doc, dump), "the all-features project".to_string())];
     for i in 0..count {
         // Now and then an undo or redo of earlier edits, as a user would.
         let undid = if depth > 0 && g.chance(8) {
@@ -781,6 +804,8 @@ fn main() {
         if stepped {
             depth += 1;
             redo = 0;
+            docs.truncate(depth);
+            docs.push((print(&doc(&s), dump), format!("edit {i} ({name})")));
         }
         if i % 7 == 0 {
             s.idle();
@@ -811,13 +836,17 @@ fn main() {
                 s.undo();
                 let undone = render(&mut s);
                 let ok = same(&undone, &before) && doc(&s) == before_doc;
+                let document = |same: bool| if same { "the same document" } else { "another document" };
                 if !ok {
-                    check(&format!("undo of edit {i} ({name}) renders as before ({})", first_diff(&undone, &before)), false);
+                    check(
+                        &format!("undo of edit {i} ({name}) renders as before ({}; {})", first_diff(&undone, &before), document(doc(&s) == before_doc)),
+                        false,
+                    );
                 }
                 s.redo();
                 let redone = render(&mut s);
                 if !same(&redone, &after) || doc(&s) != after_doc {
-                    check(&format!("redo of edit {i} ({name}) renders as after ({})", first_diff(&redone, &after)), false);
+                    check(&format!("redo of edit {i} ({name}) renders as after ({}; {})", first_diff(&redone, &after), document(doc(&s) == after_doc)), false);
                 }
                 checked += 1;
             }
@@ -836,6 +865,8 @@ fn main() {
             let now = render(&mut s);
             let dir = scratch.join(format!("Soak{i}.marbble"));
             let saved = s.save(Some(dir)).unwrap();
+            // Saving under a new name renames the project.
+            docs[depth].0 = print(&doc(&s), dump);
             let mut t = Session::new(cfg.clone(), Vec::new());
             pool_on(&mut t);
             t.open(&saved).unwrap();
@@ -864,8 +895,22 @@ fn main() {
 
     let last = render(&mut s);
     let last_doc = doc(&s);
-    for _ in 0..depth {
+    let mut diverged = None;
+    for k in (0..depth).rev() {
         s.undo();
+        let now = print(&doc(&s), dump);
+        if diverged.is_none() && now.0 != docs[k].0 .0 {
+            diverged = Some(k);
+            let pretty = |x: &Option<String>| serde_json::to_string_pretty(&serde_json::from_str::<serde_json::Value>(x.as_deref().unwrap()).unwrap()).unwrap();
+            if dump {
+                std::fs::write(scratch.join("undo-expected.json"), pretty(&docs[k].0 .1)).unwrap();
+                std::fs::write(scratch.join("undo-got.json"), pretty(&now.1)).unwrap();
+                std::fs::write(scratch.join("undo-after.json"), pretty(&docs[k + 1].0 .1)).unwrap();
+            }
+        }
+    }
+    if let Some(k) = diverged {
+        check(&format!("undoing {} gives back the document before it (after {})", docs[k + 1].1, docs[k].1), false);
     }
     let back = render(&mut s);
     check(
@@ -873,6 +918,10 @@ fn main() {
         same(&back, &first),
     );
     check("and the first document", doc(&s) == first_doc);
+    if doc(&s) != first_doc && dump {
+        std::fs::write(scratch.join("first-expected.json"), serde_json::to_string_pretty(&first_doc).unwrap()).unwrap();
+        std::fs::write(scratch.join("first-got.json"), serde_json::to_string_pretty(&doc(&s)).unwrap()).unwrap();
+    }
     for _ in 0..depth {
         s.redo();
     }

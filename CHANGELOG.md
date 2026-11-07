@@ -6,6 +6,12 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **Undoing written automation puts the control back.** Undoing a Write Automation step took the
+  new lane away but left the fader, send or built-in plug-in's knob where the pass had moved it,
+  so the project wasn't as it was before. It now goes back to its value from before the pass.
+
 ## [0.1.0-alpha.8] - 2026-11-07
 
 ### Added

@@ -401,7 +401,10 @@ Times are in samples at the project rate.
 - Writing is in `session/auto_write.rs`: a *pass* collects points while a control moves (and
   about 30 times a second from `idle`), and goes into its lane in one undo step when it ends
   (on release in Touch, at Stop otherwise). `automation::splice` inserts it and `thin` removes
-  points within a per-parameter tolerance (Ramer-Douglas-Peucker on the vertical error).
+  points within a per-parameter tolerance (Ramer-Douglas-Peucker on the vertical error). The
+  moves take no undo steps of their own, so the pass's step holds each control at its value from
+  before the pass (`Pass::was`, as the project keeps it: a built-in's plain value, or none saved),
+  and undo puts the control back with the lane.
 
 ### Markers and Autopunch
 
