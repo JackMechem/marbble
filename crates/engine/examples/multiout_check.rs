@@ -201,7 +201,7 @@ fn main() {
     let r = s.create_midi_region(inst, 0, LEN).unwrap();
     let note = |start: i64, pitch: u8| Note { start, length: 6000, pitch, velocity: 127, muted: false };
     s.set_midi_content(vec![MidiContent { region: r, notes: vec![note(A.0, NOTE_ONE), note(B.0, NOTE_ONE + 2)], cc: vec![], start: None, length: None }]);
-    // The plug-in now and then loses one of its samples for good (TODO.md), with no engine involved.
+    // The plug-in now and then loses one of its samples for good (issue #37), with no engine involved.
     let mut loaded = wait_for_samples(&mut s, inst, A) && wait_for_samples(&mut s, inst, B);
     for _ in 0..4 {
         if loaded {

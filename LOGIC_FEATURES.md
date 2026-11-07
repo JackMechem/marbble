@@ -727,7 +727,7 @@ smart tempo, samplers, virtual players, pattern tools, Live Loops and notation.
 
 ### Sampler, Quick Sampler and Drum Machine Designer (p. 122, 329, 564)
 
-- [x] Sampler instrument (multi-zone, mapping, modulation). *Marbble Sampler; see its open items in TODO.md.*
+- [x] Sampler instrument (multi-zone, mapping, modulation). *Marbble Sampler; see its [open issues](https://github.com/JackMechem/marbble/labels/area%3A%20sampler).*
 - [~] Quick Sampler: Classic, One Shot, Slice and Recorder modes. *All in Marbble Sampler's one panel: a zone over the keyboard, one-shot, Slice, Record.*
 - [~] Create sampler tracks by dropping files on Sampler or Quick Sampler zones, Original or Optimized (p. 122). *Dropping on the panel of a sampler track that exists. No Optimized mode.*
 - [x] Convert audio regions to a new Sampler track, sliced at transients or markers (p. 329). *Whole or at transients; not at markers.*

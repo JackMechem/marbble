@@ -137,7 +137,8 @@ On NixOS or with Nix, use the flake instead (below).
 On Windows, VST3 plug-ins still load, play, save their state and can be automated; only their
 own editor window is missing. The Windows and macOS columns say what's built: both cross-check, lint
 and pass the engine tests and headless checks on a silent stand-in device, but none of it has been
-tried on real hardware yet ([TODO.md](TODO.md) lists what to try).
+tried on real hardware yet (the [Windows](https://github.com/JackMechem/marbble/labels/platform%3A%20windows) and
+[macOS](https://github.com/JackMechem/marbble/labels/platform%3A%20macos) issues list what to try).
 
 ## Build from source
 
@@ -187,7 +188,7 @@ for Windows and macOS, tests and packaging.
 | [docs/DEVELOPING.md](docs/DEVELOPING.md) | Building, testing, debugging, conventions, and recipes for common changes. |
 | [docs/logic-reference.md](docs/logic-reference.md) | The Logic Pro research behind the layout and behaviour. |
 | [LOGIC_FEATURES.md](LOGIC_FEATURES.md) | The feature scope: every Logic Pro feature by stage, with Marbble's status. |
-| [TODO.md](TODO.md) | What's still open, by topic, and the roadmap in stages. |
+| [TODO.md](TODO.md) | The roadmap in stages; what's open is in the [issues](https://github.com/JackMechem/marbble/issues). |
 | [CHANGELOG.md](CHANGELOG.md) | What changed in each release. |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Reporting bugs, testing, how issues and milestones are used, and sending a pull request. |
 
@@ -210,8 +211,8 @@ main limitations:
   Control; MP3 and AAC aren't offered as bounce formats.
 
 The User Guide's [Known limitations](docs/USER_GUIDE.md#20-known-limitations) has the full list,
-the [issues](https://github.com/JackMechem/marbble/issues) what's open, [TODO.md](TODO.md) the staged roadmap, and [CHANGELOG.md](CHANGELOG.md) what each release
-contains.
+the [issues](https://github.com/JackMechem/marbble/issues) what's open, [TODO.md](TODO.md) the staged roadmap, and
+[CHANGELOG.md](CHANGELOG.md) what each release contains.
 
 ## Versions
 
