@@ -200,7 +200,7 @@ fn build(s: &mut Session, scratch: &Path) -> Extras {
         let x: Vec<f32> = (0..9600).map(|i| 0.5 * (i as f32 * 0.13).sin()).collect();
         daw_engine::decode::write_wav(&tone, RATE, &[x.clone(), x]).unwrap();
         set_string(&mut state, "sf_0_0", tone.to_str().unwrap());
-        copy.state = Some(format!("{}:{controller}", b64.encode(&state)));
+        copy.state = Some(format!("{}:{controller}", b64.encode(&state)).into());
         s.paste_plugin(&[inst], usize::MAX, &copy).unwrap();
         let r = s.create_midi_region(inst, 0, 2 * BAR).unwrap();
         let notes = (0..8).map(|i| Note { start: i * BAR / 4, length: 6000, pitch: 57, velocity: 127, muted: false }).collect();

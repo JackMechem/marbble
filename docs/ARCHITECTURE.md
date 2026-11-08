@@ -1035,7 +1035,9 @@ Song.marbble/
 - Plug-in state is `"<component base64>:<controller base64>"` in `PluginSlot::state`. Saving,
   autosaving, checkpointing with `plugins`, undo, redo and rebuilding read it from every running
   plug-in; in between, the project keeps a recent copy of each VST3's state (see
-  [State](#state)). The UI never sees it (`for_ui`).
+  [State](#state)). It is an `Arc<str>`, written as a plain string, so the undo steps and UI
+  snapshots that clone the project share each state rather than copying it (it can be
+  megabytes). The UI never sees it (`for_ui`).
 - Recordings go to `Audio Files/` named `<track>#NN.wav` (or `<project> - <track>#NN.wav`),
   unless Settings › Recording names another folder, in which case they go to
   `<folder>/<project name>/`.

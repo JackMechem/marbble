@@ -103,7 +103,7 @@ fn zones_of(s: &Session, t: Id) -> Vec<Zone> {
     s.sampler_view(t).unwrap().zones.into_iter().map(|z| z.zone).collect()
 }
 
-fn state_of(s: &Session, t: Id) -> Option<String> {
+fn state_of(s: &Session, t: Id) -> Option<std::sync::Arc<str>> {
     s.project.track(t).unwrap().instrument.as_ref().unwrap().state.clone()
 }
 

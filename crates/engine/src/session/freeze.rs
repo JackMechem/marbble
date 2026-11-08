@@ -128,7 +128,7 @@ impl Session {
                 let _ = std::fs::remove_file(&r.path);
                 continue;
             };
-            let states: Vec<(Id, String)> = t
+            let states: Vec<(Id, Arc<str>)> = t
                 .inserts
                 .iter()
                 .flatten()

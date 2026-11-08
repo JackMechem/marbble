@@ -3,6 +3,8 @@
 //!
 //! All of this is saved. New fields go at the end of the struct with `#[serde(default)]`.
 
+use std::sync::Arc;
+
 use super::*;
 
 /// What a track is. Folder and Summing are the two kinds of stack; only Audio and Instrument hold
@@ -62,9 +64,11 @@ pub struct PluginSlot {
     pub name: String,
     #[serde(default)]
     pub bypass: bool,
-    /// Base64 plugin state. Only populated in saved files, never sent to the UI.
+    /// A VST3's state as `"<component base64>:<controller base64>"`, or the Sampler's zones as
+    /// JSON. Never sent to the UI (see `Project::for_ui`). Shared, as it can be megabytes and
+    /// every undo step and UI snapshot clones the project: written as a plain string.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub state: Option<String>,
+    pub state: Option<Arc<str>>,
     /// A built-in effect's parameter values: (parameter id, value in its plain units). Ids
     /// missing here play at their defaults.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]

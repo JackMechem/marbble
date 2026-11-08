@@ -48,7 +48,7 @@ fn drag(s: &mut Session, uid: Id, param: u32, from: f64, to: f64) {
     s.drive_vst_handler(uid, Gesture::End(param));
 }
 
-fn saved(s: &Session, track: Id) -> String {
+fn saved(s: &Session, track: Id) -> std::sync::Arc<str> {
     s.copy_plugin(track, 0).unwrap().state.unwrap()
 }
 

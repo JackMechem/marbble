@@ -277,7 +277,7 @@ impl Session {
         self.check_unfrozen(&[track])?;
         let t = self.project.track_mut(track).ok_or_else(|| anyhow!("no such track"))?;
         let s = t.instrument.as_mut().filter(|s| s.plugin_id == SAMPLER).ok_or_else(|| anyhow!("That track has no Marbble Sampler"))?;
-        s.state = Some(state.to_json());
+        s.state = Some(state.to_json().into());
         let slot = s.clone();
         let data = self.sampler_data(&slot);
         self.send(Cmd::InstrumentData { track, uid: slot.uid, data });

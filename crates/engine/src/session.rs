@@ -363,9 +363,9 @@ fn untitled_dir(root: &Path) -> PathBuf {
     unreachable!()
 }
 
-fn encode_state(st: &PluginState) -> String {
+fn encode_state(st: &PluginState) -> Arc<str> {
     let b = base64::engine::general_purpose::STANDARD;
-    format!("{}:{}", b.encode(&st.component), b.encode(&st.controller))
+    format!("{}:{}", b.encode(&st.component), b.encode(&st.controller)).into()
 }
 
 fn decode_state(s: &str) -> PluginState {

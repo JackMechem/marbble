@@ -111,7 +111,7 @@ impl Session {
     /// may not be called wasn't asked, and has its copy in `doc` already. Without, it's the
     /// project `restore` replaces, whose copies are as current as they were.
     pub(super) fn adopt_states(&mut self, doc: &Project, read: bool) {
-        let states: HashMap<Id, (&str, &String)> = recovery::slots(doc).filter_map(|s| Some((s.uid, (s.plugin_id.as_str(), s.state.as_ref()?)))).collect();
+        let states: HashMap<Id, (&str, &Arc<str>)> = recovery::slots(doc).filter_map(|s| Some((s.uid, (s.plugin_id.as_str(), s.state.as_ref()?)))).collect();
         for slot in recovery::slots_mut(&mut self.project) {
             let Some(c) = self.controllers.get(&slot.uid) else { continue };
             // An instance id undo freed may have come back as another plug-in.
@@ -261,5 +261,63 @@ mod tests {
         s.adopt_states(&doc, true);
         let states = |p: &Project| p.track(t).unwrap().inserts.iter().flatten().map(|s| s.state.clone()).collect::<Vec<_>>();
         assert_eq!(states(&s.project), states(&before));
+    }
+
+    fn slot(uid: Id, plugin_id: &str, state: &str) -> PluginSlot {
+        PluginSlot {
+            uid,
+            plugin_id: plugin_id.into(),
+            name: "Heavy".into(),
+            bypass: false,
+            state: Some(state.into()),
+            params: Vec::new(),
+            sidechain: None,
+            sidechain_pre: false,
+            preset: None,
+        }
+    }
+
+    /// A state can be megabytes: the undo steps and UI snapshots that copy the project share it
+    /// rather than copying it, and it's written as the plain string it always was.
+    #[test]
+    fn states_are_shared_by_undo_steps_and_snapshots_and_saved_as_before() {
+        let mut s = session();
+        let t = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
+        let big = format!("{}:", "QUJD".repeat(256 * 1024));
+        let uid = s.project.alloc_id();
+        s.project.track_mut(t).unwrap().inserts[0] = Some(slot(uid, "/missing.vst3|ABC", &big));
+        let state = |s: &Session| s.project.track(t).unwrap().inserts[0].as_ref().unwrap().state.clone().unwrap();
+        for i in 0..20 {
+            s.checkpoint("Tempo", None, false);
+            s.set_tempo(100.0 + i as f64);
+        }
+        let ui = s.project.for_ui();
+        assert!(ui.track(t).unwrap().inserts[0].as_ref().unwrap().state.is_none(), "the UI never sees it");
+        let st = state(&s);
+        assert_eq!(Arc::strong_count(&st), 1 + 20 + 1, "the project, each step and this one share it");
+        s.undo();
+        assert!(Arc::ptr_eq(&state(&s), &st), "and an undo puts back the same one");
+
+        let json = serde_json::to_value(s.project.track(t).unwrap().inserts[0].as_ref().unwrap()).unwrap();
+        assert_eq!(json["state"].as_str(), Some(big.as_str()));
+        let read: PluginSlot = serde_json::from_str(r#"{"uid": 7, "plugin_id": "/x.vst3|ABC", "name": "X", "state": "AAAA:BBBB"}"#).unwrap();
+        assert_eq!(read.state.as_deref(), Some("AAAA:BBBB"));
+        let none: PluginSlot = serde_json::from_str(r#"{"uid": 7, "plugin_id": "/x.vst3|ABC", "name": "X"}"#).unwrap();
+        assert!(none.state.is_none() && serde_json::to_value(&none).unwrap().get("state").is_none());
+    }
+
+    /// The Sampler's fingerprint for its panel is the hash of its zones' text, as it was.
+    #[test]
+    fn the_sampler_fingerprint_is_unchanged() {
+        use std::hash::{Hash, Hasher};
+        let mut p = Project::new("t", 48000);
+        let mut s = session();
+        let t = s.add_track(TrackKind::Instrument, InputSel::None, None, None).unwrap();
+        p.tracks = vec![s.project.track(t).unwrap().clone()];
+        p.tracks[0].instrument = Some(slot(5, crate::instrument::sampler::ID, "{\"zones\":[]}"));
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        String::from("{\"zones\":[]}").hash(&mut h);
+        let ui = p.for_ui();
+        assert_eq!(ui.tracks[0].instrument.as_ref().unwrap().state.as_deref(), Some(format!("{:x}", h.finish()).as_str()));
     }
 }

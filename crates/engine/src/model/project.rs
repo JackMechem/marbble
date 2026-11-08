@@ -500,7 +500,8 @@ impl Project {
     }
 
     /// A copy safe to hand to the UI (plugin state blobs stripped). A sampler's state goes as a
-    /// short fingerprint instead, which tells its panel when to read the zones again.
+    /// short fingerprint instead, which tells its panel when to read the zones again. The blobs
+    /// are shared, so the copy takes a reference to each and drops it, copying none.
     pub fn for_ui(&self) -> Project {
         let mut p = self.clone();
         let strip = |s: &mut Option<PluginSlot>| {
@@ -509,7 +510,7 @@ impl Project {
                     use std::hash::{Hash, Hasher};
                     let mut h = std::collections::hash_map::DefaultHasher::new();
                     text.hash(&mut h);
-                    format!("{:x}", h.finish())
+                    format!("{:x}", h.finish()).into()
                 });
             }
         };

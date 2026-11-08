@@ -6,6 +6,14 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **Less memory and quicker edits with plug-ins that have large settings.** Every undo step used
+  to hold its own copy of every plug-in's settings, and the window's every update copied them
+  too. They are now shared, so 100 undo steps with four plug-ins of 1.5 MB settings each take
+  14 MB instead of 614 MB, and an edit, an undo and an update of the window are 3 to 20 times
+  quicker in such a project. Project files are unchanged.
+
 ### Fixed
 
 - **No edit is lost on the way to the audio engine.** A burst of changes larger than the

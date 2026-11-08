@@ -206,7 +206,7 @@ fn stuck_plugin(
     check(&format!("and the session says so ({warning:?})"), warning.contains("responds again"));
 }
 
-fn s_state(s: &Session, t: Id) -> Option<String> {
+fn s_state(s: &Session, t: Id) -> Option<std::sync::Arc<str>> {
     s.project.track(t).and_then(|t| t.instrument.as_ref()).and_then(|i| i.state.clone())
 }
 

@@ -148,7 +148,7 @@ fn load_samples(s: &mut Session, inst: Id, one: &Path, two: &Path) {
     set_string(&mut state, "sf_0_0", one.to_str().unwrap());
     set_string(&mut state, "sf_1_0", two.to_str().unwrap());
     set_float(&mut state, "note_1", 11.0);
-    copy.state = Some(format!("{}:{controller}", b64.encode(&state)));
+    copy.state = Some(format!("{}:{controller}", b64.encode(&state)).into());
     s.paste_plugin(&[inst], usize::MAX, &copy).unwrap();
 }
 
