@@ -4,7 +4,7 @@
 //! reduction reaches the tick.
 //! usage: strip_check <audio file> <scratch dir>
 use std::path::{Path, PathBuf};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use daw_engine::audio_io::AudioConfig;
 use daw_engine::fx::compressor::param;
@@ -34,10 +34,32 @@ fn play(s: &mut Session) -> Tick {
     s.stop();
     // play() is ignored until the engine has really stopped.
     transport::wait_for(s, false);
-    // As the app's tick thread would, take in what played up to the stop, so a reset after
-    // this one starts from silence.
-    s.tick();
+    // As the app's tick thread would, take in what played up to the stop, and what still
+    // rings on after it, so a reset after this one starts from silence.
+    wait_quiet(s);
     t
+}
+
+/// Takes ticks until the engine has played silence for 100 ms, for at most two seconds. A
+/// Channel EQ rings on for a few blocks after the tone stops dead at Stop, and on a loaded
+/// machine those blocks can come after the first tick: a reset made then would see the ring in
+/// the next tick. One silent tick isn't enough, as no block may have run since the last one.
+fn wait_quiet(s: &mut Session) {
+    let start = Instant::now();
+    let mut quiet_since: Option<Instant> = None;
+    loop {
+        let t = s.tick();
+        let quiet = t.master == (0.0, 0.0) && t.meters.iter().all(|m| m.1 == 0.0 && m.2 == 0.0);
+        quiet_since = if quiet { quiet_since.or(Some(Instant::now())) } else { None };
+        if quiet_since.is_some_and(|q| q.elapsed() >= Duration::from_millis(100)) {
+            return;
+        }
+        if start.elapsed() > Duration::from_secs(2) {
+            println!("  (the engine didn't go quiet after Stop: {:?} {:?})", t.master, t.meters);
+            return;
+        }
+        std::thread::sleep(Duration::from_millis(10));
+    }
 }
 
 fn held(t: &Tick, id: Id) -> f32 {
@@ -136,7 +158,7 @@ fn main() {
     check("after a reset the hold follows the new level", held(&t, b) > 0.01 && held(&t, b) < 1.0);
     s.reset_peak_holds(None);
     let t = s.tick();
-    check("resetting all clears every indicator", t.peak_holds.is_empty());
+    check(&format!("resetting all clears every indicator (left: {:?})", t.peak_holds), t.peak_holds.is_empty());
 
     // A bounce doesn't light the clip indicators.
     s.set_region_gain(&[r], Some(30.0), None);
