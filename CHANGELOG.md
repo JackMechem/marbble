@@ -19,6 +19,8 @@ All notable changes to Marbble are recorded here. The format follows
   only arrangement sections shows just the Arrangement track, 22 px instead of 98. The Tempo
   track starts at 40 px instead of 56 and can still be resized. Both are remembered per
   project.
+- **The Step Sequencer's bar no longer repeats its name.** After Functions it shows the pattern
+  region's name, as the Piano Roll does, and nothing when no pattern region is selected.
 
 ### Fixed
 

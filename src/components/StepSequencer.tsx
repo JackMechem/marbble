@@ -305,7 +305,13 @@ export function StepSequencer() {
         <button className="local-menu" disabled={!region && !fit.has("detach")} onMouseDown={(e) => openMenuAt(e.currentTarget, functionsMenu())}>
           Functions
         </button>
-        {!fit.has("title") && <span className="local-title">{region?.name ?? "Step Sequencer"}</span>}
+        {/* The region's name, as the Piano Roll has there (the tab already says Step Sequencer);
+            one of the steps the bar gives way with. */}
+        {region && !fit.has("title") && (
+          <span className="local-title" title={region.name}>
+            {region.name}
+          </span>
+        )}
       </div>
       <div className="local-right">{!fit.has("detach") && <DetachButton panel="steps" />}</div>
     </div>
