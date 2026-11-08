@@ -1,7 +1,7 @@
 // Unit tests for src/stripRows.ts (the channel strips' shared insert and send rows). Run with `npm test`.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { FADER_WANTED, filledBeyond, fitStripRows, FX_ROWS_MAX, SEND_ROWS_MAX, SLOT_ROW_H, slotsWanted, stripRows, stripWants } from "../src/stripRows.ts";
+import { FADER_WANTED, fitStripRows, FX_ROWS_MAX, SEND_ROWS_MAX, SLOT_ROW_H, slotLayout, slotsWanted, stripRows, stripWants } from "../src/stripRows.ts";
 
 const slots = (...filled: number[]) => Array.from({ length: 8 }, (_, i) => (filled.includes(i) ? { uid: i } : null));
 
@@ -24,7 +24,7 @@ test("strips side by side share the rows of the one that wants the most", () => 
   assert.deepEqual(rows, { inserts: 2, sends: 3 });
 });
 
-test("rows are at least one and at most the maximum; past it a strip scrolls", () => {
+test("rows are at least one and at most the maximum", () => {
   assert.deepEqual(stripRows([]), { inserts: 1, sends: 1 });
   assert.deepEqual(stripRows([{ inserts: 0, sends: 0 }]), { inserts: 1, sends: 1 });
   assert.deepEqual(stripRows([{ inserts: 8, sends: 8 }]), { inserts: FX_ROWS_MAX, sends: SEND_ROWS_MAX });
@@ -38,10 +38,19 @@ test("what each kind of strip wants", () => {
   assert.deepEqual(stripWants("aux", slots(), [], 8), { inserts: 1, sends: 1 });
 });
 
-test("the +N counts filled slots below the shown rows", () => {
-  assert.equal(filledBeyond(slots(0, 1, 6, 7), 6), 2);
-  assert.equal(filledBeyond(slots(0, 1), 6), 0);
-  assert.equal(filledBeyond(undefined, 1), 0);
+test("filled slots past the rows go behind a \"+N more\" in the last row", () => {
+  // Room to spare: empty slots fill the rows, up to the slots there are.
+  assert.deepEqual(slotLayout(slots(0), 3, 8), { shown: 3, more: [] });
+  assert.deepEqual(slotLayout(undefined, 1, 8), { shown: 1, more: [] });
+  assert.deepEqual(slotLayout([{}], 3, 1), { shown: 1, more: [] });
+  // Exactly full: every plug-in shows, with no empty slot after them.
+  assert.deepEqual(slotLayout(slots(0, 1), 2, 8), { shown: 2, more: [] });
+  // One row, two plug-ins: the row is "+2 more".
+  assert.deepEqual(slotLayout(slots(0, 1), 1, 8), { shown: 0, more: [0, 1] });
+  // Past the maximum: five rows as they are, the sixth stands for the rest, gaps left out.
+  assert.deepEqual(slotLayout(slots(0, 1, 2, 3, 4, 5, 7), 6, 8), { shown: 5, more: [5, 7] });
+  // A plug-in after a gap past the rows.
+  assert.deepEqual(slotLayout(slots(0, 4), 2, 8), { shown: 1, more: [4] });
 });
 
 test("a short Mixer shows fewer slot rows so the fader keeps its height", () => {

@@ -1,9 +1,11 @@
 // The pieces that keep channel strips level with each other: the boxes their insert and send
-// slots sit in (as many rows as the strips beside them, see stripRows.ts), the "+N" for slots
-// scrolled out of view, and blank stand-ins for sections a strip doesn't have (Stereo Out's input
+// slots sit in (as many rows as the strips beside them, see stripRows.ts), the "+N more" row for
+// filled slots past them, and blank stand-ins for sections a strip doesn't have (Stereo Out's input
 // and sends, a folder's plug-ins, a VCA's everything), as tall as the real ones.
+import { Icon } from "../icons";
+import { openMenuAt, type MenuItem } from "./Menu";
 
-/** A strip's box of insert or send slots: `rows` slots tall, scrolling when it holds more. */
+/** A strip's box of insert or send slots: `rows` slots tall. */
 export function SlotBox({ rows, children }: { rows: number; children?: React.ReactNode }) {
   return (
     <div className="strip-slots" style={{ "--rows": rows } as React.CSSProperties}>
@@ -12,13 +14,24 @@ export function SlotBox({ rows, children }: { rows: number; children?: React.Rea
   );
 }
 
-/** "+N" beside a section's label: filled slots scrolled out of its box. */
-export function MoreBadge({ n }: { n: number }) {
-  return n > 0 ? (
-    <span className="strip-more" title={`${n} more below: scroll the slots`}>
-      +{n}
-    </span>
-  ) : null;
+/** The last row of a strip with more filled slots than rows: "+N more", a menu of the rest
+ *  (`menu`, made when it opens so it lists them as they are then). */
+export function MoreSlot({ n, shown, noun, menu }: { n: number; shown: number; noun: [string, string]; menu: () => MenuItem[] }) {
+  // With slots above it, "+2 more"; as the only row, "2 plug-ins".
+  const text = shown > 0 ? `+${n} more` : `${n} ${noun[n === 1 ? 0 : 1]}`;
+  return (
+    <div
+      className="slot more"
+      title={`${n} more ${noun[n === 1 ? 0 : 1]} than fit: click for them`}
+      onMouseDown={(e) => {
+        e.stopPropagation();
+        if (e.button === 0) openMenuAt(e.currentTarget, menu());
+      }}
+    >
+      <span className="slot-name">{text}</span>
+      <Icon.chevron />
+    </div>
+  );
 }
 
 /** Stand-ins for sections a strip doesn't have, as tall as the real ones, so that the rows under

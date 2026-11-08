@@ -4,14 +4,14 @@ import { invoke } from "@tauri-apps/api/core";
 import { useRef, useState } from "react";
 import { SEND_SLOTS, type Send, type Track } from "../api";
 import { emptySendMenu, outputLabel, outputMenu, sendLabel, sendMenu, setSendLevel } from "../routing";
-import { useStore } from "../store";
+import { getState, useStore } from "../store";
 import { dbToFader, faderToDb, formatDb } from "../time";
-import { openMenuAt } from "./Menu";
+import { openMenuAt, type MenuItem } from "./Menu";
 import { learnContext } from "../learn";
 import { sliderAria } from "../sliderKeys";
 import { sliderKeyDown } from "./Controls";
-import { filledBeyond, slotsWanted } from "../stripRows";
-import { MoreBadge, SlotBox } from "./StripSlots";
+import { slotLayout } from "../stripRows";
+import { MoreSlot, SlotBox } from "./StripSlots";
 
 /** A small unipolar level knob, on the fader's taper. Shift-drag adjusts finely; double-click
  *  is 0 dB. */
@@ -103,21 +103,33 @@ function SendSlot({ track, slot, send }: { track: Track; slot: number; send: Sen
   );
 }
 
+/** The menu behind a Sends "+N more": each send in `slots` with its slot's menu, then a send to
+ *  add in the first free slot. */
+function moreSendsMenu(track: Track, sends: (Send | null)[], slots: number[]): MenuItem[] {
+  const tracks = getState().snap?.project.tracks ?? [];
+  const items: MenuItem[] = slots.map((i) => {
+    const send = sends[i]!;
+    const aux = tracks.find((t) => t.id === send.bus);
+    return { label: aux ? sendLabel(aux) : "—", hint: send.muted ? "Muted" : undefined, children: sendMenu(track, i, send) };
+  });
+  const free = sends.findIndex((s) => !s);
+  if (free >= 0) items.push({ separator: true }, { label: "Add Send", children: emptySendMenu(track, free) });
+  return items;
+}
+
 /** The Sends section, under Audio FX: `rows` slots (shared with the strips beside it, see
- *  stripRows.ts), scrolling when the filled ones and an empty one need more. */
+ *  stripRows.ts), the last one "+N more" when the filled ones need more. */
 export function SendsSection({ track, rows }: { track: Track; rows: number }) {
   const sends = Array.from({ length: SEND_SLOTS }, (_, i) => track.sends?.[i] ?? null);
-  const shown = Math.max(rows, slotsWanted(sends, SEND_SLOTS));
+  const { shown, more } = slotLayout(sends, rows, SEND_SLOTS);
   return (
     <div className="strip-section">
-      <div className="strip-label">
-        Sends
-        <MoreBadge n={filledBeyond(sends, rows)} />
-      </div>
+      <div className="strip-label">Sends</div>
       <SlotBox rows={rows}>
         {sends.slice(0, shown).map((s, i) => (
           <SendSlot key={i} track={track} slot={i} send={s} />
         ))}
+        {more.length > 0 && <MoreSlot n={more.length} shown={shown} noun={["send", "sends"]} menu={() => moreSendsMenu(track, sends, more)} />}
       </SlotBox>
     </div>
   );

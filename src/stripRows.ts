@@ -1,11 +1,12 @@
 // How many insert and send slots the channel strips show. Strips side by side (the Mixer, the
 // Inspector's pair) show the same number of rows, so their faders, meters, pan knobs and
 // automation buttons line up across the row however many plug-ins each one has. A strip with
-// more than fits scrolls its slots in their own box. Pure, so it can be unit tested.
+// more than fits shows "+N more" in its last row, a menu of the rest. Pure, so it can be unit
+// tested.
 
-/** The most insert rows a strip shows; a strip with more scrolls them. */
+/** The most insert rows a strip shows; past them, "+N more". */
 export const FX_ROWS_MAX = 6;
-/** The most send rows a strip shows; a strip with more scrolls them. */
+/** The most send rows a strip shows; past them, "+N more". */
 export const SEND_ROWS_MAX = 4;
 
 export interface SlotRows {
@@ -32,9 +33,17 @@ export function stripRows(wants: readonly SlotRows[]): SlotRows {
   return { inserts: most("inserts", FX_ROWS_MAX), sends: most("sends", SEND_ROWS_MAX) };
 }
 
-/** How many filled slots sit past the shown rows, for the "+N" beside the section's label. */
-export function filledBeyond(slots: readonly unknown[] | undefined, rows: number): number {
-  return (slots ?? []).slice(rows).filter(Boolean).length;
+/**
+ * How a strip fills its `rows` with its slots (`total` of them): `shown` slots as they are, then,
+ * when filled slots sit past the rows, a "+N more" row in the last one standing for the filled
+ * slots from there on (`more`, their slot numbers). When the filled slots fill every row there is
+ * no empty one to add to; "+N more" and the Library still add.
+ */
+export function slotLayout(slots: readonly unknown[] | undefined, rows: number, total: number): { shown: number; more: number[] } {
+  const filled = (slots ?? []).flatMap((s, i) => (s ? [i] : []));
+  if (filled.every((i) => i < rows)) return { shown: Math.min(rows, total), more: [] };
+  const shown = Math.max(rows - 1, 0);
+  return { shown, more: filled.filter((i) => i >= shown) };
 }
 
 /** What a strip shows rows for: a track's inserts and sends, or Stereo Out's inserts (`kind`
@@ -54,8 +63,7 @@ export const FADER_WANTED = 120;
  * The rows the Mixer's strips show in a view `viewH` tall. `fixedH` is a strip's height with no
  * slot rows and its fader at its least (`faderMin`). While the fader would get less than
  * `FADER_WANTED`, rows go, sends first (the larger section first), down to one in each; a strip
- * with more slots than rows scrolls them in their own box and shows "+N", as it does past the
- * maximum. Still too short with one row each: the strips scroll (see Mixer).
+ * with more filled slots than rows shows "+N more" in its last one, as it does past the maximum. Still too short with one row each: the strips scroll (see Mixer).
  */
 export function fitStripRows(rows: SlotRows, viewH: number, fixedH: number, faderMin: number): SlotRows {
   let { inserts, sends } = rows;

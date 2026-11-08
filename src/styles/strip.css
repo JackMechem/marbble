@@ -65,38 +65,41 @@
   opacity: 0.9;
 }
 
-/* A strip's insert or send slots: as many rows as the strips beside it (stripRows.ts), scrolling
-   when it has more, so the sections below stay level across the strips. */
+/* A strip's insert or send slots: as many rows as the strips beside it (stripRows.ts), so the
+   sections below stay level across the strips. Filled slots past them go behind "+N more". */
 .strip-slots {
   display: flex;
   flex-direction: column;
   gap: 2px;
   height: calc(var(--rows, 1) * 22px - 2px);
-  overflow: hidden auto;
 }
 
 .strip-slots > .slot {
   flex: none;
 }
 
-.strip-slots::-webkit-scrollbar {
-  width: 4px;
-}
-
-.strip-slots::-webkit-scrollbar-track {
-  background: none;
-}
-
-.strip-slots::-webkit-scrollbar-thumb {
-  border: 0;
-  border-radius: 2px;
-}
-
-/* "+2" beside Audio FX or Sends: filled slots scrolled out of the box. */
-.strip-more {
-  margin-left: 4px;
+/* "+2 more" in a strip's last slot row: a menu of the plug-ins or sends that don't fit. */
+.slot.more {
+  justify-content: center;
+  gap: 2px;
+  padding: 0 6px;
   color: var(--accent);
+  cursor: default;
+}
+
+.slot.more:hover {
+  background: var(--slot-empty-hi);
+}
+
+.slot.more .slot-name {
+  flex: none;
+  padding: 0;
   font-weight: 600;
+}
+
+.slot.more svg {
+  flex: none;
+  opacity: 0.8;
 }
 
 /* A section a strip doesn't have, kept as an empty space of the same height. */

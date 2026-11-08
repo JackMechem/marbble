@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { act, actMade, api, canRecord, INSTRUMENT_SLOT, isStack, MASTER_ID, SEND_SLOTS, type Id, type InputSel, type PluginSlot, type Track } from "../api";
 import { Icon } from "../icons";
 import { pluginMenu } from "../pluginMenu";
-import { onTick, peakHold, useStore } from "../store";
+import { getState, onTick, peakHold, useStore } from "../store";
 import { formatDb, inputLabel } from "../time";
 import { Fader, GrMeter, Knob, Meter } from "./Controls";
 import { EqThumb } from "./Eq";
@@ -27,10 +27,50 @@ import { auxInput, hasExtraOutputs, nextOutput } from "../multiOut";
 import { keepRegionsOn } from "../ops";
 import { useVcas, VcaSlot } from "./Vca";
 import { slotName } from "../slotName";
-import { BlankButtons, BlankEq, BlankRow, BlankSlots, MoreBadge, SlotBox } from "./StripSlots";
-import { filledBeyond, stripRows, stripWants, type SlotRows } from "../stripRows";
+import { BlankButtons, BlankEq, BlankRow, BlankSlots, MoreSlot, SlotBox } from "./StripSlots";
+import { slotLayout, stripRows, stripWants, type SlotRows } from "../stripRows";
 
 const PAN = { type: "pan" } as const;
+
+/** Opens a slot's plug-in: a built-in effect's panel, a VST3's editor. A frozen track's plug-ins
+ *  are unloaded, and a missing VST3 or a built-in without a panel has nothing to open. */
+function openSlot(trackId: Id, plugin: PluginSlot, title: string, missing: boolean) {
+  if (isBuiltinFx(plugin.plugin_id)) {
+    if (!refuseFrozen([trackId])) toggleFxPanel(plugin.uid);
+    return;
+  }
+  if (missing || plugin.plugin_id.startsWith("builtin:") || refuseFrozen([trackId])) return;
+  api.openEditor(plugin.uid, `${title} — ${plugin.name}`);
+}
+
+/** The menu behind an Audio FX "+N more": each plug-in in `slots` with what its slot offers,
+ *  then a plug-in to add in the first free slot. */
+function moreFxMenu(trackId: Id, inserts: (PluginSlot | null)[], slots: number[], title: string): MenuItem[] {
+  const missing = getState().snap?.missing ?? [];
+  const items: MenuItem[] = slots.map((i) => {
+    const p = inserts[i]!;
+    const change = (f: () => void) => () => {
+      if (!refuseFrozen([trackId])) f();
+    };
+    return {
+      label: slotName(p.plugin_id, p.name),
+      hint: p.bypass ? "Off" : undefined,
+      children: [
+        { label: "Open", onClick: () => openSlot(trackId, p, title, missing.includes(p.uid)) },
+        { label: "Bypass", checked: p.bypass, onClick: change(() => api.setBypass(trackId, i, !p.bypass)) },
+        { separator: true },
+        { label: "Remove", onClick: change(() => api.removePlugin(trackId, i)) },
+      ],
+    };
+  });
+  const free = inserts.findIndex((p) => !p);
+  if (free >= 0) {
+    // The slot menu's list without its "No Plug-in" and the line under it.
+    const add = pluginMenu(getState().plugins, { instrument: false, pick: (id) => loadPlugin(trackId, free, id), remove: () => {} }).slice(2);
+    items.push({ separator: true }, { label: "Add Plug-in", children: add });
+  }
+  return items;
+}
 
 export function PluginSlotView({
   trackId,
@@ -107,15 +147,7 @@ export function PluginSlotView({
         onMouseDown={(e) => {
           e.stopPropagation();
           if (e.button !== 0) return;
-          const open = () => {
-            // A built-in effect opens its panel (a frozen track's plug-ins are unloaded).
-            if (isBuiltinFx(plugin.plugin_id)) {
-              if (!refuseFrozen([trackId])) toggleFxPanel(plugin.uid);
-              return;
-            }
-            if (missing || plugin.plugin_id.startsWith("builtin:") || refuseFrozen([trackId])) return;
-            api.openEditor(plugin.uid, `${title} — ${plugin.name}`);
-          };
+          const open = () => openSlot(trackId, plugin, title, missing);
           if (instrument || frozen) open();
           else startSlotDrag(e, trackId, slot, slotName(plugin.plugin_id, plugin.name), open);
         }}
@@ -185,8 +217,8 @@ export function ChannelStrip({ track, selected, rows }: { track: Track | null; s
   const volume = isMaster ? master?.volume_db ?? 0 : track.volume_db;
   const wants = stripWants(isMaster ? null : track.kind, inserts, isMaster ? undefined : track.sends, SEND_SLOTS);
   const rowsHere = rows ?? stripRows([wants]);
-  // Every strip shows the shared rows (empty slots below its plug-ins); one that wants more scrolls.
-  const shown = Math.min(inserts.length, Math.max(rowsHere.inserts, wants.inserts));
+  // Every strip shows the shared rows (empty slots below its plug-ins); past them, "+N more".
+  const fx = slotLayout(inserts, rowsHere.inserts, inserts.length);
   const name = isMaster ? "Stereo Out" : track.name;
   const folder = track?.kind === "folder";
   // Subtracks of a summing stack play through it (a folder passes them on).
@@ -309,12 +341,12 @@ export function ChannelStrip({ track, selected, rows }: { track: Track | null; s
             <div className="strip-label">
               Audio FX
               <StripLatencyBadge id={id} />
-              <MoreBadge n={filledBeyond(inserts, rowsHere.inserts)} />
             </div>
             <SlotBox rows={rowsHere.inserts}>
-              {inserts.slice(0, shown).map((p, i) => (
+              {inserts.slice(0, fx.shown).map((p, i) => (
                 <PluginSlotView key={i} trackId={id} slot={i} plugin={p} title={name} />
               ))}
+              {fx.more.length > 0 && <MoreSlot n={fx.more.length} shown={fx.shown} noun={["plug-in", "plug-ins"]} menu={() => moreFxMenu(id, inserts, fx.more, name)} />}
             </SlotBox>
           </div>
 

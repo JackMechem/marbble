@@ -1860,14 +1860,15 @@ selected track's strip and Stereo Out.
 The strips line up across the Mixer: each shows as many insert and send slots as the strip that
 needs the most (its plug-ins or sends plus an empty slot), up to 6 Audio FX rows and 4 Sends
 rows, so faders, meters, pan knobs and automation buttons sit on one line. A strip with more
-than that scrolls its slots (scroll over them), and its section label shows how many filled
-slots are out of view, for example **Audio FX +2**. The Inspector's two strips line up with each
+than that shows **+2 more** (for example) in its last row: click it for a menu of the plug-ins
+or sends that don't fit, each with what its own slot offers (Open, Bypass and Remove for a
+plug-in), and to add another. The Inspector's two strips line up with each
 other the same way. When the strips don't fit, the Mixer scrolls sideways; the rest of the window
 stays as it is.
 
 The Mixer opens tall enough for a whole strip with its fader. Made shorter, it keeps the faders
 first: the Audio FX and Sends sections show fewer rows (down to one each, sends first; the rest
-scroll in their box, with **+N** on the label), and when even that doesn't fit, the strips
+go behind **+N more** in the last row), and when even that doesn't fit, the strips
 scroll up and down from the bottom, so the faders, meters and names stay in view and Setting and
 Input are scrolled up. The selected track's strip has its name plate lit, with an accent line
 under the name.

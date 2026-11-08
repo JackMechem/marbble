@@ -2618,7 +2618,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `FadeRows.tsx`, `RegionParamRows.tsx` | The Region inspector's fade rows and playback parameter rows. |
 | `TrackInspector.tsx` | The Inspector's Track section: name, colour, input, output and freeze, editable; type, instrument, regions and group. |
 | `ChannelStrip.tsx` | A mixer channel strip. |
-| `StripSlots.tsx` | The strips' slot boxes (shared row count, scrolling past it, "+N") and blank stand-ins for sections a strip doesn't have, which keep strips level. |
+| `StripSlots.tsx` | The strips' slot boxes (shared row count, a "+N more" menu past it) and blank stand-ins for sections a strip doesn't have, which keep strips level. |
 | `Sends.tsx` | The channel strip's Sends section and Output slot. |
 | `Vca.tsx` | The Mixer's VCA strips and the channel strip's VCA slot. |
 | `Eq.tsx` | Channel EQ thumbnail and editor window. |
