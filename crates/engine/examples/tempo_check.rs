@@ -1,6 +1,6 @@
 //! Exercises the tempo map and signature changes: the click rendered through the engine
 //! across tempo and signature changes, plug-in transport positions, bar numbering, Move MIDI
-//! Regions with Tempo, quantize, a MIDI file round trip of a tempo map, undo, and that a
+//! Regions with Tempo (an inactive track alternative's regions too), quantize, a MIDI file round trip of a tempo map, undo, and that a
 //! project without changes keeps the old timing exactly. Runs against a session on the silent
 //! ALSA null output. usage: tempo_check <scratch dir>
 use std::sync::Arc;
@@ -192,6 +192,19 @@ fn main() {
     let bb = map2.bar_beat_at((start + notes[0].start) as f64);
     check(
         &format!("Move MIDI keeps the region on bar 3 ({start} vs {:.0}) and its note on beat 2 ({bb:?})", map2.bar_start(3)),
+        (start as f64 - map2.bar_start(3)).abs() <= 1.0 && bb.bar == 3 && bb.beat == 2 && bb.div == 1,
+    );
+    s.undo();
+    // The same with the region in a track alternative that isn't playing: switched to
+    // afterwards, it is on its bar too.
+    s.checkpoint("Tempo with Track Alternatives", None, false);
+    s.new_track_alternative(inst, false).unwrap();
+    s.set_tempo_map(vec![ev(0, 120.0, false), ev(2 * sr, 120.0, false)], true);
+    s.switch_track_alternative(inst, "A").unwrap();
+    let (start, notes) = midi_notes(&s, rid);
+    let bb = map2.bar_beat_at((start + notes[0].start) as f64);
+    check(
+        &format!("Move MIDI moves an inactive track alternative's region too ({start} vs {:.0}, note {bb:?})", map2.bar_start(3)),
         (start as f64 - map2.bar_start(3)).abs() <= 1.0 && bb.bar == 3 && bb.beat == 2 && bb.div == 1,
     );
     s.undo();

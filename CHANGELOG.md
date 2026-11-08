@@ -16,6 +16,9 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Fixed
 
+- **Move MIDI Regions with Tempo moves every track alternative.** A tempo edit with it on moved
+  only the active alternative's MIDI regions, so switching to another afterwards found its MIDI
+  off its bars and beats. The inactive alternatives' MIDI regions now move with the tempo too.
 - **No edit is lost on the way to the audio engine.** A burst of changes larger than the
   engine's queue (an undo of a very large edit, say) used to drop what didn't fit, leaving
   playback out of step with what the window showed. Marbble now waits for the engine to make

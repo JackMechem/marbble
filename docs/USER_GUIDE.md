@@ -1616,7 +1616,8 @@ signature menu edits the signature of the playhead's bar.
 tempo changes, so audio never drifts. To keep MIDI on its bars and beats instead, turn on
 right-click › **Move MIDI Regions with Tempo** in the Tempo track before editing: tempo edits
 from the Tempo track or the LCD then move and stretch MIDI regions, notes and controllers to
-keep their musical positions. Audio, frozen tracks, automation and markers never move.
+keep their musical positions, on every track alternative, not just the active one. Audio,
+frozen tracks, automation and markers never move.
 
 **MIDI files** carry their tempo and signature changes: importing into a project with no
 regions adopts the file's tempo map; importing into a project that already has regions places

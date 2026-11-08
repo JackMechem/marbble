@@ -63,7 +63,9 @@ impl Session {
     }
 
     /// Moves MIDI regions, notes and controllers so that what sat at a bar and beat under
-    /// `old` sits at the same bar and beat under `new`. Audio regions keep their time.
+    /// `old` sits at the same bar and beat under `new`, on every track alternative (the
+    /// inactive ones too, so switching to one finds it on its bars). Audio regions keep their
+    /// time.
     pub fn move_midi_with_tempo(&mut self, old: &TempoMap, new: &TempoMap) {
         let to = |s: i64| old.remap(new, s as f64).round() as i64;
         let mut touched = Vec::new();
@@ -71,21 +73,10 @@ impl Session {
         for t in self.project.tracks.iter_mut().filter(|t| t.frozen.is_none()) {
             let mut moved = false;
             for r in &mut t.regions {
-                let rs = r.start;
-                let RegionContent::Midi { notes, cc } = &mut r.content else { continue };
-                let start = to(rs);
-                for n in notes.iter_mut() {
-                    let (a, b) = (to(rs + n.start), to(rs + n.start + n.length));
-                    n.start = a - start;
-                    n.length = (b - a).max(1);
-                }
-                for c in cc.iter_mut() {
-                    c.start = to(rs + c.start) - start;
-                }
-                r.length = (to(rs + r.length) - start).max(1);
-                r.loop_end = r.loop_end.map(to);
-                r.start = start;
-                moved = true;
+                moved |= follow_tempo(r, &to);
+            }
+            for r in t.alternatives.iter_mut().flat_map(|a| a.regions.iter_mut()) {
+                follow_tempo(r, &to);
             }
             if moved {
                 touched.push(t.id);
@@ -104,5 +95,66 @@ impl Session {
         let a = TempoMap::new(sr, old, &p.signatures, p.tempo, (p.sig_num, p.sig_den));
         let b = TempoMap::new(sr, new, &p.signatures, p.tempo, (p.sig_num, p.sig_den));
         self.move_midi_with_tempo(&a, &b);
+    }
+}
+
+/// Moves a MIDI region, its notes and controllers from each timeline sample `s` to `to(s)`.
+/// False (and nothing changed) for an audio region.
+fn follow_tempo(r: &mut Region, to: &dyn Fn(i64) -> i64) -> bool {
+    let rs = r.start;
+    let RegionContent::Midi { notes, cc } = &mut r.content else { return false };
+    let start = to(rs);
+    for n in notes.iter_mut() {
+        let (a, b) = (to(rs + n.start), to(rs + n.start + n.length));
+        n.start = a - start;
+        n.length = (b - a).max(1);
+    }
+    for c in cc.iter_mut() {
+        c.start = to(rs + c.start) - start;
+    }
+    r.length = (to(rs + r.length) - start).max(1);
+    r.loop_end = r.loop_end.map(to);
+    r.start = start;
+    true
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::audio_io::AudioConfig;
+    use crate::session::MidiContent;
+
+    #[test]
+    fn move_midi_with_tempo_moves_every_track_alternative() {
+        let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
+        let mut s = Session::new(cfg, Vec::new());
+        let sr = s.project.sample_rate as i64;
+        let t = s.add_track(TrackKind::Instrument, InputSel::None, None, None).unwrap();
+        // A region on bar 3 with a note on its second beat, at 120 BPM.
+        let map = s.tempo_map();
+        let bar3 = map.bar_start(3).round() as i64;
+        let beat = (map.samples_per_quarter_at(0.0)).round() as i64;
+        let id = s.create_midi_region(t, bar3, 4 * beat).unwrap();
+        s.set_midi_content(vec![MidiContent {
+            region: id,
+            notes: vec![Note { start: beat, length: beat, pitch: 60, velocity: 100, muted: false }],
+            cc: vec![],
+            start: None,
+            length: None,
+        }]);
+        // Alternative B is a copy; A, with the original, waits.
+        s.new_track_alternative(t, true).unwrap();
+        // Twice as fast from 1 s on (half way through bar 1).
+        s.set_tempo_map(vec![TempoEvent { pos: 0, bpm: 120.0, ramp: false }, TempoEvent { pos: sr, bpm: 240.0, ramp: false }], true);
+        let map = s.tempo_map();
+        let on_bars = |r: &Region| {
+            let RegionContent::Midi { notes, .. } = &r.content else { return false };
+            let bb = map.bar_beat_at((r.start + notes[0].start) as f64);
+            (r.start as f64 - map.bar_start(3)).abs() <= 1.0 && (bb.bar, bb.beat, bb.div) == (3, 2, 1)
+        };
+        let track = s.project.track(t).unwrap();
+        assert!(on_bars(&track.regions[0]), "the active alternative's region: {:?}", track.regions[0].start);
+        let waiting = &track.alternatives[0].regions[0];
+        assert!(on_bars(waiting), "the inactive alternative's region moves too: {} vs {}", waiting.start, map.bar_start(3));
     }
 }
