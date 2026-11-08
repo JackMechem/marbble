@@ -52,7 +52,7 @@ fn main() {
                             if bus.default_active { ", active by default" } else { "" }
                         );
                     }
-                    let st = c.save_state();
+                    let st = c.save_state().unwrap_or_default();
                     println!(
                         "  OK   {:<28} [{}] vendor={} inst={} editor={} state={}B peak={peak:.3}",
                         d.name,

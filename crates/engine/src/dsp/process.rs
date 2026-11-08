@@ -196,6 +196,12 @@ impl Engine {
         self.parallel.fits(&self.tracks)
     }
 
+    /// Whether a block given up on is still open.
+    #[cfg(test)]
+    pub(crate) fn stalled_for_tests(&self) -> bool {
+        self.parallel.stalled
+    }
+
     /// Waits for a block given up on to end (never on the audio thread), so that what it was using
     /// can change or go away.
     pub(crate) fn settle(&mut self) {
@@ -217,10 +223,11 @@ impl Engine {
     }
 
     /// Strips whose threads have come back out of the plug-in they were left in go back as
-    /// garbage, and the session brings their tracks back (`Cmd::Back`).
+    /// garbage, and the session brings their tracks back (`Cmd::Back`); so do workers replaced
+    /// since, once they hold no strip.
     pub(super) fn release_held(&mut self) {
-        while let Some(t) = self.parallel.take_released(&self.status) {
-            self.discard(Garbage::Track(t));
+        while let Some(g) = self.parallel.take_released(&self.status) {
+            self.discard(g);
         }
     }
 

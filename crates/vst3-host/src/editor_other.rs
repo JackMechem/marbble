@@ -13,5 +13,7 @@ impl Editor {
         true
     }
     pub fn raise(&self) {}
+    pub fn set_quiet(&self, _on: bool) {}
+    pub fn hide(&self) {}
     pub fn close<K: Send + 'static>(self, _keep_alive: K) {}
 }

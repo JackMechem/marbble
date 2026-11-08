@@ -79,6 +79,7 @@ impl Session {
 
     /// Brings the project to an undo or redo step, and returns the step that comes back here.
     fn step_to(&mut self, e: UndoEntry) -> UndoEntry {
+        self.mark_unresponsive();
         let now = self.capture_plugin_states();
         let plugin = e.plugin.as_ref().map(|(uid, _)| (*uid, self.vst_state_now(*uid)));
         let back = UndoEntry { project: now, label: e.label.clone(), key: None, at: Instant::now(), plugin };
@@ -92,6 +93,8 @@ impl Session {
     /// Brings the engine to `target`, touching only what differs, so plug-ins that didn't
     /// change keep running (and keep their state).
     pub(super) fn restore(&mut self, target: Project) {
+        // Controllers it drops of plug-ins a processing thread is left in keep their editors.
+        self.mark_unresponsive();
         self.auto_abort();
         let current = std::mem::replace(&mut self.project, target);
         // The drag mode is a setting, not part of the edit history.

@@ -17,8 +17,9 @@ impl Session {
     pub fn copy_plugin(&self, track: Id, slot: usize) -> Result<PluginSlot> {
         let s = self.slot_get(track, slot).ok_or_else(|| anyhow!("no plug-in in that slot"))?;
         let mut copy = s.clone();
-        if let Some(c) = self.controllers.get(&s.uid) {
-            copy.state = Some(encode_state(&c.save_state()));
+        // A plug-in a processing thread is left in (`session/left_out.rs`) keeps its last saved state.
+        if let Some(st) = self.controllers.get(&s.uid).and_then(|c| c.save_state()) {
+            copy.state = Some(encode_state(&st));
         }
         Ok(copy)
     }
@@ -72,6 +73,8 @@ impl Session {
             let ins = self.instantiate_slot(&new_slot)?;
             // VST3 state is only kept in the document while the plug-in is unloaded.
             let new_slot = PluginSlot { state: if self.controllers.contains_key(&new_slot.uid) { None } else { new_slot.state }, ..new_slot };
+            // A plug-in a processing thread is left in keeps its editor, hidden, untold.
+            self.mark_unresponsive();
             let old = self.slot_ref(track, slot).ok_or_else(|| anyhow!("no such slot"))?.replace(new_slot);
             if let Some(o) = old {
                 if let Some(mut c) = self.controllers.remove(&o.uid) {

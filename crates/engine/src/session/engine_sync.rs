@@ -504,6 +504,8 @@ impl Session {
 
     /// Recreates every track and plugin from the project document.
     pub(super) fn rebuild_graph(&mut self) {
+        // The plug-ins threads are still left in keep their editors hidden, untold.
+        self.mark_unresponsive();
         let snapshot = self.capture_plugin_states();
         for c in self.controllers.values_mut() {
             c.close_editor();
@@ -540,8 +542,9 @@ impl Session {
         let held = self.held();
         let fill = |track: Id, s: &mut Option<PluginSlot>, ctrls: &HashMap<Id, PluginController>| {
             if let Some(slot) = s {
-                if let Some(c) = ctrls.get(&slot.uid).filter(|_| !Self::left_in(&held, track, slot.uid)) {
-                    slot.state = Some(encode_state(&c.save_state()));
+                let c = ctrls.get(&slot.uid).filter(|c| !Self::left_in(&held, track, slot.uid, c.instance()));
+                if let Some(st) = c.and_then(|c| c.save_state()) {
+                    slot.state = Some(encode_state(&st));
                 }
             }
         };

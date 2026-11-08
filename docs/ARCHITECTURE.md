@@ -747,28 +747,52 @@ guarantees:
   on the call's number and phase, which the worker's own `leave` loses if the plug-in returns at
   that moment); a shorter call is more likely a hiccup than a hang. It then counts the worker's
   task and every task the graph has waiting for it out of `remaining`: none of them ran, and none
-  ever gets ready. The caller finishes the rest of the block (with a quarter of the limit) and
-  plays on. Past that, or with the worker held up outside a plug-in, it falls back to
-  `retire_stuck` and a stalled block, during which each callback (and `Engine::settle`) calls
-  `Parallel::press_on`: a worker retired in that block that has since been in a plug-in for long
-  enough is left after all, and the caller does what's ready of the block, never waiting.
+  ever gets ready. The block is silent whatever happens, so the caller runs none of the rest: it
+  counts out what's ready as if it had run (`Pool::pass_over`), while the other workers finish what
+  they have, with a quarter of the limit, and plays on. A strip that misses the block misses it as
+  in a block shed for an overload, and the caller never calls into another instance of a plug-in
+  that may be stuck on something they share. Past that, or with the worker held up outside a
+  plug-in, it falls back to `retire_stuck` and a stalled block, during which each callback (and
+  `Engine::settle`) calls `Parallel::press_on`: a worker retired in that block that has since been
+  in a plug-in for long enough is left after all, and what's ready of the block is passed over in
+  the same way, never waiting. So `settle`, off the audio thread and without flush-to-zero, runs no
+  plug-in either.
   `Parallel::leave_out`, once the block is over, swaps the strip in the engine's list for a
   stand-in made ahead in `Workers::new`, which takes the commands meant for the track, and marks
   the stand-in and every strip counted out `left_out`: they play nothing in any later block,
-  serial or pooled. `EngineStatus::held` lists the track and plug-in, and `left_events` tells the
-  session, which says so, lets playback go on (stopping a recording), refuses renders while
-  `left_out` counts any strip (they'd be missing), and asks no plug-in a thread is left in for
-  its state (`capture_plugin_states`, the VST3 undo watch), saving the state the project last had.
+  serial or pooled. `EngineStatus::held` lists the track and plug-in under a token of the strip's
+  own (the stand-in carries it too), so that one let go of is never taken for another strip of the
+  same track (left, deleted, brought back by undo and left again) or for one listed after a
+  rebuild freed its entry; with how many VST3 instances had been made by then
+  (`vst3_host::instances_made`), as an instance made since (that undo's) is another and may be
+  called; and whether the stand-in has gone with its track. `left_events` tells the session, which
+  says so, lets playback go on (stopping a recording), and refuses renders while `left_out` counts
+  any strip (they'd be missing). It looks after `Engine::settle`, with the engine lock held, so a
+  block that ends as a render starts counts. The session marks the controller of the instance a
+  thread is left in (`set_unresponsive`, in `idle` and before anything that drops controllers or
+  reads states), and the host calls into it no more from the main thread: not idle, its
+  parameters, automation, controllers, latency or state (`save_state` gives None, so saving,
+  copying and the VST3 undo watch keep the state the project last had; an undo or redo of its own
+  step leaves the state in the project for its next instance, and an edit pending in it stays
+  pending), and its editor neither opens nor hears of resizes or timers. The one exception is the
+  plug-in's own run-loop event handlers on Linux (`IEventHandler::onFDIsSet`), which keep running:
+  their sockets must be read, or the main loop would spin on them. An editor closed then, or
+  dropped with its track, is hidden and kept, untold, until the instance is gone
+  (`vst3_host::close_stranded_editors`).
   The strip left behind is never touched again until its thread is gone: if the plug-in ever
   returns, `leave` fails, the strip returns at once, the worker skips its bookkeeping, marks its
   `Call` `GONE` and ends, and `Parallel::take_released` sends the strip back as garbage and marks
-  its entry in `held` back. The session's `idle` then builds the track a new strip, plug-ins from
-  their state now, and sends `Cmd::Back`, which puts it in the stand-in's place and brings back
-  every strip sitting out but those still fed by a plug-in that hasn't returned (with a fade-in, as
-  for Track On). Reset Audio Engine rebuilds every strip while any sits out. Until a thread is
-  gone, the job it's in (a new cell per time workers are left), its scratch and the graph
-  (`Parallel::graph_held`) stay, and dropping the `Workers` or the pool leaks them and lets the
-  thread go rather than join it.
+  its entry in `held` back. Workers replaced meanwhile (a new thread count, Reset Audio Engine) are
+  kept for that (`Parallel::replaced`), and go back as garbage once their last strip has. The
+  session's `idle` then builds the track a new strip, plug-ins from their state now, and sends
+  `Cmd::Back`, which puts it in the place of the stand-in with that token and brings back every
+  strip sitting out but those still fed by a plug-in that hasn't returned, the new strip among them
+  (with a fade-in, as for Track On). A track another thread still holds a strip of keeps its
+  stand-in, and one whose stand-in has gone (deleted, maybe brought back by undo with new
+  instances) keeps what it has. Reset Audio
+  Engine rebuilds every strip while any sits out. Until a thread is gone, the job it's in (a new
+  cell per time workers are left), its scratch and the graph (`Parallel::graph_held`) stay, and
+  dropping the `Workers` or the pool leaks them and lets the thread go rather than join it.
 - *A worker given up on is retired.* At the give-up `Pool::retire_stuck` takes every worker still
   in a task (`Slot::busy`, set before a worker claims, so one preempted between taking a task and
   starting it counts) out of the pool: it takes no task again and its thread ends once it gets out.

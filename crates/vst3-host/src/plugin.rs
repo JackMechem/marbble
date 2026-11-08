@@ -10,7 +10,7 @@
 #![cfg_attr(target_env = "msvc", allow(clippy::unnecessary_cast))]
 
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -25,6 +25,7 @@ use crate::stream::{as_stream, MemoryStream};
 use crate::util::{unhex, utf16};
 
 mod controller;
+pub use controller::close_stranded_editors;
 mod instantiate;
 pub use instantiate::*;
 mod multi_out;
@@ -96,8 +97,19 @@ pub struct PluginState {
     pub controller: Vec<u8>,
 }
 
+/// Instances made so far in this process, which numbers each (`PluginController::instance`).
+static INSTANCES: AtomicU64 = AtomicU64::new(0);
+
+/// How many plug-in instances have been made so far: every instance made from now on has a higher
+/// number (`PluginController::instance`). Allocates nothing and takes no lock.
+pub fn instances_made() -> u64 {
+    INSTANCES.load(Ordering::Acquire)
+}
+
 /// COM objects shared by both halves. Torn down when both halves are gone.
 struct Shared {
+    /// The instance's number, from 1 up, in the order instances were made.
+    instance: u64,
     component: ComPtr<IComponent>,
     processor: Option<ComPtr<IAudioProcessor>>,
     controller: Option<ComPtr<IEditController>>,
@@ -226,6 +238,10 @@ pub struct PluginController {
     /// so that undo can tell those from edits in the editor (see `host_echo`).
     host_changes: AtomicU64,
     host_set: parking_lot::Mutex<HashMap<u32, (f64, Instant)>>,
+    /// The host says a thread is stuck in the processor (`set_unresponsive`): nothing here calls
+    /// into the plug-in meanwhile. The latency it reported last, for `latency` to give then.
+    unresponsive: bool,
+    last_latency: AtomicU32,
 }
 
 unsafe impl Send for PluginController {}

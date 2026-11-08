@@ -18,6 +18,7 @@ impl Session {
         self.sampler_record_cancel();
         self.send(Cmd::Stop);
         self.close_recordings();
+        self.mark_unresponsive();
         self.controllers.clear();
         self.vst_watches.clear();
         self.undo_stack.clear();
@@ -128,6 +129,7 @@ impl Session {
         self.close_recordings();
         // Instance ids restart in every project, so old controllers must not leak state into
         // the new one.
+        self.mark_unresponsive();
         self.controllers.clear();
         self.vst_watches.clear();
         self.undo_stack.clear();

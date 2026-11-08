@@ -78,11 +78,13 @@ pub enum Cmd {
     Graph(Option<Box<TaskGraph>>),
     /// Makes checks go through the pool (see [`ParallelTest`]).
     ParallelTest(ParallelTest),
-    /// A plug-in that stopped responding returned (`EngineStatus::held` no longer lists its track):
-    /// the track's new strip (None: it's gone from the project) takes the stand-in's place, and
-    /// every strip sitting out comes back but for those in `still_out` (sorted), which are fed by
-    /// one that hasn't returned yet.
-    Back { track: Option<Box<TrackDsp>>, still_out: Vec<Id> },
+    /// A plug-in that stopped responding returned (`EngineStatus::take_back` gave its `token`):
+    /// the track's new strip (None: it's gone from the project, its stand-in has gone, or another
+    /// thread still holds one of its strips) takes the place of the stand-in for that token, if
+    /// it's still there, and every strip sitting out comes back but for those in `still_out`
+    /// (sorted), which are fed by one that hasn't returned yet. The new strip sits out too if it's
+    /// one of those.
+    Back { token: u64, track: Option<Box<TrackDsp>>, still_out: Vec<Id> },
 }
 
 /// What a [`Cmd`] replaced, going back to the session's thread so it is freed there.

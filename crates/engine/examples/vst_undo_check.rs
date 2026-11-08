@@ -1,7 +1,8 @@
 //! Undo for edits in a VST3's own editor, through the `IComponentHandler` the editor would call
 //! (no editor can open here), with real plug-ins: LSP's Compressor, ZamCompX2 and TONE3000. Each
 //! edit is read back from the controller and the saved state and measured in a render; prints
-//! SKIP for a plug-in that isn't installed. Also prints what `getState` costs.
+//! SKIP for a plug-in that isn't installed. Also prints what `getState` costs, and checks that a
+//! controller marked unresponsive (a processing thread is stuck in its plug-in) calls nothing.
 //! usage: vst_undo_check <audio file> <scratch dir>
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -451,12 +452,12 @@ fn costs(all: &[PluginDescriptor]) {
         let mut size = 0;
         for _ in 0..200 {
             let t = Instant::now();
-            let st = c.save_state();
+            let st = c.save_state().unwrap();
             times.push(t.elapsed());
             size = st.component.len() + st.controller.len();
         }
         times.sort();
-        let st = c.save_state();
+        let st = c.save_state().unwrap();
         let t = Instant::now();
         for _ in 0..20 {
             c.load_state(&st);
@@ -471,6 +472,90 @@ fn costs(all: &[PluginDescriptor]) {
     }
 }
 
+/// The plug-in stops responding with an edit in its editor still open (its controller marked as the
+/// session marks one a processing thread is left in): idle, another edit and its undo, and undoing
+/// the plug-in's own step ask it for nothing, and the state that undo couldn't give it is kept in
+/// the project, for when it's loaded again.
+fn stuck(r: &mut Rig, name: &str) {
+    let (track, uid, id, v0, v1) = (r.track, r.uid, r.param, r.v0, r.v1);
+    let s = &mut r.s;
+    pump(s, 400);
+    let state0 = saved(s, track);
+    let (from, to) = if near(s.vst_param(uid, id), v1) { (v1, v0) } else { (v0, v1) };
+    drag(s, uid, id, from, to);
+    pump(s, 400);
+    let steps = s.undo_depths().0;
+    s.drive_vst_handler(uid, Gesture::Begin(id));
+    s.drive_vst_handler(uid, Gesture::Perform(id, (v0 + v1) / 2.0));
+    s.set_unresponsive_for_checks(uid, true);
+    let reads = s.vst_state_reads(uid);
+    pump(s, 300);
+    s.checkpoint("Rename", None, false);
+    s.update_track(track, TrackPatch { name: Some("stuck".into()), ..Default::default() });
+    check(&format!("{name}: stuck, its open edit makes no step"), s.undo_depths().0 == steps + 1);
+    s.undo();
+    s.undo();
+    check(
+        &format!("{name}: stuck, idle, another edit and undo, and undoing its step don't ask it for its state"),
+        s.vst_state_reads(uid) == reads && s.undo_depths().0 == steps - 1,
+    );
+    check(&format!("{name}: and the state that undo couldn't give it waits in the project"), saved(s, track) == state0);
+    s.set_unresponsive_for_checks(uid, false);
+    s.drive_vst_handler(uid, Gesture::End(id));
+    pump(s, 400);
+}
+
+/// A controller whose plug-in a processing thread is stuck in (`set_unresponsive`) doesn't call it:
+/// its values read as unknown, edits and states go nowhere, the editor doesn't open, and the
+/// latency is the last one it reported. Marked responsive again, it's as before.
+fn unresponsive(d: &PluginDescriptor, param: &str) {
+    let (_p, mut c) = vst3_host::instantiate(d, 48000.0, 512).unwrap();
+    let id = c.parameters().iter().find(|x| x.name == param).map(|x| x.id).unwrap();
+    let (latency, value, changes) = (c.latency(), c.param_value(id).unwrap(), c.host_changes());
+    let state = c.save_state().unwrap();
+    c.set_unresponsive(true);
+    c.edit_param(id, 1.0 - value);
+    c.set_param_value(id, 1.0 - value);
+    c.load_state(&state);
+    c.idle();
+    let quiet = c.param_value(id).is_none()
+        && c.parameters().is_empty()
+        && c.param_names().is_empty()
+        && c.save_state().is_none()
+        && c.host_changes() == changes
+        && c.latency() == latency
+        && c.open_editor("unresponsive").is_err()
+        && !c.editor_open();
+    check(&format!("{}: a controller marked unresponsive calls nothing", d.name), quiet);
+    c.set_unresponsive(false);
+    let back = c.param_value(id).is_some_and(|v| (v - value).abs() < 1e-9) && c.save_state().is_some() && !c.parameters().is_empty();
+    check(&format!("{}: and marked responsive again, it's as before", d.name), back);
+}
+
+/// A multi-output instrument a processing thread is stuck in: switching its extra outputs, which
+/// cycles `setActive` around `activateBus` while its processor would have to be parked, waits for
+/// nothing and changes nothing until it's marked responsive again, and then does.
+fn unresponsive_outputs(d: &PluginDescriptor) {
+    let (_p, mut c) = vst3_host::instantiate(d, 48000.0, 512).unwrap();
+    let Some(extra) = c.output_buses().iter().find(|b| b.index != 0 && !b.active).map(|b| b.index) else {
+        println!("SKIP {}: no extra output that's off", d.name);
+        return;
+    };
+    let active = |c: &vst3_host::PluginController| c.output_buses().iter().filter(|b| b.active).map(|b| b.index).collect::<Vec<_>>();
+    let before = active(&c);
+    c.set_unresponsive(true);
+    let t = Instant::now();
+    c.set_active_outputs(&[extra]);
+    let took = t.elapsed();
+    check(
+        &format!("{}: stuck, its outputs don't switch, at once ({took:?})", d.name),
+        active(&c) == before && took < Duration::from_millis(20) && c.audio_buses().is_empty(),
+    );
+    c.set_unresponsive(false);
+    c.set_active_outputs(&[extra]);
+    check(&format!("{}: and responsive again, they do", d.name), active(&c).contains(&extra) && !c.audio_buses().is_empty());
+}
+
 fn main() {
     let mut args = std::env::args().skip(1);
     let tone = PathBuf::from(args.next().expect("audio file"));
@@ -481,6 +566,10 @@ fn main() {
         .collect();
     let find = |n: &str| all.iter().find(|d| d.name == n).cloned();
     costs(&all);
+    match find("Multi-Sampler x12 DirectOut") {
+        Some(d) => unresponsive_outputs(&d),
+        None => println!("SKIP LSP's Multi-Sampler x12 DirectOut isn't installed"),
+    }
 
     match find("Compressor Stereo") {
         Some(d) => {
@@ -491,6 +580,8 @@ fn main() {
             states(&mut r, &d.name);
             automation(&mut r, &d.name);
             live(&mut r, &d.name);
+            unresponsive(&d, "Output gain");
+            stuck(&mut r, &d.name);
         }
         None => println!("SKIP LSP's Compressor Stereo isn't installed"),
     }

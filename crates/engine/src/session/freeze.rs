@@ -133,7 +133,7 @@ impl Session {
                 .iter()
                 .flatten()
                 .chain(t.instrument.iter())
-                .filter_map(|s| self.controllers.get(&s.uid).map(|c| (s.uid, encode_state(&c.save_state()))))
+                .filter_map(|s| self.controllers.get(&s.uid).and_then(|c| c.save_state()).map(|st| (s.uid, encode_state(&st))))
                 .collect();
             let clip = self.add_clip(&r.path, r.clip);
             let tm = self.project.track_mut(r.track).unwrap();
@@ -185,6 +185,8 @@ impl Session {
 
     /// Unloads a track's plug-ins from the engine (and their controllers and editors).
     fn unload_plugins(&mut self, t: &Track) {
+        // A plug-in a processing thread is left in keeps its editor, hidden, untold.
+        self.mark_unresponsive();
         if let Some(s) = &t.instrument {
             if let Some(mut c) = self.controllers.remove(&s.uid) {
                 c.close_editor();

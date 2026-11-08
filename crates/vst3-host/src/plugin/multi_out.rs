@@ -214,10 +214,12 @@ impl PluginController {
 
     /// Makes `want` the extra output buses in use (indexes; the main bus is always on). Off the
     /// audio thread; takes a few milliseconds when something changes, and nothing otherwise. An
-    /// index the plug-in doesn't have is ignored.
+    /// index the plug-in doesn't have is ignored. Nothing changes while the plug-in mustn't be
+    /// called (`set_unresponsive`): its processor never parks, and switching buses would call it
+    /// while a thread is still in `process`. Asked again later, it does it then.
     pub fn set_active_outputs(&mut self, want: &[u32]) {
         let changes = |b: &OutputBus| b.index != 0 && b.active != want.contains(&b.index);
-        if !self.outputs.iter().any(changes) {
+        if self.unresponsive || !self.outputs.iter().any(changes) {
             return;
         }
         let gate = &self.shared.out_gate;

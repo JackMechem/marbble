@@ -10,6 +10,7 @@ impl Session {
     /// Returns true if the set of open editors changed or automation was written, when the UI
     /// needs a new snapshot.
     pub fn idle(&mut self) -> bool {
+        self.mark_unresponsive();
         self.sync_parallel();
         let before = self.open_editors().len();
         let mut latency_changed = false;
@@ -25,6 +26,8 @@ impl Session {
         while let Ok(g) = self.garbage_rx.pop() {
             self.sampler_garbage(g);
         }
+        // Editors hidden while their plug-in wasn't responding, whose instance is gone now.
+        vst3_host::close_stranded_editors();
         self.sampler_idle();
         let written = self.auto_idle();
         let stepped = self.vst_undo_idle();

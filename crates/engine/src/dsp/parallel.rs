@@ -73,7 +73,7 @@ impl Job for StripJob {
         let busy = unsafe { &*self.busy.add(thread) };
         busy.store(t.id, Ordering::Relaxed);
         #[cfg(test)]
-        tests::held_in_task(t.id);
+        test_hooks::task_starts(t.id);
         let at = std::time::Instant::now();
         t.outs.reset();
         let mut routes = Deferred { tracks: self.tracks, graph, ti: task, n: self.cx.n, call };
@@ -107,11 +107,14 @@ pub struct Workers {
     /// Ready to take the place of a strip left in a plug-in: one per worker.
     #[allow(clippy::vec_box)]
     spares: Vec<Box<TrackDsp>>,
-    /// The strips threads were left holding, from `Box::into_raw`, each with its thread and track.
-    held: Vec<(*mut TrackDsp, usize, Id)>,
+    /// The strips threads were left holding, from `Box::into_raw`, each with its thread and its
+    /// token in `EngineStatus::held`.
+    held: Vec<(*mut TrackDsp, usize, u64)>,
     /// Threads left in plug-ins in the open block and not yet seen to by `Parallel::leave_out`:
     /// the thread, its task and the plug-in's uid.
     fresh: Vec<(usize, usize, Id)>,
+    /// Workers these replaced while their threads still held strips (`Parallel::set_workers`).
+    older: Option<Box<Workers>>,
 }
 
 // SAFETY: the raw pointers only point into what the engine owns, and are only used while a block is
@@ -134,6 +137,7 @@ impl Workers {
             spares: (1..threads).map(|_| stand_in()).collect(),
             held: Vec::with_capacity(threads),
             fresh: Vec::with_capacity(threads),
+            older: None,
         })
     }
 
@@ -153,6 +157,15 @@ impl Workers {
     /// How the workers are doing, to be read while the engine has them.
     pub fn health(&self) -> Arc<Health> {
         self.pool.health()
+    }
+
+    /// A strip a thread was left in, once the thread has come back out and let go of it.
+    fn release(&mut self, status: &EngineStatus) -> Option<Box<TrackDsp>> {
+        let k = self.held.iter().position(|&(_, thread, _)| self.pool.gone(thread))?;
+        let (strip, _, token) = self.held.swap_remove(k);
+        status.release(token);
+        // SAFETY: from `Box::into_raw` in `leave_out`, untouched since, and its thread is done with it.
+        Some(unsafe { Box::from_raw(strip) })
     }
 }
 
@@ -230,6 +243,9 @@ pub(super) struct Parallel {
     pub stalled: bool,
     /// A thread was left in a plug-in holding the graph, which is never freed now.
     graph_held: bool,
+    /// Workers replaced while threads of theirs still held strips, newest first (linked through
+    /// `Workers::older`): kept until each strip is back (`take_released`).
+    replaced: Option<Box<Workers>>,
     /// The time limit the open block was given up at.
     give_up: Duration,
     /// The load is high enough to be worth the workers.
@@ -255,8 +271,16 @@ impl Parallel {
         old
     }
 
+    /// The old workers, to be freed elsewhere. Not while a thread of theirs still holds a strip:
+    /// they're kept until it lets go, so that its track can come back (`take_released`).
     pub fn set_workers(&mut self, w: Option<Box<Workers>>) -> Option<Box<Workers>> {
-        std::mem::replace(&mut self.workers, w)
+        let mut old = std::mem::replace(&mut self.workers, w)?;
+        if old.held.is_empty() {
+            return Some(old);
+        }
+        old.older = self.replaced.take();
+        self.replaced = Some(old);
+        None
     }
 
     /// Whether this block goes through the pool.
@@ -330,9 +354,10 @@ impl Parallel {
             // The strip's own fields are its thread's: the graph has its id.
             let id = graph.id(task);
             stand_in.id = id;
+            let token = status.hold(id, uid);
+            stand_in.held_token = token;
             let held = std::mem::replace(&mut tracks[task], stand_in);
-            w.held.push((Box::into_raw(held), thread, id));
-            status.hold(id, uid);
+            w.held.push((Box::into_raw(held), thread, token));
         }
         for (i, t) in tracks.iter_mut().enumerate() {
             if w.pool.dropped(i) {
@@ -347,18 +372,30 @@ impl Parallel {
 
     /// A strip a thread was left in, once the thread has come back out and let go of it, to be
     /// freed elsewhere. `status` no longer lists it as held, and the session brings the track back.
-    pub fn take_released(&mut self, status: &EngineStatus) -> Option<Box<TrackDsp>> {
-        let w = self.workers.as_deref_mut()?;
-        let k = w.held.iter().position(|&(_, thread, _)| w.pool.gone(thread))?;
-        let (strip, _, id) = w.held.swap_remove(k);
-        status.release(id);
-        // SAFETY: from `Box::into_raw` in `leave_out`, untouched since, and its thread is done with it.
-        Some(unsafe { Box::from_raw(strip) })
+    /// Or workers replaced since that now hold no strip, to be freed too.
+    pub fn take_released(&mut self, status: &EngineStatus) -> Option<Garbage> {
+        if let Some(t) = self.workers.as_deref_mut().and_then(|w| w.release(status)) {
+            return Some(Garbage::Track(t));
+        }
+        let mut link = &mut self.replaced;
+        loop {
+            let w = link.as_deref_mut()?;
+            if let Some(t) = w.release(status) {
+                return Some(Garbage::Track(t));
+            }
+            if w.held.is_empty() {
+                let mut done = link.take().expect("just looked");
+                *link = done.older.take();
+                return Some(Garbage::Workers(done));
+            }
+            link = &mut link.as_mut().expect("just looked").older;
+        }
     }
 
     /// While a block given up on stays open: leaves a worker that has since been out in a plug-in
-    /// long enough (one that was held up in its own task at the give-up, say), and does what's
-    /// ready of the block, never waiting. True once the block is over.
+    /// long enough (one that was held up in its own task at the give-up, say), and counts out what's
+    /// ready of the block without running it (`Pool::pass_over`), never waiting. True once the
+    /// block is over. Calls no plug-in, from the callback or from `Engine::settle`.
     pub fn press_on(&mut self) -> bool {
         let (Some(w), Some(graph)) = (self.workers.as_deref_mut(), self.graph.as_deref()) else { return true };
         let fresh = &mut w.fresh;
@@ -372,9 +409,10 @@ impl Parallel {
             debug_assert!(w.job_at < w.jobs.len(), "a job per time a worker is left");
             self.graph_held = true;
         }
-        // The caller's share of the block: what the job reads stays put while it's open, as `run`
-        // says, since no command is applied meanwhile.
-        w.pool.finish(Some(Duration::ZERO))
+        // The block is silent whatever happens, and a strip that misses it is like one in a block
+        // shed for an overload. The workers still playing run what they take, and what the job
+        // reads stays put while it's open, as `run` says, since no command is applied meanwhile.
+        w.pool.pass_over(Duration::ZERO)
     }
 
     /// Whether a block given up on is over.
@@ -434,9 +472,10 @@ impl Parallel {
                 w.job_at += 1;
                 debug_assert!(w.job_at < w.jobs.len(), "a job per worker left");
                 self.graph_held = true;
-                // What's left takes as long as any block, and a worker held up anywhere else must
-                // still be demoted before the kernel's limit (`GIVE_UP_SECS`).
-                if w.pool.finish(Some(limit / 4)) {
+                // The block is silent: the rest is only counted out (`press_on` says why), and a worker
+                // held up anywhere else must still be demoted before the kernel's limit
+                // (`GIVE_UP_SECS`).
+                if w.pool.pass_over(limit / 4) {
                     return Outcome::LeftOut;
                 }
             }
@@ -457,6 +496,99 @@ impl Drop for Parallel {
     fn drop(&mut self) {
         if self.graph_held {
             std::mem::forget(self.graph.take());
+        }
+    }
+}
+
+/// For tests: who holds what in a block on the pool, by synchronisation rather than timing. A worker
+/// can be held up in a strip's own task, outside any plug-in call (as one kept off the CPU would be,
+/// or a slow part of the strip's own work); the caller can be made to wait in a strip until workers
+/// have started others, so that those are the workers'; and a worker can be made to wait in a strip
+/// until the caller is in such a gate, so that it can't take the gate first. Keyed by track id, so
+/// each test uses ids of its own.
+#[cfg(test)]
+pub(crate) mod test_hooks {
+    use super::Id;
+    use std::sync::Mutex;
+    use std::time::{Duration, Instant};
+
+    static IN_TASK: Mutex<Vec<Id>> = Mutex::new(Vec::new());
+    /// Strips the caller waits in, each until workers have started the strips listed with it.
+    static GATES: Mutex<Vec<(Id, Vec<Id>)>> = Mutex::new(Vec::new());
+    static STARTED: Mutex<Vec<Id>> = Mutex::new(Vec::new());
+    /// Strips a worker waits in until the caller is in the gate listed with each, and the gates the
+    /// caller is in or has been in.
+    static AFTER: Mutex<Vec<(Id, Id)>> = Mutex::new(Vec::new());
+    static ENTERED: Mutex<Vec<Id>> = Mutex::new(Vec::new());
+    /// Longer than any test should ever wait.
+    const PATIENCE: Duration = Duration::from_secs(60);
+
+    fn on_worker() -> bool {
+        // The pool names its threads.
+        std::thread::current().name().is_some_and(|n| n.starts_with("marbble-dsp"))
+    }
+
+    fn wait(what: impl Fn() -> bool) {
+        let t = Instant::now();
+        while !what() && t.elapsed() < PATIENCE {
+            std::thread::sleep(Duration::from_millis(1));
+        }
+    }
+
+    /// As a strip's task starts, on whichever thread.
+    pub(crate) fn task_starts(id: Id) {
+        if on_worker() {
+            let gate = AFTER.lock().unwrap().iter().find(|(x, _)| *x == id).map(|(_, g)| *g);
+            if let Some(g) = gate {
+                wait(|| ENTERED.lock().unwrap().contains(&g));
+            }
+            if GATES.lock().unwrap().iter().any(|(_, ids)| ids.contains(&id)) {
+                STARTED.lock().unwrap().push(id);
+            }
+            wait(|| !IN_TASK.lock().unwrap().contains(&id));
+            return;
+        }
+        let Some(ids) = GATES.lock().unwrap().iter().find(|(g, _)| *g == id).map(|(_, ids)| ids.clone()) else { return };
+        ENTERED.lock().unwrap().push(id);
+        wait(|| ids.iter().all(|i| STARTED.lock().unwrap().contains(i)));
+    }
+
+    /// Holds a worker up in the strip `id`'s task, outside any plug-in call, while `on`.
+    pub(crate) fn hold_in_task(id: Id, on: bool) {
+        let mut l = IN_TASK.lock().unwrap();
+        l.retain(|&x| x != id);
+        if on {
+            l.push(id);
+        }
+    }
+
+    /// Makes the caller wait as it starts the strip `gate` until workers have started each of
+    /// `ids`: as it takes nothing else meanwhile, they're the workers'. First in the order of the
+    /// strips, `gate` is the caller's first task (each thread takes the first ready one of its
+    /// own share first); `after` keeps the workers from taking it before that. None for `ids`
+    /// empty.
+    pub(crate) fn gate(gate: Id, ids: &[Id]) {
+        let mut g = GATES.lock().unwrap();
+        let mut started = STARTED.lock().unwrap();
+        for (_, old) in g.iter().filter(|(x, _)| *x == gate) {
+            started.retain(|x| !old.contains(x));
+        }
+        g.retain(|(x, _)| *x != gate);
+        started.retain(|x| !ids.contains(x));
+        ENTERED.lock().unwrap().retain(|&x| x != gate);
+        if !ids.is_empty() {
+            g.push((gate, ids.to_vec()));
+        }
+    }
+
+    /// Makes a worker wait as it starts the strip `id` until the caller is in `gate` (None: never).
+    /// With one such strip first in each worker's share of the order, every worker takes its own
+    /// and waits there, so none can take `gate` before the caller does.
+    pub(crate) fn after(id: Id, gate: Option<Id>) {
+        let mut a = AFTER.lock().unwrap();
+        a.retain(|(x, _)| *x != id);
+        if let Some(g) = gate {
+            a.push((id, g));
         }
     }
 }
@@ -922,10 +1054,29 @@ mod tests {
     }
 
     /// Plays until a worker gets track 2's strip and is left in Tar.
+    /// Not until any overload: on a busy machine a block can be counted as one for running late, or
+    /// be given up on with a worker kept off the CPU, and the block then stays open for a while.
+    /// Should those give-ups have retired every worker before one got the strip, the pool is started
+    /// afresh.
     fn until_stuck(e: &mut Rig, out: &mut [f32]) {
         let started = Instant::now();
-        while e.status.overloads.load(Ordering::Relaxed) == 0 {
-            assert!(started.elapsed().as_secs() < 20, "no worker ever got the strip");
+        while e.status.left_events.load(Ordering::Relaxed) == 0 || e.engine.parallel.stalled {
+            assert!(started.elapsed().as_secs() < 60, "no worker ever got the strip");
+            e.engine.process(&[], 0, out, 2);
+            let w = e.engine.parallel.workers.as_ref().unwrap();
+            if e.status.left_events.load(Ordering::Relaxed) == 0 && !e.engine.parallel.stalled && !w.pool.has_workers() {
+                let threads = w.threads();
+                e.tx.push(Cmd::Workers(Some(Workers::new(PoolOptions { threads, ..Default::default() })))).ok().unwrap();
+                e.engine.process(&[], 0, out, 2);
+            }
+        }
+    }
+
+    /// Plays until a block given up on stays open.
+    fn until_stalled(e: &mut Rig, out: &mut [f32]) {
+        let started = Instant::now();
+        while !e.engine.parallel.stalled {
+            assert!(started.elapsed().as_secs() < 60, "no block was given up on");
             e.engine.process(&[], 0, out, 2);
         }
     }
@@ -949,7 +1100,7 @@ mod tests {
         assert!(st.overload_stuck.load(Ordering::Relaxed) && st.overload_left_out.load(Ordering::Relaxed));
         let left = (st.left_events.load(Ordering::Relaxed), st.left_track.load(Ordering::Relaxed), st.left_plugin.load(Ordering::Relaxed));
         assert_eq!(left, (1, 2, 99), "the message names it");
-        assert_eq!(st.held(), [(2, 99)]);
+        assert_eq!(ids(&st.held()), [(2, 99)]);
         assert_eq!(st.left_out.load(Ordering::Relaxed), 5);
         for t in &e.engine.tracks {
             assert_eq!(t.left_out, LEFT_OUT.contains(&t.id), "track {}", t.id);
@@ -963,6 +1114,8 @@ mod tests {
         e.tx.push(Cmd::Play { from: 0 }).ok().unwrap();
         e.engine.process(&[], 0, &mut out, 2);
         assert_eq!(e.status.cmds_done.load(Ordering::Relaxed), done + 2);
+        // From here on a block running late on a busy machine mustn't be given up on or shed.
+        e.tx.push(Cmd::ParallelTest(ParallelTest { always: true, renders: false, patient: true })).ok().unwrap();
         // Past the overload's silence, tracks 1 and 3 play, serially now (the worker was the only one).
         let started = Instant::now();
         while e.engine.shedding > 0 {
@@ -1001,13 +1154,14 @@ mod tests {
         };
         assert_eq!((held.id, held.inserts[1].as_ref().map(|i| i.uid)), (2, Some(99)));
         assert!(e.status.held().is_empty());
-        assert_eq!(e.status.take_back(), [(2, 99)], "for the session to bring back");
+        let back = e.status.take_back();
+        assert_eq!(ids(&back), [(2, 99)], "for the session to bring back");
         assert!(e.status.take_back().is_empty());
         assert!(e.engine.tracks.iter().all(|t| t.left_out == LEFT_OUT.contains(&t.id)), "until it brings them back");
         assert_eq!(e.engine.parallel.workers.as_ref().unwrap().health().report().stuck, 1);
         // The session sends the track a new strip, and the rest comes back with it.
         let fresh = strip(2, TrackKind::Audio, params(Some(5), &[(6, 0.4, false)]), vec![tone(20, 170.0, None, false)]);
-        e.tx.push(Cmd::Back { track: Some(fresh), still_out: Vec::new() }).ok().unwrap();
+        e.tx.push(Cmd::Back { token: back[0].token, track: Some(fresh), still_out: Vec::new() }).ok().unwrap();
         e.engine.process(&[], 0, &mut out, 2);
         assert!(e.engine.tracks.iter().all(|t| !t.left_out));
         assert_eq!(e.status.left_out.load(Ordering::Relaxed), 0);
@@ -1023,26 +1177,7 @@ mod tests {
         }
     }
 
-    /// Tracks whose strip a worker holds up in its own task, outside any plug-in call, while they're
-    /// listed: as a worker kept off the CPU would, or a slow part of the strip's own work. Each test
-    /// uses ids of its own.
-    static IN_TASK: std::sync::Mutex<Vec<Id>> = std::sync::Mutex::new(Vec::new());
-
-    pub(super) fn held_in_task(id: Id) {
-        if std::thread::current().name().is_some_and(|n| n.starts_with("marbble-dsp")) {
-            while IN_TASK.lock().unwrap().contains(&id) {
-                std::thread::sleep(Duration::from_millis(1));
-            }
-        }
-    }
-
-    fn hold_in_task(id: Id, on: bool) {
-        let mut l = IN_TASK.lock().unwrap();
-        l.retain(|&x| x != id);
-        if on {
-            l.push(id);
-        }
-    }
+    use test_hooks::{after, gate, hold_in_task};
 
     /// Plays until the engine is over the block it gave up on.
     fn until_unstalled(e: &mut Rig, out: &mut [f32]) {
@@ -1064,14 +1199,14 @@ mod tests {
         // Track 8 plays straight to Stereo Out, with Tar.
         let eight = strip(8, TrackKind::Audio, params(None, &[]), vec![tone(80, 290.0, None, false), tar_for_checks(98, SR as f32, hold.clone())]);
         e.tx.push(Cmd::AddTrack(eight, 7)).ok().unwrap();
-        let ids = (0..g.len()).map(|i| g.id(i)).chain([8]).collect();
+        let order = (0..g.len()).map(|i| g.id(i)).chain([8]).collect();
         let edges = [(1, 5), (2, 5), (1, 6), (1, 7), (2, 6), (3, 7), (4, 6), (5, 7), (1, 4), (2, 4)];
-        e.tx.push(Cmd::Graph(Some(Box::new(TaskGraph::new(ids, &edges, |_| true).unwrap())))).ok().unwrap();
+        e.tx.push(Cmd::Graph(Some(Box::new(TaskGraph::new(order, &edges, |_| true).unwrap())))).ok().unwrap();
         e.tx.push(Cmd::Workers(Some(Workers::new(PoolOptions { threads: 2, ..Default::default() })))).ok().unwrap();
         e.tx.push(Cmd::ParallelTest(ParallelTest { always: true, renders: false, patient: false })).ok().unwrap();
         hold_in_task(8, true);
         let mut out = vec![0.0f32; BLOCK * 2];
-        until_stuck(&mut e, &mut out);
+        until_stalled(&mut e, &mut out);
         assert!(e.engine.parallel.stalled && !e.status.overload_left_out.load(Ordering::Relaxed), "held up in its task");
         let w = e.engine.parallel.workers.as_ref().unwrap();
         assert_eq!(w.health().report().stuck, 1, "and retired");
@@ -1081,7 +1216,7 @@ mod tests {
         until_unstalled(&mut e, &mut out);
         let st = &e.status;
         assert_eq!((st.left_events.load(Ordering::Relaxed), st.left_track.load(Ordering::Relaxed), st.left_plugin.load(Ordering::Relaxed)), (1, 8, 98));
-        assert_eq!(st.held(), [(8, 98)]);
+        assert_eq!(ids(&st.held()), [(8, 98)]);
         assert!(e.engine.tracks.iter().all(|t| t.left_out == (t.id == 8)));
         let done = e.status.cmds_done.load(Ordering::Relaxed);
         e.tx.push(Cmd::Stop).ok().unwrap();
@@ -1096,56 +1231,90 @@ mod tests {
         }
     }
 
+    /// Track ids for `stalled_with_tar`, each test's own: the caller's gate, a strip for each of the
+    /// two workers to wait in, the track with Tar, and the one a worker is held up in.
+    struct Stall {
+        gate: Id,
+        waits: [Id; 2],
+        tar: Id,
+        held: Id,
+    }
+
+    impl Stall {
+        fn new(base: Id) -> Stall {
+            Stall { gate: base, waits: [base + 1, base + 2], tar: base + 3, held: base + 4 }
+        }
+
+        /// Lets everything go.
+        fn end(&self, hold: &AtomicBool) {
+            gate(self.gate, &[]);
+            for w in self.waits {
+                after(w, None);
+            }
+            hold_in_task(self.held, false);
+            hold.store(false, Ordering::SeqCst);
+        }
+    }
+
+    /// A block on three threads that stays open with one worker left in Tar and the other held up
+    /// in its own task, set up by synchronisation alone. `project`'s tracks come after five of
+    /// `ids`', each to Stereo Out: the caller's first task is its gate, and each worker's first is
+    /// a strip it waits in until the caller is in the gate, so no worker takes the gate; the caller
+    /// waits there until the workers have the Tar track and the held one, so it takes neither.
+    fn stalled_with_tar(ids: &Stall, hold: &Arc<AtomicBool>) -> Rig {
+        let mut e = rig();
+        project(&mut e);
+        let tar = strip(ids.tar, TrackKind::Audio, params(None, &[]), vec![tone(92, 270.0, None, false), tar_for_checks(96, SR as f32, hold.clone())]);
+        let plain = |id: Id| strip(id, TrackKind::Audio, params(None, &[]), vec![tone(93, 350.0, None, false)]);
+        for t in [plain(ids.held), tar, plain(ids.waits[1]), plain(ids.waits[0]), plain(ids.gate)] {
+            e.tx.push(Cmd::AddTrack(t, 0)).ok().unwrap();
+        }
+        let order = [ids.gate, ids.waits[0], ids.waits[1], ids.tar, ids.held].into_iter().chain(1..=7).collect();
+        let edges = [(1, 5), (2, 5), (1, 6), (1, 7), (2, 6), (3, 7), (4, 6), (5, 7), (1, 4), (2, 4)];
+        e.tx.push(Cmd::Graph(Some(Box::new(TaskGraph::new(order, &edges, |_| true).unwrap())))).ok().unwrap();
+        e.tx.push(Cmd::Workers(Some(Workers::new(PoolOptions { threads: 3, ..Default::default() })))).ok().unwrap();
+        e.tx.push(Cmd::ParallelTest(ParallelTest { always: true, renders: false, patient: false })).ok().unwrap();
+        gate(ids.gate, &[ids.tar, ids.held]);
+        for w in ids.waits {
+            after(w, Some(ids.gate));
+        }
+        hold_in_task(ids.held, true);
+        let mut out = vec![0.0f32; BLOCK * 2];
+        until_stalled(&mut e, &mut out);
+        assert!(e.engine.parallel.stalled, "the worker in its own task holds the block open");
+        // Once in Tar for long enough, the other worker is left there, from the callback if not at
+        // the give-up already.
+        let started = Instant::now();
+        while e.engine.parallel.workers.as_ref().unwrap().fresh.is_empty() {
+            assert!(started.elapsed().as_secs() < 60, "the worker in Tar was never left");
+            e.engine.process(&[], 0, &mut out, 2);
+        }
+        assert!(e.engine.parallel.stalled);
+        e
+    }
+
     /// Two workers held up at the give-up, one in Tar for long enough, one in its own task: the
     /// block stays open after all, as the caller can't leave the second. Once that one is through,
     /// the first's strip is left out, from the callback or from `settle`, and the session hears of
     /// it then.
     #[test]
     fn a_strip_left_in_a_block_that_stays_open_is_left_out_once_it_ends() {
-        for settle in [false, true] {
-            let mut tries = 0;
-            loop {
-                tries += 1;
-                // The two hold-ups depend on which worker takes which strip. Some schedulers
-                // (GitHub's Windows runners) never hand them out that way.
-                if tries > 40 {
-                    eprintln!("skipped (settle: {settle}): the workers were never held up both ways at once");
-                    break;
-                }
-                let hold = Arc::new(AtomicBool::new(true));
-                let mut e = tarred(3, &hold);
-                // Track 9 plays straight to Stereo Out, and is held up in its task. Third in the
-                // list, it's the second worker's to take first, as track 2 is the first's.
-                e.tx.push(Cmd::AddTrack(strip(9, TrackKind::Audio, params(None, &[]), vec![tone(90, 330.0, None, false)]), 2)).ok().unwrap();
-                let ids = vec![1, 2, 9, 3, 4, 5, 6, 7];
-                let edges = [(1, 5), (2, 5), (1, 6), (1, 7), (2, 6), (3, 7), (4, 6), (5, 7), (1, 4), (2, 4)];
-                e.tx.push(Cmd::Graph(Some(Box::new(TaskGraph::new(ids, &edges, |_| true).unwrap())))).ok().unwrap();
-                hold_in_task(9, true);
+        for (settle, ids) in [(false, Stall::new(310)), (true, Stall::new(320))] {
+            let hold = Arc::new(AtomicBool::new(true));
+            let mut e = stalled_with_tar(&ids, &hold);
+            assert!(!e.status.overload_left_out.load(Ordering::Relaxed), "the session stops the transport for a stalled block");
+            assert_eq!(e.status.left_events.load(Ordering::Relaxed), 0, "nothing is left out yet");
+            hold_in_task(ids.held, false);
+            if settle {
+                e.engine.settle();
+            } else {
                 let mut out = vec![0.0f32; BLOCK * 2];
-                until_stuck(&mut e, &mut out);
-                let stalled = e.engine.parallel.stalled;
-                let w = e.engine.parallel.workers.as_ref().unwrap();
-                let left = !w.fresh.is_empty() || (1..w.threads()).any(|t| w.pool.is_left(t));
-                hold_in_task(9, false);
-                if !(stalled && left) {
-                    // Not this time: one of the two strips went to the callback, or wasn't reached.
-                    hold.store(false, Ordering::SeqCst);
-                    until_unstalled(&mut e, &mut out);
-                    continue;
-                }
-                assert!(!e.status.overload_left_out.load(Ordering::Relaxed), "the session stops the transport for a stalled block");
-                assert_eq!(e.status.left_events.load(Ordering::Relaxed), 0, "nothing is left out yet");
-                if settle {
-                    e.engine.settle();
-                } else {
-                    until_unstalled(&mut e, &mut out);
-                }
-                assert!(!e.engine.parallel.stalled);
-                assert_eq!((e.status.left_events.load(Ordering::Relaxed), e.status.left_track.load(Ordering::Relaxed)), (1, 2), "now it's said");
-                assert!(e.engine.tracks.iter().all(|t| t.left_out == LEFT_OUT.contains(&t.id)), "settle: {settle}");
-                hold.store(false, Ordering::SeqCst);
-                break;
+                until_unstalled(&mut e, &mut out);
             }
+            assert!(!e.engine.parallel.stalled);
+            assert_eq!((e.status.left_events.load(Ordering::Relaxed), e.status.left_track.load(Ordering::Relaxed)), (1, ids.tar), "now it's said");
+            assert!(e.engine.tracks.iter().all(|t| t.left_out == (t.id == ids.tar)), "settle: {settle}");
+            ids.end(&hold);
         }
     }
 
@@ -1164,7 +1333,8 @@ mod tests {
         until_unstalled(&mut e, &mut out);
         let both = [2, 3, 4, 5, 6, 7];
         assert!(e.engine.tracks.iter().all(|t| t.left_out == both.contains(&t.id)));
-        assert_eq!(e.engine.parallel.workers.as_ref().unwrap().health().report().stuck, 2);
+        // Both workers in Tar, and on a busy enough machine any given up on for being kept off the CPU.
+        assert!(e.engine.parallel.workers.as_ref().unwrap().health().report().stuck >= 2);
         // Track 3's Tar returns first: 3 comes back, but 7 is still fed by 2.
         three.store(false, Ordering::SeqCst);
         let started = Instant::now();
@@ -1173,9 +1343,11 @@ mod tests {
             e.engine.process(&[], 0, &mut out, 2);
             std::thread::sleep(Duration::from_millis(1));
         }
-        assert_eq!(e.status.held(), [(2, 99)]);
+        assert_eq!(ids(&e.status.held()), [(2, 99)]);
+        let back = e.status.take_back();
+        assert_eq!(ids(&back), [(3, 97)]);
         let fresh = strip(3, TrackKind::Audio, params(None, &[(7, 0.6, true)]), vec![tone(30, 230.0, None, false)]);
-        e.tx.push(Cmd::Back { track: Some(fresh), still_out: LEFT_OUT.to_vec() }).ok().unwrap();
+        e.tx.push(Cmd::Back { token: back[0].token, track: Some(fresh), still_out: LEFT_OUT.to_vec() }).ok().unwrap();
         e.engine.process(&[], 0, &mut out, 2);
         assert!(e.engine.tracks.iter().all(|t| t.left_out == LEFT_OUT.contains(&t.id)));
         hold.store(false, Ordering::SeqCst);
@@ -1187,49 +1359,169 @@ mod tests {
         let mut e = tarred(4, &hold);
         let mut out = vec![0.0f32; BLOCK * 2];
         until_stuck(&mut e, &mut out);
+        // From here on a block running late on a busy machine mustn't be given up on or shed.
+        e.tx.push(Cmd::ParallelTest(ParallelTest { always: true, renders: false, patient: true })).ok().unwrap();
         while e.engine.shedding > 0 {
             e.engine.process(&[], 0, &mut out, 2);
         }
+        // The worker in Tar, and on a machine busy enough, one given up on for being kept off the
+        // CPU: each is out of the pool.
+        let started = Instant::now();
+        while e.engine.parallel.workers.as_ref().unwrap().health().report().starting > 0 {
+            assert!(started.elapsed().as_secs() < 60, "the workers never started");
+            std::thread::sleep(Duration::from_millis(1));
+        }
         let w = e.engine.parallel.workers.as_ref().unwrap();
-        assert_eq!((w.playing(), w.health().report().stuck), (3, 1));
-        // Removing the plug-in reaches the stand-in, and the rest plays on the three threads left,
-        // with Tar still holding the fourth.
+        let stuck = w.health().report().stuck;
+        assert!(stuck >= 1 && w.playing() == 4 - stuck as usize, "{stuck} given up on, {} playing", w.playing());
+        let playing = w.playing() as u32;
+        // Removing the plug-in reaches the stand-in, and the rest plays on the threads left, with
+        // Tar still holding the fourth.
         e.tx.push(Cmd::Insert { track: 2, slot: 1, insert: None }).ok().unwrap();
         let before = e.status.parallel_blocks.load(Ordering::Relaxed);
         let got = play(&mut e, 40);
         assert_eq!(e.status.parallel_blocks.load(Ordering::Relaxed) - before, 40, "every block on the pool");
-        assert_eq!(e.status.threads.load(Ordering::Relaxed), 3);
+        assert_eq!(e.status.threads.load(Ordering::Relaxed), playing);
         assert!(got.iter().any(|s| s.abs() > 0.01));
         assert!(e.engine.tracks.iter().all(|t| t.left_out == LEFT_OUT.contains(&t.id)));
         hold.store(false, Ordering::SeqCst);
     }
 
+    /// The garbage that has come back so far: strips of which tracks, and how many workers.
+    fn garbage(e: &mut Rig) -> (Vec<Id>, usize) {
+        let (mut tracks, mut workers) = (Vec::new(), 0);
+        while let Ok(g) = e._keep.0.pop() {
+            match g {
+                Garbage::Track(t) => tracks.push(t.id),
+                Garbage::Workers(_) => workers += 1,
+                _ => {}
+            }
+        }
+        (tracks, workers)
+    }
+
+    /// The thread count changes while a thread is left in a plug-in, twice: the workers holding the
+    /// strip are kept until it's back, and its track then comes back as ever, with what it feeds.
     #[test]
-    fn workers_with_a_thread_left_in_a_plug_in_can_be_replaced_and_dropped() {
+    fn workers_replaced_while_a_thread_is_left_in_a_plug_in_hand_its_strip_back() {
         let hold = Arc::new(AtomicBool::new(true));
         let mut e = tarred(2, &hold);
         let mut out = vec![0.0f32; BLOCK * 2];
         until_stuck(&mut e, &mut out);
+        assert_eq!(ids(&e.status.held()), [(2, 99)]);
         e.tx.push(Cmd::Workers(Some(Workers::new(PoolOptions { threads: 3, ..Default::default() })))).ok().unwrap();
         e.engine.process(&[], 0, &mut out, 2);
-        // The old ones are dropped off the audio thread, at once, though Tar still holds a thread.
-        let t = Instant::now();
-        let mut dropped = false;
-        while let Ok(g) = e._keep.0.pop() {
-            dropped |= matches!(g, Garbage::Workers(_));
-            drop(g);
-        }
-        assert!(dropped && t.elapsed() < Duration::from_secs(5));
-        let before = e.status.parallel_blocks.load(Ordering::Relaxed);
+        assert_eq!(garbage(&mut e).1, 0, "the old workers are kept, as a thread of theirs holds a strip");
+        // From here on a block running late on a busy machine mustn't be given up on or shed.
+        e.tx.push(Cmd::ParallelTest(ParallelTest { always: true, renders: false, patient: true })).ok().unwrap();
         let got = play(&mut e, 200);
-        assert!(e.status.parallel_blocks.load(Ordering::Relaxed) > before, "the new pool plays");
-        assert!(got.iter().any(|s| s.abs() > 0.01));
+        assert!(got.iter().any(|s| s.abs() > 0.01), "the new pool plays");
+        // Replaced again: those held nothing, and go at once.
+        e.tx.push(Cmd::Workers(Some(Workers::new(PoolOptions { threads: 4, ..Default::default() })))).ok().unwrap();
+        e.engine.process(&[], 0, &mut out, 2);
+        assert_eq!(garbage(&mut e).1, 1);
         // A graph the old thread may still hold is let go of without being freed.
         e.tx.push(Cmd::Graph(None)).ok().unwrap();
         e.engine.process(&[], 0, &mut out, 2);
-        // Tar returns into what the old pool left behind for it.
+        assert_eq!(ids(&e.status.held()), [(2, 99)], "still listed");
+        // Tar returns: the strip comes back, and then the workers that held it.
+        hold.store(false, Ordering::SeqCst);
+        let (mut tracks, mut workers) = (Vec::new(), 0);
+        let started = Instant::now();
+        while workers == 0 {
+            assert!(started.elapsed().as_secs() < 20, "the strip never came back");
+            e.engine.process(&[], 0, &mut out, 2);
+            let (t, w) = garbage(&mut e);
+            tracks.extend(t);
+            workers += w;
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        assert_eq!((tracks, workers), (vec![2], 1));
+        assert!(e.status.held().is_empty());
+        let back = e.status.take_back();
+        assert_eq!(ids(&back), [(2, 99)], "for the session to bring back");
+        let fresh = strip(2, TrackKind::Audio, params(Some(5), &[(6, 0.4, false)]), vec![tone(20, 170.0, None, false)]);
+        e.tx.push(Cmd::Back { token: back[0].token, track: Some(fresh), still_out: Vec::new() }).ok().unwrap();
+        e.engine.process(&[], 0, &mut out, 2);
+        assert!(e.engine.tracks.iter().all(|t| !t.left_out && !t.stand_in));
+        assert_eq!(e.status.left_out.load(Ordering::Relaxed), 0);
+        for t in &e.engine.tracks {
+            t.meter.take();
+        }
+        play(&mut e, 20);
+        for t in &e.engine.tracks {
+            let (l, r) = t.meter.take();
+            assert!(l.max(r) > 0.0, "track {} plays again", t.id);
+        }
+    }
+
+    /// The engine goes while workers it replaced still have a thread left in a plug-in: it doesn't
+    /// wait for the thread.
+    #[test]
+    fn an_engine_with_replaced_workers_still_holding_a_strip_drops_at_once() {
+        let hold = Arc::new(AtomicBool::new(true));
+        let mut e = tarred(2, &hold);
+        let mut out = vec![0.0f32; BLOCK * 2];
+        until_stuck(&mut e, &mut out);
+        e.tx.push(Cmd::Workers(None)).ok().unwrap();
+        e.engine.process(&[], 0, &mut out, 2);
+        let t = Instant::now();
+        drop(e);
+        assert!(t.elapsed() < Duration::from_secs(5));
+        // Tar returns into what was left behind for it.
         hold.store(false, Ordering::SeqCst);
         std::thread::sleep(Duration::from_millis(20));
-        play(&mut e, 4);
+    }
+
+    /// The track comes back from `Cmd::Back` still fed by a plug-in a thread is left in: it sits
+    /// out with the rest of those, until that one is back too. A `Cmd::Back` for a stand-in that
+    /// has gone (its track deleted, then brought back by undo with a strip of its own) leaves the
+    /// strip the track has now.
+    #[test]
+    fn a_track_brought_back_while_its_feeder_is_still_held_sits_out() {
+        let mut e = rig();
+        project(&mut e);
+        let mut out = vec![0.0f32; BLOCK * 2];
+        // As `leave_out` would leave them: 1 and 4 are stand-ins (4 waits for 1), and aux 6 and 7
+        // sit out with them.
+        for t in e.engine.tracks.iter_mut().filter(|t| [1, 4, 6, 7].contains(&t.id)) {
+            t.sit_out();
+        }
+        for (i, token) in [(0, 4), (3, 5)] {
+            e.engine.tracks[i].stand_in = true;
+            e.engine.tracks[i].held_token = token;
+        }
+        // Track 4's plug-in returns, but 1 is still held.
+        let four = strip(4, TrackKind::Audio, params(None, &[(6, 0.3, false)]), vec![tone(40, 310.0, None, false)]);
+        e.tx.push(Cmd::Back { token: 5, track: Some(four), still_out: vec![1, 4, 6, 7] }).ok().unwrap();
+        e.engine.process(&[], 0, &mut out, 2);
+        let four = e.engine.tracks.iter().find(|t| t.id == 4).unwrap();
+        assert!(four.left_out && !four.stand_in, "the new strip, sitting out");
+        assert_eq!(e.status.left_out.load(Ordering::Relaxed), 4);
+        // One for a stand-in that isn't there any more: the new strip goes, and 4's stays.
+        let other = strip(4, TrackKind::Audio, params(None, &[]), vec![]);
+        e.tx.push(Cmd::Back { token: 5, track: Some(other), still_out: vec![1, 4, 6, 7] }).ok().unwrap();
+        e.engine.process(&[], 0, &mut out, 2);
+        let four = e.engine.tracks.iter().find(|t| t.id == 4).unwrap();
+        assert_eq!(four.params.sends[0].map(|s| s.bus), Some(6), "the strip it had");
+    }
+
+    fn ids(v: &[HeldStrip]) -> Vec<(Id, Id)> {
+        v.iter().map(|h| (h.track, h.plugin)).collect()
+    }
+
+    /// Removing a stand-in (its track deleted) says so in its entry, for the session: whatever strip
+    /// the track gets later isn't the one held.
+    #[test]
+    fn a_stand_in_removed_with_its_track_is_noted_in_its_entry() {
+        let hold = Arc::new(AtomicBool::new(true));
+        let mut e = tarred(2, &hold);
+        let mut out = vec![0.0f32; BLOCK * 2];
+        until_stuck(&mut e, &mut out);
+        assert!(!e.status.held()[0].stand_in_gone);
+        e.tx.push(Cmd::RemoveTrack(2)).ok().unwrap();
+        e.engine.process(&[], 0, &mut out, 2);
+        assert!(e.status.held()[0].stand_in_gone);
+        hold.store(false, Ordering::SeqCst);
     }
 }

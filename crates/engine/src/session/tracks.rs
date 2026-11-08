@@ -101,6 +101,8 @@ impl Session {
         if all.is_empty() {
             return;
         }
+        // A plug-in a processing thread is left in keeps its editor, hidden, untold.
+        self.mark_unresponsive();
         let first = self.project.tracks.iter().position(|t| all.contains(&t.id)).unwrap_or(0);
         for id in &all {
             let Some(i) = self.project.tracks.iter().position(|t| t.id == *id) else { continue };
@@ -191,7 +193,8 @@ impl Session {
 
     /// The slot with a fresh instance id and the running plug-in's current settings.
     fn copy_slot(&mut self, slot: &PluginSlot) -> PluginSlot {
-        let state = self.controllers.get(&slot.uid).map(|c| encode_state(&c.save_state())).or_else(|| slot.state.clone());
+        // A plug-in a processing thread is left in (`session/left_out.rs`) gives its last saved state.
+        let state = self.controllers.get(&slot.uid).and_then(|c| c.save_state()).map(|s| encode_state(&s)).or_else(|| slot.state.clone());
         PluginSlot { uid: self.project.alloc_id(), state, ..slot.clone() }
     }
 

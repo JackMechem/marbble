@@ -136,16 +136,24 @@ impl Call {
 
     /// The caller's side: leaves the thread in the call it's in, if it has been in it for `least`.
     fn leave_behind(&self, least: Duration) -> bool {
+        self.look(least).is_some_and(|s| self.leave_at(s))
+    }
+
+    /// The call the thread is in, if it has been in it for `least`.
+    fn look(&self, least: Duration) -> Option<u64> {
         let s = self.state.load(Ordering::SeqCst);
         if phase(s) != IN_PLUGIN {
-            return false;
+            return None;
         }
         // Written before the state: this call's start, or a later call's, whose number then fails
-        // the exchange below.
+        // the exchange in `leave_at`.
         let since = self.since.load(Ordering::Relaxed);
-        if self.now().saturating_sub(since) < least.as_nanos() as u64 {
-            return false;
-        }
+        (self.now().saturating_sub(since) >= least.as_nanos() as u64).then_some(s)
+    }
+
+    /// Leaves the thread in the call `look` saw, unless it has come out of it since: if it has gone
+    /// into another, that one's number differs.
+    fn leave_at(&self, s: u64) -> bool {
         self.state.compare_exchange(s, with_phase(s, LEFT), Ordering::SeqCst, Ordering::SeqCst).is_ok()
     }
 
@@ -340,12 +348,28 @@ impl Shared {
         // A panic can leave the call open. Whichever way it went, a thread left in it has no task
         // any more: the caller counted it out, and the next block may be running.
         if !call.leave() {
+            if let Some(hook) = LEFT_HOOK.get().filter(|_| thread != 0) {
+                hook();
+            }
             call.state.store(GONE as u64, Ordering::SeqCst);
             return false;
         }
         if panicked {
             self.panics.fetch_add(1, Ordering::Relaxed);
         }
+        self.done(task, graph);
+        true
+    }
+
+    /// Counts a task out without running it, as if it had: what waits for it gets ready.
+    fn pass(&self, task: usize) {
+        // SAFETY: as in `run_task`.
+        let graph = unsafe { &*(*self.job.get()).expect("a task without a job").1 };
+        self.done(task, graph);
+    }
+
+    /// A task the thread owns is over: its dependants that now have all they wait for get ready.
+    fn done(&self, task: usize, graph: &TaskGraph) {
         let mut freed = 0usize;
         for &s in graph.succs(task) {
             let s = s as usize;
@@ -360,7 +384,6 @@ impl Shared {
         }
         // The last thing: after this the caller may start the next block.
         self.remaining.0.fetch_sub(1, Ordering::AcqRel);
-        true
     }
 }
 
@@ -381,6 +404,15 @@ static WORKER_HOOK: OnceLock<fn()> = OnceLock::new();
 
 pub fn set_worker_hook(f: fn()) {
     let _ = WORKER_HOOK.set(f);
+}
+
+/// Runs in a worker that comes back out of the plug-in it was left in, before it lets go of its
+/// task and ends, for the same checks: from there it is no longer one of the pool's (it frees what
+/// its thread was set up with as it ends).
+static LEFT_HOOK: OnceLock<fn()> = OnceLock::new();
+
+pub fn set_left_hook(f: fn()) {
+    let _ = LEFT_HOOK.set(f);
 }
 
 impl Pool {
@@ -610,15 +642,33 @@ impl Pool {
     /// `limit`, which can only be because a worker is stuck in a task or isn't getting the CPU. The
     /// block then stays open, and [`Pool::is_done`] says when it's over.
     pub fn finish(&self, limit: Option<Duration>) -> bool {
+        self.work(limit, true)
+    }
+
+    /// Like [`Pool::finish`], but the caller runs none of the tasks it takes: it counts them out as
+    /// if they had run (whatever waits for them still gets ready), while the workers run theirs.
+    /// For a block given up on, whose output is thrown away: on the way to its end the caller never
+    /// calls into a plug-in, which could be another instance of the one that stopped responding,
+    /// or be on a thread that isn't the audio callback (`Engine::settle`). True once the block is
+    /// over; `Duration::ZERO` takes what's ready and doesn't wait.
+    pub fn pass_over(&self, limit: Duration) -> bool {
+        self.work(Some(limit), false)
+    }
+
+    fn work(&self, limit: Option<Duration>, run: bool) -> bool {
         let sh = &*self.shared;
         let started = Instant::now();
         let mut idle_since = started;
         let mut spins = 0u32;
         loop {
             if let Some(task) = sh.claim(0) {
-                // The caller is never left in a plug-in.
-                sh.run_task(task, 0);
-                idle_since = Instant::now();
+                if run {
+                    // The caller is never left in a plug-in.
+                    sh.run_task(task, 0);
+                    idle_since = Instant::now();
+                } else {
+                    sh.pass(task);
+                }
                 continue;
             }
             if sh.remaining.0.load(Ordering::Acquire) == 0 {
@@ -1363,7 +1413,11 @@ mod tests {
             let mut h = Hang::new(64);
             h.hold = AtomicBool::new(false);
             h.caller_nap = Duration::from_micros(20);
-            // Either side of the limit.
+            // Either side of the limit. Which way each try goes depends on the scheduler, so the
+            // counts are checked whichever it is; the two outcomes are each made to happen in tests
+            // of their own (`a_plug_in_that_returns_before_the_caller_looks_is_not_left` and
+            // `a_worker_left_in_a_plug_in_costs_its_task_…`), and the exchange that decides between
+            // them in `the_caller_leaves_only_the_call_it_looked_at`.
             h.nap = Duration::from_micros(4000 + (k % 9) * 250);
             let job = Arc::new(h);
             let p = pool(2);
@@ -1399,6 +1453,110 @@ mod tests {
             run_blocks(&p, &g, &Arc::new(Log::new(g.clone())), 3);
         }
         eprintln!("{left} of 60 left");
+    }
+
+    /// The plug-in returns after the caller gave the block up but before it looks: the worker isn't
+    /// left, and its task and what waits for it run as ever.
+    #[test]
+    fn a_plug_in_that_returns_before_the_caller_looks_is_not_left() {
+        let g = pairs();
+        let job = Arc::new(Hang::new(64));
+        let p = pool(2);
+        started(&p);
+        hang(&p, &g, Arc::as_ptr(&job));
+        until("it never went into the plug-in", || job.in_call.load(Ordering::SeqCst) == 1);
+        job.hold.store(false, Ordering::SeqCst);
+        until("it never came out", || job.done.load(Ordering::SeqCst) == 1);
+        let on = job.on.load(Ordering::SeqCst);
+        assert_eq!(p.abandon(&g, Duration::ZERO, |_, _, _| panic!("left")), 0);
+        assert!(p.finish(Some(Duration::from_secs(30))), "the block ends with every task");
+        for t in 0..64 {
+            assert_eq!((p.dropped(t), job.ran[t].load(Ordering::SeqCst)), (false, 1), "task {t}");
+        }
+        assert!(!p.is_left(on) && !p.gone(on));
+        assert_eq!(job.back.load(Ordering::SeqCst), 0);
+        let r = p.health().report();
+        assert_eq!((r.playing, r.stuck), (2, 0), "and it plays on");
+        run_blocks(&p, &g, &Arc::new(Log::new(g.clone())), 20);
+    }
+
+    /// The caller leaves only the call it looked at: not one the thread made since, back to back.
+    #[test]
+    fn the_caller_leaves_only_the_call_it_looked_at() {
+        let c = Call::new(Instant::now());
+        assert_eq!(c.look(Duration::ZERO), None, "in no call");
+        // Out of the call before the caller acts: nothing to leave.
+        c.enter(1);
+        let s = c.look(Duration::ZERO).unwrap();
+        assert!(c.leave());
+        assert!(!c.leave_at(s));
+        // Out of it and into the next: that one is still the thread's.
+        c.enter(1);
+        let s = c.look(Duration::ZERO).unwrap();
+        assert!(c.leave());
+        c.enter(2);
+        assert!(!c.leave_at(s), "a later call isn't the one looked at");
+        assert!(c.leave() && !c.left());
+        // Not in it for long enough.
+        c.enter(3);
+        assert_eq!(c.look(Duration::from_secs(60)), None);
+        // Looked at and left while still in it: the thread's own leave fails.
+        let s = c.look(Duration::ZERO).unwrap();
+        assert!(c.leave_at(s));
+        assert!(c.left() && !c.leave());
+    }
+
+    /// The same with a thread making calls back to back while the caller looks: the call the caller
+    /// leaves the thread in is the one whose `leave` fails, and every call before it was the
+    /// thread's.
+    #[test]
+    fn a_thread_making_calls_back_to_back_is_left_in_the_call_the_caller_saw() {
+        for _ in 0..20 {
+            let c = Arc::new(Call::new(Instant::now()));
+            let worker = {
+                let c = c.clone();
+                thread::spawn(move || {
+                    for k in 1u64.. {
+                        c.enter(k);
+                        std::hint::black_box((0..k % 50).sum::<u64>());
+                        if !c.leave() {
+                            return k;
+                        }
+                    }
+                    unreachable!()
+                })
+            };
+            let at = loop {
+                if let Some(s) = c.look(Duration::ZERO) {
+                    if c.leave_at(s) {
+                        break s >> 8;
+                    }
+                }
+            };
+            assert_eq!(worker.join().unwrap(), at, "left in call {at}");
+        }
+    }
+
+    /// For a block given up on, the caller only counts tasks out: it runs none, and the block ends
+    /// once the workers are through.
+    #[test]
+    fn passing_over_a_block_runs_nothing_on_the_caller() {
+        let g = pairs();
+        let job = Arc::new(Hang::new(64));
+        let p = pool(2);
+        started(&p);
+        let ptr: *const Hang = Arc::as_ptr(&job);
+        unsafe { p.start(&g, ptr) };
+        if !p.pass_over(Duration::from_millis(50)) {
+            // The worker took a task first and is held in its plug-in: left, that's counted out too.
+            until("it never went into the plug-in", || job.in_call.load(Ordering::SeqCst) == 1);
+            assert_eq!(p.abandon(&g, Duration::ZERO, |_, _, _| {}), 1);
+            assert!(p.pass_over(Duration::ZERO));
+        }
+        assert!(p.is_done());
+        assert!(job.ran.iter().all(|r| r.load(Ordering::SeqCst) == 0), "no task ran");
+        job.hold.store(false, Ordering::SeqCst);
+        run_blocks(&p, &g, &Arc::new(Log::new(g.clone())), 20);
     }
 
     #[test]

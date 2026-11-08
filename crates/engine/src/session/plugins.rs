@@ -43,6 +43,7 @@ impl Session {
         let new_slot =
             PluginSlot { uid, plugin_id: plugin_id.to_string(), name, bypass: false, state: None, params, sidechain: None, sidechain_pre: false, preset: None };
         let ins = self.instantiate_slot(&new_slot)?;
+        self.mark_unresponsive();
         let old = self.slot_ref(track, slot).ok_or_else(|| anyhow!("no such slot"))?.replace(new_slot);
         if let Some(o) = old {
             self.controllers.remove(&o.uid);
@@ -62,6 +63,8 @@ impl Session {
         if self.is_frozen(track) {
             return;
         }
+        // A plug-in a processing thread is left in keeps its editor, hidden, untold.
+        self.mark_unresponsive();
         let old = self.slot_ref(track, slot).and_then(|s| s.take());
         if let Some(o) = old {
             if let Some(mut c) = self.controllers.remove(&o.uid) {

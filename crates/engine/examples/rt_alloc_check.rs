@@ -42,13 +42,13 @@ thread_local! {
 
 /// The workers are being watched: from before a block starts until after it ends.
 static WORKERS_COUNTED: AtomicBool = AtomicBool::new(false);
-/// Only the callback is counted: a worker left in a plug-in is ending, and a thread's end frees
-/// what std set it up with. It's demoted and plays nothing by then.
-static CALLBACK_ONLY: AtomicBool = AtomicBool::new(false);
 static WORKERS_SEEN: AtomicUsize = AtomicUsize::new(0);
+/// Workers that came back out of the plug-in they were left in, and stopped being counted then:
+/// such a thread ends, and a thread's end frees what std set it up with.
+static WORKERS_LET_GO: AtomicUsize = AtomicUsize::new(0);
 
 fn counted(what: &str) {
-    let worker = WORKERS_COUNTED.load(Ordering::Relaxed) && !CALLBACK_ONLY.load(Ordering::Relaxed) && WORKER.try_with(|c| c.get()).unwrap_or(false);
+    let worker = WORKERS_COUNTED.load(Ordering::Relaxed) && WORKER.try_with(|c| c.get()).unwrap_or(false);
     let on = worker || COUNTING.try_with(|c| c.get()).unwrap_or(false);
     if !on {
         return;
@@ -182,9 +182,10 @@ fn stuck_plugin(
     let why = refused.as_ref().err().map(|e| e.to_string()).unwrap_or_default();
     check(&format!("a render is refused meanwhile ({why:?})"), why.contains("sitting out"));
 
-    // Tar returns: the strip goes back, and the track comes back with a new one.
+    // Tar returns: the strip goes back, and the track comes back with a new one. The other workers
+    // are counted all along; the one left in Tar only until it's out.
     let mark = ALLOCS.load(Ordering::Relaxed);
-    CALLBACK_ONLY.store(true, Ordering::Relaxed);
+    let let_go = WORKERS_LET_GO.load(Ordering::Relaxed);
     hold.store(false, Ordering::SeqCst);
     let started = std::time::Instant::now();
     while !guard.status.held().is_empty() && started.elapsed().as_secs() < 10 {
@@ -192,12 +193,15 @@ fn stuck_plugin(
         std::thread::sleep(std::time::Duration::from_millis(1));
     }
     std::thread::sleep(std::time::Duration::from_millis(20));
-    CALLBACK_ONLY.store(false, Ordering::Relaxed);
     s.idle();
     run(guard, 20, true);
     let n = ALLOCS.load(Ordering::Relaxed) - mark;
     let out = guard.status.left_out.load(Ordering::Relaxed);
-    check(&format!("the strip taken back and the track brought back allocate nothing in the callback ({n}; {out} tracks left out)"), n == 0 && out == 0);
+    let let_go = WORKERS_LET_GO.load(Ordering::Relaxed) - let_go;
+    check(
+        &format!("the strip taken back and the track brought back allocate nothing in the callback or on the workers ({n}; {out} tracks left out; {let_go} worker let go)"),
+        n == 0 && out == 0 && let_go == 1,
+    );
     let warning = s.tick().warning.unwrap_or_default();
     check(&format!("and the session says so ({warning:?})"), warning.contains("responds again"));
 }
@@ -247,6 +251,10 @@ fn main() {
     daw_engine::dsp::pool::set_worker_hook(|| {
         WORKER.with(|c| c.set(true));
         WORKERS_SEEN.fetch_add(1, Ordering::Relaxed);
+    });
+    daw_engine::dsp::pool::set_left_hook(|| {
+        WORKER.with(|c| c.set(false));
+        WORKERS_LET_GO.fetch_add(1, Ordering::Relaxed);
     });
     println!("-- the callback alone");
     scenario(&scratch.join("serial"), 1);

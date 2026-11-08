@@ -3558,7 +3558,10 @@ afresh, and a message says so. Otherwise **Reset Audio Engine** in Settings › 
 plug-ins again and brings the tracks back, along with the thread. Meanwhile bounces, exports,
 Freeze and Bounce in Place are refused, as those tracks would be missing from them, and saving
 keeps the settings the stuck plug-in was last saved with rather than asking it, as it may never
-answer. A plug-in that stops responding on the audio thread itself can't be left like this.
+answer. For the same reason Marbble leaves the plug-in alone in the meantime: its window stops
+updating and won't open, its controls and automation don't reach it, and closing its window (or
+deleting its track) only hides the window until the plug-in responds or is unloaded. A plug-in
+that stops responding on the audio thread itself can't be left like this.
 
 ### "… put out invalid audio" and a plug-in goes quiet
 

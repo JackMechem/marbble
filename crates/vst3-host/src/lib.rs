@@ -27,5 +27,6 @@ mod x11_scale;
 pub use host::Gesture;
 pub use module::PluginDescriptor;
 pub use plugin::{
-    instantiate, instantiate_keyed, BusLayout, KeyInput, MidiEvent, OutputBus, ParamInfo, PluginController, PluginProcessor, PluginState, TransportInfo,
+    close_stranded_editors, instances_made, instantiate, instantiate_keyed, BusLayout, KeyInput, MidiEvent, OutputBus, ParamInfo, PluginController,
+    PluginProcessor, PluginState, TransportInfo,
 };

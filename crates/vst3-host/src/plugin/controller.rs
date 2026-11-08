@@ -6,7 +6,56 @@
 
 use super::*;
 
+use std::cell::RefCell;
+
+thread_local! {
+    /// Editors closed while a thread was stuck in their plug-in (`set_unresponsive`), hidden but not
+    /// told, each with the plug-in's COM objects: closed for real once both halves are gone
+    /// (`close_stranded_editors`).
+    static STRANDED: RefCell<Vec<(crate::editor::Editor, Arc<Shared>)>> = const { RefCell::new(Vec::new()) };
+}
+
+/// Closes the editors of plug-ins that stopped responding (`PluginController::set_unresponsive`)
+/// whose instance is gone since: its processor came back from the thread stuck in it and was
+/// dropped, and its controller was too. Call periodically on the thread that closed them (the UI
+/// thread).
+pub fn close_stranded_editors() {
+    let done: Vec<_> = STRANDED.with(|s| {
+        let mut s = s.borrow_mut();
+        let (done, keep) = std::mem::take(&mut *s).into_iter().partition(|(_, shared)| Arc::strong_count(shared) == 1);
+        *s = keep;
+        done
+    });
+    for (e, shared) in done {
+        e.close(shared);
+    }
+}
+
 impl PluginController {
+    /// Says whether a thread is stuck in the processor's `process` (the host left it there). While
+    /// it is, nothing here calls into the plug-in, which may be holding a lock its controller and
+    /// editor need: `idle` only handles the editor window's own events, parameter values read as
+    /// unknown and edits go nowhere, the editor doesn't open, closing it only hides it until the
+    /// instance is gone (`close_stranded_editors`), `latency` is the last one reported, `save_state`
+    /// gives None, and output buses and the side-chain input don't switch.
+    pub fn set_unresponsive(&mut self, on: bool) {
+        self.unresponsive = on;
+        if let Some(e) = &self.editor {
+            e.set_quiet(on);
+        }
+    }
+
+    /// The instance's number, from 1 up in the order instances were made in this process: one made
+    /// after `instances_made` gave `n` has a higher number than `n`.
+    pub fn instance(&self) -> u64 {
+        self.shared.instance
+    }
+
+    /// Whether the plug-in may be called (see `set_unresponsive`).
+    pub fn responsive(&self) -> bool {
+        !self.unresponsive
+    }
+
     pub fn has_editor(&self) -> bool {
         self.shared.controller.is_some()
     }
@@ -17,6 +66,14 @@ impl PluginController {
 
     /// Call periodically on the UI thread.
     pub fn idle(&mut self) {
+        if self.unresponsive {
+            // The window's own events, which reach the plug-in no more (`set_quiet`), so that a
+            // close is seen.
+            if self.editor.as_mut().is_some_and(|e| e.pump()) {
+                self.close_editor();
+            }
+            return;
+        }
         if let Some(c) = &self.shared.controller {
             while let Ok((id, v)) = self.out_rx.pop() {
                 unsafe {
@@ -43,10 +100,15 @@ impl PluginController {
     /// The processing latency the plug-in reports, in samples (`getLatencySamples`). Its
     /// output lags its input by this much; the host compensates the other paths.
     pub fn latency(&self) -> u32 {
-        match &self.shared.processor {
+        if self.unresponsive {
+            return self.last_latency.load(Ordering::Relaxed);
+        }
+        let l = match &self.shared.processor {
             Some(p) => unsafe { p.getLatencySamples() },
             None => 0,
-        }
+        };
+        self.last_latency.store(l, Ordering::Relaxed);
+        l
     }
 
     /// Whether the plug-in reported a new latency since the last call (checked in `idle`).
@@ -75,6 +137,9 @@ impl PluginController {
     /// the instance not yet in use. Errors, with the side-chain gone, if the plug-in refuses.
     pub fn set_key_active(&mut self, on: bool) -> Result<(), String> {
         let Some(bus) = self.key_bus.filter(|_| on != self.key_active) else { return Ok(()) };
+        if self.unresponsive {
+            return Err(format!("{} isn't responding", self.desc.name));
+        }
         let refused = unsafe {
             self.shared.component.setActive(0);
             let r = self.shared.component.activateBus(MediaTypes_::kAudio as i32, BusDirections_::kInput as i32, bus as i32, on as TBool);
@@ -91,11 +156,15 @@ impl PluginController {
         Ok(())
     }
 
-    /// The plug-in's audio buses as it reports them now.
+    /// The plug-in's audio buses as it reports them now (none while it mustn't be called, see
+    /// `set_unresponsive`).
     pub fn audio_buses(&self) -> Vec<BusLayout> {
         // C enums are i32 in the MSVC bindings and u32 elsewhere; `as _` fits both.
         let default_active: u32 = BusInfo_::BusFlags_::kDefaultActive as _;
         let mut out = Vec::new();
+        if self.unresponsive {
+            return out;
+        }
         for dir in [BusDirections_::kInput as i32, BusDirections_::kOutput as i32] {
             let count = unsafe { self.shared.component.getBusCount(MediaTypes_::kAudio as i32, dir) };
             for i in 0..count {
@@ -125,7 +194,7 @@ impl PluginController {
     /// left out).
     pub fn parameters(&self) -> Vec<ParamInfo> {
         use ParameterInfo_::ParameterFlags_::*;
-        let Some(c) = &self.shared.controller else { return Vec::new() };
+        let Some(c) = self.shared.controller.as_ref().filter(|_| !self.unresponsive) else { return Vec::new() };
         let mut out = Vec::new();
         unsafe {
             for i in 0..c.getParameterCount() {
@@ -152,7 +221,7 @@ impl PluginController {
     /// what the editor can send, unlike `parameters`.
     pub fn param_names(&self) -> Vec<(u32, String, bool)> {
         use ParameterInfo_::ParameterFlags_::*;
-        let Some(c) = &self.shared.controller else { return Vec::new() };
+        let Some(c) = self.shared.controller.as_ref().filter(|_| !self.unresponsive) else { return Vec::new() };
         let mut out = Vec::new();
         unsafe {
             for i in 0..c.getParameterCount() {
@@ -167,12 +236,15 @@ impl PluginController {
 
     /// The controller's current normalized value of a parameter.
     pub fn param_value(&self, id: u32) -> Option<f64> {
-        self.shared.controller.as_ref().map(|c| unsafe { c.getParamNormalized(id) })
+        self.shared.controller.as_ref().filter(|_| !self.unresponsive).map(|c| unsafe { c.getParamNormalized(id) })
     }
 
     /// Moves the controller (and so the editor) to a value the host is playing, such as
     /// automation. Doesn't reach the processor: queue that with `PluginProcessor::queue_param`.
     pub fn set_param_value(&self, id: u32, value: f64) {
+        if self.unresponsive {
+            return;
+        }
         self.host_changes.fetch_add(1, Ordering::Relaxed);
         self.host_set.lock().insert(id, (value.clamp(0.0, 1.0), Instant::now()));
         if let Some(c) = &self.shared.controller {
@@ -185,6 +257,9 @@ impl PluginController {
     /// Sets a parameter as a control surface would: moves the controller (and so the editor)
     /// and queues the value for the processor, like an edit made in the plug-in's own editor.
     pub fn edit_param(&self, id: u32, value: f64) {
+        if self.unresponsive {
+            return;
+        }
         let v = value.clamp(0.0, 1.0);
         self.set_param_value(id, v);
         let _ = self.shared._handler.edits.lock().push((id, v));
@@ -223,7 +298,7 @@ impl PluginController {
     /// controller first as an editor does: for headless checks, where no editor can open.
     #[doc(hidden)]
     pub fn drive_handler(&self, g: Gesture) {
-        let Some(h) = self.shared._handler.to_com_ptr::<IComponentHandler>() else { return };
+        let Some(h) = self.shared._handler.to_com_ptr::<IComponentHandler>().filter(|_| !self.unresponsive) else { return };
         unsafe {
             match g {
                 Gesture::Begin(id) => h.beginEdit(id),
@@ -258,6 +333,9 @@ impl PluginController {
     }
 
     pub fn open_editor(&mut self, title: &str) -> Result<(), String> {
+        if self.unresponsive {
+            return Err(format!("{} isn't responding", self.desc.name));
+        }
         if self.editor.is_some() {
             if let Some(e) = &self.editor {
                 e.raise();
@@ -274,12 +352,22 @@ impl PluginController {
     }
 
     pub fn close_editor(&mut self) {
-        if let Some(e) = self.editor.take() {
-            e.close(self.shared.clone());
+        let Some(e) = self.editor.take() else { return };
+        if self.unresponsive {
+            // Telling the view it's removed would wait on the plug-in.
+            e.hide();
+            STRANDED.with(|s| s.borrow_mut().push((e, self.shared.clone())));
+            return;
         }
+        e.close(self.shared.clone());
     }
 
-    pub fn save_state(&self) -> PluginState {
+    /// The plug-in's state (`getState`), or None while it mustn't be called (`set_unresponsive`):
+    /// keep the one saved last then.
+    pub fn save_state(&self) -> Option<PluginState> {
+        if self.unresponsive {
+            return None;
+        }
         let mut st = PluginState::default();
         unsafe {
             let s = MemoryStream::new(Vec::new());
@@ -293,10 +381,14 @@ impl PluginController {
                 }
             }
         }
-        st
+        Some(st)
     }
 
+    /// Does nothing while the plug-in mustn't be called (`set_unresponsive`).
     pub fn load_state(&self, st: &PluginState) {
+        if self.unresponsive {
+            return;
+        }
         self.host_changes.fetch_add(1, Ordering::Relaxed);
         unsafe {
             if !st.component.is_empty() {

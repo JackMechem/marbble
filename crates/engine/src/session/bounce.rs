@@ -110,10 +110,15 @@ impl Session {
         }
         self.sync_parallel();
         self.settle_latency();
+        let engine = self.engine.clone();
+        let mut guard = engine.lock();
+        // A block given up on may still be open, and leave tracks out as it ends: only then is it
+        // known whether any would be missing, and with the lock held none can be left out after.
+        guard.settle();
         if let Some(why) = self.left_out_refusal() {
             return Err(anyhow!(why));
         }
-        let audio = self.engine.lock().render(from, to, tail, isolate, progress);
+        let audio = guard.render(from, to, tail, isolate, progress);
         Ok(audio)
     }
 
@@ -128,10 +133,12 @@ impl Session {
         }
         self.settle_latency();
         let engine = self.engine.clone();
+        let mut guard = engine.lock();
+        // As in `render`.
+        guard.settle();
         if let Some(why) = self.left_out_refusal() {
             return Err(anyhow!(why));
         }
-        let mut guard = engine.lock();
         let audio = guard.render_with_edit(from, to, at, &mut || edit(self));
         Ok(audio)
     }

@@ -127,6 +127,8 @@ struct Window {
     size: Mutex<(u32, u32)>,
     /// The view said it can be resized by the user; otherwise the WM hints pin its size.
     resizable: bool,
+    /// The plug-in mustn't be called for now (`Editor::set_quiet`).
+    quiet: AtomicBool,
 }
 
 impl Window {
@@ -213,7 +215,15 @@ impl IRunLoopTrait for PlugFrame {
     unsafe fn registerTimer(&self, handler: *mut ITimerHandler, ms: TimerInterval) -> tresult {
         let (Some(l), Some(h)) = (event_loop(), ComRef::from_raw(handler)) else { return kResultFalse };
         let h: ComPtr<ITimerHandler> = h.to_com_ptr();
-        let id = l.add_timer(ms.max(1), Box::new(move || gl_isolated(|| h.onTimer())));
+        let win = self.window.clone();
+        let id = l.add_timer(
+            ms.max(1),
+            Box::new(move || {
+                if !win.quiet.load(Ordering::Relaxed) {
+                    gl_isolated(|| h.onTimer());
+                }
+            }),
+        );
         self.sources.lock().entry(handler as usize).or_default().push(id);
         kResultOk
     }
@@ -359,7 +369,7 @@ impl Editor {
             let _ = conn.change_property8(PropMode::REPLACE, id, AtomEnum::WM_NAME, AtomEnum::STRING, title.as_bytes());
             let _ = conn.change_property8(PropMode::REPLACE, id, net_wm_name, utf8, title.as_bytes());
             let _ = conn.change_property8(PropMode::REPLACE, id, AtomEnum::WM_CLASS, AtomEnum::STRING, b"marbble-plugin\0Marbble\0");
-            let window = Arc::new(Window { conn, id, size: Mutex::new((w as u32, h as u32)), resizable });
+            let window = Arc::new(Window { conn, id, size: Mutex::new((w as u32, h as u32)), resizable, quiet: AtomicBool::new(false) });
             if resizable {
                 // WM_NORMAL_HINTS: just PPosition.
                 let hints: [u32; 18] = [4, x as u32, y as u32, w as u32, h as u32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -392,7 +402,8 @@ impl Editor {
                 l.add_fd(
                     fd,
                     Box::new(move || {
-                        drain_events(&win, wm_delete, &closed, sized.as_ref());
+                        let quiet = win.quiet.load(Ordering::Relaxed);
+                        drain_events(&win, wm_delete, &closed, sized.as_ref().filter(|_| !quiet));
                     }),
                 )
             });
@@ -403,9 +414,21 @@ impl Editor {
 
     /// Processes pending window events. Returns true once the user closed the window.
     pub fn pump(&mut self) -> bool {
-        let view = if self.resizable { Some(&self.view) } else { None };
+        let view = if self.resizable && !self.window.quiet.load(Ordering::Relaxed) { Some(&self.view) } else { None };
         drain_events(&self.window, self.wm_delete, &self.closed, view);
         self.closed.load(Ordering::Relaxed)
+    }
+
+    /// While `on`, nothing of the host's calls into the plug-in: a resize isn't passed on, and its
+    /// timers don't fire. Its own event handlers still do, as their sockets must be read.
+    pub fn set_quiet(&self, on: bool) {
+        self.window.quiet.store(on, Ordering::Relaxed);
+    }
+
+    /// Takes the window off the screen, without a word to the plug-in.
+    pub fn hide(&self) {
+        let _ = self.window.conn.unmap_window(self.window.id);
+        let _ = self.window.conn.flush();
     }
 
     pub fn raise(&self) {

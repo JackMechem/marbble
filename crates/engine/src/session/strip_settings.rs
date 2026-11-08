@@ -17,8 +17,9 @@ impl Session {
     pub fn copy_strip(&self, track: Id) -> Result<StripSetting> {
         let capture = |s: &PluginSlot| {
             let mut c = s.clone();
-            if let Some(ctrl) = self.controllers.get(&s.uid) {
-                c.state = Some(encode_state(&ctrl.save_state()));
+            // A plug-in a processing thread is left in (`session/left_out.rs`) keeps its last saved state.
+            if let Some(st) = self.controllers.get(&s.uid).and_then(|c| c.save_state()) {
+                c.state = Some(encode_state(&st));
             }
             c
         };
@@ -139,6 +140,8 @@ impl Session {
         // A running VST3's state lives in its controller; the document keeps it only while the
         // plug-in is unloaded.
         let new_slot = new_slot.map(|s| PluginSlot { state: if self.controllers.contains_key(&s.uid) { None } else { s.state.clone() }, ..s });
+        // A plug-in a processing thread is left in keeps its editor, hidden, untold.
+        self.mark_unresponsive();
         let old = std::mem::replace(self.slot_ref(track, slot).ok_or_else(|| anyhow!("no such slot"))?, new_slot);
         if let Some(o) = old {
             if let Some(mut c) = self.controllers.remove(&o.uid) {

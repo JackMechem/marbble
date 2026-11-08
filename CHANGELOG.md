@@ -39,6 +39,15 @@ All notable changes to Marbble are recorded here. The format follows
 - **Bounces with an automated Linear Phase EQ come out the same every time.** Where a bounce
   followed the EQ's automation could depend on how long the EQ had played before it, so a bounce
   right after adding the EQ, undoing or opening a large project could differ from the next one.
+- **A plug-in that stops responding on a processing thread is handled more safely.** Changing
+  Processing Threads while its track sits out no longer keeps the track out for good once the
+  plug-in responds again; a bounce or export started just as a plug-in stops
+  responding is refused instead of rendering without its track; a track that comes back while a
+  track feeding it is still out waits for that one; and while the plug-in isn't responding,
+  Marbble no longer calls into it from its window, automation, controllers, parameter edits or
+  undo, so the app can't freeze on it (undoing its edits then applies them when it's loaded
+  again). Closing its window, or deleting its track, hides the window until the plug-in responds
+  again, and a deleted track brought back by undo meanwhile plays and edits normally.
 
 ## [0.1.0-alpha.10] - 2026-11-07
 

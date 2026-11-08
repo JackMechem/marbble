@@ -265,6 +265,10 @@ pub struct Session {
     overloads_seen: u32,
     /// Times tracks were left out already reported (see `session/left_out.rs`).
     left_events_seen: u32,
+    /// Some plug-in controller is marked as not to be called (see `session/left_out.rs`).
+    marked_unresponsive: bool,
+    /// Strips left in plug-ins that `EngineStatus::held` couldn't list, already logged.
+    held_unlisted_seen: u32,
     /// What each loaded built-in effect shares with the session, by instance id (see
     /// `session/builtin.rs`), and the instances whose panels are open.
     fx: HashMap<Id, Arc<FxShared>>,
@@ -428,6 +432,8 @@ impl Session {
             bad_audio_seen: 0,
             overloads_seen: 0,
             left_events_seen: 0,
+            marked_unresponsive: false,
+            held_unlisted_seen: 0,
             bad_audio_at: Instant::now() - Duration::from_secs(60),
             fx: HashMap::new(),
             fx_watch: Default::default(),

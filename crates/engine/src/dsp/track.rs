@@ -255,8 +255,10 @@ pub struct TrackDsp {
     /// for it, or it's fed by one (see `Parallel::leave_out`). Until the plug-in returns
     /// (`Cmd::Back`) or the strips are rebuilt.
     pub(super) left_out: bool,
-    /// It's such a stand-in, which only ever sits out.
+    /// It's such a stand-in, which only ever sits out, and the token `EngineStatus::hold` gave the
+    /// strip it stands in for.
     pub(super) stand_in: bool,
+    pub(super) held_token: u64,
 }
 
 impl TrackDsp {
@@ -309,6 +311,7 @@ impl TrackDsp {
             fold_now: Default::default(),
             left_out: false,
             stand_in: false,
+            held_token: 0,
         }
     }
 

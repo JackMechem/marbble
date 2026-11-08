@@ -179,6 +179,7 @@ pub fn instantiate_keyed(desc: &PluginDescriptor, sample_rate: f64, max_block: u
         }
 
         let shared = Arc::new(Shared {
+            instance: INSTANCES.fetch_add(1, Ordering::AcqRel) + 1,
             component,
             processor: Some(processor.clone()),
             controller,
@@ -229,6 +230,8 @@ pub fn instantiate_keyed(desc: &PluginDescriptor, sample_rate: f64, max_block: u
             params_restarted: false,
             host_changes: Default::default(),
             host_set: Default::default(),
+            unresponsive: false,
+            last_latency: Default::default(),
         };
         Ok((proc_half, ctrl_half))
     }

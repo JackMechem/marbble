@@ -252,10 +252,11 @@ impl Session {
         if self.vst_watches.contains_key(&uid) {
             return;
         }
+        // A plug-in a processing thread is left in isn't asked (`session/left_out.rs`).
+        let start = Instant::now();
+        let Some(known) = c.save_state().map(Arc::new) else { return };
         c.take_gestures();
         c.take_params_restarted();
-        let start = Instant::now();
-        let known = Arc::new(c.save_state());
         let read_took = start.elapsed();
         let mut tracker = Tracker::default();
         let mut names = HashMap::new();
@@ -342,17 +343,17 @@ impl Session {
         let now = Instant::now();
         let mut stepped = false;
         let uids: Vec<Id> = self.vst_watches.keys().copied().collect();
-        let held = self.held();
         for uid in uids {
-            // A plug-in a processing thread is left in may never answer (`session/left_out.rs`).
-            if self.plugin_left_in(&held, uid) {
-                continue;
-            }
             let Some(w) = self.vst_watches.get_mut(&uid) else { continue };
             let Some(c) = self.controllers.get_mut(&uid) else {
                 self.vst_watches.remove(&uid);
                 continue;
             };
+            // A plug-in a processing thread is left in may never answer (`session/left_out.rs`):
+            // its watch waits, an edit pending in it too.
+            if !c.responsive() {
+                continue;
+            }
             if !w.headless && !c.editor_open() {
                 stepped |= self.finish_vst_edit(uid);
                 self.vst_watches.remove(&uid);
@@ -375,7 +376,8 @@ impl Session {
                 && now.duration_since(w.read_at) >= REFRESH_MIN.max(w.read_took * REFRESH_SHARE)
             {
                 let start = Instant::now();
-                w.known = Arc::new(c.save_state());
+                let Some(st) = c.save_state() else { continue };
+                w.known = Arc::new(st);
                 w.reads += 1;
                 w.read_took = start.elapsed();
                 w.read_at = now;
@@ -387,12 +389,13 @@ impl Session {
 
     /// Makes the step for a plug-in's pending edit, if it changed the plug-in. Returns whether
     /// it did.
+    /// A plug-in a processing thread is left in keeps its pending edit, for when it's back.
     fn finish_vst_edit(&mut self, uid: Id) -> bool {
         let Some(w) = self.vst_watches.get_mut(&uid) else { return false };
+        let Some(c) = self.controllers.get(&uid).filter(|c| c.responsive()) else { return false };
         let Some(p) = w.tracker.take() else { return false };
-        let Some(c) = self.controllers.get(&uid) else { return false };
         let start = Instant::now();
-        let state = c.save_state();
+        let Some(state) = c.save_state() else { return false };
         w.reads += 1;
         let now = Instant::now();
         w.read_took = now.duration_since(start);
@@ -429,7 +432,11 @@ impl Session {
     /// Makes the steps for edits still pending, ahead of an undo, a redo or another edit: their
     /// order in the history must be the order they happened in.
     pub(super) fn flush_vst_edits(&mut self) {
-        let uids: Vec<Id> = self.vst_watches.iter().filter(|(_, w)| w.tracker.pending.is_some()).map(|(&uid, _)| uid).collect();
+        self.mark_unresponsive();
+        // One a processing thread is left in keeps its edit pending (`finish_vst_edit`), and its
+        // edits may never leave the ring.
+        let unresponsive = |uid: &Id| self.controllers.get(uid).is_some_and(|c| !c.responsive());
+        let uids: Vec<Id> = self.vst_watches.iter().filter(|(uid, w)| w.tracker.pending.is_some() && !unresponsive(uid)).map(|(&uid, _)| uid).collect();
         for uid in uids {
             // Edits still in the ring would land on top of what an undo puts back. Only ever
             // waits when a command comes in the moment after the mouse button came up.
@@ -444,10 +451,11 @@ impl Session {
         }
     }
 
-    /// A plug-in's state as of now, for the step that comes back to it.
+    /// A plug-in's state as of now, for the step that comes back to it: the one the project has,
+    /// for a plug-in that isn't loaded or that a processing thread is left in.
     pub(super) fn vst_state_now(&self, uid: Id) -> Arc<PluginState> {
-        if let Some(c) = self.controllers.get(&uid) {
-            return Arc::new(c.save_state());
+        if let Some(st) = self.controllers.get(&uid).and_then(|c| c.save_state()) {
+            return Arc::new(st);
         }
         let slot = self.slots_of_project().find(|s| s.uid == uid);
         Arc::new(slot.and_then(|s| s.state.as_deref()).map(decode_state).unwrap_or_default())
@@ -459,10 +467,11 @@ impl Session {
     }
 
     /// Puts a plug-in back: processor, controller and so an open editor. It makes no step,
-    /// whatever the plug-in answers. A plug-in that isn't loaded (it's frozen or missing) gets
-    /// the state when it next loads.
+    /// whatever the plug-in answers. A plug-in that isn't loaded (it's frozen or missing), or that
+    /// a processing thread is left in (`session/left_out.rs`), gets the state when it next loads:
+    /// a new instance when its track comes back.
     pub(super) fn restore_vst_state(&mut self, uid: Id, st: Arc<PluginState>) {
-        let Some(c) = self.controllers.get_mut(&uid) else {
+        let Some(c) = self.controllers.get_mut(&uid).filter(|c| c.responsive()) else {
             let encoded = encode_state(&st);
             let tracks = self.project.tracks.iter_mut().flat_map(|t| t.instrument.iter_mut().chain(t.inserts.iter_mut().flatten()));
             if let Some(slot) = tracks.chain(self.project.master.inserts.iter_mut().flatten()).find(|s| s.uid == uid) {

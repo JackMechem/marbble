@@ -242,6 +242,18 @@ impl Editor {
         MainThreadMarker::new().is_some() && self.delegate.ivars().closed.get()
     }
 
+    /// Resizes reach the plug-in as they happen, from the window's delegate: not held back yet.
+    pub fn set_quiet(&self, _on: bool) {}
+
+    /// Takes the window off the screen, without a word to the plug-in.
+    pub fn hide(&self) {
+        let w = MainOnly(self.window.clone());
+        on_main(move || {
+            let w = w;
+            w.0.orderOut(None);
+        });
+    }
+
     pub fn raise(&self) {
         let w = MainOnly(self.window.clone());
         on_main(move || {

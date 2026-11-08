@@ -242,6 +242,10 @@ impl Engine {
             Cmd::RemoveTrack(id) => {
                 if let Some(i) = self.tracks.iter().position(|t| t.id == id) {
                     let t = self.tracks.remove(i);
+                    if t.stand_in {
+                        // Whatever strip the track gets later isn't the one a thread holds.
+                        self.status.stand_in_gone(t.held_token);
+                    }
                     self.discard(Garbage::Track(t));
                 }
                 self.resolve_routes();
@@ -489,9 +493,15 @@ impl Engine {
                 }
             }
             Cmd::ParallelTest(t) => self.parallel.test = t,
-            Cmd::Back { track, still_out } => {
-                if let Some(new) = track {
-                    match self.tracks.iter().position(|t| t.id == new.id) {
+            Cmd::Back { token, track, still_out } => {
+                if let Some(mut new) = track {
+                    // Fed by a plug-in still not responding, it sits out with the rest of those.
+                    if still_out.binary_search(&new.id).is_ok() {
+                        new.sit_out();
+                    }
+                    // Only in place of the stand-in for that strip: a track deleted and brought
+                    // back meanwhile plays a strip of its own, which stays.
+                    match self.tracks.iter().position(|t| t.id == new.id && t.stand_in && t.held_token == token) {
                         Some(i) => {
                             let old = std::mem::replace(&mut self.tracks[i], new);
                             self.discard(Garbage::Track(old));
