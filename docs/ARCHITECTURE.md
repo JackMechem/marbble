@@ -1060,6 +1060,7 @@ Interface-only state lives in the webview's `localStorage`:
 | `marbble.pianoRoll` | `components/pianoRollEditor/prefs.ts` | Piano Roll view and Time Quantize settings. |
 | `marbble.eventList` | `components/EventList.tsx` | Event List filters, the type + adds, Catch and MIDI Out. |
 | `marbble.stripSilence` | `components/StripSilence.tsx` | The Strip Silence sheet's last settings. |
+| `marbble.drumReplace` | `components/DrumReplace.tsx` | The Drum Replacement/Doubling sheet's last settings. |
 | `marbble.showOverview` | `components/Overview.tsx` | Whether the overview strip replaces the scroll bar. |
 | `marbble.fxPanelSizes` | `fxDockState.ts` | The last size of each effect type's floating panel. |
 | `marbble.detachedPanels` | `detach.ts` | Which panels were detached at quit, and each kind's window geometry. |
@@ -1632,7 +1633,7 @@ Audio Track Editor and meters are canvas drawings. The common pattern:
 - Dialogs are chosen by `state.dialog` (`new-tracks`, `settings`, `chooser`, `bounce`,
   `bounce-in-place`, `project-settings`, `recovery`, `alternatives`), plus separately flagged
   sheets (group settings, Marker List, Channel EQ, Musical Typing, Controller Assignments,
-  Strip Silence).
+  Strip Silence, Drum Replacement/Doubling).
 - `askName` (`components/NameSheet.tsx`) asks for a name or a value in a small sheet above
   everything else, the Project Chooser included, and resolves with it or null. Never use
   `window.prompt`, `confirm` or `alert`: macOS's web view doesn't implement them (prompt
@@ -2381,6 +2382,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `session/multi_out.rs` | Multi-output instruments: the instruments' outputs for the UI, `add_output_aux`, `sync_output_buses` (called from `update_pdc`), what Freeze and Bounce in Place refuse. The design notes are at its top. |
 | `session/crossfades.rs` | Fade shapes and types from the inspector, the Crossfade command, the X-Fade drag mode (`auto_crossfade`), Crossfade Time (`crossfade_frames`). |
 | `session/drag_modes.rs` | Region edits as the Tracks area makes them: `drag_move_regions`, `drag_nudge_regions`, `drag_resize_region`, `drag_delete_regions`, `drag_paste_regions`, in the drag mode and with Move Automation with Regions. |
+| `session/drum_replace.rs` | Drum Replacement/Doubling: an audio track's regions as parts of clips (loop passes, a take folder's comp segments) for `drum_replace.rs`, and the sampler track it makes, with its made sample written to `Samples/Drum Replacement`. |
 | `session/auto_lanes.rs` | Stereo Out's lanes (`strip_lanes`), folder stacks' volume and mute automation, the extra lanes shown under a track (`set_auto_lanes`). |
 | `session/recovery.rs` | Crash safety: atomic project writes (`write_atomic`), recording journals, recovering interrupted takes, the fallback from a damaged project.json. |
 | `session/bounce.rs` | Bounce, Export All (or Selected) Tracks, Export Region, Bounce in Place (render and place), normalize. |
@@ -2422,6 +2424,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `automation.rs` | `AutoTarget`, `LaneDsp`, `value_at`, curves (`shape`), `splice`, `thin`, plug-in id remapping and `take_plugin_lanes`. |
 | `auto_move.rs` | Move Automation with Regions on one lane: carrying a region's stretch of automation to where it lands. Pure. |
 | `drag_modes.rs` | The No Overlap, Shuffle L and Shuffle R drag modes on one track's lane of spans. Pure. |
+| `drum_replace.rs` | Drum Replacement/Doubling: the hits in parts of clips (`transients::hits` with a pre-roll, merged within a 30 ms hold), the threshold, notes and velocities (`127 · √(level / loudest)`, the inverse of the sampler's squared velocity), and the drum samples it synthesises. Pure. |
 | `fades.rs` | Fade curves, Speed Up and Slow Down tables, the crossfade types, where crossfades go (`crossfades`, `loop_seams`). |
 | `midi.rs` | Pure MIDI content helpers: split, trim, join with controller chasing; the notes held over a position (note chase); clearing a range (Record in Replace mode). |
 | `region_params.rs` | Region playback parameters: the transforms (quantize with swing, gate, delay, transpose, dynamics, velocity), playback windows, `bake` for Apply. |
@@ -2443,7 +2446,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `synth.rs` | Marbble Synth, the original small polyphonic instrument. Unchanged since it was written: old projects depend on its every sample. |
 | `instrument/` | Built-in instruments: the `Instrument` contract and registry (`mod.rs`), Marbble Synth in the registry (`basic.rs`), Marbble Tre (`tre/`), Sei (`sei/`), Cinque (`cinque/`), Uno (`uno/`), Sedici (`sedici/`), Onda (`onda/`), what they share (`common.rs`) and test with (`test_kit.rs`). See [Built-in instruments](#built-in-instruments). |
 | `synth_dsp/` | Parts for synth models: `osc`, `filter`, `env`, `lfo`, `alloc`, `analog`, `resample`, `smooth`. |
-| `transients.rs` | Onset detection for transient markers and Split at Transients. |
+| `transients.rs` | Onset detection for transient markers, Split at Transients, the sampler's slices and Drum Replacement: per hop, the peak level and the peak first difference against the loudest of the last 25 ms (so low ringing never triggers itself), a minimum gap, the attack found in whichever measure stood out first; `hits` adds each onset's peak and its level above what was already sounding. Pure. |
 | `vca.rs` | VCA faders: the offset and mute a strip gets from its VCA chain, loop checks. |
 | `sysvol.rs` | Linux only: the sound server's input volume for the recording device (input level check). |
 | `wav_repair.rs` | Repairing the headers of WAV files a crash left mid-recording. |
@@ -2526,6 +2529,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `comps.ts` | Comp names, MIDI take folders and the folder's name bar label; pure, tested. |
 | `fades.ts` | Fade curves and crossfades for drawing (mirrors `fades.rs`), the inspector's fade types, the handles' places; pure, tested. |
 | `dragModes.ts` | The drag modes' rules for drawing a drag's outcome (mirrors `drag_modes.rs`); pure, tested. |
+| `drumReplace.ts` | Drum Replacement/Doubling's settings, the threshold over the engine's candidate hits (pure, tested), and the markers the Tracks area draws while its sheet (`components/DrumReplace.tsx`) is open. |
 | `regionBar.ts` | A region's name bar and body at a given track height; pure, tested. |
 | `trackHeader.ts` | Track header layouts by height and the volume slider's meter scale; pure, tested. |
 | `headerColumns.ts` | The button columns the track headers share, with gaps where a track has no such button; pure, tested. |
@@ -2618,6 +2622,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `FadeRows.tsx`, `RegionParamRows.tsx` | The Region inspector's fade rows and playback parameter rows. |
 | `TrackInspector.tsx` | The Inspector's Track section: name, colour, input, output and freeze, editable; type, instrument, regions and group. |
 | `ChannelStrip.tsx` | A mixer channel strip. |
+| `DrumReplace.tsx` | The Drum Replacement/Doubling sheet: fetches every candidate hit once (`drum_hits`, off the main thread) and sets the markers from its threshold. |
 | `StripSlots.tsx` | The strips' slot boxes (shared row count, a "+N more" menu past it) and blank stand-ins for sections a strip doesn't have, which keep strips level. |
 | `Sends.tsx` | The channel strip's Sends section and Output slot. |
 | `Vca.tsx` | The Mixer's VCA strips and the channel strip's VCA slot. |

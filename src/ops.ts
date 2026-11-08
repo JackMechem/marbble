@@ -6,6 +6,7 @@ import { act, actMade, api, call, canRecord, isStack, type Group, type Id, type 
 import { newAux } from "./routing";
 import type { MenuItem } from "./components/Menu";
 import { askName, notEmpty } from "./components/NameSheet";
+import { openDrumReplace } from "./components/DrumReplace";
 import { currentLayout, setTrackHeight, stepVisible } from "./layout";
 import { isLooped, regionEnd } from "./loops";
 import { BOUNCE_IN_PLACE_HINT, openBounce, openBounceInPlace } from "./bounce";
@@ -560,6 +561,7 @@ export function trackMenu(t: Track, rename: () => void): MenuItem[] {
             : { label: s("Freeze Track", "Freeze Tracks"), disabled: !sel.some((x) => canFreeze(x) && x.regions.length), onClick: () => freezeTracks(ids) },
         ]
       : []),
+    ...(t.kind === "audio" && !many ? [{ label: "Drum Replacement/Doubling…", disabled: !t.regions.length, onClick: () => openDrumReplace(t.id) }] : []),
     { separator: true },
     { label: "Rename Track", disabled: many, onClick: rename },
     { label: "Track Color", children: colorMenu(many ? undefined : t.color, (c) => c && sel.forEach((x) => api.updateTrack(x.id, { color: c }))) },

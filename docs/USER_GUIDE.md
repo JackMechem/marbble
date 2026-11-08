@@ -1214,6 +1214,33 @@ From the Track menu, the track header's right-click menu, or keys:
 - **Select Previous / Next Track:** Up and Down arrows. **Mute / Solo the selected track:**
   M and S.
 
+### Drum Replacement and Doubling
+
+**Track › Drum Replacement/Doubling…** (or the audio track header's right-click menu) turns the
+hits on a recorded drum, a kick or snare mic say, into MIDI notes playing a sample on a new
+track, to replace the recording or to layer a sample with it. It works on the track's selected
+regions, or on all of it when none are selected. Take folders are read through their comp.
+
+- **Instrument:** Kick, Snare, Tom High, Tom Mid, Tom Low or Hi-Hat. It sets the note (General
+  MIDI's: C1 for the kick, D1 for the snare, and so on) and the sample.
+- **Mode:** **Replace** mutes the recorded track; **Doubling** keeps both playing.
+- **Threshold:** how loud a hit must be to count. The hits it keeps are marked on the track's
+  regions as you move it, and the sheet says how many there are and how loud the loudest is.
+  A soft hit on top of a still-ringing drum reads by how much it adds, so the bleed of a
+  hi-hat into a kick mic stays under the threshold.
+- **Notes At:** **Attack Start** (the default) puts each note where its hit begins, which is
+  where a drum sample begins too, so the sample lines up with the recording and stays in phase
+  with the overheads when doubling. **Peak** puts it at the hit's loudest moment, for a sample
+  that starts at its peak. **Timing Offset** moves every note, in milliseconds, for a sample
+  with a slower start (negative is earlier). The markers move with these too.
+
+**Create Track** adds a software instrument track right below with Marbble Sampler, playing a
+kick (or the chosen drum) that Marbble makes for the project, in `Samples/Drum Replacement`. A
+MIDI region over the same span has a note at each hit, its velocity from the hit's level:
+the loudest hit is 127, and the rest play as much quieter as they were recorded. The notes edit
+like any others in the Piano Roll. To use your own sample, drop it on the note's key in the
+sampler's panel and delete the made one. It's one undo step.
+
 ### Undo
 
 Ctrl+Z and Shift+Ctrl+Z undo and redo every edit: regions, tracks, names, colours, volume,
@@ -1833,8 +1860,9 @@ the selection, as one undo step:
 The transient button (or View › Show Transients) marks the onsets found in the audio. View ›
 **Transient Sensitivity** sets how readily they are found: Low, Medium (default), High or Very
 High. **Split at Transients** chops the selection (or the selected regions) at every marker in
-one step, for slicing drums. Onsets are found from the audio itself: a fast peak level jumping
-well above a slower average, moved back to the start of the attack.
+one step, for slicing drums. Onsets are found from the audio itself: the level, or its brightest
+part (a beater's click), jumping well above the loudest of the moment before, so a ringing kick
+never marks itself twice. Each marker is moved back to the start of the attack.
 
 ### Info
 

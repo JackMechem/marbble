@@ -65,6 +65,7 @@ import { sheetBlocks } from "./sheetKeys";
 import { AlternativesSheet } from "./components/AlternativesSheet";
 import { ARRANGE_COMMANDS, runArrangeCommand } from "./arrangeCmds";
 import { StripSilenceHost } from "./components/StripSilence";
+import { DrumReplaceHost, openDrumReplace } from "./components/DrumReplace";
 import { installMenuBar } from "./menuBar";
 import { checkForUpdates, checkUpdatesAtLaunch } from "./updates";
 import { UpdateNotice } from "./components/UpdateNotice";
@@ -178,6 +179,11 @@ function handleMenu(id: string) {
     case "track-on-off":
       ops.switchAll("off");
       break;
+    case "drum-replace": {
+      const t = s.snap?.selected;
+      if (t != null) openDrumReplace(t);
+      break;
+    }
     case "freeze-track":
       freezeTracks(ops.selectedTracks());
       break;
@@ -684,6 +690,7 @@ export default function App() {
       <MenuHost />
       <NameSheetHost />
       <StripSilenceHost />
+      <DrumReplaceHost />
       <UpdateNotice />
       <Toast />
     </div>

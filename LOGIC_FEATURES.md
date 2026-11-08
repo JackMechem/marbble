@@ -733,7 +733,7 @@ smart tempo, samplers, virtual players, pattern tools, Live Loops and notation.
 - [x] Convert audio regions to a new Sampler track, sliced at transients or markers (p. 329). *Whole or at transients; not at markers.*
 - [ ] Drum Machine Designer: a pad grid of sub-tracks with per-pad channel strips (p. 122, 697)
 - [ ] Sample Alchemy (p. 122)
-- [ ] Drum replacement and doubling from a recorded drum track (p. 133)
+- [x] Drum replacement and doubling from a recorded drum track (p. 133). *Kick, snare, three toms and hi-hat, each with a sample Marbble makes; threshold with live markers, attack or peak timing and an offset. No Prelisten, and no Drum Machine Designer kit to load.*
 
 ### Session Players and Drummer (p. 403–435)
 

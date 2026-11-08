@@ -102,6 +102,7 @@ pub const AUTOSAVE_FILE: &str = "project.autosave.json";
 mod auto_write;
 mod recovery;
 pub use recovery::{discard_journals, read_journal, recording_journals, JournalTake, RecJournal, RecordingRecovery, BACKUP_FILE};
+mod drum_replace;
 mod musical_moves;
 mod region_gain;
 mod sampler;

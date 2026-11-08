@@ -19,6 +19,7 @@ import { movedStart } from "../../musicalMove";
 import { newLaneId } from "../../newTrackDrag";
 import { drawGainHandle, gainDragging, withLiveGain } from "../../regionGainDrag";
 import { drawToolOverlay } from "../../trackTools";
+import { drumMarks } from "../../drumReplace";
 import { drawLoops, drawNewLane, drawRegion, MUTED_COLOR, roundRect } from "../../regionDraw";
 import { dragNewLanes, dragTarget, type TracksRefs } from "./drag";
 import type { Viewport } from "../../view";
@@ -222,6 +223,9 @@ export function drawTracks({ canvasRef, live, dragRef, swipeRef, marqueeRef, hov
     }
   });
 
+  // Drum Replacement's hits, while its sheet is open.
+  drawDrumMarks(ctx, project, layout, vp, pps, W);
+
   if (getState().showAutomation) drawAutomation(ctx, { project, layout, pps, vp });
 
   // Recording in progress
@@ -268,6 +272,29 @@ function drawStackLanes(ctx: CanvasRenderingContext2D, project: Project, layout:
     });
     ctx.restore();
   });
+}
+
+/** Where Drum Replacement will put its notes: a line down the audio track's lane at each hit
+ *  the threshold keeps, with a tick at the top. */
+function drawDrumMarks(ctx: CanvasRenderingContext2D, project: Project, layout: Layout, vp: Viewport, pps: number, W: number) {
+  const marks = drumMarks();
+  const i = marks ? project.tracks.findIndex((t) => t.id === marks.track) : -1;
+  if (!marks || i < 0 || !layout.heights[i]) return;
+  const y = layout.tops[i] - vp.top + 1;
+  const h = layout.heights[i] - layout.takeRows[i] - 3;
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#4c9eff";
+  for (const at of marks.at) {
+    const x = Math.round(at * pps - vp.left);
+    if (x < -4 || x > W + 4) continue;
+    ctx.globalAlpha = 0.85;
+    ctx.fillRect(x, y, 1, h);
+    ctx.globalAlpha = 1;
+    ctx.beginPath();
+    ctx.moveTo(x - 3.5, y);
+    ctx.lineTo(x + 4.5, y);
+    ctx.lineTo(x + 0.5, y + 5);
+    ctx.fill();
+  }
 }
 
 /** A take being recorded on its track. */

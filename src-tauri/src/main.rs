@@ -393,6 +393,8 @@ fn main() {
             commands::sampler_record_stop,
             commands::sampler_record_cancel,
             commands::convert_region_to_sampler,
+            commands::drum_hits,
+            commands::drum_replace,
             commands::section_edit,
             commands::insert_cut_section,
             commands::remove_gaps,

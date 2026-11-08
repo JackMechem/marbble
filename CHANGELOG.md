@@ -45,9 +45,19 @@ All notable changes to Marbble are recorded here. The format follows
   every release including prereleases. The website's Download section switches between them,
   release notes name their channel, and the `stable` and `unstable` branches follow each one's
   newest release, so a Nix flake input can track a channel.
+- **Drum Replacement and Doubling** (Track › Drum Replacement/Doubling…, or an audio track's
+  header menu). It finds the hits on a recorded drum and makes a Marbble Sampler track below with
+  a note at each, its velocity from the hit's level, playing a kick, snare, tom or hi-hat sample
+  Marbble makes. Replace mutes the recording; Doubling layers the sample with it. A threshold,
+  with the hits marked on the track as you move it, notes at the attack or the peak, and a timing
+  offset.
 
 ### Changed
 
+- **Transients are found more reliably on drums.** A ringing kick no longer marks itself twice,
+  a hit on top of another one's ringing is found, and markers land on the attack to the sample
+  instead of up to a few milliseconds early or late. Split at Transients, the sampler's Slice and
+  Convert to Sampler Track all use it.
 - **The website is at <https://marbble.dev/>.** Help › User Guide, What's New and Website and the
   About box open it there.
 

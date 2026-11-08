@@ -15,6 +15,7 @@ pub mod auto_move;
 pub mod automation;
 pub mod controllers;
 pub mod drag_modes;
+pub mod drum_replace;
 pub mod eq;
 pub mod fades;
 pub mod model;
