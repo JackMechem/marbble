@@ -44,6 +44,13 @@
   box-shadow: 0 0 0 0.5px var(--edge);
 }
 
+/* The track's icon, in its colour, before the icon's name. */
+.insp-icon-art {
+  flex: none;
+  display: flex;
+  margin-right: 2px;
+}
+
 /* A pop-up value that may be long (an input or aux name) keeps its chevron in view. */
 .insp-popup {
   max-width: 100%;

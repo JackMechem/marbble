@@ -150,7 +150,7 @@ hosting, automation and undo. This stage is mostly done.
 - [ ] Several tracks sharing one channel strip (New Track with Same Channel Strip / Next Channel) (p. 125–126)
 - [ ] Search for and select a track (p. 128)
 - [ ] Rename several tracks at once (p. 129)
-- [ ] Track icons, including custom icons (p. 130)
+- [~] Track icons, including custom icons (p. 130). *38 built-in icons in groups, picked from the header, Mixer strip, Inspector or track menu; a new track's name picks one. No custom (image file) icons.*
 - [ ] Sort tracks (p. 131)
 - [ ] Automatically zoom the focused track (p. 132)
 - [ ] Hide tracks through groups (p. 147)

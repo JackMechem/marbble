@@ -289,6 +289,18 @@ Track headers:
 - **Select** a track by clicking its header; Ctrl+click adds or removes a track; Shift+click
   selects a range. Up and Down select the track above or below, scrolling it into view.
 - **Rename** by double-clicking the name.
+- **Track icon:** click the icon (or right-click › **Track Icon**, the icon on the track's Mixer
+  strip, or the Track inspector's **Icon**) for a grid of icons by group: the track types',
+  drums (kick, snare, hi-hat, toms, overheads, room, kit, drum machine), percussion, bass,
+  guitars and amp, keys, strings, brass, woodwinds, vocals, and effects and buses. The arrow
+  keys move through it and Return chooses. The icon goes on every selected track when the one
+  you clicked is selected; Edit › Undo takes it back. **Default** gives the track the icon its
+  name suggests: a name with a word such as Kick, Snare, Hat, Tom, OH or Overhead, Room, Drums,
+  Bass, Gtr or Guitar, Amp, Keys or Piano, Organ, Synth, Strings, Brass, Sax, Vox or Vocal, BV
+  or Choir, Verb, Delay or FX shows that instrument's icon ("Kick In 2", "OH L", "Lead Vox"),
+  and changes with the name until you choose one. Other tracks show their type's icon. The icon
+  is saved with the track, copied by Duplicate Track and kept by templates; channel strip
+  settings leave it alone.
 - **Reorder** by dragging the track number or icon (just the number on the shortest tracks,
   which have no icon). A track dropped among a stack's subtracks
   (or right under an open stack's header) goes into that stack.
@@ -332,7 +344,8 @@ the Stereo Out strip.
   Audio Track editor and the help tags while dragging (4 0 0 0 is four bars), with the time in
   minutes and seconds after it. Position is in bars and beats counted from one, as on the LCD.
 - The **Track** section has the track's **Name** (type a new one and press Return; Esc puts
-  the old one back), **Color** (click the swatch for the colour grid), type, **Input** (audio
+  the old one back), **Color** (click the swatch for the colour grid), **Icon** (click it for
+  the icon grid; see [Track headers](#tracks-area)), type, **Input** (audio
   tracks: a pop-up, as on the channel strip) or instrument, **Output** (a pop-up: Stereo Out,
   the stack, or an aux), **Freeze** (as the snowflake button), the region or subtrack count
   and the group. Choosing a track (clicking its header or its strip in the Mixer,
@@ -1198,7 +1211,7 @@ From the Track menu, the track header's right-click menu, or keys:
 - **Duplicate Track** copies settings, plug-ins with their current settings, automation and
   regions. **New Track with Same Settings** copies everything except the regions and
   automation.
-- **Rename Track**, **Track Color** (a grid of 20 colours, named in their tooltips), Track On, Mute, Solo, Record Enable, Select All Regions on Track,
+- **Rename Track**, **Track Color** (a grid of 20 colours, named in their tooltips), **Track Icon**, Track On, Mute, Solo, Record Enable, Select All Regions on Track,
   Export Track as MIDI File…, Reset Track Height.
 - **Track Alternatives** (Track › Track Alternatives, or the right-click menu): other sets of
   regions for an audio or instrument track, as in Logic. **New Alternative** starts an empty
@@ -1892,7 +1905,7 @@ From top to bottom:
 | **Fader and meter** | Drag the fader (Shift for fine), double-click for 0 dB. -96 to +6 dB. On a strip assigned to a VCA, an outlined cap marks where the strip really plays (its fader plus the VCA). The meter holds peaks for 2 s, and its top lights red while the clip indicator is on. With a Compressor, Limiter, Noise Gate or De-Esser on the strip, a thin **gain-reduction meter** beside it grows down from the top as the first one that isn't bypassed reduces the gain (up to 30 dB). |
 | **Power** | Turns the track off: silent, and it runs nothing (see [Turning tracks off](#turning-tracks-off)). Not on Stereo Out. |
 | **M S R I** | Mute, Solo, Record Enable, Input Monitoring. |
-| **Name** | With the track colour. Right-click it for the channel strip settings menu. |
+| **Name** | With the track colour and icon (click the icon to choose another). Right-click it for the channel strip settings menu. |
 
 The clip indicators keep their peak until you reset them, as in Logic: playing again doesn't
 reset them, and they are the same in the Mixer, the Inspector and a Mixer in its own window.

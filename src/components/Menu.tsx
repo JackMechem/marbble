@@ -1,6 +1,6 @@
 // In-window menus (right-click, local and slot menus): `openMenu`, `openMenuAt` and the `MenuHost` that
 // draws whichever is open. ops.ts and the editors build the items.
-import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Icon } from "../icons";
 
 export interface MenuItem {
@@ -18,6 +18,8 @@ export interface MenuItem {
   color?: string;
   /** Renders a grid of colour swatches (named in their tooltips) instead of a row. */
   swatches?: Swatch[];
+  /** Renders this instead of a row: a picker of its own, which closes the menu when it's done. */
+  content?: ReactNode;
 }
 
 /** One colour of a swatch grid. */
@@ -111,6 +113,8 @@ function List({ items, x, y, minWidth, depth }: { items: MenuItem[]; x: number; 
             <div key={i} className="menu-sep" />
           ) : it.swatches ? (
             <SwatchGrid key={i} swatches={it.swatches} />
+          ) : it.content ? (
+            <div key={i}>{it.content}</div>
           ) : it.header ? (
             <div key={i} className="menu-header">
               {it.label}
