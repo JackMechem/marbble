@@ -1358,7 +1358,8 @@ stores the pair as base64 in `PluginSlot::state` and restores it straight after 
   `host:id` strings; `find_device` accepts any id the host knows (headless tests use
   `alsa:null`) and falls back to the default device.
 - `AudioConfig` (saved in `settings.json` › `audio`): host, input, output, sample rate
-  (48000), buffer size (256), `input_enabled`, `auto_monitor`, `recording_delay_ms`.
+  (48000), buffer size (256), `input_enabled`, `auto_monitor`, `recording_delay_ms`,
+  `processing_threads`, `lock_memory` (see [Memory locking](#memory-locking)).
   `same_devices` decides whether a change reopens the streams.
 - `choose_config` needs the requested rate to be supported (there is no fallback) and a sample
   format of f32, i32 or i16. The buffer size is fixed when the device allows it.
@@ -1382,6 +1383,35 @@ stores the pair as base64 in `PluginSlot::state` and restores it straight after 
   when the rate changed.
 - **Real-time priority** comes from cpal (`realtime-dbus`, through rtkit) for its ALSA and
   PipeWire callback threads; JACK threads are real-time through the JACK server.
+
+### Memory locking
+
+Under memory pressure Linux swaps out the pages a process touched least recently, and an audio
+thread that reads one (the later minutes of a clip, a plug-in's tables) waits for the disk: a
+dropout with the CPU meter low. So the app locks its memory at startup (`main.rs` calls
+`Session::apply_memory_lock` right after `Session::new`, before a project loads), as Ardour and
+JACK do; `memlock.rs` holds the platform code and `memlock::plan` the decision, a pure function.
+
+- **Only with an unlimited `RLIMIT_MEMLOCK`** (the audio group's usual limit) does it call
+  `mlockall(MCL_CURRENT | MCL_FUTURE | MCL_ONFAULT)`. A finite limit locks nothing: the kernel
+  measures `MCL_CURRENT` against the whole mapped size (VmSize, gigabytes with WebKitGTK in the
+  process), and under `MCL_FUTURE` an allocation past the limit fails. The state
+  (`MemoryLock`: locked, off, limit too small with the limit, failed, unsupported) is logged once
+  and kept in `Session::memory_lock`, which Settings › Audio reads with the `memory_lock` command.
+- **`MCL_ONFAULT`** locks pages as they are first touched instead of populating every mapping:
+  what has been used stays in RAM, untouched thread stacks and heap cost nothing. On kernels
+  before 4.4 (`EINVAL`) it falls back to plain `mlockall`. In `memlock_check` plain `mlockall` made
+  the process 29% bigger at once and 69% bigger after a render; `MCL_ONFAULT` added nothing. VmLck
+  then reports the size of the locked mappings, not what is resident.
+- **Switching it off** (`AudioConfig::lock_memory`, applied by `set_audio_config` when it changes)
+  calls `munlockall`; on again locks again. Tests and the checks never lock unless they ask.
+- **What gets pinned** is almost all clips: `Clip` holds every file decoded whole as f32, 11 MB a
+  minute per mono channel at 48 kHz, and opening a project loads every clip in `project.clips`,
+  also those no region or take uses any more. `memlock_check`'s drum session (24 minutes of mono
+  takes plus the all-features project's instruments and effects) is 294 MB resident, 267 MB of it
+  clips; the engine itself, with every built-in instrument and effect, is about 30 MB. A real
+  drum-recording project of 33 clips holds 1.7 GB, 0.7 GB of it takes no longer on any track.
+- macOS and Windows: `MemoryLock::Unsupported`, and the switch is hidden.
 
 ### Latency compensation for recordings
 
@@ -2395,7 +2425,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `session/freeze.rs` | Track Freeze and `frozen_guard`. |
 | `session/markers.rs` | Marker edits and the Autopunch range. |
 | `session/arrangement.rs` | Arrangement track edits: add, rename, colour, resize, and moving, copying or deleting a section with its content. |
-| `session/takes.rs` | Recording into take folders, Autopunch trimming, comp edits, Flatten, Merge, Pack, Unpack. |
+| `session/takes.rs` | Recording into take folders, Autopunch trimming, comp edits, Flatten, Merge, Pack (from one track or several), Unpack (to new or existing tracks), Export and Move Active Take. |
 | `session/auto_write.rs` | Automation writing (Touch, Latch, Write), plug-in editors following automation, lane edit commands. |
 | `session/controllers.rs` | Controller assignments: the last touched parameter, learning, the saved list, applying controller moves through the normal edit paths (undo steps, automation touches that let go 0.5 s after the controller stops). Run from `idle`. |
 | `session/builtin.rs` | Built-in effects in slots: instantiation, parameters, side-chains, meters for open panels. |
@@ -2416,6 +2446,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `session/backups.rs` | Backups on save, pruning, Revert to, Revert to Saved, the fallback on open. |
 | `session/templates.rs` | User project templates: save, list, rename, delete, new project from one. |
 | `session/track_alternatives.rs` | Track alternatives: new, duplicate, switch, rename, delete. |
+| `session/track_icons.rs` | Track Icon: `set_track_icon` on several tracks. The icon is an id the UI draws (`Track::icon`); None shows the default `trackIcons.ts` works out. |
 | `session/patterns.rs` | Pattern regions: create, `set_pattern`, convert to and from MIDI regions, realizing them for `regions_dsp`. |
 | `takes.rs` | Pure take-folder logic: comp editing, playback pieces and crossfades, `RecPlan`. |
 | `arrangement.rs` | The Arrangement track's arithmetic: tiling sections and the time maps (`Piece`, `Plan`) for moving, copying and deleting them; automation through a time map. Pure. |
@@ -2432,6 +2463,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `smf.rs` | Standard MIDI File reader and writer. |
 | `audio_io.rs` | Device enumeration and the duplex stream that drives the engine. |
 | `denormals.rs` | `NoDenormals`: flush-to-zero on the audio thread (x86_64 and aarch64). |
+| `memlock.rs` | Settings › Audio › Lock audio memory: `mlockall` on Linux when `RLIMIT_MEMLOCK` allows, `/proc/self/status` figures. See [Memory locking](#memory-locking). |
 | `recorder.rs` | The recording disk-writer thread and live previews. |
 | `midi_io.rs` | MIDI inputs (midir), velocity curves, the MIDI activity log, assigned controllers taken off the live path (`inject_from` feeds a message in as a port would, for tests). |
 | `plugin_db.rs` | Out-of-process plug-in scanning, the cache, the scan report, the config folder. |
@@ -2527,6 +2559,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `loops.ts` | Looping regions in the tracks area. |
 | `takes.ts` | Take folders in the tracks area: take rows, comp drawing, swipes, the take folder menu. |
 | `comps.ts` | Comp names, MIDI take folders and the folder's name bar label; pure, tested. |
+| `packTakes.ts` | Pack Take Folder across tracks: the tracks packed from and those left empty; pure, tested. |
 | `fades.ts` | Fade curves and crossfades for drawing (mirrors `fades.rs`), the inspector's fade types, the handles' places; pure, tested. |
 | `dragModes.ts` | The drag modes' rules for drawing a drag's outcome (mirrors `drag_modes.rs`); pure, tested. |
 | `drumReplace.ts` | Drum Replacement/Doubling's settings, the threshold over the engine's candidate hits (pure, tested), and the markers the Tracks area draws while its sheet (`components/DrumReplace.tsx`) is open. |
@@ -2577,7 +2610,10 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `samplerMap.ts`, `samplerDrop.ts` | Marbble Sampler's zones, note names and the sums behind its map (pure, tested); files going into it from its panel or a drop. |
 | `sideChain.ts` | The key sources a side-chain menu offers; pure, tested. |
 | `threads.ts` | Settings › Audio › Processing Threads; pure, tested. |
+| `memoryLock.ts` | Settings › Audio › Lock audio memory: whether the switch shows, and what the note under it says; pure, tested. |
 | `trackOff.ts` | Whether a track is off through its stacks, as `Project::is_off` has it; pure, tested. |
+| `trackIcons.ts` | Track icons: the set by group, the name table ("Kick In" → kick) and the icon a track shows (chosen, else its name's, else its kind's, worked out each time so it follows renames), the picker's arrow keys; pure, tested. |
+| `trackIconArt.tsx` | The track icons' drawings, and `TrackIcon` for a track. |
 | `keyRepeat.ts` | Which key commands run again while their key is held; pure, tested. |
 | `fxShapes.ts` | The curves the modulation, distortion and Gain panels draw, mirroring the engine; pure, tested. |
 | `linearPhaseEq.ts` | The Linear Phase EQ's parameters as Channel EQ settings, so its panel reuses the EQ editor; pure, tested. |
@@ -2620,7 +2656,8 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `TrackTools.tsx` | The Left-click and Command-click Tool pop-ups and the tools' icons. |
 | `Panels.tsx` | Inspector, Mixer, Library, Browser. |
 | `FadeRows.tsx`, `RegionParamRows.tsx` | The Region inspector's fade rows and playback parameter rows. |
-| `TrackInspector.tsx` | The Inspector's Track section: name, colour, input, output and freeze, editable; type, instrument, regions and group. |
+| `TrackInspector.tsx` | The Inspector's Track section: name, colour, icon, input, output and freeze, editable; type, instrument, regions and group. |
+| `TrackIconPicker.tsx` | The Track Icon picker (a grid in an in-window menu) from a header's icon, a strip's, the Track inspector and the track menu. |
 | `ChannelStrip.tsx` | A mixer channel strip. |
 | `DrumReplace.tsx` | The Drum Replacement/Doubling sheet: fetches every candidate hit once (`drum_hits`, off the main thread) and sets the markers from its threshold. |
 | `StripSlots.tsx` | The strips' slot boxes (shared row count, a "+N more" menu past it) and blank stand-ins for sections a strip doesn't have, which keep strips level. |

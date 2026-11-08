@@ -240,6 +240,7 @@ mod tests {
             instrument_output: None,
             eq_preset: None,
             off: false,
+            icon: None,
         }
     }
 

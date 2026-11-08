@@ -63,6 +63,10 @@ pub struct AudioConfig {
     /// Recording Delay. Positive values move recordings earlier.
     #[serde(default)]
     pub recording_delay_ms: f32,
+    /// Settings › Audio › Lock audio memory (Linux): keep the process's memory in RAM, so the
+    /// audio never waits for a page the system swapped out ([`crate::memlock`]).
+    #[serde(default = "crate::memlock::default_setting")]
+    pub lock_memory: bool,
 }
 
 impl Default for AudioConfig {
@@ -77,6 +81,7 @@ impl Default for AudioConfig {
             auto_monitor: false,
             recording_delay_ms: 0.0,
             processing_threads: crate::threads::default_setting(),
+            lock_memory: crate::memlock::default_setting(),
         }
     }
 }

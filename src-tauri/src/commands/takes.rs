@@ -47,7 +47,22 @@ pub fn unpack_take_folder(state: State<AppState>, region: Id) -> R<Made> {
     edit_made(&state, "Unpack Take Folder", false, |s| Ok(s.unpack_take_folder(region)))
 }
 
-/// Pack Take Folder from audio regions on one track. Returns the folder.
+/// Unpack to Existing Tracks. Returns the tracks the takes went onto.
+#[tauri::command]
+pub fn unpack_to_existing_tracks(state: State<AppState>, region: Id) -> R<Made> {
+    edit_made(&state, "Unpack Take Folder", false, |s| Ok(s.unpack_to_existing_tracks(region)))
+}
+
+/// Export Active Take to New Track, or with `remove` Move Active Take to New Track. Returns
+/// the new track.
+#[tauri::command]
+pub fn export_active_take(state: State<AppState>, region: Id, remove: bool) -> R<Made> {
+    let label = if remove { "Move Active Take" } else { "Export Active Take" };
+    edit_made(&state, label, false, |s| Ok(s.export_active_take(region, remove)))
+}
+
+/// Pack Take Folder from audio regions on one track or several (onto the topmost). Returns
+/// the folder.
 #[tauri::command]
 pub fn pack_take_folder(state: State<AppState>, ids: Vec<Id>) -> R<Made> {
     edit_made(&state, "Pack Take Folder", false, |s| s.pack_take_folder(&ids).map(|id| vec![id]))
