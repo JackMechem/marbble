@@ -51,7 +51,7 @@ import { marqueeCopy, marqueeCut, marqueeDelete, marqueePaste, openToolMenu } fr
 import { getSettings, updateSettings } from "./prefs";
 import { createMarker, deleteMarker, deleteSelectedMarker, gotoMarker, markerAtPlayhead, openMarkerList } from "./markers";
 import { MarkerList } from "./components/MarkerList";
-import { packTakeFolder, stepTake } from "./takes";
+import { moveSelectedSection, packTakeFolder, removeSelectedSection, stepTake } from "./takes";
 import { installDetach, receiveSnapshot, toggleDetached } from "./detach";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { moveAutomationAnswer } from "./moveAutomation";
@@ -426,8 +426,9 @@ const KEY_ACTIONS: Record<string, () => void> = {
     if (t) api.updateTrack(t.id, { armed: !t.armed });
   },
   "track-on-off": () => handleMenu("track-on-off"),
-  "select-previous": () => moveSelection(-1),
-  "select-next": () => moveSelection(1),
+  // With a comp section selected in an open take folder, Up and Down move it between takes.
+  "select-previous": () => moveSelectedSection(-1) || moveSelection(-1),
+  "select-next": () => moveSelectedSection(1) || moveSelection(1),
   // Clipboard keys stay with text fields (onKey skips them), so the menu bar doesn't take them.
   // With a marquee they act on the part of the regions inside it.
   copy: () => marqueeCopy() || ops.copyRegions(),
@@ -436,7 +437,7 @@ const KEY_ACTIONS: Record<string, () => void> = {
   "mute-regions": () => ops.toggleRegionMute(),
   "delete-regions": () => {
     // Selected automation points (or a tempo change) go first, as in Logic.
-    if (deleteSelectedPoints() || deleteSelectedTempoEvent() || deleteSelectedMarker() || marqueeDelete()) return;
+    if (deleteSelectedPoints() || deleteSelectedTempoEvent() || deleteSelectedMarker() || marqueeDelete() || removeSelectedSection()) return;
     if (getState().selectedRegions.length) ops.deleteRegions();
   },
   "set-locators": () => ops.setLocatorsByRegions(),

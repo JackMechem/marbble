@@ -162,3 +162,36 @@ fn previous_and_next_take_step_selected_folders_and_partners() {
     s.step_take(&[c], 1);
     assert_eq!(comp(&s, c), vec![(0, LEN, ct[2])]);
 }
+
+#[test]
+fn comp_sections_edit_in_grouped_folders_with_undo() {
+    let (mut s, [oh, kick, _], _) = session();
+    let r = s.project.alloc_id();
+    let passes: Vec<_> = (0..3).map(|k| Some((r, k))).collect();
+    // The kick's folder starts later on the timeline, so its take time differs from the overhead's.
+    let (a, at) = folder(&mut s, oh, 0, &passes);
+    let (b, bt) = folder(&mut s, kick, 1000, &passes);
+    s.set_comp_range(a, Some(at[0]), 2000, 3000);
+    assert_eq!(comp(&s, b), vec![(0, 1000, bt[2]), (1000, 2000, bt[0]), (2000, LEN, bt[2])]);
+    // Drag the border at 3000 to 3500: both sections change, on both mics.
+    s.checkpoint("Move Comp Section Edge", None, false);
+    s.move_comp_edge(a, 3000, 3500);
+    assert_eq!(comp(&s, a), vec![(0, 2000, at[2]), (2000, 3500, at[0]), (3500, LEN, at[2])]);
+    assert_eq!(comp(&s, b), vec![(0, 1000, bt[2]), (1000, 2500, bt[0]), (2500, LEN, bt[2])]);
+    s.undo();
+    assert_eq!(comp(&s, b)[1], (1000, 2000, bt[0]));
+    // Move the section down a take, then remove it.
+    s.move_comp_section(b, 2500, 1);
+    assert_eq!(comp(&s, a)[1], (2000, 3000, at[1]));
+    assert_eq!(comp(&s, b)[1], (1000, 2000, bt[1]));
+    s.move_comp_section(a, 2500, -1);
+    assert_eq!(comp(&s, a)[1], (2000, 3000, at[0]));
+    s.move_comp_section(a, 2500, -1);
+    assert_eq!(comp(&s, a)[1], (2000, 3000, at[0]), "already the top take");
+    s.remove_comp_section(a, 2100);
+    assert_eq!(comp(&s, a), vec![(0, 2000, at[2]), (3000, LEN, at[2])]);
+    assert_eq!(comp(&s, b), vec![(0, 1000, bt[2]), (2000, LEN, bt[2])]);
+    // An outer edge: grow the first section back into the gap.
+    s.move_comp_edge(b, 2000, 2400);
+    assert_eq!(comp(&s, a), vec![(0, 2400, at[2]), (3000, LEN, at[2])]);
+}

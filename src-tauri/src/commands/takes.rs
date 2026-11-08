@@ -20,6 +20,24 @@ pub fn step_take(state: State<AppState>, regions: Vec<Id>, delta: i64) -> Snapsh
     edit(&state, if delta < 0 { "Previous Take" } else { "Next Take" }, None, false, |s| s.step_take(&regions, delta))
 }
 
+/// Drags the comp edge at timeline `at` to `to` (a border moves both sections).
+#[tauri::command]
+pub fn move_comp_edge(state: State<AppState>, region: Id, at: i64, to: i64) -> Snapshot {
+    edit(&state, "Move Comp Section Edge", None, false, |s| s.move_comp_edge(region, at, to))
+}
+
+/// Removes the comp section heard at timeline `at`.
+#[tauri::command]
+pub fn remove_comp_section(state: State<AppState>, region: Id, at: i64) -> Snapshot {
+    edit(&state, "Remove Comp Section", None, false, |s| s.remove_comp_section(region, at))
+}
+
+/// Moves the comp section heard at timeline `at` to the take above (`delta` -1) or below (1).
+#[tauri::command]
+pub fn move_comp_section(state: State<AppState>, region: Id, at: i64, delta: i64) -> Snapshot {
+    edit(&state, "Move Comp Section", None, false, |s| s.move_comp_section(region, at, delta))
+}
+
 #[tauri::command]
 pub fn rename_take(state: State<AppState>, region: Id, take: Id, name: String) -> Snapshot {
     edit(&state, "Rename Take", None, false, |s| s.rename_take(region, take, name))

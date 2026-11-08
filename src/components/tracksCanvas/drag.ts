@@ -4,6 +4,7 @@ import { type Id, type Project, type Track } from "../../api";
 import { stepVisible, type Layout } from "../../layout";
 import { newLanes, sourceTracks } from "../../newTrackDrag";
 import type { GrabKind } from "../../regionGrab";
+import type { CompDrag } from "../../takes";
 
 /** The latest values for the imperative draw and pointer code. */
 export interface TracksLive {
@@ -18,8 +19,8 @@ export interface TracksLive {
 export interface TracksRefs {
   live: React.RefObject<TracksLive>;
   dragRef: React.RefObject<Drag | null>;
-  /** A Quick Swipe Comping drag: the take and take-time range. */
-  swipeRef: React.RefObject<{ region: Id; take: Id; start: number; end: number } | null>;
+  /** A Quick Swipe Comping drag (the take and take-time range) or a comp section edge drag. */
+  swipeRef: React.RefObject<CompDrag | null>;
   /** A rubber-band selection, in content coordinates. */
   marqueeRef: React.RefObject<{ left: number; top: number; right: number; bottom: number } | null>;
   /** The region under the pointer, which shows its fade handles. */

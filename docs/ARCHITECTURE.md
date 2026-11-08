@@ -366,6 +366,11 @@ Times are in samples at the project rate.
   (`TakeFolder::matching_take`: by pass when the folders share a recording, else by position),
   and a folder with no match is left alone. One Tauri command does them all, so it is one undo
   step.
+- **Comp sections**: `move_comp_edge` drags a section edge (`TakeFolder::move_edge`: a border
+  moves both sections, an outer edge its own), `remove_comp_section` and `move_comp_section`
+  (to `neighbour_take`) are `set_comp_range` over the section's range, so grouped folders follow
+  the same way. `src/comps.ts` mirrors `move_edge` (`movedEdge`) to draw an edge drag; the
+  selected section is `compSection` in the store, by a timeline position inside it.
 
 ### Notes and controllers
 

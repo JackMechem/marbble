@@ -14,6 +14,11 @@ All notable changes to Marbble are recorded here. The format follows
   the same place on the other tracks, as one undo step: the drum mics of a cycle recording stay
   on the same performance. Takes recorded together match pass by pass; folders packed by hand
   match by take number.
+- **Edit comp sections.** In an open take folder, drag a section's edge: the border between two
+  sections moves both, an outer edge lengthens or shortens its section. Click a section that is
+  in the comp to select it; Up and Down move it to the take above or below, and Delete (or the
+  row's right-click menu) removes it, leaving a gap. Grouped take folders follow, and every edit
+  is one undo step.
 - **Select Previous Take and Select Next Take** (Alt+Shift+Up and Alt+Shift+Down) switch the
   selected take folders, and their grouped partners, one take up or down.
 

@@ -2,8 +2,9 @@
 //! running engine (silent ALSA null output):
 //! - several comps per folder: create, switch, rename and delete them, with undo, and each comp
 //!   renders as it should;
-//! - the folders of grouped tracks switch takes, comp and step to the next take together (one
-//!   undo step), and act alone with the group off;
+//! - the folders of grouped tracks switch takes, comp, step to the next take and edit comp
+//!   sections (move a border, remove a section, move it to another take) together, one undo
+//!   step each, and act alone with the group off;
 //! - MIDI cycle recording with "Create take folders" (notes played in through the same path as
 //!   Musical Typing) makes a folder with a take per pass, and choosing a take changes what
 //!   plays;
@@ -238,6 +239,30 @@ fn main() {
     s.undo();
     let h = halves(&mut s);
     check(&format!("one undo puts both back ({h:?})"), near(h, (0.5, 1.0)));
+    // Comp section edits: take 2 is heard over the first second, take 1 over the second.
+    let levels = |s: &mut Session, at: &[i64]| {
+        let out = render(s, j, 3 * j);
+        at.iter().map(|&p| mid(&out, p)).collect::<Vec<f32>>()
+    };
+    let all_near = |got: &[f32], want: &[f32]| got.iter().zip(want).all(|(g, w)| (g - w).abs() < 1e-3);
+    let (q1, q5, q9, q11) = (j + j / 4, j + j / 2, 2 * j + j / 4, 2 * j + 3 * j / 4);
+    s.checkpoint("Move Comp Section Edge", None, false);
+    s.move_comp_edge(mics[0].1, 2 * j, 2 * j + j / 2);
+    let l = levels(&mut s, &[q1, q9, q11]);
+    check(&format!("dragging the border between sections moves it on both mics ({l:?})"), all_near(&l, &[0.5, 0.5, 1.0]));
+    s.checkpoint("Remove Comp Section", None, false);
+    s.remove_comp_section(mics[1].1, q5);
+    let l = levels(&mut s, &[q5, q11]);
+    check(&format!("removing a section silences it on both ({l:?})"), all_near(&l, &[0.0, 1.0]));
+    s.undo();
+    s.checkpoint("Move Comp Section", None, false);
+    s.move_comp_section(mics[0].1, q5, -1);
+    let l = levels(&mut s, &[q1, q9, q11]);
+    check(&format!("moving a section to the take above moves both ({l:?})"), all_near(&l, &[1.0, 1.0, 1.0]));
+    s.undo();
+    s.undo();
+    let h = halves(&mut s);
+    check(&format!("and the section edits undo ({h:?})"), near(h, (0.5, 1.0)));
     let mut g = s.project.group(group).unwrap().clone();
     g.enabled = false;
     s.update_group(g);

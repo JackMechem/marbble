@@ -192,10 +192,7 @@ impl Session {
     fn edit_folder(&mut self, region: Id, f: impl FnOnce(&mut TakeFolder, i64)) {
         let Some((track, r)) = self.folder_mut(region) else { return };
         crate::takes::save_midi_take(r);
-        let to_take_time = match r.content {
-            RegionContent::Audio { offset, .. } => offset - r.start,
-            RegionContent::Midi { .. } => r.takes.as_ref().unwrap().offset - r.start,
-        };
+        let to_take_time = take_time_shift(r);
         let newest = {
             let folder = r.takes.as_mut().unwrap();
             f(folder, to_take_time);
@@ -313,6 +310,46 @@ impl Session {
 
     fn select_take_alone(&mut self, region: Id, take: Id) {
         self.edit_folder(region, |f, _| f.select_whole(take));
+    }
+
+    // ---- comp sections ----------------------------------------------------------------------
+
+    /// The comp section of `region` heard at timeline `at` (in take time), and what to add to
+    /// a timeline position to get the folder's take time.
+    fn comp_section(&self, region: Id, at: i64) -> Option<(CompSegment, i64)> {
+        let r = self.region(region)?;
+        let shift = take_time_shift(r);
+        Some((r.takes.as_ref()?.section_at(at + shift)?, shift))
+    }
+
+    /// Drags the comp edge at timeline `at` to `to` (`TakeFolder::move_edge`): a border moves
+    /// both sections, an outer edge lengthens or shortens its own. Grouped folders with an
+    /// edge there follow.
+    pub fn move_comp_edge(&mut self, region: Id, at: i64, to: i64) {
+        for (r, _) in self.linked_folders(region, None) {
+            if !self.is_midi_folder(r) {
+                self.edit_folder(r, |f, shift| f.move_edge(at + shift, to + shift));
+            }
+        }
+    }
+
+    /// Removes the comp section heard at timeline `at`: that stretch falls silent, in grouped
+    /// folders too.
+    pub fn remove_comp_section(&mut self, region: Id, at: i64) {
+        if let Some((s, shift)) = self.comp_section(region, at) {
+            self.set_comp_range(region, None, s.start - shift, s.end - shift);
+        }
+    }
+
+    /// Moves the comp section heard at timeline `at` to the take `delta` rows up (negative) or
+    /// down that has audio there (Logic's alternating between lanes); where that take's audio
+    /// stops, the section keeps its own take. Grouped folders follow with their matching take.
+    pub fn move_comp_section(&mut self, region: Id, at: i64, delta: i64) {
+        let Some((s, shift)) = self.comp_section(region, at) else { return };
+        let to = self.region(region).and_then(|r| r.takes.as_ref()).and_then(|f| f.neighbour_take(&s, delta));
+        if let Some(t) = to {
+            self.set_comp_range(region, Some(t), s.start - shift, s.end - shift);
+        }
     }
 
     /// Previous Take (`delta` -1) and Next Take (1): each folder in `regions`, and the grouped
@@ -550,6 +587,14 @@ impl Session {
         self.push_regions(track);
         self.dirty = true;
         Ok(id)
+    }
+}
+
+/// What to add to a timeline position to get folder `r`'s take time.
+fn take_time_shift(r: &Region) -> i64 {
+    match r.content {
+        RegionContent::Audio { offset, .. } => offset - r.start,
+        RegionContent::Midi { .. } => r.takes.as_ref().map_or(0, |f| f.offset) - r.start,
     }
 }
 

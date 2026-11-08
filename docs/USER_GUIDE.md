@@ -1362,13 +1362,25 @@ Take folders follow Logic's Quick Swipe Comping.
   - Drag across a take row to put that stretch of the take into the comp (snapped to the grid).
     Comp parts are drawn bright and the rest dimmed; the closed folder draws the comp's
     waveform.
-  - Click a take row to hear that take throughout.
+  - Click a take row to hear that take throughout. A click on a part of a take that is already
+    in the comp selects that *comp section* instead (outlined); a swipe selects the section it
+    makes.
+- **Editing comp sections** (in the comp heard, as in Logic):
+  - Drag the edge of a section in its take row (the pointer becomes a resize arrow). Where one
+    section hands over to the next, the border moves and both sections change; an outer edge,
+    next to a gap or the folder's end, lengthens or shortens its section. A section can't pass
+    its neighbour or reach past its take's audio.
+  - With a section selected, **Up** and **Down** move it to the take above or below (takes with
+    no audio there are skipped), and **Delete** removes it, leaving a silent gap. Right-click a
+    section for **Move Section to Take Above**, **Move Section to Take Below** and **Remove
+    Section**.
   - **Select Previous Take** and **Select Next Take** (Alt+Shift+Up and Alt+Shift+Down) switch
     every selected take folder one take up or down (from the take heard longest, in a comp).
 - **Grouped tracks comp together.** When tracks are in a group that is on and links **Editing
   (Selection)**, their take folders follow each other, as in Logic: choosing a take, swiping a
   comp, and choosing, creating, duplicating, renaming or deleting a comp in one folder does the
-  same in the folders at the same place on the others, as one undo step. Record the drum mics
+  same in the folders at the same place on the others, as one undo step; so do the comp section
+  edits (on the folders with a section edge or section at the same place). Record the drum mics
   together and Take 2 is Take 2 on every mic. Takes recorded together are matched by their
   pass (a take only one of the tracks recorded is left alone on the others); folders packed by
   hand are matched by take number. Turn the group off (its clutch) to comp one folder alone.

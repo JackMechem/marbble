@@ -1,6 +1,6 @@
 // Take folder comps and MIDI take folders: what the folder menu lists and what the folder's
 // name bar says. The comp logic itself is in the engine (crates/engine/src/takes.rs).
-import type { Region, TakeFolder } from "./api";
+import type { CompSegment, Id, Region, TakeFolder } from "./api";
 
 /** A MIDI take folder: whole takes only, no swipe comping (as in Logic). */
 export const isMidiFolder = (r: Region): boolean => !!r.takes && r.content.type === "midi";
@@ -33,4 +33,59 @@ export function folderLabel(r: Region): string | null {
     return f.takes.find((t) => t.id === id)?.name ?? null;
   }
   return wholeTakeName(f) ?? compNames(f)[currentComp(f)];
+}
+
+// ---- comp sections: what the engine's comp section edits will do, for drawing a drag ----------
+
+/** The comp section heard at take time `at`. */
+export function sectionAt(f: TakeFolder, at: number): CompSegment | null {
+  return f.comp.find((s) => s.start <= at && at < s.end) ?? null;
+}
+
+/** The end of one of `take`'s comp sections within `tol` of take time `at` (the nearest), or
+ *  null: where a drag in that take's row moves a section edge. */
+export function edgeNear(f: TakeFolder, take: Id, at: number, tol: number): number | null {
+  let best: number | null = null;
+  for (const s of f.comp) {
+    if (s.take !== take) continue;
+    for (const e of [s.start, s.end]) if (Math.abs(e - at) <= tol && (best === null || Math.abs(e - at) < Math.abs(best - at))) best = e;
+  }
+  return best;
+}
+
+/** The comp with its edge at take time `at` dragged to `to`, as the engine's `move_edge` does it:
+ *  where one section hands over to the next both move, an outer edge moves its own section, and
+ *  no section passes its neighbour, vanishes or reaches past its take's audio. */
+export function movedEdge(f: TakeFolder, at: number, to: number): CompSegment[] {
+  const comp = f.comp.map((s) => ({ ...s }));
+  const l = comp.findIndex((s) => s.end === at);
+  const r = comp.findIndex((s) => s.start === at);
+  const span = (s: CompSegment) => f.takes.find((t) => t.id === s.take) ?? s;
+  let lo = -Infinity;
+  let hi = Infinity;
+  if (l >= 0) {
+    lo = comp[l].start + 1;
+    hi = Math.min(hi, span(comp[l]).end, r < 0 && l + 1 < comp.length ? comp[l + 1].start : Infinity);
+  }
+  if (r >= 0) {
+    lo = Math.max(lo, span(comp[r]).start, l < 0 && r > 0 ? comp[r - 1].end : -Infinity);
+    hi = Math.min(hi, comp[r].end - 1);
+  }
+  if ((l < 0 && r < 0) || lo > hi) return comp;
+  const x = Math.min(hi, Math.max(lo, to));
+  if (l >= 0) comp[l].end = x;
+  if (r >= 0) comp[r].start = x;
+  return comp;
+}
+
+/** The take `delta` rows from section `s`'s take (up when negative) that has audio somewhere in
+ *  it, where Move Section to Take Above or Below sends it; null when there is none. */
+export function neighbourTake(f: TakeFolder, s: CompSegment, delta: number): Id | null {
+  const k = f.takes.findIndex((t) => t.id === s.take);
+  if (k < 0 || !delta) return null;
+  for (let i = k + delta; i >= 0 && i < f.takes.length; i += Math.sign(delta)) {
+    const t = f.takes[i];
+    if (t.start < s.end && t.end > s.start) return t.id;
+  }
+  return null;
 }
