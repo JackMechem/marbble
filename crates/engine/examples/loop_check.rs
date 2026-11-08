@@ -6,19 +6,23 @@ use daw_engine::audio_io::AudioConfig;
 use daw_engine::model::{InputSel, Note, RegionContent, TrackKind};
 use daw_engine::Session;
 
+#[path = "common/transport.rs"]
+mod transport;
+
 /// Plays the cycle `from..to` for a moment and returns the peak meter of each track id given,
 /// plus Stereo Out.
 fn levels(s: &mut Session, from: i64, to: i64, ids: &[u64]) -> (Vec<f32>, f32) {
     s.set_cycle(true, from, to);
     s.locate(from);
     s.play();
+    transport::wait_for(s, true);
     std::thread::sleep(Duration::from_millis(150));
     s.tick();
     std::thread::sleep(Duration::from_millis(250));
     let t = s.tick();
     s.stop();
     // play() is ignored until the engine has really stopped.
-    std::thread::sleep(Duration::from_millis(60));
+    transport::wait_for(s, false);
     let lv = ids.iter().map(|id| t.meters.iter().find(|m| m.0 == *id).map(|m| m.1.max(m.2)).unwrap_or(-1.0)).collect();
     (lv, t.master.0.max(t.master.1))
 }

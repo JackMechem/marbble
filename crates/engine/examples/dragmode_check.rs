@@ -13,6 +13,9 @@ use daw_engine::prefs::MoveAutomation;
 use daw_engine::session::RegionMove;
 use daw_engine::Session;
 
+#[path = "common/transport.rs"]
+mod transport;
+
 /// Set by any failed check: the example then exits with status 1, so scripts notice.
 static FAILED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
@@ -33,13 +36,14 @@ fn level(s: &mut Session, a: i64, b: i64) -> f32 {
     s.set_cycle(true, a, b);
     s.locate(a);
     s.play();
+    transport::wait_for(s, true);
     std::thread::sleep(Duration::from_millis(150));
     s.tick();
     std::thread::sleep(Duration::from_millis(250));
     let t = s.tick();
     s.stop();
     // play() is ignored until the engine has really stopped.
-    std::thread::sleep(Duration::from_millis(60));
+    transport::wait_for(s, false);
     t.master.0.max(t.master.1)
 }
 

@@ -12,6 +12,9 @@ use daw_engine::model::{Id, InputSel, RegionContent, TrackKind, MASTER_ID};
 use daw_engine::session::{RenderOptions, Tick};
 use daw_engine::Session;
 
+#[path = "common/transport.rs"]
+mod transport;
+
 static FAILED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 fn check(name: &str, ok: bool) {
@@ -23,13 +26,14 @@ fn check(name: &str, ok: bool) {
 fn play(s: &mut Session) -> Tick {
     s.locate(0);
     s.play();
+    transport::wait_for(s, true);
     std::thread::sleep(Duration::from_millis(150));
     s.tick();
     std::thread::sleep(Duration::from_millis(250));
     let t = s.tick();
     s.stop();
     // play() is ignored until the engine has really stopped.
-    std::thread::sleep(Duration::from_millis(60));
+    transport::wait_for(s, false);
     // As the app's tick thread would, take in what played up to the stop, so a reset after
     // this one starts from silence.
     s.tick();

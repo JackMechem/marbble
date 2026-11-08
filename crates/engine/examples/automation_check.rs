@@ -10,19 +10,23 @@ use daw_engine::model::{AutoMode, AutoParam, AutoPoint, InputSel, TrackKind};
 use daw_engine::session::TrackPatch;
 use daw_engine::Session;
 
+#[path = "common/transport.rs"]
+mod transport;
+
 /// Loops `from..to` for a moment and returns the track's peak meter (left, right). The null
 /// device has no clock, so a short cycle is how to listen to one stretch of the timeline.
 fn levels_at(s: &mut Session, id: u64, from: i64, to: i64) -> (f32, f32) {
     s.set_cycle(true, from, to);
     s.locate(from);
     s.play();
+    transport::wait_for(s, true);
     std::thread::sleep(Duration::from_millis(120));
     s.tick();
     std::thread::sleep(Duration::from_millis(200));
     let t = s.tick();
     s.stop();
     // play() is ignored until the engine has really stopped.
-    std::thread::sleep(Duration::from_millis(60));
+    transport::wait_for(s, false);
     t.meters.iter().find(|m| m.0 == id).map(|m| (m.1, m.2)).unwrap_or((-1.0, -1.0))
 }
 
@@ -51,10 +55,11 @@ fn pass(s: &mut Session, from: i64, during: impl FnOnce(&mut Session)) {
     s.set_cycle(false, 0, 0);
     s.locate(from);
     s.play();
+    transport::wait_for(s, true);
     std::thread::sleep(Duration::from_millis(40));
     during(s);
     s.stop();
-    std::thread::sleep(Duration::from_millis(60));
+    transport::wait_for(s, false);
 }
 
 /// Keeps `idle` (the UI's 30 Hz housekeeping) running while time passes.
