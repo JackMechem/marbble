@@ -41,16 +41,31 @@
   mask-image: linear-gradient(to right, black calc(100% - 36px), transparent);
 }
 
-/* In a row, as a chain of devices, each as tall as the row. */
+/* In a row, a chain of devices that scrolls sideways: sections stack in columns as tall as the
+   box, so the short ones share a column and the bottom section's height isn't left empty. */
 .inst-panel.row .inst-sections {
-  flex-wrap: nowrap;
+  flex-direction: column;
+  flex-wrap: wrap;
+  align-content: flex-start;
 }
 
 .inst-panel.row .inst-section {
+  flex: 1 0 auto;
+}
+
+/* A floating window that hasn't been sized takes its height from the sections: one line of them. */
+.fx-window:not(.sized) .inst-panel.row .inst-sections {
+  flex-direction: row;
+  flex-wrap: nowrap;
+}
+
+.fx-window:not(.sized) .inst-panel.row .inst-section {
   flex: none;
 }
 
-/* In a grid, lines of sections that fill the width, with their edges lined up. */
+/* In a grid, every section is one line of controls, so the lines are all one height and pack
+   with no space under the shorter sections; each line fills the width, its controls packed from
+   the left of each section. */
 .inst-panel.grid .inst-sections {
   flex-wrap: wrap;
 }
@@ -59,40 +74,54 @@
   flex: 1 1 auto;
 }
 
-/* Up to four controls in a line, more in two: columns, so a switch stays over its knob. */
+/* The controls on a grid of equal cells: up to four in a line, more in two (in a row), in
+   columns, so a section's author can put a switch over its knob. */
 .inst-section > .fx-group-body {
   display: grid;
   grid-auto-flow: column;
+  grid-auto-columns: minmax(64px, auto);
   align-items: start;
   align-content: start;
-  justify-items: center;
-  gap: 8px 6px;
-}
-
-.inst-panel.row .inst-section > .fx-group-body {
   justify-content: start;
+  justify-items: center;
+  gap: 6px;
 }
 
+.inst-section.rows-1 > .fx-group-body,
 .inst-panel.grid .inst-section > .fx-group-body {
-  justify-content: space-evenly;
-}
-
-.inst-section.one-row > .fx-group-body {
   grid-template-rows: auto;
 }
 
-.inst-section.two-rows > .fx-group-body {
+.inst-section.rows-2 > .fx-group-body {
   grid-template-rows: auto auto;
 }
 
-.inst-section .fx-knob {
-  width: 66px;
+/* Every cell is a name two lines high, the control on the knobs' line, then the value: a choice
+   or a switch sits level with the knobs beside it. */
+.inst-section .fx-knob,
+.inst-section .fx-choice,
+.inst-section .inst-toggle {
+  display: grid;
+  grid-template-rows: calc(2em * 1.15) 40px 18px;
+  justify-items: center;
+  align-items: center;
+  gap: 3px;
+  min-width: 64px;
 }
 
-/* Two lines high whether the name takes one line or two, with the text at the bottom, so the
-   knobs in a row sit level. A longer name shows its last two lines; the knob's tooltip has it all. */
+.inst-section .fx-knob {
+  width: 64px;
+}
+
+/* A switch or segments wider than a knob keeps clear of the next cell. */
+.inst-section .fx-choice,
+.inst-section .inst-toggle {
+  padding-inline: 2px;
+}
+
+/* A longer name shows its last two lines, at the bottom; the knob's tooltip has it all. */
 .inst-section .fx-label {
-  height: calc(2em * 1.15);
+  align-self: stretch;
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -100,6 +129,73 @@
   white-space: normal;
   text-align: center;
   line-height: 1.15;
+}
+
+.inst-section .fx-value {
+  min-width: 52px;
+}
+
+/* One header per section: its name, and its on/off light when it has one. */
+.inst-section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 15px;
+  white-space: nowrap;
+}
+
+.inst-section-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inst-power,
+.inst-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 4px;
+  color: inherit;
+}
+
+.inst-power {
+  flex: none;
+  justify-content: center;
+  width: 16px;
+  height: 15px;
+  margin-left: -3px;
+}
+
+.inst-switch {
+  max-width: 100%;
+  height: 16px;
+  padding: 0 4px;
+  color: var(--dim);
+  font-size: var(--fs-sm);
+}
+
+.inst-switch-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inst-power:hover,
+.inst-switch:hover {
+  background: var(--btn-hi);
+}
+
+.inst-power.on .dyn-led,
+.inst-switch.on .dyn-led {
+  background: var(--accent);
+  box-shadow: 0 0 4px var(--accent);
+}
+
+/* A part switched off: its controls dim, and still work. */
+.inst-section.off > .fx-group-body,
+.inst-cell.off .knob,
+.inst-cell.off .fx-value {
+  opacity: 0.45;
 }
 
 .fx-dock > .fx-body:has(> .inst-panel) {

@@ -3,14 +3,16 @@
 // registering it in FX_PANELS (src/fx.ts), as the effects do.
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { api, call, type Id } from "../../api";
-import type { FxPanelProps } from "../../fx";
+import type { FxParamSpec, FxPanelProps } from "../../fx";
 import { getState } from "../../store";
 import { moreBeyond, savedLayout, saveLayout, type PanelPlace, type SectionLayout } from "../../instLayout";
+import { sectionView } from "../../instSections";
+import { useFxLearn } from "../../learn";
 import { keyboardKeys } from "../../pianoKeys";
-import { FxControl, FxGroup, FxMeter, isReductionMeter } from "./common";
+import { FxChoice, FxGroup, FxKnob, FxMeter, FxToggle, isReductionMeter } from "./common";
 
-export function InstrumentPanel({ info, track, values, set, touch, meters }: FxPanelProps) {
-  const byId = new Map(info.params.map((p) => [p.id, p]));
+export function InstrumentPanel(props: FxPanelProps) {
+  const { info, track, meters } = props;
   const ref = useRef<HTMLDivElement>(null);
   const [place, setPlace] = useState<PanelPlace>("docked");
   const [layout, setLayout] = useState<SectionLayout>(() => savedLayout("docked"));
@@ -30,15 +32,10 @@ export function InstrumentPanel({ info, track, values, set, touch, meters }: FxP
     <div ref={ref} className={"fx-panel inst-panel " + layout}>
       <div ref={sections} className="inst-sections" data-more={more ?? undefined} onWheel={wheelAcross}>
         {(info.sections ?? []).map((s) => (
-          <FxGroup key={s.title} title={s.title} className={"inst-section " + (s.params.length > 4 ? "two-rows" : "one-row")}>
-            {s.params.map((id) => {
-              const p = byId.get(id);
-              return p ? <FxControl key={id} spec={p} value={values[id]} onChange={(v) => set(id, v)} onTouch={(on) => touch(id, on)} /> : null;
-            })}
-          </FxGroup>
+          <InstSection key={s.title} {...props} title={s.title} params={s.params} />
         ))}
         {info.meters.length > 0 && (
-          <FxGroup title="Meters" className="inst-section">
+          <FxGroup title="Meters" className="inst-section rows-1">
             {info.meters.map((m, i) => (
               <FxMeter key={m} label={m} value={meters[i] ?? NaN} kind={isReductionMeter(m) ? "reduction" : "level"} />
             ))}
@@ -57,6 +54,70 @@ export function InstrumentPanel({ info, track, values, set, touch, meters }: FxP
         <PanelKeyboard track={track} />
       </div>
     </div>
+  );
+}
+
+/**
+ * One section of an instrument's panel: one header with the section's name (and its on/off
+ * switch, when it has one), then its controls on a grid of equal cells, named without repeating
+ * the header (instSections.ts). The Sampler's panel shows its sections with it too.
+ */
+export function InstSection({ info, values, set, touch, title, params, className }: FxPanelProps & { title: string; params: number[]; className?: string }) {
+  const byId = new Map(info.params.map((p) => [p.id, p]));
+  const specs = params.flatMap((id) => byId.get(id) ?? []);
+  const view = sectionView(info.id, title, specs);
+  const on = (id: number) => values[id] >= 0.5;
+  const power = view.power === null ? null : byId.get(view.power);
+  const control = (spec: FxParamSpec, label: string) => {
+    const change = (v: number) => set(spec.id, v);
+    if (spec.kind.type === "toggle")
+      return (
+        <div className="inst-toggle">
+          <div className="fx-label" />
+          <FxToggle spec={spec} value={values[spec.id]} onChange={change} label={label} />
+        </div>
+      );
+    if (spec.kind.type === "choice") return <FxChoice spec={spec} value={values[spec.id]} onChange={change} label={label} />;
+    return <FxKnob spec={spec} value={values[spec.id]} onChange={change} onTouch={(t) => touch(spec.id, t)} size={40} label={label} />;
+  };
+  return (
+    <div className={`fx-group inst-section rows-${view.rows}` + (power && !on(power.id) ? " off" : "") + (className ? " " + className : "")} role="group" aria-label={title}>
+      <div className="fx-group-title inst-section-title">
+        {power && <LedSwitch spec={power} on={on(power.id)} onChange={(v) => set(power.id, v)} className="inst-power" />}
+        <span className="inst-section-name">{title}</span>
+      </div>
+      <div className="fx-group-body">
+        {view.cells.map((c) => {
+          const spec = byId.get(c.id)!;
+          if (c.type === "control") return <div key={c.id} className="inst-cell">{control(spec, c.label)}</div>;
+          const toggle = byId.get(c.toggle)!;
+          return (
+            <div key={c.id} className={"inst-cell switched" + (on(c.toggle) ? "" : " off")}>
+              <FxKnob
+                spec={spec}
+                value={values[spec.id]}
+                onChange={(v) => set(spec.id, v)}
+                onTouch={(t) => touch(spec.id, t)}
+                size={40}
+                label={c.label}
+                head={<LedSwitch spec={toggle} on={on(c.toggle)} onChange={(v) => set(toggle.id, v)} className="inst-switch" text={c.label} />}
+              />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/** An on/off switch with a light, for a section's or a knob's part: its name in the tooltip. */
+function LedSwitch({ spec, on, onChange, className, text }: { spec: FxParamSpec; on: boolean; onChange: (v: number) => void; className: string; text?: string }) {
+  const learn = useFxLearn(spec.id);
+  return (
+    <button className={className + (on ? " on" : "")} aria-pressed={on} aria-label={spec.name} title={spec.name} onClick={() => onChange(on ? 0 : 1)} onContextMenu={learn}>
+      <span className="dyn-led" />
+      {text && <span className="inst-switch-name">{text}</span>}
+    </button>
   );
 }
 

@@ -73,33 +73,6 @@
   gap: 4px;
 }
 
-/* Two rows of controls, as many columns as they need. */
-.smp-section > .fx-group-body {
-  display: grid;
-  grid-auto-flow: column;
-  grid-template-rows: repeat(2, auto);
-  align-content: start;
-  justify-items: center;
-  gap: 6px;
-}
-
-.smp-section .fx-knob {
-  width: 60px;
-}
-
-/* Two lines high whether the name takes one line or two, with the text at the bottom, so the
-   knobs in a row sit level. A longer name shows its last two lines; the knob's tooltip has it all. */
-.smp-section .fx-label {
-  height: calc(2em * 1.15);
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  overflow: hidden;
-  white-space: normal;
-  text-align: center;
-  line-height: 1.15;
-}
-
 .smp-tools {
   flex: none;
   display: flex;

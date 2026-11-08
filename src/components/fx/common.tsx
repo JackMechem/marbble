@@ -29,6 +29,7 @@ export function FxKnob({
   onTouch,
   size = 46,
   label,
+  head,
   format = formatValue,
 }: {
   spec: FxParamSpec;
@@ -38,6 +39,8 @@ export function FxKnob({
   size?: number;
   /** Overrides the parameter's name. */
   label?: string;
+  /** Shown in the name's place: a switch with the name in it (an instrument's "Osc 1" with its on/off). */
+  head?: React.ReactNode;
   /** Overrides the readout (a pan as "L 35", say); typing a value still parses plain units. */
   format?: (spec: FxParamSpec, v: number) => string;
 }) {
@@ -85,7 +88,7 @@ export function FxKnob({
   const a1 = angle(n);
   return (
     <div className="fx-knob" style={{ minWidth: Math.max(size + 16, 64) }}>
-      <div className="fx-label">{label ?? spec.name}</div>
+      <div className="fx-label">{head ?? label ?? spec.name}</div>
       <div
         className="knob"
         style={{ width: size, height: size }}

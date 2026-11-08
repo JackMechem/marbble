@@ -2069,7 +2069,10 @@ can: `ParamSpec`, `FactoryPreset`, `FxContext`, presets, `FxShared`, the panels'
 - **In the UI**: `list_builtin_instruments` fills `instList` (`src/store.ts`). `fxInfo` looks through
   both lists; `isBuiltinFx` is true for what has parameters, so Marbble Synth still has no panel.
   `InstrumentPanel` (`src/components/fx/Instrument.tsx`) shows the sections and a keyboard, unless
-  `FX_PANELS` has a custom panel for that id. The keyboard selects the track and plays through
+  `FX_PANELS` has a custom panel for that id. Each section (`InstSection`, which the Sampler's panel
+  uses too) names its controls without the section's words, folds an "X On" switch into the knob
+  "X" and puts the section's own switch in its header (`src/instSections.ts`); the parameters keep
+  their full names for tooltips, automation and MIDI learn. The keyboard selects the track and plays through
   `midi_event`, the Musical Typing path.
 
 **Marbble Synth** stays as it was: `basic.rs` wraps `BasicSynth` without changing it. Old projects
@@ -2767,6 +2770,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `compressorModel.ts`, `dynScale.ts` | The Compressor's parameter ids, circuits and curve (mirrors `compressor.rs`), and the dynamics panels' value formatting and knob maths; pure, tested. |
 | `settingsText.ts` | The words Settings and the Recovery sheet show: MIDI messages, plug-in types, what crashed work left; pure, tested. |
 | `instLayout.ts` | How an instrument panel lays out its sections, chosen apart for docked and floating, and which edge they run on past (for the fade); pure, tested. |
+| `instSections.ts` | What an instrument panel's section shows: labels without the section's words, switches folded into their knobs or the header, one line or two; pure, tested. |
 | `samplerMap.ts`, `samplerDrop.ts` | Marbble Sampler's zones, note names and the sums behind its map (pure, tested); files going into it from its panel or a drop. |
 | `sideChain.ts` | The key sources a side-chain menu offers; pure, tested. |
 | `threads.ts` | Settings › Audio › Processing Threads; pure, tested. |

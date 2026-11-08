@@ -11,8 +11,8 @@ import { dropOnSampler } from "../../samplerDrop";
 import { memorySize, dragZone, grabOf, keyAt, keyName, moveHandle, parseKey, pointsOf, toZone, zoneAt, zoneRect, zoomed, type MapBox, type SamplerView, type SamplerWave, type WaveHandle, type ZoneGrab, type ZoneView } from "../../samplerMap";
 import { getState, setState, useStore } from "../../store";
 import { AUDIO_EXTENSIONS } from "../../dnd";
-import { FxControl, FxGroup } from "./common";
-import { wheelAcross } from "./Instrument";
+import { FxGroup } from "./common";
+import { InstSection, wheelAcross } from "./Instrument";
 
 type Result<T> = { snapshot: Snapshot; result: T };
 
@@ -475,12 +475,12 @@ function RecordControls({ track, onDone }: { track: Id; onDone: (zone: number) =
   );
 }
 
-export function SamplerPanel({ info, track, uid, values, set, touch, meters }: FxPanelProps) {
+export function SamplerPanel(props: FxPanelProps) {
+  const { info, track, uid, meters } = props;
   const fingerprint = useStore((s) => findFxSlot(s.snap?.project, uid)?.plugin.state);
   const [view, setView] = useState<SamplerView | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
   const [notes, setNotes] = useState<string | null>(null);
-  const byId = new Map(info.params.map((p) => [p.id, p]));
 
   useEffect(() => {
     let live = true;
@@ -573,12 +573,7 @@ export function SamplerPanel({ info, track, uid, values, set, touch, meters }: F
           )}
         </FxGroup>
         {(info.sections ?? []).map((s) => (
-          <FxGroup key={s.title} title={s.title} className="smp-col smp-section">
-            {s.params.map((id) => {
-              const p = byId.get(id);
-              return p ? <FxControl key={id} spec={p} value={values[id]} onChange={(v) => set(id, v)} onTouch={(on) => touch(id, on)} /> : null;
-            })}
-          </FxGroup>
+          <InstSection key={s.title} {...props} title={s.title} params={s.params} className="smp-col" />
         ))}
       </div>
     </div>

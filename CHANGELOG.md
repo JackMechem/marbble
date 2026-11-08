@@ -8,6 +8,14 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Changed
 
+- **Tidier instrument panels.** The built-in instruments' sections (Tre, Sei, Cinque, Uno, Onda,
+  Sedici and the Sampler's) no longer repeat their names in every control: Oscillator 1 shows
+  Range and Wave, not Osc 1 Range and Osc 1 Wave. A part's on/off switch is a light by its knob's
+  name (Tre's Osc 1, Noise and Glide) or by its section's title (Onda's oscillators, Sedici's
+  operators) instead of a button of its own. Controls sit on one grid, with choices and switches
+  level with the knobs; in Grid every section is one line, so the lines pack with no space under
+  the shorter sections (Tre's Grid fits a 1920-pixel-wide bottom section without scrolling), and
+  in Row the short sections stack to the panel's height.
 - **Less memory and quicker edits with plug-ins that have large settings.** Every undo step used
   to hold its own copy of every plug-in's settings, and the window's every update copied them
   too. They are now shared, so 100 undo steps with four plug-ins of 1.5 MB settings each take
