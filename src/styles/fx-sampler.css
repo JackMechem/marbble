@@ -81,12 +81,23 @@
   height: 24px;
 }
 
+/* The shared pop-up (Form.tsx Select), at the height of the panel's buttons. */
 .smp-input,
 .smp-zone-pick {
   flex: none;
+  height: 22px;
   min-width: 0;
   max-width: 100%;
-  font-size: var(--fs-sm);
+  font-size: var(--fs-md);
+}
+
+.smp-input {
+  width: 116px;
+}
+
+.smp-zone-pick {
+  align-self: flex-start;
+  width: 260px;
 }
 
 .smp-rec.on {

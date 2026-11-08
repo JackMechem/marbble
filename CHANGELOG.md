@@ -16,6 +16,9 @@ All notable changes to Marbble are recorded here. The format follows
   level with the knobs; in Grid every section is one line, so the lines pack with no space under
   the shorter sections (Tre's Grid fits a 1920-pixel-wide bottom section without scrolling), and
   in Row the short sections stack to the panel's height.
+- **The Sampler's input and zone pickers match the other pop-ups.** They were the last native
+  drop-down lists, drawn by the system; they now open Marbble's own menu. With the keyboard, Up
+  and Down step through any of these pop-ups' choices, and Return or Space opens the menu.
 - **Less memory and quicker edits with plug-ins that have large settings.** Every undo step used
   to hold its own copy of every plug-in's settings, and the window's every update copied them
   too. They are now shared, so 100 undo steps with four plug-ins of 1.5 MB settings each take

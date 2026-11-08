@@ -23,31 +23,51 @@ export function sheetKey(e: React.KeyboardEvent, onClose: () => void) {
   }
 }
 
+/**
+ * A pop-up menu button in place of a native <select>. Arrow Up and Down step through the
+ * options without opening it, as a closed native one does; Return or Space opens it.
+ */
 export function Select<T extends string | number>({
   value,
   options,
   onChange,
   width,
+  title,
+  className,
 }: {
   value: T;
   options: [T, string][];
   onChange: (v: T) => void;
   width?: number | string;
+  /** The tooltip; the chosen option's name when there's none. */
+  title?: string;
+  className?: string;
 }) {
   const current = options.find((o) => o[0] === value);
+  const open = (el: HTMLElement) =>
+    openMenuAt(
+      el,
+      options.map(([v, label]) => ({ label, checked: v === value, onClick: () => onChange(v) })),
+    );
   return (
     <button
       type="button"
-      className="select"
+      className={"select" + (className ? " " + className : "")}
       style={{ width }}
-      title={current?.[1]}
+      title={title ?? current?.[1]}
       onMouseDown={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        openMenuAt(
-          e.currentTarget,
-          options.map(([v, label]) => ({ label, checked: v === value, onClick: () => onChange(v) })),
-        );
+        open(e.currentTarget);
+      }}
+      // A click with no pointer behind it is Return or Space.
+      onClick={(e) => e.detail === 0 && open(e.currentTarget)}
+      onKeyDown={(e) => {
+        if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+        e.preventDefault();
+        const i = options.findIndex((o) => o[0] === value);
+        const next = options[Math.min(options.length - 1, Math.max(0, i + (e.key === "ArrowDown" ? 1 : -1)))];
+        if (next && next[0] !== value) onChange(next[0]);
       }}
     >
       <span className="select-label">{current?.[1] ?? ""}</span>

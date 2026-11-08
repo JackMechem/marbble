@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "../../fileDialog";
+import { Select } from "../Form";
 import { act, api, call, type Id, type InputSel, type Snapshot } from "../../api";
 import type { FxPanelProps } from "../../fx";
 import { findFxSlot } from "../../fxHost";
@@ -458,14 +459,7 @@ function RecordControls({ track, onDone }: { track: Id; onDone: (zone: number) =
           <button className="fx-toggle smp-rec" title="Record from the audio input into this sampler. The transport stays as it is." onClick={start}>
             ● Record
           </button>
-          <select className="smp-input" value={choice} onChange={(e) => setChoice(Number(e.target.value))} title="The input to record from">
-            {options.map((o, i) => (
-              <option key={o.label} value={i}>
-                {o.label}
-              </option>
-            ))}
-            {!options.length && <option>No input</option>}
-          </select>
+          <Select className="smp-input" value={choice} options={options.length ? options.map((o, i) => [i, o.label]) : [[0, "No input"]]} onChange={setChoice} title="The input to record from" />
           <label className="smp-check" title="Move the start and end in past the silence. The file keeps everything.">
             <input type="checkbox" checked={trim} onChange={(e) => setTrim(e.target.checked)} /> Trim
           </label>
@@ -549,13 +543,13 @@ export function SamplerPanel(props: FxPanelProps) {
         </FxGroup>
         <FxGroup title={zone ? `Zone: ${zone.name}` : "Zone"} className="smp-col smp-wave">
           {zones.length > 1 && (
-            <select className="smp-zone-pick" value={selected ?? ""} onChange={(e) => setSelected(Number(e.target.value))} title="Choose a zone, for those behind others on the map">
-              {zones.map((z) => (
-                <option key={z.id} value={z.id}>
-                  {z.error ? `(can't play) ${z.name}` : z.name} {keyName(z.key_lo)}–{keyName(z.key_hi)}
-                </option>
-              ))}
-            </select>
+            <Select
+              className="smp-zone-pick"
+              value={selected ?? -1}
+              options={zones.map((z) => [z.id, `${z.error ? `(can't play) ${z.name}` : z.name} ${keyName(z.key_lo)}–${keyName(z.key_hi)}`])}
+              onChange={setSelected}
+              title="Choose a zone, for those behind others on the map"
+            />
           )}
           {zone ? (
             <>
