@@ -1,6 +1,5 @@
 //! Exercises looping regions and hidden tracks against a running engine (silent ALSA null
 //! output). usage: loop_check <audio file> <scratch dir>
-use std::time::Duration;
 
 use daw_engine::audio_io::AudioConfig;
 use daw_engine::model::{InputSel, Note, RegionContent, TrackKind};
@@ -9,22 +8,11 @@ use daw_engine::Session;
 #[path = "common/transport.rs"]
 mod transport;
 
-/// Plays the cycle `from..to` for a moment and returns the peak meter of each track id given,
-/// plus Stereo Out.
-fn levels(s: &mut Session, from: i64, to: i64, ids: &[u64]) -> (Vec<f32>, f32) {
+/// Plays the cycle `from..to` and returns the peak meter of each track id given, plus Stereo
+/// Out, once `ready` accepts them (`transport::once`: one window, for silence).
+fn levels(s: &mut Session, from: i64, to: i64, ids: &[u64], ready: impl Fn(&[f32], f32) -> bool) -> (Vec<f32>, f32) {
     s.set_cycle(true, from, to);
-    s.locate(from);
-    s.play();
-    transport::wait_for(s, true);
-    std::thread::sleep(Duration::from_millis(150));
-    s.tick();
-    std::thread::sleep(Duration::from_millis(250));
-    let t = s.tick();
-    s.stop();
-    // play() is ignored until the engine has really stopped.
-    transport::wait_for(s, false);
-    let lv = ids.iter().map(|id| t.meters.iter().find(|m| m.0 == *id).map(|m| m.1.max(m.2)).unwrap_or(-1.0)).collect();
-    (lv, t.master.0.max(t.master.1))
+    transport::measure(s, from, ids, ready)
 }
 
 /// Set by any failed check: the example then exits with status 1, so scripts notice.
@@ -55,22 +43,22 @@ fn main() {
     let len = sr / 2;
     assert!(full > 5 * len, "the test file should be longer than 2.5 s");
     s.resize_region(id, 0, len);
-    let (lv, _) = levels(&mut s, len + sr / 10, len + sr, &[a]);
+    let (lv, _) = levels(&mut s, len + sr / 10, len + sr, &[a], transport::once);
     ok &= check(&format!("unlooped region is silent after its end ({:.4})", lv[0]), lv[0] < 1e-4);
 
     s.checkpoint("Loop Region", None, false);
     s.set_region_loop(id, Some(4 * len + len / 2));
-    let (lv, _) = levels(&mut s, len + sr / 10, len + sr, &[a]);
+    let (lv, _) = levels(&mut s, len + sr / 10, len + sr, &[a], |lv, _| lv[0] > 0.01);
     ok &= check(&format!("looped region plays in its repetitions ({:.3})", lv[0]), lv[0] > 0.01);
-    let (lv, _) = levels(&mut s, 5 * len, 6 * len, &[a]);
+    let (lv, _) = levels(&mut s, 5 * len, 6 * len, &[a], transport::once);
     ok &= check(&format!("the loop stops at its loop end ({:.4})", lv[0]), lv[0] < 1e-4);
 
     s.undo();
     let gone = s.project.track(a).unwrap().regions[0].loop_end.is_none();
-    let (lv, _) = levels(&mut s, len + sr / 10, len + sr, &[a]);
+    let (lv, _) = levels(&mut s, len + sr / 10, len + sr, &[a], transport::once);
     ok &= check(&format!("undo removes the loop ({:.4})", lv[0]), gone && lv[0] < 1e-4);
     s.redo();
-    let (lv, _) = levels(&mut s, len + sr / 10, len + sr, &[a]);
+    let (lv, _) = levels(&mut s, len + sr / 10, len + sr, &[a], |lv, _| lv[0] > 0.01);
     ok &= check(&format!("redo brings it back ({:.3})", lv[0]), s.project.track(a).unwrap().regions[0].loop_end == Some(4 * len + len / 2) && lv[0] > 0.01);
 
     // Moving takes the loop along; trimming keeps its end, or drops it when overtaken.
@@ -109,7 +97,7 @@ fn main() {
     let want: Vec<(i64, i64)> = vec![(0, len), (len, len), (2 * len, len), (3 * len, len), (4 * len, len / 2)];
     ok &= check(&format!("convert makes one region per pass {starts:?}"), copies.len() == 4 && starts == want);
     ok &= check("no loops left", s.project.track(a).unwrap().regions.iter().all(|r| r.loop_end.is_none()));
-    let (lv, _) = levels(&mut s, len + sr / 10, len + sr, &[a]);
+    let (lv, _) = levels(&mut s, len + sr / 10, len + sr, &[a], |lv, _| lv[0] > 0.01);
     ok &= check(&format!("the copies play ({:.3})", lv[0]), lv[0] > 0.01);
     s.undo();
     ok &= check("undo restores the loop", s.project.track(a).unwrap().regions.len() == 1 && s.project.track(a).unwrap().regions[0].is_looped());
@@ -148,7 +136,7 @@ fn main() {
     );
     s.set_region_gain(&quiet, Some(-40.0), None);
     s.move_region(id, 0, None); // the loop's region is now the newest
-    let (lv, _) = levels(&mut s, 2 * len + sr / 20, 3 * len - sr / 20, &[a]);
+    let (lv, _) = levels(&mut s, 2 * len + sr / 20, 3 * len - sr / 20, &[a], |lv, _| lv[0] > 1e-5);
     ok &= check(&format!("a region body covers the loop under it ({:.4})", lv[0]), lv[0] > 1e-5 && lv[0] < 0.05);
     s.undo();
 
@@ -172,10 +160,10 @@ fn main() {
     }
     s.set_region_loop(mid, None); // pushes the edited notes
     s.update_track(a, daw_engine::session::TrackPatch { mute: Some(true), ..Default::default() });
-    let (lv, _) = levels(&mut s, 2 * beat, 3 * beat, &[inst]);
+    let (lv, _) = levels(&mut s, 2 * beat, 3 * beat, &[inst], transport::once);
     ok &= check(&format!("unlooped MIDI region is silent later ({:.4})", lv[0]), lv[0] < 1e-3);
     s.set_region_loop(mid, Some(4 * beat));
-    let (lv, _) = levels(&mut s, 2 * beat, 3 * beat, &[inst]);
+    let (lv, _) = levels(&mut s, 2 * beat, 3 * beat, &[inst], |lv, _| lv[0] > 0.01);
     ok &= check(&format!("looped MIDI region plays its notes again ({:.3})", lv[0]), lv[0] > 0.01);
     s.update_track(a, daw_engine::session::TrackPatch { mute: Some(false), ..Default::default() });
 
@@ -185,7 +173,7 @@ fn main() {
     s.set_tracks_hidden(&[stack], true);
     let all_hidden = [stack, a, inst].iter().all(|id| s.project.track(*id).unwrap().hidden);
     ok &= check("hiding a stack hides its subtracks", all_hidden);
-    let (lv, _) = levels(&mut s, 0, len, &[a]);
+    let (lv, _) = levels(&mut s, 0, len, &[a], |lv, _| lv[0] > 0.01);
     ok &= check(&format!("a hidden track still plays ({:.3})", lv[0]), lv[0] > 0.01);
     s.undo();
     ok &= check("undo shows them again", s.project.tracks.iter().all(|t| !t.hidden));

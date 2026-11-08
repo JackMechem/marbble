@@ -22,15 +22,9 @@ fn check(name: &str, ok: bool) {
     println!("{} {name}", if ok { "PASS" } else { "FAIL" });
 }
 
-/// Plays for a moment and returns the last tick.
-fn play(s: &mut Session) -> Tick {
-    s.locate(0);
-    s.play();
-    transport::wait_for(s, true);
-    std::thread::sleep(Duration::from_millis(150));
-    s.tick();
-    std::thread::sleep(Duration::from_millis(250));
-    let t = s.tick();
+/// Plays until `ready` accepts a tick (see `transport::play_until`) and returns it.
+fn play(s: &mut Session, ready: impl Fn(&Tick) -> bool) -> Tick {
+    let t = transport::play_until(s, 0, ready);
     s.stop();
     // play() is ignored until the engine has really stopped.
     transport::wait_for(s, false);
@@ -60,6 +54,11 @@ fn wait_quiet(s: &mut Session) {
         }
         std::thread::sleep(Duration::from_millis(10));
     }
+}
+
+/// For `play`: whether all these strips' meters show sound.
+fn sounding(ids: &[Id]) -> impl Fn(&Tick) -> bool + '_ {
+    |t| transport::levels(t, ids).0.iter().all(|&l| l > 1e-4)
 }
 
 fn held(t: &Tick, id: Id) -> f32 {
@@ -115,7 +114,7 @@ fn main() {
     check("and the Channel EQ", [a, b].iter().all(|t| s.project.track(*t).unwrap().eq.bands[4].gain == -6.0));
 
     // The gain-reduction meter: the tone at -21.5 dBFS is well over a -45 dB threshold.
-    let t = play(&mut s);
+    let t = play(&mut s, sounding(&[src, a, b]));
     let gr = |id: Id| t.gain_reduction.iter().find(|g| g.0 == id).map(|g| g.1);
     check(
         &format!("the compressed strips report gain reduction ({:?} {:?} {:?})", gr(src), gr(a), gr(b)),
@@ -127,7 +126,7 @@ fn main() {
         &format!("one undo ({label:?}) takes it off both tracks"),
         inserts(&s, a).iter().all(|x| x.is_none()) && inserts(&s, b)[1].as_deref() == Some("builtin:reverb") && inserts(&s, b)[0].is_none(),
     );
-    let t = play(&mut s);
+    let t = play(&mut s, sounding(&[src]));
     check(
         "a strip without dynamics shows no gain reduction",
         !t.gain_reduction.iter().any(|g| g.0 == a || g.0 == b) && t.gain_reduction.iter().any(|g| g.0 == src),
@@ -142,19 +141,19 @@ fn main() {
     s.reset_peak_holds(None);
     let r = region_of(&s, b);
     s.set_region_gain(&[r], Some(30.0), None);
-    let t = play(&mut s);
+    let t = play(&mut s, sounding(&[a, b]));
     let peak_db = 20.0 * held(&t, b).log10();
     check(&format!("a clipping track holds a peak over 0 dBFS ({peak_db:+.1} dBFS)"), held(&t, b) > 1.0);
     check(&format!("a quiet track's hold stays under it ({:+.1} dBFS)", 20.0 * held(&t, a).log10()), held(&t, a) > 0.01 && held(&t, a) < 1.0);
     check("Stereo Out holds its peak too", held(&t, MASTER_ID) > 1.0);
 
     s.set_region_gain(&[r], Some(0.0), None);
-    let t = play(&mut s);
+    let t = play(&mut s, sounding(&[b]));
     check(&format!("the hold outlasts the clip, and playing again doesn't reset it ({:+.1} dBFS)", 20.0 * held(&t, b).log10()), held(&t, b) > 1.0);
     s.reset_peak_holds(Some(&[b]));
     let t = s.tick();
     check("resetting one strip clears just its indicator", held(&t, b) == 0.0 && held(&t, a) > 0.0 && held(&t, MASTER_ID) > 1.0);
-    let t = play(&mut s);
+    let t = play(&mut s, sounding(&[b]));
     check("after a reset the hold follows the new level", held(&t, b) > 0.01 && held(&t, b) < 1.0);
     s.reset_peak_holds(None);
     let t = s.tick();

@@ -6,13 +6,15 @@
 //! Gains are measured with synthetic files: a region on a constant (DC) file next to one on a
 //! silent file shows one side of a crossfade on its own.
 use std::path::{Path, PathBuf};
-use std::time::Duration;
 
 use daw_engine::audio_io::AudioConfig;
 use daw_engine::fades::{curve, DragMode, FadeInType, FadeOutType};
 use daw_engine::model::{Id, InputSel, RegionContent, TrackKind};
 use daw_engine::session::{BipOptions, BipSource, BitDepth, RenderOptions};
 use daw_engine::Session;
+
+#[path = "common/transport.rs"]
+mod transport;
 
 /// Set by any failed check: the example then exits with status 1, so scripts notice.
 static FAILED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
@@ -99,17 +101,10 @@ fn at(l: &Layout, p: f64) -> usize {
     (l.j - l.len / 2 + (p * l.len as f64).round() as i64) as usize
 }
 
-/// Plays a cycle around the junction for a moment and returns the Stereo Out peak.
+/// Plays a cycle around the junction until Stereo Out sounds (see `transport::play_until`)
+/// and returns its peak.
 fn live_peak(s: &mut Session) -> f32 {
-    s.locate(0);
-    s.play();
-    std::thread::sleep(Duration::from_millis(150));
-    s.tick();
-    std::thread::sleep(Duration::from_millis(250));
-    let t = s.tick();
-    s.stop();
-    std::thread::sleep(Duration::from_millis(60));
-    t.master.0.max(t.master.1)
+    transport::measure(s, 0, &[], |_, m| m > 1e-4).1
 }
 
 fn main() {

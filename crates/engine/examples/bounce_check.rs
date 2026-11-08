@@ -8,6 +8,9 @@ use daw_engine::model::{InputSel, Note, Region, RegionContent, TrackKind};
 use daw_engine::session::{BipOptions, BipSource, BitDepth, RenderOptions, TrackPatch};
 use daw_engine::Session;
 
+#[path = "common/transport.rs"]
+mod transport;
+
 /// Set by any failed check: the example then exits with status 1, so scripts notice.
 static FAILED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
@@ -49,17 +52,10 @@ fn db(g: f32) -> f32 {
     20.0 * g.max(1e-12).log10()
 }
 
-/// Plays a moment and returns the peak on Stereo Out, to show live playback still works.
+/// Plays until Stereo Out carries the tone (see `transport::play_until`) and returns its
+/// peak, to show live playback still works.
 fn live_level(s: &mut Session) -> f32 {
-    s.locate(0);
-    s.play();
-    std::thread::sleep(Duration::from_millis(150));
-    s.tick();
-    std::thread::sleep(Duration::from_millis(250));
-    let t = s.tick();
-    s.stop();
-    std::thread::sleep(Duration::from_millis(60));
-    t.master.0.max(t.master.1)
+    transport::measure(s, 0, &[], |_, m| m > 0.01).1
 }
 
 fn main() {

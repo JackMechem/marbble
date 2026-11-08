@@ -24,19 +24,19 @@ fn session() -> Session {
     Session::new(cfg, Vec::new())
 }
 
-/// Plays for a moment and returns the peak meter of `track`.
+/// Plays for one window and returns the peak meter of `track`: for the checks that it is
+/// silent (`plays` waits for the tone).
 fn level(s: &mut Session, track: u64) -> f32 {
-    s.locate(0);
-    s.play();
-    transport::wait_for(s, true);
-    std::thread::sleep(Duration::from_millis(150));
-    s.tick();
-    std::thread::sleep(Duration::from_millis(250));
-    let t = s.tick();
-    s.stop();
-    // play() is ignored until the engine has really stopped.
-    transport::wait_for(s, false);
-    t.meters.iter().find(|m| m.0 == track).map(|m| m.1.max(m.2)).unwrap_or(-1.0)
+    transport::measure(s, 0, &[track], transport::once).0[0]
+}
+
+/// The level a playing track's meter must reach to count as playing the tone.
+const PLAYS: f32 = 0.01;
+
+/// Plays until `track`'s meter reaches [`PLAYS`] (see `transport::play_until`) and returns its
+/// peak.
+fn plays(s: &mut Session, track: u64) -> f32 {
+    transport::measure(s, 0, &[track], |lv, _| lv[0] > PLAYS).0[0]
 }
 
 fn reopen(dir: &Path) -> Session {
@@ -62,8 +62,8 @@ fn main() {
     s.import_audio(Path::new(&tone), a, 0).unwrap();
     // The null device has no clock and runs flat out, so loop over the audio.
     s.set_cycle(true, 0, 48000);
-    let lv = level(&mut s, a);
-    check(&format!("the track plays ({lv:.3})"), lv > 0.01);
+    let lv = plays(&mut s, a);
+    check(&format!("the track plays ({lv:.3})"), lv > PLAYS);
 
     // ---- track alternatives -----------------------------------------------------------------
     s.checkpoint("New Track Alternative", None, false);
@@ -72,23 +72,23 @@ fn main() {
     check(&format!("a new track alternative ({b}) is empty and silent ({lv:.4})"), b == "B" && lv < 1e-4);
     s.checkpoint("Switch Track Alternative", None, false);
     s.switch_track_alternative(a, "A").unwrap();
-    let lv = level(&mut s, a);
-    check(&format!("switching back to A plays its regions ({lv:.3})"), lv > 0.01);
+    let lv = plays(&mut s, a);
+    check(&format!("switching back to A plays its regions ({lv:.3})"), lv > PLAYS);
     s.undo();
     let lv = level(&mut s, a);
     check(&format!("undo switches back to B ({lv:.4})"), s.project.track(a).unwrap().alternative == "B" && lv < 1e-4);
     s.undo();
     let none = s.project.track(a).unwrap().alternatives.is_empty();
-    let lv = level(&mut s, a);
-    check(&format!("undo removes the new alternative ({lv:.3})"), none && lv > 0.01);
+    let lv = plays(&mut s, a);
+    check(&format!("undo removes the new alternative ({lv:.3})"), none && lv > PLAYS);
     s.redo();
     check("redo brings it back", s.project.track(a).unwrap().alternatives.len() == 1);
     s.switch_track_alternative(a, "A").unwrap();
     s.checkpoint("Duplicate Track Alternative", None, false);
     let c = s.new_track_alternative(a, true).unwrap();
     s.rename_track_alternative(a, &c, "Comp").unwrap();
-    let lv = level(&mut s, a);
-    check(&format!("a duplicate alternative plays the same regions ({lv:.3})"), lv > 0.01);
+    let lv = plays(&mut s, a);
+    check(&format!("a duplicate alternative plays the same regions ({lv:.3})"), lv > PLAYS);
     s.save(None).unwrap();
     let mut r = reopen(&dir);
     let t = r.project.track(a).unwrap();
@@ -140,8 +140,8 @@ fn main() {
     s.dirty = true;
     s.switch_alternative(&first).unwrap();
     check(&format!("switching loads the other alternative ({})", s.project.tempo), s.alternative_name() == first && s.project.tempo == 101.0);
-    let lv = level(&mut s, a);
-    check(&format!("the switched-to alternative plays ({lv:.3})"), lv > 0.01);
+    let lv = plays(&mut s, a);
+    check(&format!("the switched-to alternative plays ({lv:.3})"), lv > PLAYS);
     let r = reopen(&dir);
     check("reopening opens the active alternative", r.alternative_name() == first && r.alternatives().len() == 2);
     drop(r);

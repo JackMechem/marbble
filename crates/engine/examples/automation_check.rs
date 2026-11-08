@@ -13,21 +13,19 @@ use daw_engine::Session;
 #[path = "common/transport.rs"]
 mod transport;
 
-/// Loops `from..to` for a moment and returns the track's peak meter (left, right). The null
-/// device has no clock, so a short cycle is how to listen to one stretch of the timeline.
+/// Loops `from..to` and returns the track's peak meter (left, right). The null device has no
+/// clock, so a short cycle is how to listen to one stretch of the timeline. Every stretch
+/// measured here sounds (quietly, at -40 dB, or on one side), so it plays until the track does
+/// (`transport::play_until`) and the checks compare the levels.
 fn levels_at(s: &mut Session, id: u64, from: i64, to: i64) -> (f32, f32) {
     s.set_cycle(true, from, to);
-    s.locate(from);
-    s.play();
-    transport::wait_for(s, true);
-    std::thread::sleep(Duration::from_millis(120));
-    s.tick();
-    std::thread::sleep(Duration::from_millis(200));
-    let t = s.tick();
-    s.stop();
-    // play() is ignored until the engine has really stopped.
-    transport::wait_for(s, false);
-    t.meters.iter().find(|m| m.0 == id).map(|m| (m.1, m.2)).unwrap_or((-1.0, -1.0))
+    let meter = |t: &daw_engine::session::Tick| t.meters.iter().find(|m| m.0 == id).map(|m| (m.1, m.2)).unwrap_or((-1.0, -1.0));
+    let t = transport::play_until(s, from, |t| {
+        let (l, r) = meter(t);
+        l.max(r) > 1e-5
+    });
+    transport::stop(s);
+    meter(&t)
 }
 
 fn db(g: f32) -> f32 {

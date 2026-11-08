@@ -1,6 +1,5 @@
 //! Exercises track stacks, groups and region edits against a running engine (silent ALSA
 //! null output). usage: stack_check <audio file> <scratch dir>
-use std::time::Duration;
 
 use daw_engine::audio_io::AudioConfig;
 use daw_engine::model::{InputSel, RegionContent, TrackKind};
@@ -10,20 +9,10 @@ use daw_engine::Session;
 #[path = "common/transport.rs"]
 mod transport;
 
-/// Plays for a moment and returns the peak meter of each track id given, plus Stereo Out.
-fn levels(s: &mut Session, ids: &[u64]) -> (Vec<f32>, f32) {
-    s.locate(0);
-    s.play();
-    transport::wait_for(s, true);
-    std::thread::sleep(Duration::from_millis(150));
-    s.tick();
-    std::thread::sleep(Duration::from_millis(250));
-    let t = s.tick();
-    s.stop();
-    // play() is ignored until the engine has really stopped.
-    transport::wait_for(s, false);
-    let lv = ids.iter().map(|id| t.meters.iter().find(|m| m.0 == *id).map(|m| m.1.max(m.2)).unwrap_or(-1.0)).collect();
-    (lv, t.master.0.max(t.master.1))
+/// Plays and returns the peak meter of each track id given, plus Stereo Out, once `ready`
+/// accepts them (`transport::once`: one window, for silence).
+fn levels(s: &mut Session, ids: &[u64], ready: impl Fn(&[f32], f32) -> bool) -> (Vec<f32>, f32) {
+    transport::measure(s, 0, ids, ready)
 }
 
 /// Set by any failed check: the example then exits with status 1, so scripts notice.
@@ -49,21 +38,21 @@ fn main() {
     // The null device has no clock and runs flat out, so loop over the audio.
     s.set_cycle(true, 0, 48000);
     println!("audio: {:?}", s.audio_status);
-    let (lv, master) = levels(&mut s, &[a, b]);
+    let (lv, master) = levels(&mut s, &[a, b], |lv, m| lv[0] > 0.01 && lv[1] > 0.01 && m > 0.01);
     check(&format!("both tracks play (a={:.3} b={:.3} out={master:.3})", lv[0], lv[1]), lv[0] > 0.01 && lv[1] > 0.01 && master > 0.01);
 
     // Summing stack: subtracks play through it.
     let sum = s.create_stack(&[a, b], true).unwrap();
     let order: Vec<_> = s.project.tracks.iter().map(|t| (t.name.clone(), t.parent)).collect();
     println!("order after stacking: {order:?}");
-    let (lv, master) = levels(&mut s, &[a, b, sum]);
+    let (lv, master) = levels(&mut s, &[a, b, sum], |lv, m| lv[2] > 0.01 && m > 0.01);
     check(&format!("summing stack carries its subtracks (stack={:.3} out={master:.3})", lv[2]), lv[2] > 0.01 && master > 0.01);
     s.update_track_linked(sum, TrackPatch { mute: Some(true), ..Default::default() });
-    let (_, master) = levels(&mut s, &[a]);
+    let (_, master) = levels(&mut s, &[a], transport::once);
     check(&format!("muting the stack silences it (out={master:.4})"), master < 1e-4);
     s.update_track_linked(sum, TrackPatch { mute: Some(false), ..Default::default() });
     s.update_track_linked(a, TrackPatch { solo: Some(true), ..Default::default() });
-    let (lv, master) = levels(&mut s, &[a, b, sum]);
+    let (lv, master) = levels(&mut s, &[a, b, sum], |lv, m| lv[0] > 0.01 && m > 0.01);
     check(
         &format!("soloing a subtrack keeps its stack audible (a={:.3} b={:.3} out={master:.3})", lv[0], lv[1]),
         lv[0] > 0.01 && lv[1] < 1e-4 && master > 0.01,
@@ -74,9 +63,9 @@ fn main() {
     s.flatten_stack(sum);
     check("flatten keeps the subtracks", s.project.track(a).map(|t| t.parent.is_none()).unwrap_or(false) && s.project.track(sum).is_none());
     let folder = s.create_stack(&[a, b], false).unwrap();
-    let (before, _) = levels(&mut s, &[a]);
+    let (before, _) = levels(&mut s, &[a], |lv, _| lv[0] > 0.01);
     s.update_track_linked(folder, TrackPatch { volume_db: Some(-12.0), ..Default::default() });
-    let (after, _) = levels(&mut s, &[a]);
+    let (after, _) = levels(&mut s, &[a], |lv, _| lv[0] > 1e-4);
     let drop_db = 20.0 * (after[0] / before[0]).log10();
     check(&format!("folder fader moves subtracks ({drop_db:.1} dB)"), (drop_db + 12.0).abs() < 1.0);
     s.update_track_linked(folder, TrackPatch { volume_db: Some(0.0), ..Default::default() });
@@ -101,7 +90,7 @@ fn main() {
     let dup = s.duplicate_tracks(&[a], true);
     let d = s.project.track(dup[0]).unwrap();
     check(&format!("duplicate copies regions and stays in the stack ({}, parent {:?})", d.name, d.parent), d.regions.len() == 1 && d.parent == Some(folder));
-    let (lv, _) = levels(&mut s, &[dup[0]]);
+    let (lv, _) = levels(&mut s, &[dup[0]], |lv, _| lv[0] > 0.01);
     check(&format!("duplicate plays ({:.3})", lv[0]), lv[0] > 0.01);
 
     // Region edits.
@@ -139,7 +128,7 @@ fn main() {
     check(&format!("deleting a stack deletes its subtracks ({} -> {})", tracks_before, s.project.tracks.len()), s.project.tracks.len() == tracks_before - 5);
     s.undo();
     check("undo brings the stack back", s.project.tracks.len() == tracks_before && s.project.track(a).unwrap().parent == Some(folder));
-    let (lv, _) = levels(&mut s, &[b]);
+    let (lv, _) = levels(&mut s, &[b], |lv, _| lv[0] > 0.01);
     check(&format!("restored subtrack plays ({:.3})", lv[0]), lv[0] > 0.01);
     std::process::exit(FAILED.load(std::sync::atomic::Ordering::Relaxed) as i32);
 }

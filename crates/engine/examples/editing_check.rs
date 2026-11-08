@@ -2,13 +2,15 @@
 //! Crossings on splits and range edits, a region gain drag as the Tracks area sends it (one
 //! undo step, heard in playback), and a nudge in bars and beats across a tempo change.
 //! usage: editing_check <audio file> <scratch dir>
-use std::time::Duration;
 
 use daw_engine::audio_io::AudioConfig;
 use daw_engine::model::{InputSel, Region, RegionContent, TrackKind};
 use daw_engine::session::RangeEdit;
 use daw_engine::tempo::TempoEvent;
 use daw_engine::Session;
+
+#[path = "common/transport.rs"]
+mod transport;
 
 /// Set by any failed check: the example then exits with status 1, so scripts notice.
 static FAILED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
@@ -18,17 +20,9 @@ fn check(name: &str, ok: bool) {
     println!("{} {name}", if ok { "PASS" } else { "FAIL" });
 }
 
-/// Plays for a moment and returns Stereo Out's peak.
+/// Plays until Stereo Out sounds (see `transport::play_until`) and returns its peak.
 fn level(s: &mut Session) -> f32 {
-    s.locate(0);
-    s.play();
-    std::thread::sleep(Duration::from_millis(150));
-    s.tick();
-    std::thread::sleep(Duration::from_millis(250));
-    let t = s.tick();
-    s.stop();
-    std::thread::sleep(Duration::from_millis(60));
-    t.master.0.max(t.master.1)
+    transport::measure(s, 0, &[], |_, m| m > 1e-4).1
 }
 
 fn regions(s: &Session, track: u64) -> Vec<Region> {

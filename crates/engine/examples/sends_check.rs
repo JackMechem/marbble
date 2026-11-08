@@ -1,6 +1,5 @@
 //! Exercises sends, aux buses and output routing against a running engine (silent ALSA null
 //! output). usage: sends_check <audio file> <scratch dir>
-use std::time::Duration;
 
 use daw_engine::audio_io::AudioConfig;
 use daw_engine::model::{InputSel, TrackKind, TrackSend, MASTER_ID};
@@ -10,20 +9,10 @@ use daw_engine::Session;
 #[path = "common/transport.rs"]
 mod transport;
 
-/// Plays for a moment and returns the peak meter of each track id given, plus Stereo Out.
-fn levels(s: &mut Session, ids: &[u64]) -> (Vec<f32>, f32) {
-    s.locate(0);
-    s.play();
-    transport::wait_for(s, true);
-    std::thread::sleep(Duration::from_millis(150));
-    s.tick();
-    std::thread::sleep(Duration::from_millis(250));
-    let t = s.tick();
-    s.stop();
-    // play() is ignored until the engine has really stopped.
-    transport::wait_for(s, false);
-    let lv = ids.iter().map(|id| t.meters.iter().find(|m| m.0 == *id).map(|m| m.1.max(m.2)).unwrap_or(-1.0)).collect();
-    (lv, t.master.0.max(t.master.1))
+/// Plays and returns the peak meter of each track id given, plus Stereo Out, once `ready`
+/// accepts them (`transport::once`: one window, for silence).
+fn levels(s: &mut Session, ids: &[u64], ready: impl Fn(&[f32], f32) -> bool) -> (Vec<f32>, f32) {
+    transport::measure(s, 0, ids, ready)
 }
 
 /// Set by any failed check: the example then exits with status 1, so scripts notice.
@@ -60,27 +49,27 @@ fn main() {
         xt.name == "Aux 1" && xt.bus == 1 && s.project.tracks.last().map(|t| t.id) == Some(x),
     );
 
-    let (lv, _) = levels(&mut s, &[a, x]);
+    let (lv, _) = levels(&mut s, &[a, x], transport::once);
     ok &= check(&format!("an aux without sends is silent (aux={:.4})", lv[1]), lv[1] < 1e-4);
 
     // Post-fader send at 0 dB: the aux gets the track's own (post-fader) signal.
     let send = |pre_fader| Some(TrackSend { bus: x, level_db: 0.0, pre_fader, muted: false });
     s.set_send(a, 0, send(false)).unwrap();
-    let (lv, _) = levels(&mut s, &[a, x]);
+    let (lv, _) = levels(&mut s, &[a, x], |lv, _| lv[0] > 0.01 && lv[1] > 0.01);
     let diff = 20.0 * (lv[1] / lv[0]).log10();
     ok &= check(&format!("a 0 dB send delivers to the aux (track={:.3} aux={:.3}, {diff:+.2} dB)", lv[0], lv[1]), lv[1] > 0.01 && diff.abs() < 0.5);
     s.set_send_level(a, 0, -12.0);
-    let (lv, _) = levels(&mut s, &[a, x]);
+    let (lv, _) = levels(&mut s, &[a, x], |lv, _| lv[0] > 0.01 && lv[1] > 1e-4);
     let diff = 20.0 * (lv[1] / lv[0]).log10();
     ok &= check(&format!("send level -12 dB ({diff:+.2} dB)"), (diff + 12.0).abs() < 0.5);
     s.set_send_level(a, 0, 0.0);
 
     // Fader at -inf: the post-fader send goes quiet, a pre-fader one carries on.
     patch(&mut s, a, TrackPatch { volume_db: Some(-96.0), ..Default::default() });
-    let (lv, _) = levels(&mut s, &[a, x]);
+    let (lv, _) = levels(&mut s, &[a, x], transport::once);
     ok &= check(&format!("post-fader send follows the fader down (aux={:.4})", lv[1]), lv[1] < 1e-4);
     s.set_send(a, 0, send(true)).unwrap();
-    let (lv, master) = levels(&mut s, &[a, x]);
+    let (lv, master) = levels(&mut s, &[a, x], |lv, m| lv[1] > 0.01 && m > 0.01);
     ok &= check(
         &format!("pre-fader send delivers with the fader at -inf (track={:.4} aux={:.3} out={master:.3})", lv[0], lv[1]),
         lv[0] < 1e-4 && lv[1] > 0.01 && master > 0.01,
@@ -89,7 +78,7 @@ fn main() {
     // Muting the aux silences what arrives there (b is muted so only the aux could sound).
     patch(&mut s, b, TrackPatch { mute: Some(true), ..Default::default() });
     patch(&mut s, x, TrackPatch { mute: Some(true), ..Default::default() });
-    let (lv, master) = levels(&mut s, &[x]);
+    let (lv, master) = levels(&mut s, &[x], transport::once);
     ok &= check(&format!("muting the aux silences it (aux={:.4} out={master:.4})", lv[0]), lv[0] < 1e-4 && master < 1e-4);
     patch(&mut s, x, TrackPatch { mute: Some(false), ..Default::default() });
     patch(&mut s, b, TrackPatch { mute: Some(false), ..Default::default() });
@@ -97,12 +86,12 @@ fn main() {
 
     // Solo: soloing the source keeps its aux audible; soloing the aux keeps its source.
     patch(&mut s, a, TrackPatch { solo: Some(true), ..Default::default() });
-    let (lv, _) = levels(&mut s, &[a, b, x]);
+    let (lv, _) = levels(&mut s, &[a, b, x], |lv, _| lv[0] > 0.01 && lv[2] > 0.01);
     ok &=
         check(&format!("soloing a track keeps its aux audible (a={:.3} b={:.4} aux={:.3})", lv[0], lv[1], lv[2]), lv[0] > 0.01 && lv[1] < 1e-4 && lv[2] > 0.01);
     patch(&mut s, a, TrackPatch { solo: Some(false), ..Default::default() });
     patch(&mut s, x, TrackPatch { solo: Some(true), ..Default::default() });
-    let (lv, _) = levels(&mut s, &[a, b, x]);
+    let (lv, _) = levels(&mut s, &[a, b, x], |lv, _| lv[0] > 0.01 && lv[2] > 0.01);
     ok &= check(
         &format!("soloing an aux keeps its sources audible (a={:.3} b={:.4} aux={:.3})", lv[0], lv[1], lv[2]),
         lv[0] > 0.01 && lv[1] < 1e-4 && lv[2] > 0.01,
@@ -113,10 +102,10 @@ fn main() {
     s.set_send(a, 0, None).unwrap();
     s.set_output(b, Some(x)).unwrap();
     patch(&mut s, a, TrackPatch { mute: Some(true), ..Default::default() });
-    let (lv, master) = levels(&mut s, &[b, x]);
+    let (lv, master) = levels(&mut s, &[b, x], |lv, m| lv[1] > 0.01 && m > 0.01);
     ok &= check(&format!("output to an aux (b={:.3} aux={:.3} out={master:.3})", lv[0], lv[1]), lv[1] > 0.01 && master > 0.01);
     patch(&mut s, x, TrackPatch { mute: Some(true), ..Default::default() });
-    let (_, master) = levels(&mut s, &[b]);
+    let (_, master) = levels(&mut s, &[b], transport::once);
     ok &= check(&format!("muting the aux silences tracks routed to it (out={master:.4})"), master < 1e-4);
     patch(&mut s, x, TrackPatch { mute: Some(false), ..Default::default() });
     patch(&mut s, a, TrackPatch { mute: Some(false), ..Default::default() });
@@ -126,7 +115,7 @@ fn main() {
     ids.retain(|&i| i != x);
     ids.insert(0, x);
     s.reorder_tracks(ids);
-    let (lv, _) = levels(&mut s, &[x]);
+    let (lv, _) = levels(&mut s, &[x], |lv, _| lv[0] > 0.01);
     ok &= check(&format!("an aux above its senders still receives (aux={:.3})", lv[0]), lv[0] > 0.01);
 
     // Feedback loops are refused.
@@ -164,7 +153,7 @@ fn main() {
     let saved = s.save(Some(std::path::PathBuf::from(&scratch).join("SendsReload.marbble"))).unwrap();
     s.open(&saved).unwrap();
     s.set_cycle(true, 0, 48000);
-    let (lv, _) = levels(&mut s, &[x, y]);
+    let (lv, _) = levels(&mut s, &[x, y], |lv, _| lv[0] > 0.01 && lv[1] > 0.01);
     ok &= check(&format!("routing survives save and open (aux={:.3} chained aux={:.3})", lv[0], lv[1]), lv[0] > 0.01 && lv[1] > 0.01);
 
     // Deleting the aux clears what pointed at it; undo puts it all back.
@@ -173,7 +162,7 @@ fn main() {
     let ta = s.project.track(a).unwrap();
     let tb = s.project.track(b).unwrap();
     ok &= check("deleting the aux clears sends and outputs to it", ta.sends.iter().all(|x| x.is_none()) && tb.output.is_none());
-    let (lv, _) = levels(&mut s, &[y]);
+    let (lv, _) = levels(&mut s, &[y], transport::once);
     ok &= check(&format!("the aux it fed goes quiet (aux={:.4})", lv[0]), lv[0] < 1e-4);
     s.undo();
     let ta = s.project.track(a).unwrap();
@@ -182,7 +171,7 @@ fn main() {
         "undo restores sends and outputs",
         ta.sends[2].map(|s| s.bus) == Some(x) && tb.output == Some(x) && s.project.track(x).unwrap().sends[0].map(|s| s.bus) == Some(y),
     );
-    let (lv, _) = levels(&mut s, &[x, y]);
+    let (lv, _) = levels(&mut s, &[x, y], |lv, _| lv[0] > 0.01 && lv[1] > 0.01);
     ok &= check(&format!("restored routing plays (aux={:.3} chained aux={:.3})", lv[0], lv[1]), lv[0] > 0.01 && lv[1] > 0.01);
 
     // Undo of a routing edit.

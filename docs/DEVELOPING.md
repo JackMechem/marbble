@@ -164,6 +164,13 @@ exit with status 1 when a check fails; for `tempo_check`, look for `FAIL` in the
 (`... | grep -c FAIL`). `undo_check` and `import_check` print what they did for you to read
 instead.
 
+A check that plays and reads the meters goes through `examples/common/transport.rs` rather
+than fixed sleeps: `transport::measure` plays the cycle until the sound the check expects shows
+up on the meters (at most 3 s, starting the transport again if an overload stopped it, and
+printing the tick's warnings), then the check asserts on that window; `transport::once` takes a
+single window, for the checks that something stays silent. A slow or loaded machine (GitHub's
+macOS runners) can otherwise play a window late and read silence.
+
 Most take an audio file and a scratch directory, which must be an absolute path and is used as
 the project folder (never point it at your real projects):
 

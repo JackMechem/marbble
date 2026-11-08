@@ -1,24 +1,19 @@
 //! Exercises MIDI region content against a running engine (silent ALSA null output): Piano
 //! Roll edits, muted notes, controller playback and chasing, split/join/trim with controllers,
 //! and MIDI file export and import. usage: midi_check <scratch dir>
-use std::time::Duration;
 
 use daw_engine::audio_io::AudioConfig;
 use daw_engine::model::{CcEvent, CcKind, InputSel, Note, RegionContent, TrackKind};
 use daw_engine::session::MidiContent;
 use daw_engine::Session;
 
-/// Plays the cycle for a moment and returns the track's peak level.
-fn level(s: &mut Session, id: u64) -> f32 {
-    s.locate(0);
-    s.play();
-    std::thread::sleep(Duration::from_millis(150));
-    s.tick();
-    std::thread::sleep(Duration::from_millis(250));
-    let t = s.tick();
-    s.stop();
-    std::thread::sleep(Duration::from_millis(60));
-    t.meters.iter().find(|m| m.0 == id).map(|m| m.1.max(m.2)).unwrap_or(-1.0)
+#[path = "common/transport.rs"]
+mod transport;
+
+/// Plays the cycle and returns the track's peak level, once `ready` accepts it
+/// (`transport::once`: one window, for silence).
+fn level(s: &mut Session, id: u64, ready: impl Fn(&[f32], f32) -> bool) -> f32 {
+    transport::measure(s, 0, &[id], ready).0[0]
 }
 
 /// Set by any failed check: the example then exits with status 1, so scripts notice.
@@ -63,19 +58,19 @@ fn main() {
 
     s.checkpoint("Create Notes", None, false);
     s.set_midi_content(content(chord.clone(), vec![]));
-    let lv = level(&mut s, inst);
+    let lv = level(&mut s, inst, |lv, _| lv[0] > 0.01);
     check(&format!("notes play ({lv:.3})"), lv > 0.01);
 
     s.set_midi_content(content(chord.iter().map(|n| Note { muted: true, ..*n }).collect(), vec![]));
-    let lv = level(&mut s, inst);
+    let lv = level(&mut s, inst, transport::once);
     check(&format!("muted notes are silent ({lv:.4})"), lv < 1e-4);
 
     // Expression at 0 from the start silences the synth; chased on every play.
     s.set_midi_content(content(chord.clone(), vec![CcEvent { start: 0, kind: expr, value: 0 }]));
-    let lv = level(&mut s, inst);
+    let lv = level(&mut s, inst, transport::once);
     check(&format!("expression 0 silences ({lv:.4})"), lv < 1e-4);
     s.set_midi_content(content(chord.clone(), vec![CcEvent { start: 0, kind: expr, value: 127 }]));
-    let lv = level(&mut s, inst);
+    let lv = level(&mut s, inst, |lv, _| lv[0] > 0.01);
     check(&format!("expression 127 plays ({lv:.3})"), lv > 0.01);
 
     // Unsorted, out-of-range input comes back normalised.

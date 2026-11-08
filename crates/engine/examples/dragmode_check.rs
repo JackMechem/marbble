@@ -4,7 +4,6 @@
 //! plays, and that each edit is one undo step.
 //! usage: dragmode_check <audio file> <scratch dir>
 use std::path::{Path, PathBuf};
-use std::time::Duration;
 
 use daw_engine::audio_io::AudioConfig;
 use daw_engine::fades::DragMode;
@@ -31,20 +30,11 @@ fn session(dir: PathBuf) -> Session {
     s
 }
 
-/// Peak level of Stereo Out while cycling over [a, b).
-fn level(s: &mut Session, a: i64, b: i64) -> f32 {
+/// Peak level of Stereo Out while cycling over [a, b), once `ready` accepts it
+/// (`transport::once`: one window, for silence).
+fn level(s: &mut Session, a: i64, b: i64, ready: impl Fn(&[f32], f32) -> bool) -> f32 {
     s.set_cycle(true, a, b);
-    s.locate(a);
-    s.play();
-    transport::wait_for(s, true);
-    std::thread::sleep(Duration::from_millis(150));
-    s.tick();
-    std::thread::sleep(Duration::from_millis(250));
-    let t = s.tick();
-    s.stop();
-    // play() is ignored until the engine has really stopped.
-    transport::wait_for(s, false);
-    t.master.0.max(t.master.1)
+    transport::measure(s, a, &[], ready).1
 }
 
 /// The track's regions as (id, start, length), by start.
@@ -118,7 +108,7 @@ fn modes(tone: &Path, scratch: &Path) {
     s.drag_move_regions(&[RegionMove { id: c, start: sec / 2, track: None }], None);
     let ok = lane(&s, t).first() == Some(&(a, 0, sec / 2)) && lane(&s, t).contains(&(c, sec / 2, sec / 2)) && lane(&s, t).contains(&(b, sec, sec));
     check(&format!("No Overlap: the region on the left is shortened {:?}", lane(&s, t)), ok);
-    let heard = level(&mut s, 0, sec / 2);
+    let heard = level(&mut s, 0, sec / 2, |_, m| m > 0.03);
     check(&format!("No Overlap: what's left of a still plays ({heard:.3})"), heard > 0.03);
     s.undo();
     check("No Overlap: undo", lane(&s, t) == start);
@@ -162,13 +152,13 @@ fn automation(tone: &Path, scratch: &Path) {
         AutoPoint { pos: hi, value: -96.0, curve: 0.0 },
     ];
     s.set_automation_lane(t, AutoParam::Volume, points);
-    let open = level(&mut s, lo, hi);
+    let open = level(&mut s, lo, hi, |_, m| m > 0.03);
     check(&format!("the region plays under its automation ({open:.3})"), open > 0.03);
 
     // Never: the region moves to 2 s, where the automation is closed.
     s.checkpoint("Move Region", None, false);
     s.drag_move_regions(&[RegionMove { id: r, start: 2 * sec, track: None }], None);
-    let shut = level(&mut s, 2 * sec, 2 * sec + sec / 2);
+    let shut = level(&mut s, 2 * sec, 2 * sec + sec / 2, transport::once);
     check(&format!("Never: the automation stays behind ({shut:.5})"), shut < 0.003);
     s.undo();
 
@@ -176,20 +166,20 @@ fn automation(tone: &Path, scratch: &Path) {
     s.prefs.editing.move_automation = MoveAutomation::Always;
     s.checkpoint("Move Region", None, false);
     s.drag_move_regions(&[RegionMove { id: r, start: 2 * sec, track: None }], None);
-    let moved = level(&mut s, 2 * sec, 2 * sec + sec / 2);
+    let moved = level(&mut s, 2 * sec, 2 * sec + sec / 2, |_, m| m > 0.03);
     check(&format!("Always: the automation moves with the region ({moved:.3})"), moved > 0.03);
     let lane = &s.project.track(t).unwrap().automation[0].points;
     let v = |x: i64| daw_engine::automation::value_at(lane, x).unwrap();
     check(&format!("the old place is closed again ({} dB)", v(sec * 3 / 4)), v(sec * 3 / 4) < -90.0);
     s.undo();
-    let back = level(&mut s, lo, hi);
+    let back = level(&mut s, lo, hi, |_, m| m > 0.03);
     let curve = &s.project.track(t).unwrap().automation[0].points;
     check(&format!("one undo puts region and automation back ({back:.3})"), back > 0.03 && curve.len() == 5);
 
     // An explicit answer (the Ask dialog's Don't Move) overrides Always.
     s.checkpoint("Nudge", None, false);
     s.drag_nudge_regions(&[r], 2 * sec, Some(false));
-    let shut = level(&mut s, 2 * sec + sec / 2, 3 * sec);
+    let shut = level(&mut s, 2 * sec + sec / 2, 3 * sec, transport::once);
     check(&format!("Don't Move leaves the automation ({shut:.5})"), shut < 0.003);
     s.undo();
     let _ = std::fs::remove_dir_all(&s.dir);
