@@ -6,6 +6,15 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **No edit is lost on the way to the audio engine.** A burst of changes larger than the
+  engine's queue (an undo of a very large edit, say) used to drop what didn't fit, leaving
+  playback out of step with what the window showed. Marbble now waits for the engine to make
+  room. If the engine takes nothing for a second (the audio device stopped, a callback stuck), a
+  message says so and the engine is rebuilt from the project as soon as it responds again,
+  stopping playback first.
+
 ## [0.1.0-alpha.11] - 2026-11-08
 
 ### Changed

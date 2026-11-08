@@ -196,6 +196,12 @@ impl Engine {
         self.parallel.fits(&self.tracks)
     }
 
+    /// The Stereo Out gain the last `Cmd::MasterVolume` set.
+    #[cfg(test)]
+    pub(crate) fn master_volume_for_tests(&self) -> f32 {
+        self.master_volume
+    }
+
     /// Whether a block given up on is still open.
     #[cfg(test)]
     pub(crate) fn stalled_for_tests(&self) -> bool {

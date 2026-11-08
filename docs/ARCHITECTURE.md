@@ -92,7 +92,7 @@ engine lock, the device outputs silence (see `dsp/offline.rs`).
   The command and garbage queues used to be `crossbeam_channel`s. Those can make a receiver
   spin while a preempted sender finishes a write; with real-time priority the audio thread then
   starved the sender and the kernel killed the app with SIGXCPU (`RLIMIT_RTTIME`). `rtrb` never
-  waits. `Session::send` drops a command rather than block if the ring is ever full.
+  waits. When the command ring is full, the main thread waits for room instead (see below).
 - **not do I/O or call into plug-in controllers.** Only the processor half of a plug-in
   (`PluginProcessor`) is moved into the engine.
 
@@ -110,6 +110,19 @@ The pattern that makes this work is **Cmd in, Garbage out**:
 `EngineStatus::cmds_done` catches up, for the few places that need the engine to have applied
 something (stopping a recording). With no audio device running, `send` drains the queue by
 calling `process` with no buffers, so the graph stays current and headless tests work.
+
+A burst of more than 4096 commands (an undo of a very large edit) fills the command ring.
+`Session::send` then waits on the main thread, sleeping 1 ms at a time and freeing the garbage
+the engine sends back meanwhile, until the callback makes room; the audio thread doesn't change
+what it does. An engine that takes nothing for `SEND_WAIT` (1 s: the device stopped, a callback
+stuck in a plug-in) doesn't get that command. It is counted in `EngineStatus::cmds_dropped`
+(which `soak_check` and `rt_alloc_check` expect to stay 0), logged, and warned about, and the
+session sets `engine_resync`: from then on a command that finds the ring full is dropped
+without waiting, so the UI isn't held up a second per command. Once the ring is empty again,
+`idle` (`resync_engine`) stops a running transport through the session, then on a later idle
+rebuilds the engine from the project with `rebuild_graph`, as Reset Audio Engine does without
+reopening the device. It waits for the ring to empty because commands queued before the
+dropped one would otherwise land on the new graph and undo part of it.
 
 Failures on the audio thread are contained rather than fatal:
 

@@ -40,6 +40,9 @@ pub struct EngineStatus {
     pub cpu_peak: AtomicU32,
     pub late_blocks: AtomicU32,
     pub cmds_done: AtomicU64,
+    /// Commands the session gave up sending because the engine took none for a while with the
+    /// queue full (see `Session::send`). The session counts these, not the audio thread.
+    pub cmds_dropped: AtomicU64,
     pub midi_activity: AtomicU32,
     pub overruns: AtomicU32,
     /// Blocks in which `Engine::process` panicked; the audio callback silenced them (see
@@ -94,6 +97,7 @@ impl Default for EngineStatus {
             cpu_peak: AtomicU32::new(0),
             late_blocks: AtomicU32::new(0),
             cmds_done: AtomicU64::new(0),
+            cmds_dropped: AtomicU64::new(0),
             midi_activity: AtomicU32::new(0),
             overruns: AtomicU32::new(0),
             engine_errors: AtomicU32::new(0),

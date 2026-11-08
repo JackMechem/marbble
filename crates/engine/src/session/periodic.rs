@@ -6,13 +6,15 @@ use super::*;
 
 impl Session {
     /// Main-thread housekeeping: plugin controller idle, freeing replaced DSP objects, keeping
-    /// MIDI inputs connected and automation (plug-in editors following it, writes from them).
+    /// MIDI inputs connected, automation (plug-in editors following it, writes from them) and
+    /// bringing the engine up to date after commands for it were dropped (`resync_engine`).
     /// Returns true if the set of open editors changed or automation was written, when the UI
     /// needs a new snapshot.
     pub fn idle(&mut self) -> bool {
         self.mark_unresponsive();
         self.sync_parallel();
         let before = self.open_editors().len();
+        self.resync_engine();
         let mut latency_changed = false;
         for c in self.controllers.values_mut() {
             c.idle();

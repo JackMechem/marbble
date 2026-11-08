@@ -483,6 +483,8 @@ fn scenario(scratch: &Path, threads: u32) {
     }
     drop(guard);
     s.stop();
+    let dropped = s.status.cmds_dropped.load(Ordering::Relaxed);
+    check(&format!("no command for the engine was dropped ({dropped})"), dropped == 0);
     match &lsp {
         Some(d) => vst_gate(d),
         None => println!("SKIP the VST3 side-chain: LSP's Sidechain Compressor isn't installed"),

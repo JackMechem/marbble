@@ -7,16 +7,82 @@
 
 use super::*;
 
+/// How long `send` waits for room in a full command queue before it gives up on a command:
+/// longer than any device buffer, and than a block given up on in a stuck plug-in takes to end.
+const SEND_WAIT: Duration = Duration::from_millis(1000);
+
 impl Session {
+    /// Queues a command for the audio thread. Should the queue (4096 commands) be full, the main
+    /// thread waits for the engine to make room (`send_when_room`); the audio thread never waits.
     pub(super) fn send(&mut self, cmd: Cmd) {
         self.graph_dirty |= threads::changes_routes(&cmd);
-        if self.cmd_tx.push(cmd).is_ok() {
-            self.cmds_sent += 1;
+        match self.cmd_tx.push(cmd) {
+            Ok(()) => self.cmds_sent += 1,
+            Err(rtrb::PushError::Full(cmd)) => self.send_when_room(cmd),
         }
         if self.audio.is_none() {
             // No device is running, so drain the queue here to keep the graph current.
             self.engine.lock().process(&[], 0, &mut [], 0);
         }
+    }
+
+    /// The queue is full: waits up to `SEND_WAIT` for the engine to take commands, freeing what it
+    /// hands back meanwhile (were the garbage ring to fill too, the engine would leak it). An engine
+    /// that takes none for that long (the device stopped, a callback stuck) doesn't get this one: it
+    /// is counted in `EngineStatus::cmds_dropped`, the tick warns, and `idle` rebuilds the engine
+    /// from the project once it has taken the rest (`resync_engine`). Until then a command finding
+    /// the queue full is dropped at once, so that an edit doesn't hold the UI up for each.
+    fn send_when_room(&mut self, mut cmd: Cmd) {
+        let deadline = Instant::now() + SEND_WAIT;
+        while !self.engine_resync {
+            if self.audio.is_none() {
+                self.engine.lock().process(&[], 0, &mut [], 0);
+            }
+            while let Ok(g) = self.garbage_rx.pop() {
+                self.sampler_garbage(g);
+            }
+            match self.cmd_tx.push(cmd) {
+                Ok(()) => {
+                    self.cmds_sent += 1;
+                    return;
+                }
+                Err(rtrb::PushError::Full(c)) => cmd = c,
+            }
+            if Instant::now() >= deadline {
+                log::error!("the audio engine took no commands for {} ms with its queue full: rebuilding it once it does", SEND_WAIT.as_millis());
+                self.engine_resync = true;
+                self.warning.get_or_insert_with(|| {
+                    "The audio engine stopped taking changes, so what plays may not match the project. It is brought up to date once it catches up, or with Reset Audio Engine in Settings › Audio.".into()
+                });
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        drop(cmd);
+        self.status.cmds_dropped.fetch_add(1, Ordering::Relaxed);
+    }
+
+    /// After `send` dropped commands: once the engine has taken every other one, rebuilds it from
+    /// the project, as Reset Audio Engine does without reopening the device. A transport running
+    /// is stopped first, through the session, so a recording ends with its takes.
+    pub(super) fn resync_engine(&mut self) {
+        if !self.engine_resync || !self.cmd_queue_empty() {
+            return;
+        }
+        if self.is_playing() || self.is_recording() {
+            // The rebuild waits for the next idle, once the engine has taken the stop.
+            self.stop();
+            self.warning.get_or_insert_with(|| "Playback stopped to bring the audio engine up to date with changes it missed.".into());
+            return;
+        }
+        log::warn!("rebuilding the audio engine after {} commands for it were dropped", self.status.cmds_dropped.load(Ordering::Relaxed));
+        self.rebuild_graph();
+    }
+
+    /// Whether the engine has taken every command sent. Once it has, holding the engine's lock
+    /// means it has applied them too, as it applies what it takes before letting go.
+    fn cmd_queue_empty(&self) -> bool {
+        self.cmd_tx.slots() == self.cmd_tx.buffer().capacity()
     }
 
     /// Blocks until the audio thread has applied every command sent so far.
@@ -504,6 +570,9 @@ impl Session {
 
     /// Recreates every track and plugin from the project document.
     pub(super) fn rebuild_graph(&mut self) {
+        // Every command dropped is made good by this, unless the engine has yet to apply some sent
+        // before it, which would undo part of what this sets up.
+        self.engine_resync &= !self.cmd_queue_empty();
         // The plug-ins threads are still left in keep their editors hidden, untold.
         self.mark_unresponsive();
         let snapshot = self.capture_plugin_states();
@@ -568,5 +637,132 @@ impl Session {
     pub(super) fn update_midi_target(&mut self) {
         let target = self.midi_target_id();
         self.send(Cmd::MidiTarget(target));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A session on the null device, whose callback plays block after block as fast as it can.
+    fn session() -> Session {
+        let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
+        let mut s = Session::new(cfg, Vec::new());
+        assert!(s.audio.is_some(), "the null device runs");
+        s.wait_for_engine();
+        s.warning = None;
+        s
+    }
+
+    fn engine_volume(s: &Session) -> f32 {
+        s.engine.lock().master_volume_for_tests()
+    }
+
+    fn dropped(s: &Session) -> u64 {
+        s.status.cmds_dropped.load(Ordering::Relaxed)
+    }
+
+    /// Two and a half queues of commands while the callback is held off for 200 ms, as by a long
+    /// buffer: the main thread waits for room, and every one is applied, in order.
+    #[test]
+    fn a_burst_longer_than_the_queue_waits_for_room() {
+        let mut s = session();
+        let engine = s.engine.clone();
+        let (held_tx, held) = std::sync::mpsc::channel();
+        let holder = std::thread::spawn(move || {
+            let _callback_held_off = engine.lock();
+            held_tx.send(()).unwrap();
+            std::thread::sleep(Duration::from_millis(200));
+        });
+        held.recv().unwrap();
+        let before = s.cmds_sent;
+        let t = Instant::now();
+        for k in 0..10_000 {
+            s.send(Cmd::MasterVolume(k as f32));
+        }
+        assert!(t.elapsed() >= Duration::from_millis(150), "it waited for the engine");
+        holder.join().unwrap();
+        s.wait_for_engine();
+        assert_eq!(s.cmds_sent - before, 10_000);
+        assert_eq!(s.status.cmds_done.load(Ordering::Acquire), s.cmds_sent);
+        assert_eq!(engine_volume(&s), 9999.0);
+        assert_eq!(dropped(&s), 0);
+        assert!(!s.engine_resync && s.warning.is_none());
+    }
+
+    /// With no device, each command is applied as it's sent, however many there are.
+    #[test]
+    fn without_a_device_commands_apply_at_once() {
+        let mut s = session();
+        s.audio = None;
+        for k in 0..10_000 {
+            s.send(Cmd::MasterVolume(k as f32));
+            assert_eq!(s.status.cmds_done.load(Ordering::Acquire), s.cmds_sent);
+        }
+        assert_eq!(engine_volume(&s), 9999.0);
+        assert_eq!(dropped(&s), 0);
+        assert!(!s.engine_resync && s.warning.is_none());
+    }
+
+    /// A callback that takes nothing for longer than `SEND_WAIT`: the edit that finds the queue
+    /// full waits that long, is dropped, counted and warned about, and those after it are dropped
+    /// at once. When the engine takes commands again it plays what was queued, out of step with the
+    /// project, until `idle` stops the transport and rebuilds it from the project.
+    #[test]
+    fn an_engine_taking_nothing_is_rebuilt_once_it_does() {
+        let mut s = session();
+        s.set_master_volume(-6.0);
+        s.play();
+        s.wait_for_engine();
+        assert!(s.is_playing());
+        let engine = s.engine.clone();
+        let callback_held_off = engine.lock();
+        for _ in 0..s.cmd_tx.slots() {
+            s.send(Cmd::MasterVolume(0.5));
+        }
+        let t = Instant::now();
+        s.set_master_volume(-12.0);
+        assert!(t.elapsed() >= SEND_WAIT);
+        assert_eq!(dropped(&s), 1);
+        assert!(s.engine_resync);
+        assert!(s.warning.take().is_some_and(|w| w.contains("stopped taking changes")));
+        let t = Instant::now();
+        for _ in 0..100 {
+            s.set_master_volume(-18.0);
+        }
+        assert!(t.elapsed() < SEND_WAIT / 4, "later commands don't wait: {:?}", t.elapsed());
+        assert_eq!(dropped(&s), 101);
+        // Not while the engine has yet to take what's queued.
+        s.resync_engine();
+        assert!(s.engine_resync && s.is_playing());
+
+        drop(callback_held_off);
+        s.wait_for_engine();
+        assert_eq!(engine_volume(&s), 0.5, "the engine is out of step with the project");
+        // As the app's idle timer does: an idle may send commands of its own first, and the
+        // rebuild waits for the engine to take them.
+        let idle_until = |s: &mut Session, done: fn(&Session) -> bool| {
+            for _ in 0..100 {
+                s.idle();
+                s.wait_for_engine();
+                if done(s) {
+                    return;
+                }
+            }
+            panic!("idle didn't get there");
+        };
+        idle_until(&mut s, |s| !s.is_playing());
+        assert!(s.engine_resync, "first the transport stops");
+        let w = s.warning.take();
+        assert!(w.as_deref().is_some_and(|w| w.contains("Playback stopped")), "{w:?}");
+        idle_until(&mut s, |s| !s.engine_resync);
+        assert_eq!(engine_volume(&s), volume_gain(-18.0));
+
+        // And commands go as before.
+        s.set_master_volume(-3.0);
+        s.wait_for_engine();
+        assert_eq!(engine_volume(&s), volume_gain(-3.0));
+        assert_eq!(dropped(&s), 101);
+        assert!(s.warning.is_none());
     }
 }

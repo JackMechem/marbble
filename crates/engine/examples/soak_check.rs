@@ -931,6 +931,8 @@ fn main() {
         same(&again, &last),
     );
     check("and the last document", doc(&s) == last_doc);
+    let dropped = s.status.cmds_dropped.load(std::sync::atomic::Ordering::Relaxed);
+    check(&format!("no command for the engine was dropped ({dropped})"), dropped == 0);
 
     if FAILED.load(std::sync::atomic::Ordering::Relaxed) {
         std::process::exit(1);

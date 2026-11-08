@@ -303,6 +303,10 @@ pub struct Session {
     /// task graph or the setting since it was last looked at.
     threads: threads::ThreadState,
     graph_dirty: bool,
+    /// `send` gave up on a command, the engine taking none for `SEND_WAIT`: the engine is rebuilt
+    /// from the project once it has taken the rest (`resync_engine`), and until then a command
+    /// finding the queue full is dropped at once.
+    engine_resync: bool,
 }
 
 /// A project snapshot taken before an edit.
@@ -450,6 +454,7 @@ impl Session {
             vst_watches: HashMap::new(),
             threads: threads::ThreadState { topology: crate::threads::Topology::detect(), ..Default::default() },
             graph_dirty: true,
+            engine_resync: false,
         };
         s.restart_audio();
         s.sync_globals();
