@@ -238,13 +238,21 @@
   height: 22px;
 }
 
+/* The name's lines (LinesText): one, or two on a tall full header, broken at spaces, each ending in
+   "…" when cut. */
 .th-name {
+  display: flex;
+  flex-direction: column;
   font-size: var(--fs-lg);
   font-weight: 600;
+  line-height: 16px;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
   color: var(--text);
+}
+
+.th-name > .truncate {
+  display: block;
 }
 
 .th-rename {
@@ -268,6 +276,25 @@
   height: 21px;
   font-size: var(--fs-md);
   border-radius: 4px;
+}
+
+/* A full header's second line: the buttons, then the volume slider at the header's right edge, so
+   the name above runs on over the slider's column. */
+.th-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.th-controls > .th-buttons {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* A name on two lines keeps the power button on its first. */
+.th-name-row.two-lines {
+  align-items: flex-start;
 }
 
 /* Where this track has no such button: a space, so the buttons line up with other headers'. */

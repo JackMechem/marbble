@@ -45,3 +45,9 @@ test("a strip's name breaks at spaces only, never inside a word", () => {
   assert.deepEqual(fitLines("  Lead   Vox  ", box(3)), ["Lead", "Vox"], "extra spaces don't count");
   assert.deepEqual(fitLines("", box(3)), [""]);
 });
+
+test("a name kept to one line (a short track header) is the whole name, cut by the box", () => {
+  const box = (n: number) => (s: string) => s.length <= n;
+  assert.deepEqual(fitLines("Red Clay Drums", box(7), 1), ["Red Clay Drums"]);
+  assert.deepEqual(fitLines("Red Clay Drums", box(20), 1), ["Red Clay Drums"]);
+});

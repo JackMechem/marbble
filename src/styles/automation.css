@@ -35,6 +35,7 @@
 
 /* Everything but the H button fades. */
 .track-header.is-hidden > :not(.th-main),
+.track-header.is-hidden .th-controls > .th-volume,
 .track-header.is-hidden .th-name,
 .track-header.is-hidden .th-buttons > :not(.hide) {
   opacity: 0.45;

@@ -7,7 +7,8 @@ export type Taper = (db: number) => number;
 
 /**
  * How a track header lays itself out at a given height:
- * - `full`: the icon tile, the name above a row of M S R I and freeze buttons;
+ * - `full`: the icon tile, the name (on two lines when tall: `nameLines`) above a row of M S R I
+ *   and freeze buttons and the volume slider;
  * - `compact`: everything on one line with a smaller icon; the buttons move into a "⋯" menu,
  *   and only the ones switched on stay in the header;
  * - `tiny`: as compact without the icon, with a smaller name and controls.
@@ -23,6 +24,20 @@ export function headerTier(height: number): HeaderTier {
   if (height >= FULL_TIER_H) return "full";
   if (height >= COMPACT_TIER_H) return "compact";
   return "tiny";
+}
+
+/** Smallest full header with room for the name on two lines above the button row. */
+export const TWO_LINE_H = 72;
+/** What the automation controls' own line adds to a full header (TrackHeaders.tsx's AUTO_ROW_H). */
+export const AUTO_LINE_H = 24;
+
+/**
+ * How many lines a header's name may take: two on a full header with room for the second line
+ * (and for the automation controls' line, `autoRow`, when it shows), else one. A name takes the
+ * second line only when it doesn't fit on one (`fitLines` in textFit.ts).
+ */
+export function nameLines(height: number, autoRow: boolean): 1 | 2 {
+  return height >= TWO_LINE_H + (autoRow ? AUTO_LINE_H : 0) ? 2 : 1;
 }
 
 /** The header volume slider's size at a tier: the groove (which holds the meter) and the

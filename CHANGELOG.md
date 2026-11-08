@@ -42,6 +42,11 @@ All notable changes to Marbble are recorded here. The format follows
   showed it out of place. Every alternative now moves with its time, and Insert Cut Section
   puts each alternative's part back where it was cut from. A frozen track's alternatives
   refuse the move, as its regions do.
+- **Track names use the room the header has.** A track header cut its name short ("Red Cla…")
+  with room to spare beside it. The volume slider now sits on the buttons' line, so the name
+  runs on above it to the header's edge, and a header 72 px tall or more (96 px with automation
+  shown) puts a long name on two lines, broken between words. A name that's still cut shows in
+  full in its tooltip.
 
 ## [0.1.0-alpha.11] - 2026-11-08
 

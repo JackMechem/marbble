@@ -8,6 +8,7 @@ import { headerTier } from "../trackHeader";
 import { AddLaneButton, AutomationControls } from "./AutomationHeader";
 import { LevelSlider } from "./LevelSlider";
 import { openMenuAt } from "./Menu";
+import { LinesText } from "./PathText";
 
 /** The header of one of a track's extra automation lanes: its parameter pop-up, and buttons to
  *  add a lane below or close this one. */
@@ -90,7 +91,7 @@ export function OutputTrackHeader({ row }: { row: OutputRow }) {
           </div>
         )}
         <div className="th-main">
-          <div className="th-name">Stereo Out</div>
+          <LinesText className="th-name" text="Stereo Out" max={1} title="Stereo Out" />
           {automation && tier === "full" && <AutomationControls track={strip} />}
         </div>
         <div className="th-volume">

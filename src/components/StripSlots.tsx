@@ -2,11 +2,9 @@
 // slots sit in (as many rows as the strips beside them, see stripRows.ts), the "+N more" row for
 // filled slots past them, and blank stand-ins for sections a strip doesn't have (Stereo Out's input
 // and sends, a folder's plug-ins, a VCA's everything), as tall as the real ones.
-import { useLayoutEffect, useRef, useState } from "react";
 import { Icon } from "../icons";
 import { openMenuAt, type MenuItem } from "./Menu";
-import { fitLines } from "../textFit";
-import { textWidth } from "./PathText";
+import { LinesText } from "./PathText";
 
 /** A strip's box of insert or send slots: `rows` slots tall. */
 export function SlotBox({ rows, children }: { rows: number; children?: React.ReactNode }) {
@@ -86,28 +84,5 @@ export function BlankButtons() {
 /** A strip's name on its name plate: up to two lines, broken at spaces only (`fitLines`), each
  *  line ending in "…" when cut (strip.css). The plate's tooltip has the whole name. */
 export function PlateName({ name }: { name: string }) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const [lines, setLines] = useState<string[]>([name]);
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const fit = () => {
-      const room = el.clientWidth;
-      const next = room > 0 ? fitLines(name, (s) => textWidth(el, s) <= room) : [name];
-      setLines((l) => (l.length === next.length && l.every((x, i) => x === next[i]) ? l : next));
-    };
-    fit();
-    const ro = new ResizeObserver(fit);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [name]);
-  return (
-    <span ref={ref} className="strip-name-text">
-      {lines.map((l, i) => (
-        <span key={i} className="truncate">
-          {l}
-        </span>
-      ))}
-    </span>
-  );
+  return <LinesText text={name} className="strip-name-text" />;
 }

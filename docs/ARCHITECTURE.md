@@ -1638,8 +1638,10 @@ Audio Track Editor and meters are canvas drawings. The common pattern:
 - **Text that doesn't fit** follows shared rules in `text-fit.css` rather than one-off fixes:
   `.truncate` (one line ending in "…"), `.path-text` with `PathText.tsx` and `textFit.ts` (a path
   shortened from its start at a separator, measured with a canvas in the element's font, the
-  whole path in the tooltip), captions and buttons that never wrap, and a checkbox kept beside
-  its label.
+  whole path in the tooltip), `LinesText` (also in `PathText.tsx`: a name on up to a few lines
+  broken at spaces by `fitLines`, each line ending in "…" when cut, the whole name in the tooltip
+  while cut; the Mixer's name plates and the track headers use it), captions and buttons that
+  never wrap, and a checkbox kept beside its label.
 - **Keyboard focus.** `:focus-visible` draws `--focus-ring` (`base.css`). Browsers also count a
   key pressed after a click as keyboard focus, which here would ring the last button clicked as
   soon as a shortcut is pressed, so `focusRing.ts` marks `<html>` with `data-keyboard-focus` on
@@ -1686,7 +1688,7 @@ Audio Track Editor and meters are canvas drawings. The common pattern:
   `mixerView` in the store holds both; it is shared with detached windows and the main window
   saves it per project folder, like track heights. Name plates are filled with the track's
   colour, their ink chosen by contrast (`plateInk`), and hold two lines of name, broken at
-  spaces only (`fitLines` in `textFit.ts`, measured by `PlateName`), each line ending in "…" when
+  spaces only (`fitLines` in `textFit.ts`, measured by `PlateName` with `LinesText`), each line ending in "…" when
   cut. Section labels and slot texts stay on one line at every width (a narrow strip's Audio FX
   label shows only its latency when it has one), and `useStripFit` measures the strip with the
   least fader, so every strip fits the view.
@@ -2699,7 +2701,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `dragModes.ts` | The drag modes' rules for drawing a drag's outcome (mirrors `drag_modes.rs`); pure, tested. |
 | `drumReplace.ts` | Drum Replacement/Doubling's settings, the threshold over the engine's candidate hits (pure, tested), and the markers the Tracks area draws while its sheet (`components/DrumReplace.tsx`) is open. |
 | `regionBar.ts` | A region's name bar and body at a given track height; pure, tested. |
-| `trackHeader.ts` | Track header layouts by height and the volume slider's meter scale; pure, tested. |
+| `trackHeader.ts` | Track header layouts by height (and how many lines the name may take) and the volume slider's meter scale; pure, tested. |
 | `headerColumns.ts` | The button columns the track headers share, with gaps where a track has no such button; pure, tested. |
 | `regionParams.ts` | The Region inspector's playback parameter values and how they show; pure, tested. |
 | `tools.ts`, `marquee.ts` | Tracks-area tools (list, Tool menu keys, Scissors and Fade tool geometry) and the marquee's geometry; pure. |
@@ -2760,7 +2762,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `vca.ts` | VCA offsets and loop checks for drawing the Mixer (mirrors `vca.rs`); pure, tested. |
 | `stripRows.ts` | How many insert and send rows strips side by side share (the Mixer's, the Inspector's pair), so their faders line up, and how many fit a short Mixer; pure, tested. |
 | `mixerLayout.ts` | The Mixer's stacks as brackets (collapsible), its strip widths and their saved form, and name plate ink by contrast; pure, tested. |
-| `textFit.ts` | Shortening a long path at a separator for `PathText.tsx`, and breaking a strip's name onto two lines at spaces for `PlateName`; pure, tested. |
+| `textFit.ts` | Shortening a long path at a separator for `PathText.tsx`, and breaking a name onto lines at spaces for `LinesText` (the Mixer's name plates, the track headers); pure, tested. |
 | `slotName.ts` | A plug-in slot's short name (a built-in instrument's model without "Marbble"); pure, tested. |
 | `slotDrag.ts` | Dragging plug-ins between Audio FX slots. |
 | `waveform.ts` | Waveform fetching, caching and the four drawing styles. |

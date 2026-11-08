@@ -48,6 +48,7 @@
 
 /* The power button stays at full strength: it's what turns the track back on. */
 .track-header.is-off > :not(.th-main),
+.track-header.is-off .th-controls > .th-volume,
 .track-header.is-off .th-name,
 .track-header.is-off .th-buttons > :not(.power) {
   opacity: 0.45;

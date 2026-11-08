@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { COMPACT_TIER_H, FULL_TIER_H, headerTier, levelSliderSize, meterScale, meterTravel, SLIDER_METER_FLOOR, thumbCenter } from "../src/trackHeader.ts";
+import { AUTO_LINE_H, COMPACT_TIER_H, FULL_TIER_H, headerTier, levelSliderSize, meterScale, meterTravel, nameLines, SLIDER_METER_FLOOR, thumbCenter, TWO_LINE_H } from "../src/trackHeader.ts";
 import { MIN_BODY_H, regionBar, fadeZone } from "../src/regionBar.ts";
 
 // The fader taper from time.ts (which can't be loaded here: it imports the tempo module).
@@ -23,6 +23,21 @@ test("header tiers by height", () => {
   assert.equal(headerTier(COMPACT_TIER_H - 1), "tiny");
   assert.equal(headerTier(MIN_TRACK_H), "tiny");
   assert.equal(headerTier(64), "full", "the default height keeps the full layout");
+});
+
+test("a name takes two lines only on a full header with room for them", () => {
+  assert.equal(nameLines(64, false), 1, "the default height keeps one line");
+  assert.equal(nameLines(TWO_LINE_H - 1, false), 1);
+  assert.equal(nameLines(TWO_LINE_H, false), 2);
+  assert.equal(nameLines(260, false), 2);
+  assert.equal(nameLines(COMPACT_TIER_H, false), 1, "one-line headers keep one line");
+  assert.equal(headerTier(TWO_LINE_H), "full");
+  // The automation controls' own line needs room as well.
+  assert.equal(nameLines(TWO_LINE_H, true), 1);
+  assert.equal(nameLines(TWO_LINE_H + AUTO_LINE_H - 1, true), 1);
+  assert.equal(nameLines(TWO_LINE_H + AUTO_LINE_H, true), 2);
+  // Two 16 px lines, the 6 px gap and the 21 px button row, with a few px above and below.
+  assert.ok(TWO_LINE_H >= 2 * 16 + 6 + 21 + 8);
 });
 
 test("the slider fits the smallest row, and is taller than the old slider and meter", () => {

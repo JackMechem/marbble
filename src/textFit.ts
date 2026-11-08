@@ -1,6 +1,6 @@
 // Fitting text to its box, the parts CSS can't do alone. A long path is shortened from its start
-// at a separator ("…/Music/Marbble"), never mid-name; the whole path goes in the tooltip. A strip's
-// name breaks onto two lines at spaces only (`fitLines`). The
+// at a separator ("…/Music/Marbble"), never mid-name; the whole path goes in the tooltip. A name (a
+// strip's, a track header's) breaks onto lines at spaces only (`fitLines`). The
 // CSS side (truncate, nowrap) is src/styles/text-fit.css. Pure, so it can be unit tested.
 
 /** What a shortened path starts with. */
@@ -25,7 +25,7 @@ export function fitPath(path: string, fits: (s: string) => boolean): string {
 }
 
 /**
- * A name on `max` lines (a channel strip's name plate), broken only at spaces: each line takes as
+ * A name on `max` lines (a channel strip's name plate, a track header), broken only at spaces: each line takes as
  * many words as fit (`fits`), at least one, and the last line takes the rest. A word too wide for
  * the box, or a last line that doesn't fit, is left for the box's own text-overflow to end in "…".
  */

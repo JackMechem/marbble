@@ -14,8 +14,9 @@ import { canFreeze, toggleFreeze } from "../freeze";
 import { takeRowsHeight } from "../takes";
 import { fmt, keyHint } from "../keymap";
 import { withKey } from "../keyFormat";
-import { headerTier } from "../trackHeader";
+import { headerTier, nameLines } from "../trackHeader";
 import { headerColumns, type SwitchId } from "../headerColumns";
+import { LinesText } from "./PathText";
 import { isTrackOff, powerTitle } from "../trackOff";
 import { LevelSlider } from "./LevelSlider";
 import { TrackAltButton } from "./TrackAlternatives";
@@ -106,6 +107,11 @@ function Header({
   const autoRow = full && automation && height >= AUTO_ROW_H;
   const autoInVolume = full && automation && !autoRow;
   const sliderW = Math.max(56, 88 - depth * INDENT);
+  // A full header puts the slider on the buttons' line, so the name above has the header's whole
+  // width up to the slider's end; on two lines when the height has room. (The automation controls
+  // that stand in for the slider on short full headers are two lines tall, so they keep a column.)
+  const sliderInRow = full && !autoInVolume;
+  const lines = full ? nameLines(height, autoRow) : 1;
   const allTracks = useStore((s) => s.snap?.project.tracks) ?? [];
   const off = isTrackOff(allTracks, track);
   // "On" here means lit, which for this button is the track being off. Its menu entry reads the
@@ -185,6 +191,59 @@ function Header({
     if (!selected) clickTrack(track.id, { shiftKey: false, ctrlKey: false, metaKey: false });
     openMenu(e.clientX, e.clientY, trackMenu(track, () => setEditing(true)));
   };
+  const buttonRow = (
+    <div className="th-buttons">
+      {/* Short headers keep only the switches that are on, so a muted, soloed, armed or
+          frozen track still shows it; the rest are in the "⋯" menu. */}
+      {(full ? columns.full : columns.compact).map(column)}
+      {group && <GroupBadge group={group} onClick={() => setState({ groupSheet: group.id })} />}
+      {showsTrackAlts(track) && <TrackAltButton track={track} />}
+      {hideMode && (
+        <button
+          className={"tbtn hide" + (track.hidden ? " on" : "")}
+          title={track.hidden ? "Hidden: click to show this track" : "Hide this track"}
+          aria-label={track.hidden ? "Hidden: click to show this track" : "Hide this track"}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            setHidden([track.id], !track.hidden);
+          }}
+        >
+          H
+        </button>
+      )}
+      {!full && automation && <AutoModeButton track={track} compact />}
+      {!full && (
+        <button
+          className="tbtn th-more"
+          title="On/Off, Mute, Solo, Record and more"
+          aria-label="On/Off, Mute, Solo, Record and more"
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            openMore(e.currentTarget);
+          }}
+        >
+          <MoreIcon />
+        </button>
+      )}
+    </div>
+  );
+  const volumeCell = (
+    <div className="th-volume">
+      {autoInVolume ? (
+        <AutomationControls track={track} width={sliderW} />
+      ) : (
+        <LevelSlider
+          db={volume}
+          onChange={(db) => api.updateTrack(track.id, { volume_db: db })}
+          width={sliderW}
+          tier={tier}
+          track={track.kind === "folder" ? null : track.id}
+          label={track.kind === "folder" ? "Folder volume (moves every subtrack)" : "Volume"}
+          {...volumeTouch}
+        />
+      )}
+    </div>
+  );
   return (
     <div
       className={`track-header tier-${tier}` + (selected ? " selected" : "") + (primary ? " primary" : "") + (stack ? " stack" : "") + (track.hidden ? " is-hidden" : "") + (track.frozen ? " frozen" : "") + (off ? " is-off" : "")}
@@ -235,7 +294,7 @@ function Header({
         </button>
       )}
       <div className="th-main">
-        <div className="th-name-row">
+        <div className={"th-name-row" + (lines > 1 ? " two-lines" : "")}>
           {editing ? (
             <input
               className="th-rename"
@@ -254,64 +313,22 @@ function Header({
               }}
             />
           ) : (
-            <div className="th-name" onDoubleClick={() => setEditing(true)} title={track.name}>
-              {track.name}
-            </div>
+            <LinesText className="th-name" text={track.name} max={lines} title={track.name} onDoubleClick={() => setEditing(true)} />
           )}
           {/* On the name's line: the button row has no room to spare at the usual widths. */}
           {full && btn(power)}
         </div>
-        <div className="th-buttons">
-          {/* Short headers keep only the switches that are on, so a muted, soloed, armed or
-              frozen track still shows it; the rest are in the "⋯" menu. */}
-          {(full ? columns.full : columns.compact).map(column)}
-          {group && <GroupBadge group={group} onClick={() => setState({ groupSheet: group.id })} />}
-          {showsTrackAlts(track) && <TrackAltButton track={track} />}
-          {hideMode && (
-            <button
-              className={"tbtn hide" + (track.hidden ? " on" : "")}
-              title={track.hidden ? "Hidden: click to show this track" : "Hide this track"}
-              aria-label={track.hidden ? "Hidden: click to show this track" : "Hide this track"}
-              onMouseDown={(e) => {
-                e.stopPropagation();
-                setHidden([track.id], !track.hidden);
-              }}
-            >
-              H
-            </button>
-          )}
-          {!full && automation && <AutoModeButton track={track} compact />}
-          {!full && (
-            <button
-              className="tbtn th-more"
-              title="On/Off, Mute, Solo, Record and more"
-              aria-label="On/Off, Mute, Solo, Record and more"
-              onMouseDown={(e) => {
-                e.stopPropagation();
-                openMore(e.currentTarget);
-              }}
-            >
-              <MoreIcon />
-            </button>
-          )}
-        </div>
+        {sliderInRow ? (
+          <div className="th-controls">
+            {buttonRow}
+            {volumeCell}
+          </div>
+        ) : (
+          buttonRow
+        )}
         {autoRow && <AutomationControls track={track} />}
       </div>
-      <div className="th-volume">
-        {autoInVolume ? (
-          <AutomationControls track={track} width={sliderW} />
-        ) : (
-          <LevelSlider
-            db={volume}
-            onChange={(db) => api.updateTrack(track.id, { volume_db: db })}
-            width={sliderW}
-            tier={tier}
-            track={track.kind === "folder" ? null : track.id}
-            label={track.kind === "folder" ? "Folder volume (moves every subtrack)" : "Volume"}
-            {...volumeTouch}
-          />
-        )}
-      </div>
+      {!sliderInRow && volumeCell}
       <div
         className="th-resize"
         title={`Drag to resize · ${fmt("Alt")}-drag resizes all tracks · double-click to reset`}

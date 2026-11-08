@@ -312,7 +312,7 @@ instead and enforce rules that would otherwise only fail in the running app.
 | `stepInput.test.ts` | Step Input: step lengths through the tempo map, the chord and advance state machine, the region edits. |
 | `stepSeq.test.ts` | The Step Sequencer: step edits, rows, paint values for each edit mode, names, the rows of a new pattern by instrument, the playing step of each row. |
 | `snap.test.ts` | The snap grid (`snapStep`, `snapPos` in `src/time.ts`): Bar, Beat, Division, Ticks and Smart in each signature. |
-| `textFit.test.ts` | Long paths shortened at a separator, and strip names on two lines broken at spaces (`src/textFit.ts`). |
+| `textFit.test.ts` | Long paths shortened at a separator, and names on lines broken at spaces (`src/textFit.ts`). |
 | `tempo.test.ts` | `src/tempo.ts`, the mirror of the engine's tempo map. |
 | `musicalMove.test.ts` | Region moves and nudges in bars and beats through the tempo map. |
 | `audioEdit.test.ts` | The Audio Track Editor's range arithmetic (`src/audioRange.ts`). |
@@ -327,7 +327,7 @@ instead and enforce rules that would otherwise only fail in the running app.
 | `tools.test.ts` | The Tracks area's tools (`src/tools.ts`) and the marquee (`src/marquee.ts`). |
 | `overview.test.ts` | The overview strip's mapping: time, track rows, the visible-area box, scroll and zoom drags. |
 | `scrolling.test.ts` | Mouse Wheel Scrolls (`src/wheel.ts`) and bringing the playhead into view (`revealLeft` in `src/view.ts`). |
-| `trackHeader.test.ts` | Track header layouts by height, the volume slider's meter scale, and region name bars (`src/regionBar.ts`). |
+| `trackHeader.test.ts` | Track header layouts by height (and the name's lines), the volume slider's meter scale, and region name bars (`src/regionBar.ts`). |
 | `autoLanes.test.ts` | Automation curves, Show Used Automation, the extra lanes and their boxes. |
 | `laneFollow.test.ts` | The shown lane following a plug-in moved to another track. |
 | `alternatives.test.ts` | Backup labels, alternative names and track alternatives (`src/alternativesModel.ts`). |
