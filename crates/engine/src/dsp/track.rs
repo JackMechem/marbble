@@ -251,6 +251,12 @@ pub struct TrackDsp {
     pub(super) spent: f32,
     /// What its folder does to it this block, read before the pool started.
     pub(super) fold_now: auto::FoldState,
+    /// It sits out every block: its plug-in stopped responding on a worker, and this is the stand-in
+    /// for it, or it's fed by one (see `Parallel::leave_out`). Until the plug-in returns
+    /// (`Cmd::Back`) or the strips are rebuilt.
+    pub(super) left_out: bool,
+    /// It's such a stand-in, which only ever sits out.
+    pub(super) stand_in: bool,
 }
 
 impl TrackDsp {
@@ -301,7 +307,27 @@ impl TrackDsp {
             outs: Outlets::new(),
             spent: 0.0,
             fold_now: Default::default(),
+            left_out: false,
+            stand_in: false,
         }
+    }
+
+    /// Leaves the strip out from now on (`left_out`). What effects keyed from it read goes silent.
+    pub(super) fn sit_out(&mut self) {
+        self.left_out = true;
+        for key in [&mut self.key_l, &mut self.key_r, &mut self.pre_key_l, &mut self.pre_key_r] {
+            key.fill(0.0);
+        }
+    }
+
+    /// Back from sitting out, as a track switched back on comes back: notes and controllers
+    /// chased afresh, automation resent, and a fade-in of `fade` frames.
+    pub(super) fn come_back(&mut self, fade: u32) {
+        self.left_out = false;
+        self.resume_left = fade;
+        self.flush_notes = true;
+        self.chase_cc = true;
+        self.auto_sent = [f32::NAN; MAX_AUTO_SENT];
     }
 
     pub fn set_automation(&mut self, lanes: Arc<Vec<LaneDsp>>, mode: AutoMode) {

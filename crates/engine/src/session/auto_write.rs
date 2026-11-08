@@ -15,7 +15,7 @@ use vst3_host::{Gesture, ParamInfo};
 use super::{Session, TrackPatch};
 use crate::automation::{lanes_dsp, splice, thin, tolerance, value_at, AutoTarget};
 use crate::dsp::Cmd;
-use crate::model::{AutoLane, AutoMode, AutoParam, AutoPoint, Id, MASTER_ID};
+use crate::model::{AutoLane, AutoMode, AutoParam, AutoPoint, Id, Project, MASTER_ID};
 
 /// How long Touch takes to glide back to the existing curve after the control is let go (s).
 const RETURN_GLIDE: f64 = 0.2;
@@ -24,6 +24,47 @@ const RETURN_GLIDE: f64 = 0.2;
 const HOLD_GAP: f64 = 0.05;
 /// ...that far before the new value.
 const HOLD_RAMP: f64 = 0.01;
+
+/// A control's own value as the project keeps it: a built-in plug-in's in its own units
+/// (not normalized), or that it has none saved and plays its default.
+#[derive(Clone, Copy)]
+pub(super) enum Own {
+    Value(f32),
+    Unsaved,
+}
+
+/// Puts a control's own value ([`Session::own_value`]) into a copy of the project.
+fn put_own_value(p: &mut Project, track: Id, param: &AutoParam, own: Own) {
+    if let AutoParam::Plugin { uid, param, .. } = param {
+        let tracks = p.tracks.iter_mut().flat_map(|t| t.inserts.iter_mut().flatten().chain(t.instrument.as_mut()));
+        if let Some(s) = tracks.chain(p.master.inserts.iter_mut().flatten()).find(|s| s.uid == *uid) {
+            match own {
+                Own::Value(v) => super::builtin::store_value(s, *param, v),
+                Own::Unsaved => s.params.retain(|x| x.0 != *param),
+            }
+        }
+        return;
+    }
+    let Own::Value(v) = own else { return };
+    if track == MASTER_ID {
+        if matches!(param, AutoParam::Volume) {
+            p.master.volume_db = v;
+        }
+        return;
+    }
+    let Some(t) = p.track_mut(track) else { return };
+    match param {
+        AutoParam::Volume => t.volume_db = v,
+        AutoParam::Pan => t.pan = v,
+        AutoParam::Mute => t.mute = v >= 0.5,
+        AutoParam::Send(slot) => {
+            if let Some(Some(s)) = t.sends.get_mut(*slot as usize) {
+                s.level_db = v;
+            }
+        }
+        AutoParam::Plugin { .. } => {}
+    }
+}
 
 #[derive(Default)]
 pub(super) struct AutoWriter {
@@ -41,6 +82,9 @@ struct Pass {
     mode: AutoMode,
     /// The value before writing began, for a lane that was empty.
     before: f32,
+    /// The control's own value, as the project keeps it, before the pass moved it: undoing
+    /// the pass puts it back. None for a VST3's parameter, which lives in the plug-in's state.
+    was: Option<Own>,
     /// Finished stretches (a cycle jump back ends one): start, end, points.
     done: Vec<(i64, i64, Vec<AutoPoint>)>,
     start: i64,
@@ -72,6 +116,14 @@ impl Session {
             AutoParam::Plugin { uid, param, .. } => {
                 self.controllers.get(uid).and_then(|c| c.param_value(*param)).map(|v| v as f32).or_else(|| self.builtin_normalized(*uid, *param))
             }
+        }
+    }
+
+    /// The control's own value as the project keeps it (none for a VST3's parameter).
+    fn own_value(&self, track: Id, param: &AutoParam) -> Option<Own> {
+        match param {
+            AutoParam::Plugin { uid, param, .. } => self.builtin_saved(*uid, *param).map(|v| v.map_or(Own::Unsaved, Own::Value)),
+            _ => self.live_value(track, param).map(Own::Value),
         }
     }
 
@@ -119,8 +171,9 @@ impl Session {
     }
 
     /// Starts writing `param` at `pos` if the track's mode writes (or finds the pass already
-    /// going). `before` is the value the control had before it moved.
-    fn begin_pass(&mut self, track: Id, param: &AutoParam, pos: i64, before: Option<f32>) -> Option<usize> {
+    /// going). `before` is the value the control had before it moved, and `was` the same as
+    /// [`Session::own_value`] has it (the value now if None).
+    fn begin_pass(&mut self, track: Id, param: &AutoParam, pos: i64, before: Option<f32>, was: Option<Own>) -> Option<usize> {
         if let Some(i) = self.pass_index(track, param) {
             return Some(i);
         }
@@ -129,6 +182,7 @@ impl Session {
             return None;
         }
         let value = self.live_value(track, param)?;
+        let was = was.or_else(|| self.own_value(track, param));
         let before = before.or_else(|| self.curve_value(track, param, pos)).unwrap_or(value);
         // Write mode already plays every live value; Touch and Latch let go of this one.
         if mode != AutoMode::Write {
@@ -139,6 +193,7 @@ impl Session {
             param: param.clone(),
             mode,
             before,
+            was,
             done: Vec::new(),
             start: pos,
             points: vec![AutoPoint { pos, value, curve: 0.0 }],
@@ -209,7 +264,7 @@ impl Session {
         let pos = self.position();
         for (k, param) in [AutoParam::Volume, AutoParam::Pan, AutoParam::Mute].into_iter().enumerate() {
             let Some(before) = was[k] else { continue };
-            let Some(i) = self.begin_pass(track, &param, pos, Some(before)) else { continue };
+            let Some(i) = self.begin_pass(track, &param, pos, Some(before), Some(Own::Value(before))) else { continue };
             if let Some(v) = self.live_value(track, &param) {
                 self.sample_pass(i, v);
             }
@@ -237,7 +292,7 @@ impl Session {
         }
         let param = AutoParam::Send(slot as u8);
         let pos = self.position();
-        if let Some(i) = self.begin_pass(track, &param, pos, before) {
+        if let Some(i) = self.begin_pass(track, &param, pos, before, before.map(Own::Value)) {
             if let Some(v) = self.live_value(track, &param) {
                 self.sample_pass(i, v);
             }
@@ -273,13 +328,14 @@ impl Session {
             return;
         }
         let pos = self.position();
+        let was = self.own_value(track, param);
         // Pick the control up where the automation has it, so the value doesn't jump.
         if mode != AutoMode::Write && self.pass_index(track, param).is_none() {
             if let Some(v) = self.curve_value(track, param, pos) {
                 self.set_live(track, param, v);
             }
         }
-        if let Some(i) = self.begin_pass(track, param, pos, None) {
+        if let Some(i) = self.begin_pass(track, param, pos, None, was) {
             self.auto.passes[i].held = true;
             if let Some(v) = self.live_value(track, param) {
                 self.sample_pass(i, v);
@@ -312,7 +368,7 @@ impl Session {
             }
         }
         for p in params {
-            self.begin_pass(track, &p, from, None);
+            self.begin_pass(track, &p, from, None, None);
         }
     }
 
@@ -358,7 +414,17 @@ impl Session {
         if passes.is_empty() {
             return;
         }
-        self.checkpoint("Write Automation", None, false);
+        // The controls moved without steps of their own (the app takes none while writing), so
+        // the step holds them as they were before their passes: undoing it puts them back
+        // along with the lanes, as before the moves.
+        self.flush_vst_edits();
+        let mut was = self.project.clone();
+        for p in &passes {
+            if let Some(v) = p.was {
+                put_own_value(&mut was, p.track, &p.param, v);
+            }
+        }
+        self.push_step(was, "Write Automation", None);
         let glide = (RETURN_GLIDE * self.sample_rate()) as i64;
         let mut tracks: Vec<Id> = Vec::new();
         let mut release: Vec<(Id, AutoTarget)> = Vec::new();
@@ -453,7 +519,7 @@ impl Session {
                         let p = self.plugin_param(track, uid, id);
                         // Some editors don't bracket their edits with begin/end.
                         let pos = self.position();
-                        if let Some(i) = self.begin_pass(track, &p, pos, None) {
+                        if let Some(i) = self.begin_pass(track, &p, pos, None, None) {
                             self.sample_pass(i, v as f32);
                         }
                     }
@@ -574,15 +640,15 @@ impl Session {
         self.controllers.get(&uid).map(|c| c.parameters()).unwrap_or_default()
     }
 
-    /// A built-in effect's control moved (from `before`, normalized); recorded like a send
-    /// knob while writing.
-    pub(super) fn auto_plugin_moved(&mut self, track: Id, uid: Id, param: u32, before: f32) {
+    /// A built-in effect's control moved (from `before`, normalized, and `was` as the project
+    /// kept it; None for a VST3's); recorded like a send knob while writing.
+    pub(super) fn auto_plugin_moved(&mut self, track: Id, uid: Id, param: u32, before: f32, was: Option<Own>) {
         if !self.is_playing() {
             return;
         }
         let p = self.plugin_param(track, uid, param);
         let pos = self.position();
-        if let Some(i) = self.begin_pass(track, &p, pos, Some(before)) {
+        if let Some(i) = self.begin_pass(track, &p, pos, Some(before), was) {
             if let Some(v) = self.live_value(track, &p) {
                 self.sample_pass(i, v);
             }
@@ -594,5 +660,57 @@ impl Session {
     /// Write). Those moves belong to the pass's undo step rather than getting their own.
     pub fn automation_writing(&self, track: Id) -> bool {
         self.is_playing() && self.auto_mode_of(track).map(|m| m.writes()).unwrap_or(false)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::{InputSel, TrackKind};
+
+    /// Makes a move that writes automation, then checks that undo gives back the project as it
+    /// was before and redo as it was after.
+    fn undoes(s: &mut Session, what: &str, made: impl FnOnce(&mut Session)) {
+        let doc = |s: &Session| serde_json::to_value(&s.project).unwrap();
+        let before = doc(s);
+        made(s);
+        let after = doc(s);
+        assert_ne!(after, before, "{what}");
+        assert_eq!(s.undo_label().as_deref(), Some("Write Automation"), "{what}");
+        s.undo();
+        assert_eq!(doc(s), before, "{what}: undo");
+        s.redo();
+        assert_eq!(doc(s), after, "{what}: redo");
+        s.undo();
+    }
+
+    /// Undoing a pass takes back the moves of its control as well as its lane, so the project
+    /// is as it was before (soak_check seed 22: a built-in effect's knob moved in Touch while
+    /// playing came back from undo still moved).
+    #[test]
+    fn undoing_written_automation_puts_the_controls_back() {
+        let cfg = crate::audio_io::AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
+        let mut s = Session::new(cfg, Vec::new());
+        let t = s.add_track(TrackKind::Audio, InputSel::None, None, None).unwrap();
+        s.set_plugin(t, 0, "builtin:compressor").unwrap();
+        let uid = s.project.track(t).unwrap().inserts[0].as_ref().unwrap().uid;
+        let params = s.builtin_params(uid);
+        let ((saved, a), (unsaved, b)) = (params[0], params[1]);
+        s.set_builtin_param(t, 0, saved, a + 1.0).unwrap();
+        s.set_automation_lane(t, AutoParam::Volume, vec![AutoPoint { pos: 0, value: -6.0, curve: 0.0 }]);
+        s.set_auto_mode(t, AutoMode::Touch);
+        let engine = s.engine_for_checks();
+        let mut e = engine.lock();
+        s.play();
+        let mut buf = vec![0.0f32; 1024];
+        e.process(&[], 0, &mut buf, 2);
+        assert!(s.automation_writing(t));
+        undoes(&mut s, "a knob with a saved value", |s| s.set_builtin_param(t, 0, saved, a + 2.0).unwrap());
+        undoes(&mut s, "a knob playing its default", |s| s.set_builtin_param(t, 0, unsaved, b + 1.0).unwrap());
+        undoes(&mut s, "a fader picked up from its lane and moved", |s| {
+            s.automation_touch(t, AutoParam::Volume, true);
+            s.update_track_linked(t, TrackPatch { volume_db: Some(-20.0), ..Default::default() });
+            s.automation_touch(t, AutoParam::Volume, false);
+        });
     }
 }

@@ -7,18 +7,22 @@
 
 use super::*;
 
-/// Space a strip works in, one per thread: a send reading the delay line at its own tap, and the
-/// fader gains of the block, which post-fader sends at another tap apply again.
+/// Space a strip works in, one per thread: a send reading the delay line at its own tap, the
+/// fader gains of the block, which post-fader sends at another tap apply again, and the side-chain
+/// key a plug-in is reading.
 pub(crate) struct Scratch {
     pub(super) tap_l: Vec<f32>,
     pub(super) tap_r: Vec<f32>,
     pub(super) gain_l: Vec<f32>,
     pub(super) gain_r: Vec<f32>,
+    pub(super) key_l: Vec<f32>,
+    pub(super) key_r: Vec<f32>,
 }
 
 impl Default for Scratch {
     fn default() -> Self {
-        Scratch { tap_l: vec![0.0; MAX_BLOCK], tap_r: vec![0.0; MAX_BLOCK], gain_l: vec![0.0; MAX_BLOCK], gain_r: vec![0.0; MAX_BLOCK] }
+        let buf = || vec![0.0; MAX_BLOCK];
+        Scratch { tap_l: buf(), tap_r: buf(), gain_l: buf(), gain_r: buf(), key_l: buf(), key_r: buf() }
     }
 }
 
@@ -137,6 +141,13 @@ pub(crate) trait Routes {
     fn output(&mut self, outs: &mut Outlets, dest: Dest, l: &[f32], r: &[f32]);
     /// The analyzer's feed, when it looks at this strip (None: silence, from an Off track).
     fn analyze(&mut self, outs: &mut Outlets, signal: Option<(&[f32], &[f32])>, n: usize);
+    /// Around a call into the strip's plug-in `uid`, which may never return. False after it if the
+    /// strip was left in it (`pool::Call`): it's no longer this thread's, which must stop at once.
+    /// The serial loop has nobody to leave a strip to.
+    fn enter(&self, _uid: Id) {}
+    fn leave(&self) -> bool {
+        true
+    }
 }
 
 /// The serial loop's routes.

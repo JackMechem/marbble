@@ -342,7 +342,12 @@ impl Session {
         let now = Instant::now();
         let mut stepped = false;
         let uids: Vec<Id> = self.vst_watches.keys().copied().collect();
+        let held = self.held();
         for uid in uids {
+            // A plug-in a processing thread is left in may never answer (`session/left_out.rs`).
+            if self.plugin_left_in(&held, uid) {
+                continue;
+            }
             let Some(w) = self.vst_watches.get_mut(&uid) else { continue };
             let Some(c) = self.controllers.get_mut(&uid) else {
                 self.vst_watches.remove(&uid);

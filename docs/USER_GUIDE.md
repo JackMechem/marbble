@@ -108,6 +108,7 @@ Contents:
     [Recordings are early or late](#recordings-are-early-or-late) ·
     [The CPU meter](#the-cpu-meter) ·
     ["System overload" and playback stops](#system-overload-and-playback-stops) ·
+    ["… stopped responding" and a track goes quiet](#-stopped-responding-and-a-track-goes-quiet) ·
     ["… put out invalid audio" and a plug-in goes quiet](#-put-out-invalid-audio-and-a-plug-in-goes-quiet) ·
     [The playhead or meters freeze during a bounce](#the-playhead-or-meters-freeze-during-a-bounce) ·
     [Plug-ins are missing](#plug-ins-are-missing) ·
@@ -2441,8 +2442,9 @@ and sends line up at Stereo Out.
 
 **Low Latency Mode** (Settings › Audio, or Record › Low Latency Mode): while you play live,
 plug-ins with more latency than the limit (5 ms by default) are switched off on record-enabled
-tracks and on monitored audio tracks, and those tracks skip their compensation delay. An armed
-audio track that is recording always skips its own compensation delay. Bounces and exports
+tracks and on monitored audio tracks, and those tracks skip their compensation delay. The auxes
+on a record-enabled instrument's extra outputs do the same, so they stay with its main output. An
+armed audio track that is recording always skips its own compensation delay. Bounces and exports
 ignore Low Latency Mode.
 
 ---
@@ -2520,8 +2522,9 @@ orange in Touch and Latch, red in Write.
 - Moves in a plug-in's own editor are written too (through the plug-in's begin/perform/end edit
   calls). While they are, they undo with the pass, not as steps of their own.
 - Group members that share volume, pan or mute write together.
-- Each pass is one undo step, **Write Automation**. Written passes are thinned to the points the
-  curve needs.
+- Each pass is one undo step, **Write Automation**. Undoing it takes the lane back and returns the
+  control to where it was before the pass. Written passes are thinned to the points the curve
+  needs.
 - Lanes are evaluated every audio block. Volume keeps the fader's smoothing, and plug-in
   parameters are ramped across each block. With plug-in delay compensation, automation follows the
   delayed audio.
@@ -3358,6 +3361,22 @@ finish its work for a tenth of a second. That thread is left out from then on, s
 can't take Marbble down with it even if it never finishes, and the other threads play on. **Reset
 Audio Engine** in Settings › Audio brings it back. Until then Settings › Audio says how many threads
 play.
+
+### "… stopped responding" and a track goes quiet
+
+When a plug-in on one of the extra processing threads (Settings › Audio › Processing Threads)
+doesn't return from its work for a tenth of a second, Marbble leaves it there and plays on
+without it. After a moment of silence, the rest of the mix carries on. The plug-in's track, and
+anything that track feeds (an aux it sends to, the summing stack it plays through, a track it
+keys a side-chain for), are silent from then on, and a message names the plug-in and the track.
+Playback doesn't stop, but a recording does, as the take now has a gap.
+
+If the plug-in responds again later, the track comes back by itself, with the plug-in loaded
+afresh, and a message says so. Otherwise **Reset Audio Engine** in Settings › Audio loads the
+plug-ins again and brings the tracks back, along with the thread. Meanwhile bounces, exports,
+Freeze and Bounce in Place are refused, as those tracks would be missing from them, and saving
+keeps the settings the stuck plug-in was last saved with rather than asking it, as it may never
+answer. A plug-in that stops responding on the audio thread itself can't be left like this.
 
 ### "… put out invalid audio" and a plug-in goes quiet
 

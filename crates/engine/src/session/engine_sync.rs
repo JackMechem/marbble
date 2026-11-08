@@ -48,12 +48,17 @@ impl Session {
         // The command counter restarts with the engine's view of it.
         self.cmds_sent = self.status.cmds_done.load(Ordering::Relaxed);
         self.pending_pos = None;
-        if rate != self.project.sample_rate || (self.engine_rate as u32) != rate {
+        let new_rate = rate != self.project.sample_rate || (self.engine_rate as u32) != rate;
+        if new_rate {
             // The project runs at the device's rate, and that's saved with it.
             if rate != self.project.sample_rate {
                 self.dirty = true;
             }
             self.project.sample_rate = rate;
+        }
+        // Tracks left out after a plug-in stopped responding come back with new instances of
+        // their plug-ins.
+        if new_rate || self.status.left_out.load(Ordering::Relaxed) > 0 {
             self.rebuild_graph();
         }
     }
@@ -82,6 +87,12 @@ impl Session {
         // that much late too.
         let pdc = self.pdc_global.total as f64;
         (us as f64 * sr / 1e6 + ring + manual + pdc).round() as i64
+    }
+
+    /// What recorded MIDI is moved earlier by: it only travels one way, as the performer reacts
+    /// to audio that left late (output latency plus the delay compensation).
+    pub(super) fn midi_latency_frames(&self) -> i64 {
+        (self.status.output_latency_us.load(Ordering::Relaxed) as f64 * self.sample_rate() / 1e6).round() as i64 + self.pdc_global.total as i64
     }
 
     /// The input and output latency the device last reported, and the compensation recordings get.
@@ -506,24 +517,27 @@ impl Session {
         self.sync_globals();
     }
 
-    /// The project with each plugin's current state embedded (for saving or rebuilding).
+    /// The project with each plugin's current state embedded (for saving or rebuilding). A plug-in
+    /// a processing thread is left in (`session/left_out.rs`) isn't asked, as it may never answer:
+    /// it keeps the state the project last had for it.
     pub(super) fn capture_plugin_states(&self) -> Project {
         let mut p = self.project.clone();
-        let fill = |s: &mut Option<PluginSlot>, ctrls: &HashMap<Id, PluginController>| {
+        let held = self.held();
+        let fill = |track: Id, s: &mut Option<PluginSlot>, ctrls: &HashMap<Id, PluginController>| {
             if let Some(slot) = s {
-                if let Some(c) = ctrls.get(&slot.uid) {
+                if let Some(c) = ctrls.get(&slot.uid).filter(|_| !Self::left_in(&held, track, slot.uid)) {
                     slot.state = Some(encode_state(&c.save_state()));
                 }
             }
         };
         for t in &mut p.tracks {
-            fill(&mut t.instrument, &self.controllers);
+            fill(t.id, &mut t.instrument, &self.controllers);
             for s in &mut t.inserts {
-                fill(s, &self.controllers);
+                fill(t.id, s, &self.controllers);
             }
         }
         for s in &mut p.master.inserts {
-            fill(s, &self.controllers);
+            fill(MASTER_ID, s, &self.controllers);
         }
         p
     }

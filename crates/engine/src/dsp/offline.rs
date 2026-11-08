@@ -106,6 +106,8 @@ impl Engine {
         self.settle();
         // Apply edits that are still queued, so the render hears the latest settings.
         self.process(&[], 0, &mut [], 0);
+        // A Stop still draining live is over: the render's own drain comes at its end.
+        self.finish_stop();
         let saved = Saved {
             pos: self.pos,
             playing: self.playing,

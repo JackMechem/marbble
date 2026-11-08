@@ -7,12 +7,15 @@
 //! The silent ALSA null device runs, so edits queue their commands for the next block as they
 //! do during playback; holding the engine's lock keeps its callback out.
 //! Runs twice: with the callback alone, and with every block on the pool of worker threads
-//! (`dsp/pool.rs`), whose threads are counted for as long as a block can be running.
+//! (`dsp/pool.rs`), whose threads are counted for as long as a block can be running. On the pool
+//! a plug-in then stops responding on a worker: leaving the worker in it, and its track and what
+//! that feeds out of the blocks after, must not allocate either.
 //! usage: rt_alloc_check <scratch dir>
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::Cell;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::Arc;
 
 use daw_engine::audio_io::AudioConfig;
 use daw_engine::model::{AutoParam, Id, TrackKind};
@@ -39,10 +42,13 @@ thread_local! {
 
 /// The workers are being watched: from before a block starts until after it ends.
 static WORKERS_COUNTED: AtomicBool = AtomicBool::new(false);
+/// Only the callback is counted: a worker left in a plug-in is ending, and a thread's end frees
+/// what std set it up with. It's demoted and plays nothing by then.
+static CALLBACK_ONLY: AtomicBool = AtomicBool::new(false);
 static WORKERS_SEEN: AtomicUsize = AtomicUsize::new(0);
 
 fn counted(what: &str) {
-    let worker = WORKERS_COUNTED.load(Ordering::Relaxed) && WORKER.try_with(|c| c.get()).unwrap_or(false);
+    let worker = WORKERS_COUNTED.load(Ordering::Relaxed) && !CALLBACK_ONLY.load(Ordering::Relaxed) && WORKER.try_with(|c| c.get()).unwrap_or(false);
     let on = worker || COUNTING.try_with(|c| c.get()).unwrap_or(false);
     if !on {
         return;
@@ -140,6 +146,60 @@ fn vst_gate(d: &vst3_host::PluginDescriptor) {
     }
     let n = ALLOCS.load(Ordering::Relaxed) - mark;
     check(&format!("a bypassed VST3 takes its editor's edits without allocating ({n})"), n == 0 && !p.has_edits());
+}
+
+/// A plug-in on `track` that stops responding on a worker (`tar_for_checks`), with blocks given up on
+/// when they run that late, as they are live: the worker is left in it, the track and the stack it
+/// plays through sit out, and once the plug-in returns its strip goes back as garbage and the
+/// session brings the track back. None of it may allocate, in the callback or on the workers. The
+/// transport plays on, the session says what happened, and renders are refused meanwhile.
+fn stuck_plugin(
+    s: &mut Session,
+    guard: &mut parking_lot::MutexGuard<daw_engine::dsp::Engine>,
+    run: &mut impl FnMut(&mut parking_lot::MutexGuard<daw_engine::dsp::Engine>, usize, bool),
+    track: Id,
+) {
+    // Whatever the session had to say so far.
+    s.tick();
+    let hold = Arc::new(AtomicBool::new(true));
+    s.set_threads_for_checks(4, daw_engine::dsp::ParallelTest { always: true, renders: false, patient: false });
+    s.insert_for_checks(track, 7, daw_engine::dsp::parallel::tar_for_checks(999_999, s.sample_rate() as f32, hold.clone()));
+    let mark = ALLOCS.load(Ordering::Relaxed);
+    let started = std::time::Instant::now();
+    // The callback plays a block alone now and then, and Tar only holds up a worker.
+    while guard.status.left_out.load(Ordering::Relaxed) == 0 && started.elapsed().as_secs() < 30 {
+        run(guard, 1, true);
+    }
+    let left = guard.status.left_out.load(Ordering::Relaxed);
+    // Past the overload's silence.
+    run(guard, 200, true);
+    let n = ALLOCS.load(Ordering::Relaxed) - mark;
+    check(&format!("a plug-in that stops responding on a worker and its track left out allocate nothing ({n}; {left} tracks left out)"), n == 0 && left >= 2);
+    let warning = s.tick().warning.unwrap_or_default();
+    check(&format!("the transport plays on, and the session says why ({warning:?})"), s.is_playing() && warning.contains("stopped responding"));
+    s.idle();
+    let refused = parking_lot::MutexGuard::unlocked(guard, || s.render(0, 4800, 0, None, &mut |_| {}));
+    let why = refused.as_ref().err().map(|e| e.to_string()).unwrap_or_default();
+    check(&format!("a render is refused meanwhile ({why:?})"), why.contains("sitting out"));
+
+    // Tar returns: the strip goes back, and the track comes back with a new one.
+    let mark = ALLOCS.load(Ordering::Relaxed);
+    CALLBACK_ONLY.store(true, Ordering::Relaxed);
+    hold.store(false, Ordering::SeqCst);
+    let started = std::time::Instant::now();
+    while !guard.status.held().is_empty() && started.elapsed().as_secs() < 10 {
+        run(guard, 1, true);
+        std::thread::sleep(std::time::Duration::from_millis(1));
+    }
+    std::thread::sleep(std::time::Duration::from_millis(20));
+    CALLBACK_ONLY.store(false, Ordering::Relaxed);
+    s.idle();
+    run(guard, 20, true);
+    let n = ALLOCS.load(Ordering::Relaxed) - mark;
+    let out = guard.status.left_out.load(Ordering::Relaxed);
+    check(&format!("the strip taken back and the track brought back allocate nothing in the callback ({n}; {out} tracks left out)"), n == 0 && out == 0);
+    let warning = s.tick().warning.unwrap_or_default();
+    check(&format!("and the session says so ({warning:?})"), warning.contains("responds again"));
 }
 
 fn s_state(s: &Session, t: Id) -> Option<String> {
@@ -400,6 +460,9 @@ fn scenario(scratch: &Path, threads: u32) {
     run(&mut guard, bars(4.0), true);
     let moves = ALLOCS.load(Ordering::Relaxed) - mark;
     check(&format!("locating, cycling and stopping allocate nothing ({moves})"), moves == 0);
+    if threads > 1 {
+        stuck_plugin(&mut s, &mut guard, &mut run, w.a2);
+    }
     check(&format!("it played something (peak {peak:.3})"), peak > 0.01);
     let pooled = guard.status.parallel_blocks.load(Ordering::Relaxed) - pooled_before;
     if threads > 1 {

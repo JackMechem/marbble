@@ -13,6 +13,8 @@ pub(super) enum BlockEnd {
     Silenced,
     /// A strip on the pool hasn't finished (see `Parallel::run`).
     GivenUp,
+    /// Strips on the pool were left in plug-ins that didn't return, and the rest finished.
+    LeftOut,
 }
 
 /// One strip's work for the block. The serial loop and the worker threads run this same code, with
@@ -42,13 +44,28 @@ pub(super) fn run_strip<R: Routes>(cx: &BlockCtx<'_>, ti: usize, t: &mut TrackDs
     if role == Some(Role::Skip) {
         return;
     }
+    // Its plug-in stopped responding, or it's fed by one that did: it plays nothing, and what's
+    // sent to it is let go.
+    if t.left_out {
+        t.sum_l[..n].fill(0.0);
+        t.sum_r[..n].fill(0.0);
+        if cx.analyzer_target == Some(t.id) {
+            routes.analyze(&mut t.outs, None, n);
+        }
+        return;
+    }
     // An Off track goes quiet through its fader as a muted one does, then stops. A track
     // in the middle of a take stays on until the take ends (only an undo can get here:
     // the session refuses the switch while recording), so no audio is lost.
     let taking = recording && t.params.armed && (t.rec.is_some() || cx.midi_target == Some(t.id));
     let off = t.params.off && !taking;
     if off && (t.dormant || snap_gains || iso.is_some() || t.faded_out()) {
+        // It may call its plug-ins, though only for the strip itself.
+        routes.enter(0);
         t.sleep_block(n, &cx.transport);
+        if !routes.leave() {
+            return;
+        }
         if cx.analyzer_target == Some(t.id) {
             routes.analyze(&mut t.outs, None, n);
         }
@@ -66,10 +83,13 @@ pub(super) fn run_strip<R: Routes>(cx: &BlockCtx<'_>, ti: usize, t: &mut TrackDs
     let mut p = t.params;
     let pdc = t.pdc;
     // A live track (recording, or monitored in Low Latency Mode) skips its delay
-    // compensation, so the performer isn't kept waiting (see session/pdc.rs).
+    // compensation, so the performer isn't kept waiting (see session/pdc.rs). An aux on an
+    // instrument's extra output is monitored with the instrument, so it keeps up with the
+    // instrument's main output.
     let monitored = match t.kind {
         TrackKind::Audio => p.monitor || (p.armed && auto_monitor),
         TrackKind::Instrument => p.armed,
+        TrackKind::Aux if p.instrument_output.is_some() => t.feed.source.and_then(|i| routes.earlier(i)).is_some_and(|s| s.params.armed),
         _ => false,
     };
     let live = (recording && p.armed && t.kind == TrackKind::Audio) || (low_latency && monitored);
@@ -134,7 +154,8 @@ pub(super) fn run_strip<R: Routes>(cx: &BlockCtx<'_>, ti: usize, t: &mut TrackDs
         TrackKind::Summing | TrackKind::Aux => {
             routes.inputs((&mut t.sum_l[..n], &mut t.sum_r[..n]), l, r);
             if let Some(o) = p.instrument_output {
-                let pull = multi_out::Pull { bus: o.bus as usize, smooth, snap: snap_gains, delay: pdc.feed, fade: (pdc::FADE_SECS * sr) as u32 };
+                let delay = if live { 0 } else { pdc.feed };
+                let pull = multi_out::Pull { bus: o.bus as usize, smooth, snap: snap_gains, delay, fade: (pdc::FADE_SECS * sr) as u32 };
                 let src = t.feed.source.and_then(|i| routes.earlier(i));
                 t.feed.pull(src, &pull, &mut t.pdc_taps.feed, (l, r), (&mut sc.tap_l[..n], &mut sc.tap_r[..n]));
                 if contain(l, r) {
@@ -300,12 +321,19 @@ pub(super) fn run_strip<R: Routes>(cx: &BlockCtx<'_>, ti: usize, t: &mut TrackDs
             }
             t.midi.sort_by_key(|m| m.offset);
             if let Some(ins) = &mut t.instrument {
-                if !ins.bypass && ll_skip & INSTRUMENT_BIT == 0 {
+                routes.enter(ins.uid);
+                let ran = !ins.bypass && ll_skip & INSTRUMENT_BIT == 0;
+                if ran {
                     ins.plugin.process(l, r, &t.midi, &transport);
-                    check_output(cx.status, ins, l, r);
-                    t.instrument_ran = true;
                 } else {
                     ins.plugin.pass_edits_aside(&transport);
+                }
+                if !routes.leave() {
+                    return;
+                }
+                if ran {
+                    check_output(cx.status, ins, l, r);
+                    t.instrument_ran = true;
                 }
             }
             // A frozen instrument track plays its freeze file instead.
@@ -326,16 +354,33 @@ pub(super) fn run_strip<R: Routes>(cx: &BlockCtx<'_>, ti: usize, t: &mut TrackDs
 
     for (k, slot) in t.inserts.iter_mut().enumerate().filter(|_| fx) {
         let Some(ins) = slot else { continue };
-        if !ins.bypass && ll_skip & (1 << k) == 0 {
-            let key = key_signal(ins.key.idx.and_then(|i| routes.earlier(i)), ins.key.pre, iso, n);
+        let ran = !ins.bypass && ll_skip & (1 << k) == 0;
+        // The plug-in reads its key from this thread's scratch: left in it (`Routes::leave`), it
+        // must not read the source's own buffers, which the engine goes on writing, and frees with
+        // the source's track.
+        let key = match ran.then(|| key_signal(ins.key.idx.and_then(|i| routes.earlier(i)), ins.key.pre, iso, n)).flatten() {
+            Some((a, b)) => {
+                sc.key_l[..n].copy_from_slice(a);
+                sc.key_r[..n].copy_from_slice(b);
+                Some((&sc.key_l[..n], &sc.key_r[..n]))
+            }
+            None => None,
+        };
+        routes.enter(ins.uid);
+        if ran {
             match &mut ins.plugin {
                 Plugin::Builtin(b) => b.process(l, r, key, &fx_context(&transport)),
                 Plugin::Vst(p) => p.process_keyed(l, r, key, &[], &transport),
                 p => p.process(l, r, &[], &transport),
             }
-            check_output(cx.status, ins, l, r);
         } else {
             ins.plugin.pass_edits_aside(&transport);
+        }
+        if !routes.leave() {
+            return;
+        }
+        if ran {
+            check_output(cx.status, ins, l, r);
         }
     }
     // The delay line keeps the post-plug-in signal; the output and the sends read it

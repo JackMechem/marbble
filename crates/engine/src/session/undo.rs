@@ -26,12 +26,19 @@ impl Session {
             }
         }
         let project = if plugins { self.capture_plugin_states() } else { self.project.clone() };
+        self.push_step(project, label, key);
+        true
+    }
+
+    /// Pushes a step that undoes back to `project`, which is usually the project as it is now
+    /// (see [`Session::checkpoint`]).
+    pub(super) fn push_step(&mut self, project: Project, label: &str, key: Option<String>) {
+        self.redo_stack.clear();
         self.undo_stack.push(UndoEntry { project, label: label.to_string(), key, at: Instant::now(), plugin: None });
         let limit = self.prefs.general.undo_limit.max(1);
         if self.undo_stack.len() > limit {
             self.undo_stack.drain(..self.undo_stack.len() - limit);
         }
-        true
     }
 
     /// Takes back the step [`Session::checkpoint`] just pushed, after its edit failed: anything
