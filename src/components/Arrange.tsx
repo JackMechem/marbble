@@ -19,6 +19,7 @@ import { escapeMarquee, toolLeave } from "../trackTools";
 import { drawTracks } from "./tracksCanvas/draw";
 import type { Drag, TracksLive } from "./tracksCanvas/drag";
 import { tracksPointer } from "./tracksCanvas/pointer";
+import { onDrumMarks } from "../drumReplace";
 
 // ---- peaks ----------------------------------------------------------------------------------
 
@@ -102,6 +103,8 @@ export function Arrange() {
   useLayoutEffect(() => {
     requestDraw();
   });
+  // Drum Replacement's markers follow its sheet.
+  useEffect(() => onDrumMarks(requestDraw), [requestDraw]);
 
   // Viewport sizing
   useEffect(() => {

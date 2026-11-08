@@ -1,0 +1,12 @@
+/* The Drum Replacement/Doubling sheet. */
+/* ---- Drum Replacement sheet (components/DrumReplace.tsx) ---------------------------------- */
+
+.drum-replace-summary {
+  margin: 6px 0 14px;
+  font-size: var(--fs-sm);
+}
+
+.drum-replace-grid {
+  grid-template-columns: 110px 1fr;
+  margin-bottom: 4px;
+}

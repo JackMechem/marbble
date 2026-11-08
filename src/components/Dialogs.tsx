@@ -2,6 +2,7 @@
 // panes (the rest are in settingsPanes/), Group Settings and the input level warning.
 import { useEffect, useRef, useState } from "react";
 import { threadNote, threadOptions, type ThreadChoices } from "../threads";
+import { memoryLockNote, offersMemoryLock, type MemoryLock } from "../memoryLock";
 import { useSheetKeys } from "../sheetKeys";
 import type { SheetMode } from "../sheetKeysModel";
 import { ask } from "@tauri-apps/plugin-dialog";
@@ -217,6 +218,7 @@ function AudioPane({ close }: { close: () => void }) {
   const [applied, setApplied] = useState<AudioConfig | null>(null);
   const [busy, setBusy] = useState(false);
   const [threads, setThreads] = useState<ThreadChoices | null>(null);
+  const [memLock, setMemLock] = useState<MemoryLock | null>(null);
   const setCfg = (c: AudioConfig) => {
     audioDraft = c;
     setCfgState(c);
@@ -227,6 +229,7 @@ function AudioPane({ close }: { close: () => void }) {
       if (c && !audioDraft) setCfgState(c);
     });
     call<ThreadChoices>("thread_choices").then(setThreads);
+    call<MemoryLock>("memory_lock").then(setMemLock);
   }, []);
   // New threads ask for real-time priority as they start, so what was left out is known a moment later.
   const refreshThreads = () => setTimeout(() => call<ThreadChoices>("thread_choices").then(setThreads), 500);
@@ -257,6 +260,7 @@ function AudioPane({ close }: { close: () => void }) {
       audioDraft = null;
       setApplied(cfg);
       refreshThreads();
+      call<MemoryLock>("memory_lock").then(setMemLock);
     }
     return !!snap;
   };
@@ -326,6 +330,17 @@ function AudioPane({ close }: { close: () => void }) {
           <NumberField value={cfg.recording_delay_ms} step={0.5} resolution={0.1} min={-500} max={500} onChange={(v) => setCfg({ ...cfg, recording_delay_ms: v })} />
           <span className="dim">ms, added to the measured latency</span>
         </div>
+        {offersMemoryLock(memLock) && (
+          <>
+            <label>Memory:</label>
+            <label className="check">
+              <input type="checkbox" checked={cfg.lock_memory} onChange={(e) => setCfg({ ...cfg, lock_memory: e.target.checked })} />
+              Lock audio memory (keeps the audio from dropping out when the system swaps)
+            </label>
+            <span />
+            <span className={memoryLockNote(memLock).warn ? "warn" : "form-note"}>{memoryLockNote(memLock).text}</span>
+          </>
+        )}
         <PdcSettings />
       </div>
       <LatencyReadout />

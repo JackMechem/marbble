@@ -6,6 +6,8 @@ import { act, actMade, api, call, canRecord, isStack, type Group, type Id, type 
 import { newAux } from "./routing";
 import type { MenuItem } from "./components/Menu";
 import { askName, notEmpty } from "./components/NameSheet";
+import { openDrumReplace } from "./components/DrumReplace";
+import { trackIconMenu } from "./components/TrackIconPicker";
 import { currentLayout, setTrackHeight, stepVisible } from "./layout";
 import { isLooped, regionEnd } from "./loops";
 import { BOUNCE_IN_PLACE_HINT, openBounce, openBounceInPlace } from "./bounce";
@@ -445,8 +447,9 @@ export function regionMenu(r: Region, rename: () => void): MenuItem[] {
         : []),
       { label: "Reverse", onClick: () => act("reverse_regions", { ids: audio }) },
     );
-    // Take folders: the folder's own menu, and Pack Take Folder for plain regions on one track.
-    const packable = audio.length > 1 && new Set(audio.map((id) => trackOf(id)?.id)).size === 1 && regs.every((x) => !x.takes);
+    // Take folders: the folder's own menu, and Pack Take Folder for plain regions (on one
+    // track or several).
+    const packable = audio.length > 1 && regs.every((x) => !x.takes);
     items.push(
       { separator: true },
       ...(isFolder(r) ? [{ label: "Take Folder", children: takeFolderMenu(r) }] : []),
@@ -560,9 +563,11 @@ export function trackMenu(t: Track, rename: () => void): MenuItem[] {
             : { label: s("Freeze Track", "Freeze Tracks"), disabled: !sel.some((x) => canFreeze(x) && x.regions.length), onClick: () => freezeTracks(ids) },
         ]
       : []),
+    ...(t.kind === "audio" && !many ? [{ label: "Drum Replacement/Doubling…", disabled: !t.regions.length, onClick: () => openDrumReplace(t.id) }] : []),
     { separator: true },
     { label: "Rename Track", disabled: many, onClick: rename },
     { label: "Track Color", children: colorMenu(many ? undefined : t.color, (c) => c && sel.forEach((x) => api.updateTrack(x.id, { color: c }))) },
+    { label: "Track Icon", children: trackIconMenu(t) },
     ...(canHaveAlternatives(t) && !many ? [{ label: "Track Alternatives", children: trackAltMenu(t) }] : []),
     { separator: true },
     {

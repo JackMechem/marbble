@@ -238,6 +238,11 @@ pub struct Track {
     /// The preset last loaded into the Channel EQ or saved from it (see `PluginSlot::preset`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub eq_preset: Option<PresetRef>,
+    /// The icon the user chose for the track, by the UI's id for it ("kick", "mic"). None shows
+    /// the icon its name suggests, else its kind's (see `src/trackIcons.ts`). Not part of channel
+    /// strip settings: the icon belongs to the track.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub icon: Option<String>,
 }
 
 /// An output of a multi-output instrument, as an aux's input.

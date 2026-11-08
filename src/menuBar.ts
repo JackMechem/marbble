@@ -38,6 +38,7 @@ function ownStates(): Map<string, ItemState> {
     { id: "freeze-track", enabled: sel.some((t) => canFreeze(t) && !t.frozen && t.regions.length > 0) },
     { id: "unfreeze-track", enabled: sel.some((t) => !!t.frozen) },
     { id: "track-on-off", enabled: sel.length > 0, checked: sel.length > 0 && sel.every((t) => !t.off) },
+    { id: "drum-replace", enabled: cur?.kind === "audio" },
     { id: "track-alt-new", enabled: alt },
     { id: "track-alt-duplicate", enabled: alt },
     { id: "track-alt-rename", enabled: alt },

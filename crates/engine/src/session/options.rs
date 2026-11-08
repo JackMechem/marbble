@@ -306,13 +306,16 @@ impl Session {
         self.dirty = true;
     }
 
-    /// Moves regions by `delta` samples (the Nudge keys).
+    /// Moves regions by `delta` samples (the Nudge keys), every one by the same amount, so
+    /// mics lined up by the sample stay lined up: the earliest stops at the project start.
     pub fn nudge_regions(&mut self, ids: &[Id], delta: i64) {
+        let first = ids.iter().filter_map(|&id| self.region(id)).map(|r| r.start).min().unwrap_or(0);
+        let delta = delta.max(-first);
         let pairs = self.crossfade_pairs(ids);
         let mut touched = Vec::new();
         for t in &mut self.project.tracks {
             for r in t.regions.iter_mut().filter(|r| ids.contains(&r.id)) {
-                r.start = (r.start + delta).max(0);
+                r.move_to(r.start + delta);
                 if !touched.contains(&t.id) {
                     touched.push(t.id);
                 }
@@ -425,6 +428,44 @@ mod tests {
         let _ = std::fs::remove_dir_all(&scratch);
         s.dir = scratch.join("Song.marbble");
         (s, scratch)
+    }
+
+    #[test]
+    fn nudges_move_every_region_the_same() {
+        let (mut s, _) = session("nudge");
+        let t = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
+        let u = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
+        let mut add = |track: Id, start: i64, loop_end: Option<i64>| {
+            let id = s.project.alloc_id();
+            let content = RegionContent::Audio { clip: 0, offset: 0, gain_db: 0.0, fade_in: 0, fade_out: 0, fade_shape: Default::default() };
+            let r = Region {
+                id,
+                name: "R".into(),
+                start,
+                length: 100,
+                muted: false,
+                color: None,
+                content,
+                loop_end,
+                takes: None,
+                params: Default::default(),
+                pattern: None,
+            };
+            s.project.track_mut(track).unwrap().regions.push(r);
+            id
+        };
+        let (a, b) = (add(t, 3, None), add(u, 1_000, Some(1_400)));
+        let at = |s: &Session| (s.region(a).unwrap().start, s.region(b).unwrap().start, s.region(b).unwrap().loop_end);
+        // A sample at a time, on two tracks; a looped region takes its loop end along.
+        s.nudge_regions(&[a, b], 1);
+        assert_eq!(at(&s), (4, 1_001, Some(1_401)));
+        s.nudge_regions(&[a, b], -2);
+        assert_eq!(at(&s), (2, 999, Some(1_399)));
+        // Past the project start the earliest stops at 0 and the other keeps its distance.
+        s.nudge_regions(&[a, b], -50);
+        assert_eq!(at(&s), (0, 997, Some(1_397)));
+        s.nudge_regions(&[b], -50);
+        assert_eq!(at(&s), (0, 947, Some(1_347)));
     }
 
     #[test]

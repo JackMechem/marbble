@@ -31,7 +31,7 @@ pub const SAMPLES_DIR: &str = "Samples";
 
 /// A path inside the project as the project file keeps it: with forward slashes on every system, so a
 /// project made on Windows finds its samples elsewhere, and a path the file already holds still joins.
-fn project_relative(path: &Path) -> String {
+pub(super) fn project_relative(path: &Path) -> String {
     path.components().map(|c| c.as_os_str().to_string_lossy()).collect::<Vec<_>>().join("/")
 }
 /// Slices start on this key (C1, where a drum map starts).
@@ -273,7 +273,7 @@ impl Session {
     }
 
     /// Writes a slot's zones back and sends its instance the result.
-    fn sampler_store(&mut self, track: Id, state: &SamplerState) -> Result<()> {
+    pub(super) fn sampler_store(&mut self, track: Id, state: &SamplerState) -> Result<()> {
         self.check_unfrozen(&[track])?;
         let t = self.project.track_mut(track).ok_or_else(|| anyhow!("no such track"))?;
         let s = t.instrument.as_mut().filter(|s| s.plugin_id == SAMPLER).ok_or_else(|| anyhow!("That track has no Marbble Sampler"))?;

@@ -11,9 +11,9 @@ import { ProjectSettingsSheet, RecoverySheet } from "./components/Settings";
 import { commandForEvent } from "./keymap";
 import { runsOnKey } from "./keyRepeat";
 import { installPluginKeys } from "./pluginKeys";
-import { loadSettings, nudgeSamples, offerRecoveryFor, runStartup } from "./prefs";
+import { loadSettings, nudgeSamples, offerRecoveryFor, runStartup, type Nudge } from "./prefs";
 import { toggleZeroCrossings } from "./zeroCrossings";
-import { movedStart, nudgeTarget } from "./musicalMove";
+import { evenNudge, movedStart, nudgeTarget } from "./musicalMove";
 import { tempoMap } from "./tempo";
 import { restoreAppearance, useAppearancePersistence } from "./appearance";
 import { Editor } from "./components/Editor";
@@ -65,6 +65,7 @@ import { sheetBlocks } from "./sheetKeys";
 import { AlternativesSheet } from "./components/AlternativesSheet";
 import { ARRANGE_COMMANDS, runArrangeCommand } from "./arrangeCmds";
 import { StripSilenceHost } from "./components/StripSilence";
+import { DrumReplaceHost, openDrumReplace } from "./components/DrumReplace";
 import { installMenuBar } from "./menuBar";
 import { checkForUpdates, checkUpdatesAtLaunch } from "./updates";
 import { UpdateNotice } from "./components/UpdateNotice";
@@ -178,6 +179,11 @@ function handleMenu(id: string) {
     case "track-on-off":
       ops.switchAll("off");
       break;
+    case "drum-replace": {
+      const t = s.snap?.selected;
+      if (t != null) openDrumReplace(t);
+      break;
+    }
     case "freeze-track":
       freezeTracks(ops.selectedTracks());
       break;
@@ -451,6 +457,8 @@ const KEY_ACTIONS: Record<string, () => void> = {
   "global-tracks": () => handleMenu("global-tracks"),
   "nudge-left": () => nudgeRegions(-1),
   "nudge-right": () => nudgeRegions(1),
+  "nudge-left-sample": () => nudgeRegions(-1, "smp1"),
+  "nudge-right-sample": () => nudgeRegions(1, "smp1"),
   "project-settings": () => handleMenu("project-settings"),
   "settings-keys": () => handleMenu("settings-keys"),
   autopunch: () => handleMenu("autopunch"),
@@ -469,17 +477,21 @@ const KEY_ACTIONS: Record<string, () => void> = {
   ...ARRANGE_COMMANDS,
 };
 
-function nudgeRegions(dir: number) {
+/** Nudge Left / Right: by the Nudge Value, or by `step` (the by-sample key commands). */
+function nudgeRegions(dir: number, step: Nudge = getSettings().ui.nudge) {
   const s = getState();
   if (!s.snap || !s.selectedRegions.length) return;
   // A bar or beat as long as it is where the selection starts.
   const at = Math.min(...s.snap.project.tracks.flatMap((t) => t.regions.filter((r) => s.selectedRegions.includes(r.id)).map((r) => r.start)));
   const ids = s.selectedRegions;
-  const delta = Math.round(dir * nudgeSamples(s.snap.project, Number.isFinite(at) ? at : 0));
+  // By milliseconds or samples they all move the same number of samples, so the first stops
+  // at the project start rather than the others moving without it.
+  const delta = evenNudge(Number.isFinite(at) ? at : 0, dir * nudgeSamples(s.snap.project, Number.isFinite(at) ? at : 0, step));
+  if (!delta) return;
   // By a bar, beat or note value the first region moves through the tempo map and the others
-  // keep their bars and beats; by milliseconds they all move the same number of samples.
+  // keep their bars and beats.
   const map = tempoMap(s.snap.project);
-  const to = Number.isFinite(at) ? nudgeTarget(map, at, getSettings().ui.nudge, dir) : null;
+  const to = Number.isFinite(at) ? nudgeTarget(map, at, step, dir) : null;
   const moves = s.snap.project.tracks.flatMap((t) =>
     t.regions.filter((r) => ids.includes(r.id)).map((r) => ({ id: r.id, start: to === null ? Math.max(0, r.start + delta) : movedStart(map, r.start, at, to, true) })),
   );
@@ -687,6 +699,7 @@ export default function App() {
       <MenuHost />
       <NameSheetHost />
       <StripSilenceHost />
+      <DrumReplaceHost />
       <UpdateNotice />
       <Toast />
     </div>

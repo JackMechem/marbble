@@ -20,19 +20,12 @@ import { isTrackOff, powerTitle } from "../trackOff";
 import { LevelSlider } from "./LevelSlider";
 import { TrackAltButton } from "./TrackAlternatives";
 import { showsTrackAlts } from "../alternativesModel";
+import { TrackIcon } from "../trackIconArt";
+import { openTrackIconPicker } from "./TrackIconPicker";
 
 const INDENT = 12;
 /** Smallest full header with room for the automation controls on a line of their own. */
 const AUTO_ROW_H = 76;
-
-function StackIcon({ summing }: { summing: boolean }) {
-  return (
-    <svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round">
-      <path d="M2.5 6h5l1.5 1.8h8.5v8.7h-15z" />
-      {summing && <path d="M7 12.2h6M10 9.2v6" />}
-    </svg>
-  );
-}
 
 /** The "⋯" of the button menu on short headers. */
 function MoreIcon() {
@@ -56,16 +49,6 @@ interface Switch {
   toggle: () => void;
   /** The tick in the "⋯" menu, when that isn't `on`. */
   checked?: boolean;
-}
-
-/** Two signals merging into one bus. */
-function AuxIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M2.5 5.5h4l4 4.5h7M2.5 14.5h4l4-4.5" />
-      <path d="M15 7.5l2.5 2.5-2.5 2.5" />
-    </svg>
-  );
 }
 
 function GroupBadge({ group, onClick }: { group: Group; onClick: () => void }) {
@@ -108,7 +91,8 @@ function Header({
   hideMode: boolean;
   /** The button columns every header in view shares (headerColumns.ts). */
   columns: { full: SwitchId[]; compact: SwitchId[] };
-  onReorderStart: (e: React.MouseEvent, index: number) => void;
+  /** `click` runs when the press ends without dragging. */
+  onReorderStart: (e: React.MouseEvent, index: number, click?: () => void) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const stack = isStack(track.kind);
@@ -229,9 +213,26 @@ function Header({
         </button>
       )}
       {tier !== "tiny" && (
-        <div className="th-icon" style={{ color: track.color }} onMouseDown={(e) => onReorderStart(e, index)} title={stack ? (track.kind === "summing" ? "Summing Stack" : "Folder Stack") : track.kind === "aux" ? `Aux · Bus ${track.bus}` : undefined}>
-          {track.kind === "audio" ? <Icon.waveform /> : track.kind === "instrument" ? <Icon.keyboard /> : track.kind === "aux" ? <AuxIcon /> : <StackIcon summing={track.kind === "summing"} />}
-        </div>
+        <button
+          type="button"
+          className="th-icon"
+          style={{ color: track.color }}
+          aria-label="Track Icon"
+          aria-haspopup="menu"
+          title={(stack ? (track.kind === "summing" ? "Summing Stack · " : "Folder Stack · ") : track.kind === "aux" ? `Aux · Bus ${track.bus} · ` : "") + "Click to choose an icon, drag to reorder"}
+          onMouseDown={(e) => {
+            // Not focused by the press: Space must stay Play, not open the picker.
+            e.preventDefault();
+            const el = e.currentTarget;
+            onReorderStart(e, index, () => openTrackIconPicker(el, track));
+          }}
+          onClick={(e) => {
+            // Return or Space; a mouse click is handled when the press ends, as it may be a drag.
+            if (e.detail === 0) openTrackIconPicker(e.currentTarget, track);
+          }}
+        >
+          <TrackIcon track={track} />
+        </button>
       )}
       <div className="th-main">
         <div className="th-name-row">
@@ -348,7 +349,7 @@ export function TrackHeaders() {
 
   // Dragging a track moves it with its subtracks. Where it lands decides its stack: it joins
   // the stack of the track it's dropped above (or the stack whose header it's dropped below).
-  const startReorder = (e: React.MouseEvent, index: number) => {
+  const startReorder = (e: React.MouseEvent, index: number, click?: () => void) => {
     if (e.button !== 0 || !project) return;
     e.stopPropagation();
     clickTrack(project.tracks[index].id, e);
@@ -369,7 +370,7 @@ export function TrackHeaders() {
       window.removeEventListener("mousemove", move);
       window.removeEventListener("mouseup", up);
       setDrop(null);
-      if (!moved) return;
+      if (!moved) return click?.();
       const tracks = project.tracks;
       const id = tracks[index].id;
       const block = new Set<Id>([id]);
