@@ -337,7 +337,11 @@ Times are in samples at the project rate.
   so playback parameters, loops, chase and every render work unchanged; `bake` realizes first,
   so Join and MIDI export do too, and `push_tempo_regions` rebuilds pattern tracks on tempo
   changes. The region's stored notes stay empty. The Step Sequencer sends the whole edited
-  pattern with `set_pattern` (keyed per drag, so a painted run is one undo step).
+  pattern with `set_pattern` (keyed per drag, so a painted run is one undo step). `offset`
+  (quarter notes into the pattern where the region starts) is set only when an Arrangement
+  move or a section edit cuts a pattern region (`session/arrangement.rs` `cut_piece`), so each
+  piece plays on from the cut; splitting by hand starts the pattern again, and `set_pattern`
+  keeps the region's offset.
 
 ### Take folders and comps
 
@@ -2438,7 +2442,8 @@ lands. The pure side builds it (`arrangement::move_section`, `copy_section` and
 `delete_section` return a `Plan` of pieces plus the new sections; `arrange_cmds::section_pieces`
 for Insert Silence, Cut and Repeat Section), and one apply step maps everything through it:
 regions with `session/arrangement.rs` `remap_regions` (a region inside one piece moves whole,
-one across a piece edge is cut with `range_edit::sub_region`), automation lanes with
+one across a piece edge is cut with `cut_piece`: `range_edit::sub_region`, and a pattern
+region's piece gets a `Pattern::offset` so it plays on from the cut), automation lanes with
 `arrangement::remap_points`, markers with `arrangement::map_pos`, and, for the section edits,
 the arrangement sections with `arrange_cmds::remap_sections`. The
 tempo and signature tracks never move. With a marquee, the section edits map only its tracks

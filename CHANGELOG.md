@@ -28,6 +28,11 @@ All notable changes to Marbble are recorded here. The format follows
   saved before came back with the settings it was saved with. The project now keeps a recent
   copy of every plug-in's settings, taken when it loads and a moment after each change, so it
   comes back as it was. Pasted plug-ins and channel strip settings keep theirs too.
+- **Moving sections no longer changes what a pattern region plays.** An Arrangement track move
+  or a Section Between Locators edit (Insert Silence, Cut Section, Insert Cut Section, Repeat
+  Section) that cut a pattern region started its pattern again at each cut, so the moved part
+  played the pattern's first steps instead of its own. Each piece now plays on from where it
+  was cut. Splitting a pattern region by hand still starts its pattern again.
 
 ## [0.1.0-alpha.11] - 2026-11-08
 

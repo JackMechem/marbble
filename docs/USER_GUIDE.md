@@ -1896,7 +1896,9 @@ regions**, MIDI regions that play the notes their pattern makes.
 - The notes a pattern plays follow the tempo map and the region's playback parameters, and
   play everywhere a MIDI region does: bounces, exports, Bounce in Place, Freeze, MIDI file
   export and Join. Splitting or trimming the start of a pattern region starts its pattern
-  again at the new start; the Piano Roll and Event List don't show a pattern region's notes
+  again at the new start. An Arrangement track move or a Section Between Locators edit that
+  cuts a pattern region doesn't change what it plays: each piece plays on from where it was
+  cut. The Piano Roll and Event List don't show a pattern region's notes
   (convert it to edit them there).
 
 ---

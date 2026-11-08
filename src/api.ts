@@ -114,6 +114,9 @@ export interface Pattern {
   /** Absent = true: repeats to the region's end. */
   looped?: boolean;
   rows: PatternRow[];
+  /** Quarter notes into the pattern where the region starts (a piece an Arrangement move or a
+   *  section edit cut off a longer pattern region); absent = 0. The engine keeps it. */
+  offset?: number;
 }
 
 /** A region's playback parameters, applied as it plays (crates/engine/src/region_params.rs). */

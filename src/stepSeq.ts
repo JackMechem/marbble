@@ -270,12 +270,13 @@ export function paintFor(m: EditMode, p: Pattern, r: number, i: number, frac: nu
 
 /**
  * The step of row `row` playing at timeline sample `pos`, or null outside the region (and
- * after an unlooped pattern's end). Every pass of a looping region starts the pattern over.
+ * after an unlooped pattern's end). Every pass of a looping region starts the pattern over,
+ * from the pattern's offset.
  */
 export function playingStep(map: TempoMap, region: Region, p: Pattern, row: PatternRow, pos: number, regionEnd: number): number | null {
   if (pos < region.start || pos >= regionEnd || region.length <= 0) return null;
   const pass = region.start + Math.floor((pos - region.start) / region.length) * region.length;
-  const q = map.beatsAt(pos) - map.beatsAt(pass);
+  const q = map.beatsAt(pos) - map.beatsAt(pass) + Math.max(0, p.offset ?? 0);
   if (p.looped === false && q >= p.length * stepQuarters(p.rate)) return null;
   const k = Math.floor(q / stepQuarters(rowRate(p, row)) + 1e-9);
   return k % rowLength(p, row);

@@ -1,10 +1,12 @@
 //! Exercises pattern regions (the Step Sequencer) against a running engine (silent ALSA null
 //! output), through offline bounces of the built-in synth: a pattern plays exactly the notes
 //! worked out by hand (straight, swung, rows of other lengths and rates, ties, a loop and a
-//! tempo change), step edits undo, and Convert to MIDI Region renders identically.
+//! tempo change), step edits undo, Convert to MIDI Region renders identically, and an
+//! Arrangement move or a section edit that cuts the region leaves what it plays alone.
 //! usage: pattern_check <scratch dir>
 use std::path::{Path, PathBuf};
 
+use daw_engine::arrange_cmds::SectionEdit;
 use daw_engine::audio_io::AudioConfig;
 use daw_engine::model::{Id, InputSel, Note, RegionContent, TrackKind};
 use daw_engine::pattern::{Pattern, PatternRow, Step};
@@ -41,6 +43,9 @@ fn max_diff(a: &[f32], b: &[f32]) -> f32 {
 fn region(s: &Session, id: Id) -> daw_engine::model::Region {
     s.project.tracks.iter().flat_map(|t| t.regions.iter()).find(|r| r.id == id).unwrap().clone()
 }
+
+/// An edit and its name.
+type NamedEdit<'a> = (&'a str, &'a dyn Fn(&mut Session));
 
 /// A row with the given steps on, each at `gate` percent.
 fn row(pitch: u8, on: &[usize], gate: u8) -> PatternRow {
@@ -241,6 +246,61 @@ fn main() {
         &format!("Convert to Pattern Region plays the same notes (max diff {:.2e})", max_diff(&again, &midi)),
         region(&s, p).pattern.is_some() && max_diff(&again, &midi) < 1e-6,
     );
+    s.undo();
+
+    // ---- moves and section edits that cut the region leave what it plays alone -----------------
+    // The swung pattern over two bars, so its three- and five-step rows start the second bar
+    // elsewhere in their cycles. Each edit is rendered on the pattern region and on the same
+    // region converted to MIDI (which a cut can't change): the two must match.
+    s.checkpoint("Two Bars", None, false);
+    s.resize_region(p, bar, 2 * bar);
+    let s16 = bar / 16;
+    let edits: [NamedEdit; 4] = [
+        ("an Arrangement move", &|s: &mut Session| {
+            // Sections 0..1, 1..1.5 bars (and a bit, off the grid) and on to 3; the last moves
+            // before the middle one, cutting the region where they meet.
+            let ids: Vec<Id> = [bar, bar / 2 + 1000, 3 * bar / 2 - 1000]
+                .iter()
+                .map(|&len| {
+                    let id = s.add_arrangement_marker(None);
+                    s.resize_arrangement_marker(id, len);
+                    id
+                })
+                .collect();
+            s.move_arrangement_marker(ids[2], Some(ids[1]), false).unwrap();
+        }),
+        ("Insert Silence Between Locators", &|s: &mut Session| {
+            s.section_edit(SectionEdit::InsertSilence, bar + 5 * s16, bar + 13 * s16, None).unwrap();
+        }),
+        ("Cut Section and Insert Cut Section elsewhere", &|s: &mut Session| {
+            s.section_edit(SectionEdit::Cut, bar + 5 * s16, bar + 13 * s16, None).unwrap();
+            s.insert_cut_section(bar + 11 * s16).unwrap();
+        }),
+        ("Repeat Section Between Locators", &|s: &mut Session| {
+            s.section_edit(SectionEdit::Repeat, bar + 3 * s16, bar + 22 * s16, None).unwrap();
+        }),
+    ];
+    let whole = bounce(&mut s, &scratch, end);
+    for (name, edit) in edits {
+        s.checkpoint(name, None, false);
+        edit(&mut s);
+        let patterns = s.project.track(inst).unwrap().regions.iter().filter(|r| r.pattern.is_some()).count();
+        let played = bounce(&mut s, &scratch, end);
+        s.undo();
+        s.checkpoint(name, None, false);
+        s.convert_patterns_to_midi(&[p]);
+        edit(&mut s);
+        let want = bounce(&mut s, &scratch, end);
+        s.undo();
+        let d = max_diff(&played, &want);
+        check(
+            &format!(
+                "{name} cutting a pattern region plays what it played, from {patterns} pattern regions (max diff {d:.2e}, changed {:.2e})",
+                max_diff(&played, &whole)
+            ),
+            d < 1e-6 && patterns > 1 && max_diff(&played, &whole) > 1e-3,
+        );
+    }
     s.undo();
 
     // A saved project keeps its pattern.

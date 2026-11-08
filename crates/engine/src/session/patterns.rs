@@ -59,8 +59,9 @@ impl Session {
     }
 
     /// Replaces a pattern region's pattern (the Step Sequencer's edits). Values are kept in
-    /// range. When the pattern's length changes and the region was exactly as long as the
-    /// pattern, the region follows, as a new pattern region's bar does.
+    /// range, and the region keeps where it starts in its pattern (`Pattern::offset`: the
+    /// Step Sequencer doesn't edit it). When the pattern's length changes and the region was
+    /// exactly as long as the pattern, the region follows, as a new pattern region's bar does.
     pub fn set_pattern(&mut self, id: Id, pattern: Pattern) -> Result<()> {
         let (track, _) = self.find_region(id).ok_or_else(|| anyhow!("No such region"))?;
         self.check_unfrozen(&[track])?;
@@ -71,6 +72,7 @@ impl Session {
         let new = pattern.clamped();
         self.edit_regions(&[id], |r, _| {
             let Some(old) = &r.pattern else { return };
+            let offset = old.offset;
             let length_of = |p: &Pattern| (map.sample_at(map.beats_at(r.start as f64) + p.quarters()) - r.start as f64).round() as i64;
             if old.quarters() != new.quarters() && (r.length - length_of(old)).abs() <= 1 {
                 r.length = length_of(&new).max(1);
@@ -78,7 +80,7 @@ impl Session {
                     r.loop_end = None;
                 }
             }
-            r.pattern = Some(new.clone());
+            r.pattern = Some(Pattern { offset, ..new.clone() });
         });
         self.dirty = true;
         Ok(())

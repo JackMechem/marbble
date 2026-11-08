@@ -109,6 +109,11 @@ test("the playing step follows each row's rate and length, and the region's loop
   // Not looped: nothing after the pattern's own length.
   const once = { ...p, looped: false, length: 8 };
   assert.equal(ss.playingStep(map, r, once, once.rows[0], r.start + 9 * S16, end), null);
+  // A piece cut off a longer region starts partway in: here five sixteenths, in every pass.
+  const cut = { ...p, offset: 5 / 4 };
+  assert.equal(ss.playingStep(map, r, cut, cut.rows[0], r.start, end), 5);
+  assert.equal(ss.playingStep(map, r, cut, cut.rows[0], r.start + r.length + S16, end), 6);
+  assert.equal(ss.playingStep(map, r, { ...once, offset: 7 / 4 }, once.rows[0], r.start + S16, end), null);
 });
 
 test("a pattern region made at the playhead goes in the first bar no region covers", () => {

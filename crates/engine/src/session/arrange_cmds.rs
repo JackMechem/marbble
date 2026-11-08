@@ -11,7 +11,7 @@
 
 use anyhow::{anyhow, Result};
 
-use super::arrangement::{remap_regions, untouched};
+use super::arrangement::{cut_piece, remap_regions, untouched};
 use super::range_edit::sub_region;
 use super::*;
 use crate::arrange_cmds::{butt_together, end_at_next, overlap_trims, remap_sections, section_pieces, SectionEdit, Span};
@@ -146,6 +146,7 @@ impl Session {
         let in_scope = |id: Id| scope.is_none_or(|s| s.contains(&id));
         let touched: Vec<Id> = self.project.tracks.iter().filter(|t| in_scope(t.id) && t.regions.iter().any(|r| !untouched(r, pieces))).map(|t| t.id).collect();
         self.check_unfrozen(&touched)?;
+        let map = self.tempo_map();
         let mut next = self.project.next_id;
         let mut alloc = || {
             next += 1;
@@ -154,7 +155,7 @@ impl Session {
         let mut lanes_changed = Vec::new();
         for t in self.project.tracks.iter_mut().filter(|t| in_scope(t.id)) {
             if touched.contains(&t.id) {
-                t.regions = remap_regions(&t.regions, pieces, &mut alloc);
+                t.regions = remap_regions(&t.regions, pieces, &map, &mut alloc);
             }
             if remap_lanes(&mut t.automation, pieces) {
                 lanes_changed.push(t.id);
@@ -188,13 +189,14 @@ impl Session {
     /// What lies between `a` and `b` on `scope`'s tracks (every track for None), for Insert
     /// Cut Section.
     fn copy_section(&self, a: i64, b: i64, scope: Option<&[Id]>) -> SectionClip {
+        let map = self.tempo_map();
         let mut tracks = Vec::new();
         for t in self.project.tracks.iter().filter(|t| scope.is_none_or(|s| s.contains(&t.id))) {
             let mut regions = Vec::new();
             for r in &t.regions {
                 let passes = if r.is_looped() { r.real_copies() } else { vec![r.clone()] };
                 for p in passes.iter().filter(|p| p.start < b && p.start + p.length > a) {
-                    let mut m = sub_region(p, a, b, p.id);
+                    let mut m = cut_piece(p, a, b, p.id, &map);
                     m.start -= a;
                     regions.push(m);
                 }
@@ -657,6 +659,58 @@ mod tests {
         assert_eq!(s.project.markers.iter().map(|m| (m.pos, m.name.as_str())).collect::<Vec<_>>(), vec![(2200, "In")]);
         let vol = &s.project.track(t[0]).unwrap().automation[0].points;
         assert!((value_at(vol, 2000).unwrap() - -20.0).abs() < 0.05 && (value_at(vol, 2250).unwrap() - -15.0).abs() < 0.05, "{vol:?}");
+    }
+
+    /// Every note the project plays: (timeline start, pitch), sorted.
+    fn heard(s: &Session) -> Vec<(i64, u8)> {
+        let mut v: Vec<(i64, u8)> = s
+            .played_notes()
+            .iter()
+            .flat_map(|p| {
+                let start = s.region(p.region).unwrap().start;
+                p.notes.iter().map(move |n| (start + n.start, n.pitch))
+            })
+            .collect();
+        v.sort();
+        v
+    }
+
+    #[test]
+    fn section_edits_keep_what_a_pattern_region_plays() {
+        let (mut s, _, _) = session();
+        let bar = s.tempo_map().samples_per_bar_at(0.0).round() as i64;
+        let s16 = bar / 16;
+        let t = s.add_track(TrackKind::Instrument, InputSel::None, None, None).unwrap();
+        let id = s.create_pattern_region(t, 0, 2 * bar).unwrap();
+        // A kick every third sixteenth: the second bar starts on the row's second step.
+        let mut p = s.region(id).unwrap().pattern.clone().unwrap();
+        p.rows[0].length = Some(3);
+        p.rows[0].steps = vec![crate::pattern::Step { on: true, ..Default::default() }];
+        s.set_pattern(id, p).unwrap();
+        let before = heard(&s);
+        let shifted = |from: i64, by: i64| -> Vec<(i64, u8)> { before.iter().map(|&(x, p)| (if x < from { x } else { x + by }, p)).collect() };
+
+        // A bar of silence at bar 2: the second bar moves on and plays as it did.
+        s.section_edit(SectionEdit::InsertSilence, bar, 2 * bar, None).unwrap();
+        assert_eq!(heard(&s), shifted(bar, bar));
+        s.section_edit(SectionEdit::Cut, bar, 2 * bar, None).unwrap();
+        assert_eq!(heard(&s), before);
+
+        // Cut from the sixth sixteenth (a kick) to bar 2, and Insert Cut Section back there.
+        s.section_edit(SectionEdit::Cut, 6 * s16, bar, None).unwrap();
+        assert_eq!(
+            heard(&s),
+            before.iter().filter(|n| n.0 < 6 * s16 || n.0 >= bar).map(|&(x, p)| (if x < bar { x } else { x - bar + 6 * s16 }, p)).collect::<Vec<_>>()
+        );
+        s.insert_cut_section(6 * s16).unwrap();
+        assert_eq!(heard(&s), before);
+
+        // Repeat the first bar: the copy plays it again, and the second bar moves on.
+        s.section_edit(SectionEdit::Repeat, 0, bar, None).unwrap();
+        let mut want = shifted(bar, bar);
+        want.extend(before.iter().filter(|n| n.0 < bar).map(|&(x, p)| (x + bar, p)));
+        want.sort();
+        assert_eq!(heard(&s), want);
     }
 
     #[test]

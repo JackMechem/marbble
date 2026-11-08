@@ -11,7 +11,9 @@
 //! repeats every `n` steps (rows of different lengths drift against each other: polymeter),
 //! and the pattern plays on to the region's end when it loops, or stops after its own length
 //! when it doesn't. Swing delays every second step of a straight row. A tied step carries the
-//! note before it on instead of starting one.
+//! note before it on instead of starting one. A region cut off a longer pattern region by an
+//! Arrangement move or a section edit starts partway into the pattern (`Pattern::offset`), so it
+//! plays on from where it was cut.
 
 use serde::{Deserialize, Serialize};
 
@@ -49,6 +51,10 @@ fn yes() -> bool {
 
 fn is_true(b: &bool) -> bool {
     *b
+}
+
+fn is_zero(x: &f64) -> bool {
+    *x == 0.0
 }
 
 /// One step of a row. Off steps keep their values, so turning one on again brings them back.
@@ -119,12 +125,17 @@ pub struct Pattern {
     #[serde(default = "yes", skip_serializing_if = "is_true")]
     pub looped: bool,
     pub rows: Vec<PatternRow>,
+    /// Quarter notes into the pattern where the region starts: 0 for a region that starts the
+    /// pattern; more for a piece an Arrangement move or a section edit cut off a longer pattern
+    /// region, which plays on from where it was cut. Splitting by hand starts the pattern again.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub offset: f64,
 }
 
 impl Default for Pattern {
     /// The pattern of a new pattern region: a bar of sixteenth notes on the default kit.
     fn default() -> Self {
-        Pattern { length: 16, rate: 16, swing: 0, looped: true, rows: DEFAULT_KIT.iter().map(|&p| PatternRow::new(p)).collect() }
+        Pattern { length: 16, rate: 16, swing: 0, looped: true, rows: DEFAULT_KIT.iter().map(|&p| PatternRow::new(p)).collect(), offset: 0.0 }
     }
 }
 
@@ -186,9 +197,12 @@ impl Pattern {
 
     /// The notes the pattern plays in a region at timeline sample `start` lasting `length`,
     /// relative to the region start and sorted. Muted rows are left out; when any row is
-    /// soloed, only soloed rows play.
+    /// soloed, only soloed rows play. With an offset the region plays the pattern from there:
+    /// the notes that start before it are left out, as a cut MIDI region leaves them out.
     pub fn notes(&self, start: i64, length: i64, map: &TempoMap) -> Vec<Note> {
-        let q0 = map.beats_at(start as f64);
+        // Pattern time (quarters from the pattern's start) `from` is at timeline beat `q0`.
+        let from = self.offset.max(0.0);
+        let q0 = map.beats_at(start as f64) - from;
         let span = map.beats_at((start + length) as f64) - q0;
         let limit = if self.looped { span } else { span.min(self.quarters()) };
         let solo = self.rows.iter().any(|r| r.solo);
@@ -204,7 +218,7 @@ impl Pattern {
             let mut push = |on: f64, off: f64, velocity: u8| {
                 let s = map.sample_at(q0 + on).round() as i64 - start;
                 let e = map.sample_at(q0 + off).round() as i64 - start;
-                if s < length {
+                if (0..length).contains(&s) {
                     out.push(Note { start: s, length: (e - s).max(1), pitch: row.pitch, velocity, muted: false });
                 }
             };
@@ -280,7 +294,7 @@ pub fn from_notes(notes: &[Note], start: i64, length: i64, map: &TempoMap) -> Pa
             *s = Step { tie: true, gate: if j == more { last } else { 100 }, ..*s };
         }
     }
-    Pattern { length: steps as u16, rate, swing: 0, looped: true, rows }
+    Pattern { length: steps as u16, rate, swing: 0, looped: true, rows, offset: 0.0 }
 }
 
 #[cfg(test)]
@@ -414,6 +428,31 @@ mod tests {
         wrap.steps[0].tie = true;
         let n = pattern(vec![wrap]).notes(0, 8 * S16, &map120());
         assert_eq!(n.iter().map(|n| (n.start, n.length)).collect::<Vec<_>>(), vec![(3 * S16, 2 * S16), (7 * S16, S16)]);
+    }
+
+    #[test]
+    fn an_offset_plays_on_from_partway_in() {
+        let mut three = row(36, &[0]);
+        three.length = Some(3);
+        let mut tied = row(38, &[4, 9, 12]);
+        tied.steps[10].tie = true;
+        let p = pattern(vec![three, tied]);
+        let whole = p.notes(0, 32 * S16, &map120());
+        // From ten sixteenths in, as a piece somewhere else: what the whole played from there,
+        // less the tied note that started before it.
+        let cut = Pattern { offset: 10.0 / 4.0, ..p.clone() };
+        let piece = cut.notes(50_000, 22 * S16, &map120());
+        let key = |n: &[Note]| n.iter().map(|n| (n.start, n.length, n.pitch)).collect::<Vec<_>>();
+        let want: Vec<Note> = whole.iter().filter(|n| n.start >= 10 * S16).map(|n| Note { start: n.start - 10 * S16, ..*n }).collect();
+        assert_eq!(key(&piece), key(&want));
+        assert!(!starts(&piece, 38).contains(&0));
+        // Not looped: the rest of its one pass.
+        let once = Pattern { looped: false, ..cut };
+        assert_eq!(starts(&once.notes(0, 32 * S16, &map120()), 38), vec![2 * S16]);
+        // Saved only when set.
+        assert!(!serde_json::to_string(&p).unwrap().contains("offset"));
+        let back: Pattern = serde_json::from_str(&serde_json::to_string(&once).unwrap()).unwrap();
+        assert_eq!(back.offset, 2.5);
     }
 
     #[test]

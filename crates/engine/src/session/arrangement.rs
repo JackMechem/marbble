@@ -18,10 +18,22 @@ pub(super) fn untouched(r: &Region, pieces: &[Piece]) -> bool {
     pieces.iter().any(|p| p.is_identity() && p.contains(lo, hi)) && !pieces.iter().any(|p| p.copy && p.overlaps(lo, hi))
 }
 
+/// The part of `r` between `a` and `b`, as the edits that move time cut it (Arrangement moves
+/// and section edits): unlike splitting by hand, which starts a pattern region's pattern again,
+/// a pattern region's piece plays on from where it was cut. `map` is the tempo map it plays
+/// through.
+pub(super) fn cut_piece(r: &Region, a: i64, b: i64, id: Id, map: &TempoMap) -> Region {
+    let mut out = sub_region(r, a, b, id);
+    if let Some(p) = &mut out.pattern {
+        p.offset += map.beats_at(out.start as f64) - map.beats_at(r.start as f64);
+    }
+    out
+}
+
 /// The regions of a track after the time map: a region inside one piece moves whole (loop and
 /// all); one across a piece's edge is cut there (a loop first becomes real copies). The first
 /// piece of each region keeps its id, so a region that only moves stays selected.
-pub(super) fn remap_regions(regions: &[Region], pieces: &[Piece], alloc: &mut dyn FnMut() -> Id) -> Vec<Region> {
+pub(super) fn remap_regions(regions: &[Region], pieces: &[Piece], map: &TempoMap, alloc: &mut dyn FnMut() -> Id) -> Vec<Region> {
     // Originals first, so the copies are the ones with new ids.
     let order: Vec<&Piece> = pieces.iter().filter(|p| !p.copy).chain(pieces.iter().filter(|p| p.copy)).collect();
     let mut out = Vec::new();
@@ -38,7 +50,7 @@ pub(super) fn remap_regions(regions: &[Region], pieces: &[Piece], alloc: &mut dy
             }
             let passes = if r.is_looped() { r.real_copies() } else { vec![r.clone()] };
             for pass in passes.iter().filter(|q| p.overlaps(q.start, q.start + q.length)) {
-                let mut m = sub_region(pass, p.start, p.end, next_id(alloc));
+                let mut m = cut_piece(pass, p.start, p.end, next_id(alloc), map);
                 m.start += p.delta();
                 out.push(m);
             }
@@ -123,6 +135,7 @@ impl Session {
         let pieces = &plan.pieces;
         let touched: Vec<Id> = self.project.tracks.iter().filter(|t| t.regions.iter().any(|r| !untouched(r, pieces))).map(|t| t.id).collect();
         self.check_unfrozen(&touched)?;
+        let map = self.tempo_map();
         let mut next = self.project.next_id;
         let mut alloc = || {
             next += 1;
@@ -131,7 +144,7 @@ impl Session {
         let mut lanes_changed = Vec::new();
         for t in self.project.tracks.iter_mut() {
             if touched.contains(&t.id) {
-                t.regions = remap_regions(&t.regions, pieces, &mut alloc);
+                t.regions = remap_regions(&t.regions, pieces, &map, &mut alloc);
             }
             let mut changed = false;
             for lane in t.automation.iter_mut() {
@@ -320,6 +333,77 @@ mod tests {
         assert!(s.move_arrangement_marker(sec[1], None, false).is_err());
         assert_eq!(spans(&s, t[0]), vec![(1200, 1300, 0)]);
         assert_eq!(s.project.arrangement[1].start, 1000, "nothing moved");
+    }
+
+    /// Every note the project plays: (timeline start, pitch), sorted.
+    fn heard(s: &Session) -> Vec<(i64, u8)> {
+        let mut v: Vec<(i64, u8)> = s
+            .played_notes()
+            .iter()
+            .flat_map(|p| {
+                let start = s.region(p.region).unwrap().start;
+                p.notes.iter().map(move |n| (start + n.start, n.pitch))
+            })
+            .collect();
+        v.sort();
+        v
+    }
+
+    /// A pattern region over `bars` bars from 0 whose kick plays every third sixteenth, so
+    /// each bar starts on another step of the row. Returns it, the track and the bar length.
+    fn pattern_region(s: &mut Session, bars: i64) -> (Id, Id, i64) {
+        let bar = s.tempo_map().samples_per_bar_at(0.0).round() as i64;
+        let t = s.add_track(TrackKind::Instrument, InputSel::None, None, None).unwrap();
+        let id = s.create_pattern_region(t, 0, bars * bar).unwrap();
+        let mut p = s.region(id).unwrap().pattern.clone().unwrap();
+        p.rows[0].length = Some(3);
+        p.rows[0].steps = vec![crate::pattern::Step { on: true, ..Default::default() }];
+        s.set_pattern(id, p).unwrap();
+        (id, t, bar)
+    }
+
+    #[test]
+    fn pattern_regions_cut_by_a_move_play_on_from_the_cut() {
+        let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
+        let mut s = Session::new(cfg, Vec::new());
+        let (id, t, bar) = pattern_region(&mut s, 3);
+        let sec: Vec<Id> = (0..3)
+            .map(|_| {
+                let id = s.add_arrangement_marker(None);
+                s.resize_arrangement_marker(id, bar);
+                id
+            })
+            .collect();
+        let before = heard(&s);
+        assert!(before.contains(&(0, 36)) && !before.contains(&(bar, 36)), "bar 2 starts on the row's second step");
+        // Bars 2 and 3 trade places, each playing what it played before.
+        s.move_arrangement_marker(sec[2], Some(sec[1]), false).unwrap();
+        let mut want: Vec<(i64, u8)> = before
+            .iter()
+            .map(|&(x, p)| {
+                (
+                    if x < bar {
+                        x
+                    } else if x < 2 * bar {
+                        x + bar
+                    } else {
+                        x - bar
+                    },
+                    p,
+                )
+            })
+            .collect();
+        want.sort();
+        assert_eq!(heard(&s), want);
+        let regions = &s.project.track(t).unwrap().regions;
+        assert_eq!(regions.len(), 3);
+        assert!(regions.iter().any(|r| r.id == id && r.pattern.as_ref().unwrap().offset == 0.0));
+        // Splitting by hand still starts the pattern again.
+        let piece = regions.iter().find(|r| r.start == 0).unwrap().id;
+        s.split_regions_at(&[piece], &[bar / 2]);
+        let second = s.project.track(t).unwrap().regions.iter().find(|r| r.start == bar / 2).unwrap();
+        assert_eq!(second.pattern.as_ref().unwrap().offset, 0.0);
+        assert!(heard(&s).contains(&(bar / 2, 36)));
     }
 
     #[test]
