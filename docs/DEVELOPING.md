@@ -335,6 +335,7 @@ instead and enforce rules that would otherwise only fail in the running app.
 | `bounceFormat.test.ts` | The Bounce dialog's formats, resolutions and file names. |
 | `fxFormat.test.ts` | Built-in effect readouts and control mapping. |
 | `fxShapes.test.ts` | The curves the modulation, distortion and Gain panels draw, against the engine's values. |
+| `barFit.test.ts` | Local bars on one row (`src/barFit.ts`): a step taken while the row overflows and taken back once there's room, unknown needs tried, settling from any start, the class names; guards that every bar uses it. |
 | `paneSizes.test.ts` | Pane sizes (`src/paneSizes.ts`): limits, malformed saved sizes, the Tracks area's minimum and the bottom section's room; guards that the window's grid column can't grow with its content and that the bottom panes shrink. |
 | `presetBox.test.ts` | The preset pop-up's label (`src/presetBox.ts`): the loaded preset's name, "(edited)", "Default" and "Manual". |
 | `fxDock.test.ts` | Plug-in panels docked or floating: the slot toggle, closing back, one Channel EQ at a time, Esc, pruning, resize maths and saved sizes. |

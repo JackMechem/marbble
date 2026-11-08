@@ -1665,12 +1665,19 @@ Audio Track Editor and meters are canvas drawings. The common pattern:
   shrinks and the divider stays on screen. The remembered size isn't changed by this: a larger
   window shows it again. A drag of the divider starts from the height shown and stays within
   `bottomMax` (`src/paneSizes.ts`), so a size remembered too tall never needs a long drag back.
-- **Narrow bars.** The editors' local bars (`.editor-bar`, `editor-bars.css`) and the control bar
-  are CSS size containers (`container-type: inline-size`). Their `@container` rules drop the
-  captions and tighten sliders and gaps below widths measured for each bar, so the rules hold at
-  any interface size (125 % at 1280 px is a 1024 px wide page). An editor bar wraps as a last
-  resort: its tools (`.local-right`) stay beside the tabs and menus while they have 360 px there,
-  wrapping within it, and otherwise take a row of their own; every row is 24 px.
+- **Narrow bars.** Every local bar (the Tracks area's, the Mixer's, the editors' and the bars
+  under them) keeps to one row at any width. Each lists the steps it gives way with, in order
+  (captions, then tighter gaps and sliders, then its least used controls into its View,
+  Functions or Options menu, the editor tabs shortened to a word); `useBarFit`
+  (`components/useBarFit.ts`) measures what the row needs after each render and when the bar or
+  its parts change size, and `nextFit` (`barFit.ts`) takes a step while the row overflows and
+  goes back one once the room is there for what that step was measured to need. Each step taken
+  is a `fit-<step>` class on the bar (`editor-bars.css`) or a control left out in the component,
+  and a control that leaves the bar is added to the menu if it isn't there already. The steps
+  change in layout effects, before the browser paints, and the widths are the bar's own, so the
+  steps hold at any interface size (125 % at 1280 px is a 1024 px wide page). The control bar is
+  a CSS size container (`container-type: inline-size`) whose `@container` rule tightens its gaps
+  and buttons below the width it needs.
 - **The Mixer's height.** `useStripFit` (`Panels.tsx`) measures a strip with no slot rows and its
   fader at its least, and `fitStripRows` (`stripRows.ts`) takes slot rows away, sends first,
   while the fader would get less than 120 px. Below one row each the strips scroll, pinned to the
@@ -2718,6 +2725,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `freeze.ts` | Freeze and Unfreeze from the UI. |
 | `bounce.ts` | Bounce and export option types; opening the dialogs. |
 | `bounceFormat.ts` | Bounce formats and resolutions each offers, and the file names; pure, tested. |
+| `barFit.ts` | How a local bar keeps to one row: the step to take for what the row measured, and each step's class; pure, tested. |
 | `projectFiles.ts` | File › Project Alternatives, Revert to Saved, Revert to and Save as Template, and rebuilding their native menus (`set_project_menus`). |
 | `alternativesModel.ts` | Backup labels, name checks (mirroring `check_name`) and free names, track alternatives' names; pure, tested. |
 | `trackAlternatives.ts` | Track › Track Alternatives commands and the header pop-up's menu. |
@@ -2813,6 +2821,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `Form.tsx` | Themed form controls. |
 | `Menu.tsx` | In-window menus. |
 | `Splitter.tsx` | Pane dividers and saved pane sizes. |
+| `useBarFit.ts` | The hook that measures a local bar and steps it until its row fits (`barFit.ts`). |
 | `Editor.tsx` | Bottom editor pane: picks the Piano Roll or the Audio Track Editor. |
 | `PianoRoll.tsx` | The Piano Roll: refs, working list, effects, panes. |
 | `pianoRollEditor/` | Its parts: `core.ts` (view and grid on the live values, drawing, sending edits, sound, help tag), `commands.ts` (zoom, clipboards, edits), `menus.ts`, `keys.ts` (keys and `pianoRollMenu`), `noteGestures.ts`, `laneGestures.ts`, `wheel.ts`, `prefs.ts` (saved view and tool), `PianoRollBar.tsx`, `QuantizePanel.tsx`, `ToolIcon.tsx`. |

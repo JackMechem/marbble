@@ -1,133 +1,115 @@
-/* The editors' tool bars (Piano Roll, Event List, Step Sequencer, Audio Track editor) fit their
-   pane at any width. Each bar is a size container, and gives way in the same order:
-   1. the captions go (Quantize, Grid, Vel, Height, Zoom…); each control keeps its tooltip;
-   2. the sliders and gaps get shorter and the region name shortens;
-   3. what still doesn't fit wraps onto another row of the bar, so nothing is ever cut off.
+/* The local bars (the Tracks area's, the Mixer's, the editors' and the bars under them) keep to
+   one row at any width. Each measures what it needs (useBarFit, barFit.ts) and gives way a step
+   at a time, in an order its component lists; each step taken is a class, `fit-<step>`:
+   - fit-captions: the captions go (Quantize, Grid, Snap:, Height, Zoom…); each control keeps
+     its tooltip;
+   - fit-tight: gaps, sliders, menu titles and the region name get shorter;
+   - then the least used controls leave the bar for its View (or Functions, Options) menu, and
+     the editor tabs shorten to a word each; those steps are in the components.
    The widths are the bar's own, so they hold at any interface size. */
 
-.editor-bar {
-  container: editor-bar / inline-size;
-  height: auto;
-  min-height: 28px;
-  padding-block: 1px;
-  row-gap: 4px;
-  overflow: visible;
+.fit-bar {
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 
-/* Wrapped onto rows, the tabs and menus stay level with the first one. */
-.editor-bar > .editor-tabs,
-.editor-bar > .local-menus,
-.editor-bar > .local-right {
-  align-self: flex-start;
-  min-height: 24px;
-  align-items: center;
-}
-
-/* The editor tabs and menus keep their size; the tools beside them wrap first. */
-.editor-bar > .editor-tabs,
-.editor-bar > .local-menus {
+/* Nothing in the row shrinks, so what it needs is what it measures. */
+.fit-bar > *,
+.fit-bar > .local-right > *,
+.fit-bar > .local-menus > * {
   flex: none;
 }
 
+/* The editor tabs and the menus beside them. */
 .editor-bar .local-title {
   max-width: 220px;
 }
 
-/* The tools stay beside the menus while they fit there; with less room they take a row of their
-   own under the menus. The Piano Roll's many tools stay beside the menus while they have 360 px,
-   wrapping within it. */
-.editor-bar {
-  flex-wrap: wrap;
+/* A control and its caption, or a tight group, never split. */
+.fit-bar .lb-label,
+.fit-bar .pr-vel-val {
+  white-space: nowrap;
 }
 
-.pr-bar > .local-right {
-  flex-basis: 360px;
+/* ---- the steps every bar shares ---- */
+
+.fit-bar.fit-captions .lb-label {
+  display: none;
 }
 
-.editor-bar > .local-right {
-  flex-grow: 1;
+.fit-bar.fit-tight {
+  gap: 6px;
+}
+
+.fit-bar.fit-tight > .local-right {
+  gap: 5px;
+}
+
+.fit-bar.fit-tight .local-menu,
+.fit-bar.fit-tight .editor-tabs .filter,
+.fit-bar.fit-tight .mixer-filters .filter,
+.fit-bar.fit-tight .mixer-widths .filter {
+  padding-inline: 6px;
+}
+
+.fit-bar.fit-tight .zoom {
+  width: 44px;
+}
+
+.fit-bar.fit-tight .local-title {
+  max-width: 120px;
+}
+
+/* ---- each bar's own ---- */
+
+/* Piano Roll: tight, the velocity readout is a dash without notes, so it needs less room. */
+.pr-bar.fit-tight .pr-vel {
+  width: 40px;
+}
+
+.pr-bar.fit-tight .pr-vel-val {
+  min-width: 24px;
+}
+
+/* Tracks area: the Left-click Tool sits close to the Command-click Tool; alone, it doesn't. */
+.tracks-bar.fit-cmd-tool .popup.tool-popup.left {
+  margin-right: 0;
+}
+
+/* Mixer: the strip widths sit apart from the filters, closer when tight. */
+.mixer-bar.fit-tight .mixer-filters {
+  margin-left: 0;
+}
+
+.mixer-bar.fit-tight .mixer-widths {
+  margin-left: 0;
+  padding-left: 6px;
+}
+
+.mixer-bar.fit-tight .mixer-title {
+  padding-right: 6px;
+}
+
+/* Event List's types: tight, the filters sit closer to the type pop-up. */
+.el-tools.fit-tight .el-filters {
+  margin-left: 0;
+}
+
+/* Step Sequencer's pattern settings: the captions and the + keep their own space until tight. */
+.ss-tools.fit-tight .lb-label,
+.ss-tools.fit-tight .ss-add,
+.ss-tools.fit-tight .ss-learn {
+  margin-left: 0;
+}
+
+.ss-tools.fit-tight .ss-modes {
+  margin-right: 0;
+}
+
+/* What Learn and a frozen track say shortens rather than taking the row. */
+.ss-tools > .ss-learn {
+  flex: 0 1 auto;
   min-width: 0;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  row-gap: 0;
-}
-
-/* Every row of tools is 24 px, as tall as the tabs beside the first. */
-.editor-bar > .local-right > * {
-  margin-block: 2px;
-}
-
-/* A control and its caption, or a tight group, never split across rows. */
-.editor-bar .lb-label,
-.editor-bar .pr-vel-val {
-  white-space: nowrap;
-}
-
-/* The bars under the local bar (Event List types, Step Sequencer pattern settings) wrap too. */
-.el-tools.editor-bar,
-.ss-tools.editor-bar {
-  flex-wrap: wrap;
-  white-space: nowrap;
-}
-
-.el-tools.editor-bar .el-filters {
-  flex-wrap: wrap;
-  overflow: visible;
-  row-gap: 4px;
-}
-
-/* ---- Piano Roll: 1340 px with everything; 1140 without captions; 1050 compact ---- */
-
-@container editor-bar (max-width: 1360px) {
-  .pr-bar .lb-label {
-    display: none;
-  }
-}
-
-@container editor-bar (max-width: 1160px) {
-  .pr-bar > .local-right {
-    gap: 5px;
-  }
-
-  .pr-bar .editor-tabs .filter,
-  .pr-bar .local-menu {
-    padding-inline: 6px;
-  }
-
-  .pr-bar .zoom {
-    width: 44px;
-  }
-
-  .pr-bar .pr-vel {
-    width: 40px;
-  }
-
-  .pr-bar .local-title {
-    max-width: 120px;
-  }
-}
-
-/* ---- Audio Track editor: 830 px with everything ---- */
-
-@container editor-bar (max-width: 850px) {
-  .aed-bar .lb-label {
-    display: none;
-  }
-
-  .aed-bar .local-title {
-    max-width: 160px;
-  }
-}
-
-/* ---- Step Sequencer pattern settings: 660 px with everything ---- */
-
-@container editor-bar (max-width: 680px) {
-  .ss-tools .lb-label {
-    display: none;
-  }
-}
-
-.el-tools.editor-bar {
-  min-height: 26px;
-  padding-block: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

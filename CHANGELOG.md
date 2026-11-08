@@ -25,6 +25,13 @@ All notable changes to Marbble are recorded here. The format follows
 - **Move MIDI Regions with Tempo moves every track alternative.** A tempo edit with it on moved
   only the active alternative's MIDI regions, so switching to another afterwards found its MIDI
   off its bars and beats. The inactive alternatives' MIDI regions now move with the tempo too.
+- **Every local bar fits on one row.** At 1280 px, and at 125 % interface size, the Piano Roll's
+  bar wrapped its zoom slider and detach button onto a second row, and with the Library open the
+  Tracks area's bar cut its Zoom slider off at the window's edge. The Tracks area's, Mixer's and
+  editors' bars now give way a step at a time as they narrow: the captions go, the gaps and
+  sliders get shorter, the editor tabs shorten to a word (the full name in the tooltip), and the
+  least used controls move into the bar's View menu (Functions in the Step Sequencer, Options in
+  the Mixer), coming back as the bar widens.
 - **No edit is lost on the way to the audio engine.** A burst of changes larger than the
   engine's queue (an undo of a very large edit, say) used to drop what didn't fit, leaving
   playback out of step with what the window showed. Marbble now waits for the engine to make

@@ -13,6 +13,7 @@ import { openMenuAt } from "./Menu";
 import { fmt } from "../keymap";
 import { onRevealPlayhead, revealLeft } from "../view";
 import { DetachButton } from "./DetachButton";
+import { useBarFit } from "./useBarFit";
 import { timelineFrames, zoomBounds, type Drag } from "../audioEditorModel";
 import { editorDrawer, type AudioLive } from "./audioTrackEditor/draw";
 import { GainField } from "./audioTrackEditor/GainField";
@@ -21,6 +22,10 @@ import { editorPointer } from "./audioTrackEditor/pointer";
 
 /** Scroll position kept while the editor is closed, like its zoom. */
 let lastLeft = 0;
+
+/** What the local bar gives way with, in order (barFit.ts); what leaves it is in the View menu.
+ *  The region's gain stays. */
+const BAR_STEPS = ["captions", "tight", "detach", "wave", "transients", "zoom", "title"] as const;
 
 export function AudioEditor({ track, region }: { track: Track; region: Region | null }) {
   const project = useStore((s) => s.snap?.project);
@@ -207,12 +212,13 @@ export function AudioEditor({ track, region }: { track: Track; region: Region | 
 
   // ---- local bar ------------------------------------------------------------------------------
 
+  const fit = useBarFit(BAR_STEPS, track.name);
   const [lo, hi] = ppsBounds();
   const zoomValue = pps > 0 && hi > lo ? Math.log(pps / lo) / Math.log(hi / lo) : 0;
 
   return (
     <div className="editor audio-editor">
-      <div className="local-bar editor-bar aed-bar">
+      <div ref={fit.ref} className={"local-bar editor-bar fit-bar aed-bar" + fit.className}>
         <div className="local-menus">
           <button className="local-menu" onMouseDown={(e) => openMenuAt(e.currentTarget, ed.editMenu())}>
             Edit
@@ -223,45 +229,55 @@ export function AudioEditor({ track, region }: { track: Track; region: Region | 
           <button className="local-menu" onMouseDown={(e) => openMenuAt(e.currentTarget, ed.viewMenu())}>
             View
           </button>
-          <span className="local-title">Audio Track: {track.name}</span>
+          {!fit.has("title") && <span className="local-title">Audio Track: {track.name}</span>}
         </div>
         <div className="local-right">
-          <button className={"lb-btn" + (showTransients ? " on" : "")} title="Show Transients" aria-label="Show Transients" onClick={() => ed.setEd({ showTransients: !showTransients })}>
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3">
-              <path d="M1 7h2l1.2-4 1.6 8L7 5l1 3.5L9 7h4" />
-              <path d="M4.2 1.5v1M9 1.5v1" strokeLinecap="round" />
-            </svg>
-          </button>
+          {!fit.has("transients") && (
+            <button className={"lb-btn" + (showTransients ? " on" : "")} title="Show Transients" aria-label="Show Transients" onClick={() => ed.setEd({ showTransients: !showTransients })}>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3">
+                <path d="M1 7h2l1.2-4 1.6 8L7 5l1 3.5L9 7h4" />
+                <path d="M4.2 1.5v1M9 1.5v1" strokeLinecap="round" />
+              </svg>
+            </button>
+          )}
           <span className="lb-label">Gain</span>
           <GainField region={focus} />
-          <span className="lb-label" title="Waveform zoom">
-            Wave
-          </span>
-          <input
-            className="zoom vzoom"
-            type="range"
-            min={0}
-            max={1}
-            step={0.001}
-            value={Math.log(amp) / Math.log(ed.MAX_AMP)}
-            title={`Waveform zoom ×${amp.toFixed(1)} (${fmt("Alt")}-scroll, ${fmt("Mod+ArrowUp")} / ${fmt("Mod+ArrowDown")})`}
-            onChange={(e) => ed.setAmp(Math.pow(ed.MAX_AMP, parseFloat(e.target.value)))}
-            onDoubleClick={() => ed.setAmp(1)}
-          />
-          <span className="lb-label" title="Horizontal zoom">
-            Zoom
-          </span>
-          <input
-            className="zoom"
-            type="range"
-            min={0}
-            max={1}
-            step={0.001}
-            value={zoomValue}
-            title={`Horizontal zoom (${fmt("Mod")}-scroll, ${fmt("Mod+ArrowLeft")} / ${fmt("Mod+ArrowRight")}, Z)`}
-            onChange={(e) => setZoom(lo * Math.pow(hi / lo, parseFloat(e.target.value)))}
-          />
-          <DetachButton panel="editor" />
+          {!fit.has("wave") && (
+            <>
+              <span className="lb-label" title="Waveform zoom">
+                Wave
+              </span>
+              <input
+                className="zoom vzoom"
+                type="range"
+                min={0}
+                max={1}
+                step={0.001}
+                value={Math.log(amp) / Math.log(ed.MAX_AMP)}
+                title={`Waveform zoom ×${amp.toFixed(1)} (${fmt("Alt")}-scroll, ${fmt("Mod+ArrowUp")} / ${fmt("Mod+ArrowDown")})`}
+                onChange={(e) => ed.setAmp(Math.pow(ed.MAX_AMP, parseFloat(e.target.value)))}
+                onDoubleClick={() => ed.setAmp(1)}
+              />
+            </>
+          )}
+          {!fit.has("zoom") && (
+            <>
+              <span className="lb-label" title="Horizontal zoom">
+                Zoom
+              </span>
+              <input
+                className="zoom"
+                type="range"
+                min={0}
+                max={1}
+                step={0.001}
+                value={zoomValue}
+                title={`Horizontal zoom (${fmt("Mod")}-scroll, ${fmt("Mod+ArrowLeft")} / ${fmt("Mod+ArrowRight")}, Z)`}
+                onChange={(e) => setZoom(lo * Math.pow(hi / lo, parseFloat(e.target.value)))}
+              />
+            </>
+          )}
+          {!fit.has("detach") && <DetachButton panel="editor" />}
         </div>
       </div>
       {project && <InfoStrip project={project} track={track} region={focus} sel={sel} />}

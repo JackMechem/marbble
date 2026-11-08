@@ -21,6 +21,7 @@ import { loadPlugin } from "../fxHost";
 import { DetachButton } from "./DetachButton";
 import { createVca, useVcas, VcaStrip } from "./Vca";
 import { openMenuAt } from "./Menu";
+import { useBarFit } from "./useBarFit";
 import { fitStripRows, SLOT_ROW_H, stripRows, stripWants, type SlotRows } from "../stripRows";
 import {
   bracketRows,
@@ -250,6 +251,10 @@ function StripCell({ k, width, onDrag, children }: { k: string; width: number; o
   );
 }
 
+/** What the Mixer's bar gives way with, in order (barFit.ts): the strip widths, then the strip
+ *  filters, which its Options menu has too. */
+const MIXER_BAR_STEPS = ["tight", "widths", "filters"] as const;
+
 export function Mixer() {
   const project = useStore((s) => s.snap?.project);
   const selected = useStore((s) => s.snap?.selected);
@@ -260,6 +265,7 @@ export function Mixer() {
   const [drag, setDrag] = useState<{ key: string; w: number } | null>(null);
   const vcas = useVcas();
   const fit = useStripFit();
+  const barFit = useBarFit(MIXER_BAR_STEPS);
   if (!project) return null;
   const shown = project.tracks.filter((t) => (t.hidden ? showHidden : true) && (t.kind === "audio" || t.kind === "instrument" || t.kind === "aux" ? filter[t.kind] : true));
   // Auxes come after the tracks, as in Logic's mixer.
@@ -309,7 +315,7 @@ export function Mixer() {
   };
   return (
     <div className="mixer">
-      <div className="local-bar">
+      <div ref={barFit.ref} className={"local-bar fit-bar mixer-bar" + barFit.className}>
         <span className="local-title mixer-title">Mixer</span>
         <div className="local-menus">
           <button
@@ -332,26 +338,30 @@ export function Mixer() {
             Options
           </button>
         </div>
-        <div className="mixer-filters" role="group" aria-label="Strips shown">
-          {STRIP_KINDS.map(([k, label, name]) => (
-            <button key={k} className={"filter" + (filter[k] ? " on" : "")} aria-pressed={filter[k]} title={`${filter[k] ? "Hide" : "Show"} ${name.toLowerCase()} strips`} onClick={() => flip(k)}>
-              {label}
-            </button>
-          ))}
-        </div>
-        <div className="mixer-widths" role="group" aria-label="Strip width">
-          {STRIP_SIZES.map(([k, label]) => (
-            <button
-              key={k}
-              className={"filter" + (view.size === k ? " on" : "")}
-              aria-pressed={view.size === k}
-              title={`${label} strips${sized ? " (strips given a width of their own keep it: Options › Reset Strip Widths)" : ""}`}
-              onClick={() => setSize(k)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        {!barFit.has("filters") && (
+          <div className="mixer-filters" role="group" aria-label="Strips shown">
+            {STRIP_KINDS.map(([k, label, name]) => (
+              <button key={k} className={"filter" + (filter[k] ? " on" : "")} aria-pressed={filter[k]} title={`${filter[k] ? "Hide" : "Show"} ${name.toLowerCase()} strips`} onClick={() => flip(k)}>
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+        {!barFit.has("widths") && (
+          <div className="mixer-widths" role="group" aria-label="Strip width">
+            {STRIP_SIZES.map(([k, label]) => (
+              <button
+                key={k}
+                className={"filter" + (view.size === k ? " on" : "")}
+                aria-pressed={view.size === k}
+                title={`${label} strips${sized ? " (strips given a width of their own keep it: Options › Reset Strip Widths)" : ""}`}
+                onClick={() => setSize(k)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="local-right">
           <DetachButton panel="mixer" />
         </div>

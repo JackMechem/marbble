@@ -23,7 +23,8 @@ import { tracksAreaMin } from "../paneSizes";
 import { act } from "../api";
 import type { DragMode } from "../fades";
 import { ToolPopups } from "./TrackTools";
-import { marqueeCopy, marqueeCut, marqueeDelete, marqueePaste } from "../trackTools";
+import { marqueeCopy, marqueeCut, marqueeDelete, marqueePaste, toolMenuItems } from "../trackTools";
+import { useBarFit } from "./useBarFit";
 import { showUsedAutomation } from "../automation";
 import { zeroCrossingsItem } from "../zeroCrossings";
 import { arrangeItems } from "../arrangeCmds";
@@ -153,6 +154,10 @@ export function viewMenu(): MenuItem[] {
  *  global tracks, overview) and a little of the track list. */
 export const tracksAreaMinOf = (s: State) => tracksAreaMin(RULER_H + globalTracksHeight(s) + (s.showOverview ? OVERVIEW_H + 1 : 0));
 
+/** What the local bar gives way with, in this order, when it's short of room (barFit.ts). The
+ *  menus and the Left-click Tool never do; what leaves the bar is in the View menu. */
+const BAR_STEPS = ["captions", "tight", "height", "scroll", "drag", "catch", "zoom", "cmd-tool", "snap"] as const;
+
 export function TracksArea() {
   const pxPerBeat = useStore((s) => s.pxPerBeat);
   const catchPlayhead = useStore((s) => s.catchPlayhead);
@@ -167,10 +172,26 @@ export function TracksArea() {
   // Menus read the rest of the state when they open.
   const s = { ...getState(), pxPerBeat, catchPlayhead, snapMode, trackHeight };
   const zoom = Math.log(s.pxPerBeat / 2) / Math.log(200);
+  const fit = useBarFit(BAR_STEPS, `${snapMode}|${dragMode}`);
+  const gone = fit.has;
+  const snapItems = (): MenuItem[] => (Object.keys(SNAP_LABELS) as Snap[]).map((k) => ({ label: SNAP_LABELS[k], checked: s.snapMode === k, onClick: () => setState({ snapMode: k }) }));
+  const dragItems = (): MenuItem[] => (Object.keys(DRAG_LABELS) as DragMode[]).map((k) => ({ label: DRAG_LABELS[k], checked: dragMode === k, onClick: () => act("set_drag_mode", { mode: k }) }));
+  // The View menu with the controls that left the bar and aren't in it already (zoom and track
+  // height are).
+  const view = (): MenuItem[] => {
+    const moved: MenuItem[] = [
+      ...(gone("catch") ? [{ label: "Catch Playhead", hint: keyHint("catch-playhead"), checked: s.catchPlayhead, onClick: () => setState({ catchPlayhead: !s.catchPlayhead }) }] : []),
+      ...(gone("scroll") ? [{ label: "Scroll to Playhead", hint: keyHint("show-playhead"), onClick: () => transport.showPlayhead() }] : []),
+      ...(gone("cmd-tool") ? [{ label: `${fmt("Mod")}-click Tool`, children: toolMenuItems("cmd") }] : []),
+      ...(gone("snap") ? [{ label: "Snap", children: snapItems() }] : []),
+      ...(gone("drag") ? [{ label: "Drag", children: dragItems() }] : []),
+    ];
+    return moved.length ? [...viewMenu(), { separator: true }, ...moved] : viewMenu();
+  };
 
   return (
     <div className="tracks-area" style={{ minHeight }}>
-      <div className="local-bar">
+      <div ref={fit.ref} className={"local-bar fit-bar tracks-bar" + fit.className}>
         <div className="local-menus">
           <button className="local-menu" onMouseDown={(e) => openMenuAt(e.currentTarget, editMenu())}>
             Edit
@@ -178,78 +199,81 @@ export function TracksArea() {
           <button className="local-menu" onMouseDown={(e) => openMenuAt(e.currentTarget, functionsMenu())}>
             Functions
           </button>
-          <button className="local-menu" onMouseDown={(e) => openMenuAt(e.currentTarget, viewMenu())}>
+          <button className="local-menu" onMouseDown={(e) => openMenuAt(e.currentTarget, view())}>
             View
           </button>
         </div>
         <div className="local-right">
-          <button
-            className={"lb-btn catch" + (s.catchPlayhead ? " on" : "")}
-            title={tip("Catch Playhead", "catch-playhead")}
-            aria-label={tip("Catch Playhead", "catch-playhead")}
-            onClick={() => setState({ catchPlayhead: !s.catchPlayhead })}
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3">
-              <path d="M3 2v10M3 7h8M8 4l3 3-3 3" />
-            </svg>
-          </button>
-          <button className="lb-btn" title={"Scroll to Playhead" + (keyHint("show-playhead") ? ` (${keyHint("show-playhead")})` : "")} aria-label={"Scroll to Playhead" + (keyHint("show-playhead") ? ` (${keyHint("show-playhead")})` : "")} onClick={() => transport.showPlayhead()}>
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3">
-              <path d="M7 1v12M2 4h3M2 10h3M9 4h3M9 10h3" />
-            </svg>
-          </button>
-          <ToolPopups />
-          <span className="lb-label">Snap:</span>
-          <button
-            className="popup"
-            onMouseDown={(e) =>
-              openMenuAt(
-                e.currentTarget,
-                (Object.keys(SNAP_LABELS) as Snap[]).map((k) => ({ label: SNAP_LABELS[k], checked: s.snapMode === k, onClick: () => setState({ snapMode: k }) })),
-              )
-            }
-          >
-            {SNAP_LABELS[s.snapMode]} <Icon.chevron />
-          </button>
-          <span className="lb-label">Drag:</span>
-          <button
-            className="popup"
-            title={DRAG_TIPS[dragMode]}
-            onMouseDown={(e) =>
-              openMenuAt(
-                e.currentTarget,
-                (Object.keys(DRAG_LABELS) as DragMode[]).map((k) => ({ label: DRAG_LABELS[k], checked: dragMode === k, onClick: () => act("set_drag_mode", { mode: k }) })),
-              )
-            }
-          >
-            {DRAG_LABELS[dragMode]} <Icon.chevron />
-          </button>
-          <span className="lb-label" title="Track height">
-            Height
-          </span>
-          <input
-            className="zoom vzoom"
-            type="range"
-            min={MIN_TRACK_H}
-            max={MAX_TRACK_H}
-            step={1}
-            value={s.trackHeight}
-            title={`Track height (${fmt("Alt")}-scroll, ${keyHint("shorter-tracks")} / ${keyHint("taller-tracks")})`}
-            onChange={(e) => setState({ trackHeight: parseInt(e.target.value), trackHeights: {} })}
-          />
-          <span className="lb-label" title="Horizontal zoom">
-            Zoom
-          </span>
-          <input
-            className="zoom"
-            type="range"
-            min={0}
-            max={1}
-            step={0.001}
-            value={zoom}
-            title={`Horizontal zoom (${keyHint("zoom-out")} / ${keyHint("zoom-in")})`}
-            onChange={(e) => setState({ pxPerBeat: 2 * Math.pow(200, parseFloat(e.target.value)) })}
-          />
+          {!gone("catch") && (
+            <button
+              className={"lb-btn catch" + (s.catchPlayhead ? " on" : "")}
+              title={tip("Catch Playhead", "catch-playhead")}
+              aria-label={tip("Catch Playhead", "catch-playhead")}
+              onClick={() => setState({ catchPlayhead: !s.catchPlayhead })}
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3">
+                <path d="M3 2v10M3 7h8M8 4l3 3-3 3" />
+              </svg>
+            </button>
+          )}
+          {!gone("scroll") && (
+            <button className="lb-btn" title={"Scroll to Playhead" + (keyHint("show-playhead") ? ` (${keyHint("show-playhead")})` : "")} aria-label={"Scroll to Playhead" + (keyHint("show-playhead") ? ` (${keyHint("show-playhead")})` : "")} onClick={() => transport.showPlayhead()}>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3">
+                <path d="M7 1v12M2 4h3M2 10h3M9 4h3M9 10h3" />
+              </svg>
+            </button>
+          )}
+          <ToolPopups cmd={!gone("cmd-tool")} />
+          {!gone("snap") && (
+            <>
+              <span className="lb-label">Snap:</span>
+              <button className="popup" onMouseDown={(e) => openMenuAt(e.currentTarget, snapItems())}>
+                {SNAP_LABELS[s.snapMode]} <Icon.chevron />
+              </button>
+            </>
+          )}
+          {!gone("drag") && (
+            <>
+              <span className="lb-label">Drag:</span>
+              <button className="popup" title={DRAG_TIPS[dragMode]} onMouseDown={(e) => openMenuAt(e.currentTarget, dragItems())}>
+                {DRAG_LABELS[dragMode]} <Icon.chevron />
+              </button>
+            </>
+          )}
+          {!gone("height") && (
+            <>
+              <span className="lb-label" title="Track height">
+                Height
+              </span>
+              <input
+                className="zoom vzoom"
+                type="range"
+                min={MIN_TRACK_H}
+                max={MAX_TRACK_H}
+                step={1}
+                value={s.trackHeight}
+                title={`Track height (${fmt("Alt")}-scroll, ${keyHint("shorter-tracks")} / ${keyHint("taller-tracks")})`}
+                onChange={(e) => setState({ trackHeight: parseInt(e.target.value), trackHeights: {} })}
+              />
+            </>
+          )}
+          {!gone("zoom") && (
+            <>
+              <span className="lb-label" title="Horizontal zoom">
+                Zoom
+              </span>
+              <input
+                className="zoom"
+                type="range"
+                min={0}
+                max={1}
+                step={0.001}
+                value={zoom}
+                title={`Horizontal zoom (${keyHint("zoom-out")} / ${keyHint("zoom-in")})`}
+                onChange={(e) => setState({ pxPerBeat: 2 * Math.pow(200, parseFloat(e.target.value)) })}
+              />
+            </>
+          )}
         </div>
       </div>
       <div

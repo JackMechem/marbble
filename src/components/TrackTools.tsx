@@ -30,7 +30,8 @@ export function TrackToolIcon({ tool }: { tool: TrackTool }) {
   }
 }
 
-export function ToolPopups() {
+/** `cmd` false leaves out the Command-click Tool (a bar short of room has it in its View menu). */
+export function ToolPopups({ cmd = true }: { cmd?: boolean }) {
   const tools = useStore((s) => s.tools);
   const hint = keyHint("tool-menu");
   return (
@@ -38,9 +39,11 @@ export function ToolPopups() {
       <button className="popup tool-popup left" title={`Left-click Tool${hint ? ` (${hint})` : ""}`} aria-label={`Left-click Tool${hint ? ` (${hint})` : ""}`} onMouseDown={(e) => openMenuAt(e.currentTarget, toolMenuItems("left"))}>
         <TrackToolIcon tool={tools.left} /> <Icon.chevron />
       </button>
-      <button className="popup tool-popup cmd" title={`${fmt("Mod")}-click Tool`} aria-label={`${fmt("Mod")}-click Tool`} onMouseDown={(e) => openMenuAt(e.currentTarget, toolMenuItems("cmd"))}>
-        <TrackToolIcon tool={tools.cmd} /> <Icon.chevron />
-      </button>
+      {cmd && (
+        <button className="popup tool-popup cmd" title={`${fmt("Mod")}-click Tool`} aria-label={`${fmt("Mod")}-click Tool`} onMouseDown={(e) => openMenuAt(e.currentTarget, toolMenuItems("cmd"))}>
+          <TrackToolIcon tool={tools.cmd} /> <Icon.chevron />
+        </button>
+      )}
     </>
   );
 }

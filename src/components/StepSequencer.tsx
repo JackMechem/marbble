@@ -6,7 +6,7 @@
 import { useEffect, useReducer, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { act, type Id, type Pattern, type Project, type Region, type Track } from "../api";
-import { ownPanel } from "../detach";
+import { detachMenuItems, ownPanel } from "../detach";
 import { onFrame, framePos } from "../frame";
 import { Icon } from "../icons";
 import { regionEnd } from "../loops";
@@ -19,9 +19,18 @@ import { DetachButton } from "./DetachButton";
 import { EditorTabs } from "./EventList";
 import { NumberField } from "./Form";
 import { openMenu, openMenuAt, type MenuItem } from "./Menu";
+import { useBarFit } from "./useBarFit";
+
+/** What the local bar gives way with, in order (barFit.ts); the detach button moves into Functions. */
+const BAR_STEPS = ["tight", "tabs", "title", "detach"] as const;
+/** And the pattern settings under it: the edit modes become one pop-up, then Add Row and Loop
+ *  move into Functions. */
+const TOOLS_STEPS = ["captions", "tight", "modes", "add", "loop"] as const;
 
 /** The editor's settings outlive it, as Logic's editor keeps them. */
 let saved: { mode: ss.EditMode } = { mode: "on" };
+
+const modeOf = (id: ss.EditMode) => ss.EDIT_MODES.find((m) => m.id === id) ?? ss.EDIT_MODES[0];
 
 /** The pattern region the Step Sequencer edits: the first selected one. */
 function patternRegion(project: Project | undefined, selected: Id[]): { track: Track; region: Region } | null {
@@ -274,26 +283,31 @@ export function StepSequencer() {
     { label: "Delete Row", onClick: () => edit("Delete Row", (p) => ss.removeRow(p, r)) },
   ];
 
+  const fit = useBarFit(BAR_STEPS, region?.name ?? "");
+  const toolsFit = useBarFit(TOOLS_STEPS, pattern ? `${pattern.length}|${pattern.rate}|${mode}|${learnRow}` : "");
+
   const functionsMenu = (): MenuItem[] => [
     { label: "Add Row", disabled: !pattern || pattern.rows.length >= ss.MAX_ROWS, onClick: () => edit("Add Row", (p) => ss.addRow(p, undefined, ss.newRowPitch(p, kit))) },
     { label: "Clear Pattern", disabled: !pattern, onClick: () => edit("Clear Pattern", (p) => ss.clearSteps(p)) },
+    // Loop leaves the bar under this one when it's short of room.
+    ...(toolsFit.has("loop") && pattern ? [{ label: "Loop Pattern", checked: pattern.looped !== false, onClick: () => edit("Pattern Loop", (p) => ({ ...p, looped: p.looped === false })) }] : []),
     { separator: true },
     { label: "Convert to MIDI Region", disabled: !region, onClick: () => region && act("convert_patterns_to_midi", { ids: [region.id] }).then(() => setState({ bottom: "editor" })) },
+    ...(fit.has("detach") ? detachMenuItems("steps") : []),
   ];
 
   // ---- the view ---------------------------------------------------------------------------
   const bar = (
-    <div className="local-bar editor-bar">
-      <EditorTabs current="steps" />
+    <div ref={fit.ref} className={"local-bar editor-bar fit-bar" + fit.className}>
+      <EditorTabs current="steps" short={fit.has("tabs")} />
       <div className="local-menus">
-        <button className="local-menu" disabled={!region} onMouseDown={(e) => openMenuAt(e.currentTarget, functionsMenu())}>
+        {/* Functions stays open without a region while it holds the detach command. */}
+        <button className="local-menu" disabled={!region && !fit.has("detach")} onMouseDown={(e) => openMenuAt(e.currentTarget, functionsMenu())}>
           Functions
         </button>
-        <span className="local-title">{region?.name ?? "Step Sequencer"}</span>
+        {!fit.has("title") && <span className="local-title">{region?.name ?? "Step Sequencer"}</span>}
       </div>
-      <div className="local-right">
-        <DetachButton panel="steps" />
-      </div>
+      <div className="local-right">{!fit.has("detach") && <DetachButton panel="steps" />}</div>
     </div>
   );
 
@@ -324,14 +338,20 @@ export function StepSequencer() {
   return (
     <div className="editor step-seq" {...focusProps}>
       {bar}
-      <div className="ss-tools editor-bar">
-        <div className="editor-tabs ss-modes">
-          {ss.EDIT_MODES.map((m) => (
-            <button key={m.id} className={"filter" + (mode === m.id ? " on" : "")} title={m.title} onClick={() => setMode(m.id)}>
-              {m.label}
-            </button>
-          ))}
-        </div>
+      <div ref={toolsFit.ref} className={"ss-tools fit-bar" + toolsFit.className}>
+        {toolsFit.has("modes") ? (
+          <button className="popup ss-mode-pick" title={`Edit mode: ${modeOf(mode).title}`} onMouseDown={(e) => openMenuAt(e.currentTarget, ss.EDIT_MODES.map((m) => ({ label: m.label, checked: m.id === mode, onClick: () => setMode(m.id) })))}>
+            {modeOf(mode).label} <Icon.chevron />
+          </button>
+        ) : (
+          <div className="editor-tabs ss-modes">
+            {ss.EDIT_MODES.map((m) => (
+              <button key={m.id} className={"filter" + (mode === m.id ? " on" : "")} title={m.title} onClick={() => setMode(m.id)}>
+                {m.label}
+              </button>
+            ))}
+          </div>
+        )}
         <span className="lb-label">Length</span>
         <button className="popup" title="Pattern length in steps" onMouseDown={(e) => openMenuAt(e.currentTarget, lengthItems(pattern.length, (v) => v && edit("Pattern Length", (p) => ({ ...p, length: v })), null))}>
           {pattern.length} <Icon.chevron />
@@ -341,13 +361,17 @@ export function StepSequencer() {
           {ss.rateLabel(pattern.rate)} <Icon.chevron />
         </button>
         <span className="lb-label">Swing</span>
-        <NumberField value={pattern.swing} min={0} max={100} width={70} title="Swing (%)" onChange={(swing) => edit("Swing", (p) => ({ ...p, swing }), `swing:${region.id}`)} />
-        <button className={"filter" + (pattern.looped !== false ? " on" : "")} title="Loop: the pattern repeats to the end of the region" onClick={() => edit("Pattern Loop", (p) => ({ ...p, looped: p.looped === false }))}>
-          Loop
-        </button>
-        <button className="lb-btn ss-add" title="Add Row" aria-label="Add Row" disabled={pattern.rows.length >= ss.MAX_ROWS} onClick={() => edit("Add Row", (p) => ss.addRow(p, undefined, ss.newRowPitch(p, kit)))}>
-          <Icon.plus />
-        </button>
+        <NumberField value={pattern.swing} min={0} max={100} width={toolsFit.has("tight") ? 52 : 70} title="Swing (%)" onChange={(swing) => edit("Swing", (p) => ({ ...p, swing }), `swing:${region.id}`)} />
+        {!toolsFit.has("loop") && (
+          <button className={"filter" + (pattern.looped !== false ? " on" : "")} title="Loop: the pattern repeats to the end of the region" onClick={() => edit("Pattern Loop", (p) => ({ ...p, looped: p.looped === false }))}>
+            Loop
+          </button>
+        )}
+        {!toolsFit.has("add") && (
+          <button className="lb-btn ss-add" title="Add Row" aria-label="Add Row" disabled={pattern.rows.length >= ss.MAX_ROWS} onClick={() => edit("Add Row", (p) => ss.addRow(p, undefined, ss.newRowPitch(p, kit)))}>
+            <Icon.plus />
+          </button>
+        )}
         {learnRow !== null && <span className="ss-learn">Play a note for {ss.rowName(pattern.rows[learnRow]?.pitch ?? 0, kit)}…</span>}
         {frozen && <span className="ss-learn">The track is frozen.</span>}
       </div>
