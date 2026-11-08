@@ -30,6 +30,7 @@ impl Session {
         self.dirty = false;
         self.forget_unsaved();
         self.clips.clear();
+        self.clips_unreadable.clear();
         self.selected = None;
         self.locate(0);
         self.rebuild_graph();
@@ -133,20 +134,11 @@ impl Session {
         self.redo_stack.clear();
         self.auto = Default::default();
         self.forget_unsaved();
-        let mut clips = HashMap::new();
-        for c in &project.clips {
-            let p = if Path::new(&c.path).is_absolute() { PathBuf::from(&c.path) } else { dir.join(&c.path) };
-            match Clip::load(&p) {
-                Ok(clip) => {
-                    clips.insert(c.id, Arc::new(clip));
-                }
-                Err(e) => log::error!("missing audio file {}: {e}", p.display()),
-            }
-        }
         let project_rate = project.sample_rate;
-        self.clips = clips;
         self.project = project;
         self.dir = dir;
+        // Only what its tracks can play: clips nothing uses any more wait on disk (clip_loading.rs).
+        self.load_project_clips();
         self.saved = true;
         self.dirty = false;
         self.selected = self.project.tracks.first().map(|t| t.id);

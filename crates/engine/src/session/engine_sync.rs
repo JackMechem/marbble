@@ -440,6 +440,9 @@ impl Session {
     }
 
     pub(super) fn push_regions(&mut self, track: Id) {
+        // An undo, a switched alternative or a paste may bring back a clip that isn't loaded.
+        let clips = self.project.track(track).map(|t| t.clips()).unwrap_or_default();
+        self.load_clips(clips);
         if let Some(t) = self.project.track(track) {
             let r = self.regions_dsp(t);
             self.send(Cmd::Regions(track, r));
@@ -473,6 +476,7 @@ impl Session {
         let meter = self.meters.entry(t.id).or_default().clone();
         let mut dsp = TrackDsp::new(t.id, t.kind, Self::track_params(&self.project, t), meter);
         dsp.set_eq(self.eq_coeffs(t));
+        self.load_clips(t.clips());
         dsp.set_regions(self.regions_dsp(t));
         dsp.set_automation(lanes_dsp(&t.automation), t.auto_mode);
         // A new engine track starts without delay compensation; update_pdc sends it.

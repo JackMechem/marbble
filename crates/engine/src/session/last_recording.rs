@@ -56,19 +56,6 @@ fn same_regions(a: &[Region], b: &[Region]) -> bool {
     serde_json::to_value(a).ok() == serde_json::to_value(b).ok()
 }
 
-/// Every clip the project's regions and takes play, the inactive track alternatives' included.
-fn clips_in_use(p: &Project) -> std::collections::HashSet<Id> {
-    let regions = p.tracks.iter().flat_map(|t| t.regions.iter().chain(t.alternatives.iter().flat_map(|a| a.regions.iter())));
-    let mut used = std::collections::HashSet::new();
-    for r in regions {
-        if let RegionContent::Audio { clip, .. } = r.content {
-            used.insert(clip);
-            used.extend(r.takes.iter().flat_map(|f| f.takes.iter().map(|t| t.clip)));
-        }
-    }
-    used
-}
-
 /// The project documents in `dir` that can name a file: project.json and its autosave and
 /// backup, the backups (Backups/) and the other project alternatives (Alternatives/).
 fn project_docs(dir: &Path) -> Vec<String> {
@@ -243,7 +230,7 @@ impl Session {
         }
         self.delete_tracks(&made_tracks);
         // Files nothing plays any more leave the project, to be deleted when it's saved or closed.
-        let used = clips_in_use(&self.project);
+        let used = self.project.clips_in_use();
         for c in rec.clips.iter().filter(|c| !used.contains(c)) {
             if let Some(i) = self.project.clips.iter().position(|r| r.id == *c) {
                 let r = self.project.clips.remove(i);

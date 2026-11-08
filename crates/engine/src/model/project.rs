@@ -193,6 +193,13 @@ impl Project {
         }
     }
 
+    /// The clips its tracks can play (see [`Track::clips`]). The rest of `clips` is what no
+    /// region, take, alternative or freeze uses any more: deleted regions and takes, which
+    /// the undo history of an earlier session may have needed.
+    pub fn clips_in_use(&self) -> HashSet<Id> {
+        self.tracks.iter().flat_map(|t| t.clips()).collect()
+    }
+
     /// A new id. Ids are never reused within a project.
     pub fn alloc_id(&mut self) -> Id {
         let id = self.next_id;

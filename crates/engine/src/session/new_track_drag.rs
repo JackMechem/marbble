@@ -39,6 +39,7 @@ impl Session {
     /// onto new tracks: (source track, the copies in place). The originals stay. Returns every
     /// copy made and selects the last new track.
     pub fn drag_copy_regions_to_new_tracks(&mut self, items: &[(Id, Region)], lanes: &[(Id, Vec<Region>)]) -> Vec<Id> {
+        self.load_clips(lanes.iter().flat_map(|(_, regions)| regions.iter().flat_map(|r| r.clips())));
         let mut all: Vec<(Id, Region)> = items.iter().filter(|(t, _)| self.project.track(*t).is_some_and(|t| t.frozen.is_none())).cloned().collect();
         let mut last = None;
         for (source, regions) in lanes {

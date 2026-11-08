@@ -952,7 +952,9 @@ stack.
   order, all parameters, Stereo Out's inserts and the globals. Plug-ins that didn't change keep
   running with their state. Freeze transitions go through `restore_freeze`.
 - **Clips are never unloaded by undo**: recordings and imports made after a snapshot stay in
-  memory, so redo can bring their regions back.
+  memory, so redo can bring their regions back. A step whose regions play a clip that isn't
+  loaded (one nothing used when the project opened) gets it decoded by `push_regions` or
+  `build_track` before the engine sees the regions (`session/clip_loading.rs`).
 - **VST3 editors**: `restore()` leaves a plug-in that's still there alone, so an edit in a VST3's
   own editor can't undo through the snapshot. Its entry carries the state to load as well
   (`UndoEntry::plugin`), and `step_to` swaps that with the plug-in's present one, as it does the
@@ -984,6 +986,13 @@ Song.marbble/
   WAV already at the project rate stays where it is, with an absolute path).
 - **Save As** to a new folder copies every clip inside the old folder (or with a relative
   path) into the new `Audio Files/`.
+- **Opening decodes only the clips in use** (`Project::clips_in_use`: the tracks' regions, every
+  take in their folders, inactive track alternatives, freeze files). The rest of
+  `Project::clips` (regions and takes deleted in an earlier session) stays in the document and
+  on disk, so saving and Save As keep it, and is decoded when an edit makes it play again:
+  `push_regions` and `build_track` load what their regions need, and paste and Insert Cut
+  Section load the clips of what they place before checking it fits (`session/clip_loading.rs`).
+  A file that can't be read is logged once per open.
 - Plug-in state is `"<component base64>:<controller base64>"` in `PluginSlot::state`. It is
   filled only when saving, autosaving, checkpointing with `plugins`, or rebuilding; the UI
   never sees it (`for_ui`).
@@ -1438,11 +1447,12 @@ JACK do; `memlock.rs` holds the platform code and `memlock::plan` the decision, 
 - **Switching it off** (`AudioConfig::lock_memory`, applied by `set_audio_config` when it changes)
   calls `munlockall`; on again locks again. Tests and the checks never lock unless they ask.
 - **What gets pinned** is almost all clips: `Clip` holds every file decoded whole as f32, 11 MB a
-  minute per mono channel at 48 kHz, and opening a project loads every clip in `project.clips`,
-  also those no region or take uses any more. `memlock_check`'s drum session (24 minutes of mono
+  minute per mono channel at 48 kHz. Opening a project decodes only the clips its tracks can
+  play (see [Persistence](#8-persistence)); before that it decoded every one in `project.clips`. `memlock_check`'s drum session (24 minutes of mono
   takes plus the all-features project's instruments and effects) is 294 MB resident, 267 MB of it
   clips; the engine itself, with every built-in instrument and effect, is about 30 MB. A real
-  drum-recording project of 33 clips holds 1.7 GB, 0.7 GB of it takes no longer on any track.
+  drum-recording project of 33 clips held 1.7 GB, 0.7 GB of it takes no longer on any track,
+  which now stay on disk. A finished recording's buffers are shrunk to what was recorded.
 - macOS and Windows: `MemoryLock::Unsupported`, and the switch is hidden.
 
 ### Latency compensation for recordings
@@ -2439,6 +2449,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `session/plugins.rs` | Insert slots: loading, removing, bypassing, editors, the plug-in list. |
 | `session/periodic.rs` | `idle` and `tick`, and the warnings the tick carries. |
 | `session/files.rs` | New, save and open. |
+| `session/clip_loading.rs` | Decoding clips when the tracks can play them: on open only `Project::clips_in_use`, later whatever `push_regions` and `build_track` hand the engine. |
 | `session/routing.rs` | Auxes, sends and outputs; feedback-loop checks. |
 | `session/threads.rs` | Processing Threads: starting and stopping the workers, sending the task graph (`sync_parallel`). |
 | `session/multi_out.rs` | Multi-output instruments: the instruments' outputs for the UI, `add_output_aux`, `sync_output_buses` (called from `update_pdc`), what Freeze and Bounce in Place refuse. The design notes are at its top. |

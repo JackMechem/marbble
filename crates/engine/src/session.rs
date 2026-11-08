@@ -103,6 +103,7 @@ mod auto_write;
 mod last_recording;
 mod recovery;
 pub use recovery::{discard_journals, read_journal, recording_journals, JournalTake, RecJournal, RecordingRecovery, BACKUP_FILE};
+mod clip_loading;
 mod drum_replace;
 mod musical_moves;
 mod region_gain;
@@ -194,7 +195,11 @@ pub struct Session {
     pub dir: PathBuf,
     pub saved: bool,
     pub dirty: bool,
+    /// The clips decoded into memory: those the project's tracks can play, and any it has used
+    /// since it opened (see `session/clip_loading.rs`).
     clips: HashMap<Id, Arc<Clip>>,
+    /// Clips whose file couldn't be read, not tried again until a project opens.
+    clips_unreadable: std::collections::HashSet<Id>,
     /// The real-time engine. The audio callback only `try_lock`s it and outputs silence when
     /// that fails, so nothing may hold this lock on the main thread's regular paths (ticks,
     /// edits): talk to the engine through `cmd_tx`. The exceptions are offline renders (the
@@ -378,6 +383,7 @@ impl Session {
             saved: false,
             dirty: false,
             clips: HashMap::new(),
+            clips_unreadable: Default::default(),
             engine,
             cmd_tx,
             cmds_sent: 0,

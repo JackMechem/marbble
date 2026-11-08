@@ -245,6 +245,17 @@ pub struct Track {
     pub icon: Option<String>,
 }
 
+impl Track {
+    /// Every clip the track can play: its regions' (see [`Region::clips`]), its inactive
+    /// alternatives' and its freeze file.
+    pub fn clips(&self) -> Vec<Id> {
+        let alternatives = self.alternatives.iter().flat_map(|a| a.regions.iter());
+        let mut out: Vec<Id> = self.regions.iter().chain(alternatives).flat_map(|r| r.clips()).collect();
+        out.extend(self.frozen.map(|f| f.clip));
+        out
+    }
+}
+
 /// An output of a multi-output instrument, as an aux's input.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct InstrumentOutput {

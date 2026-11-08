@@ -149,6 +149,13 @@ pub struct Region {
 pub const MAX_LOOP_PASSES: i64 = 4096;
 
 impl Region {
+    /// The clips the region can play: an audio region's clip and every take in its folder,
+    /// whether the comp plays it or not.
+    pub fn clips(&self) -> Vec<Id> {
+        let RegionContent::Audio { clip, .. } = self.content else { return Vec::new() };
+        std::iter::once(clip).chain(self.takes.iter().flat_map(|f| f.takes.iter().map(|t| t.clip))).collect()
+    }
+
     /// Where the region stops sounding on the timeline: its loop end, or its own end.
     pub fn end(&self) -> i64 {
         let own = self.start + self.length;

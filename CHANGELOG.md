@@ -10,6 +10,12 @@ All notable changes to Marbble are recorded here. The format follows
 
 - **Double-clicking the Tempo track's line adds a tempo change.** It used to add one and then
   remove it again, since the second click landed on the new point.
+- **Opening a project no longer loads audio nothing uses.** Takes and regions deleted in an
+  earlier session stayed in memory every time the project opened (716 MB of 1.7 GB in a drum
+  project). Now only the audio the tracks can play is loaded (regions, every take in a take
+  folder, track alternatives, freeze files); the rest stays on disk and in the project, and
+  loads by itself if an edit brings it back. A finished recording also gives back the spare
+  room its buffers had grown.
 
 ## [0.1.0-alpha.10] - 2026-11-07
 

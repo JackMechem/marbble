@@ -242,6 +242,9 @@ impl Recorder {
                 }
             }
             finished.extend(t.sync.take());
+            // The buffers grew by doubling; the clip they become keeps only what was recorded,
+            // so a memory lock (memlock.rs) doesn't count the spare room for as long as it's open.
+            t.data.iter_mut().for_each(|c| c.shrink_to_fit());
             // Already reported while recording: don't say it twice.
             let error = if t.reported { None } else { t.error };
             out.push((id, FinishedTake { path: t.path, start: t.start, channels: t.data, error }));
@@ -270,6 +273,8 @@ mod tests {
             }
             let takes = rec.finish_all();
             assert_eq!(takes[0].1.channels[0].len(), 480);
+            // Not the minute the buffer started with.
+            assert!(takes[0].1.channels[0].capacity() < 48000);
             let spec = hound::WavReader::open(&path).unwrap().spec();
             assert_eq!(spec.bits_per_sample, bits);
             let d = crate::decode::decode(&path).unwrap();

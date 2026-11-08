@@ -262,6 +262,8 @@ impl Session {
     /// Places copies of `regions` (each with the track it goes on), shifted by `offset`.
     /// Regions that don't fit their track's kind are skipped. Returns the new ids.
     pub fn paste_regions(&mut self, items: &[(Id, Region)], offset: i64) -> Vec<Id> {
+        // A region on the clipboard may play a clip nothing used when the project opened.
+        self.load_clips(items.iter().flat_map(|(_, r)| r.clips()));
         let mut made = Vec::new();
         let mut touched = Vec::new();
         for (track, r) in items {

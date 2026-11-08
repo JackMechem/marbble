@@ -237,6 +237,7 @@ impl Session {
     /// regions.
     pub fn insert_cut_section(&mut self, at: i64) -> Result<Vec<Id>> {
         let clip = self.section_clip.clone().ok_or_else(|| anyhow!("Cut a section between the locators first."))?;
+        self.load_clips(clip.tracks.iter().flat_map(|(_, regions, _)| regions.iter().flat_map(|r| r.clips())));
         let at = at.max(0);
         let len = clip.length;
         let receiving: Vec<Id> = clip.tracks.iter().filter(|(_, r, _)| !r.is_empty()).map(|(t, _, _)| *t).collect();
@@ -404,6 +405,7 @@ impl Session {
     /// Paste Replace: pastes as `paste_regions` does, after deleting what lies under the
     /// pasted range on each track that receives regions (cut at its edges).
     pub fn paste_replace(&mut self, items: &[(Id, Region)], offset: i64) -> Vec<Id> {
+        self.load_clips(items.iter().flat_map(|(_, r)| r.clips()));
         let mut spans: Vec<(Id, i64, i64)> = Vec::new();
         for (track, r) in items {
             let fits = match (self.project.track(*track).map(|t| t.kind), &r.content) {
