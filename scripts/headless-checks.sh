@@ -29,6 +29,7 @@ CHECKS=(
   "fx_check tone dir"
   "fx_play_check tone dir"
   "takes_check tone dir"
+  "take_tracks_check tone dir"
   "recovery_check tone dir"
   "crossfade_check tone dir"
   "dragmode_check tone dir"

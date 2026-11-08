@@ -2,10 +2,12 @@
 // triangle opens it into one row per take below the track's lane, and swiping across a take
 // row puts that stretch of the take in the comp (Quick Swipe Comping). The comp logic lives in
 // the engine (crates/engine/src/takes.rs); this file draws folders and sends the edits.
+import { ask } from "@tauri-apps/plugin-dialog";
 import { act, actMade, type Id, type Region, type Take, type TakeFolder, type Track } from "./api";
 import { compNames, currentComp, isMidiFolder } from "./comps";
 import type { MenuItem } from "./components/Menu";
 import { askName, notEmpty } from "./components/NameSheet";
+import { emptiedQuestion, emptiedTracks, packTracks } from "./packTakes";
 import { getState, setState } from "./store";
 import { mix, theme } from "./theme";
 import { drawWave, ensureWave, waveCache } from "./waveform";
@@ -279,8 +281,22 @@ export function takeFolderMenu(r: Region & { takes: TakeFolder }): MenuItem[] {
   ];
 }
 
-/** Pack Take Folder: the selected audio regions on one track become a folder. */
-export function packTakeFolder(ids: Id[] = getState().selectedRegions) {
+/** Pack Take Folder: the selected audio regions become a folder, on the topmost of their
+ *  tracks. Tracks the pack leaves empty can then be deleted, as a step of its own. */
+export async function packTakeFolder(ids: Id[] = getState().selectedRegions) {
   if (ids.length < 2) return;
-  actMade("pack_take_folder", { ids }).then((made) => made && setState({ selectedRegions: made, focus: "regions" }));
+  const from = packTracks(getState().snap?.project.tracks ?? [], ids);
+  const made = await actMade("pack_take_folder", { ids });
+  if (!made) return;
+  setState({ selectedRegions: made, focus: "regions" });
+  const empty = emptiedTracks(getState().snap?.project.tracks ?? [], from);
+  if (!empty.length) return;
+  const names = empty.map((id) => getState().snap?.project.tracks.find((t) => t.id === id)?.name ?? "");
+  const ok = await ask(emptiedQuestion(names), {
+    title: "Pack Take Folder",
+    kind: "info",
+    okLabel: empty.length > 1 ? "Delete Tracks" : "Delete Track",
+    cancelLabel: "Keep",
+  });
+  if (ok && (await act("delete_tracks", { ids: empty }))) setState({ selectedTracks: getState().selectedTracks.filter((id) => !empty.includes(id)) });
 }

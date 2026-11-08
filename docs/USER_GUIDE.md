@@ -1340,8 +1340,14 @@ heavy tracks you aren't listening to.
 Take folders follow Logic's Quick Swipe Comping.
 
 - **Making one.** Record with Cycle on (each pass becomes a take), or select several audio
-  regions on one track and choose **Pack Take Folder** (Ctrl+F on Linux and Windows,
-  Control+⌘F on macOS; also in the Edit and region menus): one take per region.
+  regions and choose **Pack Take Folder** (Ctrl+F on Linux and Windows, Control+⌘F on macOS;
+  also in the Edit and region menus): one take per region, each where it was.
+- **Packing takes from several tracks.** Takes recorded one per track (Overhead 1, Overhead 2
+  and so on) pack the same way: select their regions on all the tracks and choose Pack Take
+  Folder. The folder goes on the topmost of the tracks, its takes in track order (the top
+  track's region is Take 1), and the bottom track's take is heard. Marbble then offers to
+  delete the tracks left with no regions; Keep leaves them. The pack and the delete are an
+  undo step each.
 - **The comp.** A folder plays its *comp*: which take is heard where. A new folder starts with
   the newest take, older takes filling in where it has no audio. Where one take hands over to
   another they crossfade over the Crossfade Time (Settings › Editing, 20 ms equal power by

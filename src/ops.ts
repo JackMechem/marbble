@@ -445,8 +445,9 @@ export function regionMenu(r: Region, rename: () => void): MenuItem[] {
         : []),
       { label: "Reverse", onClick: () => act("reverse_regions", { ids: audio }) },
     );
-    // Take folders: the folder's own menu, and Pack Take Folder for plain regions on one track.
-    const packable = audio.length > 1 && new Set(audio.map((id) => trackOf(id)?.id)).size === 1 && regs.every((x) => !x.takes);
+    // Take folders: the folder's own menu, and Pack Take Folder for plain regions (on one
+    // track or several).
+    const packable = audio.length > 1 && regs.every((x) => !x.takes);
     items.push(
       { separator: true },
       ...(isFolder(r) ? [{ label: "Take Folder", children: takeFolderMenu(r) }] : []),

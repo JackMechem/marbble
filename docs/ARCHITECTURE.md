@@ -2524,6 +2524,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `loops.ts` | Looping regions in the tracks area. |
 | `takes.ts` | Take folders in the tracks area: take rows, comp drawing, swipes, the take folder menu. |
 | `comps.ts` | Comp names, MIDI take folders and the folder's name bar label; pure, tested. |
+| `packTakes.ts` | Pack Take Folder across tracks: the tracks packed from and those left empty; pure, tested. |
 | `fades.ts` | Fade curves and crossfades for drawing (mirrors `fades.rs`), the inspector's fade types, the handles' places; pure, tested. |
 | `dragModes.ts` | The drag modes' rules for drawing a drag's outcome (mirrors `drag_modes.rs`); pure, tested. |
 | `regionBar.ts` | A region's name bar and body at a given track height; pure, tested. |

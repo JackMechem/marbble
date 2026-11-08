@@ -486,7 +486,7 @@ most of it the everyday editing and mixing work.
 - [ ] Export the active take to a new track (p. 238)
 - [x] Flatten, and Flatten and Merge (p. 241)
 - [~] Unpack to existing tracks, new tracks or track alternatives (p. 243–246). *Unpack to New Tracks only.*
-- [x] Pack regions into a take folder (p. 247)
+- [x] Pack regions into a take folder (p. 247). *From one track or several; the tracks left empty can be deleted.*
 
 ### Tracks: professional (p. 141–148, 161–167)
 

@@ -421,15 +421,23 @@ impl Session {
         made
     }
 
-    /// Pack Take Folder: turns audio regions on one track into a take folder spanning them,
-    /// one take each (the newest region, last on the track, starts out heard). Returns it.
+    /// Pack Take Folder: turns audio regions into a take folder spanning them, one take each.
+    /// Regions on several tracks (takes recorded one per track) go into a folder on the topmost
+    /// of them, taken in track order, top first, so the take numbers follow the old tracks. The
+    /// last take (the newest region on one track, the bottom track's otherwise) starts out
+    /// heard. The other tracks keep their regions that weren't packed. Returns the folder.
     pub fn pack_take_folder(&mut self, ids: &[Id]) -> Result<Id> {
-        let Some((track, _)) = ids.first().and_then(|id| self.find_region(*id)) else { return Err(anyhow!("No regions to pack")) };
-        let t = self.project.track(track).unwrap();
-        let picked: Vec<Region> = t.regions.iter().filter(|r| ids.contains(&r.id)).cloned().collect();
-        if picked.len() != ids.len() {
-            return Err(anyhow!("Take folders are packed from regions on one track"));
+        let mut tracks: Vec<Id> = Vec::new();
+        let mut picked: Vec<Region> = Vec::new();
+        for t in &self.project.tracks {
+            for r in t.regions.iter().filter(|r| ids.contains(&r.id)) {
+                if !tracks.contains(&t.id) {
+                    tracks.push(t.id);
+                }
+                picked.push(r.clone());
+            }
         }
+        let Some(&track) = tracks.first() else { return Err(anyhow!("No regions to pack")) };
         if picked.len() < 2 || picked.iter().any(|r| r.takes.is_some() || !matches!(r.content, RegionContent::Audio { .. })) {
             return Err(anyhow!("Select two or more audio regions to pack into a take folder"));
         }
@@ -470,6 +478,10 @@ impl Session {
             params: Default::default(),
             pattern: None,
         };
+        for &other in &tracks[1..] {
+            self.project.track_mut(other).unwrap().regions.retain(|r| !ids.contains(&r.id));
+            self.push_regions(other);
+        }
         let t = self.project.track_mut(track).unwrap();
         let at = t.regions.iter().position(|r| ids.contains(&r.id)).unwrap_or(t.regions.len());
         t.regions.retain(|r| !ids.contains(&r.id));
@@ -708,6 +720,82 @@ mod tests {
         assert_eq!(notes_of(&s, folder), vec![70]);
         let first = &s.project.track(tracks[0]).unwrap().regions[0];
         assert!(first.muted && matches!(&first.content, RegionContent::Midi { notes, .. } if notes[0].pitch == 60));
+    }
+
+    /// A session on the null device with a 10 s audio clip, and `tracks` audio tracks.
+    fn audio_session(tracks: usize) -> (Session, Vec<Id>, Id) {
+        let cfg = crate::audio_io::AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
+        let mut s = Session::new(cfg, Vec::new());
+        s.dir = std::env::temp_dir().join(format!("marbble-audio-takes-{}", std::process::id()));
+        let ids = (0..tracks).map(|_| s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap()).collect();
+        let path = s.dir.join("Audio Files").join("ramp.wav");
+        let ramp: Vec<f32> = (0..480_000).map(|i| i as f32 / 480_000.0).collect();
+        let clip = s.add_clip(&path, Clip::from_channels(path.clone(), 48000, vec![ramp]));
+        (s, ids, clip)
+    }
+
+    fn add_audio(s: &mut Session, track: Id, clip: Id, name: &str, start: i64, length: i64, offset: i64) -> Id {
+        let id = s.project.alloc_id();
+        let content = RegionContent::Audio { clip, offset, gain_db: 0.0, fade_in: 0, fade_out: 0, fade_shape: FadeShape::default() };
+        let r = Region {
+            id,
+            name: name.into(),
+            start,
+            length,
+            muted: false,
+            color: None,
+            content,
+            loop_end: None,
+            takes: None,
+            params: Default::default(),
+            pattern: None,
+        };
+        s.project.track_mut(track).unwrap().regions.push(r);
+        s.push_regions(track);
+        id
+    }
+
+    #[test]
+    fn pack_gathers_takes_from_several_tracks() {
+        let (mut s, t, clip) = audio_session(4);
+        // One take per track, the bottom one recorded first on its track's timeline; the third
+        // track's region stays where it is.
+        let a = add_audio(&mut s, t[0], clip, "Overhead 1", 48_000, 96_000, 0);
+        let b = add_audio(&mut s, t[1], clip, "Overhead 2", 24_000, 96_000, 1_000);
+        let keep = add_audio(&mut s, t[1], clip, "Fill", 400_000, 10_000, 0);
+        let c = add_audio(&mut s, t[3], clip, "Overhead 3", 48_000, 120_000, 2_000);
+        let other = add_audio(&mut s, t[2], clip, "Kick", 0, 10_000, 0);
+        s.checkpoint("Pack Take Folder", None, false);
+        // The order of the ids doesn't matter: tracks go top first.
+        let folder = s.pack_take_folder(&[c, a, b]).unwrap();
+        let (track, _) = s.find_region(folder).unwrap();
+        assert_eq!(track, t[0], "the folder is on the topmost track");
+        let r = s.region(folder).unwrap().clone();
+        assert_eq!((r.start, r.length), (24_000, 168_000 - 24_000));
+        let f = r.takes.clone().unwrap();
+        let names: Vec<&str> = f.takes.iter().map(|k| k.name.as_str()).collect();
+        assert_eq!(names, ["Overhead 1", "Overhead 2", "Overhead 3"]);
+        // Each take keeps its own place: take time 0 is the folder start.
+        let spans: Vec<(i64, i64, i64)> = f.takes.iter().map(|k| (k.start, k.end, k.offset)).collect();
+        assert_eq!(spans, [(24_000, 120_000, -24_000), (0, 96_000, 1_000), (24_000, 144_000, 2_000 - 24_000)]);
+        assert_eq!(f.whole_take(), None, "the last take is heard, the others fill in before it");
+        assert_eq!(f.comp.last().unwrap().take, f.takes[2].id);
+        // The other tracks lose only what was packed.
+        assert_eq!(s.project.track(t[1]).unwrap().regions.iter().map(|r| r.id).collect::<Vec<_>>(), [keep]);
+        assert!(s.project.track(t[3]).unwrap().regions.is_empty());
+        assert_eq!(s.project.track(t[2]).unwrap().regions[0].id, other);
+        // One undo step puts every region back on its own track.
+        s.undo();
+        for (track, id) in [(t[0], a), (t[1], b), (t[3], c)] {
+            assert_eq!(s.find_region(id).map(|(tr, _)| tr), Some(track));
+        }
+        assert!(s.region(folder).is_none());
+        // MIDI mixed in is refused, wherever it is.
+        let m = s.add_track(TrackKind::Instrument, InputSel::None, None, None).unwrap();
+        s.place_midi_takes(m, 0, 1000, vec![(Vec::new(), Vec::new())]);
+        let midi = s.project.track(m).unwrap().regions[0].id;
+        assert!(s.pack_take_folder(&[a, midi]).is_err());
+        assert!(s.pack_take_folder(&[a]).is_err());
     }
 
     #[test]

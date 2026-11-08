@@ -47,7 +47,8 @@ pub fn unpack_take_folder(state: State<AppState>, region: Id) -> R<Made> {
     edit_made(&state, "Unpack Take Folder", false, |s| Ok(s.unpack_take_folder(region)))
 }
 
-/// Pack Take Folder from audio regions on one track. Returns the folder.
+/// Pack Take Folder from audio regions on one track or several (onto the topmost). Returns
+/// the folder.
 #[tauri::command]
 pub fn pack_take_folder(state: State<AppState>, ids: Vec<Id>) -> R<Made> {
     edit_made(&state, "Pack Take Folder", false, |s| s.pack_take_folder(&ids).map(|id| vec![id]))

@@ -6,6 +6,12 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Pack Take Folder from several tracks.** Takes recorded one per track pack into one take
+  folder on the topmost track, in track order, each at its own position. Marbble then offers to
+  delete the tracks left with no regions.
+
 ### Fixed
 
 - A take lands where it was played when an undo during the recording turns a track with latent
