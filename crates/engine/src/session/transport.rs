@@ -133,6 +133,9 @@ impl Session {
         self.rec_punch = Some(punch);
         self.rec_plan = Some(plan);
         self.start_journal();
+        // Discard Last Recording returns to where playback started.
+        self.rec_play_from = if playing { self.last_play_from } else { playhead };
+        self.rec_rating = None;
         self.last_play_from = punch;
         self.send(Cmd::Autopunch { range: quiet, capture });
         self.send(Cmd::Record { from, punch });
@@ -143,7 +146,7 @@ impl Session {
         Ok(())
     }
 
-    fn next_take_path(&self, track_name: &str) -> PathBuf {
+    pub(super) fn next_take_path(&self, track_name: &str) -> PathBuf {
         let clean = |n: &str| -> String { n.chars().map(|c| if c.is_alphanumeric() || c == ' ' || c == '-' { c } else { '_' }).collect() };
         let clean = match self.prefs.recording.take_names {
             TakeNames::ProjectTrack => format!("{} - {}", clean(&self.project.name), clean(track_name)),
@@ -182,6 +185,11 @@ impl Session {
         // MIDI only travels one way: the performer reacts to audio that left late.
         let midi_comp = plan.map(|p| p.midi_latency).unwrap_or_else(|| self.midi_latency_frames());
         let mut touched = Vec::new();
+        // What the tracks held before, and what the recording adds, for Discard Last Recording.
+        let before: Vec<(Id, Vec<Region>)> =
+            takes.iter().map(|(t, _)| *t).chain(self.rec_midi_track).filter_map(|t| Some((t, self.project.track(t)?.regions.clone()))).collect();
+        let mut clips = Vec::new();
+        let mut midi = Vec::new();
         for (track, take) in takes {
             if let Some(e) = &take.error {
                 self.warning = Some(e.clone());
@@ -198,6 +206,7 @@ impl Session {
             let clip = Clip::from_channels(take.path.clone(), self.sample_rate() as u32, take.channels);
             self.clips.insert(clip_id, Arc::new(clip));
             self.project.clips.push(ClipRef { id: clip_id, path: rel });
+            clips.push(clip_id);
             let region_id = self.project.alloc_id();
             // Line the take up with what was being heard; trim anything shifted before zero.
             let shifted = take.start - comp;
@@ -260,7 +269,7 @@ impl Session {
                     .filter(|(n, c)| !n.is_empty() || !c.is_empty())
                     .collect();
                 if !takes.is_empty() {
-                    self.place_midi_takes(track, start, end, takes);
+                    midi.extend(self.place_midi_takes(track, start, end, takes));
                     touched.push(track);
                 }
                 events.clear();
@@ -275,6 +284,7 @@ impl Session {
                 };
                 let id = self.project.alloc_id();
                 if let (false, Some(t)) = (merged, self.project.track_mut(track)) {
+                    midi.push(id);
                     let name = t.name.clone();
                     t.regions.push(Region {
                         id,
@@ -295,6 +305,7 @@ impl Session {
         }
         touched.sort_unstable();
         touched.dedup();
+        self.note_recording(before, &touched, clips, midi);
         for t in touched {
             self.push_regions(t);
         }

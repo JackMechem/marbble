@@ -13,6 +13,14 @@ All notable changes to Marbble are recorded here. The format follows
   overlaps are packed with the new take into a take folder, and a recording over a take folder
   adds a take to it, the new take heard. Every armed track does this on its own, so recording
   two mics again gives both folders the new take. Settings saved before keep their choice.
+- **Rate and colour takes.** Mark a take good (★) or bad (✗) from the take folder menu or by
+  right-clicking its row, and give it a colour of its own; **Delete Bad Takes** clears out the
+  bad ones. Settings › Recording › Take Colors colours each new take automatically.
+- **Mark Take as Good / Bad** (Alt+G, Alt+B): while recording they mark the take being
+  recorded, afterwards the newest take of the last recording on every track it went to.
+- **Discard Last Recording** (Ctrl+., ⌘. on macOS, and in the Record menu) stops if you are
+  recording, takes the last recording off every track it went to as one undoable step, and
+  returns to where playback started. Its files are deleted once nothing can bring them back.
 
 ### Fixed
 

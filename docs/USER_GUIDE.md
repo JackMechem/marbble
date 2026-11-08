@@ -502,6 +502,22 @@ A newer region always hides the older audio it overlaps during playback, as in L
 older regions are not deleted; move or trim the newer one to hear them again. Regions that
 crossfade are the exception: both play across the crossfade.
 
+### Discarding and marking takes
+
+- **Discard Last Recording** (Ctrl+. on Linux and Windows, ⌘. on macOS; also in the Record
+  menu) throws the last recording away: it stops first if you are still recording, takes the
+  recording off every track it went to (an overhead and a kick mic alike), and returns the
+  playhead to where playback started. Each track goes back to how it was before, regions packed
+  into a take folder included. On a track you have edited since, only the recorded take goes.
+  It is one Undo step. The audio files are deleted once nothing can bring them back: when you
+  save with no undo step left that needs them, or when you close the project (unless the saved
+  project still uses them).
+- **Mark Take as Good** (Alt+G, ⌥G on macOS) and **Mark Take as Bad** (Alt+B, ⌥B): pressed
+  while recording, they mark the take being recorded, which lands marked. After recording they
+  mark the newest take of the last recording on each track it went to; with that gone, the take
+  heard in the selected take folders. A recording over nothing becomes a take folder of one take
+  so it can carry the mark. In a cycle recording the newest pass is the one marked.
+
 ### Count-in and pre-roll
 
 - **Count-in** (the Count-in button in the control bar, or Shift+K) plays the click for 1 to 4 bars before recording
@@ -1380,10 +1396,18 @@ Take folders follow Logic's Quick Swipe Comping.
     waveform.
   - Click a take row to hear that take throughout.
 - **The take folder menu** (click the badge, right-click a take row, or region menu › Take
-  Folder): the takes (pick one to hear), Open / Close Take Folder, Rename Take, Delete Take,
-  Delete Unused Takes, **Flatten** (the comp becomes ordinary regions, one per stretch),
+  Folder): the takes (pick one to hear), Open / Close Take Folder, Rename Take, **Rate Take**,
+  **Take Color**, Delete Take, Delete Unused Takes, **Delete Bad Takes** (the takes marked bad; a
+  folder of nothing but bad takes keeps its newest), **Flatten** (the comp becomes ordinary regions, one per stretch),
   **Flatten and Merge** (the comp is rendered to one new audio file), and **Unpack to New
   Tracks** (every take on its own new, muted track, and the comp flattened in place).
+- **Rating and colouring takes.** Mark a take good (★) or bad (✗) from the take folder menu
+  (Rate Take), by right-clicking its row (the menu then starts with that take's Good, Bad and
+  Color), or with the Mark Take keys (see [Discarding and marking
+  takes](#discarding-and-marking-takes)). The mark shows before the take's name in its row and
+  in the menu; choose it again to clear it. A take's colour (Take Color, or Color on its row)
+  tints its row; Folder Color goes back to the folder's. With Settings › Recording › Take
+  Colors › Color takes automatically on, each take gets its own colour as it's recorded.
 - A folder moves, trims, splits, loops, fades, crossfades and changes gain like any audio
   region. Every comp edit can be undone, folders are saved with the project, and bounces,
   exports and Bounce in Place render the comp.
@@ -2939,6 +2963,7 @@ compensation rows needs **Apply Changes**, or **Done**, which applies them and c
 | Pre-roll | 0 to 30 seconds, used when Count-in is off | 0 |
 | Overlapping Recordings › Audio | Create take folders; Put the new take on top; Create a new track; Replace what's underneath (see [Recording audio](#recording-audio)) | Create take folders (on top for settings saved before it existed) |
 | Overlapping Recordings › MIDI | Create a new region; Merge into the existing region; Replace in the recorded range; Create take folders (see [Recording MIDI](#recording-midi)) | New region |
+| Take Colors | Color takes automatically: each take in a take folder gets a colour of its own as it's recorded | Off |
 
 With a Recording Folder outside the project, Save As does not copy those recordings into the
 new project folder; the project refers to them where they are.
@@ -3030,6 +3055,9 @@ shown.
 | \` | Catch Playhead |
 | Alt+\` (⌥\` on macOS) | Scroll to Playhead |
 | Ctrl+P (Control+⌘P on macOS) | Autopunch Mode |
+| Ctrl+. (⌘. on macOS) | Discard Last Recording |
+| Alt+G (⌥G on macOS) | Mark Take as Good |
+| Alt+B (⌥B on macOS) | Mark Take as Bad |
 
 ### Navigation
 

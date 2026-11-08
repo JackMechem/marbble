@@ -4,7 +4,7 @@
 use std::time::{Duration, Instant};
 
 use daw_engine::audio_io::AudioConfig;
-use daw_engine::model::{ChannelEq, Id, InputSel, Region, RegionContent, TrackKind};
+use daw_engine::model::{ChannelEq, Id, InputSel, Region, RegionContent, TakeRating, TrackKind};
 
 const BALLAST: usize = 40;
 use daw_engine::session::{BitDepth, RenderOptions, TrackPatch};
@@ -358,6 +358,23 @@ fn main() {
     }
     s.undo();
     ok &= check("one undo takes the take back off both mics", mics.iter().all(|&m| regions(&s, m).len() == 1 && regions(&s, m)[0].takes.is_none()));
+
+    // ---- rating the new take, then Discard Last Recording ---------------------------------------
+    s.locate(bar);
+    std::thread::sleep(Duration::from_millis(60));
+    ok &= record(&mut s, None, 1, 3 * bar);
+    let marked = s.mark_take(TakeRating::Good, &[]);
+    let rated = |s: &Session, m: Id| regions(s, m).first().and_then(|r| r.takes.as_ref()).map(|f| f.takes.iter().map(|t| t.rating).collect::<Vec<_>>());
+    ok &= check(
+        &format!("Mark Take as Good marks the new take on both mics ({:?})", rated(&s, mics[0])),
+        marked && mics.iter().all(|&m| rated(&s, m) == Some(vec![TakeRating::None, TakeRating::Good])),
+    );
+    s.locate(5 * bar);
+    let discarded = s.discard_last_recording();
+    ok &= check(
+        &format!("Discard Last Recording puts both mics back and returns to where playback started ({discarded:?}, at {})", s.position()),
+        discarded.is_ok() && s.position() == bar && mics.iter().all(|&m| regions(&s, m).len() == 1 && regions(&s, m)[0].takes.is_none()),
+    );
 
     // The comp still plays after all of this (undo and recording leave the folder alone).
     let again = render(&mut s, 0, len);

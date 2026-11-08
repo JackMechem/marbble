@@ -258,6 +258,7 @@ fn spec() -> Vec<Spec> {
             vec![
                 item("play", "Play / Stop"),
                 item("record", "Record"),
+                item("discard-recording", "Discard Last Recording"),
                 Sep,
                 check("cycle", "Cycle"),
                 check("autopunch", "Autopunch"),

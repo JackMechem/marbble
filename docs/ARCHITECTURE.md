@@ -363,6 +363,17 @@ Times are in samples at the project rate.
   overlapped audio regions and the new take(s) into a folder, or adds them to the folder
   there, by turning each into takes on the timeline (`timeline_takes`) and moving them into
   the folder's take time.
+- A `Take` can carry a `rating` (`TakeRating`: none, good, bad) and its own `color`; both are
+  left out of the file when unset. **The last recording**: `place_recording` ends with
+  `note_recording` (`session/last_recording.rs`), which keeps a `LastRecording` (each track it
+  changed with its regions before and after, its new clips and MIDI ids). It applies the mark
+  pressed while recording (`rec_rating`; a plain recorded region becomes a one-take folder to
+  hold it) and Settings › Recording › Color takes. Discard Last Recording restores the tracks
+  still as the recording left them and, on a track edited since, removes just the recorded
+  takes; the clips nothing plays any more leave `Project::clips` and wait in
+  `Session::discarded`. `purge_discarded` deletes their files on an in-place save when no undo
+  or redo step lists the clip and no document in the project folder (project.json, autosave,
+  backups, alternatives) names the file, and on closing the project when no document does.
 
 ### Notes and controllers
 

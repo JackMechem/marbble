@@ -115,6 +115,13 @@ export function RecordingPane({ close }: { close: () => void }) {
           />
         </Row>
       </Section>
+      <Section title="Takes">
+        <Row label="Take Colors:" note="Each take in a take folder gets a colour of its own as it's recorded. Change one from the take folder menu.">
+          <Check checked={!!r.color_takes} onChange={(on) => setPrefs("recording", { color_takes: on })}>
+            Color takes automatically
+          </Check>
+        </Row>
+      </Section>
       <Foot close={close} />
     </>
   );

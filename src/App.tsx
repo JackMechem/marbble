@@ -291,6 +291,9 @@ function handleMenu(id: string) {
     case "record":
       act("record");
       break;
+    case "discard-recording":
+      act("discard_last_recording");
+      break;
     case "play":
       act("toggle_play");
       break;
@@ -394,6 +397,9 @@ function handleMenu(id: string) {
 const KEY_ACTIONS: Record<string, () => void> = {
   play: () => act("toggle_play"),
   record: () => act("record"),
+  "discard-recording": () => handleMenu("discard-recording"),
+  "mark-take-good": () => markTake("good"),
+  "mark-take-bad": () => markTake("bad"),
   cycle: () => transport.toggleCycle(),
   metronome: () => handleMenu("metronome"),
   "count-in": () => handleMenu("count-in"),
@@ -465,6 +471,14 @@ const KEY_ACTIONS: Record<string, () => void> = {
   "step-input": () => handleMenu("step-input"),
   ...ARRANGE_COMMANDS,
 };
+
+/** Mark Take as Good / Bad: the take being recorded or just recorded, else the take heard in
+ *  each selected take folder. */
+function markTake(rating: "good" | "bad") {
+  const s = getState();
+  const folders = (s.snap?.project.tracks ?? []).flatMap((t) => t.regions.filter((r) => r.takes && s.selectedRegions.includes(r.id)).map((r) => r.id));
+  act("mark_take", { rating, regions: folders });
+}
 
 function nudgeRegions(dir: number) {
   const s = getState();

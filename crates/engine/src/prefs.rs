@@ -209,6 +209,9 @@ pub struct RecordingPrefs {
     /// The control bar's Replace button: every recording replaces what it overlaps, audio and
     /// MIDI alike, whatever `audio_overlap` and `midi_overlap` say.
     pub replace: bool,
+    /// Give each new take in a take folder a colour of its own (Logic's colour takes
+    /// automatically).
+    pub color_takes: bool,
 }
 
 /// Overlapping Recordings › Audio's default before "Create take folders" existed.
@@ -247,6 +250,7 @@ impl Default for RecordingPrefs {
             take_names: TakeNames::TrackNumber,
             folder: None,
             replace: false,
+            color_takes: false,
         }
     }
 }

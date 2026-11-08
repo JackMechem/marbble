@@ -157,6 +157,7 @@ pub fn base(s: &mut Session, dir: &Path) -> World {
         gain_db: 0.0,
         notes: vec![note(0, q, pitch, 100), note(2 * q, q, pitch + 4, 100), note(BAR + q, q, pitch + 7, 100)],
         cc: Vec::new(),
+        ..Default::default()
     };
     let mut folder = TakeFolder::new();
     folder.takes = vec![take(t1, "Take 1", 48), take(t2, "Take 2", 55)];

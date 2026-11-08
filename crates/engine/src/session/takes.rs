@@ -112,6 +112,7 @@ impl Session {
                 gain_db: 0.0,
                 notes: Vec::new(),
                 cc: Vec::new(),
+                ..Default::default()
             });
         }
         folder.default_comp();
@@ -350,6 +351,35 @@ impl Session {
         self.edit_folder(region, |f, _| f.remove_unused());
     }
 
+    /// Marks a take good or bad (or neither).
+    pub fn set_take_rating(&mut self, region: Id, take: Id, rating: TakeRating) {
+        self.edit_folder(region, |f, _| {
+            if let Some(t) = f.take_mut(take) {
+                t.rating = rating;
+            }
+        });
+    }
+
+    /// A take's own colour (None: the folder's).
+    pub fn set_take_color(&mut self, region: Id, take: Id, color: Option<String>) {
+        self.edit_folder(region, |f, _| {
+            if let Some(t) = f.take_mut(take) {
+                t.color = color;
+            }
+        });
+    }
+
+    /// Delete Bad Takes: removes the takes marked bad; the comp loses the parts they played. A
+    /// folder of nothing but bad takes keeps its newest.
+    pub fn delete_bad_takes(&mut self, region: Id) {
+        self.edit_folder(region, |f, _| {
+            let bad: Vec<Id> = f.takes.iter().filter(|t| t.rating == TakeRating::Bad).map(|t| t.id).collect();
+            for id in bad.iter().take(bad.len().min(f.takes.len().saturating_sub(1))) {
+                f.remove_take(*id);
+            }
+        });
+    }
+
     /// Flatten: replaces the folder with plain regions, one per stretch of its comp (a looping
     /// folder flattens every pass). Returns the new regions.
     pub fn flatten_take_folder(&mut self, region: Id) -> Vec<Id> {
@@ -516,6 +546,7 @@ impl Session {
                 gain_db,
                 notes: Vec::new(),
                 cc: Vec::new(),
+                ..Default::default()
             });
         }
         folder.default_comp();
@@ -565,6 +596,7 @@ fn timeline_takes(r: &Region) -> Vec<Take> {
             gain_db,
             notes: Vec::new(),
             cc: Vec::new(),
+            ..Default::default()
         }],
     }
 }
@@ -609,15 +641,16 @@ impl Session {
     /// Recording over a MIDI take folder adds the passes to it as new takes; recording over
     /// plain MIDI regions packs them into a new folder with the passes; otherwise several
     /// passes make a new folder and a single one a plain region. The newest take is heard.
-    pub(super) fn place_midi_takes(&mut self, track: Id, start: i64, end: i64, passes: Vec<(Vec<Note>, Vec<CcEvent>)>) {
-        let Some(t) = self.project.track(track) else { return };
+    /// Returns the recorded takes (or the region).
+    pub(super) fn place_midi_takes(&mut self, track: Id, start: i64, end: i64, passes: Vec<(Vec<Note>, Vec<CcEvent>)>) -> Vec<Id> {
+        let Some(t) = self.project.track(track) else { return Vec::new() };
         let name = t.name.clone();
         let overlaps = |r: &Region| matches!(r.content, RegionContent::Midi { .. }) && !r.is_looped() && r.start < end && r.start + r.length > start;
         let folder_at = t.regions.iter().position(|r| r.takes.is_some() && overlaps(r));
         let packed: Vec<Region> =
             if folder_at.is_some() { Vec::new() } else { t.regions.iter().filter(|r| r.takes.is_none() && overlaps(r)).cloned().collect() };
         if folder_at.is_none() && packed.is_empty() && passes.len() < 2 {
-            let Some((notes, cc)) = passes.into_iter().next() else { return };
+            let Some((notes, cc)) = passes.into_iter().next() else { return Vec::new() };
             let id = self.project.alloc_id();
             let region = Region {
                 id,
@@ -633,7 +666,7 @@ impl Session {
                 pattern: None,
             };
             self.project.track_mut(track).unwrap().regions.push(region);
-            return;
+            return vec![id];
         }
         // The folder: the one recorded over, or a new one where the old regions were.
         let mut folder = match folder_at {
@@ -677,7 +710,7 @@ impl Session {
             let tt = at + to_tt;
             let notes = notes.iter().map(|n| Note { start: n.start + tt, ..*n }).collect();
             let cc = cc.iter().map(|c| CcEvent { start: c.start + tt, ..*c }).collect();
-            f.takes.push(Take { id, name, clip: 0, offset: 0, start: tt, end: tt + len, gain_db: 0.0, notes, cc });
+            f.takes.push(Take { id, name, clip: 0, offset: 0, start: tt, end: tt + len, gain_db: 0.0, notes, cc, ..Default::default() });
         };
         for r in &packed {
             if let RegionContent::Midi { notes, cc } = &r.content {
@@ -685,9 +718,11 @@ impl Session {
                 add(f, id, r.start, r.length, notes, cc);
             }
         }
+        let mut recorded = Vec::new();
         for (notes, cc) in &passes {
             let id = self.project.alloc_id();
             add(f, id, start, end - start, notes, cc);
+            recorded.push(id);
         }
         let newest = f.takes.last().map(|t| t.id).unwrap();
         f.select_whole(newest);
@@ -704,6 +739,7 @@ impl Session {
                 t.regions.insert(at.min(t.regions.len()), folder);
             }
         }
+        recorded
     }
 
     /// Flatten for a MIDI take folder: it becomes a plain region of the take it plays.

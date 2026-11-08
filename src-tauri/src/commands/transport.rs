@@ -31,6 +31,25 @@ pub fn record(state: State<AppState>) -> R<Snapshot> {
     })
 }
 
+/// Discard Last Recording: stops a recording in progress and takes the last recording off its
+/// tracks (one undo step), returning to where playback started.
+#[tauri::command]
+pub fn discard_last_recording(state: State<AppState>) -> R<Snapshot> {
+    try_snap(&state, |s| s.discard_last_recording())
+}
+
+/// Mark Take as Good / Bad: the take being recorded (no undo step: it lands with the recording),
+/// else the last recording's takes, or the takes heard in the folders `regions`.
+#[tauri::command]
+pub fn mark_take(state: State<AppState>, rating: TakeRating, regions: Vec<Id>) -> Snapshot {
+    snap(&state, |s| {
+        let pushed = !s.is_recording() && s.checkpoint("Rate Take", None, false);
+        if !s.mark_take(rating, &regions) && pushed {
+            s.abandon_checkpoint();
+        }
+    })
+}
+
 #[tauri::command]
 pub fn locate(state: State<AppState>, pos: i64) {
     with(&state, |s| s.locate(pos))

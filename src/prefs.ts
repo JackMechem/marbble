@@ -30,6 +30,8 @@ export interface Prefs {
     folder: string | null;
     /** The control bar's Replace button: every recording replaces what it overlaps. */
     replace?: boolean;
+    /** Give each new take in a take folder its own colour. */
+    color_takes?: boolean;
   };
   midi: {
     disabled_inputs: string[];
@@ -108,6 +110,7 @@ const DEFAULTS: AppSettings = {
       take_names: "track_number",
       folder: null,
       replace: false,
+      color_takes: false,
     },
     midi: { disabled_inputs: [], thru: true, velocity: "linear", fixed_velocity: 100, chase_notes: true, chase_controllers: true },
     editing: { fade_ms: 0, move_automation: "never", crossfade_ms: 20, crossfade_curve: 0.5 },

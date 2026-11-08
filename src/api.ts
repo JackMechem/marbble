@@ -166,7 +166,13 @@ export interface Take {
   /** A MIDI take's notes and controllers, in take time. */
   notes?: Note[];
   cc?: CcEvent[];
+  /** Marked good or bad; unrated takes leave it out. */
+  rating?: TakeRating;
+  /** The take's own colour in its row and the comp (else the folder's). */
+  color?: string | null;
 }
+
+export type TakeRating = "none" | "good" | "bad";
 
 export interface CompSegment {
   start: number;

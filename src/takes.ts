@@ -2,11 +2,14 @@
 // triangle opens it into one row per take below the track's lane, and swiping across a take
 // row puts that stretch of the take in the comp (Quick Swipe Comping). The comp logic lives in
 // the engine (crates/engine/src/takes.rs); this file draws folders and sends the edits.
-import { act, actMade, type Id, type Region, type Take, type TakeFolder, type Track } from "./api";
+import { act, actMade, type Id, type Region, type Take, type TakeFolder, type TakeRating, type Track } from "./api";
 import { compNames, currentComp, isMidiFolder } from "./comps";
 import type { MenuItem } from "./components/Menu";
 import { askName, notEmpty } from "./components/NameSheet";
+import { colorMenu } from "./ops";
+import { MUTED_COLOR } from "./regionDraw";
 import { getState, setState } from "./store";
+import { hasBadTakes, RATING_MARKS, takeLabel, toggledRating } from "./takeRatings";
 import { mix, theme } from "./theme";
 import { drawWave, ensureWave, waveCache } from "./waveform";
 
@@ -119,12 +122,12 @@ export function drawCompWave(
 }
 
 /** The take rows of an open folder, below its track's lane (`y` is the first row's top). Comp
- *  parts are in the region's colour, the rest dimmed, as in Logic. `preview` is a swipe in
- *  progress: take and take-time range. */
+ *  parts are in the region's colour (or the take's own), the rest dimmed, as in Logic. A rated
+ *  take's name has its mark. `preview` is a swipe in progress: take and take-time range. */
 export function drawTakeRows(
   ctx: CanvasRenderingContext2D,
   r: Region & { takes: TakeFolder },
-  color: string,
+  folderColor: string,
   x: number,
   w: number,
   y: number,
@@ -137,6 +140,8 @@ export function drawTakeRows(
   const visX1 = Math.min(W, x + w);
   const light = theme.region === "light";
   r.takes.takes.forEach((t, k) => {
+    // A muted folder's rows stay grey.
+    const color = folderColor === MUTED_COLOR ? folderColor : (t.color ?? folderColor);
     const ry = y + k * TAKE_ROW_H;
     const rh = TAKE_ROW_H - 2;
     // The take's own extent within the folder.
@@ -158,7 +163,7 @@ export function drawTakeRows(
       ctx.fillStyle = light ? "rgba(0,0,0,0.6)" : "rgba(255,255,255,0.75)";
       ctx.font = "600 10px Inter, 'SF Pro Text', system-ui, sans-serif";
       ctx.textBaseline = "middle";
-      ctx.fillText(t.name, visX0 + 4, ry + rh / 2 + 0.5);
+      ctx.fillText(takeLabel(t), visX0 + 4, ry + rh / 2 + 0.5);
       ctx.restore();
       return;
     }
@@ -187,7 +192,7 @@ export function drawTakeRows(
     ctx.fillStyle = light ? "rgba(0,0,0,0.6)" : "rgba(255,255,255,0.75)";
     ctx.font = "600 10px Inter, 'SF Pro Text', system-ui, sans-serif";
     ctx.textBaseline = "middle";
-    ctx.fillText(t.name, visX0 + 4, ry + rh / 2 + 0.5);
+    ctx.fillText(takeLabel(t), visX0 + 4, ry + rh / 2 + 0.5);
     ctx.restore();
   });
 }
@@ -256,22 +261,42 @@ function compItems(r: Region & { takes: TakeFolder }): MenuItem[] {
   ];
 }
 
+/** Good and Bad for one take, ticked when it has them; choosing the ticked one clears it. */
+function ratingItems(r: Region, t: Take): MenuItem[] {
+  const rate = (rating: TakeRating) => act("set_take_rating", { region: r.id, take: t.id, rating: toggledRating(t.rating, rating) });
+  return [
+    { label: `${RATING_MARKS.good} Good`, checked: t.rating === "good", onClick: () => rate("good") },
+    { label: `${RATING_MARKS.bad} Bad`, checked: t.rating === "bad", onClick: () => rate("bad") },
+  ];
+}
+
+/** A take's colour menu: the folder's colour, or one of its own. */
+function takeColorItems(r: Region, t: Take): MenuItem[] {
+  return colorMenu(t.color, (color) => act("set_take_color", { region: r.id, take: t.id, color }), "Folder Color");
+}
+
 /** The take folder menu (the badge, or Take Folder in the region menu). A MIDI folder plays
- *  whole takes, so it has no comps, and Flatten and Merge is just Flatten. */
-export function takeFolderMenu(r: Region & { takes: TakeFolder }): MenuItem[] {
+ *  whole takes, so it has no comps, and Flatten and Merge is just Flatten. Opened on a take
+ *  row, it starts with that take's rating and colour. */
+export function takeFolderMenu(r: Region & { takes: TakeFolder }, row?: Take): MenuItem[] {
   const f = r.takes;
   const midi = isMidiFolder(r);
   const whole = midi ? (f.comp[0]?.take ?? f.takes[f.takes.length - 1]?.id) : wholeTake(f);
   const select = (ids: Id[] | null) => ids && setState({ selectedRegions: ids, focus: "regions" });
+  const own: MenuItem[] = row ? [{ label: takeLabel(row), header: true }, ...ratingItems(r, row), { label: "Color", children: takeColorItems(r, row) }, { separator: true }] : [];
   return [
+    ...own,
     ...(midi ? [] : compItems(r)),
     { label: "Takes", header: true },
-    ...f.takes.map((t, k) => ({ label: `${k + 1}  ${t.name}`, checked: whole === t.id, onClick: () => act("select_take", { region: r.id, take: t.id }) })),
+    ...f.takes.map((t, k) => ({ label: `${k + 1}  ${takeLabel(t)}`, checked: whole === t.id, onClick: () => act("select_take", { region: r.id, take: t.id }) })),
     { separator: true },
     { label: isOpen(r.id) ? "Close Take Folder" : "Open Take Folder", onClick: () => toggleFolder(r.id) },
     { label: "Rename Take", children: f.takes.map((t) => ({ label: t.name, onClick: () => renameTake(r, t) })) },
+    { label: "Rate Take", children: f.takes.map((t) => ({ label: takeLabel(t), children: ratingItems(r, t) })) },
+    { label: "Take Color", children: f.takes.map((t) => ({ label: takeLabel(t), children: takeColorItems(r, t) })) },
     { label: "Delete Take", disabled: f.takes.length < 2, children: f.takes.map((t) => ({ label: t.name, onClick: () => act("delete_take", { region: r.id, take: t.id }) })) },
     { label: "Delete Unused Takes", disabled: f.comp.length === 0 || new Set(f.comp.map((s) => s.take)).size === f.takes.length, onClick: () => act("delete_unused_takes", { region: r.id }) },
+    { label: "Delete Bad Takes", disabled: !hasBadTakes(f), onClick: () => act("delete_bad_takes", { region: r.id }) },
     { separator: true },
     { label: "Flatten", onClick: () => actMade("flatten_take_folder", { region: r.id }).then(select) },
     ...(midi ? [] : [{ label: "Flatten and Merge", onClick: () => actMade("merge_take_folder", { region: r.id }).then(select) }]),

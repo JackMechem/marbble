@@ -469,11 +469,11 @@ most of it the everyday editing and mixing work.
 - [ ] Spot erase notes while recording (p. 204)
 - [ ] Note Repeat (p. 205)
 - [x] Step input: musical typing, Step Input keyboard, MIDI keyboard, rests (p. 210–211)
-- [ ] Discard recording and return to the last play position (⌘.)
-- [ ] Colour takes automatically; mark a take while recording (p. 218–220)
+- [x] Discard recording and return to the last play position (⌘.). *Ctrl+. outside macOS; one undo step, and the files go once nothing can bring them back.*
+- [x] Colour takes automatically; mark a take while recording (p. 218–220). *Good and bad marks from the take folder menu, a take row or a key; Delete Bad Takes.*
 - [ ] Flashback Capture for MIDI and audio (p. 220–222)
 - [x] Low Latency Monitoring mode (p. 575)
-- [ ] Delete a recording together with its audio file (p. 199)
+- [~] Delete a recording together with its audio file (p. 199). *Discard Last Recording deletes its files once no undo step or saved project needs them.*
 
 ### Take folders and comping (p. 222–247)
 

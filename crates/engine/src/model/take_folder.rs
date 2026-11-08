@@ -51,7 +51,7 @@ pub struct Comp {
 }
 
 /// One pass of a cycle recording (or a region packed into a folder).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Take {
     pub id: Id,
     pub name: String,
@@ -68,6 +68,28 @@ pub struct Take {
     pub notes: Vec<Note>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub cc: Vec<CcEvent>,
+    /// Marked good or bad (the take folder menu, or a key while recording).
+    #[serde(default, skip_serializing_if = "TakeRating::is_unrated")]
+    pub rating: TakeRating,
+    /// The take's own colour in its row and the comp; None: the folder's.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
+}
+
+/// How a take was rated: good (★), bad (✗) or not at all.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TakeRating {
+    #[default]
+    None,
+    Good,
+    Bad,
+}
+
+impl TakeRating {
+    pub fn is_unrated(&self) -> bool {
+        *self == TakeRating::None
+    }
 }
 
 /// Part of a comp: take `take` is heard over take time `start..end`.

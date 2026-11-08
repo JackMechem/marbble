@@ -17,6 +17,7 @@ impl Session {
         }
         self.sampler_record_cancel();
         self.send(Cmd::Stop);
+        self.close_recordings();
         self.controllers.clear();
         self.vst_watches.clear();
         self.undo_stack.clear();
@@ -46,6 +47,7 @@ impl Session {
     pub fn save(&mut self, dir: Option<PathBuf>) -> Result<PathBuf> {
         let target = dir.unwrap_or_else(|| self.dir.clone());
         let target = crate::old_name::project_path(target);
+        let in_place = target == self.dir;
         std::fs::create_dir_all(target.join(AUDIO_DIR))?;
         self.ensure_freeze_files();
         if target != self.dir {
@@ -93,6 +95,10 @@ impl Session {
         self.dir = target.clone();
         self.saved = true;
         self.dirty = false;
+        // Discarded recordings the saved project (and its undo history) no longer needs go now.
+        if in_place {
+            self.purge_discarded(false);
+        }
         Ok(target)
     }
 
@@ -118,6 +124,7 @@ impl Session {
         }
         self.sampler_record_cancel();
         self.send(Cmd::Stop);
+        self.close_recordings();
         // Instance ids restart in every project, so old controllers must not leak state into
         // the new one.
         self.controllers.clear();

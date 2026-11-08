@@ -29,6 +29,22 @@ pub fn delete_unused_takes(state: State<AppState>, region: Id) -> Snapshot {
     edit(&state, "Delete Unused Takes", None, false, |s| s.delete_unused_takes(region))
 }
 
+/// Marks a take good or bad (or neither).
+#[tauri::command]
+pub fn set_take_rating(state: State<AppState>, region: Id, take: Id, rating: TakeRating) -> Snapshot {
+    edit(&state, "Rate Take", None, false, |s| s.set_take_rating(region, take, rating))
+}
+
+#[tauri::command]
+pub fn set_take_color(state: State<AppState>, region: Id, take: Id, color: Option<String>) -> Snapshot {
+    edit(&state, "Take Color", None, false, |s| s.set_take_color(region, take, color))
+}
+
+#[tauri::command]
+pub fn delete_bad_takes(state: State<AppState>, region: Id) -> Snapshot {
+    edit(&state, "Delete Bad Takes", None, false, |s| s.delete_bad_takes(region))
+}
+
 /// Flatten: the comp as plain regions. Returns them.
 #[tauri::command]
 pub fn flatten_take_folder(state: State<AppState>, region: Id) -> R<Made> {

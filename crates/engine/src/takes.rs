@@ -19,6 +19,10 @@ pub const PASS_MARK: [u8; 3] = [0xF9, 0, 0];
 /// Most takes one recording is cut into (a guard against a degenerate cycle).
 const MAX_TAKES: i64 = 999;
 
+/// The colours Settings › Recording › Color takes gives a folder's takes in turn: every other
+/// one of the track colours (`TRACK_COLORS` in src/view.ts), so neighbours differ.
+pub const TAKE_COLORS: [&str; 10] = ["#e5483a", "#f2a63b", "#c9cf3a", "#4fae4c", "#35a8a0", "#3b8fd9", "#6a5be0", "#b14fc8", "#d9546e", "#8e8e93"];
+
 impl Take {
     // A length in frames on the timeline, not a container's: "empty" means nothing here.
     #[allow(clippy::len_without_is_empty)]
@@ -583,6 +587,7 @@ mod tests {
                     gain_db: 0.0,
                     notes: Vec::new(),
                     cc: Vec::new(),
+                    ..Default::default()
                 })
                 .collect(),
             ..TakeFolder::new()
@@ -710,8 +715,20 @@ mod tests {
             gain_db: 0.0,
             notes: vec![note(50, 60), note(500, 62)],
             cc: Vec::new(),
+            ..Default::default()
         });
-        f.takes.push(Take { id: 2, name: "Take 2".into(), clip: 0, offset: 0, start: 0, end: 1000, gain_db: 0.0, notes: vec![note(300, 72)], cc: Vec::new() });
+        f.takes.push(Take {
+            id: 2,
+            name: "Take 2".into(),
+            clip: 0,
+            offset: 0,
+            start: 0,
+            end: 1000,
+            gain_db: 0.0,
+            notes: vec![note(300, 72)],
+            cc: Vec::new(),
+            ..Default::default()
+        });
         assert_eq!(f.midi_take(), Some(2), "the newest without a comp");
         f.select_whole(1);
         assert_eq!(f.midi_take(), Some(1));

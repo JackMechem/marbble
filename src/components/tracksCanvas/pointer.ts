@@ -354,7 +354,7 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
     if (showAutomation && project) return openMenu(e.clientX, e.clientY, automationMenu(e, autoInput()));
     const h = hit(e);
     if (!h || !project) return;
-    if (h.row) return openMenu(e.clientX, e.clientY, takeFolderMenu(h.row.region));
+    if (h.row) return openMenu(e.clientX, e.clientY, takeFolderMenu(h.row.region, h.row.take));
     if (!h.region) {
       const pos = Math.max(0, Math.round(snapPos(project, h.sample, getState().snapMode, getState().pxPerBeat)));
       if (h.track && h.track.id !== getState().snap?.selected) {

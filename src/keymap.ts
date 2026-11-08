@@ -31,6 +31,10 @@ export const KEY_COMMANDS: KeyCommand[] = [
   { id: "catch-playhead", label: "Catch Playhead", group: "Transport", keys: ["`"] },
   { id: "show-playhead", label: "Scroll to Playhead", group: "Transport", keys: ["Alt+`"] },
   { id: "autopunch", label: "Autopunch Mode", group: "Transport", keys: ["Mod+Ctrl+P"] },
+  // Logic's ⌘. "Discard Recording and Return to Last Play Position".
+  { id: "discard-recording", label: "Discard Last Recording", group: "Transport", keys: ["Mod+."] },
+  { id: "mark-take-good", label: "Mark Take as Good", group: "Transport", keys: ["Alt+G"] },
+  { id: "mark-take-bad", label: "Mark Take as Bad", group: "Transport", keys: ["Alt+B"] },
 
   { id: "create-marker", label: "Create Marker", group: "Navigation", keys: ["Alt+'"] },
   { id: "delete-marker", label: "Delete Marker", group: "Navigation", keys: [] },

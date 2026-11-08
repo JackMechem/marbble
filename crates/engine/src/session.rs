@@ -100,6 +100,7 @@ const AUDIO_DIR: &str = "Audio Files";
 pub const AUTOSAVE_FILE: &str = "project.autosave.json";
 
 mod auto_write;
+mod last_recording;
 mod recovery;
 pub use recovery::{discard_journals, read_journal, recording_journals, JournalTake, RecJournal, RecordingRecovery, BACKUP_FILE};
 mod musical_moves;
@@ -232,6 +233,13 @@ pub struct Session {
     pdc_report: PdcReport,
     /// How the recording in progress is cut into takes (see `session/takes.rs`).
     rec_plan: Option<crate::takes::RecPlan>,
+    /// Where playback started for the recording in progress, the rating marked for its take,
+    /// and what the last recording made (see `session/last_recording.rs`).
+    rec_play_from: i64,
+    rec_rating: Option<TakeRating>,
+    last_recording: Option<last_recording::LastRecording>,
+    /// Files of discarded recordings, deleted once nothing can need them.
+    discarded: Vec<(Id, PathBuf)>,
     /// The engine's sample rate, kept here so reading it needn't lock the engine (see
     /// `engine`: the audio callback only try_locks it, and loses its block when that fails).
     /// Set where the graph is replaced, in `rebuild_graph`.
@@ -396,6 +404,10 @@ impl Session {
             pdc_global: PdcGlobal::default(),
             pdc_report: PdcReport::default(),
             rec_plan: None,
+            rec_play_from: 0,
+            rec_rating: None,
+            last_recording: None,
+            discarded: Vec::new(),
             engine_rate,
             warning: None,
             engine_errors_seen: 0,
