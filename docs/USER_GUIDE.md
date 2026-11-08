@@ -3013,7 +3013,7 @@ tab's changes apply and **Done** on the right.
 **Updates.** With Check for updates at launch on, Marbble asks GitHub once at each launch for
 its list of releases (`api.github.com/repos/JackMechem/marbble/releases`). The request says
 nothing about your projects or settings; GitHub sees your IP address, as with any web page. When a newer version is out on your channel, a notice at the bottom right
-says so, for example "Marbble 0.1.0-alpha.9 is out": **View Release** opens its release page in
+says so, for example "Marbble 0.1.0-alpha.10 is out": **View Release** opens its release page in
 your browser, where you download it yourself, and **Later** hides the notice until the next
 launch. The notice never takes the keyboard and waits while you record. Marbble never downloads
 or installs anything itself. Offline, or when GitHub can't be reached, the check gives up
