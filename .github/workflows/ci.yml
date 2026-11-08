@@ -1,5 +1,5 @@
 # Type-checks and tests the frontend and the engine, and checks that the app builds, on
-# Linux, Windows and macOS for every push and pull request. On Linux it also runs the
+# Linux, Windows and macOS for every push and pull request. On Linux and macOS it also runs the
 # headless engine checks that need no third-party plug-ins.
 name: CI
 
@@ -67,9 +67,10 @@ jobs:
         if: runner.os == 'Linux'
         run: cargo "+$LINT_TOOLCHAIN" clippy --workspace --all-targets -- -D warnings
       # A real Session on ALSA's null output device (no sound card, audio server or plug-ins
-      # needed), with a generated test tone; the same script developers run.
+      # needed), with a generated test tone; the same script developers run. macOS has no ALSA,
+      # so there the engine runs on its silent stand-in device.
       - name: Headless engine checks
-        if: runner.os == 'Linux'
+        if: runner.os != 'Windows'
         run: bash scripts/headless-checks.sh
 
   # The flake: `nix build` (and so `nix run`) builds the app and runs the engine's unit tests.

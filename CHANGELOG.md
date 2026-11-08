@@ -6,6 +6,10 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- CI runs the headless engine checks on macOS as well as Linux.
+
 ### Fixed
 
 - **Double-clicking the Tempo track's line adds a tempo change.** It used to add one and then
