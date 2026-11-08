@@ -1681,7 +1681,8 @@ Audio Track Editor and meters are canvas drawings. The common pattern:
 - **The Mixer's height.** `useStripFit` (`Panels.tsx`) measures a strip with no slot rows and its
   fader at its least, and `fitStripRows` (`stripRows.ts`) takes slot rows away, sends first,
   while the fader would get less than 120 px. Below one row each the strips scroll, pinned to the
-  bottom until scrolled up, so faders and names show first. The Mixer's default height is 560 px,
+  bottom until scrolled up, so faders and names show first. The Inspector's strip pair uses the
+  same hook on its own box. The Mixer's default height is 560 px,
   the Editors' 360 px. The stack brackets' rows (the row's top padding) don't count as the
   strips' room.
 - **The control bar's steps** (`control-bar.css`). The transport and the LCD keep their size

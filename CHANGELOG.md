@@ -19,6 +19,11 @@ All notable changes to Marbble are recorded here. The format follows
 - **The Sampler's input and zone pickers match the other pop-ups.** They were the last native
   drop-down lists, drawn by the system; they now open Marbble's own menu. With the keyboard, Up
   and Down step through any of these pop-ups' choices, and Return or Space opens the menu.
+- **The Inspector's channel strips fit its height, as the Mixer's do.** When the Inspector is
+  short (a small window, or the Region and Track sections open), its two strips show fewer insert
+  and send rows, sends first, so the faders keep room to set a level; a strip with more plug-ins
+  or sends than rows says "+N more" in its last one. Too short even for one row each, the pair
+  scrolls, starting at the bottom with the faders and names in view.
 - **Less memory and quicker edits with plug-ins that have large settings.** Every undo step used
   to hold its own copy of every plug-in's settings, and the window's every update copied them
   too. They are now shared, so 100 undo steps with four plug-ins of 1.5 MB settings each take

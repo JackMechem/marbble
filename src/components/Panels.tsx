@@ -77,8 +77,10 @@ export function Inspector() {
     () => project?.tracks.flatMap((t) => t.regions).filter((r) => selectedRegions.includes(r.id)) ?? [],
     [project, selectedRegions],
   );
+  // The strip pair fits its slot rows to its height as the Mixer's strips do.
+  const fit = useStripFit();
   if (!project) return <div className="inspector" />;
-  const rows = rowsFor(project, track ? [track] : []);
+  const rows = fit.rows(rowsFor(project, track ? [track] : []));
   const region = regions.length === 1 ? regions[0] : null;
   const regionTitle = regions.length > 1 ? `${regions.length} selected` : region ? region.name : "Default Settings";
   const bbt = (s: number) => {
@@ -130,9 +132,11 @@ export function Inspector() {
           )}
         </Disclosure>
       </div>
-      <div className="inspector-strips">
-        {track ? <ChannelStrip track={track} selected rows={rows} /> : <div className="strip placeholder" />}
-        <ChannelStrip track={null} rows={rows} />
+      <div className="inspector-strips" ref={fit.ref} onScroll={fit.onScroll}>
+        <div className="inspector-strip-row">
+          {track ? <ChannelStrip track={track} selected rows={rows} /> : <div className="strip placeholder" />}
+          <ChannelStrip track={null} rows={rows} />
+        </div>
       </div>
     </div>
   );
@@ -148,10 +152,10 @@ const STRIP_KINDS: [StripKind, string, string][] = [
 ];
 
 /**
- * Fits the Mixer's strips to its height: fewer slot rows when it's short, so the faders keep
- * their room (fitStripRows), and when even one row each doesn't fit, the strips scroll from the
- * bottom, so the faders, meters and names show first. The view stays at the bottom while it was
- * there; once scrolled up it stays where it was put.
+ * Fits the Mixer's strips (or the Inspector's pair) to its height: fewer slot rows when it's
+ * short, so the faders keep their room (fitStripRows), and when even one row each doesn't fit,
+ * the strips scroll from the bottom, so the faders, meters and names show first. The view stays
+ * at the bottom while it was there; once scrolled up it stays where it was put.
  */
 function useStripFit() {
   const ref = useRef<HTMLDivElement>(null);
@@ -167,8 +171,9 @@ function useStripFit() {
     const strip = fader?.closest<HTMLElement>(".strip");
     if (!el || !fader || !strip) return;
     const faderMin = parseFloat(getComputedStyle(fader).minHeight) || 0;
-    // The stack brackets' rows above the strips (the row's top padding) aren't the strips' room.
-    const row = el.firstElementChild;
+    // The Mixer's stack brackets' rows above the strips (its row's top padding) aren't the
+    // strips' room. The Inspector's strips sit straight in the box.
+    const row = el.querySelector(":scope > .mixer-row");
     const brackets = row ? parseFloat(getComputedStyle(row).paddingTop) || 0 : 0;
     // The strip without its slot rows and with its fader at its least: the fader takes the
     // strip's spare height, and the slot boxes are SLOT_ROW_H a row.

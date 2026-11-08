@@ -79,11 +79,20 @@
   padding: 6px 4px;
 }
 
+/* Fitted to its height as the Mixer is (Panels.tsx useStripFit): too short even for one slot row
+   each, the pair scrolls, from the bottom. As in the Mixer (.mixer-strips, .mixer-row), the
+   strips sit in a row at least as tall as the box, which grows with them when they need more,
+   so it's the box that scrolls rather than the strips spilling out of it. */
 .inspector-strips {
   flex: 1;
-  display: flex;
   min-height: 0;
+  overflow: hidden auto;
   border-top: 1px solid var(--edge);
+}
+
+.inspector-strip-row {
+  display: flex;
+  min-height: 100%;
 }
 
 .inspector-strips .strip {
