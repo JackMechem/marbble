@@ -80,12 +80,16 @@ impl Default for ClickSettings {
 #[serde(rename_all = "snake_case")]
 pub enum AudioOverlap {
     /// The take goes on top; older audio it covers stays but is not heard.
-    #[default]
     OnTop,
     /// The take goes on a new track below (Logic's "Create tracks").
     NewTrack,
     /// The parts of older regions under the take are removed (files are kept).
     Replace,
+    /// A recording over audio regions packs them with the new take into a take folder, and one
+    /// over a take folder adds a take to it (Logic's "Create take folders"). The new take is
+    /// heard. The Replace button still wins.
+    #[default]
+    TakeFolders,
 }
 
 /// What happens when a new MIDI recording overlaps a MIDI region on its track.
@@ -193,6 +197,9 @@ pub struct RecordingPrefs {
     pub count_in_bars: u32,
     /// Seconds played before the record position when Count-in is off.
     pub pre_roll_secs: f32,
+    /// New settings start with take folders; a settings file from before that option keeps
+    /// putting takes on top, its default then.
+    #[serde(default = "earlier_audio_overlap")]
     pub audio_overlap: AudioOverlap,
     pub midi_overlap: MidiOverlap,
     pub take_names: TakeNames,
@@ -202,6 +209,11 @@ pub struct RecordingPrefs {
     /// The control bar's Replace button: every recording replaces what it overlaps, audio and
     /// MIDI alike, whatever `audio_overlap` and `midi_overlap` say.
     pub replace: bool,
+}
+
+/// Overlapping Recordings › Audio's default before "Create take folders" existed.
+fn earlier_audio_overlap() -> AudioOverlap {
+    AudioOverlap::OnTop
 }
 
 impl RecordingPrefs {
@@ -230,7 +242,7 @@ impl Default for RecordingPrefs {
             bit_depth: BitDepth::Float32,
             count_in_bars: 1,
             pre_roll_secs: 0.0,
-            audio_overlap: AudioOverlap::OnTop,
+            audio_overlap: AudioOverlap::TakeFolders,
             midi_overlap: MidiOverlap::NewRegion,
             take_names: TakeNames::TrackNumber,
             folder: None,
@@ -389,13 +401,29 @@ mod tests {
     #[test]
     fn replace_button_overrides_both_overlap_settings() {
         let mut r = RecordingPrefs { midi_overlap: MidiOverlap::Merge, ..Default::default() };
-        assert_eq!((r.audio_mode(), r.midi_mode()), (AudioOverlap::OnTop, MidiOverlap::Merge));
+        assert_eq!((r.audio_mode(), r.midi_mode()), (AudioOverlap::TakeFolders, MidiOverlap::Merge));
         r.replace = true;
         assert_eq!((r.audio_mode(), r.midi_mode()), (AudioOverlap::Replace, MidiOverlap::Replace));
         // Older settings files have neither the button nor the chase switches.
         let p: Prefs = serde_json::from_str(r#"{"recording":{"midi_overlap":"replace"},"midi":{"thru":false}}"#).unwrap();
         assert!(!p.recording.replace && p.recording.midi_mode() == MidiOverlap::Replace);
         assert!(p.midi.chase_notes && p.midi.chase_controllers);
+    }
+
+    #[test]
+    fn new_settings_record_audio_into_take_folders() {
+        assert_eq!(Prefs::default().recording.audio_overlap, AudioOverlap::TakeFolders);
+        // No settings file, or one without a Recording section: the new default.
+        let p: Prefs = serde_json::from_str(r#"{"general":{"undo_limit":50}}"#).unwrap();
+        assert_eq!(p.recording.audio_overlap, AudioOverlap::TakeFolders);
+        // A Recording section from before the option keeps putting takes on top.
+        let p: Prefs = serde_json::from_str(r#"{"recording":{"count_in_bars":2}}"#).unwrap();
+        assert_eq!(p.recording.audio_overlap, AudioOverlap::OnTop);
+        // A saved choice is kept, whichever it is.
+        for (v, want) in [("on_top", AudioOverlap::OnTop), ("take_folders", AudioOverlap::TakeFolders), ("new_track", AudioOverlap::NewTrack)] {
+            let p: Prefs = serde_json::from_str(&format!(r#"{{"recording":{{"audio_overlap":"{v}"}}}}"#)).unwrap();
+            assert_eq!(p.recording.audio_overlap, want);
+        }
     }
 
     #[test]

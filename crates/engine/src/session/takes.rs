@@ -146,6 +146,72 @@ impl Session {
         r
     }
 
+    /// Places an audio recording made with "Create take folders" (Settings › Recording ›
+    /// Overlapping Recordings › Audio): `region`, a plain take or a cycle recording's new folder.
+    /// Recording over a take folder adds its takes to that folder; recording over audio regions
+    /// packs them into a new folder with it. The new takes are heard wherever they have audio,
+    /// the comp from before elsewhere, and the folder goes on top, as a new take would. Muted
+    /// and looping regions are left as they are.
+    pub(super) fn place_audio_takes(&mut self, track: Id, region: Region) {
+        let Some(t) = self.project.track(track) else { return };
+        let (rs, re) = (region.start, region.start + region.length);
+        let overlaps = |r: &Region| matches!(r.content, RegionContent::Audio { .. }) && !r.muted && !r.is_looped() && r.start < re && r.start + r.length > rs;
+        let folder_at = t.regions.iter().position(|r| r.takes.is_some() && overlaps(r));
+        let packed: Vec<Region> =
+            if folder_at.is_some() { Vec::new() } else { t.regions.iter().filter(|r| r.takes.is_none() && overlaps(r)).cloned().collect() };
+        let t = self.project.track_mut(track).unwrap();
+        if folder_at.is_none() && packed.is_empty() {
+            t.regions.push(region);
+            return;
+        }
+        // The folder: the one recorded over, or a new one where the old regions were.
+        let mut folder = match folder_at {
+            Some(i) => t.regions.remove(i),
+            None => Region {
+                color: packed.first().and_then(|r| r.color.clone()),
+                content: RegionContent::Audio { clip: 0, offset: 0, gain_db: 0.0, fade_in: 0, fade_out: 0, fade_shape: FadeShape::default() },
+                takes: Some(TakeFolder::new()),
+                ..region.clone()
+            },
+        };
+        t.regions.retain(|r| !packed.iter().any(|p| p.id == r.id));
+        // It covers the recording and everything packed into it.
+        let lo = packed.iter().map(|r| r.start).chain([rs, folder.start]).min().unwrap();
+        let hi = packed.iter().map(|r| r.start + r.length).chain([re, folder.start + folder.length]).max().unwrap();
+        let RegionContent::Audio { offset: tt0, .. } = folder.content else { return };
+        let f = folder.takes.as_mut().unwrap();
+        // Take time at timeline position p is p + to_tt; the folder never starts at negative take time.
+        let mut to_tt = tt0 - folder.start;
+        if lo + to_tt < 0 {
+            f.shift(-(lo + to_tt));
+            // An audio folder keeps its take time in its content's offset.
+            f.offset = 0;
+            to_tt = -lo;
+        }
+        // Oldest first, each heard wherever it has audio, so the recording ends up on top.
+        for k in packed.iter().chain([&region]).flat_map(timeline_takes) {
+            let id = self.project.alloc_id();
+            let (start, end) = (k.start + to_tt, k.end + to_tt);
+            let name = format!("Take {}", f.takes.len() + 1);
+            f.takes.push(Take { id, name, offset: k.offset - to_tt, start, end, ..k });
+            f.select(id, start, end);
+        }
+        f.store_comp();
+        let newest = f.takes.last().map(|k| k.clip).unwrap_or(0);
+        let fade = self.default_fade(hi - lo);
+        folder.start = lo;
+        folder.length = hi - lo;
+        // The folder's own clip follows its newest take (see `TakeFolder`).
+        if let RegionContent::Audio { clip, offset, fade_in, fade_out, .. } = &mut folder.content {
+            *clip = newest;
+            *offset = lo + to_tt;
+            if folder_at.is_none() {
+                (*fade_in, *fade_out) = (fade, fade);
+            }
+        }
+        self.project.track_mut(track).unwrap().regions.push(folder);
+    }
+
     /// What a take folder's first pass plays (frames x channels), as `render_region` does for
     /// plain audio: the comp with its crossfades, the folder's gain and fades.
     pub(super) fn render_comp(&self, r: &Region, f: &TakeFolder, channels: usize) -> Vec<Vec<f32>> {
@@ -480,6 +546,29 @@ impl Session {
     }
 }
 
+/// The takes of audio region `r` with the timeline as take time: a plain region is one take
+/// spanning it, a take folder's takes lie where they play.
+fn timeline_takes(r: &Region) -> Vec<Take> {
+    let RegionContent::Audio { clip, offset, gain_db, .. } = r.content else { return Vec::new() };
+    match &r.takes {
+        Some(f) => {
+            let to_tt = offset - r.start;
+            f.takes.iter().map(|t| Take { start: t.start - to_tt, end: t.end - to_tt, offset: t.offset + to_tt, ..t.clone() }).collect()
+        }
+        None => vec![Take {
+            id: 0,
+            name: r.name.clone(),
+            clip,
+            offset: offset - r.start,
+            start: r.start,
+            end: r.start + r.length,
+            gain_db,
+            notes: Vec::new(),
+            cc: Vec::new(),
+        }],
+    }
+}
+
 /// The notes and controller events of one recorded MIDI pass (`events`, engine positions, in
 /// order), relative to the region start `start`: note-ons paired with their note-offs, notes
 /// still held ending at `stop` (or as the window says), and only what the window keeps.
@@ -708,6 +797,147 @@ mod tests {
         assert_eq!(notes_of(&s, folder), vec![70]);
         let first = &s.project.track(tracks[0]).unwrap().regions[0];
         assert!(first.muted && matches!(&first.content, RegionContent::Midi { notes, .. } if notes[0].pitch == 60));
+    }
+
+    fn audio_session(tag: &str) -> Session {
+        let cfg = crate::audio_io::AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
+        let mut s = Session::new(cfg, Vec::new());
+        s.dir = std::env::temp_dir().join(format!("marbble-audio-takes-{tag}-{}", std::process::id()));
+        s
+    }
+
+    /// Places a recording as `finish_recording` does, one undo step: `frames` of audio captured
+    /// from `start` on each of `tracks`.
+    fn record_onto(s: &mut Session, plan: Option<RecPlan>, start: i64, frames: usize, tracks: &[Id]) {
+        s.checkpoint("Record", None, false);
+        s.rec_punch = Some(start);
+        s.rec_plan = plan;
+        let takes = tracks
+            .iter()
+            .map(|&t| (t, FinishedTake { path: s.dir.join(format!("{t}-{start}.wav")), start, channels: vec![vec![0.1; frames]], error: None }))
+            .collect();
+        s.place_recording(takes, 0);
+    }
+
+    /// A track's regions as (start, length), and the comp of its folder as (start, end, take index).
+    type Layout = (Vec<(i64, i64)>, Vec<(i64, i64, usize)>);
+
+    fn layout(s: &Session, track: Id) -> Layout {
+        let regions = &s.project.track(track).unwrap().regions;
+        let spans = regions.iter().map(|r| (r.start, r.length)).collect();
+        let comp = regions
+            .iter()
+            .find_map(|r| r.takes.as_ref())
+            .map(|f| f.comp.iter().map(|c| (c.start, c.end, f.takes.iter().position(|t| t.id == c.take).unwrap())).collect())
+            .unwrap_or_default();
+        (spans, comp)
+    }
+
+    #[test]
+    fn recording_over_audio_makes_take_folders() {
+        let mut s = audio_session("over");
+        assert_eq!(s.prefs.recording.audio_overlap, crate::prefs::AudioOverlap::TakeFolders);
+        // Two mics: every armed track gets a folder of its own.
+        let oh = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
+        let kick = s.add_track(TrackKind::Audio, InputSel::Mono(1), None, None).unwrap();
+        record_onto(&mut s, None, 1000, 1000, &[oh, kick]);
+        for t in [oh, kick] {
+            assert_eq!(layout(&s, t), (vec![(1000, 1000)], vec![]));
+        }
+        record_onto(&mut s, None, 1000, 1000, &[oh, kick]);
+        let mut clips = Vec::new();
+        for t in [oh, kick] {
+            let r = &s.project.track(t).unwrap().regions[0];
+            let f = r.takes.as_ref().unwrap();
+            assert_eq!((f.takes.len(), f.whole_take()), (2, Some(f.takes[1].id)));
+            assert_eq!(f.takes.iter().map(|k| k.name.as_str()).collect::<Vec<_>>(), ["Take 1", "Take 2"]);
+            // The folder plays its newest take's audio: this track's new file.
+            assert!(matches!(r.content, RegionContent::Audio { clip, offset: 0, .. } if clip == f.takes[1].clip));
+            clips.push(f.takes[1].clip);
+        }
+        assert_ne!(clips[0], clips[1]);
+        // A third pass adds a take to each folder.
+        record_onto(&mut s, None, 1000, 1000, &[oh, kick]);
+        for t in [oh, kick] {
+            assert_eq!(s.project.track(t).unwrap().regions.len(), 1);
+            assert_eq!(s.project.track(t).unwrap().regions[0].takes.as_ref().unwrap().takes.len(), 3);
+        }
+        // Each recording is one undo step, on both tracks.
+        s.undo();
+        for t in [oh, kick] {
+            assert_eq!(s.project.track(t).unwrap().regions[0].takes.as_ref().unwrap().takes.len(), 2);
+        }
+        s.undo();
+        for t in [oh, kick] {
+            assert_eq!(layout(&s, t), (vec![(1000, 1000)], vec![]));
+        }
+        // The Replace button still wins.
+        s.prefs.recording.replace = true;
+        record_onto(&mut s, None, 1000, 1000, &[oh]);
+        assert!(s.project.track(oh).unwrap().regions.iter().all(|r| r.takes.is_none()));
+        assert_eq!(s.project.track(oh).unwrap().regions.len(), 1);
+    }
+
+    #[test]
+    fn take_folders_cover_what_the_recording_overlaps() {
+        let mut s = audio_session("spans");
+        let t = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
+        // A punch-in part-way over a region: the old take still plays before it.
+        record_onto(&mut s, None, 0, 1000, &[t]);
+        record_onto(&mut s, None, 500, 1000, &[t]);
+        assert_eq!(layout(&s, t), (vec![(0, 1500)], vec![(0, 500, 0), (500, 1500, 1)]));
+        let f = s.project.track(t).unwrap().regions[0].takes.clone().unwrap();
+        // Take 2's audio starts at take time 500, its file's first frame.
+        assert_eq!((f.takes[1].start, f.takes[1].end, f.takes[1].offset), (500, 1500, -500));
+        s.undo();
+        s.undo();
+
+        // Over two regions: both are packed, each heard where the recording isn't.
+        record_onto(&mut s, None, 0, 1000, &[t]);
+        record_onto(&mut s, None, 2000, 1000, &[t]);
+        record_onto(&mut s, None, 500, 2000, &[t]);
+        assert_eq!(layout(&s, t), (vec![(0, 3000)], vec![(0, 500, 0), (500, 2500, 2), (2500, 3000, 1)]));
+        s.undo();
+        assert_eq!(layout(&s, t), (vec![(0, 1000), (2000, 1000)], vec![]));
+        s.undo();
+        s.undo();
+
+        // Starting before a folder: it grows to the left and keeps playing what it did.
+        record_onto(&mut s, None, 1000, 1000, &[t]);
+        record_onto(&mut s, None, 1000, 1000, &[t]);
+        record_onto(&mut s, None, 0, 1500, &[t]);
+        assert_eq!(layout(&s, t), (vec![(0, 2000)], vec![(0, 1500, 2), (1500, 2000, 1)]));
+        let r = &s.project.track(t).unwrap().regions[0];
+        let f = r.takes.as_ref().unwrap();
+        assert!(matches!(r.content, RegionContent::Audio { offset: 0, .. }) && f.offset == 0);
+        assert_eq!(f.takes.iter().map(|k| (k.start, k.end)).collect::<Vec<_>>(), [(1000, 2000), (1000, 2000), (0, 1500)]);
+
+        // Muted regions are left alone.
+        let other = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
+        record_onto(&mut s, None, 0, 1000, &[other]);
+        s.project.track_mut(other).unwrap().regions[0].muted = true;
+        record_onto(&mut s, None, 0, 1000, &[other]);
+        assert!(s.project.track(other).unwrap().regions.iter().all(|r| r.takes.is_none()));
+    }
+
+    #[test]
+    fn cycle_recording_over_take_folders_adds_takes() {
+        let mut s = audio_session("cycle");
+        let t = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
+        let plan = RecPlan { from: 1000, cycle: Some((1000, 2000)), punch: None, latency: 0, midi_latency: 0, min_take: 1 };
+        record_onto(&mut s, None, 0, 1500, &[t]);
+        // Two passes over a region: the region and both passes in one folder, the last pass heard.
+        record_onto(&mut s, Some(plan), 1000, 2000, &[t]);
+        assert_eq!(layout(&s, t), (vec![(0, 2000)], vec![(0, 1000, 0), (1000, 2000, 2)]));
+        // Two more over that folder (which is longer than the cycle) join it.
+        record_onto(&mut s, Some(plan), 1000, 2000, &[t]);
+        assert_eq!(layout(&s, t), (vec![(0, 2000)], vec![(0, 1000, 0), (1000, 2000, 4)]));
+        let f = s.project.track(t).unwrap().regions[0].takes.clone().unwrap();
+        assert_eq!(f.takes.iter().map(|k| k.name.as_str()).collect::<Vec<_>>(), ["Take 1", "Take 2", "Take 3", "Take 4", "Take 5"]);
+        // The passes are a cycle apart in their file.
+        assert_eq!((f.takes[4].offset - f.takes[3].offset, f.takes[3].clip), (1000, f.takes[4].clip));
+        s.undo();
+        assert_eq!(s.project.track(t).unwrap().regions[0].takes.as_ref().unwrap().takes.len(), 3);
     }
 
     #[test]

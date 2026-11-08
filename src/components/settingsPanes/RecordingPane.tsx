@@ -69,16 +69,21 @@ export function RecordingPane({ close }: { close: () => void }) {
         <Row
           label="Audio:"
           note={
-            {
-              on_top: "The new take plays; the older audio stays underneath and comes back if you move the take.",
-              new_track: "When the take overlaps a region, it goes on a new track below with the same settings and plug-ins.",
-              replace: "The parts of older regions under the take are removed. Their audio files are kept.",
-            }[r.audio_overlap]
+            r.replace
+              ? "Replace is on in the control bar: recordings replace what they overlap, audio and MIDI alike."
+              : {
+                  take_folders:
+                    "Recording over regions packs them into a take folder with the new take, and recording over a take folder adds a take to it. The new take is heard; choose another from the folder's menu.",
+                  on_top: "The new take plays; the older audio stays underneath and comes back if you move the take.",
+                  new_track: "When the take overlaps a region, it goes on a new track below with the same settings and plug-ins.",
+                  replace: "The parts of older regions under the take are removed. Their audio files are kept.",
+                }[r.audio_overlap]
           }
         >
           <Select
             value={r.audio_overlap}
             options={[
+              ["take_folders", "Create take folders"],
               ["on_top", "Put the new take on top"],
               ["new_track", "Create a new track"],
               ["replace", "Replace what's underneath"],

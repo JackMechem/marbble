@@ -174,7 +174,7 @@ hosting, automation and undo. This stage is mostly done.
 - [x] Takes written as 24-bit or 32-bit float WAV in the project's Audio Files folder (p. 1054, 1082)
 - [x] Regions draw live while recording
 - [x] Take naming options
-- [~] Overlapping recordings (p. 1057). *On top, new track or replace for audio; MIDI also merges or creates take folders. Audio take folders come only from cycle recording.*
+- [x] Overlapping recordings (p. 1057). *Take folders (the default), on top, new track or replace for audio; MIDI also merges or creates take folders.*
 - [x] A newer region hides the older audio it overlaps during playback
 
 ### Record software instruments (p. 200–215)

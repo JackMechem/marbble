@@ -6,6 +6,14 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Recording over audio makes a take folder,** as in Logic. Settings › Recording › Overlapping
+  Recordings › Audio has **Create take folders**, the new default: the regions a recording
+  overlaps are packed with the new take into a take folder, and a recording over a take folder
+  adds a take to it, the new take heard. Every armed track does this on its own, so recording
+  two mics again gives both folders the new take. Settings saved before keep their choice.
+
 ### Fixed
 
 - A take lands where it was played when an undo during the recording turns a track with latent

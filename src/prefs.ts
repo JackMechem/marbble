@@ -7,7 +7,7 @@ import { tempoMap } from "./tempo";
 import type { UpdateChannel } from "./updateCheck";
 import type { WheelScrolls } from "./wheel";
 
-export type AudioOverlap = "on_top" | "new_track" | "replace";
+export type AudioOverlap = "on_top" | "new_track" | "replace" | "take_folders";
 export type MidiOverlap = "new_region" | "merge" | "replace" | "take_folders";
 export type TakeNames = "track_number" | "track" | "project_track";
 export type VelocityCurve = "linear" | "soft" | "hard" | "fixed";
@@ -103,7 +103,7 @@ const DEFAULTS: AppSettings = {
       bit_depth: "float32",
       count_in_bars: 1,
       pre_roll_secs: 0,
-      audio_overlap: "on_top",
+      audio_overlap: "take_folders",
       midi_overlap: "new_region",
       take_names: "track_number",
       folder: null,

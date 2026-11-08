@@ -358,6 +358,11 @@ Times are in samples at the project rate.
 - Recording: `RecPlan` (`takes.rs`) describes how a cycle or Autopunch recording is cut into
   takes; `Session::record_plan` builds it before recording, and `shape_take` applies it to each
   finished file.
+  `place_take` (`session/options.rs`) then follows Settings › Recording › Overlapping
+  Recordings; with `AudioOverlap::TakeFolders` (the default) `place_audio_takes` packs the
+  overlapped audio regions and the new take(s) into a folder, or adds them to the folder
+  there, by turning each into takes on the timeline (`timeline_takes`) and moving them into
+  the folder's take time.
 
 ### Notes and controllers
 

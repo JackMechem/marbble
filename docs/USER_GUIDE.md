@@ -476,10 +476,23 @@ be opened in a window of their own, for example to put the Mixer on a second mon
   monitored), so you don't hear the old take over the new one.
 - A frozen track can't be record-enabled.
 
-**Overlapping recordings** (Settings › Recording): a new take over existing regions is put
-**on top** (the older audio stays underneath and is hidden where the new one plays), on a **new
-track** below with the same settings, or **replaces** what's underneath (the older regions are
-trimmed; their files are kept). MIDI has its own setting (see [Recording MIDI](#recording-midi)).
+**Overlapping recordings** (Settings › Recording › Overlapping Recordings › Audio) says what a
+new take over existing regions does:
+
+- **Create take folders** (the default, as in Logic): the regions it overlaps are packed with the
+  new take into a take folder, and a recording over a take folder adds a take to it. The new take
+  is heard wherever it has audio; the older takes keep playing where it has none (a punch-in
+  part-way over a region, say). Every armed track does this on its own, so recording an overhead
+  and a kick mic again gives each mic's folder the new take. Muted and looping regions are left as
+  they are. One Undo takes the whole recording back. See
+  [Take folders and comping](#7-take-folders-and-comping).
+- **Put the new take on top:** the older audio stays underneath and is hidden where the new one
+  plays.
+- **Create a new track:** the take goes on a new track below with the same settings.
+- **Replace what's underneath:** the older regions are trimmed; their files are kept.
+
+Settings files from before Create take folders existed keep putting takes on top until you
+choose otherwise. MIDI has its own setting (see [Recording MIDI](#recording-midi)).
 
 The **Replace** button in the control bar (beside Autopunch) works like Logic's: while it is on,
 every recording replaces what it overlaps, audio and MIDI alike, whatever the two Overlapping
@@ -503,7 +516,10 @@ With **Cycle** on, recording starts at the left locator (or carries on if you ar
 playing inside the cycle) and loops. When you stop, the passes become **takes in a take
 folder** ("Take 1", "Take 2"...). A last pass stopped part-way is kept if it got at least a
 beat in. Recording the same cycle range again adds its passes to the same folder. A single pass
-becomes a normal region. See [Take folders and comping](#7-take-folders-and-comping).
+becomes a normal region (or, with Create take folders, a take in the folder of what it
+overlaps). Cycle passes over other audio join it the same way: the regions underneath are
+packed into the folder with them, or the folder there takes them as new takes. See
+[Take folders and comping](#7-take-folders-and-comping).
 
 MIDI recorded in cycle mode goes into one region over the passes, unless Settings › Recording
 › Overlapping Recordings › MIDI is set to Create take folders (see
@@ -1339,8 +1355,10 @@ heavy tracks you aren't listening to.
 
 Take folders follow Logic's Quick Swipe Comping.
 
-- **Making one.** Record with Cycle on (each pass becomes a take), or select several audio
-  regions on one track and choose **Pack Take Folder** (Ctrl+F on Linux and Windows,
+- **Making one.** Record with Cycle on (each pass becomes a take), record over audio with
+  Settings › Recording › Overlapping Recordings › Audio set to **Create take folders** (the
+  default: the regions underneath and the new take go into a folder, and recording over a folder
+  adds a take), or select several audio regions on one track and choose **Pack Take Folder** (Ctrl+F on Linux and Windows,
   Control+⌘F on macOS; also in the Edit and region menus): one take per region.
 - **The comp.** A folder plays its *comp*: which take is heard where. A new folder starts with
   the newest take, older takes filling in where it has no audio. Where one take hands over to
@@ -2919,7 +2937,7 @@ compensation rows needs **Apply Changes**, or **Done**, which applies them and c
 | Take Names | Vocals#03 (track and take number); Vocals (track name); Song - Vocals#03 (project, track and number) | Track and take number |
 | Count-in | On (this project's switch, the same as Shift+K) and 1 to 4 bars | Off, 1 bar |
 | Pre-roll | 0 to 30 seconds, used when Count-in is off | 0 |
-| Overlapping Recordings › Audio | Put the new take on top; Create a new track; Replace what's underneath | On top |
+| Overlapping Recordings › Audio | Create take folders; Put the new take on top; Create a new track; Replace what's underneath (see [Recording audio](#recording-audio)) | Create take folders (on top for settings saved before it existed) |
 | Overlapping Recordings › MIDI | Create a new region; Merge into the existing region; Replace in the recorded range; Create take folders (see [Recording MIDI](#recording-midi)) | New region |
 
 With a Recording Folder outside the project, Save As does not copy those recordings into the

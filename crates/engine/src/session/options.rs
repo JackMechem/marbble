@@ -180,6 +180,10 @@ impl Session {
         let overlaps = |r: &Region| matches!(r.content, RegionContent::Audio { .. }) && r.start < re && r.start + r.length > rs;
         let any = self.project.track(track)?.regions.iter().any(overlaps);
         let dest = match self.prefs.recording.audio_mode() {
+            AudioOverlap::TakeFolders if any => {
+                self.place_audio_takes(track, region);
+                return Some(track);
+            }
             AudioOverlap::NewTrack if any => {
                 // A track with the same settings and plug-ins, right below, not record-enabled.
                 *self.duplicate_tracks(&[track], false).first()?

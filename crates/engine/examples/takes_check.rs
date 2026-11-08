@@ -328,6 +328,37 @@ fn main() {
     );
     s.set_punch(false, pin, pout);
 
+    // ---- recording over audio without Cycle: a take folder per armed track --------------------
+    s.set_cycle(false, cs, ce);
+    s.update_track(punched, TrackPatch { armed: Some(false), ..Default::default() });
+    let mics: Vec<Id> = (0..2).map(|k| s.add_track(TrackKind::Audio, InputSel::Mono(k), None, None).unwrap()).collect();
+    for &m in &mics {
+        s.update_track(m, TrackPatch { armed: Some(true), ..Default::default() });
+    }
+    for _ in 0..2 {
+        s.locate(bar);
+        std::thread::sleep(Duration::from_millis(60));
+        ok &= record(&mut s, None, 1, 3 * bar);
+    }
+    for (k, &m) in mics.iter().enumerate() {
+        let r = regions(&s, m);
+        let f = r.first().and_then(|x| x.takes.clone());
+        ok &= check(
+            &format!(
+                "a second take over mic {k}'s region makes a folder of both, the new one heard ({} regions, {:?} takes)",
+                r.len(),
+                f.as_ref().map(|f| f.takes.len())
+            ),
+            r.len() == 1
+                && f.as_ref().is_some_and(|f| {
+                    let new = &f.takes[f.takes.len() - 1];
+                    f.takes.len() == 2 && f.comp.iter().any(|c| c.take == new.id && (c.start, c.end) == (new.start, new.end))
+                }),
+        );
+    }
+    s.undo();
+    ok &= check("one undo takes the take back off both mics", mics.iter().all(|&m| regions(&s, m).len() == 1 && regions(&s, m)[0].takes.is_none()));
+
     // The comp still plays after all of this (undo and recording leave the folder alone).
     let again = render(&mut s, 0, len);
     ok &= check("the comped folder still plays as saved", again.iter().zip(&comp_saved).all(|(x, y)| (x - y).abs() < 1e-6));
