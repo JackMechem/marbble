@@ -13,6 +13,12 @@ All notable changes to Marbble are recorded here. The format follows
   too. They are now shared, so 100 undo steps with four plug-ins of 1.5 MB settings each take
   14 MB instead of 614 MB, and an edit, an undo and an update of the window are 3 to 20 times
   quicker in such a project. Project files are unchanged.
+- **The global tracks take only the room they need.** Arrangement, Signature and Tempo now show
+  or hide one by one: right-click their headers, or use the Tracks area's View › Global Tracks.
+  A project shows the ones it uses until you choose (all three when it uses none), so one with
+  only arrangement sections shows just the Arrangement track, 22 px instead of 98. The Tempo
+  track starts at 40 px instead of 56 and can still be resized. Both are remembered per
+  project.
 
 ### Fixed
 

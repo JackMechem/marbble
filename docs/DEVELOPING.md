@@ -324,6 +324,7 @@ instead and enforce rules that would otherwise only fail in the running app.
 | `newTrackDrag.test.ts` | Which source lanes a drag past the last track makes new tracks for (`src/newTrackDrag.ts`). |
 | `comps.test.ts` | Take folder comp names and the folder's name bar label. |
 | `arrangement.test.ts` | The Arrangement track's drawing and drag helpers. |
+| `globalTracks.test.ts` | Which global tracks show (`src/globalTracks.ts`): the ones a project uses, the menu toggle, their height, the saved choice. |
 | `tools.test.ts` | The Tracks area's tools (`src/tools.ts`) and the marquee (`src/marquee.ts`). |
 | `overview.test.ts` | The overview strip's mapping: time, track rows, the visible-area box, scroll and zoom drags. |
 | `scrolling.test.ts` | Mouse Wheel Scrolls (`src/wheel.ts`) and bringing the playhead into view (`revealLeft` in `src/view.ts`). |

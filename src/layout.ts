@@ -6,6 +6,7 @@ import { getState, setState, useStore } from "./store";
 import { takeRowsHeight } from "./takes";
 import { OUTPUT_ID, subLaneHeight } from "./autoLanes";
 import { parseMixerView } from "./mixerLayout";
+import { defaultGlobalTracks, parseGlobalView, TEMPO_DEFAULT_H, type GlobalTrackId } from "./globalTracks";
 
 /** Smallest track height: one line of text. Headers lay out in tiers by height (see
  *  trackHeader.ts), and regions slim their name bar (regionBar.ts). */
@@ -203,5 +204,38 @@ export function saveMixerView(path: string) {
     localStorage.setItem(mixerKey(path), JSON.stringify(getState().mixerView));
   } catch {
     // Not critical: the strips fall back to Normal next time.
+  }
+}
+
+// ---- persistence: which global tracks show and the Tempo lane's height, per project folder too
+
+const globalKey = (path: string) => `marbble.globalTracks:${path}`;
+
+/** The project's saved choice, or the global tracks it uses (`defaultGlobalTracks`) when it has
+ *  none; worked out once as it opens, so tracks don't come and go while it's edited. */
+export function loadGlobalView(path: string) {
+  let text: string | null = null;
+  try {
+    text = localStorage.getItem(globalKey(path));
+  } catch {
+    // The defaults are fine.
+  }
+  const v = parseGlobalView(text);
+  const project = getState().snap?.project;
+  setState({ globalTracks: v.shown ?? defaultGlobalTracks(project ?? {}), tempoLaneH: v.tempoH ?? TEMPO_DEFAULT_H });
+}
+
+/** Saves what the user changed (the tracks shown, the Tempo lane's height) for the open project,
+ *  keeping the rest of what was saved. Until a choice is saved, the project shows what it uses. */
+export function saveGlobalView(change: { shown?: GlobalTrackId[]; tempoH?: number }) {
+  const path = getState().snap?.path;
+  if (!path) return;
+  try {
+    const old = parseGlobalView(localStorage.getItem(globalKey(path)));
+    const shown = change.shown ?? old.shown ?? undefined;
+    const tempoH = change.tempoH ?? old.tempoH ?? undefined;
+    localStorage.setItem(globalKey(path), JSON.stringify({ shown, tempoH }));
+  } catch {
+    // Not critical: the project shows what it uses next time.
   }
 }

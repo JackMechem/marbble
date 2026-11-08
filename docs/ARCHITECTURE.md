@@ -1143,6 +1143,7 @@ Interface-only state lives in the webview's `localStorage`:
 | `marbble.paneSizes` | `components/Splitter.tsx` | Library, Inspector, Browser, Mixer, Editor, docked-panel and header sizes, read through `paneSizes.ts` (within limits; malformed values are the defaults). |
 | `marbble.trackHeights:<project path>` | `layout.ts` | `{ base, heights, output }` for one project (`output`: the Output track shown). |
 | `marbble.mixerView:<project path>` | `layout.ts` | `{ size, widths }` for one project: the Mixer's strip size and the strips given a width of their own (read through `mixerLayout.ts`). |
+| `marbble.globalTracks:<project path>` | `layout.ts` | `{ shown, tempoH }` for one project: the global tracks chosen to show and the Tempo lane's height, each saved only once changed (read through `globalTracks.ts`). Without `shown`, a project shows the global tracks it uses. |
 | `marbble.bounce` | `components/Bounce.tsx` | Tail, format, resolution, sample rate and normalize of the bounce and export dialogs. |
 | `marbble.bounce-in-place` | `components/Bounce.tsx` | Bounce in Place options. |
 | `marbble.pianoRoll` | `components/pianoRollEditor/prefs.ts` | Piano Roll view and Time Quantize settings. |
@@ -1902,6 +1903,10 @@ CC to keep their bar/beat positions. Commands: `set_tempo_map`, `set_signatures`
 the base values. MIDI files (`smf.rs`) read and write tempo (0x51) and time signature (0x58)
 events, converting ticks through the file's own map. The UI is
 `src/components/GlobalTracks.tsx` (Tempo and Signature lanes) and the LCD in `ControlBar.tsx`.
+Which global tracks show (G shows them) is `src/globalTracks.ts`: each of Arrangement,
+Signature and Tempo on its own, from the headers' right-click menu or the Tracks area's
+View › Global Tracks. A project with no saved choice shows the ones it uses, worked out once as
+it opens so tracks don't come and go during edits.
 
 ## 13. Built-in effects and presets
 
@@ -2667,7 +2672,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `store.ts` | The global UI store and the tick channel (`pushTick`, `onTick`, `meterLevels`, `liveTakes`). |
 | `frame.ts` | The shared animation-frame loop, `framePos`, `coalesced`. |
 | `view.ts` | Shared tracks-area viewport, layout constants, the colour palette. |
-| `layout.ts` | Track heights, depth and positions; per-project height persistence; vertical zoom. |
+| `layout.ts` | Track heights, depth and positions; per-project persistence of heights, the Mixer's widths and the global tracks shown; vertical zoom. |
 | `time.ts` | Samples to bars/beats and back; the snap grid (`snapStep`: Bar, Beat, Division, Ticks, Smart). |
 | `transport.ts` | Cycle, Autopunch and locate helpers. |
 | `keymap.ts` | `KEY_COMMANDS`, `MENU_SHORTCUTS`, key normalisation. |
@@ -2682,6 +2687,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `menuLabels.ts` | One name per menu command and the shared Edit menu layout; pure, tested against `menu.rs`. |
 | `fileDialog.ts` | `open` and `save`, the dialog plug-in's behind `file_dialog_problem`; the only way to a file dialog (`tests/fileDialog.test.ts`). |
 | `tempo.ts` | The UI's mirror of `tempo.rs`, cached per snapshot. |
+| `globalTracks.ts` | Which global tracks show: the ones a project uses, the menu toggle, their rows' height, the saved choice; pure, tested. |
 | `prefs.ts` | Mirror of the settings, startup behaviour (`runStartup`), recovery offers, nudge sizes. |
 | `updates.ts`, `updateCheck.ts` | The update check: asking GitHub at launch and from Help › Check for Updates…, the notice's offer, View Release; the rules (semver order, each channel's newest release, the texts), pure and tested. See [Menus and dialogs](#menus-and-dialogs). |
 | `ops.ts` | Track and region operations and the right-click menus (`trackMenu`, `regionMenu`, `laneMenu`). |

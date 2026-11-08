@@ -1580,6 +1580,14 @@ File › Project Settings › General. Changes along the timeline live in the **
 Show them with View › Show Global Tracks (G); they sit between the ruler and the tracks: the
 [Arrangement track](#the-arrangement-track) at the top, then the Signature and Tempo tracks.
 
+Each of the three shows or hides on its own, as in Logic's Global Tracks configuration:
+right-click the global tracks' headers (or the Marker label beside the ruler, which works while
+they're hidden), or use the Tracks area's View › Global Tracks, and tick the ones to show. Picking one there while the global tracks are hidden shows them with it.
+Until you choose, a project shows the ones it uses (arrangement sections, a tempo change, a
+signature change after bar 1), or all three when it uses none, so a project that uses only the
+Arrangement track gives the rest of the room to its tracks. The choice and the Tempo track's
+height are remembered for each project. (The marker lane is part of the ruler and always shows.)
+
 ### Tempo track
 
 - Click the tempo line (or double-click anywhere in the lane) to add a tempo change at the
@@ -1591,7 +1599,7 @@ Show them with View › Show Global Tracks (G); they sit between the ruler and t
   removed.
 - Right-click a point › **Ramp to Next Tempo** to glide smoothly to the next change instead of
   jumping. Ramps are exact: beats, the click and MIDI all follow the curve.
-- Drag the lane's bottom edge to resize it.
+- Drag the lane's bottom edge (or its header's) to resize it; it starts 40 px tall.
 
 ### Signature track
 

@@ -8,6 +8,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { act, actMade, type ArrangementMarker, type Id, type Project } from "../api";
 import { ARRANGEMENT_NAMES, dropSlot, regionsInSection, resizePreview, sectionColor, sectionEnd, sections, type Drop } from "../arrangement";
 import { coalesced } from "../frame";
+import { ARRANGEMENT_H } from "../globalTracks";
 import { Icon } from "../icons";
 import { colorMenu } from "../ops";
 import { getState, setState, useStore } from "../store";
@@ -20,7 +21,7 @@ import { openMenu, type MenuItem } from "./Menu";
 import { askName, notEmpty } from "./NameSheet";
 
 /** Height of the Arrangement lane. */
-export const ARR_H = 22;
+export const ARR_H = ARRANGEMENT_H;
 /** How close to a section's right edge a drag resizes it, in pixels. */
 const EDGE_PX = 5;
 

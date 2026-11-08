@@ -16,7 +16,7 @@ import { isLooped } from "../loops";
 import { exportSelectionMidi, importMidiDialog } from "../midiFiles";
 import { fmt, keyHint, tip } from "../keymap";
 import { transport } from "../transport";
-import { GlobalTracks, globalTracksHeight } from "./GlobalTracks";
+import { GlobalTracks, globalHeaderMenu, globalTrackItems, globalTracksHeight } from "./GlobalTracks";
 import { Overview, toggleOverview } from "./Overview";
 import { OVERVIEW_H } from "../overview";
 import { tracksAreaMin } from "../paneSizes";
@@ -120,6 +120,8 @@ export function viewMenu(): MenuItem[] {
     { id: "automation", label: L("automation"), hint: keyHint("automation"), checked: s.showAutomation, onClick: () => setState({ showAutomation: !s.showAutomation }) },
     { id: "used-automation", label: L("used-automation"), hint: keyHint("used-automation"), onClick: showUsedAutomation },
     { id: "global-tracks", label: L("global-tracks"), hint: keyHint("global-tracks"), checked: s.showGlobalTracks, onClick: () => setState({ showGlobalTracks: !s.showGlobalTracks }) },
+    // Which of them show, one click from anywhere (as Logic's Global Tracks configuration).
+    { label: "Global Tracks", children: globalTrackItems() },
     { id: "overview", label: L("overview"), checked: s.showOverview, onClick: toggleOverview },
     { separator: true },
     { id: "show-hidden", label: L("show-hidden"), hint: keyHint("show-hidden"), checked: s.showHidden, onClick: ops.toggleShowHidden },
@@ -266,7 +268,9 @@ export function TracksArea() {
           <button className={"hide-mode" + (showHidden ? " on" : "")} title={tip("Show Hidden Tracks", "show-hidden")} aria-label={tip("Show Hidden Tracks", "show-hidden")} onClick={ops.toggleShowHidden}>
             H
           </button>
-          <span className="global-label">Marker</span>
+          <span className="global-label" onContextMenu={globalHeaderMenu}>
+            Marker
+          </span>
         </div>
         <Ruler />
         {globalH > 0 && <GlobalTracks />}

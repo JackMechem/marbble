@@ -1,6 +1,7 @@
 // Logic's Signature and Tempo global tracks, between the ruler and the tracks (View › Show
 // Global Tracks, G), under the Arrangement track (ArrangementTrack.tsx). They scroll and zoom
-// with the arrange area.
+// with the arrange area. Each shows or hides on its own (globalTracks.ts): right-click their
+// headers, or View › Global Tracks.
 //
 // Tempo lane: click the line (or double-click anywhere in the lane) to add a tempo change at
 // the snapped position (dragging it right away), drag a point up or down to change its tempo
@@ -21,12 +22,11 @@ import { NumberField } from "./Form";
 import { openMenu, type MenuItem } from "./Menu";
 import { getSettings } from "../prefs";
 import { timeStripWheel } from "../wheel";
-import { ARR_H, ArrangementHeader, ArrangementLane } from "./ArrangementTrack";
+import { ArrangementHeader, ArrangementLane } from "./ArrangementTrack";
+import { saveGlobalView } from "../layout";
+import { clampTempoH, GLOBAL_TRACK_LABELS, GLOBAL_TRACKS, globalRowsHeight, SIGNATURE_H, toggleGlobalTrack, type GlobalTrackId } from "../globalTracks";
+import { keyHint } from "../keymap";
 
-/** Height of the Signature lane. */
-export const SIG_H = 20;
-export const TEMPO_MIN_H = 32;
-export const TEMPO_MAX_H = 240;
 /** Inset of the tempo graph from the lane's top and bottom. */
 const PAD = 7;
 /** How near the tempo line (px) a single click adds a tempo change. */
@@ -35,7 +35,30 @@ const LINE_HIT = 6;
 const TEMPO_COLOR = "#8cc63f";
 
 /** Rows the global tracks take in the tracks area (0 when hidden). */
-export const globalTracksHeight = (s: State) => (s.showGlobalTracks ? ARR_H + SIG_H + s.tempoLaneH : 0);
+export const globalTracksHeight = (s: State) => (s.showGlobalTracks ? globalRowsHeight(s.globalTracks, s.tempoLaneH) : 0);
+
+/** Shows or hides one global track (`toggleGlobalTrack`), remembered for the project. */
+export function toggleGlobalTrackShown(id: GlobalTrackId) {
+  const s = getState();
+  const v = toggleGlobalTrack({ on: s.showGlobalTracks, shown: s.globalTracks }, id);
+  setState({ showGlobalTracks: v.on, globalTracks: v.shown });
+  saveGlobalView({ shown: v.shown });
+}
+
+/** A checkbox per global track, ticked while it is in view: the global tracks' header menu and
+ *  View › Global Tracks. */
+export function globalTrackItems(): MenuItem[] {
+  const s = getState();
+  return GLOBAL_TRACKS.map((id) => ({ label: GLOBAL_TRACK_LABELS[id], checked: s.showGlobalTracks && s.globalTracks.includes(id), onClick: () => toggleGlobalTrackShown(id) }));
+}
+
+/** Right-click on the global tracks' headers (the marker lane's label too), as in Logic: which
+ *  of them show, and Show Global Tracks. */
+export function globalHeaderMenu(e: React.MouseEvent) {
+  e.preventDefault();
+  const on = getState().showGlobalTracks;
+  openMenu(e.clientX, e.clientY, [...globalTrackItems(), { separator: true }, { label: "Show Global Tracks", hint: keyHint("global-tracks"), checked: on, onClick: () => setState({ showGlobalTracks: !on }) }]);
+}
 
 const project = () => getState().snap?.project;
 
@@ -88,10 +111,14 @@ export function GlobalTracks() {
   const proj = useStore((s) => s.snap?.project);
   const pxPerBeat = useStore((s) => s.pxPerBeat);
   const laneH = useStore((s) => s.tempoLaneH);
+  const shown = useStore((s) => s.globalTracks);
   useStore((s) => s.themeId);
   useStore((s) => s.uiScale);
-  const live = useRef({ project: proj, pxPerBeat, laneH });
-  live.current = { project: proj, pxPerBeat, laneH };
+  // The canvas holds the Signature lane over the Tempo lane, either of them hidden (0 high).
+  const sigH = shown.includes("signature") ? SIGNATURE_H : 0;
+  const tempoOn = shown.includes("tempo");
+  const live = useRef({ project: proj, pxPerBeat, laneH, sigH, tempoOn });
+  live.current = { project: proj, pxPerBeat, laneH, sigH, tempoOn };
   const ref = useRef<HTMLCanvasElement>(null);
   const phRef = useRef<HTMLDivElement>(null);
   /** Events shown while a point is dragged (committed on release), the axis kept still. */
@@ -99,18 +126,18 @@ export function GlobalTracks() {
   const [pop, setPop] = useState<SigPop | null>(null);
 
   const geometry = () => {
-    const { project, pxPerBeat, laneH } = live.current;
+    const { project, pxPerBeat, laneH, sigH, tempoOn } = live.current;
     const pps = project ? pxPerBeat / samplesPerBeat(project) : 1;
-    return { pps, laneH, left: viewport().left };
+    return { pps, laneH, sigH, tempoOn, left: viewport().left };
   };
 
   const draw = () => {
     const cv = ref.current;
     const { project } = live.current;
     if (!cv || !project) return;
-    const { pps, laneH, left } = geometry();
+    const { pps, laneH, sigH, tempoOn, left } = geometry();
     const W = viewport().width;
-    const H = SIG_H + laneH;
+    const H = sigH + (tempoOn ? laneH : 0);
     const dpr = pixelRatio();
     if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) {
       cv.width = Math.round(W * dpr);
@@ -121,9 +148,9 @@ export function GlobalTracks() {
     const ctx = cv.getContext("2d")!;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.fillStyle = theme.rulerCycleZone;
-    ctx.fillRect(0, 0, W, SIG_H);
+    ctx.fillRect(0, 0, W, sigH);
     ctx.fillStyle = theme.arrangeBg;
-    ctx.fillRect(0, SIG_H, W, laneH);
+    ctx.fillRect(0, sigH, W, H - sigH);
 
     const map = tempoMap(project);
     const xOf = (pos: number) => pos * pps - left;
@@ -131,29 +158,30 @@ export function GlobalTracks() {
     ctx.fillStyle = theme.barLine;
     for (const b of map.bars(Math.max(0, left / pps), (left + W) / pps)) ctx.fillRect(Math.round(xOf(b.start)) + 0.5, 0, 1, H);
     ctx.fillStyle = theme.rulerEdge;
-    ctx.fillRect(0, SIG_H - 1, W, 1);
+    if (sigH) ctx.fillRect(0, sigH - 1, W, 1);
     ctx.fillRect(0, H - 1, W, 1);
 
     // Signatures at their bars.
     ctx.font = "600 10px Inter, 'SF Pro Text', system-ui, sans-serif";
     ctx.textBaseline = "middle";
-    for (const s of map.sigs) {
+    for (const s of sigH ? map.sigs : []) {
       const x = Math.round(xOf(map.barStart(s.bar))) + 0.5;
       if (x > W + 2) break;
       const label = `${s.num}/${s.den}`;
       const tw = ctx.measureText(label).width;
       if (x + tw + 8 < 0) continue;
       ctx.fillStyle = theme.rulerTick;
-      ctx.fillRect(x, 3, 1, SIG_H - 6);
+      ctx.fillRect(x, 3, 1, sigH - 6);
       ctx.fillStyle = theme.rulerText;
-      ctx.fillText(label, x + 4, SIG_H / 2);
+      ctx.fillText(label, x + 4, sigH / 2);
     }
+    if (!tempoOn) return;
 
     // The tempo graph: holds, ramps and a point per change.
     const pv = preview.current;
     const events = pv?.events ?? map.events;
     const [lo, hi] = pv?.range ?? tempoRange(events);
-    const yOf = (bpm: number) => SIG_H + PAD + ((hi - bpm) / Math.max(1e-6, hi - lo)) * (laneH - 2 * PAD);
+    const yOf = (bpm: number) => sigH + PAD + ((hi - bpm) / Math.max(1e-6, hi - lo)) * (laneH - 2 * PAD);
     ctx.beginPath();
     events.forEach((e, i) => {
       const next = events[i + 1];
@@ -181,7 +209,7 @@ export function GlobalTracks() {
       ctx.fillStyle = on ? "#ffffff" : TEMPO_COLOR;
       ctx.fillRect(Math.round(x) - 2.5, Math.round(y) - 2.5, 5, 5);
       ctx.fillStyle = on ? theme.text : mix(TEMPO_COLOR, theme.text, 0.35);
-      ctx.fillText(pv && pv.i === i ? pv.label : fmtBpm(e.bpm), x + 5, y < SIG_H + 14 ? y + 8 : y - 7);
+      ctx.fillText(pv && pv.i === i ? pv.label : fmtBpm(e.bpm), x + 5, y < sigH + 14 ? y + 8 : y - 7);
     });
   };
 
@@ -229,14 +257,14 @@ export function GlobalTracks() {
 
   /** The tempo change drawn at (x, y) in canvas pixels, if any. */
   const pointAt = (p: Project, x: number, y: number): number | null => {
-    const { pps, laneH, left } = geometry();
+    const { pps, laneH, sigH, left } = geometry();
     const events = tempoMap(p).events;
     const [lo, hi] = tempoRange(events);
     let best: number | null = null;
     let bestD = 7;
     events.forEach((e, i) => {
       const px = e.pos * pps - left;
-      const py = SIG_H + PAD + ((hi - e.bpm) / Math.max(1e-6, hi - lo)) * (laneH - 2 * PAD);
+      const py = sigH + PAD + ((hi - e.bpm) / Math.max(1e-6, hi - lo)) * (laneH - 2 * PAD);
       const d = Math.max(Math.abs(px - x), Math.abs(py - y));
       if (d < bestD) {
         bestD = d;
@@ -262,8 +290,9 @@ export function GlobalTracks() {
     const rect = ref.current!.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    if (y >= SIG_H + live.current.laneH - 4) return resizeDown(e);
-    if (y < SIG_H) return sigDown(e, p, x);
+    const { sigH, laneH, tempoOn } = live.current;
+    if (tempoOn && y >= sigH + laneH - 4) return resizeDown(e);
+    if (y < sigH) return sigDown(e, p, x);
     tempoDown(e, p, x, y);
   };
 
@@ -271,10 +300,11 @@ export function GlobalTracks() {
     e.preventDefault();
     const startY = e.clientY;
     const startH = live.current.laneH;
-    const move = (ev: MouseEvent) => setState({ tempoLaneH: Math.round(Math.min(TEMPO_MAX_H, Math.max(TEMPO_MIN_H, startH + ev.clientY - startY))) });
+    const move = (ev: MouseEvent) => setState({ tempoLaneH: clampTempoH(startH + ev.clientY - startY) });
     const up = () => {
       window.removeEventListener("mousemove", move);
       window.removeEventListener("mouseup", up);
+      if (getState().tempoLaneH !== startH) saveGlobalView({ tempoH: getState().tempoLaneH });
     };
     window.addEventListener("mousemove", move);
     window.addEventListener("mouseup", up);
@@ -315,7 +345,7 @@ export function GlobalTracks() {
       if (pos <= 0) return;
       // A single click adds one only on (or near) the line; away from it a double-click does,
       // so a click that just lands in the lane doesn't change the tempo.
-      const lineY = SIG_H + PAD + ((range[1] - map.bpmAt(pos)) / Math.max(1e-6, range[1] - range[0])) * (live.current.laneH - 2 * PAD);
+      const lineY = live.current.sigH + PAD + ((range[1] - map.bpmAt(pos)) / Math.max(1e-6, range[1] - range[0])) * (live.current.laneH - 2 * PAD);
       if (e.detail < 2 && Math.abs(y - lineY) > LINE_HIT) {
         if (selectedTempo !== null) {
           selectedTempo = null;
@@ -387,7 +417,7 @@ export function GlobalTracks() {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     const map = tempoMap(p);
-    if (y < SIG_H) {
+    if (y < live.current.sigH) {
       // Right-click deletes a signature change (the first one is the project's own).
       const s = sigAt(p, x);
       if (s && s.bar > 1) commitSigs(map.sigs.filter((x) => x.bar !== s.bar));
@@ -437,19 +467,23 @@ export function GlobalTracks() {
 
   return (
     <>
-      <div className="global-headers">
-        <ArrangementHeader />
-        <div className="global-name" style={{ height: SIG_H }}>
-          Signature
-        </div>
-        <div className="global-name" style={{ height: laneH }}>
-          Tempo
-          <div className="global-resize" onMouseDown={resizeDown} />
-        </div>
+      <div className="global-headers" onContextMenu={globalHeaderMenu}>
+        {shown.includes("arrangement") && <ArrangementHeader />}
+        {sigH > 0 && (
+          <div className="global-name" style={{ height: sigH }}>
+            Signature
+          </div>
+        )}
+        {tempoOn && (
+          <div className="global-name" style={{ height: laneH }}>
+            Tempo
+            <div className="global-resize" onMouseDown={resizeDown} />
+          </div>
+        )}
       </div>
       <div className="global-lanes" onWheel={onWheel}>
-        <ArrangementLane />
-        <canvas ref={ref} onMouseDown={onMouseDown} onContextMenu={onContextMenu} />
+        {shown.includes("arrangement") && <ArrangementLane />}
+        {(sigH > 0 || tempoOn) && <canvas ref={ref} onMouseDown={onMouseDown} onContextMenu={onContextMenu} />}
         <div className="global-playhead" ref={phRef} style={{ ["--ph" as string]: theme.playhead }} />
       </div>
       {pop && <SignaturePopover pop={pop} onCancel={() => setPop(null)} onCommit={commitPop} />}

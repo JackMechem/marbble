@@ -36,7 +36,7 @@ import { currentTick, getState, pushTick, setState, useStore } from "./store";
 import { transport } from "./transport";
 import { applyTheme } from "./themes";
 import { applyUiScale, stepUiScale } from "./uiScale";
-import { currentLayout, loadHeights, loadMixerView, saveHeights, saveMixerView, stepVisible, zoomTracks } from "./layout";
+import { currentLayout, loadGlobalView, loadHeights, loadMixerView, saveHeights, saveMixerView, stepVisible, zoomTracks } from "./layout";
 import { revealTop, scrollTo, viewport } from "./view";
 import { installNativeDrop } from "./dnd";
 import { newAux } from "./routing";
@@ -561,7 +561,8 @@ function StatusLine() {
   );
 }
 
-/** Remembers track heights, and the Mixer's strip widths, per project folder. */
+/** Remembers track heights, the Mixer's strip widths and the global tracks shown, per project
+ *  folder. */
 function useHeightPersistence() {
   const path = useStore((s) => s.snap?.path);
   const base = useStore((s) => s.trackHeight);
@@ -573,6 +574,7 @@ function useHeightPersistence() {
     if (path && path !== loaded) {
       loadHeights(path);
       loadMixerView(path);
+      loadGlobalView(path);
       setLoaded(path);
     }
   }, [path, loaded]);

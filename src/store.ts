@@ -11,6 +11,7 @@ import type { WaveStyle } from "./waveform";
 import { DEFAULT_TOOLS, type Tools } from "./tools";
 import type { Marquee } from "./marquee";
 import { DEFAULT_MIXER_VIEW, type MixerView } from "./mixerLayout";
+import { GLOBAL_TRACKS, TEMPO_DEFAULT_H, type GlobalTrackId } from "./globalTracks";
 
 export type Snap = "smart" | "bar" | "beat" | "division" | "ticks" | "off";
 /** What the bottom section shows; "fx" is the docked plug-in panels (fxDock.ts), "list" the
@@ -83,9 +84,11 @@ export interface State {
   compSection: { region: Id; at: number } | null;
   /** The Marker List sheet. */
   showMarkerList: boolean;
-  /** The Tempo and Signature global tracks above the tracks (G). */
+  /** The global tracks above the tracks (G). */
   showGlobalTracks: boolean;
-  /** Height of the Tempo lane. */
+  /** Which global tracks show with G, per project (globalTracks.ts). */
+  globalTracks: GlobalTrackId[];
+  /** Height of the Tempo lane, per project. */
   tempoLaneH: number;
   /** Tempo edits move MIDI regions to keep their bars and beats (the Tempo lane's menu). */
   moveMidiWithTempo: boolean;
@@ -171,7 +174,8 @@ let state: State = {
   compSection: null,
   showMarkerList: false,
   showGlobalTracks: false,
-  tempoLaneH: 56,
+  globalTracks: [...GLOBAL_TRACKS],
+  tempoLaneH: TEMPO_DEFAULT_H,
   moveMidiWithTempo: false,
   fxList: [],
   instList: [],
