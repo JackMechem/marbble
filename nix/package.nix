@@ -34,6 +34,7 @@ rustPlatform.buildRustPackage (finalAttrs: {
       ../crates
       ../src-tauri
       ../src
+      ../public
       ../index.html
       # bundled with the app (Tauri's bundle.resources)
       ../LICENSE

@@ -6,6 +6,11 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **The project chooser's logo shows in the Nix package.** The Nix build left out the folder it
+  is in, so the chooser showed a broken image.
+
 ## [0.1.0-alpha.9] - 2026-11-07
 
 ### Added
