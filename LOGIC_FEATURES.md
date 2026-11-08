@@ -414,7 +414,7 @@ most of it the everyday editing and mixing work.
 - [x] Move to playhead (pickup clock) (p. 305)
 - [ ] Move to recorded position (p. 305). *Regions don't keep their recorded position yet.*
 - [ ] Slip and rotate by the nudge value (p. 306)
-- [ ] Nudge value in ticks, frames and samples (p. 306)
+- [~] Nudge value in ticks, frames and samples (p. 306). *Samples (1 to 50), and Nudge Left/Right by Sample; no ticks or frames.*
 - [x] Insert silence, cut, insert or repeat a section between the locators across all tracks (p. 307–310). *Or within the marquee on its tracks. The tempo and signature tracks stay put, as with the Arrangement track.*
 - [x] Remove gaps between regions (p. 308)
 - [ ] Region anchor / shift playback position (p. 311)

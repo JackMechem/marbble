@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { act, call, type BitDepth, type ClickSettings, type PluginDesc, type Project, type RecentProject, type Snapshot } from "./api";
 import { getState, setState, type Snap } from "./store";
+import { sampleStep } from "./musicalMove";
 import { tempoMap } from "./tempo";
 import type { UpdateChannel } from "./updateCheck";
 import type { WheelScrolls } from "./wheel";
@@ -12,7 +13,7 @@ export type MidiOverlap = "new_region" | "merge" | "replace" | "take_folders";
 export type TakeNames = "track_number" | "track" | "project_track";
 export type VelocityCurve = "linear" | "soft" | "hard" | "fixed";
 export type Startup = "chooser" | "last_project" | "empty_project";
-export type Nudge = "bar" | "beat" | "8" | "16" | "32" | "ms10" | "ms1";
+export type Nudge = "bar" | "beat" | "8" | "16" | "32" | "ms10" | "ms1" | "smp50" | "smp10" | "smp5" | "smp2" | "smp1";
 export type PdcMode = "all" | "off";
 export type ClickLocates = "anywhere" | "empty" | "off";
 export type MoveAutomation = "never" | "always" | "ask";
@@ -172,13 +173,14 @@ export async function refreshPlugins() {
 }
 
 /** The Nudge step in samples for the current project, at the tempo and signature at `pos`. */
-export function nudgeSamples(p: Project, pos = 0): number {
-  const n = settings.ui.nudge;
+export function nudgeSamples(p: Project, pos = 0, n: Nudge = settings.ui.nudge): number {
   const m = tempoMap(p);
   if (n === "bar") return m.samplesPerBarAt(pos);
   if (n === "beat") return m.samplesPerBeatAt(pos);
   if (n === "ms10") return p.sample_rate / 100;
   if (n === "ms1") return p.sample_rate / 1000;
+  const smp = sampleStep(n);
+  if (smp !== null) return smp;
   // Note values: 8 = eighth note, relative to a quarter.
   return m.samplesPerQuarterAt(pos) * (4 / Number(n));
 }

@@ -1,6 +1,7 @@
 //! Takes recorded one per track, against a running engine (silent ALSA null output, rendered
 //! offline): Pack Take Folder from regions on several tracks, heard as one folder, and deleting
-//! the tracks it leaves empty. usage: take_tracks_check <audio file> <scratch dir>
+//! the tracks it leaves empty; nudging regions on several tracks by samples.
+//! usage: take_tracks_check <audio file> <scratch dir>
 use daw_engine::audio_io::AudioConfig;
 use daw_engine::model::{Id, InputSel, TrackKind};
 use daw_engine::Session;
@@ -77,6 +78,22 @@ fn main() {
     );
     let back = peak(&render(&mut s, 0, len)[window.clone()]);
     check(&format!("and they play together again ({:.3})", back / first), (back - all).abs() < 1e-4);
+
+    // ---- nudging by samples: every region moves the same number of samples -----------------
+    s.move_region(ids[1], 10, None);
+    let before = render(&mut s, 0, len);
+    s.checkpoint("Nudge", None, false);
+    s.drag_nudge_regions(&ids, 1, Some(false));
+    let after = render(&mut s, 0, len);
+    check(
+        "a nudge by a sample delays the mix by exactly one sample",
+        after[0].abs() < 1e-9 && (1..len as usize).all(|i| (after[i] - before[i - 1]).abs() < 1e-6),
+    );
+    // Five samples back: the regions at 1 can go back only one, and the one at 11 goes with them.
+    s.drag_nudge_regions(&ids, -5, Some(false));
+    let starts: Vec<i64> = ids.iter().map(|&id| s.project.tracks.iter().flat_map(|t| &t.regions).find(|r| r.id == id).unwrap().start).collect();
+    let again = render(&mut s, 0, len);
+    check(&format!("past the start they stop together ({starts:?})"), starts == [0, 10, 0] && again.iter().zip(&before).all(|(a, b)| (a - b).abs() < 1e-6));
 
     std::process::exit(if FAILED.load(std::sync::atomic::Ordering::Relaxed) { 1 } else { 0 });
 }

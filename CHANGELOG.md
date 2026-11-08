@@ -11,9 +11,15 @@ All notable changes to Marbble are recorded here. The format follows
 - **Pack Take Folder from several tracks.** Takes recorded one per track pack into one take
   folder on the topmost track, in track order, each at its own position. Marbble then offers to
   delete the tracks left with no regions.
+- **Nudge by samples.** Settings › Editing › Nudge Value has 1, 2, 5, 10 and 50 samples, and
+  Nudge Regions Left / Right by Sample (Alt+Shift+Left / Right) moves the selected regions one
+  sample whatever the Nudge Value is.
 
 ### Fixed
 
+- Nudging a looped region moves its loop end with it, so the loop keeps its length, and a
+  nudge that would take the earliest selected region before the project start stops it there
+  instead of squashing the regions together.
 - A take lands where it was played when an undo during the recording turns a track with latent
   plug-ins back on. The take was moved by the delay compensation as it was at Stop, not as the
   performer heard it.

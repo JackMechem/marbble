@@ -847,7 +847,11 @@ The pointer changes over a region's hot zones:
   Editing; 1/16 note by default). A run of nudges is one undo step. A bar, beat or note value
   is counted through the tempo map: the first selected region moves by exactly that many bars
   or beats, and the others keep their bars and beats, across tempo changes too. A nudge by
-  milliseconds moves every region the same time.
+  milliseconds or samples moves every region the same number of samples (the earliest stops
+  at the project start, and the others with it).
+- **Nudge by sample:** Alt+Shift+Left / Alt+Shift+Right move the selected regions by one
+  sample, whatever the Nudge Value is: for lining up a close mic with an overhead by ear or by
+  waveform. The Nudge Value can also be 1, 2, 5, 10 or 50 samples.
 - **Snap Edits to Zero Crossings** (Edit menu, also in the Tracks area's and Audio Track
   Editor's Edit menus; a key command with no key by default): with it on, splits, trims and
   range edits of audio regions (Split at Playhead, the Scissors, the marquee, the Audio Track
@@ -2948,7 +2952,7 @@ The velocity curve applies to MIDI inputs, not to Musical Typing.
 | Setting | Choices | Default |
 |---|---|---|
 | Snap | Smart (follows the zoom), Bar, Beat, Division (a quarter of a beat), Ticks, Off | Smart |
-| Nudge Value | Bar, Beat, 1/8 note, 1/16 note, 1/32 note, 10 ms, 1 ms | 1/16 note |
+| Nudge Value | Bar, Beat, 1/8 note, 1/16 note, 1/32 note, 10 ms, 1 ms, 50, 10, 5, 2 or 1 samples | 1/16 note |
 | Click Moves Playhead | Anywhere in the tracks; Empty space only; Never (a click without a drag moves the playhead there, snapped to the grid) | Empty space only (Anywhere before 0.1.0-alpha.7, which earlier settings keep) |
 | Anti-click Fades | 0 to 100 ms, for new recordings and imports | 0 |
 | Move Automation with Regions | Never; Always; Ask (whether moving a region along its track takes its automation along) | Never |
@@ -3068,6 +3072,7 @@ shown.
 | L | Loop regions |
 | U | Set Locators by Regions |
 | Alt+Left / Alt+Right | Nudge regions left / right |
+| Alt+Shift+Left / Alt+Shift+Right | Nudge regions left / right by one sample |
 | Ctrl+F (Control+⌘F on macOS) | Pack Take Folder |
 | T | Show Tool Menu (then a tool's letter: T Pointer, P Pencil, E Eraser, I Scissors, G Glue, M Mute, A Fade, R Marquee; Esc Pointer) |
 | Shift+F | Select All Following |

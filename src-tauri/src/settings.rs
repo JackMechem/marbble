@@ -43,7 +43,7 @@ pub struct UiPrefs {
     /// Snap mode of new windows: "smart", "bar", "beat", "division", "ticks" or "off".
     pub snap: String,
     /// Nudge step for the Nudge Left/Right key commands: "bar", "beat", "8", "16", "32",
-    /// "ms10" or "ms1".
+    /// "ms10", "ms1", or a number of samples: "smp50", "smp10", "smp5", "smp2" or "smp1".
     pub nudge: String,
     /// Key command overrides: command id -> key strings (an empty list removes the default).
     pub keymap: BTreeMap<String, Vec<String>>,

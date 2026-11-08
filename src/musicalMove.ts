@@ -20,7 +20,7 @@ export function movedStart(map: TempoMap, pos: number, from: number, to: number,
 
 /** Where a nudge by `step` in direction `dir` (±1) takes a region at `at`, through the tempo
  *  map: a bar keeps the position within the bar, beats and note values count in quarter notes.
- *  Null for the steps in milliseconds, which stay a number of samples. */
+ *  Null for the steps in milliseconds and samples, which stay a number of samples. */
 export function nudgeTarget(map: TempoMap, at: number, step: Nudge, dir: number): number | null {
   const q = map.beatsAt(at);
   let to: number;
@@ -33,6 +33,17 @@ export function nudgeTarget(map: TempoMap, at: number, step: Nudge, dir: number)
     to = map.sampleAt(q + (dir * 4) / Number(step));
   } else return null;
   return Math.max(0, Math.round(to));
+}
+
+/** The samples in a Nudge Value given as a number of samples ("smp5"), else null. */
+export function sampleStep(step: Nudge): number | null {
+  return step.startsWith("smp") ? Number(step.slice(3)) : null;
+}
+
+/** A nudge that moves every region the same number of samples, `delta` (signed): the earliest,
+ *  at `first`, stops at the project start, and the others with it. */
+export function evenNudge(first: number, delta: number): number {
+  return Math.max(-first, Math.round(delta));
 }
 
 /** `r` moved to `start`, its loop end with it (for a copy that is pasted where it is). */

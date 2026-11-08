@@ -14,7 +14,7 @@ test("holding a toggle or one-shot doesn't run it again", () => {
 });
 
 test("holding a move or a zoom repeats", () => {
-  for (const id of ["rewind", "forward", "zoom-in", "zoom-out", "select-previous", "select-next", "nudge-left", "nudge-right"]) assert.equal(runsOnKey(id, true), true, id);
+  for (const id of ["rewind", "forward", "zoom-in", "zoom-out", "select-previous", "select-next", "nudge-left", "nudge-right", "nudge-left-sample", "nudge-right-sample"]) assert.equal(runsOnKey(id, true), true, id);
 });
 
 test("every repeating command exists in the keymap", () => {
