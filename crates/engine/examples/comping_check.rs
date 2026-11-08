@@ -2,6 +2,9 @@
 //! running engine (silent ALSA null output):
 //! - several comps per folder: create, switch, rename and delete them, with undo, and each comp
 //!   renders as it should;
+//! - the folders of grouped tracks switch takes, comp, step to the next take and edit comp
+//!   sections (move a border, remove a section, move it to another take) together, one undo
+//!   step each, and act alone with the group off;
 //! - MIDI cycle recording with "Create take folders" (notes played in through the same path as
 //!   Musical Typing) makes a folder with a take per pass, and choosing a take changes what
 //!   plays;
@@ -201,6 +204,74 @@ fn main() {
     );
     s.set_drag_mode(DragMode::Overlap);
     s.delete_track(t);
+
+    // ---- Grouped take folders switch and comp together --------------------------------------
+    // Two mics' folders, each take 1 at 0.5 and take 2 at 0.25: the mix is 1.0 or 0.5 where
+    // they play the same take and 0.75 where they don't.
+    let mics: Vec<(Id, Id, Vec<Id>)> = (0..2)
+        .map(|_| {
+            let t = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
+            let a = place(&mut s, t, &hi_dc, j, 2 * j, 0);
+            let b = place(&mut s, t, &lo_dc, j, 2 * j, 0);
+            let f = s.pack_take_folder(&[a, b]).unwrap();
+            let takes = region(&s, f).takes.unwrap().takes.iter().map(|k| k.id).collect();
+            (t, f, takes)
+        })
+        .collect();
+    let group = s.create_group(&[mics[0].0, mics[1].0]);
+    let halves = |s: &mut Session| {
+        let out = render(s, j, 3 * j);
+        (mid(&out, j + j / 2), mid(&out, 2 * j + j / 2))
+    };
+    let near = |(x, y): (f32, f32), (a, b): (f32, f32)| (x - a).abs() < 1e-3 && (y - b).abs() < 1e-3;
+    s.checkpoint("Select Take", None, false);
+    s.select_take(mics[0].1, mics[0].2[0]);
+    let h = halves(&mut s);
+    check(&format!("choosing take 1 on one mic switches the other too ({h:?})"), near(h, (1.0, 1.0)));
+    s.checkpoint("Edit Comp", None, false);
+    s.set_comp_range(mics[1].1, Some(mics[1].2[1]), j, 2 * j);
+    let h = halves(&mut s);
+    check(&format!("a swipe on one comps both ({h:?})"), near(h, (0.5, 1.0)));
+    s.checkpoint("Next Take", None, false);
+    s.step_take(&[mics[0].1, mics[1].1], 1);
+    let h = halves(&mut s);
+    check(&format!("Next Take moves both folders on one take ({h:?})"), near(h, (0.5, 0.5)));
+    s.undo();
+    let h = halves(&mut s);
+    check(&format!("one undo puts both back ({h:?})"), near(h, (0.5, 1.0)));
+    // Comp section edits: take 2 is heard over the first second, take 1 over the second.
+    let levels = |s: &mut Session, at: &[i64]| {
+        let out = render(s, j, 3 * j);
+        at.iter().map(|&p| mid(&out, p)).collect::<Vec<f32>>()
+    };
+    let all_near = |got: &[f32], want: &[f32]| got.iter().zip(want).all(|(g, w)| (g - w).abs() < 1e-3);
+    let (q1, q5, q9, q11) = (j + j / 4, j + j / 2, 2 * j + j / 4, 2 * j + 3 * j / 4);
+    s.checkpoint("Move Comp Section Edge", None, false);
+    s.move_comp_edge(mics[0].1, 2 * j, 2 * j + j / 2);
+    let l = levels(&mut s, &[q1, q9, q11]);
+    check(&format!("dragging the border between sections moves it on both mics ({l:?})"), all_near(&l, &[0.5, 0.5, 1.0]));
+    s.checkpoint("Remove Comp Section", None, false);
+    s.remove_comp_section(mics[1].1, q5);
+    let l = levels(&mut s, &[q5, q11]);
+    check(&format!("removing a section silences it on both ({l:?})"), all_near(&l, &[0.0, 1.0]));
+    s.undo();
+    s.checkpoint("Move Comp Section", None, false);
+    s.move_comp_section(mics[0].1, q5, -1);
+    let l = levels(&mut s, &[q1, q9, q11]);
+    check(&format!("moving a section to the take above moves both ({l:?})"), all_near(&l, &[1.0, 1.0, 1.0]));
+    s.undo();
+    s.undo();
+    let h = halves(&mut s);
+    check(&format!("and the section edits undo ({h:?})"), near(h, (0.5, 1.0)));
+    let mut g = s.project.group(group).unwrap().clone();
+    g.enabled = false;
+    s.update_group(g);
+    s.select_take(mics[0].1, mics[0].2[0]);
+    let h = halves(&mut s);
+    check(&format!("with the group off, each folder switches alone ({h:?})"), near(h, (0.75, 1.0)));
+    for (t, ..) in mics {
+        s.delete_track(t);
+    }
 
     // ---- A take folder crossfaded with its neighbour -----------------------------------------
     // The folder plays the sine up to 2 s; the next region carries on with the same sine. A

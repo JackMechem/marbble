@@ -21,9 +21,55 @@ All notable changes to Marbble are recorded here. The format follows
 - **Discard Last Recording** (Ctrl+., ⌘. on macOS, and in the Record menu) stops if you are
   recording, takes the last recording off every track it went to as one undoable step, and
   returns to where playback started. Its files are deleted once nothing can bring them back.
+- **Track icons.** Click the icon in a track header, on a Mixer strip or in the Track inspector
+  (or right-click › Track Icon) to choose one of 38 icons in groups: drums (kick, snare, hi-hat,
+  toms, overheads, room, kit), percussion, bass, guitars and amp, keys, strings, brass,
+  woodwinds, vocals, effects and buses, and the usual track icons. It applies to every selected
+  track, is undoable, is saved with the project and kept by Duplicate Track and templates.
+  Until you choose one, a track's name picks it ("Kick In", "OH", "Vox", "Bass", "Gtr", "Keys"),
+  and renaming the track changes it; otherwise it's the track type's icon, as before.
+- **Pack Take Folder from several tracks.** Takes recorded one per track pack into one take
+  folder on the topmost track, in track order, each at its own position. Marbble then offers to
+  delete the tracks left with no regions.
+- **Nudge by samples.** Settings › Editing › Nudge Value has 1, 2, 5, 10 and 50 samples, and
+  Nudge Regions Left / Right by Sample (Alt+Shift+Left / Right) moves the selected regions one
+  sample whatever the Nudge Value is.
+- **Unpack to Existing Tracks, and Export or Move Active Take to New Track** in the take folder
+  menu. Unpack to Existing Tracks puts the takes on the tracks below the folder's, one each,
+  adding tracks where there aren't enough. Export copies the take heard (or the comp,
+  flattened) to a new track with the same settings; Move takes it out of the folder too.
+- **Drum Replacement and Doubling** (Track › Drum Replacement/Doubling…, or an audio track's
+  header menu). It finds the hits on a recorded drum and makes a Marbble Sampler track below with
+  a note at each, its velocity from the hit's level, playing a kick, snare, tom or hi-hat sample
+  Marbble makes. Replace mutes the recording; Doubling layers the sample with it. A threshold,
+  with the hits marked on the track as you move it, notes at the attack or the peak, and a timing
+  offset.
+- **Grouped take folders switch and comp together.** When tracks share a group that is on with
+  Editing (Selection) linked, choosing a take, swiping a comp, and choosing, creating,
+  duplicating, renaming or deleting a comp in one take folder does the same in the folders at
+  the same place on the other tracks, as one undo step: the drum mics of a cycle recording stay
+  on the same performance. Takes recorded together match pass by pass; folders packed by hand
+  match by take number.
+- **Edit comp sections.** In an open take folder, drag a section's edge: the border between two
+  sections moves both, an outer edge lengthens or shortens its section. Click a section that is
+  in the comp to select it; Up and Down move it to the take above or below, and Delete (or the
+  row's right-click menu) removes it, leaving a gap. Grouped take folders follow, and every edit
+  is one undo step.
+- **Select Previous Take and Select Next Take** (Alt+Shift+Up and Alt+Shift+Down) switch the
+  selected take folders, and their grouped partners, one take up or down.
+
+### Changed
+
+- **Transients are found more reliably on drums.** A ringing kick no longer marks itself twice,
+  a hit on top of another one's ringing is found, and markers land on the attack to the sample
+  instead of up to a few milliseconds early or late. Split at Transients, the sampler's Slice and
+  Convert to Sampler Track all use it.
 
 ### Fixed
 
+- Nudging a looped region moves its loop end with it, so the loop keeps its length, and a
+  nudge that would take the earliest selected region before the project start stops it there
+  instead of squashing the regions together.
 - A take lands where it was played when an undo during the recording turns a track with latent
   plug-ins back on. The take was moved by the delay compensation as it was at Stop, not as the
   performer heard it.
@@ -44,6 +90,12 @@ All notable changes to Marbble are recorded here. The format follows
 - **Undoing written automation puts the control back.** Undoing a Write Automation step took the
   new lane away but left the fader, send or built-in plug-in's knob where the pass had moved it,
   so the project wasn't as it was before. It now goes back to its value from before the pass.
+- **Audio no longer drops out when Linux swaps Marbble's memory.** Under memory pressure the
+  system could move part of a playing clip or plug-in to swap, and the audio waited for the disk
+  while the CPU meter read a few percent. Marbble now locks its memory in RAM at startup when the
+  system allows it (an unlimited RLIMIT_MEMLOCK, as the audio group usually gives), and the log
+  says whether it did. Settings › Audio › Memory switches it off and on, and says why it isn't
+  locked when the limit is too small.
 
 ## [0.1.0-alpha.8] - 2026-11-07
 

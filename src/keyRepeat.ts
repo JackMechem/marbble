@@ -3,7 +3,7 @@
 // would run many times.
 //
 // This module has no imports, so it runs under plain Node for the tests in tests/.
-const REPEATS = new Set(["rewind", "forward", "previous-marker", "next-marker", "zoom-in", "zoom-out", "taller-tracks", "shorter-tracks", "select-previous", "select-next", "nudge-left", "nudge-right"]);
+const REPEATS = new Set(["rewind", "forward", "previous-marker", "next-marker", "zoom-in", "zoom-out", "taller-tracks", "shorter-tracks", "select-previous", "select-next", "nudge-left", "nudge-right", "nudge-left-sample", "nudge-right-sample"]);
 
 /** Whether command `id` runs for this key press, `repeat` being the event's auto-repeat flag. */
 export function runsOnKey(id: string, repeat: boolean): boolean {

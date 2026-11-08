@@ -103,14 +103,18 @@ mod auto_write;
 mod last_recording;
 mod recovery;
 pub use recovery::{discard_journals, read_journal, recording_journals, JournalTake, RecJournal, RecordingRecovery, BACKUP_FILE};
+mod drum_replace;
 mod musical_moves;
 mod region_gain;
 mod sampler;
 mod threads;
+mod track_icons;
 mod track_off;
 mod vst_key;
 mod zero_crossings;
 pub use sampler::{prepare_files, PreparedFile, SamplerAdded, SamplerRecording, SamplerView, SamplerWave, SfzReport, ZoneView, SAMPLES_DIR};
+#[cfg(test)]
+mod comp_tests;
 #[cfg(test)]
 mod held_notes;
 #[cfg(test)]
@@ -205,6 +209,8 @@ pub struct Session {
     audio: Option<AudioIo>,
     pub audio_status: AudioStatus,
     pub audio_config: AudioConfig,
+    /// Whether the process's memory is locked (`apply_memory_lock`).
+    pub memory_lock: crate::memlock::MemoryLock,
     midi: MidiIo,
     midi_rec_rx: rtrb::Consumer<(i64, [u8; 3])>,
     recorder: Recorder,
@@ -380,6 +386,7 @@ impl Session {
             audio: None,
             audio_status: AudioStatus::default(),
             audio_config,
+            memory_lock: crate::memlock::MemoryLock::initial(),
             midi,
             midi_rec_rx: rec_rx,
             recorder: Recorder::new(),

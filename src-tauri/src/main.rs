@@ -70,6 +70,8 @@ fn main() {
     });
     let prefs = settings::load();
     let mut session = Session::new(prefs.audio, plugins);
+    // Before a project loads, so its clips are locked as they're read (Settings › Audio).
+    session.apply_memory_lock();
     session.set_prefs(prefs.prefs);
     session.load_controller_assignments(plugin_db::config_dir().join("controller-assignments.json"));
     // `marbble path/to/Song.marbble` opens a project at launch.
@@ -159,6 +161,7 @@ fn main() {
             commands::audio_devices,
             commands::get_audio_config,
             commands::thread_choices,
+            commands::memory_lock,
             commands::set_audio_config,
             commands::play,
             commands::stop,
@@ -177,6 +180,7 @@ fn main() {
             commands::add_tracks,
             commands::delete_track,
             commands::update_track,
+            commands::set_track_icon,
             commands::select_track,
             commands::reorder_tracks,
             commands::move_region,
@@ -280,6 +284,10 @@ fn main() {
             commands::set_punch,
             commands::set_comp_range,
             commands::select_take,
+            commands::step_take,
+            commands::move_comp_edge,
+            commands::remove_comp_section,
+            commands::move_comp_section,
             commands::rename_take,
             commands::delete_take,
             commands::delete_unused_takes,
@@ -289,6 +297,8 @@ fn main() {
             commands::flatten_take_folder,
             commands::merge_take_folder,
             commands::unpack_take_folder,
+            commands::unpack_to_existing_tracks,
+            commands::export_active_take,
             commands::pack_take_folder,
             commands::move_regions,
             commands::clear_undo_history,
@@ -398,6 +408,8 @@ fn main() {
             commands::sampler_record_stop,
             commands::sampler_record_cancel,
             commands::convert_region_to_sampler,
+            commands::drum_hits,
+            commands::drum_replace,
             commands::section_edit,
             commands::insert_cut_section,
             commands::remove_gaps,

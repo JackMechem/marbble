@@ -150,7 +150,7 @@ hosting, automation and undo. This stage is mostly done.
 - [ ] Several tracks sharing one channel strip (New Track with Same Channel Strip / Next Channel) (p. 125–126)
 - [ ] Search for and select a track (p. 128)
 - [ ] Rename several tracks at once (p. 129)
-- [ ] Track icons, including custom icons (p. 130)
+- [~] Track icons, including custom icons (p. 130). *38 built-in icons in groups, picked from the header, Mixer strip, Inspector or track menu; a new track's name picks one. No custom (image file) icons.*
 - [ ] Sort tracks (p. 131)
 - [ ] Automatically zoom the focused track (p. 132)
 - [ ] Hide tracks through groups (p. 147)
@@ -414,7 +414,7 @@ most of it the everyday editing and mixing work.
 - [x] Move to playhead (pickup clock) (p. 305)
 - [ ] Move to recorded position (p. 305). *Regions don't keep their recorded position yet.*
 - [ ] Slip and rotate by the nudge value (p. 306)
-- [ ] Nudge value in ticks, frames and samples (p. 306)
+- [~] Nudge value in ticks, frames and samples (p. 306). *Samples (1 to 50), and Nudge Left/Right by Sample; no ticks or frames.*
 - [x] Insert silence, cut, insert or repeat a section between the locators across all tracks (p. 307–310). *Or within the marquee on its tracks. The tempo and signature tracks stay put, as with the Arrangement track.*
 - [x] Remove gaps between regions (p. 308)
 - [ ] Region anchor / shift playback position (p. 311)
@@ -481,12 +481,13 @@ most of it the everyday editing and mixing work.
 - [x] Quick Swipe Comping (p. 222)
 - [x] Open a take folder and preview or choose takes (p. 223–224)
 - [x] Create, save, rename and delete comps (p. 224–233)
-- [ ] Edit comp sections: move, alternate between lanes, remove a take (p. 227–229)
+- [x] Grouped take folders switch and comp together; Select Previous/Next Take
+- [x] Edit comp sections: move, alternate between lanes, remove a take (p. 227–229)
 - [ ] Edit take regions: trim, cut, slice at comp borders, move between lanes (p. 234–237)
-- [ ] Export the active take to a new track (p. 238)
+- [x] Export the active take to a new track (p. 238). *Or the comp, flattened; Move Active Take too.*
 - [x] Flatten, and Flatten and Merge (p. 241)
-- [~] Unpack to existing tracks, new tracks or track alternatives (p. 243–246). *Unpack to New Tracks only.*
-- [x] Pack regions into a take folder (p. 247)
+- [~] Unpack to existing tracks, new tracks or track alternatives (p. 243–246). *New and existing tracks; not track alternatives.*
+- [x] Pack regions into a take folder (p. 247). *From one track or several; the tracks left empty can be deleted.*
 
 ### Tracks: professional (p. 141–148, 161–167)
 
@@ -733,7 +734,7 @@ smart tempo, samplers, virtual players, pattern tools, Live Loops and notation.
 - [x] Convert audio regions to a new Sampler track, sliced at transients or markers (p. 329). *Whole or at transients; not at markers.*
 - [ ] Drum Machine Designer: a pad grid of sub-tracks with per-pad channel strips (p. 122, 697)
 - [ ] Sample Alchemy (p. 122)
-- [ ] Drum replacement and doubling from a recorded drum track (p. 133)
+- [x] Drum replacement and doubling from a recorded drum track (p. 133). *Kick, snare, three toms and hi-hat, each with a sample Marbble makes; threshold with live markers, attack or peak timing and an offset. No Prelisten, and no Drum Machine Designer kit to load.*
 
 ### Session Players and Drummer (p. 403–435)
 

@@ -13,6 +13,8 @@ use crate::takes::TAKE_COLORS;
 /// What a recording made, for Discard Last Recording and the rating keys.
 #[derive(Debug, Clone)]
 pub(super) struct LastRecording {
+    /// Its `Take::pass` id.
+    recording: Id,
     /// Where playback started.
     from: i64,
     tracks: Vec<RecordedTrack>,
@@ -94,7 +96,7 @@ impl Session {
     /// regions of the tracks it recorded to, as they were, and the `clips` and `midi` it made):
     /// notes it as the last recording, gives its take the rating marked while recording and,
     /// with Settings › Recording › Color takes, colours the takes of its folders.
-    pub(super) fn note_recording(&mut self, before: Vec<(Id, Vec<Region>)>, touched: &[Id], clips: Vec<Id>, midi: Vec<Id>) {
+    pub(super) fn note_recording(&mut self, recording: Id, before: Vec<(Id, Vec<Region>)>, touched: &[Id], clips: Vec<Id>, midi: Vec<Id>) {
         let rating = self.rec_rating.take();
         if touched.is_empty() {
             self.last_recording = None;
@@ -104,7 +106,7 @@ impl Session {
             .iter()
             .map(|&t| RecordedTrack { track: t, before: before.iter().find(|(id, _)| *id == t).map(|(_, r)| r.clone()), after: Vec::new() })
             .collect();
-        self.last_recording = Some(LastRecording { from: self.rec_play_from, tracks, clips, midi });
+        self.last_recording = Some(LastRecording { recording, from: self.rec_play_from, tracks, clips, midi });
         if let Some(r) = rating {
             self.rate_recorded(r);
         }
@@ -145,7 +147,7 @@ impl Session {
     fn rate_recorded(&mut self, rating: TakeRating) -> bool {
         let Some(mut rec) = self.last_recording.take() else { return false };
         let mut rated = false;
-        let LastRecording { tracks, clips, midi, .. } = &mut rec;
+        let LastRecording { recording, tracks, clips, midi, .. } = &mut rec;
         for rt in tracks.iter_mut() {
             let Some(t) = self.project.track(rt.track) else { continue };
             // A track still as the recording left it stays that way, for Discard.
@@ -154,7 +156,7 @@ impl Session {
                 (0..t.regions.len()).filter(|&i| t.regions[i].takes.is_none() && made(clips, midi, t.regions[i].id, audio_clip(&t.regions[i]))).collect();
             for i in plain {
                 let id = self.project.alloc_id();
-                wrap_in_folder(&mut self.project.track_mut(rt.track).unwrap().regions[i], id);
+                wrap_in_folder(&mut self.project.track_mut(rt.track).unwrap().regions[i], id, (*recording, 0));
                 // The take is the recording's, wherever its content came from.
                 midi.push(id);
             }
@@ -220,11 +222,20 @@ impl Session {
             match (&rt.before, same_regions(&regions, &rt.after)) {
                 (Some(before), true) => self.project.track_mut(rt.track).unwrap().regions = before.clone(),
                 (None, true) => made_tracks.push(rt.track),
-                _ if self.remove_recorded(rt.track, &rec) => {}
+                _ if self.remove_recorded(rt.track, &rec, true) => {}
                 _ => continue,
             }
             changed = true;
             self.push_regions(rt.track);
+        }
+        // Its takes packed into a folder on another track since (Pack Take Folder across tracks)
+        // go too. A copy exported to a track of its own stays, with its file.
+        let others: Vec<Id> = self.project.tracks.iter().map(|t| t.id).filter(|t| !rec.tracks.iter().any(|r| r.track == *t)).collect();
+        for t in others {
+            if self.remove_recorded(t, &rec, false) {
+                changed = true;
+                self.push_regions(t);
+            }
         }
         if !changed {
             self.abandon_checkpoint();
@@ -245,13 +256,13 @@ impl Session {
         Ok(())
     }
 
-    /// Takes the takes and regions `rec` made off `track`. A folder left without takes goes;
-    /// one that loses the take it played falls back on the newest wherever it has audio.
-    /// Returns whether anything went.
-    fn remove_recorded(&mut self, track: Id, rec: &LastRecording) -> bool {
+    /// Takes the takes `rec` made off `track`, and its plain regions with `plain`. A folder left
+    /// without takes goes; one that loses the take it played falls back on the newest wherever it
+    /// has audio. Returns whether anything went.
+    fn remove_recorded(&mut self, track: Id, rec: &LastRecording, plain: bool) -> bool {
         let Some(t) = self.project.track_mut(track) else { return false };
         let n = t.regions.len();
-        t.regions.retain(|r| r.takes.is_some() || !rec.made(r.id, audio_clip(r)));
+        t.regions.retain(|r| !plain || r.takes.is_some() || !rec.made(r.id, audio_clip(r)));
         let mut changed = t.regions.len() != n;
         for r in &mut t.regions {
             let midi = audio_clip(r).is_none();
@@ -318,17 +329,17 @@ impl Session {
     }
 }
 
-/// Makes the plain region `r` a take folder of one take, `id`, that plays as it did.
-fn wrap_in_folder(r: &mut Region, id: Id) {
+/// Makes the plain region `r` a take folder of one take, `id` (pass `pass`), that plays as it did.
+fn wrap_in_folder(r: &mut Region, id: Id, pass: (Id, u32)) {
     let mut f = TakeFolder::new();
     let name = "Take 1".to_string();
     match &mut r.content {
         RegionContent::Audio { clip, offset, .. } => {
-            f.takes.push(Take { id, name, clip: *clip, offset: *offset, start: 0, end: r.length, ..Default::default() });
+            f.takes.push(Take { id, name, clip: *clip, offset: *offset, start: 0, end: r.length, pass: Some(pass), ..Default::default() });
             *offset = 0;
         }
         RegionContent::Midi { notes, cc } => {
-            f.takes.push(Take { id, name, start: 0, end: r.length, notes: notes.clone(), cc: cc.clone(), ..Default::default() });
+            f.takes.push(Take { id, name, start: 0, end: r.length, notes: notes.clone(), cc: cc.clone(), pass: Some(pass), ..Default::default() });
         }
     }
     f.select_whole(id);
@@ -423,6 +434,16 @@ mod tests {
         // The older take is left, heard where it has audio.
         assert_eq!((f.takes.len(), f.comp.len()), (1, 1));
         assert!(matches!(regions[0].content, RegionContent::Audio { clip, .. } if clip == f.takes[0].clip));
+        // A take packed onto another track since goes from the folder there.
+        let other = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
+        record_onto(&mut s, 0, 3000, 1000, &[other]);
+        let ids = [s.project.track(t).unwrap().regions[0].id, s.project.track(other).unwrap().regions[0].id];
+        s.flatten_take_folder(ids[0]);
+        let flat = s.project.track(t).unwrap().regions[0].id;
+        s.pack_take_folder(&[flat, ids[1]]).unwrap();
+        s.discard_last_recording().unwrap();
+        assert_eq!(takes(&s, t).len(), 1);
+        assert!(s.project.track(other).unwrap().regions.is_empty());
         // A recording placed on a new track takes the track with it.
         s.prefs.recording.audio_overlap = AudioOverlap::NewTrack;
         let n = s.project.tracks.len();

@@ -190,6 +190,9 @@ impl Session {
             takes.iter().map(|(t, _)| *t).chain(self.rec_midi_track).filter_map(|t| Some((t, self.project.track(t)?.regions.clone()))).collect();
         let mut clips = Vec::new();
         let mut midi = Vec::new();
+        // Shared by the takes every track gets from this recording (`Take::pass`).
+        let recording = self.project.alloc_id();
+        let mut passes = takes::RecordingPasses::new(recording);
         for (track, take) in takes {
             if let Some(e) = &take.error {
                 self.warning = Some(e.clone());
@@ -234,11 +237,11 @@ impl Session {
                 pattern: None,
             };
             // Cycle passes become a take folder; Autopunch trims to the punch range.
-            let Some(region) = self.shape_take(plan, track, region, take.start, frames as i64) else {
+            let Some(region) = self.shape_take(plan, track, region, take.start, frames as i64, recording) else {
                 touched.push(track);
                 continue;
             };
-            if let Some(dest) = self.place_take(track, region) {
+            if let Some(dest) = self.place_take(track, region, &mut passes) {
                 touched.push(track);
                 touched.push(dest);
             }
@@ -305,7 +308,7 @@ impl Session {
         }
         touched.sort_unstable();
         touched.dedup();
-        self.note_recording(before, &touched, clips, midi);
+        self.note_recording(recording, before, &touched, clips, midi);
         for t in touched {
             self.push_regions(t);
         }

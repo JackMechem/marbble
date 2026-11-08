@@ -2,11 +2,13 @@
 // triangle opens it into one row per take below the track's lane, and swiping across a take
 // row puts that stretch of the take in the comp (Quick Swipe Comping). The comp logic lives in
 // the engine (crates/engine/src/takes.rs); this file draws folders and sends the edits.
-import { act, actMade, type Id, type Region, type Take, type TakeFolder, type TakeRating, type Track } from "./api";
-import { compNames, currentComp, isMidiFolder } from "./comps";
+import { ask } from "@tauri-apps/plugin-dialog";
+import { act, actMade, type CompSegment, type Id, type Region, type Take, type TakeFolder, type TakeRating, type Track } from "./api";
+import { compNames, currentComp, isMidiFolder, movedEdge, neighbourTake, sectionAt } from "./comps";
 import type { MenuItem } from "./components/Menu";
 import { askName, notEmpty } from "./components/NameSheet";
 import { colorMenu } from "./ops";
+import { emptiedQuestion, emptiedTracks, packTracks } from "./packTakes";
 import { MUTED_COLOR } from "./regionDraw";
 import { getState, setState } from "./store";
 import { hasBadTakes, RATING_MARKS, takeLabel, toggledRating } from "./takeRatings";
@@ -17,6 +19,10 @@ import { drawWave, ensureWave, waveCache } from "./waveform";
 export const TAKE_ROW_H = 26;
 /** Width of the triangle and take badge at the start of a folder's name bar. */
 export const FOLDER_BADGE_W = 34;
+
+/** A comp edit being dragged in an open folder's take rows, in take time: a swipe of `take` over
+ *  `start..end`, or the comp section edge at `edge` moved to `to`. */
+export type CompDrag = { region: Id; take: Id; start: number; end: number } | { region: Id; edge: number; to: number };
 
 /** An audio or MIDI take folder. */
 export const isFolder = (r: Region): r is Region & { takes: TakeFolder } => !!r.takes;
@@ -123,7 +129,8 @@ export function drawCompWave(
 
 /** The take rows of an open folder, below its track's lane (`y` is the first row's top). Comp
  *  parts are in the region's colour (or the take's own), the rest dimmed, as in Logic. A rated
- *  take's name has its mark. `preview` is a swipe in progress: take and take-time range. */
+ *  take's name has its mark. `drag` is a swipe or an edge drag in progress; the selected comp
+ *  section is outlined. */
 export function drawTakeRows(
   ctx: CanvasRenderingContext2D,
   r: Region & { takes: TakeFolder },
@@ -133,9 +140,13 @@ export function drawTakeRows(
   y: number,
   pps: number,
   W: number,
-  preview: { take: Id; start: number; end: number } | null,
+  drag: CompDrag | null,
 ) {
   const tt0 = takeShift(r) + r.start;
+  const preview = drag && "take" in drag ? drag : null;
+  const comp: CompSegment[] = drag && "edge" in drag ? movedEdge(r.takes, drag.edge, drag.to) : r.takes.comp;
+  const sel = getState().compSection;
+  const selected = sel?.region === r.id && !drag ? sectionAt(r.takes, sel.at + takeShift(r)) : null;
   const visX0 = Math.max(0, x);
   const visX1 = Math.min(W, x + w);
   const light = theme.region === "light";
@@ -169,7 +180,7 @@ export function drawTakeRows(
     }
     const wave = waveCache.get(t.clip);
     const scale = 10 ** (t.gain_db / 20);
-    const segs = r.takes.comp.filter((s) => s.take === t.id).map((s) => [s.start, s.end]);
+    const segs = comp.filter((s) => s.take === t.id).map((s) => [s.start, s.end]);
     if (preview && preview.take === t.id) segs.push([preview.start, preview.end]);
     // Selected stretches: a bright body under the waveform.
     for (const [a, b] of segs) {
@@ -188,6 +199,14 @@ export function drawTakeRows(
         const sx1 = Math.min(tx1, x + (b - tt0) * pps);
         if (sx1 > sx0) drawWave(ctx, wave, t.offset + tt0, x, w, ry + 2, rh - 4, pps, light ? mix(color, "#000000", 0.55) : theme.ink, sx0, sx1, undefined, scale);
       }
+    }
+    // The selected comp section: an outline around it in its take's row.
+    if (selected?.take === t.id) {
+      const sx0 = Math.max(tx0, x + (selected.start - tt0) * pps);
+      const sx1 = Math.min(tx1, x + (selected.end - tt0) * pps);
+      ctx.strokeStyle = light ? mix(color, "#000000", 0.6) : theme.ink;
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(sx0 + 0.75, ry + 1.25, Math.max(0, sx1 - sx0 - 1.5), rh - 1.5);
     }
     ctx.fillStyle = light ? "rgba(0,0,0,0.6)" : "rgba(255,255,255,0.75)";
     ctx.font = "600 10px Inter, 'SF Pro Text', system-ui, sans-serif";
@@ -233,6 +252,61 @@ export function takeAtRow(r: Region & { takes: TakeFolder }, y: number, rowsTop:
   return k >= 0 && k < r.takes.takes.length ? r.takes.takes[k] : null;
 }
 
+/** Drags the comp edge at timeline `at` to `to`: a border moves both sections, an outer edge
+ *  lengthens or shortens its own. */
+export function moveCompEdge(r: Region, at: number, to: number) {
+  if (at !== to) act("move_comp_edge", { region: r.id, at: Math.round(at), to: Math.round(to) });
+}
+
+/** The selected comp section, while its folder is open and selected: the folder and the section. */
+export function selectedSection(): { r: Region & { takes: TakeFolder }; s: CompSegment; at: number } | null {
+  const st = getState();
+  const sel = st.compSection;
+  if (!sel || !st.selectedRegions.includes(sel.region) || !isOpen(sel.region)) return null;
+  const r = st.snap?.project.tracks.flatMap((t) => t.regions).find((x) => x.id === sel.region);
+  if (!r || !isFolder(r) || isMidiFolder(r)) return null;
+  const s = sectionAt(r.takes, sel.at + takeShift(r));
+  return s ? { r, s, at: sel.at } : null;
+}
+
+/** Moves the selected comp section to the take above (-1) or below (1); false when no section is
+ *  selected, so the arrow keys fall back to selecting tracks. */
+export function moveSelectedSection(delta: number): boolean {
+  const cur = selectedSection();
+  if (!cur) return false;
+  if (neighbourTake(cur.r.takes, cur.s, delta) !== null) act("move_comp_section", { region: cur.r.id, at: cur.at, delta });
+  return true;
+}
+
+/** Removes the selected comp section (it falls silent); false when none is selected. */
+export function removeSelectedSection(): boolean {
+  const cur = selectedSection();
+  if (!cur) return false;
+  act("remove_comp_section", { region: cur.r.id, at: cur.at });
+  setState({ compSection: null });
+  return true;
+}
+
+/** The comp section part of a take row's menu: for the section of `take` heard at timeline `at`. */
+function sectionItems(r: Region & { takes: TakeFolder }, take: Id, at: number): MenuItem[] {
+  const s = sectionAt(r.takes, at + takeShift(r));
+  if (!s || s.take !== take) return [];
+  const move = (delta: number) => ({
+    disabled: neighbourTake(r.takes, s, delta) === null,
+    onClick: () => {
+      setState({ compSection: { region: r.id, at } });
+      act("move_comp_section", { region: r.id, at, delta });
+    },
+  });
+  return [
+    { label: "Comp Section", header: true },
+    { label: "Move Section to Take Above", ...move(-1) },
+    { label: "Move Section to Take Below", ...move(1) },
+    { label: "Remove Section", onClick: () => act("remove_comp_section", { region: r.id, at }) },
+    { separator: true },
+  ];
+}
+
 async function renameTake(r: Region, t: Take) {
   const name = await askName({ title: "Rename Take", value: t.name, ok: "Rename", check: notEmpty });
   if (name && name !== t.name) act("rename_take", { region: r.id, take: t.id, name });
@@ -276,16 +350,22 @@ function takeColorItems(r: Region, t: Take): MenuItem[] {
 }
 
 /** The take folder menu (the badge, or Take Folder in the region menu). A MIDI folder plays
- *  whole takes, so it has no comps, and Flatten and Merge is just Flatten. Opened on a take
- *  row, it starts with that take's rating and colour. */
-export function takeFolderMenu(r: Region & { takes: TakeFolder }, row?: Take): MenuItem[] {
+ *  whole takes, so it has no comps, and Flatten and Merge is just Flatten. Right-clicking a take
+ *  row (`row`: its take and the timeline position) puts that take's rating and colour first,
+ *  then the edits of the comp section there. */
+export function takeFolderMenu(r: Region & { takes: TakeFolder }, row?: { take: Id; at: number }): MenuItem[] {
   const f = r.takes;
   const midi = isMidiFolder(r);
   const whole = midi ? (f.comp[0]?.take ?? f.takes[f.takes.length - 1]?.id) : wholeTake(f);
   const select = (ids: Id[] | null) => ids && setState({ selectedRegions: ids, focus: "regions" });
-  const own: MenuItem[] = row ? [{ label: takeLabel(row), header: true }, ...ratingItems(r, row), { label: "Color", children: takeColorItems(r, row) }, { separator: true }] : [];
+  const active = whole === null ? "Comp" : "Take";
+  const rowTake = row && f.takes.find((t) => t.id === row.take);
+  const own: MenuItem[] = rowTake
+    ? [{ label: takeLabel(rowTake), header: true }, ...ratingItems(r, rowTake), { label: "Color", children: takeColorItems(r, rowTake) }, { separator: true }]
+    : [];
   return [
     ...own,
+    ...(row && !midi ? sectionItems(r, row.take, row.at) : []),
     ...(midi ? [] : compItems(r)),
     { label: "Takes", header: true },
     ...f.takes.map((t, k) => ({ label: `${k + 1}  ${takeLabel(t)}`, checked: whole === t.id, onClick: () => act("select_take", { region: r.id, take: t.id }) })),
@@ -301,11 +381,38 @@ export function takeFolderMenu(r: Region & { takes: TakeFolder }, row?: Take): M
     { label: "Flatten", onClick: () => actMade("flatten_take_folder", { region: r.id }).then(select) },
     ...(midi ? [] : [{ label: "Flatten and Merge", onClick: () => actMade("merge_take_folder", { region: r.id }).then(select) }]),
     { label: "Unpack to New Tracks", onClick: () => actMade("unpack_take_folder", { region: r.id }) },
+    { label: "Unpack to Existing Tracks", onClick: () => actMade("unpack_to_existing_tracks", { region: r.id }) },
+    { separator: true },
+    // As in Logic, the items name the comp when one is heard rather than a whole take.
+    { label: `Export Active ${active} to New Track`, onClick: () => actMade("export_active_take", { region: r.id, remove: false }) },
+    { label: `Move Active ${active} to New Track`, onClick: () => actMade("export_active_take", { region: r.id, remove: true }) },
   ];
 }
 
-/** Pack Take Folder: the selected audio regions on one track become a folder. */
-export function packTakeFolder(ids: Id[] = getState().selectedRegions) {
+/** Previous Take (-1) and Next Take (1): the selected take folders switch one take up or down
+ *  (the engine takes grouped folders along). */
+export function stepTake(delta: number) {
+  const s = getState();
+  const folders = (s.snap?.project.tracks ?? []).flatMap((t) => t.regions.filter((r) => r.takes && s.selectedRegions.includes(r.id)).map((r) => r.id));
+  if (folders.length) act("step_take", { regions: folders, delta });
+}
+
+/** Pack Take Folder: the selected audio regions become a folder, on the topmost of their
+ *  tracks. Tracks the pack leaves empty can then be deleted, as a step of its own. */
+export async function packTakeFolder(ids: Id[] = getState().selectedRegions) {
   if (ids.length < 2) return;
-  actMade("pack_take_folder", { ids }).then((made) => made && setState({ selectedRegions: made, focus: "regions" }));
+  const from = packTracks(getState().snap?.project.tracks ?? [], ids);
+  const made = await actMade("pack_take_folder", { ids });
+  if (!made) return;
+  setState({ selectedRegions: made, focus: "regions" });
+  const empty = emptiedTracks(getState().snap?.project.tracks ?? [], from);
+  if (!empty.length) return;
+  const names = empty.map((id) => getState().snap?.project.tracks.find((t) => t.id === id)?.name ?? "");
+  const ok = await ask(emptiedQuestion(names), {
+    title: "Pack Take Folder",
+    kind: "info",
+    okLabel: empty.length > 1 ? "Delete Tracks" : "Delete Track",
+    cancelLabel: "Keep",
+  });
+  if (ok && (await act("delete_tracks", { ids: empty }))) setState({ selectedTracks: getState().selectedTracks.filter((id) => !empty.includes(id)) });
 }

@@ -13,6 +13,12 @@ pub fn thread_choices(state: State<AppState>) -> daw_engine::threads::ThreadChoi
     with(&state, |s| s.thread_choices())
 }
 
+/// Settings › Audio › Lock audio memory: whether the memory is locked, or why not.
+#[tauri::command]
+pub fn memory_lock(state: State<AppState>) -> daw_engine::memlock::MemoryLock {
+    with(&state, |s| s.memory_lock.clone())
+}
+
 #[tauri::command]
 pub fn get_audio_config(state: State<AppState>) -> AudioConfig {
     with(&state, |s| s.audio_config.clone())

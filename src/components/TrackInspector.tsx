@@ -1,6 +1,6 @@
 // The Inspector's Track section, as in Logic's Track inspector, from what a track already has:
-// name, colour, type, input or instrument, output, freeze, regions and group. Name, colour,
-// input, output and freeze can be changed here; the channel strip below has the rest.
+// name, colour, icon, type, input or instrument, output, freeze, regions and group. Name, colour,
+// icon, input, output and freeze can be changed here; the channel strip below has the rest.
 import { useEffect, useState } from "react";
 import { api, isStack, type Project, type Track } from "../api";
 import { canFreeze, toggleFreeze } from "../freeze";
@@ -11,6 +11,9 @@ import { useStore } from "../store";
 import { inputLabel } from "../time";
 import { inputMenu } from "./ChannelStrip";
 import { openMenuAt, type MenuItem } from "./Menu";
+import { TrackIcon } from "../trackIconArt";
+import { iconLabel } from "../trackIcons";
+import { openTrackIconPicker } from "./TrackIconPicker";
 
 const KIND_NAMES: Record<Track["kind"], string> = { audio: "Audio", instrument: "Software Instrument", folder: "Folder Stack", summing: "Summing Stack", aux: "Aux" };
 
@@ -93,6 +96,29 @@ export function TrackRows({ project, track }: { project: Project; track: Track }
             openMenuAt(e.currentTarget, colorMenu(track.color, (c) => c && api.updateTrack(track.id, { color: c })));
           }}
         />
+      </Row>
+      <Row label="Icon">
+        <button
+          type="button"
+          className="insp-popup insp-icon"
+          aria-haspopup="menu"
+          title="Track Icon"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            openTrackIconPicker(e.currentTarget, track);
+          }}
+          onClick={(e) => {
+            // Return or Space.
+            if (e.detail === 0) openTrackIconPicker(e.currentTarget, track);
+          }}
+        >
+          <span className="insp-icon-art" style={{ color: track.color }}>
+            <TrackIcon track={track} size={16} />
+          </span>
+          <span className="insp-popup-text">{iconLabel(track)}</span>
+          <Icon.chevron />
+        </button>
       </Row>
       <Row label="Type">{KIND_NAMES[track.kind]}</Row>
       {track.kind === "aux" && <Row label="Input">Bus {track.bus}</Row>}

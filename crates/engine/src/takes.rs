@@ -152,6 +152,108 @@ impl TakeFolder {
         self.comp = out;
     }
 
+    // ---- grouped folders and Previous/Next Take --------------------------------------------
+
+    /// The take of `other` that goes with this folder's `take`, for grouped folders that switch
+    /// and comp together. Folders recorded together (sharing a recording) match pass by pass,
+    /// so a take only one of them recorded has no match; others (packed by hand) match by
+    /// position.
+    pub fn matching_take(&self, take: Id, other: &TakeFolder) -> Option<Id> {
+        let t = self.take(take)?;
+        let recordings = |f: &TakeFolder| f.takes.iter().filter_map(|t| t.pass.map(|p| p.0)).collect::<Vec<_>>();
+        let ours = recordings(self);
+        if recordings(other).iter().any(|r| ours.contains(r)) {
+            return other.takes.iter().find(|o| t.pass.is_some() && o.pass == t.pass).map(|o| o.id);
+        }
+        let k = self.takes.iter().position(|x| x.id == take)?;
+        other.takes.get(k).map(|o| o.id)
+    }
+
+    /// The take Previous and Next Take step from: the one heard throughout, or in a comp the
+    /// one heard longest.
+    pub fn heard_take(&self) -> Option<Id> {
+        let mut best: Option<(Id, i64)> = None;
+        for t in &self.takes {
+            let heard: i64 = self.comp.iter().filter(|s| s.take == t.id).map(|s| s.end - s.start).sum();
+            if heard > 0 && best.is_none_or(|(_, b)| heard > b) {
+                best = Some((t.id, heard));
+            }
+        }
+        best.map(|(id, _)| id)
+    }
+
+    /// The take `delta` places after (before, when negative) the one heard, for Previous and
+    /// Next Take. None past the first or last take. With nothing heard, Next starts at the
+    /// first take and Previous at the last.
+    pub fn stepped_take(&self, delta: i64) -> Option<Id> {
+        let n = self.takes.len() as i64;
+        let at = match self.heard_take().and_then(|id| self.takes.iter().position(|t| t.id == id)) {
+            Some(k) => k as i64 + delta,
+            None if delta > 0 => delta - 1,
+            None => n + delta,
+        };
+        (0..n).contains(&at).then(|| self.takes[at as usize].id)
+    }
+
+    // ---- comp sections (Logic's comp section editing) ----------------------------------------
+
+    /// The comp section heard at take time `at`.
+    pub fn section_at(&self, at: i64) -> Option<CompSegment> {
+        self.comp.iter().find(|s| s.start <= at && at < s.end).copied()
+    }
+
+    /// Moves the comp edge at take time `at` to `to`. Where one section hands over to the next
+    /// both move; an outer edge (next to a gap or the end) moves its own section alone. No
+    /// section passes its neighbour, vanishes or reaches past its take's audio. Nothing changes
+    /// when no section edge is at `at`.
+    pub fn move_edge(&mut self, at: i64, to: i64) {
+        let left = self.comp.iter().position(|s| s.end == at);
+        let right = self.comp.iter().position(|s| s.start == at);
+        let audio = |s: &CompSegment| self.take(s.take).map(|t| (t.start, t.end)).unwrap_or((s.start, s.end));
+        let (mut lo, mut hi) = (i64::MIN, i64::MAX);
+        if let Some(l) = left {
+            lo = self.comp[l].start + 1;
+            hi = hi.min(audio(&self.comp[l]).1);
+            if right.is_none() {
+                hi = hi.min(self.comp.get(l + 1).map_or(i64::MAX, |n| n.start));
+            }
+        }
+        if let Some(r) = right {
+            lo = lo.max(audio(&self.comp[r]).0);
+            if left.is_none() && r > 0 {
+                lo = lo.max(self.comp[r - 1].end);
+            }
+            hi = hi.min(self.comp[r].end - 1);
+        }
+        if (left.is_none() && right.is_none()) || lo > hi {
+            return;
+        }
+        let to = to.clamp(lo, hi);
+        if let Some(l) = left {
+            self.comp[l].end = to;
+        }
+        if let Some(r) = right {
+            self.comp[r].start = to;
+        }
+        self.normalize();
+    }
+
+    /// The take `delta` rows from section `s`'s take (up when negative) that has audio
+    /// somewhere in it, where moving the section to the take above or below sends it.
+    pub fn neighbour_take(&self, s: &CompSegment, delta: i64) -> Option<Id> {
+        let k = self.takes.iter().position(|t| t.id == s.take)? as i64;
+        let n = self.takes.len() as i64;
+        let mut i = k + delta;
+        while delta != 0 && (0..n).contains(&i) {
+            let t = &self.takes[i as usize];
+            if t.start < s.end && t.end > s.start {
+                return Some(t.id);
+            }
+            i += delta.signum();
+        }
+        None
+    }
+
     // ---- comps ------------------------------------------------------------------------------
 
     /// The comps by name, the current one at `current`. A folder that never had a second comp
@@ -631,6 +733,64 @@ mod tests {
         assert_eq!(f.takes.len(), 1);
         f.remove_take(2);
         assert!(f.comp.is_empty());
+    }
+
+    #[test]
+    fn grouped_folders_match_takes() {
+        let passes = |f: &mut TakeFolder, p: &[Option<(Id, u32)>]| f.takes.iter_mut().zip(p).for_each(|(t, p)| t.pass = *p);
+        let mut a = folder(&[(1, 0, 1000), (2, 0, 1000), (3, 0, 1000)]);
+        let mut b = folder(&[(11, 0, 1000), (12, 0, 1000), (13, 0, 1000)]);
+        // Packed by hand: by position.
+        assert_eq!((a.matching_take(2, &b), a.matching_take(3, &b), a.matching_take(9, &b)), (Some(12), Some(13), None));
+        // Recorded together: by pass, so b's own extra recording has no partner in a.
+        passes(&mut a, &[Some((50, 0)), Some((50, 1)), Some((60, 0))]);
+        passes(&mut b, &[Some((70, 0)), Some((50, 0)), Some((50, 1))]);
+        assert_eq!((a.matching_take(1, &b), a.matching_take(2, &b), a.matching_take(3, &b)), (Some(12), Some(13), None));
+        assert_eq!((b.matching_take(11, &a), b.matching_take(13, &a)), (None, Some(2)));
+    }
+
+    #[test]
+    fn comp_sections_move_resize_and_change_take() {
+        let spans = |f: &TakeFolder| f.comp.iter().map(|s| (s.start, s.end, s.take)).collect::<Vec<_>>();
+        let mut f = folder(&[(1, 0, 1000), (2, 0, 1000), (3, 200, 800)]);
+        f.select(1, 0, 300);
+        f.select(2, 300, 500);
+        f.clear(500, 700);
+        f.select(1, 700, 1000);
+        // A border moves both sections, and can't swallow either.
+        f.move_edge(300, 250);
+        assert_eq!(spans(&f)[..2], [(0, 250, 1), (250, 500, 2)]);
+        f.move_edge(250, 900);
+        assert_eq!(spans(&f)[..2], [(0, 499, 1), (499, 500, 2)]);
+        f.move_edge(499, 300);
+        // An outer edge grows into the gap, up to the next section, and shrinks.
+        f.move_edge(500, 900);
+        assert_eq!(spans(&f)[1], (300, 700, 2));
+        // Grown up to the next section, the edge is a border again.
+        f.move_edge(700, 600);
+        assert_eq!(spans(&f), vec![(0, 300, 1), (300, 600, 2), (600, 1000, 1)]);
+        let before = spans(&f);
+        f.move_edge(650, 640);
+        assert_eq!(spans(&f), before, "no edge there");
+        // A section of take 3 stops where take 3's audio does.
+        f.select(3, 300, 600);
+        f.move_edge(300, 0);
+        assert_eq!(spans(&f)[..2], [(0, 200, 1), (200, 600, 3)]);
+        // Between lanes: takes without audio there are skipped.
+        let s = f.section_at(800).unwrap();
+        assert_eq!((s.take, f.neighbour_take(&s, 1), f.neighbour_take(&s, -1)), (1, Some(2), None));
+        let s = f.section_at(400).unwrap();
+        assert_eq!((f.neighbour_take(&s, -1), f.neighbour_take(&s, 1), f.section_at(1000)), (Some(2), None, None));
+    }
+
+    #[test]
+    fn previous_and_next_take_step_from_the_take_heard() {
+        let mut f = folder(&[(1, 0, 1000), (2, 0, 1000), (3, 0, 1000)]);
+        assert_eq!((f.stepped_take(1), f.stepped_take(-1)), (Some(1), Some(3)), "nothing heard");
+        f.select_whole(2);
+        assert_eq!((f.heard_take(), f.stepped_take(-1), f.stepped_take(1)), (Some(2), Some(1), Some(3)));
+        f.select(3, 0, 600);
+        assert_eq!((f.heard_take(), f.stepped_take(1), f.stepped_take(-1)), (Some(3), None, Some(2)));
     }
 
     #[test]

@@ -40,6 +40,11 @@ const NUDGES: [Nudge, string][] = [
   ["32", "1/32 note"],
   ["ms10", "10 ms"],
   ["ms1", "1 ms"],
+  ["smp50", "50 samples"],
+  ["smp10", "10 samples"],
+  ["smp5", "5 samples"],
+  ["smp2", "2 samples"],
+  ["smp1", "1 sample"],
 ];
 
 export function EditingPane({ close }: { close: () => void }) {
@@ -109,5 +114,7 @@ export function EditingPane({ close }: { close: () => void }) {
 function nudgeNote(): string {
   const keys = [keyHint("nudge-left"), keyHint("nudge-right")].filter(Boolean);
   const what = keys.length ? keys.join(" and ") : "Nudge Regions Left / Right (no keys assigned)";
-  return `How far ${what} ${keys.length === 1 ? "moves" : "move"} the selected regions.`;
+  const bySample = [keyHint("nudge-left-sample"), keyHint("nudge-right-sample")].filter(Boolean);
+  const samples = bySample.length ? ` ${bySample.join(" and ")} always ${bySample.length === 1 ? "moves" : "move"} them by one sample.` : "";
+  return `How far ${what} ${keys.length === 1 ? "moves" : "move"} the selected regions.${samples}`;
 }

@@ -230,6 +230,7 @@ fn spec() -> Vec<Spec> {
                 item("freeze-track", "Freeze Track"),
                 item("unfreeze-track", "Unfreeze Track"),
                 check("track-on-off", "Track On"),
+                item("drum-replace", "Drum Replacement/Doubling…"),
                 Sep,
                 keyed("folder-stack", "Create Folder Stack", "Shift+CmdOrCtrl+D"),
                 item("summing-stack", "Create Summing Stack"),

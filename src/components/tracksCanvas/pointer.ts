@@ -15,8 +15,8 @@ import { automationHover, automationMenu, automationMouseDown } from "../../auto
 import { refuseFrozen } from "../../freeze";
 import { getSettings } from "../../prefs";
 import { draggedFadeOut } from "../../fades";
-import { isMidiFolder } from "../../comps";
-import { FOLDER_BADGE_W, isFolder, isOpen, swipeComp, takeAtRow, takeFolderMenu, takeShift, toggleFolder } from "../../takes";
+import { edgeNear, isMidiFolder, sectionAt } from "../../comps";
+import { FOLDER_BADGE_W, isFolder, isOpen, moveCompEdge, swipeComp, takeAtRow, takeFolderMenu, takeShift, toggleFolder } from "../../takes";
 import { toggleOverview } from "../Overview";
 import { regionBar } from "../../regionBar";
 import { moveAutomationAnswer } from "../../moveAutomation";
@@ -32,6 +32,9 @@ import { dragNewLanes, dragTarget, type TracksRefs } from "./drag";
 /** Logic's loop tool pointer: a circular arrow. */
 const LOOP_CURSOR =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 18 18'%3E%3Cg fill='none' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 9a5 5 0 1 1-1.5-3.6' stroke='%23000' stroke-width='3.4'/%3E%3Cpath d='M14 9a5 5 0 1 1-1.5-3.6' stroke='%23fff' stroke-width='1.6'/%3E%3Cpath d='M13.5 2.5v3.2h-3.2' stroke='%23000' stroke-width='3.4'/%3E%3Cpath d='M13.5 2.5v3.2h-3.2' stroke='%23fff' stroke-width='1.6'/%3E%3C/g%3E%3C/svg%3E\") 9 9, ew-resize";
+
+/** How near (px) a comp section's edge a press in a take row grabs the edge instead of swiping. */
+const EDGE_GRAB_PX = 4;
 
 type Refs = TracksRefs & {
   scrollRef: React.RefObject<HTMLDivElement | null>;
@@ -80,6 +83,13 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
     return { x, y, ti, track, region, inLoop, localY, laneH, sample: x / pps, row };
   };
 
+  /** In an open folder's take row, the comp section edge under the pointer (take time), if any. */
+  const rowEdge = (h: NonNullable<ReturnType<typeof hit>>) => {
+    if (!h.row || isMidiFolder(h.row.region)) return null;
+    const pps = live.current.pps;
+    return edgeNear(h.row.region.takes, h.row.take.id, h.sample + takeShift(h.row.region), EDGE_GRAB_PX / pps);
+  };
+
   /** What a press at `h` on a region grabs (see regionGrab.ts). */
   const grabKind = (h: NonNullable<ReturnType<typeof hit>>) => regionGrabKind(h, live.current.pps, regionCrossfades);
 
@@ -112,6 +122,9 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
     const { project, pps } = live.current;
     if (!project) return;
     if (h.track.id !== getState().snap?.selected) act("select_track", { id: h.track.id });
+    if (!h.row && getState().compSection) setState({ compSection: null });
+    const edge = rowEdge(h);
+    if (h.row && edge !== null) return startEdgeDrag(e, h.row.region, edge);
     if (h.row) return startSwipe(e, h.row.region, h.row.take.id);
     if (!h.region) return startMarquee(e, h);
     const r = h.region;
@@ -306,8 +319,39 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
     window.addEventListener("mouseup", up);
   };
 
-  /** Quick Swipe Comping: dragging across a take row puts that stretch in the comp; a click
-   *  without a drag makes the whole take the one heard. */
+  /** Dragging a comp section's edge in a take row: a border between two sections moves both, an
+   *  outer edge its own section (snapped, inside the folder). */
+  const startEdgeDrag = (e: React.MouseEvent, r: Region & { takes: NonNullable<Region["takes"]> }, edge: number) => {
+    const { project, pps } = live.current;
+    if (!project) return;
+    setState({ selectedRegions: [r.id], focus: "regions" });
+    const el = scrollRef.current!;
+    const left = el.getBoundingClientRect().left - el.scrollLeft;
+    const snap = (v: number) => Math.min(r.start + r.length, Math.max(r.start, snapPos(project, v, getState().snapMode, getState().pxPerBeat)));
+    const shift = takeShift(r);
+    const startX = e.clientX;
+    let moved = false;
+    const move = (ev: MouseEvent) => {
+      if (!moved && Math.abs(ev.clientX - startX) < 3) return;
+      moved = true;
+      swipeRef.current = { region: r.id, edge, to: snap((ev.clientX - left) / pps) + shift };
+      requestDraw();
+    };
+    const up = () => {
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+      const sw = swipeRef.current;
+      swipeRef.current = null;
+      if (moved && sw && "edge" in sw) moveCompEdge(r, edge - shift, sw.to - shift);
+      else requestDraw();
+    };
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+  };
+
+  /** Quick Swipe Comping: dragging across a take row puts that stretch in the comp and selects
+   *  it; a click without a drag makes the whole take the one heard, or, on a part of the take
+   *  already in the comp, selects that comp section (for the arrow keys and the row's menu). */
   const startSwipe = (e: React.MouseEvent, r: Region & { takes: NonNullable<Region["takes"]> }, take: Id) => {
     const { project, pps } = live.current;
     if (!project) return;
@@ -334,9 +378,20 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
       window.removeEventListener("mouseup", up);
       const sw = swipeRef.current;
       swipeRef.current = null;
-      if (!moved) act("select_take", { region: r.id, take });
-      else if (sw && sw.end > sw.start) swipeComp(r, take, sw.start - takeShift(r), sw.end - takeShift(r));
-      else requestDraw();
+      const shift = takeShift(r);
+      if (!moved) {
+        const at = Math.round(toSample(e.clientX));
+        if (sectionAt(r.takes, at + shift)?.take === take) return setState({ compSection: { region: r.id, at } });
+        setState({ compSection: null });
+        act("select_take", { region: r.id, take });
+      } else if (sw && "take" in sw && sw.end > sw.start) {
+        // The stretch the take has audio for is the new section.
+        const t = r.takes.takes.find((k) => k.id === take);
+        const a = Math.max(sw.start, t?.start ?? sw.start);
+        const b = Math.min(sw.end, t?.end ?? sw.end);
+        setState({ compSection: a < b ? { region: r.id, at: Math.floor((a + b) / 2) - shift } : null });
+        swipeComp(r, take, sw.start - shift, sw.end - shift);
+      } else requestDraw();
     };
     window.addEventListener("mousemove", move);
     window.addEventListener("mouseup", up);
@@ -354,7 +409,7 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
     if (showAutomation && project) return openMenu(e.clientX, e.clientY, automationMenu(e, autoInput()));
     const h = hit(e);
     if (!h || !project) return;
-    if (h.row) return openMenu(e.clientX, e.clientY, takeFolderMenu(h.row.region, h.row.take));
+    if (h.row) return openMenu(e.clientX, e.clientY, takeFolderMenu(h.row.region, { take: h.row.take.id, at: Math.round(h.sample) }));
     if (!h.region) {
       const pos = Math.max(0, Math.round(snapPos(project, h.sample, getState().snapMode, getState().pxPerBeat)));
       if (h.track && h.track.id !== getState().snap?.selected) {
@@ -381,7 +436,7 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
     const el = scrollRef.current!;
     if (live.current.project && toolHover(activeTool(e), h, { project: live.current.project, el, redraw: requestDraw })) return;
     if (!h?.region) {
-      el.style.cursor = "default";
+      el.style.cursor = h && rowEdge(h) !== null ? "ew-resize" : "default";
       if (hoverRef.current !== null) {
         hoverRef.current = null;
         requestDraw();

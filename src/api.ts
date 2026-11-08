@@ -170,6 +170,8 @@ export interface Take {
   rating?: TakeRating;
   /** The take's own colour in its row and the comp (else the folder's). */
   color?: string | null;
+  /** The recording and which of its passes (grouped folders match takes by it). */
+  pass?: [Id, number];
 }
 
 export type TakeRating = "none" | "good" | "bad";
@@ -264,6 +266,8 @@ export interface Track {
   alternative?: string;
   /** Extra automation lanes shown below the main lane. */
   auto_lanes?: AutoParam[];
+  /** The icon chosen for the track (trackIcons.ts ids); absent shows the name's or kind's. */
+  icon?: string | null;
 }
 
 export interface FreezeInfo {
@@ -578,6 +582,8 @@ export interface AudioConfig {
   recording_delay_ms: number;
   /** Threads that play tracks: 0 is Automatic, 1 the audio thread alone. */
   processing_threads: number;
+  /** Lock audio memory (Linux): keep Marbble's memory in RAM so the audio never waits on swap. */
+  lock_memory: boolean;
 }
 
 export const MASTER_ID = 0;
@@ -627,6 +633,7 @@ export async function actMade(cmd: string, args?: Record<string, unknown>): Prom
 export const api = {
   updateTrack: (id: Id, patch: Partial<Omit<Track, "id" | "kind" | "regions" | "inserts" | "instrument" | "parent" | "group" | "hidden" | "sends" | "output" | "bus">>) =>
     act("update_track", { id, patch }),
+  setTrackIcon: (ids: Id[], icon: string | null) => act("set_track_icon", { ids, icon }),
   selectTrack: (id: Id | null) => act("select_track", { id }),
   setPlugin: (track: Id, slot: number, pluginId: string, open = true) =>
     act("set_plugin", { track, slot, pluginId, open }),

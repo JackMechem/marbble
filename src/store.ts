@@ -77,6 +77,9 @@ export interface State {
   showOutput: boolean;
   /** Take folders shown open, with a row per take below their track. */
   openFolders: Id[];
+  /** The comp section selected in an open take folder (the one the arrow keys move), by the
+   *  folder and a timeline position inside it. */
+  compSection: { region: Id; at: number } | null;
   /** The Marker List sheet. */
   showMarkerList: boolean;
   /** The Tempo and Signature global tracks above the tracks (G). */
@@ -161,6 +164,7 @@ let state: State = {
   autoLane: {},
   showOutput: false,
   openFolders: [],
+  compSection: null,
   showMarkerList: false,
   showGlobalTracks: false,
   tempoLaneH: 56,

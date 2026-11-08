@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { TempoMap } from "../src/tempo.ts";
-import { movedStart, nudgeTarget } from "../src/musicalMove.ts";
+import { evenNudge, movedStart, nudgeTarget, sampleStep } from "../src/musicalMove.ts";
 
 const SR = 48000;
 const Q120 = (SR * 60) / 120;
@@ -40,6 +40,19 @@ test("nudges count bars, beats and note values through the tempo map", () => {
   assert.equal(nudgeTarget(map, BAR5, "16", 1), Math.round(BAR5 + Q90 / 4));
   assert.equal(nudgeTarget(map, 1000, "bar", -1), 0);
   assert.equal(nudgeTarget(map, 1000, "ms10", 1), null);
+  assert.equal(nudgeTarget(map, 1000, "smp5", 1), null);
+});
+
+test("nudges by samples move every region the same, stopping at the project start", () => {
+  assert.deepEqual((["smp1", "smp2", "smp5", "smp10", "smp50"] as const).map(sampleStep), [1, 2, 5, 10, 50]);
+  assert.equal(sampleStep("ms1"), null);
+  assert.equal(sampleStep("16"), null);
+  assert.equal(evenNudge(1000, -1), -1);
+  assert.equal(evenNudge(1000, 50), 50);
+  // The earliest region at sample 3: a nudge left by 5 takes it, and the others, back by 3.
+  assert.equal(evenNudge(3, -5), -3);
+  assert.ok(!evenNudge(0, -1), "at the start nothing moves");
+  assert.equal(evenNudge(100, -48.4), -48, "whole samples");
 });
 
 test("moved starts are whole samples, at tempos where a beat isn't", () => {

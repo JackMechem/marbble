@@ -12,13 +12,14 @@ import { onViewport, registerScroller, setViewport, viewport } from "../view";
 import { regionEnd } from "../loops";
 import { automationLeave } from "../automation";
 import { getSettings } from "../prefs";
-import { ensureTakeWaves } from "../takes";
+import { type CompDrag, ensureTakeWaves } from "../takes";
 import { onRevealPlayhead, revealLeft } from "../view";
 import { timeWheel } from "../wheel";
 import { escapeMarquee, toolLeave } from "../trackTools";
 import { drawTracks } from "./tracksCanvas/draw";
 import type { Drag, TracksLive } from "./tracksCanvas/drag";
 import { tracksPointer } from "./tracksCanvas/pointer";
+import { onDrumMarks } from "../drumReplace";
 
 // ---- peaks ----------------------------------------------------------------------------------
 
@@ -35,8 +36,8 @@ export function Arrange() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const playheadRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<Drag | null>(null);
-  // A Quick Swipe Comping drag in progress: the take and take-time range.
-  const swipeRef = useRef<{ region: Id; take: Id; start: number; end: number } | null>(null);
+  // A Quick Swipe Comping drag or a comp section edge drag in progress, in take time.
+  const swipeRef = useRef<CompDrag | null>(null);
   // A rubber-band selection in progress, in content coordinates.
   const marqueeRef = useRef<{ left: number; top: number; right: number; bottom: number } | null>(null);
   // Region under the pointer, which shows its fade handles.
@@ -59,6 +60,7 @@ export function Arrange() {
   const showAutomation = useStore((s) => s.showAutomation);
   useStore((s) => s.autoLane);
   useStore((s) => s.marquee);
+  useStore((s) => s.compSection);
 
   const pps = project ? pxPerBeat / samplesPerBeat(project) : 0;
   const lengthSamples = project
@@ -101,6 +103,8 @@ export function Arrange() {
   useLayoutEffect(() => {
     requestDraw();
   });
+  // Drum Replacement's markers follow its sheet.
+  useEffect(() => onDrumMarks(requestDraw), [requestDraw]);
 
   // Viewport sizing
   useEffect(() => {

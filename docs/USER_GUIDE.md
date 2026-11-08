@@ -102,6 +102,7 @@ Contents:
 19. [Troubleshooting](#19-troubleshooting):
     [Recordings are very quiet (or silent)](#recordings-are-very-quiet-or-silent) ·
     [Crackles, clicks or dropouts](#crackles-clicks-or-dropouts) ·
+    [Dropouts when memory runs short](#dropouts-when-memory-runs-short) ·
     [Plug-in windows and Wayland](#plug-in-windows-and-wayland) ·
     [Plug-in windows are small or blurry on a HiDPI screen](#plug-in-windows-are-small-or-blurry-on-a-hidpi-screen) ·
     [Your computer's audio is recorded, or loops back](#your-computers-audio-is-recorded-or-loops-back) ·
@@ -289,6 +290,18 @@ Track headers:
 - **Select** a track by clicking its header; Ctrl+click adds or removes a track; Shift+click
   selects a range. Up and Down select the track above or below, scrolling it into view.
 - **Rename** by double-clicking the name.
+- **Track icon:** click the icon (or right-click › **Track Icon**, the icon on the track's Mixer
+  strip, or the Track inspector's **Icon**) for a grid of icons by group: the track types',
+  drums (kick, snare, hi-hat, toms, overheads, room, kit, drum machine), percussion, bass,
+  guitars and amp, keys, strings, brass, woodwinds, vocals, and effects and buses. The arrow
+  keys move through it and Return chooses. The icon goes on every selected track when the one
+  you clicked is selected; Edit › Undo takes it back. **Default** gives the track the icon its
+  name suggests: a name with a word such as Kick, Snare, Hat, Tom, OH or Overhead, Room, Drums,
+  Bass, Gtr or Guitar, Amp, Keys or Piano, Organ, Synth, Strings, Brass, Sax, Vox or Vocal, BV
+  or Choir, Verb, Delay or FX shows that instrument's icon ("Kick In 2", "OH L", "Lead Vox"),
+  and changes with the name until you choose one. Other tracks show their type's icon. The icon
+  is saved with the track, copied by Duplicate Track and kept by templates; channel strip
+  settings leave it alone.
 - **Reorder** by dragging the track number or icon (just the number on the shortest tracks,
   which have no icon). A track dropped among a stack's subtracks
   (or right under an open stack's header) goes into that stack.
@@ -332,7 +345,8 @@ the Stereo Out strip.
   Audio Track editor and the help tags while dragging (4 0 0 0 is four bars), with the time in
   minutes and seconds after it. Position is in bars and beats counted from one, as on the LCD.
 - The **Track** section has the track's **Name** (type a new one and press Return; Esc puts
-  the old one back), **Color** (click the swatch for the colour grid), type, **Input** (audio
+  the old one back), **Color** (click the swatch for the colour grid), **Icon** (click it for
+  the icon grid; see [Track headers](#tracks-area)), type, **Input** (audio
   tracks: a pop-up, as on the channel strip) or instrument, **Output** (a pop-up: Stereo Out,
   the stack, or an aux), **Freeze** (as the snowflake button), the region or subtrack count
   and the group. Choosing a track (clicking its header or its strip in the Mixer,
@@ -879,7 +893,11 @@ The pointer changes over a region's hot zones:
   Editing; 1/16 note by default). A run of nudges is one undo step. A bar, beat or note value
   is counted through the tempo map: the first selected region moves by exactly that many bars
   or beats, and the others keep their bars and beats, across tempo changes too. A nudge by
-  milliseconds moves every region the same time.
+  milliseconds or samples moves every region the same number of samples (the earliest stops
+  at the project start, and the others with it).
+- **Nudge by sample:** Alt+Shift+Left / Alt+Shift+Right move the selected regions by one
+  sample, whatever the Nudge Value is: for lining up a close mic with an overhead by ear or by
+  waveform. The Nudge Value can also be 1, 2, 5, 10 or 50 samples.
 - **Snap Edits to Zero Crossings** (Edit menu, also in the Tracks area's and Audio Track
   Editor's Edit menus; a key command with no key by default): with it on, splits, trims and
   range edits of audio regions (Split at Playhead, the Scissors, the marquee, the Audio Track
@@ -1230,7 +1248,7 @@ From the Track menu, the track header's right-click menu, or keys:
 - **Duplicate Track** copies settings, plug-ins with their current settings, automation and
   regions. **New Track with Same Settings** copies everything except the regions and
   automation.
-- **Rename Track**, **Track Color** (a grid of 20 colours, named in their tooltips), Track On, Mute, Solo, Record Enable, Select All Regions on Track,
+- **Rename Track**, **Track Color** (a grid of 20 colours, named in their tooltips), **Track Icon**, Track On, Mute, Solo, Record Enable, Select All Regions on Track,
   Export Track as MIDI File…, Reset Track Height.
 - **Track Alternatives** (Track › Track Alternatives, or the right-click menu): other sets of
   regions for an audio or instrument track, as in Logic. **New Alternative** starts an empty
@@ -1245,6 +1263,33 @@ From the Track menu, the track header's right-click menu, or keys:
   deletes its subtracks.
 - **Select Previous / Next Track:** Up and Down arrows. **Mute / Solo the selected track:**
   M and S.
+
+### Drum Replacement and Doubling
+
+**Track › Drum Replacement/Doubling…** (or the audio track header's right-click menu) turns the
+hits on a recorded drum, a kick or snare mic say, into MIDI notes playing a sample on a new
+track, to replace the recording or to layer a sample with it. It works on the track's selected
+regions, or on all of it when none are selected. Take folders are read through their comp.
+
+- **Instrument:** Kick, Snare, Tom High, Tom Mid, Tom Low or Hi-Hat. It sets the note (General
+  MIDI's: C1 for the kick, D1 for the snare, and so on) and the sample.
+- **Mode:** **Replace** mutes the recorded track; **Doubling** keeps both playing.
+- **Threshold:** how loud a hit must be to count. The hits it keeps are marked on the track's
+  regions as you move it, and the sheet says how many there are and how loud the loudest is.
+  A soft hit on top of a still-ringing drum reads by how much it adds, so the bleed of a
+  hi-hat into a kick mic stays under the threshold.
+- **Notes At:** **Attack Start** (the default) puts each note where its hit begins, which is
+  where a drum sample begins too, so the sample lines up with the recording and stays in phase
+  with the overheads when doubling. **Peak** puts it at the hit's loudest moment, for a sample
+  that starts at its peak. **Timing Offset** moves every note, in milliseconds, for a sample
+  with a slower start (negative is earlier). The markers move with these too.
+
+**Create Track** adds a software instrument track right below with Marbble Sampler, playing a
+kick (or the chosen drum) that Marbble makes for the project, in `Samples/Drum Replacement`. A
+MIDI region over the same span has a note at each hit, its velocity from the hit's level:
+the loudest hit is 127, and the rest play as much quieter as they were recorded. The notes edit
+like any others in the Piano Roll. To use your own sample, drop it on the note's key in the
+sampler's panel and delete the made one. It's one undo step.
 
 ### Undo
 
@@ -1299,7 +1344,9 @@ Settings**, which you can reopen by clicking a member's group badge:
   like Logic's group clutch).
 - What the members share: **Volume** and **Pan** (as relative moves), **Mute**, **Solo**,
   **Record Enable**, **Track Selection** (clicking one selects all), and **Editing
-  (Selection)** (selecting a region selects the regions at the same place on the others).
+  (Selection)** (selecting a region selects the regions at the same place on the others, and
+  their take folders switch and comp together; see
+  [Take folders and comping](#7-take-folders-and-comping)).
 - **Delete Group** dissolves it. A group nobody is in is removed.
 
 ### Hiding tracks
@@ -1374,8 +1421,15 @@ Take folders follow Logic's Quick Swipe Comping.
 - **Making one.** Record with Cycle on (each pass becomes a take), record over audio with
   Settings › Recording › Overlapping Recordings › Audio set to **Create take folders** (the
   default: the regions underneath and the new take go into a folder, and recording over a folder
-  adds a take), or select several audio regions on one track and choose **Pack Take Folder** (Ctrl+F on Linux and Windows,
-  Control+⌘F on macOS; also in the Edit and region menus): one take per region.
+  adds a take), or select several audio regions and choose **Pack Take Folder** (Ctrl+F on Linux
+  and Windows, Control+⌘F on macOS; also in the Edit and region menus): one take per region,
+  each where it was.
+- **Packing takes from several tracks.** Takes recorded one per track (Overhead 1, Overhead 2
+  and so on) pack the same way: select their regions on all the tracks and choose Pack Take
+  Folder. The folder goes on the topmost of the tracks, its takes in track order (the top
+  track's region is Take 1), and the bottom track's take is heard. Marbble then offers to
+  delete the tracks left with no regions; Keep leaves them. The pack and the delete are an
+  undo step each.
 - **The comp.** A folder plays its *comp*: which take is heard where. A new folder starts with
   the newest take, older takes filling in where it has no audio. Where one take hands over to
   another they crossfade over the Crossfade Time (Settings › Editing, 20 ms equal power by
@@ -1394,13 +1448,35 @@ Take folders follow Logic's Quick Swipe Comping.
   - Drag across a take row to put that stretch of the take into the comp (snapped to the grid).
     Comp parts are drawn bright and the rest dimmed; the closed folder draws the comp's
     waveform.
-  - Click a take row to hear that take throughout.
+  - Click a take row to hear that take throughout. A click on a part of a take that is already
+    in the comp selects that *comp section* instead (outlined); a swipe selects the section it
+    makes.
+- **Editing comp sections** (in the comp heard, as in Logic):
+  - Drag the edge of a section in its take row (the pointer becomes a resize arrow). Where one
+    section hands over to the next, the border moves and both sections change; an outer edge,
+    next to a gap or the folder's end, lengthens or shortens its section. A section can't pass
+    its neighbour or reach past its take's audio.
+  - With a section selected, **Up** and **Down** move it to the take above or below (takes with
+    no audio there are skipped), and **Delete** removes it, leaving a silent gap. Right-click a
+    section for **Move Section to Take Above**, **Move Section to Take Below** and **Remove
+    Section**.
+  - **Select Previous Take** and **Select Next Take** (Alt+Shift+Up and Alt+Shift+Down) switch
+    every selected take folder one take up or down (from the take heard longest, in a comp).
+- **Grouped tracks comp together.** When tracks are in a group that is on and links **Editing
+  (Selection)**, their take folders follow each other, as in Logic: choosing a take, swiping a
+  comp, and choosing, creating, duplicating, renaming or deleting a comp in one folder does the
+  same in the folders at the same place on the others, as one undo step; so do the comp section
+  edits (on the folders with a section edge or section at the same place). Record the drum mics
+  together and Take 2 is Take 2 on every mic. Takes recorded together are matched by their
+  pass (a take only one of the tracks recorded is left alone on the others); folders packed by
+  hand are matched by take number. Turn the group off (its clutch) to comp one folder alone.
 - **The take folder menu** (click the badge, right-click a take row, or region menu › Take
   Folder): the takes (pick one to hear), Open / Close Take Folder, Rename Take, **Rate Take**,
   **Take Color**, Delete Take, Delete Unused Takes, **Delete Bad Takes** (the takes marked bad; a
-  folder of nothing but bad takes keeps its newest), **Flatten** (the comp becomes ordinary regions, one per stretch),
-  **Flatten and Merge** (the comp is rendered to one new audio file), and **Unpack to New
-  Tracks** (every take on its own new, muted track, and the comp flattened in place).
+  folder of nothing but bad takes keeps its newest), **Flatten** (the comp becomes ordinary
+  regions, one per stretch), **Flatten and Merge** (the comp is rendered to one new audio file),
+  **Unpack to New Tracks** (every take on its own new, muted track, and the comp flattened in
+  place), and the items below.
 - **Rating and colouring takes.** Mark a take good (★) or bad (✗) from the take folder menu
   (Rate Take), by right-clicking its row (the menu then starts with that take's Good, Bad and
   Color), or with the Mark Take keys (see [Discarding and marking
@@ -1408,6 +1484,20 @@ Take folders follow Logic's Quick Swipe Comping.
   in the menu; choose it again to clear it. A take's colour (Take Color, or Color on its row)
   tints its row; Folder Color goes back to the folder's. With Settings › Recording › Take
   Colors › Color takes automatically on, each take gets its own colour as it's recorded.
+- **Unpack to Existing Tracks** puts the takes on the tracks below the folder's instead, one
+  per track in take order (Take 1 on the next track), muted, next to what those tracks already
+  have; tracks of another kind (an instrument track under an audio folder), hidden and frozen
+  tracks are passed over. Where there aren't enough tracks, new ones with the folder track's
+  settings are added below the last. The comp is flattened in place, as with Unpack to New
+  Tracks.
+- **Export Active Take to New Track** copies what the folder plays (the take heard, or the
+  comp flattened into regions) onto a new track below, with the folder track's settings and
+  named after the take or comp. The copy is muted so the song sounds the same; the folder is
+  unchanged. **Move Active Take to New Track** does the same but moves it: the copy plays,
+  the take (or comp) leaves the folder, and the folder is muted. Moving a folder's only take
+  moves the whole folder out; moving its only comp leaves a fresh one (the newest take
+  wherever it has audio). With a comp heard the items read Export / Move Active Comp.
+- Every Unpack, Export and Move is one undo step.
 - A folder moves, trims, splits, loops, fades, crossfades and changes gain like any audio
   region. Every comp edit can be undone, folders are saved with the project, and bounces,
   exports and Bounce in Place render the comp.
@@ -1875,8 +1965,9 @@ the selection, as one undo step:
 The transient button (or View › Show Transients) marks the onsets found in the audio. View ›
 **Transient Sensitivity** sets how readily they are found: Low, Medium (default), High or Very
 High. **Split at Transients** chops the selection (or the selected regions) at every marker in
-one step, for slicing drums. Onsets are found from the audio itself: a fast peak level jumping
-well above a slower average, moved back to the start of the attack.
+one step, for slicing drums. Onsets are found from the audio itself: the level, or its brightest
+part (a beater's click), jumping well above the loudest of the moment before, so a ringing kick
+never marks itself twice. Each marker is moved back to the start of the attack.
 
 ### Info
 
@@ -1934,7 +2025,7 @@ From top to bottom:
 | **Fader and meter** | Drag the fader (Shift for fine), double-click for 0 dB. -96 to +6 dB. On a strip assigned to a VCA, an outlined cap marks where the strip really plays (its fader plus the VCA). The meter holds peaks for 2 s, and its top lights red while the clip indicator is on. With a Compressor, Limiter, Noise Gate or De-Esser on the strip, a thin **gain-reduction meter** beside it grows down from the top as the first one that isn't bypassed reduces the gain (up to 30 dB). |
 | **Power** | Turns the track off: silent, and it runs nothing (see [Turning tracks off](#turning-tracks-off)). Not on Stereo Out. |
 | **M S R I** | Mute, Solo, Record Enable, Input Monitoring. |
-| **Name** | With the track colour. Right-click it for the channel strip settings menu. |
+| **Name** | With the track colour and icon (click the icon to choose another). Right-click it for the channel strip settings menu. |
 
 The clip indicators keep their peak until you reset them, as in Logic: playing again doesn't
 reset them, and they are the same in the Mixer, the Inspector and a Mixer in its own window.
@@ -2945,6 +3036,7 @@ off: it then asks only when you choose Check for Updates….
 | Processing Threads | Automatic, 1 up to the number of hardware threads (at most 16) | Automatic |
 | Monitoring | Hear record-enabled tracks without pressing I | Off |
 | Recording Delay | -500 to 500 ms, added to the measured latency | 0 |
+| Memory (Linux) | Lock audio memory: keep Marbble's memory in RAM, so the audio doesn't drop out when the system swaps (see [Dropouts when memory runs short](#dropouts-when-memory-runs-short)) | On |
 | Plug-in Delay Compensation | All, Off (applies at once) | All |
 | Low Latency Mode | On, with a limit of 0 to 100 ms (applies at once) | Off, 5 ms |
 
@@ -2985,7 +3077,7 @@ The velocity curve applies to MIDI inputs, not to Musical Typing.
 | Setting | Choices | Default |
 |---|---|---|
 | Snap | Smart (follows the zoom), Bar, Beat, Division (a quarter of a beat), Ticks, Off | Smart |
-| Nudge Value | Bar, Beat, 1/8 note, 1/16 note, 1/32 note, 10 ms, 1 ms | 1/16 note |
+| Nudge Value | Bar, Beat, 1/8 note, 1/16 note, 1/32 note, 10 ms, 1 ms, 50, 10, 5, 2 or 1 samples | 1/16 note |
 | Click Moves Playhead | Anywhere in the tracks; Empty space only; Never (a click without a drag moves the playhead there, snapped to the grid) | Empty space only (Anywhere before 0.1.0-alpha.7, which earlier settings keep) |
 | Anti-click Fades | 0 to 100 ms, for new recordings and imports | 0 |
 | Move Automation with Regions | Never; Always; Ask (whether moving a region along its track takes its automation along) | Never |
@@ -3108,6 +3200,7 @@ shown.
 | L | Loop regions |
 | U | Set Locators by Regions |
 | Alt+Left / Alt+Right | Nudge regions left / right |
+| Alt+Shift+Left / Alt+Shift+Right | Nudge regions left / right by one sample |
 | Ctrl+F (Control+⌘F on macOS) | Pack Take Folder |
 | T | Show Tool Menu (then a tool's letter: T Pointer, P Pencil, E Eraser, I Scissors, G Glue, M Mute, A Fade, R Marquee; Esc Pointer) |
 | Shift+F | Select All Following |
@@ -3316,6 +3409,34 @@ at 40% lowers everything you record by about 24 dB, and a muted source records s
   (`security.rtkit.enable = true;` on NixOS). PipeWire's own quantum can also be raised.
 - Use **PipeWire** as the driver on Linux. Direct ALSA (`hw:`) devices lock the interface for
   Marbble alone.
+- If dropouts come while the CPU meter reads low and the computer is short of memory, see
+  [Dropouts when memory runs short](#dropouts-when-memory-runs-short).
+
+### Dropouts when memory runs short
+
+When the computer runs short of memory, Linux moves what a program hasn't used lately to swap,
+and has to read it back from disk when the program needs it again. If that's part of a clip or a
+plug-in that is playing, the audio waits for the disk and drops out, with the
+[CPU meter](#the-cpu-meter)'s label red while its bar reads only a few percent.
+
+On Linux Marbble locks its memory in RAM at startup, as Ardour does, so nothing it has loaded is
+swapped out. Settings › Audio › **Memory: Lock audio memory** turns it off and on (at once, with
+Apply Changes) and says whether it worked:
+
+- **Locked**: nothing to do.
+- **Not locked: the system's memory lock limit (RLIMIT_MEMLOCK) is …**: the system only lets a
+  program lock a little memory, and Marbble locks only when the limit is unlimited. Audio
+  distributions and the `audio` group usually set it: add yourself to the group
+  (`users.users.<you>.extraGroups = [ "audio" ];` and `security.pam.loginLimits` with
+  `{ domain = "@audio"; item = "memlock"; type = "-"; value = "unlimited"; }` on NixOS; a line
+  `@audio - memlock unlimited` in `/etc/security/limits.conf` elsewhere), then log out and in
+  again. `ulimit -l` in a terminal says `unlimited` when it's set.
+
+Locked memory can't be swapped, so the whole project stays in RAM: every audio file in it, about
+11 MB per minute of each mono recording at 48 kHz (decoded clips are held in memory whole). That
+includes takes whose regions were deleted, which stay in the project. A project bigger than the
+memory you can spare plays better with the lock off, or with the unused takes removed. Marbble
+doesn't lock memory on macOS and Windows yet, and the setting isn't shown there.
 
 ### Plug-in windows and Wayland
 

@@ -175,13 +175,14 @@ impl Session {
 
     /// Puts a finished audio take on `track`, following Settings › Recording › Overlapping
     /// Recordings. Returns the track it landed on.
-    pub(super) fn place_take(&mut self, track: Id, region: Region) -> Option<Id> {
+    /// `passes` are the takes' `Take::pass`es (see `RecordingPasses`).
+    pub(super) fn place_take(&mut self, track: Id, region: Region, passes: &mut super::takes::RecordingPasses) -> Option<Id> {
         let (rs, re) = (region.start, region.start + region.length);
         let overlaps = |r: &Region| matches!(r.content, RegionContent::Audio { .. }) && r.start < re && r.start + r.length > rs;
         let any = self.project.track(track)?.regions.iter().any(overlaps);
         let dest = match self.prefs.recording.audio_mode() {
             AudioOverlap::TakeFolders if any => {
-                self.place_audio_takes(track, region);
+                self.place_audio_takes(track, region, passes);
                 return Some(track);
             }
             AudioOverlap::NewTrack if any => {
@@ -310,13 +311,16 @@ impl Session {
         self.dirty = true;
     }
 
-    /// Moves regions by `delta` samples (the Nudge keys).
+    /// Moves regions by `delta` samples (the Nudge keys), every one by the same amount, so
+    /// mics lined up by the sample stay lined up: the earliest stops at the project start.
     pub fn nudge_regions(&mut self, ids: &[Id], delta: i64) {
+        let first = ids.iter().filter_map(|&id| self.region(id)).map(|r| r.start).min().unwrap_or(0);
+        let delta = delta.max(-first);
         let pairs = self.crossfade_pairs(ids);
         let mut touched = Vec::new();
         for t in &mut self.project.tracks {
             for r in t.regions.iter_mut().filter(|r| ids.contains(&r.id)) {
-                r.start = (r.start + delta).max(0);
+                r.move_to(r.start + delta);
                 if !touched.contains(&t.id) {
                     touched.push(t.id);
                 }
@@ -429,6 +433,44 @@ mod tests {
         let _ = std::fs::remove_dir_all(&scratch);
         s.dir = scratch.join("Song.marbble");
         (s, scratch)
+    }
+
+    #[test]
+    fn nudges_move_every_region_the_same() {
+        let (mut s, _) = session("nudge");
+        let t = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
+        let u = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
+        let mut add = |track: Id, start: i64, loop_end: Option<i64>| {
+            let id = s.project.alloc_id();
+            let content = RegionContent::Audio { clip: 0, offset: 0, gain_db: 0.0, fade_in: 0, fade_out: 0, fade_shape: Default::default() };
+            let r = Region {
+                id,
+                name: "R".into(),
+                start,
+                length: 100,
+                muted: false,
+                color: None,
+                content,
+                loop_end,
+                takes: None,
+                params: Default::default(),
+                pattern: None,
+            };
+            s.project.track_mut(track).unwrap().regions.push(r);
+            id
+        };
+        let (a, b) = (add(t, 3, None), add(u, 1_000, Some(1_400)));
+        let at = |s: &Session| (s.region(a).unwrap().start, s.region(b).unwrap().start, s.region(b).unwrap().loop_end);
+        // A sample at a time, on two tracks; a looped region takes its loop end along.
+        s.nudge_regions(&[a, b], 1);
+        assert_eq!(at(&s), (4, 1_001, Some(1_401)));
+        s.nudge_regions(&[a, b], -2);
+        assert_eq!(at(&s), (2, 999, Some(1_399)));
+        // Past the project start the earliest stops at 0 and the other keeps its distance.
+        s.nudge_regions(&[a, b], -50);
+        assert_eq!(at(&s), (0, 997, Some(1_397)));
+        s.nudge_regions(&[b], -50);
+        assert_eq!(at(&s), (0, 947, Some(1_347)));
     }
 
     #[test]
@@ -546,7 +588,8 @@ mod tests {
             pattern: None,
         };
         s.project.track_mut(t).unwrap().regions.push(audio(100, 0, 1000));
-        s.place_take(t, audio(101, 400, 200)).unwrap();
+        let mut passes = super::super::takes::RecordingPasses::new(0);
+        s.place_take(t, audio(101, 400, 200), &mut passes).unwrap();
         let mut spans: Vec<(i64, i64, i64)> = s
             .project
             .track(t)
@@ -563,7 +606,7 @@ mod tests {
 
         s.prefs.recording.audio_overlap = AudioOverlap::NewTrack;
         let n = s.project.tracks.len();
-        let dest = s.place_take(t, audio(102, 500, 100)).unwrap();
+        let dest = s.place_take(t, audio(102, 500, 100), &mut passes).unwrap();
         assert_ne!(dest, t);
         assert_eq!(s.project.tracks.len(), n + 1);
         assert!(!s.project.track(dest).unwrap().armed);

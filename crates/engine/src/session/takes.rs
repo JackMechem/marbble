@@ -78,8 +78,9 @@ impl Session {
     /// A finished audio recording, as `finish_recording` made it (`plain`, from the file's
     /// `frames` captured from engine position `start`), cut to what the plan says: cycle passes
     /// become a take folder (or more takes in the folder already there), an autopunch take is
-    /// trimmed to the punch range. None when there's nothing new to place.
-    pub(super) fn shape_take(&mut self, plan: Option<RecPlan>, track: Id, plain: Region, start: i64, frames: i64) -> Option<Region> {
+    /// trimmed to the punch range. None when there's nothing new to place. `recording` is the
+    /// same for every track recorded at once (see `Take::pass`).
+    pub(super) fn shape_take(&mut self, plan: Option<RecPlan>, track: Id, plain: Region, start: i64, frames: i64, recording: Id) -> Option<Region> {
         let Some(plan) = plan else { return Some(plain) };
         let RegionContent::Audio { clip, .. } = plain.content else { return Some(plain) };
         if plan.cycle.is_none() {
@@ -112,6 +113,7 @@ impl Session {
                 gain_db: 0.0,
                 notes: Vec::new(),
                 cc: Vec::new(),
+                pass: Some((recording, k as u32)),
                 ..Default::default()
             });
         }
@@ -153,7 +155,7 @@ impl Session {
     /// packs them into a new folder with it. The new takes are heard wherever they have audio,
     /// the comp from before elsewhere, and the folder goes on top, as a new take would. Muted
     /// and looping regions are left as they are.
-    pub(super) fn place_audio_takes(&mut self, track: Id, region: Region) {
+    pub(super) fn place_audio_takes(&mut self, track: Id, region: Region, passes: &mut RecordingPasses) {
         let Some(t) = self.project.track(track) else { return };
         let (rs, re) = (region.start, region.start + region.length);
         let overlaps = |r: &Region| matches!(r.content, RegionContent::Audio { .. }) && !r.muted && !r.is_looped() && r.start < re && r.start + r.length > rs;
@@ -189,8 +191,18 @@ impl Session {
             f.offset = 0;
             to_tt = -lo;
         }
+        // The packed regions and what was recorded, with the passes grouped folders match by.
+        let mut incoming = Vec::new();
+        for (k, mut t) in packed.iter().flat_map(timeline_takes).enumerate() {
+            t.pass = Some(passes.packed(k, &mut self.project));
+            incoming.push(t);
+        }
+        for mut t in timeline_takes(&region) {
+            t.pass = t.pass.or(Some((passes.recording, 0)));
+            incoming.push(t);
+        }
         // Oldest first, each heard wherever it has audio, so the recording ends up on top.
-        for k in packed.iter().chain([&region]).flat_map(timeline_takes) {
+        for k in incoming {
             let id = self.project.alloc_id();
             let (start, end) = (k.start + to_tt, k.end + to_tt);
             let name = format!("Take {}", f.takes.len() + 1);
@@ -257,10 +269,7 @@ impl Session {
     fn edit_folder(&mut self, region: Id, f: impl FnOnce(&mut TakeFolder, i64)) {
         let Some((track, r)) = self.folder_mut(region) else { return };
         crate::takes::save_midi_take(r);
-        let to_take_time = match r.content {
-            RegionContent::Audio { offset, .. } => offset - r.start,
-            RegionContent::Midi { .. } => r.takes.as_ref().unwrap().offset - r.start,
-        };
+        let to_take_time = take_time_shift(r);
         let newest = {
             let folder = r.takes.as_mut().unwrap();
             f(folder, to_take_time);
@@ -281,13 +290,54 @@ impl Session {
         self.region(region).map(|r| r.takes.is_some() && matches!(r.content, RegionContent::Midi { .. })).unwrap_or(false)
     }
 
+    /// The take folders that follow `region`'s take choices and comp edits, as in Logic: when
+    /// its track is in a group that is on and links Editing (Selection), the folders that
+    /// overlap it in time on the group's other tracks.
+    fn comp_partners(&self, region: Id) -> Vec<Id> {
+        let (Some((track, _)), Some(r)) = (self.find_region(region), self.region(region)) else { return Vec::new() };
+        let (a, b) = (r.start, r.end());
+        let peers = self.group_peers(track, |g| g.editing);
+        let regions = peers.iter().filter_map(|&t| self.project.track(t)).flat_map(|t| t.regions.iter());
+        regions.filter(|o| o.takes.is_some() && o.start < b && o.end() > a).map(|o| o.id).collect()
+    }
+
+    /// `region` and the folders that follow it, each with its take that matches `take` of
+    /// `region` (see `TakeFolder::matching_take`; None where it has none, or for no take).
+    fn linked_folders(&self, region: Id, take: Option<Id>) -> Vec<(Id, Option<Id>)> {
+        let Some(f) = self.region(region).and_then(|r| r.takes.as_ref()) else { return Vec::new() };
+        let mut out = vec![(region, take)];
+        for p in self.comp_partners(region) {
+            let other = self.region(p).and_then(|r| r.takes.as_ref());
+            out.push((p, take.zip(other).and_then(|(t, o)| f.matching_take(t, o))));
+        }
+        out
+    }
+
+    /// Applies a comp list edit (create, duplicate, switch, rename, delete) to `region` and the
+    /// folders that follow it.
+    fn edit_linked_comps(&mut self, region: Id, f: impl Fn(&mut TakeFolder)) {
+        for (r, _) in self.linked_folders(region, None) {
+            self.edit_folder(r, |folder, _| f(folder));
+        }
+    }
+
     /// Quick Swipe Comping: `take` is heard over timeline `start..end` of the folder (None
     /// silences that part of the comp). A MIDI folder plays whole takes, so it switches to
-    /// `take`, as clicking a take does.
+    /// `take`, as clicking a take does. Grouped folders follow with their matching take (one
+    /// without a match is left alone).
     pub fn set_comp_range(&mut self, region: Id, take: Option<Id>, start: i64, end: i64) {
+        for (r, t) in self.linked_folders(region, take) {
+            if take.is_none() || t.is_some() {
+                self.set_comp_range_alone(r, t, start, end);
+            }
+        }
+    }
+
+    /// `set_comp_range` on this folder only.
+    fn set_comp_range_alone(&mut self, region: Id, take: Option<Id>, start: i64, end: i64) {
         if self.is_midi_folder(region) {
             if let Some(t) = take {
-                self.select_take(region, t);
+                self.select_take_alone(region, t);
             }
             return;
         }
@@ -300,33 +350,102 @@ impl Session {
         });
     }
 
-    /// Create New Comp: a fresh comp (the newest take wherever it has audio) is heard.
+    /// Create New Comp: a fresh comp (the newest take wherever it has audio) is heard. This
+    /// and the other comp list edits reach grouped folders too.
     pub fn create_comp(&mut self, region: Id) {
-        self.edit_folder(region, |f, _| f.create_comp());
+        self.edit_linked_comps(region, |f| f.create_comp());
     }
 
     /// Duplicate Comp: a copy of the comp heard becomes the one heard.
     pub fn duplicate_comp(&mut self, region: Id) {
-        self.edit_folder(region, |f, _| f.duplicate_comp());
+        self.edit_linked_comps(region, |f| f.duplicate_comp());
     }
 
     /// Switches the folder to comp `index` (its take folder menu's comp list).
     pub fn select_comp(&mut self, region: Id, index: usize) {
-        self.edit_folder(region, |f, _| f.switch_comp(index));
+        self.edit_linked_comps(region, |f| f.switch_comp(index));
     }
 
     pub fn rename_comp(&mut self, region: Id, index: usize, name: String) {
-        self.edit_folder(region, |f, _| f.rename_comp(index, name));
+        self.edit_linked_comps(region, |f| f.rename_comp(index, name.clone()));
     }
 
     /// Delete Comp (the last one stays).
     pub fn delete_comp(&mut self, region: Id, index: usize) {
-        self.edit_folder(region, |f, _| f.delete_comp(index));
+        self.edit_linked_comps(region, |f| f.delete_comp(index));
     }
 
-    /// Makes `take` the one heard throughout the folder.
+    /// Makes `take` the one heard throughout the folder, and the matching take throughout the
+    /// grouped folders that follow it.
     pub fn select_take(&mut self, region: Id, take: Id) {
+        for (r, t) in self.linked_folders(region, Some(take)) {
+            if let Some(t) = t {
+                self.select_take_alone(r, t);
+            }
+        }
+    }
+
+    fn select_take_alone(&mut self, region: Id, take: Id) {
         self.edit_folder(region, |f, _| f.select_whole(take));
+    }
+
+    // ---- comp sections ----------------------------------------------------------------------
+
+    /// The comp section of `region` heard at timeline `at` (in take time), and what to add to
+    /// a timeline position to get the folder's take time.
+    fn comp_section(&self, region: Id, at: i64) -> Option<(CompSegment, i64)> {
+        let r = self.region(region)?;
+        let shift = take_time_shift(r);
+        Some((r.takes.as_ref()?.section_at(at + shift)?, shift))
+    }
+
+    /// Drags the comp edge at timeline `at` to `to` (`TakeFolder::move_edge`): a border moves
+    /// both sections, an outer edge lengthens or shortens its own. Grouped folders with an
+    /// edge there follow.
+    pub fn move_comp_edge(&mut self, region: Id, at: i64, to: i64) {
+        for (r, _) in self.linked_folders(region, None) {
+            if !self.is_midi_folder(r) {
+                self.edit_folder(r, |f, shift| f.move_edge(at + shift, to + shift));
+            }
+        }
+    }
+
+    /// Removes the comp section heard at timeline `at`: that stretch falls silent, in grouped
+    /// folders too.
+    pub fn remove_comp_section(&mut self, region: Id, at: i64) {
+        if let Some((s, shift)) = self.comp_section(region, at) {
+            self.set_comp_range(region, None, s.start - shift, s.end - shift);
+        }
+    }
+
+    /// Moves the comp section heard at timeline `at` to the take `delta` rows up (negative) or
+    /// down that has audio there (Logic's alternating between lanes); where that take's audio
+    /// stops, the section keeps its own take. Grouped folders follow with their matching take.
+    pub fn move_comp_section(&mut self, region: Id, at: i64, delta: i64) {
+        let Some((s, shift)) = self.comp_section(region, at) else { return };
+        let to = self.region(region).and_then(|r| r.takes.as_ref()).and_then(|f| f.neighbour_take(&s, delta));
+        if let Some(t) = to {
+            self.set_comp_range(region, Some(t), s.start - shift, s.end - shift);
+        }
+    }
+
+    /// Previous Take (`delta` -1) and Next Take (1): each folder in `regions`, and the grouped
+    /// folders that follow it, switches to the take that many places from the one heard. A
+    /// folder already moved as another's partner isn't moved again.
+    pub fn step_take(&mut self, regions: &[Id], delta: i64) {
+        let mut done = Vec::new();
+        for &region in regions {
+            if done.contains(&region) {
+                continue;
+            }
+            let next = self.region(region).and_then(|r| r.takes.as_ref()).and_then(|f| f.stepped_take(delta));
+            for (r, t) in self.linked_folders(region, next) {
+                done.push(r);
+                if let Some(t) = t {
+                    self.select_take_alone(r, t);
+                }
+            }
+        }
     }
 
     pub fn rename_take(&mut self, region: Id, take: Id, name: String) {
@@ -388,6 +507,18 @@ impl Session {
         }
         let Some((track, idx)) = self.find_region(region) else { return Vec::new() };
         let r = self.project.track(track).unwrap().regions[idx].clone();
+        let made = self.flat_regions(&r);
+        let ids = made.iter().map(|r| r.id).collect();
+        let t = self.project.track_mut(track).unwrap();
+        t.regions.splice(idx..idx + 1, made);
+        self.push_regions(track);
+        self.dirty = true;
+        ids
+    }
+
+    /// The plain regions an audio folder's comp flattens to, one per stretch (every pass of a
+    /// looping folder), with ids of their own.
+    fn flat_regions(&mut self, r: &Region) -> Vec<Region> {
         let Some(folder) = r.takes.clone() else { return Vec::new() };
         let RegionContent::Audio { gain_db, .. } = r.content else { return Vec::new() };
         let mut made = Vec::new();
@@ -426,12 +557,7 @@ impl Session {
                 });
             }
         }
-        let ids = made.iter().map(|r| r.id).collect();
-        let t = self.project.track_mut(track).unwrap();
-        t.regions.splice(idx..idx + 1, made);
-        self.push_regions(track);
-        self.dirty = true;
-        ids
+        made
     }
 
     /// Flatten and Merge: renders the comp into a new audio file, one region in the folder's
@@ -468,48 +594,16 @@ impl Session {
     /// muted so the song sounds the same, and the folder is flattened in place. Returns the
     /// new tracks.
     pub fn unpack_take_folder(&mut self, region: Id) -> Vec<Id> {
-        if self.is_midi_folder(region) {
-            return self.unpack_midi_folder(region);
-        }
-        let Some((track, idx)) = self.find_region(region) else { return Vec::new() };
-        let r = self.project.track(track).unwrap().regions[idx].clone();
-        let Some(folder) = r.takes.clone() else { return Vec::new() };
-        let RegionContent::Audio { offset: tt0, gain_db, .. } = r.content else { return Vec::new() };
+        let Some((track, takes)) = self.unpacked_takes(region) else { return Vec::new() };
         let mut made = Vec::new();
         // Each new track lands right below the folder's, so go newest first to keep the order.
-        for t in folder.takes.iter().rev() {
-            let (a, b) = (t.start.max(tt0), t.end.min(tt0 + r.length));
+        for (name, take) in takes.into_iter().rev() {
             let Some(&dst) = self.duplicate_tracks(&[track], false).first() else { continue };
-            if a < b {
-                let id = self.project.alloc_id();
-                let length = b - a;
-                let fade = self.default_fade(length);
-                let take = Region {
-                    id,
-                    name: t.name.clone(),
-                    start: r.start + a - tt0,
-                    length,
-                    muted: true,
-                    color: r.color.clone(),
-                    content: RegionContent::Audio {
-                        clip: t.clip,
-                        offset: t.offset + a,
-                        gain_db: gain_db + t.gain_db,
-                        fade_in: fade,
-                        fade_out: fade,
-                        fade_shape: FadeShape::default(),
-                    },
-                    loop_end: None,
-                    takes: None,
-                    params: Default::default(),
-                    pattern: None,
-                };
-                if let Some(d) = self.project.track_mut(dst) {
-                    d.name = t.name.clone();
-                    d.regions.push(take);
-                }
-                self.push_regions(dst);
+            if let Some(d) = self.project.track_mut(dst) {
+                d.name = name;
+                d.regions.extend(take);
             }
+            self.push_regions(dst);
             made.push(dst);
         }
         made.reverse();
@@ -517,15 +611,184 @@ impl Session {
         made
     }
 
-    /// Pack Take Folder: turns audio regions on one track into a take folder spanning them,
-    /// one take each (the newest region, last on the track, starts out heard). Returns it.
-    pub fn pack_take_folder(&mut self, ids: &[Id]) -> Result<Id> {
-        let Some((track, _)) = ids.first().and_then(|id| self.find_region(*id)) else { return Err(anyhow!("No regions to pack")) };
-        let t = self.project.track(track).unwrap();
-        let picked: Vec<Region> = t.regions.iter().filter(|r| ids.contains(&r.id)).cloned().collect();
-        if picked.len() != ids.len() {
-            return Err(anyhow!("Take folders are packed from regions on one track"));
+    /// Unpack to Existing Tracks: every take goes onto a track below the folder's, one per
+    /// track in order (the next tracks of the same kind, skipping hidden and frozen ones),
+    /// muted, and the folder is flattened in place. Where there aren't enough tracks, new ones
+    /// with the folder track's settings are added below the last. Returns the tracks used.
+    pub fn unpack_to_existing_tracks(&mut self, region: Id) -> Vec<Id> {
+        let Some((track, takes)) = self.unpacked_takes(region) else { return Vec::new() };
+        let Some(pos) = self.project.tracks.iter().position(|t| t.id == track) else { return Vec::new() };
+        let kind = self.project.tracks[pos].kind;
+        let mut used: Vec<Id> =
+            self.project.tracks[pos + 1..].iter().filter(|t| t.kind == kind && !t.hidden && t.frozen.is_none()).map(|t| t.id).take(takes.len()).collect();
+        // The tracks still needed, after the last one used and in its stack.
+        let anchor = used.last().copied().unwrap_or(track);
+        let parent = self.project.track(anchor).and_then(|t| t.parent);
+        let mut added = Vec::new();
+        for (name, _) in &takes[used.len()..] {
+            let Some(&dst) = self.duplicate_tracks(&[track], false).first() else { continue };
+            if let Some(d) = self.project.track_mut(dst) {
+                d.name = name.clone();
+            }
+            added.push(dst);
         }
+        if !added.is_empty() {
+            let mut order: Vec<Id> = self.project.tracks.iter().map(|t| t.id).filter(|id| !added.contains(id)).collect();
+            let at = order.iter().position(|&id| id == anchor).map(|i| i + 1 + self.project.descendants(anchor).len()).unwrap_or(order.len());
+            order.splice(at..at, added.iter().copied());
+            let parents: Vec<(Id, Option<Id>)> = added.iter().map(|&id| (id, parent)).collect();
+            self.move_tracks(order, &parents);
+            used.extend(added);
+        }
+        for (&dst, (_, take)) in used.iter().zip(takes) {
+            if let Some(d) = self.project.track_mut(dst) {
+                d.regions.extend(take);
+            }
+            self.push_regions(dst);
+        }
+        self.flatten_take_folder(region);
+        used
+    }
+
+    /// What Unpack puts on tracks, for the folder `region` and the track it's on: each take
+    /// (oldest first) with its name and its part inside the folder as a muted region (none for
+    /// an audio take with no audio there).
+    #[allow(clippy::type_complexity)] // Named in the doc comment; used by the two Unpacks.
+    fn unpacked_takes(&mut self, region: Id) -> Option<(Id, Vec<(String, Option<Region>)>)> {
+        let (track, idx) = self.find_region(region)?;
+        let r = &mut self.project.track_mut(track)?.regions[idx];
+        crate::takes::save_midi_take(r);
+        let r = r.clone();
+        let folder = r.takes.clone()?;
+        let mut out = Vec::new();
+        match r.content {
+            RegionContent::Audio { offset: tt0, gain_db, .. } => {
+                for t in &folder.takes {
+                    let (a, b) = (t.start.max(tt0), t.end.min(tt0 + r.length));
+                    if a >= b {
+                        out.push((t.name.clone(), None));
+                        continue;
+                    }
+                    let id = self.project.alloc_id();
+                    let length = b - a;
+                    let fade = self.default_fade(length);
+                    let take = Region {
+                        id,
+                        name: t.name.clone(),
+                        start: r.start + a - tt0,
+                        length,
+                        muted: true,
+                        color: r.color.clone(),
+                        content: RegionContent::Audio {
+                            clip: t.clip,
+                            offset: t.offset + a,
+                            gain_db: gain_db + t.gain_db,
+                            fade_in: fade,
+                            fade_out: fade,
+                            fade_shape: FadeShape::default(),
+                        },
+                        loop_end: None,
+                        takes: None,
+                        params: Default::default(),
+                        pattern: None,
+                    };
+                    out.push((t.name.clone(), Some(take)));
+                }
+            }
+            RegionContent::Midi { .. } => {
+                for t in &folder.takes {
+                    let (notes, cc) = folder.midi_window(t.id, folder.offset, r.length);
+                    let id = self.project.alloc_id();
+                    let take =
+                        Region { id, name: t.name.clone(), muted: true, content: RegionContent::Midi { notes, cc }, takes: None, loop_end: None, ..r.clone() };
+                    out.push((t.name.clone(), Some(take)));
+                }
+            }
+        }
+        Some((track, out))
+    }
+
+    /// Export Active Take to New Track: a copy of what the folder plays (the take heard, or the
+    /// comp flattened) on a new track below with the folder track's settings. The copy is
+    /// muted so the song sounds the same, and the folder is left as it is. With `remove` (Move
+    /// Active Take to New Track) the copy plays instead: the take or comp leaves the folder,
+    /// which is muted (or goes, when that was all it had). Returns the new track.
+    pub fn export_active_take(&mut self, region: Id, remove: bool) -> Vec<Id> {
+        let Some((track, idx)) = self.find_region(region) else { return Vec::new() };
+        let r = &mut self.project.track_mut(track).unwrap().regions[idx];
+        crate::takes::save_midi_take(r);
+        let r = r.clone();
+        let Some(folder) = r.takes.clone() else { return Vec::new() };
+        let midi = matches!(r.content, RegionContent::Midi { .. });
+        // What's heard: a whole take (always, in a MIDI folder) or a comp.
+        let whole = if midi { folder.midi_take() } else { folder.whole_take() };
+        let name = whole.and_then(|t| folder.take(t)).map(|t| t.name.clone()).unwrap_or_else(|| folder.comp_name());
+        let mut copy = if midi {
+            let id = self.project.alloc_id();
+            vec![Region { id, takes: None, ..r.clone() }]
+        } else {
+            self.flat_regions(&r)
+        };
+        for c in &mut copy {
+            c.name = name.clone();
+            c.muted = !remove || r.muted;
+        }
+        let Some(&dst) = self.duplicate_tracks(&[track], false).first() else { return Vec::new() };
+        if let Some(d) = self.project.track_mut(dst) {
+            d.name = name;
+            d.regions = copy;
+        }
+        self.push_regions(dst);
+        if remove {
+            if whole.is_some() && folder.takes.len() < 2 {
+                self.project.track_mut(track).unwrap().regions.retain(|x| x.id != region);
+                self.push_regions(track);
+            } else {
+                self.edit_folder(region, |f, _| match whole {
+                    // Another take takes its place: the newest, or the comp made of the rest.
+                    Some(t) => {
+                        f.remove_take(t);
+                        match f.takes.last().map(|t| t.id) {
+                            Some(newest) if midi => f.select_whole(newest),
+                            Some(_) if f.comp.is_empty() => f.default_comp(),
+                            _ => {}
+                        }
+                    }
+                    // The last comp makes way for a fresh one.
+                    None if f.comps.len() < 2 => {
+                        let old = f.current;
+                        f.create_comp();
+                        f.delete_comp(old);
+                    }
+                    None => f.delete_comp(f.current),
+                });
+                if let Some(x) = self.region_mut(region) {
+                    x.muted = true;
+                }
+                self.push_regions(track);
+            }
+        }
+        self.dirty = true;
+        vec![dst]
+    }
+
+    /// Pack Take Folder: turns audio regions into a take folder spanning them, one take each.
+    /// Regions on several tracks (takes recorded one per track) go into a folder on the topmost
+    /// of them, taken in track order, top first, so the take numbers follow the old tracks. The
+    /// last take (the newest region on one track, the bottom track's otherwise) starts out
+    /// heard. The other tracks keep their regions that weren't packed. Returns the folder.
+    pub fn pack_take_folder(&mut self, ids: &[Id]) -> Result<Id> {
+        let mut tracks: Vec<Id> = Vec::new();
+        let mut picked: Vec<Region> = Vec::new();
+        for t in &self.project.tracks {
+            for r in t.regions.iter().filter(|r| ids.contains(&r.id)) {
+                if !tracks.contains(&t.id) {
+                    tracks.push(t.id);
+                }
+                picked.push(r.clone());
+            }
+        }
+        let Some(&track) = tracks.first() else { return Err(anyhow!("No regions to pack")) };
         if picked.len() < 2 || picked.iter().any(|r| r.takes.is_some() || !matches!(r.content, RegionContent::Audio { .. })) {
             return Err(anyhow!("Select two or more audio regions to pack into a take folder"));
         }
@@ -567,6 +830,10 @@ impl Session {
             params: Default::default(),
             pattern: None,
         };
+        for &other in &tracks[1..] {
+            self.project.track_mut(other).unwrap().regions.retain(|r| !ids.contains(&r.id));
+            self.push_regions(other);
+        }
         let t = self.project.track_mut(track).unwrap();
         let at = t.regions.iter().position(|r| ids.contains(&r.id)).unwrap_or(t.regions.len());
         t.regions.retain(|r| !ids.contains(&r.id));
@@ -574,6 +841,29 @@ impl Session {
         self.push_regions(track);
         self.dirty = true;
         Ok(id)
+    }
+}
+
+/// The `Take::pass`es one recording gives the takes it makes on every track: its own for what
+/// it recorded, and one per region it packs into a folder (the first region packed on each
+/// track shares one, the second another, and so on), so grouped folders match them across the
+/// tracks recorded together.
+pub(super) struct RecordingPasses {
+    pub recording: Id,
+    packed: Vec<Id>,
+}
+
+impl RecordingPasses {
+    pub fn new(recording: Id) -> RecordingPasses {
+        RecordingPasses { recording, packed: Vec::new() }
+    }
+
+    /// The pass of the `k`th region packed on a track.
+    fn packed(&mut self, k: usize, project: &mut Project) -> (Id, u32) {
+        while self.packed.len() <= k {
+            self.packed.push(project.alloc_id());
+        }
+        (self.packed[k], 0)
     }
 }
 
@@ -598,6 +888,14 @@ fn timeline_takes(r: &Region) -> Vec<Take> {
             cc: Vec::new(),
             ..Default::default()
         }],
+    }
+}
+
+/// What to add to a timeline position to get folder `r`'s take time.
+fn take_time_shift(r: &Region) -> i64 {
+    match r.content {
+        RegionContent::Audio { offset, .. } => offset - r.start,
+        RegionContent::Midi { .. } => r.takes.as_ref().map_or(0, |f| f.offset) - r.start,
     }
 }
 
@@ -750,32 +1048,6 @@ impl Session {
         self.dirty = true;
         vec![region]
     }
-
-    /// Unpack to New Tracks for a MIDI take folder: each take on a new track below, muted,
-    /// and the folder flattened in place. Returns the new tracks.
-    fn unpack_midi_folder(&mut self, region: Id) -> Vec<Id> {
-        let Some((track, idx)) = self.find_region(region) else { return Vec::new() };
-        let r = &mut self.project.track_mut(track).unwrap().regions[idx];
-        crate::takes::save_midi_take(r);
-        let r = r.clone();
-        let folder = r.takes.clone().unwrap();
-        let mut made = Vec::new();
-        for t in folder.takes.iter().rev() {
-            let Some(&dst) = self.duplicate_tracks(&[track], false).first() else { continue };
-            let (notes, cc) = folder.midi_window(t.id, folder.offset, r.length);
-            let id = self.project.alloc_id();
-            let take = Region { id, name: t.name.clone(), muted: true, content: RegionContent::Midi { notes, cc }, takes: None, loop_end: None, ..r.clone() };
-            if let Some(d) = self.project.track_mut(dst) {
-                d.name = t.name.clone();
-                d.regions.push(take);
-            }
-            self.push_regions(dst);
-            made.push(dst);
-        }
-        made.reverse();
-        self.flatten_midi_folder(region);
-        made
-    }
 }
 
 #[cfg(test)]
@@ -835,7 +1107,7 @@ mod tests {
         assert!(first.muted && matches!(&first.content, RegionContent::Midi { notes, .. } if notes[0].pitch == 60));
     }
 
-    fn audio_session(tag: &str) -> Session {
+    fn recording_session(tag: &str) -> Session {
         let cfg = crate::audio_io::AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
         let mut s = Session::new(cfg, Vec::new());
         s.dir = std::env::temp_dir().join(format!("marbble-audio-takes-{tag}-{}", std::process::id()));
@@ -871,7 +1143,7 @@ mod tests {
 
     #[test]
     fn recording_over_audio_makes_take_folders() {
-        let mut s = audio_session("over");
+        let mut s = recording_session("over");
         assert_eq!(s.prefs.recording.audio_overlap, crate::prefs::AudioOverlap::TakeFolders);
         // Two mics: every armed track gets a folder of its own.
         let oh = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
@@ -915,8 +1187,31 @@ mod tests {
     }
 
     #[test]
+    fn grouped_mics_recorded_over_switch_takes_together() {
+        let mut s = recording_session("grouped");
+        let oh = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
+        let kick = s.add_track(TrackKind::Audio, InputSel::Mono(1), None, None).unwrap();
+        s.create_group(&[oh, kick]);
+        for _ in 0..3 {
+            record_onto(&mut s, None, 1000, 1000, &[oh, kick]);
+        }
+        let folder = |s: &Session, t: Id| s.project.track(t).unwrap().regions[0].clone();
+        let (a, b) = (folder(&s, oh), folder(&s, kick));
+        let passes = |r: &Region| r.takes.as_ref().unwrap().takes.iter().map(|t| t.pass).collect::<Vec<_>>();
+        // The packed first take and both recordings carry the same passes on both mics.
+        assert_eq!(passes(&a), passes(&b));
+        assert!(passes(&a).iter().all(|p| p.is_some()));
+        let ids = |r: &Region| r.takes.as_ref().unwrap().takes.iter().map(|t| t.id).collect::<Vec<_>>();
+        let (at, bt) = (ids(&a), ids(&b));
+        for k in 0..3 {
+            s.select_take(a.id, at[k]);
+            assert_eq!(folder(&s, kick).takes.unwrap().whole_take(), Some(bt[k]), "take {}", k + 1);
+        }
+    }
+
+    #[test]
     fn take_folders_cover_what_the_recording_overlaps() {
-        let mut s = audio_session("spans");
+        let mut s = recording_session("spans");
         let t = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
         // A punch-in part-way over a region: the old take still plays before it.
         record_onto(&mut s, None, 0, 1000, &[t]);
@@ -958,7 +1253,7 @@ mod tests {
 
     #[test]
     fn cycle_recording_over_take_folders_adds_takes() {
-        let mut s = audio_session("cycle");
+        let mut s = recording_session("cycle");
         let t = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
         let plan = RecPlan { from: 1000, cycle: Some((1000, 2000)), punch: None, latency: 0, midi_latency: 0, min_take: 1 };
         record_onto(&mut s, None, 0, 1500, &[t]);
@@ -974,6 +1269,182 @@ mod tests {
         assert_eq!((f.takes[4].offset - f.takes[3].offset, f.takes[3].clip), (1000, f.takes[4].clip));
         s.undo();
         assert_eq!(s.project.track(t).unwrap().regions[0].takes.as_ref().unwrap().takes.len(), 3);
+    }
+
+    /// A session on the null device with a 10 s audio clip, and `tracks` audio tracks.
+    fn audio_session(tracks: usize) -> (Session, Vec<Id>, Id) {
+        let cfg = crate::audio_io::AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
+        let mut s = Session::new(cfg, Vec::new());
+        s.dir = std::env::temp_dir().join(format!("marbble-audio-takes-{}", std::process::id()));
+        let ids = (0..tracks).map(|_| s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap()).collect();
+        let path = s.dir.join("Audio Files").join("ramp.wav");
+        let ramp: Vec<f32> = (0..480_000).map(|i| i as f32 / 480_000.0).collect();
+        let clip = s.add_clip(&path, Clip::from_channels(path.clone(), 48000, vec![ramp]));
+        (s, ids, clip)
+    }
+
+    fn add_audio(s: &mut Session, track: Id, clip: Id, name: &str, start: i64, length: i64, offset: i64) -> Id {
+        let id = s.project.alloc_id();
+        let content = RegionContent::Audio { clip, offset, gain_db: 0.0, fade_in: 0, fade_out: 0, fade_shape: FadeShape::default() };
+        let r = Region {
+            id,
+            name: name.into(),
+            start,
+            length,
+            muted: false,
+            color: None,
+            content,
+            loop_end: None,
+            takes: None,
+            params: Default::default(),
+            pattern: None,
+        };
+        s.project.track_mut(track).unwrap().regions.push(r);
+        s.push_regions(track);
+        id
+    }
+
+    #[test]
+    fn pack_gathers_takes_from_several_tracks() {
+        let (mut s, t, clip) = audio_session(4);
+        // One take per track, the bottom one recorded first on its track's timeline; the third
+        // track's region stays where it is.
+        let a = add_audio(&mut s, t[0], clip, "Overhead 1", 48_000, 96_000, 0);
+        let b = add_audio(&mut s, t[1], clip, "Overhead 2", 24_000, 96_000, 1_000);
+        let keep = add_audio(&mut s, t[1], clip, "Fill", 400_000, 10_000, 0);
+        let c = add_audio(&mut s, t[3], clip, "Overhead 3", 48_000, 120_000, 2_000);
+        let other = add_audio(&mut s, t[2], clip, "Kick", 0, 10_000, 0);
+        s.checkpoint("Pack Take Folder", None, false);
+        // The order of the ids doesn't matter: tracks go top first.
+        let folder = s.pack_take_folder(&[c, a, b]).unwrap();
+        let (track, _) = s.find_region(folder).unwrap();
+        assert_eq!(track, t[0], "the folder is on the topmost track");
+        let r = s.region(folder).unwrap().clone();
+        assert_eq!((r.start, r.length), (24_000, 168_000 - 24_000));
+        let f = r.takes.clone().unwrap();
+        let names: Vec<&str> = f.takes.iter().map(|k| k.name.as_str()).collect();
+        assert_eq!(names, ["Overhead 1", "Overhead 2", "Overhead 3"]);
+        // Each take keeps its own place: take time 0 is the folder start.
+        let spans: Vec<(i64, i64, i64)> = f.takes.iter().map(|k| (k.start, k.end, k.offset)).collect();
+        assert_eq!(spans, [(24_000, 120_000, -24_000), (0, 96_000, 1_000), (24_000, 144_000, 2_000 - 24_000)]);
+        assert_eq!(f.whole_take(), None, "the last take is heard, the others fill in before it");
+        assert_eq!(f.comp.last().unwrap().take, f.takes[2].id);
+        // The other tracks lose only what was packed.
+        assert_eq!(s.project.track(t[1]).unwrap().regions.iter().map(|r| r.id).collect::<Vec<_>>(), [keep]);
+        assert!(s.project.track(t[3]).unwrap().regions.is_empty());
+        assert_eq!(s.project.track(t[2]).unwrap().regions[0].id, other);
+        // One undo step puts every region back on its own track.
+        s.undo();
+        for (track, id) in [(t[0], a), (t[1], b), (t[3], c)] {
+            assert_eq!(s.find_region(id).map(|(tr, _)| tr), Some(track));
+        }
+        assert!(s.region(folder).is_none());
+        // MIDI mixed in is refused, wherever it is.
+        let m = s.add_track(TrackKind::Instrument, InputSel::None, None, None).unwrap();
+        s.place_midi_takes(m, 0, 1000, vec![(Vec::new(), Vec::new())]);
+        let midi = s.project.track(m).unwrap().regions[0].id;
+        assert!(s.pack_take_folder(&[a, midi]).is_err());
+        assert!(s.pack_take_folder(&[a]).is_err());
+    }
+
+    fn names(s: &Session) -> Vec<String> {
+        s.project.tracks.iter().map(|t| t.name.clone()).collect()
+    }
+
+    #[test]
+    fn unpack_to_existing_tracks_fills_the_tracks_below() {
+        let (mut s, t, clip) = audio_session(3);
+        for (k, name) in ["Folder", "Below 1", "Below 2"].iter().enumerate() {
+            s.project.track_mut(t[k]).unwrap().name = name.to_string();
+        }
+        // An instrument track between the two audio tracks is passed over.
+        let inst = s.add_track(TrackKind::Instrument, InputSel::None, None, Some(2)).unwrap();
+        s.project.track_mut(inst).unwrap().name = "Keys".into();
+        let below = add_audio(&mut s, t[1], clip, "Already here", 200_000, 1_000, 0);
+        let ids: Vec<Id> = (0..4).map(|k| add_audio(&mut s, t[0], clip, &format!("Take {}", k + 1), 1_000, 10_000, k * 20_000)).collect();
+        let folder = s.pack_take_folder(&ids).unwrap();
+        s.checkpoint("Unpack Take Folder", None, false);
+        let used = s.unpack_to_existing_tracks(folder);
+        assert_eq!(used.len(), 4);
+        assert_eq!((used[0], used[1]), (t[1], t[2]));
+        // Two more tracks, like the folder's, below the last one used.
+        assert_eq!(names(&s), ["Folder", "Below 1", "Keys", "Below 2", "Take 3", "Take 4"]);
+        for (k, &track) in used.iter().enumerate() {
+            let take = s.project.track(track).unwrap().regions.iter().find(|r| r.name == format!("Take {}", k + 1)).unwrap().clone();
+            assert!(take.muted);
+            assert!(matches!(take.content, RegionContent::Audio { offset, .. } if offset == k as i64 * 20_000));
+            assert_eq!((take.start, take.length), (1_000, 10_000));
+        }
+        // The tracks keep what they had; the folder is flattened to the take heard.
+        assert!(s.region(below).is_some());
+        let flat = &s.project.track(t[0]).unwrap().regions;
+        assert!(flat.len() == 1 && flat[0].takes.is_none() && !flat[0].muted);
+        s.undo();
+        assert_eq!(names(&s), ["Folder", "Below 1", "Keys", "Below 2"]);
+        assert!(s.region(folder).unwrap().takes.is_some());
+        assert_eq!(s.project.track(t[1]).unwrap().regions.len(), 1);
+    }
+
+    #[test]
+    fn export_and_move_the_active_take() {
+        let (mut s, t, clip) = audio_session(2);
+        s.project.track_mut(t[0]).unwrap().name = "Vocal".into();
+        let a = add_audio(&mut s, t[0], clip, "A", 0, 1_000, 0);
+        let b = add_audio(&mut s, t[0], clip, "B", 0, 1_000, 5_000);
+        let folder = s.pack_take_folder(&[a, b]).unwrap();
+        let takes: Vec<Id> = s.region(folder).unwrap().takes.as_ref().unwrap().takes.iter().map(|k| k.id).collect();
+        let region_on = |s: &Session, track: Id| s.project.track(track).unwrap().regions.clone();
+        // Export: a muted copy of take B on a new track below, the folder as it was.
+        s.checkpoint("Export Active Take", None, false);
+        let made = s.export_active_take(folder, false);
+        assert_eq!(names(&s), ["Vocal", "B", "Audio 2"]);
+        let copy = region_on(&s, made[0]);
+        assert_eq!(copy.len(), 1);
+        assert!(copy[0].muted && copy[0].takes.is_none() && copy[0].name == "B");
+        assert!(matches!(copy[0].content, RegionContent::Audio { offset: 5_000, clip: c, .. } if c == clip));
+        assert_eq!(s.region(folder).unwrap().takes.as_ref().unwrap().takes.len(), 2);
+        s.undo();
+        // Move: the copy plays, the folder loses take B, plays A, and is muted.
+        s.checkpoint("Move Active Take", None, false);
+        let made = s.export_active_take(folder, true);
+        assert!(!region_on(&s, made[0])[0].muted);
+        let f = s.region(folder).unwrap().takes.clone().unwrap();
+        assert_eq!((f.takes.len(), f.whole_take()), (1, Some(takes[0])));
+        assert!(s.region(folder).unwrap().muted);
+        // Moving the only take left moves the folder out altogether.
+        s.export_active_take(folder, true);
+        assert!(s.region(folder).is_none());
+        assert_eq!(names(&s), ["Vocal", "A", "B", "Audio 2"]);
+        s.undo();
+        assert_eq!(names(&s), ["Vocal", "Audio 2"]);
+        // A comp is exported flattened and named after the comp; moving it leaves a fresh one.
+        s.set_comp_range(folder, Some(takes[0]), 0, 500);
+        let made = s.export_active_take(folder, false);
+        let copy = region_on(&s, made[0]);
+        assert_eq!(copy.iter().map(|r| (r.start, r.length, r.name.as_str())).collect::<Vec<_>>(), [(0, 500, "Comp 1"), (500, 500, "Comp 1")]);
+        s.export_active_take(folder, true);
+        let f = s.region(folder).unwrap().takes.clone().unwrap();
+        assert_eq!((f.takes.len(), f.comp_names().len(), f.whole_take()), (2, 1, Some(takes[1])));
+    }
+
+    #[test]
+    fn export_a_midi_take() {
+        let cfg = crate::audio_io::AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
+        let mut s = Session::new(cfg, Vec::new());
+        let t = s.add_track(TrackKind::Instrument, InputSel::None, None, None).unwrap();
+        let pass = |pitch: u8| (vec![Note { start: 10, length: 100, pitch, velocity: 100, muted: false }], Vec::new());
+        s.place_midi_takes(t, 0, 1000, vec![pass(60), pass(62)]);
+        let folder = s.project.track(t).unwrap().regions[0].id;
+        let made = s.export_active_take(folder, false);
+        let copy = s.project.track(made[0]).unwrap().regions[0].clone();
+        assert!(copy.takes.is_none() && copy.muted);
+        assert_eq!(notes_of(&s, copy.id), vec![62]);
+        // Unpack to existing tracks: the exported track takes the first take, a new one the second.
+        let used = s.unpack_to_existing_tracks(folder);
+        assert_eq!(used[0], made[0]);
+        assert_eq!(s.project.track(used[1]).unwrap().regions.len(), 1);
+        assert_eq!(notes_of(&s, s.project.track(used[1]).unwrap().regions[0].id), vec![62]);
+        assert_eq!(notes_of(&s, s.project.track(used[0]).unwrap().regions[1].id), vec![60]);
     }
 
     #[test]
