@@ -488,7 +488,7 @@ mod tests {
         let frames = |_| Some(100_000);
         // A take folder whose comp has audio either side of its ends, then a plain region.
         let mut folder = region(1, 1000, 1000, 500, 200, FadeOutType::EqP);
-        let take = Take { id: 7, name: "Take 1".into(), clip: 3, offset: 0, start: 0, end: 5000, gain_db: 0.0, notes: Vec::new(), cc: Vec::new() };
+        let take = Take { id: 7, name: "Take 1".into(), clip: 3, offset: 0, start: 0, end: 5000, gain_db: 0.0, notes: Vec::new(), cc: Vec::new(), pass: None };
         folder.takes = Some(TakeFolder { takes: vec![take], comp: vec![CompSegment { start: 0, end: 5000, take: 7 }], ..TakeFolder::new() });
         let rs = vec![folder.clone(), region(2, 2000, 1000, 8000, 0, FadeOutType::Out)];
         assert_eq!(crossfades(&rs, frames)[0].fade_out, (1900, 200));

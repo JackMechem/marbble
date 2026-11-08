@@ -481,6 +481,7 @@ most of it the everyday editing and mixing work.
 - [x] Quick Swipe Comping (p. 222)
 - [x] Open a take folder and preview or choose takes (p. 223–224)
 - [x] Create, save, rename and delete comps (p. 224–233)
+- [x] Grouped take folders switch and comp together; Select Previous/Next Take
 - [ ] Edit comp sections: move, alternate between lanes, remove a take (p. 227–229)
 - [ ] Edit take regions: trim, cut, slice at comp borders, move between lanes (p. 234–237)
 - [ ] Export the active take to a new track (p. 238)

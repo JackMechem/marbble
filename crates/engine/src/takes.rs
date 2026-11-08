@@ -148,6 +148,49 @@ impl TakeFolder {
         self.comp = out;
     }
 
+    // ---- grouped folders and Previous/Next Take --------------------------------------------
+
+    /// The take of `other` that goes with this folder's `take`, for grouped folders that switch
+    /// and comp together. Folders recorded together (sharing a recording) match pass by pass,
+    /// so a take only one of them recorded has no match; others (packed by hand) match by
+    /// position.
+    pub fn matching_take(&self, take: Id, other: &TakeFolder) -> Option<Id> {
+        let t = self.take(take)?;
+        let recordings = |f: &TakeFolder| f.takes.iter().filter_map(|t| t.pass.map(|p| p.0)).collect::<Vec<_>>();
+        let ours = recordings(self);
+        if recordings(other).iter().any(|r| ours.contains(r)) {
+            return other.takes.iter().find(|o| t.pass.is_some() && o.pass == t.pass).map(|o| o.id);
+        }
+        let k = self.takes.iter().position(|x| x.id == take)?;
+        other.takes.get(k).map(|o| o.id)
+    }
+
+    /// The take Previous and Next Take step from: the one heard throughout, or in a comp the
+    /// one heard longest.
+    pub fn heard_take(&self) -> Option<Id> {
+        let mut best: Option<(Id, i64)> = None;
+        for t in &self.takes {
+            let heard: i64 = self.comp.iter().filter(|s| s.take == t.id).map(|s| s.end - s.start).sum();
+            if heard > 0 && best.is_none_or(|(_, b)| heard > b) {
+                best = Some((t.id, heard));
+            }
+        }
+        best.map(|(id, _)| id)
+    }
+
+    /// The take `delta` places after (before, when negative) the one heard, for Previous and
+    /// Next Take. None past the first or last take. With nothing heard, Next starts at the
+    /// first take and Previous at the last.
+    pub fn stepped_take(&self, delta: i64) -> Option<Id> {
+        let n = self.takes.len() as i64;
+        let at = match self.heard_take().and_then(|id| self.takes.iter().position(|t| t.id == id)) {
+            Some(k) => k as i64 + delta,
+            None if delta > 0 => delta - 1,
+            None => n + delta,
+        };
+        (0..n).contains(&at).then(|| self.takes[at as usize].id)
+    }
+
     // ---- comps ------------------------------------------------------------------------------
 
     /// The comps by name, the current one at `current`. A folder that never had a second comp
@@ -583,6 +626,7 @@ mod tests {
                     gain_db: 0.0,
                     notes: Vec::new(),
                     cc: Vec::new(),
+                    pass: None,
                 })
                 .collect(),
             ..TakeFolder::new()
@@ -626,6 +670,30 @@ mod tests {
         assert_eq!(f.takes.len(), 1);
         f.remove_take(2);
         assert!(f.comp.is_empty());
+    }
+
+    #[test]
+    fn grouped_folders_match_takes() {
+        let passes = |f: &mut TakeFolder, p: &[Option<(Id, u32)>]| f.takes.iter_mut().zip(p).for_each(|(t, p)| t.pass = *p);
+        let mut a = folder(&[(1, 0, 1000), (2, 0, 1000), (3, 0, 1000)]);
+        let mut b = folder(&[(11, 0, 1000), (12, 0, 1000), (13, 0, 1000)]);
+        // Packed by hand: by position.
+        assert_eq!((a.matching_take(2, &b), a.matching_take(3, &b), a.matching_take(9, &b)), (Some(12), Some(13), None));
+        // Recorded together: by pass, so b's own extra recording has no partner in a.
+        passes(&mut a, &[Some((50, 0)), Some((50, 1)), Some((60, 0))]);
+        passes(&mut b, &[Some((70, 0)), Some((50, 0)), Some((50, 1))]);
+        assert_eq!((a.matching_take(1, &b), a.matching_take(2, &b), a.matching_take(3, &b)), (Some(12), Some(13), None));
+        assert_eq!((b.matching_take(11, &a), b.matching_take(13, &a)), (None, Some(2)));
+    }
+
+    #[test]
+    fn previous_and_next_take_step_from_the_take_heard() {
+        let mut f = folder(&[(1, 0, 1000), (2, 0, 1000), (3, 0, 1000)]);
+        assert_eq!((f.stepped_take(1), f.stepped_take(-1)), (Some(1), Some(3)), "nothing heard");
+        f.select_whole(2);
+        assert_eq!((f.heard_take(), f.stepped_take(-1), f.stepped_take(1)), (Some(2), Some(1), Some(3)));
+        f.select(3, 0, 600);
+        assert_eq!((f.heard_take(), f.stepped_take(1), f.stepped_take(-1)), (Some(3), None, Some(2)));
     }
 
     #[test]
@@ -710,8 +778,20 @@ mod tests {
             gain_db: 0.0,
             notes: vec![note(50, 60), note(500, 62)],
             cc: Vec::new(),
+            pass: None,
         });
-        f.takes.push(Take { id: 2, name: "Take 2".into(), clip: 0, offset: 0, start: 0, end: 1000, gain_db: 0.0, notes: vec![note(300, 72)], cc: Vec::new() });
+        f.takes.push(Take {
+            id: 2,
+            name: "Take 2".into(),
+            clip: 0,
+            offset: 0,
+            start: 0,
+            end: 1000,
+            gain_db: 0.0,
+            notes: vec![note(300, 72)],
+            cc: Vec::new(),
+            pass: None,
+        });
         assert_eq!(f.midi_take(), Some(2), "the newest without a comp");
         f.select_whole(1);
         assert_eq!(f.midi_take(), Some(1));

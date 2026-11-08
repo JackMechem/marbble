@@ -51,7 +51,7 @@ import { marqueeCopy, marqueeCut, marqueeDelete, marqueePaste, openToolMenu } fr
 import { getSettings, updateSettings } from "./prefs";
 import { createMarker, deleteMarker, deleteSelectedMarker, gotoMarker, markerAtPlayhead, openMarkerList } from "./markers";
 import { MarkerList } from "./components/MarkerList";
-import { packTakeFolder } from "./takes";
+import { packTakeFolder, stepTake } from "./takes";
 import { installDetach, receiveSnapshot, toggleDetached } from "./detach";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { moveAutomationAnswer } from "./moveAutomation";
@@ -459,6 +459,8 @@ const KEY_ACTIONS: Record<string, () => void> = {
   "next-marker": () => handleMenu("next-marker"),
   "marker-list": () => handleMenu("marker-list"),
   "pack-takes": () => handleMenu("pack-takes"),
+  "previous-take": () => stepTake(-1),
+  "next-take": () => stepTake(1),
   "tool-menu": openToolMenu,
   "learn-assignment": () => handleMenu("learn-assignment"),
   "controller-assignments": () => handleMenu("controller-assignments"),

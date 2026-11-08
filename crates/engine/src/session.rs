@@ -111,6 +111,8 @@ mod vst_key;
 mod zero_crossings;
 pub use sampler::{prepare_files, PreparedFile, SamplerAdded, SamplerRecording, SamplerView, SamplerWave, SfzReport, ZoneView, SAMPLES_DIR};
 #[cfg(test)]
+mod comp_tests;
+#[cfg(test)]
 mod held_notes;
 #[cfg(test)]
 mod instrument_tests;

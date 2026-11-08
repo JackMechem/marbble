@@ -14,6 +14,12 @@ pub fn select_take(state: State<AppState>, region: Id, take: Id) -> Snapshot {
     edit(&state, "Select Take", None, false, |s| s.select_take(region, take))
 }
 
+/// Previous Take (`delta` -1) and Next Take (1) for the selected take folders.
+#[tauri::command]
+pub fn step_take(state: State<AppState>, regions: Vec<Id>, delta: i64) -> Snapshot {
+    edit(&state, if delta < 0 { "Previous Take" } else { "Next Take" }, None, false, |s| s.step_take(&regions, delta))
+}
+
 #[tauri::command]
 pub fn rename_take(state: State<AppState>, region: Id, take: Id, name: String) -> Snapshot {
     edit(&state, "Rename Take", None, false, |s| s.rename_take(region, take, name))

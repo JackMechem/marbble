@@ -68,6 +68,11 @@ pub struct Take {
     pub notes: Vec<Note>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub cc: Vec<CcEvent>,
+    /// The recording the take came from and which of its cycle passes it is (from 0). Every
+    /// track recorded at once gets its takes with the same, so grouped folders can match
+    /// their takes pass by pass. None: packed by hand, or recorded before this was kept.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pass: Option<(Id, u32)>,
 }
 
 /// Part of a comp: take `take` is heard over take time `start..end`.

@@ -166,6 +166,8 @@ export interface Take {
   /** A MIDI take's notes and controllers, in take time. */
   notes?: Note[];
   cc?: CcEvent[];
+  /** The recording and which of its passes (grouped folders match takes by it). */
+  pass?: [Id, number];
 }
 
 export interface CompSegment {

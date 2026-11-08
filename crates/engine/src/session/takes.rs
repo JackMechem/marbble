@@ -78,8 +78,9 @@ impl Session {
     /// A finished audio recording, as `finish_recording` made it (`plain`, from the file's
     /// `frames` captured from engine position `start`), cut to what the plan says: cycle passes
     /// become a take folder (or more takes in the folder already there), an autopunch take is
-    /// trimmed to the punch range. None when there's nothing new to place.
-    pub(super) fn shape_take(&mut self, plan: Option<RecPlan>, track: Id, plain: Region, start: i64, frames: i64) -> Option<Region> {
+    /// trimmed to the punch range. None when there's nothing new to place. `recording` is the
+    /// same for every track recorded at once (see `Take::pass`).
+    pub(super) fn shape_take(&mut self, plan: Option<RecPlan>, track: Id, plain: Region, start: i64, frames: i64, recording: Id) -> Option<Region> {
         let Some(plan) = plan else { return Some(plain) };
         let RegionContent::Audio { clip, .. } = plain.content else { return Some(plain) };
         if plan.cycle.is_none() {
@@ -112,6 +113,7 @@ impl Session {
                 gain_db: 0.0,
                 notes: Vec::new(),
                 cc: Vec::new(),
+                pass: Some((recording, k as u32)),
             });
         }
         folder.default_comp();
@@ -214,13 +216,54 @@ impl Session {
         self.region(region).map(|r| r.takes.is_some() && matches!(r.content, RegionContent::Midi { .. })).unwrap_or(false)
     }
 
+    /// The take folders that follow `region`'s take choices and comp edits, as in Logic: when
+    /// its track is in a group that is on and links Editing (Selection), the folders that
+    /// overlap it in time on the group's other tracks.
+    fn comp_partners(&self, region: Id) -> Vec<Id> {
+        let (Some((track, _)), Some(r)) = (self.find_region(region), self.region(region)) else { return Vec::new() };
+        let (a, b) = (r.start, r.end());
+        let peers = self.group_peers(track, |g| g.editing);
+        let regions = peers.iter().filter_map(|&t| self.project.track(t)).flat_map(|t| t.regions.iter());
+        regions.filter(|o| o.takes.is_some() && o.start < b && o.end() > a).map(|o| o.id).collect()
+    }
+
+    /// `region` and the folders that follow it, each with its take that matches `take` of
+    /// `region` (see `TakeFolder::matching_take`; None where it has none, or for no take).
+    fn linked_folders(&self, region: Id, take: Option<Id>) -> Vec<(Id, Option<Id>)> {
+        let Some(f) = self.region(region).and_then(|r| r.takes.as_ref()) else { return Vec::new() };
+        let mut out = vec![(region, take)];
+        for p in self.comp_partners(region) {
+            let other = self.region(p).and_then(|r| r.takes.as_ref());
+            out.push((p, take.zip(other).and_then(|(t, o)| f.matching_take(t, o))));
+        }
+        out
+    }
+
+    /// Applies a comp list edit (create, duplicate, switch, rename, delete) to `region` and the
+    /// folders that follow it.
+    fn edit_linked_comps(&mut self, region: Id, f: impl Fn(&mut TakeFolder)) {
+        for (r, _) in self.linked_folders(region, None) {
+            self.edit_folder(r, |folder, _| f(folder));
+        }
+    }
+
     /// Quick Swipe Comping: `take` is heard over timeline `start..end` of the folder (None
     /// silences that part of the comp). A MIDI folder plays whole takes, so it switches to
-    /// `take`, as clicking a take does.
+    /// `take`, as clicking a take does. Grouped folders follow with their matching take (one
+    /// without a match is left alone).
     pub fn set_comp_range(&mut self, region: Id, take: Option<Id>, start: i64, end: i64) {
+        for (r, t) in self.linked_folders(region, take) {
+            if take.is_none() || t.is_some() {
+                self.set_comp_range_alone(r, t, start, end);
+            }
+        }
+    }
+
+    /// `set_comp_range` on this folder only.
+    fn set_comp_range_alone(&mut self, region: Id, take: Option<Id>, start: i64, end: i64) {
         if self.is_midi_folder(region) {
             if let Some(t) = take {
-                self.select_take(region, t);
+                self.select_take_alone(region, t);
             }
             return;
         }
@@ -233,33 +276,62 @@ impl Session {
         });
     }
 
-    /// Create New Comp: a fresh comp (the newest take wherever it has audio) is heard.
+    /// Create New Comp: a fresh comp (the newest take wherever it has audio) is heard. This
+    /// and the other comp list edits reach grouped folders too.
     pub fn create_comp(&mut self, region: Id) {
-        self.edit_folder(region, |f, _| f.create_comp());
+        self.edit_linked_comps(region, |f| f.create_comp());
     }
 
     /// Duplicate Comp: a copy of the comp heard becomes the one heard.
     pub fn duplicate_comp(&mut self, region: Id) {
-        self.edit_folder(region, |f, _| f.duplicate_comp());
+        self.edit_linked_comps(region, |f| f.duplicate_comp());
     }
 
     /// Switches the folder to comp `index` (its take folder menu's comp list).
     pub fn select_comp(&mut self, region: Id, index: usize) {
-        self.edit_folder(region, |f, _| f.switch_comp(index));
+        self.edit_linked_comps(region, |f| f.switch_comp(index));
     }
 
     pub fn rename_comp(&mut self, region: Id, index: usize, name: String) {
-        self.edit_folder(region, |f, _| f.rename_comp(index, name));
+        self.edit_linked_comps(region, |f| f.rename_comp(index, name.clone()));
     }
 
     /// Delete Comp (the last one stays).
     pub fn delete_comp(&mut self, region: Id, index: usize) {
-        self.edit_folder(region, |f, _| f.delete_comp(index));
+        self.edit_linked_comps(region, |f| f.delete_comp(index));
     }
 
-    /// Makes `take` the one heard throughout the folder.
+    /// Makes `take` the one heard throughout the folder, and the matching take throughout the
+    /// grouped folders that follow it.
     pub fn select_take(&mut self, region: Id, take: Id) {
+        for (r, t) in self.linked_folders(region, Some(take)) {
+            if let Some(t) = t {
+                self.select_take_alone(r, t);
+            }
+        }
+    }
+
+    fn select_take_alone(&mut self, region: Id, take: Id) {
         self.edit_folder(region, |f, _| f.select_whole(take));
+    }
+
+    /// Previous Take (`delta` -1) and Next Take (1): each folder in `regions`, and the grouped
+    /// folders that follow it, switches to the take that many places from the one heard. A
+    /// folder already moved as another's partner isn't moved again.
+    pub fn step_take(&mut self, regions: &[Id], delta: i64) {
+        let mut done = Vec::new();
+        for &region in regions {
+            if done.contains(&region) {
+                continue;
+            }
+            let next = self.region(region).and_then(|r| r.takes.as_ref()).and_then(|f| f.stepped_take(delta));
+            for (r, t) in self.linked_folders(region, next) {
+                done.push(r);
+                if let Some(t) = t {
+                    self.select_take_alone(r, t);
+                }
+            }
+        }
     }
 
     pub fn rename_take(&mut self, region: Id, take: Id, name: String) {
@@ -450,6 +522,7 @@ impl Session {
                 gain_db,
                 notes: Vec::new(),
                 cc: Vec::new(),
+                pass: None,
             });
         }
         folder.default_comp();
@@ -588,7 +661,7 @@ impl Session {
             let tt = at + to_tt;
             let notes = notes.iter().map(|n| Note { start: n.start + tt, ..*n }).collect();
             let cc = cc.iter().map(|c| CcEvent { start: c.start + tt, ..*c }).collect();
-            f.takes.push(Take { id, name, clip: 0, offset: 0, start: tt, end: tt + len, gain_db: 0.0, notes, cc });
+            f.takes.push(Take { id, name, clip: 0, offset: 0, start: tt, end: tt + len, gain_db: 0.0, notes, cc, pass: None });
         };
         for r in &packed {
             if let RegionContent::Midi { notes, cc } = &r.content {

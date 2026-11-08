@@ -6,6 +6,17 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Grouped take folders switch and comp together.** When tracks share a group that is on with
+  Editing (Selection) linked, choosing a take, swiping a comp, and choosing, creating,
+  duplicating, renaming or deleting a comp in one take folder does the same in the folders at
+  the same place on the other tracks, as one undo step: the drum mics of a cycle recording stay
+  on the same performance. Takes recorded together match pass by pass; folders packed by hand
+  match by take number.
+- **Select Previous Take and Select Next Take** (Alt+Shift+Up and Alt+Shift+Down) switch the
+  selected take folders, and their grouped partners, one take up or down.
+
 ### Fixed
 
 - A take lands where it was played when an undo during the recording turns a track with latent

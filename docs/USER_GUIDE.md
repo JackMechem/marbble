@@ -1267,7 +1267,9 @@ Settings**, which you can reopen by clicking a member's group badge:
   like Logic's group clutch).
 - What the members share: **Volume** and **Pan** (as relative moves), **Mute**, **Solo**,
   **Record Enable**, **Track Selection** (clicking one selects all), and **Editing
-  (Selection)** (selecting a region selects the regions at the same place on the others).
+  (Selection)** (selecting a region selects the regions at the same place on the others, and
+  their take folders switch and comp together; see
+  [Take folders and comping](#7-take-folders-and-comping)).
 - **Delete Group** dissolves it. A group nobody is in is removed.
 
 ### Hiding tracks
@@ -1361,6 +1363,15 @@ Take folders follow Logic's Quick Swipe Comping.
     Comp parts are drawn bright and the rest dimmed; the closed folder draws the comp's
     waveform.
   - Click a take row to hear that take throughout.
+  - **Select Previous Take** and **Select Next Take** (Alt+Shift+Up and Alt+Shift+Down) switch
+    every selected take folder one take up or down (from the take heard longest, in a comp).
+- **Grouped tracks comp together.** When tracks are in a group that is on and links **Editing
+  (Selection)**, their take folders follow each other, as in Logic: choosing a take, swiping a
+  comp, and choosing, creating, duplicating, renaming or deleting a comp in one folder does the
+  same in the folders at the same place on the others, as one undo step. Record the drum mics
+  together and Take 2 is Take 2 on every mic. Takes recorded together are matched by their
+  pass (a take only one of the tracks recorded is left alone on the others); folders packed by
+  hand are matched by take number. Turn the group off (its clutch) to comp one folder alone.
 - **The take folder menu** (click the badge, right-click a take row, or region menu › Take
   Folder): the takes (pick one to hear), Open / Close Take Folder, Rename Take, Delete Take,
   Delete Unused Takes, **Flatten** (the comp becomes ordinary regions, one per stretch),

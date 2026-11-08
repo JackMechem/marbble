@@ -278,6 +278,7 @@ fn main() {
             commands::set_punch,
             commands::set_comp_range,
             commands::select_take,
+            commands::step_take,
             commands::rename_take,
             commands::delete_take,
             commands::delete_unused_takes,

@@ -357,7 +357,15 @@ Times are in samples at the project rate.
   takes, split at the `PASS_MARK`s the engine puts in the recorded stream (`midi_passes`).
 - Recording: `RecPlan` (`takes.rs`) describes how a cycle or Autopunch recording is cut into
   takes; `Session::record_plan` builds it before recording, and `shape_take` applies it to each
-  finished file.
+  finished file. Each cycle take keeps `pass: (recording, n)`, the recording's id shared by every
+  track recorded at once and its pass number.
+- **Grouped folders**: the session's take and comp edits (`select_take`, `set_comp_range`, the
+  comp list commands, `step_take` for Previous/Next Take) go through `linked_folders`, which
+  adds the folders overlapping the edited one on the other members of its group when the group
+  is on and links Editing. Each gets its own take for the one chosen
+  (`TakeFolder::matching_take`: by pass when the folders share a recording, else by position),
+  and a folder with no match is left alone. One Tauri command does them all, so it is one undo
+  step.
 
 ### Notes and controllers
 

@@ -247,6 +247,9 @@ fn main() {
     s.update_track(a, TrackPatch { armed: Some(false), ..Default::default() });
     let rec = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
     s.update_track(rec, TrackPatch { armed: Some(true), ..Default::default() });
+    // A second mic recorded at the same time, whose takes match the first's pass by pass.
+    let rec2 = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
+    s.update_track(rec2, TrackPatch { armed: Some(true), ..Default::default() });
     let (cs, ce) = (2 * bar, 6 * bar);
     s.set_cycle(true, cs, ce);
     s.locate(0);
@@ -275,6 +278,13 @@ fn main() {
                 && f.comp[1].take == t[1].id,
         );
         ok &= check("takes are named in order", t.iter().map(|x| x.name.as_str()).collect::<Vec<_>>() == ["Take 1", "Take 2", "Take 3"]);
+        let passes = |f: &daw_engine::model::TakeFolder| f.takes.iter().map(|t| t.pass).collect::<Vec<_>>();
+        let other = regions(&s, rec2).first().and_then(|x| x.takes.clone());
+        ok &= check(
+            &format!("both tracks' takes know their recording and pass ({:?})", passes(&f)),
+            passes(&f).iter().enumerate().all(|(k, p)| p.is_some_and(|p| p.1 == k as u32 && Some(p.0) == passes(&f)[0].map(|q| q.0)))
+                && other.is_some_and(|o| passes(&o) == passes(&f)),
+        );
     }
     // Recording the same cycle again adds to the folder.
     s.locate(cs);
@@ -291,6 +301,7 @@ fn main() {
     s.set_cycle(false, cs, ce);
     let punched = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
     s.update_track(rec, TrackPatch { armed: Some(false), ..Default::default() });
+    s.update_track(rec2, TrackPatch { armed: Some(false), ..Default::default() });
     s.update_track(punched, TrackPatch { armed: Some(true), ..Default::default() });
     let (pin, pout) = (bar + bar / 3, 2 * bar + bar / 2);
     s.set_punch(true, pin, pout);

@@ -74,6 +74,9 @@ export const KEY_COMMANDS: KeyCommand[] = [
   { id: "nudge-left", label: "Nudge Regions Left", group: "Editing", keys: ["Alt+ArrowLeft"] },
   { id: "nudge-right", label: "Nudge Regions Right", group: "Editing", keys: ["Alt+ArrowRight"] },
   { id: "pack-takes", label: "Pack Take Folder", group: "Editing", keys: ["Mod+Ctrl+F"] },
+  // The selected take folders, and their grouped partners, one take up or down.
+  { id: "previous-take", label: "Select Previous Take", group: "Editing", keys: ["Alt+Shift+ArrowUp"] },
+  { id: "next-take", label: "Select Next Take", group: "Editing", keys: ["Alt+Shift+ArrowDown"] },
   { id: "tool-menu", label: "Show Tool Menu", group: "Editing", keys: ["T"] },
   // Logic's arranging commands (arrangeCmds.ts). Logic's ⌃⌘ keys for the section edits are
   // ⌃⌥ outside macOS, where ⌃ and ⌘ are the same key.

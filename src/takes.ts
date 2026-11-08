@@ -279,6 +279,14 @@ export function takeFolderMenu(r: Region & { takes: TakeFolder }): MenuItem[] {
   ];
 }
 
+/** Previous Take (-1) and Next Take (1): the selected take folders switch one take up or down
+ *  (the engine takes grouped folders along). */
+export function stepTake(delta: number) {
+  const s = getState();
+  const folders = (s.snap?.project.tracks ?? []).flatMap((t) => t.regions.filter((r) => r.takes && s.selectedRegions.includes(r.id)).map((r) => r.id));
+  if (folders.length) act("step_take", { regions: folders, delta });
+}
+
 /** Pack Take Folder: the selected audio regions on one track become a folder. */
 export function packTakeFolder(ids: Id[] = getState().selectedRegions) {
   if (ids.length < 2) return;

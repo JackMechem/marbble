@@ -182,6 +182,8 @@ impl Session {
         // MIDI only travels one way: the performer reacts to audio that left late.
         let midi_comp = plan.map(|p| p.midi_latency).unwrap_or_else(|| self.midi_latency_frames());
         let mut touched = Vec::new();
+        // Shared by the takes every track gets from this recording (`Take::pass`).
+        let recording = self.project.alloc_id();
         for (track, take) in takes {
             if let Some(e) = &take.error {
                 self.warning = Some(e.clone());
@@ -225,7 +227,7 @@ impl Session {
                 pattern: None,
             };
             // Cycle passes become a take folder; Autopunch trims to the punch range.
-            let Some(region) = self.shape_take(plan, track, region, take.start, frames as i64) else {
+            let Some(region) = self.shape_take(plan, track, region, take.start, frames as i64, recording) else {
                 touched.push(track);
                 continue;
             };
