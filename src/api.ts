@@ -574,6 +574,8 @@ export interface AudioConfig {
   recording_delay_ms: number;
   /** Threads that play tracks: 0 is Automatic, 1 the audio thread alone. */
   processing_threads: number;
+  /** Lock audio memory (Linux): keep Marbble's memory in RAM so the audio never waits on swap. */
+  lock_memory: boolean;
 }
 
 export const MASTER_ID = 0;

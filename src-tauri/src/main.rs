@@ -70,6 +70,8 @@ fn main() {
     });
     let prefs = settings::load();
     let mut session = Session::new(prefs.audio, plugins);
+    // Before a project loads, so its clips are locked as they're read (Settings › Audio).
+    session.apply_memory_lock();
     session.set_prefs(prefs.prefs);
     session.load_controller_assignments(plugin_db::config_dir().join("controller-assignments.json"));
     // `marbble path/to/Song.marbble` opens a project at launch.
@@ -159,6 +161,7 @@ fn main() {
             commands::audio_devices,
             commands::get_audio_config,
             commands::thread_choices,
+            commands::memory_lock,
             commands::set_audio_config,
             commands::play,
             commands::stop,

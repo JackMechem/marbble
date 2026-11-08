@@ -102,6 +102,7 @@ Contents:
 19. [Troubleshooting](#19-troubleshooting):
     [Recordings are very quiet (or silent)](#recordings-are-very-quiet-or-silent) ·
     [Crackles, clicks or dropouts](#crackles-clicks-or-dropouts) ·
+    [Dropouts when memory runs short](#dropouts-when-memory-runs-short) ·
     [Plug-in windows and Wayland](#plug-in-windows-and-wayland) ·
     [Plug-in windows are small or blurry on a HiDPI screen](#plug-in-windows-are-small-or-blurry-on-a-hidpi-screen) ·
     [Your computer's audio is recorded, or loops back](#your-computers-audio-is-recorded-or-loops-back) ·
@@ -2941,6 +2942,7 @@ off: it then asks only when you choose Check for Updates….
 | Processing Threads | Automatic, 1 up to the number of hardware threads (at most 16) | Automatic |
 | Monitoring | Hear record-enabled tracks without pressing I | Off |
 | Recording Delay | -500 to 500 ms, added to the measured latency | 0 |
+| Memory (Linux) | Lock audio memory: keep Marbble's memory in RAM, so the audio doesn't drop out when the system swaps (see [Dropouts when memory runs short](#dropouts-when-memory-runs-short)) | On |
 | Plug-in Delay Compensation | All, Off (applies at once) | All |
 | Low Latency Mode | On, with a limit of 0 to 100 ms (applies at once) | Off, 5 ms |
 
@@ -3309,6 +3311,34 @@ at 40% lowers everything you record by about 24 dB, and a muted source records s
   (`security.rtkit.enable = true;` on NixOS). PipeWire's own quantum can also be raised.
 - Use **PipeWire** as the driver on Linux. Direct ALSA (`hw:`) devices lock the interface for
   Marbble alone.
+- If dropouts come while the CPU meter reads low and the computer is short of memory, see
+  [Dropouts when memory runs short](#dropouts-when-memory-runs-short).
+
+### Dropouts when memory runs short
+
+When the computer runs short of memory, Linux moves what a program hasn't used lately to swap,
+and has to read it back from disk when the program needs it again. If that's part of a clip or a
+plug-in that is playing, the audio waits for the disk and drops out, with the
+[CPU meter](#the-cpu-meter)'s label red while its bar reads only a few percent.
+
+On Linux Marbble locks its memory in RAM at startup, as Ardour does, so nothing it has loaded is
+swapped out. Settings › Audio › **Memory: Lock audio memory** turns it off and on (at once, with
+Apply Changes) and says whether it worked:
+
+- **Locked**: nothing to do.
+- **Not locked: the system's memory lock limit (RLIMIT_MEMLOCK) is …**: the system only lets a
+  program lock a little memory, and Marbble locks only when the limit is unlimited. Audio
+  distributions and the `audio` group usually set it: add yourself to the group
+  (`users.users.<you>.extraGroups = [ "audio" ];` and `security.pam.loginLimits` with
+  `{ domain = "@audio"; item = "memlock"; type = "-"; value = "unlimited"; }` on NixOS; a line
+  `@audio - memlock unlimited` in `/etc/security/limits.conf` elsewhere), then log out and in
+  again. `ulimit -l` in a terminal says `unlimited` when it's set.
+
+Locked memory can't be swapped, so the whole project stays in RAM: every audio file in it, about
+11 MB per minute of each mono recording at 48 kHz (decoded clips are held in memory whole). That
+includes takes whose regions were deleted, which stay in the project. A project bigger than the
+memory you can spare plays better with the lock off, or with the unused takes removed. Marbble
+doesn't lock memory on macOS and Windows yet, and the setting isn't shown there.
 
 ### Plug-in windows and Wayland
 

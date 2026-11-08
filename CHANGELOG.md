@@ -51,6 +51,12 @@ All notable changes to Marbble are recorded here. The format follows
 - **Undoing written automation puts the control back.** Undoing a Write Automation step took the
   new lane away but left the fader, send or built-in plug-in's knob where the pass had moved it,
   so the project wasn't as it was before. It now goes back to its value from before the pass.
+- **Audio no longer drops out when Linux swaps Marbble's memory.** Under memory pressure the
+  system could move part of a playing clip or plug-in to swap, and the audio waited for the disk
+  while the CPU meter read a few percent. Marbble now locks its memory in RAM at startup when the
+  system allows it (an unlimited RLIMIT_MEMLOCK, as the audio group usually gives), and the log
+  says whether it did. Settings › Audio › Memory switches it off and on, and says why it isn't
+  locked when the limit is too small.
 
 ## [0.1.0-alpha.8] - 2026-11-07
 
