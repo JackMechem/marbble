@@ -381,7 +381,7 @@ impl Session {
             return None;
         }
         self.autosave_hash = hash;
-        self.remember_states(&doc);
+        self.adopt_states(&doc, true);
         Some(AutosaveJob { path: self.dir.join(AUTOSAVE_FILE), text, journals: std::mem::take(&mut self.unsaved_journals) })
     }
 

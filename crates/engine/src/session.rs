@@ -77,6 +77,7 @@ mod controllers;
 mod marquee;
 mod strip_settings;
 pub use controllers::{controller_label, AssignmentRow};
+mod plugin_states;
 mod vca;
 mod vst_undo;
 pub use vca::VcaPatch;
@@ -284,9 +285,6 @@ pub struct Session {
     /// Journals of finished recordings whose takes aren't in a file on disk yet; the next
     /// autosave or save deletes them.
     unsaved_journals: Vec<PathBuf>,
-    /// Plug-in states as of the last autosave or save, by instance id, for an emergency
-    /// autosave that mustn't call into plug-ins.
-    captured_states: HashMap<Id, String>,
     /// The clip indicators' held peaks (see `session/strip_meters.rs`).
     peak_holds: PeakHolds,
     /// The tempo map the engine's playback lists were last built for.
@@ -299,6 +297,9 @@ pub struct Session {
     section_clip: Option<SectionClip>,
     /// Plug-ins whose editor is open, watched for undo steps (see `session/vst_undo.rs`).
     vst_watches: HashMap<Id, vst_undo::Watch>,
+    /// How current the project's copy of each running VST3's state is (see
+    /// `session/plugin_states.rs`).
+    state_copies: HashMap<Id, plugin_states::StateCopy>,
     /// Processing Threads (see `session/threads.rs`), and whether an edit may have changed the
     /// task graph or the setting since it was last looked at.
     threads: threads::ThreadState,
@@ -445,13 +446,13 @@ impl Session {
             autosave_soon: false,
             rec_journal: None,
             unsaved_journals: Vec::new(),
-            captured_states: HashMap::new(),
             peak_holds: PeakHolds::default(),
             regions_tempo: None,
             controls: Default::default(),
             midi_seen: 0,
             section_clip: None,
             vst_watches: HashMap::new(),
+            state_copies: HashMap::new(),
             threads: threads::ThreadState { topology: crate::threads::Topology::detect(), ..Default::default() },
             graph_dirty: true,
             engine_resync: false,

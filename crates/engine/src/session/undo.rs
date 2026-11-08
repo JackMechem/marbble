@@ -26,6 +26,9 @@ impl Session {
             }
         }
         let project = if plugins { self.capture_plugin_states() } else { self.project.clone() };
+        if plugins {
+            self.adopt_states(&project, true);
+        }
         self.push_step(project, label, key);
         true
     }
@@ -81,6 +84,7 @@ impl Session {
     fn step_to(&mut self, e: UndoEntry) -> UndoEntry {
         self.mark_unresponsive();
         let now = self.capture_plugin_states();
+        self.adopt_states(&now, true);
         let plugin = e.plugin.as_ref().map(|(uid, _)| (*uid, self.vst_state_now(*uid)));
         let back = UndoEntry { project: now, label: e.label.clone(), key: None, at: Instant::now(), plugin };
         self.restore(e.project);
@@ -97,6 +101,9 @@ impl Session {
         self.mark_unresponsive();
         self.auto_abort();
         let current = std::mem::replace(&mut self.project, target);
+        // A plug-in that stays loaded keeps its copy of its state, newer than the step's
+        // (`session/plugin_states.rs`).
+        self.adopt_states(&current, false);
         // The drag mode is a setting, not part of the edit history.
         self.project.drag_mode = current.drag_mode;
         // Neither is the project alternative's name, which is renamed on disk too.

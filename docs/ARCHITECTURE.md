@@ -785,7 +785,8 @@ guarantees:
   thread is left in (`set_unresponsive`, in `idle` and before anything that drops controllers or
   reads states), and the host calls into it no more from the main thread: not idle, its
   parameters, automation, controllers, latency or state (`save_state` gives None, so saving,
-  copying and the VST3 undo watch keep the state the project last had; an undo or redo of its own
+  copying, rebuilding and the VST3 undo watch keep the project's copy of it, kept recent while it
+  responded (see [State](#state)); an undo or redo of its own
   step leaves the state in the project for its next instance, and an edit pending in it stays
   pending), and its editor neither opens nor hears of resizes or timers. The one exception is the
   plug-in's own run-loop event handlers on Linux (`IEventHandler::onFDIsSet`), which keep running:
@@ -1031,9 +1032,10 @@ Song.marbble/
   `push_regions` and `build_track` load what their regions need, and paste and Insert Cut
   Section load the clips of what they place before checking it fits (`session/clip_loading.rs`).
   A file that can't be read is logged once per open.
-- Plug-in state is `"<component base64>:<controller base64>"` in `PluginSlot::state`. It is
-  filled only when saving, autosaving, checkpointing with `plugins`, or rebuilding; the UI
-  never sees it (`for_ui`).
+- Plug-in state is `"<component base64>:<controller base64>"` in `PluginSlot::state`. Saving,
+  autosaving, checkpointing with `plugins`, undo, redo and rebuilding read it from every running
+  plug-in; in between, the project keeps a recent copy of each VST3's state (see
+  [State](#state)). The UI never sees it (`for_ui`).
 - Recordings go to `Audio Files/` named `<track>#NN.wav` (or `<project> - <track>#NN.wav`),
   unless Settings › Recording names another folder, in which case they go to
   `<folder>/<project name>/`.
@@ -1293,7 +1295,8 @@ the next block starts the plug-in again and fades in. The rest of the graph play
 
 `session/vst_undo.rs` turns the same gestures into undo steps, for plug-ins with an open editor
 (`Session::vst_watches`). Nothing else makes these steps, so a plug-in with its editor closed
-costs nothing.
+costs the undo nothing (the project's copy of its state reads it once after a change, see
+[State](#state)).
 
 - **The state from before an edit** can't be read once the edit has begun, so each `Watch` keeps
   the last known state: read when the editor opens, after each edit, and when the host has
@@ -1340,6 +1343,27 @@ ignored, and the component is not reactivated.
 `save_state` reads `component.getState` and `controller.getState`; `load_state` calls
 `component.setState`, `controller.setComponentState` and `controller.setState`. The session
 stores the pair as base64 in `PluginSlot::state` and restores it straight after instantiation.
+
+The project's copy of a running VST3's state (`session/plugin_states.rs`) is what the session
+falls back on when it can't ask the plug-in, a processing thread being left in it: saving,
+copying, rebuilding its track, and an undo or redo that brings the track back take the copy. So
+it's kept recent, cheaply:
+- A plug-in loaded without a state (just added) is read at the next `idle`; one loaded with a
+  state (opened, pasted, a channel strip setting, undo) has it as its copy.
+- With its editor open, each state the [undo watch](#undo-of-editor-edits) reads is the copy, and
+  a state undo loads into it.
+- With it closed, a change (`host_changes`: automation following, a controller assignment,
+  `load_state`; `restartComponent`; edits it sends) makes the copy due once it has been quiet for
+  300 ms and the edits have reached the processor (or 300 ms more), read at most once a second
+  and 1 % of the time. An `idle` with nothing changed calls no plug-in, and one that keeps
+  changing (automation playing) is read once it stops.
+- Whatever reads every state (save, autosave, a checkpoint with `plugins`, undo, redo, a
+  rebuild) leaves what it read as the copies (`adopt_states`), and `restore` keeps the copy of a
+  plug-in that stays loaded rather than the step's older one. The emergency autosave of a panic
+  writes the project with its copies.
+A change in the 300 ms before a plug-in stops responding can still be missed. Built-in effects and
+instruments keep their settings in the slot (`params`, the Sampler's `state`), and need none of
+this.
 
 ### Editor windows
 

@@ -202,8 +202,13 @@ pub fn discard_journals(dir: &Path, keep: Option<&Path>) {
 }
 
 /// Every plug-in slot in a project.
-fn slots_mut(p: &mut Project) -> impl Iterator<Item = &mut PluginSlot> {
+pub(super) fn slots_mut(p: &mut Project) -> impl Iterator<Item = &mut PluginSlot> {
     p.tracks.iter_mut().flat_map(|t| t.instrument.iter_mut().chain(t.inserts.iter_mut().flatten())).chain(p.master.inserts.iter_mut().flatten())
+}
+
+/// The same, to read.
+pub(super) fn slots(p: &Project) -> impl Iterator<Item = &PluginSlot> {
+    p.tracks.iter().flat_map(|t| t.instrument.iter().chain(t.inserts.iter().flatten())).chain(p.master.inserts.iter().flatten())
 }
 
 /// Why a project document couldn't be opened, in words for the user.
@@ -432,17 +437,11 @@ impl Session {
 
     /// After a save wrote `doc`: the autosave and journals it supersedes go.
     pub(super) fn saved_doc(&mut self, doc: &Project) {
-        self.remember_states(doc);
+        self.adopt_states(doc, true);
         for j in std::mem::take(&mut self.unsaved_journals) {
             let _ = std::fs::remove_file(j);
         }
         self.autosave_soon = false;
-    }
-
-    /// Keeps the plug-in states of a document just captured, for [`Session::emergency_autosave`].
-    pub(super) fn remember_states(&mut self, doc: &Project) {
-        let mut doc = doc.clone();
-        self.captured_states = slots_mut(&mut doc).filter_map(|s| Some((s.uid, s.state.take()?))).collect();
     }
 
     /// A new project or another one was opened: what was pending for the old one no longer
@@ -450,25 +449,18 @@ impl Session {
     /// unless the user chose not to keep them, which deletes them; see `discard_autosave`.)
     pub(super) fn forget_unsaved(&mut self) {
         self.unsaved_journals.clear();
-        self.captured_states.clear();
         self.autosave_soon = false;
     }
 
-    /// Writes the autosave from the project as it stands, with plug-in states from the last
-    /// autosave or save: for a panic hook, where calling into plug-ins isn't safe. Nothing is
-    /// written without unsaved changes.
+    /// Writes the autosave from the project as it stands, with the project's copies of the
+    /// plug-in states (`session/plugin_states.rs`): for a panic hook, where calling into plug-ins
+    /// isn't safe. Nothing is written without unsaved changes.
     pub fn emergency_autosave(&self) -> Result<Option<PathBuf>> {
         if !self.dirty {
             return Ok(None);
         }
-        let mut doc = self.project.clone();
-        for s in slots_mut(&mut doc) {
-            if let Some(st) = self.captured_states.get(&s.uid) {
-                s.state = Some(st.clone());
-            }
-        }
         let path = self.dir.join(AUTOSAVE_FILE);
-        write_atomic(&path, &serde_json::to_vec(&doc)?, true)?;
+        write_atomic(&path, &serde_json::to_vec(&self.project)?, true)?;
         Ok(Some(path))
     }
 }

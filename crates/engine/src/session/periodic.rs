@@ -33,6 +33,7 @@ impl Session {
         self.sampler_idle();
         let written = self.auto_idle();
         let stepped = self.vst_undo_idle();
+        self.state_copies_idle();
         let controlled = self.controller_idle();
         self.bring_back();
         before != self.open_editors().len() || written || latency_changed || controlled || stepped

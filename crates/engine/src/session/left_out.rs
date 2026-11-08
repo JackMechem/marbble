@@ -51,6 +51,12 @@ impl Session {
         }
     }
 
+    /// Rebuilds every track as Reset Audio Engine does while tracks sit out, for checks.
+    #[doc(hidden)]
+    pub fn rebuild_graph_for_checks(&mut self) {
+        self.rebuild_graph();
+    }
+
     /// The plug-in's name, if it's known, and its track's, for a message.
     fn who(&self, track: Id, uid: Id) -> (Option<String>, String) {
         let t = self.project.track(track);
@@ -84,7 +90,7 @@ impl Session {
         let stopped = if recording { " Recording stopped." } else { "" };
         // Above an overload's message from the same moment, which says less.
         self.warning = Some(format!(
-            "{plugin} on \"{track}\" stopped responding, so \"{track}\" and anything it feeds sit out while the rest plays on.{stopped} They come back if it responds again, or with Reset Audio Engine in Settings › Audio. Saving keeps the settings it was last saved with."
+            "{plugin} on \"{track}\" stopped responding, so \"{track}\" and anything it feeds sit out while the rest plays on.{stopped} They come back if it responds again, or with Reset Audio Engine in Settings › Audio. Saving keeps the settings it had before it stopped."
         ));
     }
 
@@ -104,6 +110,7 @@ impl Session {
         }
         let held = self.held();
         let snapshot = self.capture_plugin_states();
+        self.adopt_states(&snapshot, true);
         let mut still_out: Vec<Id> = Vec::new();
         if !held.is_empty() {
             let ids: Vec<Id> = held.iter().map(|h| h.track).collect();

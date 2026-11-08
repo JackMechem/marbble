@@ -532,6 +532,7 @@ impl Session {
             if let Some(st) = &slot.state {
                 ctrl.load_state(&decode_state(st));
             }
+            self.track_state_copy(slot, &ctrl);
             self.controllers.insert(slot.uid, ctrl);
             Plugin::Vst(Box::new(proc))
         };
@@ -576,6 +577,7 @@ impl Session {
         // The plug-ins threads are still left in keep their editors hidden, untold.
         self.mark_unresponsive();
         let snapshot = self.capture_plugin_states();
+        self.adopt_states(&snapshot, true);
         for c in self.controllers.values_mut() {
             c.close_editor();
         }

@@ -71,8 +71,6 @@ impl Session {
             });
             let new_slot = PluginSlot { uid: self.project.alloc_id(), sidechain, ..copy.clone() };
             let ins = self.instantiate_slot(&new_slot)?;
-            // VST3 state is only kept in the document while the plug-in is unloaded.
-            let new_slot = PluginSlot { state: if self.controllers.contains_key(&new_slot.uid) { None } else { new_slot.state }, ..new_slot };
             // A plug-in a processing thread is left in keeps its editor, hidden, untold.
             self.mark_unresponsive();
             let old = self.slot_ref(track, slot).ok_or_else(|| anyhow!("no such slot"))?.replace(new_slot);

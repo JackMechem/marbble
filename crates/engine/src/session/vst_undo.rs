@@ -10,7 +10,8 @@
 //! when the host has changed the plug-in (automation following, a controller assignment), once
 //! that goes quiet. A drag calls `getState` once, after the mouse button comes up, however
 //! long it takes. Its answer is compared with the known state, so a click that changes nothing
-//! makes no step, and no plug-in without an open editor is ever asked.
+//! makes no step, and no plug-in without an open editor is ever asked here. Each state read is
+//! also the project's copy of it (`session/plugin_states.rs`).
 //!
 //! Undo and redo load the state into the plug-in (`load_state`) for the entry that has one. What
 //! the plug-in answers to that isn't an edit, so its gestures are dropped for a moment.
@@ -266,8 +267,11 @@ impl Session {
             }
             names.insert(id, name);
         }
-        let watch = Watch { known, seen_host: c.host_changes(), stale: None, read_at: Instant::now(), read_took, names, headless, reads: 1, tracker };
+        let watch =
+            Watch { known: known.clone(), seen_host: c.host_changes(), stale: None, read_at: Instant::now(), read_took, names, headless, reads: 1, tracker };
         self.vst_watches.insert(uid, watch);
+        // Each state read here is the project's copy too (`session/plugin_states.rs`).
+        self.keep_state(uid, &known);
     }
 
     /// Watches a plug-in as if its editor were open, for headless checks.
@@ -382,6 +386,8 @@ impl Session {
                 w.read_took = start.elapsed();
                 w.read_at = now;
                 w.stale = None;
+                let known = w.known.clone();
+                self.keep_state(uid, &known);
             }
         }
         stepped
@@ -406,6 +412,7 @@ impl Session {
             return false;
         }
         let before = std::mem::replace(&mut w.known, Arc::new(state));
+        let known = w.known.clone();
         w.seen_host = c.host_changes();
         w.stale = None;
         let one = p.params.first().filter(|_| p.params.len() == 1 && !p.restarted);
@@ -425,6 +432,8 @@ impl Session {
                 }
             }
         }
+        // After the step, which keeps the copy from before.
+        self.keep_state(uid, &known);
         self.dirty = true;
         true
     }
@@ -482,6 +491,7 @@ impl Session {
         c.load_state(&st);
         c.take_gestures();
         let seen_host = c.host_changes();
+        self.keep_state(uid, &st);
         if let Some(w) = self.vst_watches.get_mut(&uid) {
             w.known = st;
             w.seen_host = seen_host;

@@ -14,6 +14,12 @@ All notable changes to Marbble are recorded here. The format follows
   room. If the engine takes nothing for a second (the audio device stopped, a callback stuck), a
   message says so and the engine is rebuilt from the project as soon as it responds again,
   stopping playback first.
+- **A plug-in that stops responding keeps its settings when its track comes back.** A plug-in
+  added since the project was last saved came back at its defaults when its track was rebuilt,
+  deleted and brought back by undo, redone or duplicated while it wasn't responding, and one
+  saved before came back with the settings it was saved with. The project now keeps a recent
+  copy of every plug-in's settings, taken when it loads and a moment after each change, so it
+  comes back as it was. Pasted plug-ins and channel strip settings keep theirs too.
 
 ## [0.1.0-alpha.11] - 2026-11-08
 

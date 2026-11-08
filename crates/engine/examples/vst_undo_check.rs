@@ -2,7 +2,8 @@
 //! (no editor can open here), with real plug-ins: LSP's Compressor, ZamCompX2 and TONE3000. Each
 //! edit is read back from the controller and the saved state and measured in a render; prints
 //! SKIP for a plug-in that isn't installed. Also prints what `getState` costs, and checks that a
-//! controller marked unresponsive (a processing thread is stuck in its plug-in) calls nothing.
+//! controller marked unresponsive (a processing thread is stuck in its plug-in) calls nothing, and
+//! that the project's copy of a plug-in's state, which is used then, is recent.
 //! usage: vst_undo_check <audio file> <scratch dir>
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -505,6 +506,95 @@ fn stuck(r: &mut Rig, name: &str) {
     pump(s, 400);
 }
 
+/// The project's copy of a plug-in's state (`session/plugin_states.rs`), for one added this session
+/// that stops responding (marked as the session marks one a processing thread is stuck in) before
+/// any save. Read when it loads and once a change has gone quiet, and not otherwise, so redoing
+/// its insertion, undoing its track's deletion, duplicating the track and rebuilding all bring it
+/// back with its change rather than at its defaults. An undo keeps the copy of a plug-in that stays
+/// loaded, and with its editor open, the undo watch's reads are the copy.
+fn fallback(desc: &PluginDescriptor, param: &str, tone: &Path, scratch: &Path) {
+    let name = desc.name.as_str();
+    let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
+    let mut s = Session::new(cfg, vec![desc.clone()]);
+    s.dir = scratch.join(format!("{}-copy.marbble", name.replace(' ', "_")));
+    std::fs::create_dir_all(&s.dir).unwrap();
+    let track = s.add_track(TrackKind::Audio, InputSel::None, None, None).unwrap();
+    s.import_audio(tone, track, 0).unwrap();
+    s.checkpoint("Insert Plug-in", None, false);
+    let uid = s.set_plugin(track, 0, &desc.id).unwrap();
+    let id = s.plugin_params(uid).iter().find(|p| p.name == param).map(|p| p.id).unwrap();
+    let v0 = s.vst_param(uid, id).unwrap();
+    let v1 = if v0 > 0.5 { v0 - 0.3 } else { v0 + 0.3 };
+    let v2 = (v0 + v1) / 2.0;
+    let copy = |s: &Session, track: Id| s.project.track(track).and_then(|t| t.inserts[0].as_ref()).and_then(|p| p.state.clone());
+    let uid_of = |s: &Session, track: Id| s.project.track(track).and_then(|t| t.inserts[0].as_ref()).map(|p| p.uid);
+
+    pump(&mut s, 100);
+    let state0 = copy(&s, track);
+    check(&format!("{name}: added, its state is copied into the project at the next idle"), state0.is_some() && s.vst_copy_reads(uid) == 1);
+    pump(&mut s, 1500);
+    check(&format!("{name}: idle reads nothing while nothing changes"), s.vst_copy_reads(uid) == 1);
+    s.edit_vst_param(uid, id, v1);
+    pump(&mut s, 150);
+    check(&format!("{name}: a change isn't read at once"), s.vst_copy_reads(uid) == 1);
+    pump(&mut s, 900);
+    let state1 = copy(&s, track);
+    check(&format!("{name}: but once it's quiet, in one read"), s.vst_copy_reads(uid) == 2 && state1 != state0);
+    for i in 1..=40 {
+        s.edit_vst_param(uid, id, v1 + (v2 - v1) * i as f64 / 40.0);
+        s.idle();
+        std::thread::sleep(Duration::from_millis(25));
+    }
+    let during = s.vst_copy_reads(uid);
+    pump(&mut s, 900);
+    check(&format!("{name}: a second of changes is one read, once they stop"), during == 2 && s.vst_copy_reads(uid) == 3 && copy(&s, track) != state1);
+
+    s.checkpoint("Tempo", None, false);
+    s.set_tempo(100.0);
+    s.edit_vst_param(uid, id, v1);
+    pump(&mut s, 900);
+    let state3 = copy(&s, track);
+    s.undo();
+    check(
+        &format!("{name}: undoing another edit keeps the newer copy of a plug-in that stays loaded"),
+        copy(&s, track) == state3 && near(s.vst_param(uid, id), v1),
+    );
+
+    s.set_unresponsive_for_checks(uid, true);
+    check(&format!("{name}: stuck, copying it gives the copy"), s.copy_plugin(track, 0).unwrap().state == state3);
+    s.undo();
+    s.redo();
+    let back = uid_of(&s, track).unwrap();
+    check(&format!("{name}: stuck, undoing and redoing its insertion brings it back with its change"), near(s.vst_param(back, id), v1));
+    s.set_unresponsive_for_checks(back, true);
+    s.checkpoint("Delete Track", None, true);
+    s.delete_tracks(&[track]);
+    s.undo();
+    let back = uid_of(&s, track).unwrap();
+    check(&format!("{name}: stuck, deleting its track and undoing brings it back with its change"), near(s.vst_param(back, id), v1));
+    s.set_unresponsive_for_checks(back, true);
+    let dup = s.duplicate_tracks(&[track], false)[0];
+    check(&format!("{name}: stuck, duplicating its track copies its change"), uid_of(&s, dup).is_some_and(|u| near(s.vst_param(u, id), v1)));
+    s.rebuild_graph_for_checks();
+    let back = uid_of(&s, track).unwrap();
+    check(&format!("{name}: stuck, rebuilding brings it back with its change"), near(s.vst_param(back, id), v1));
+
+    s.watch_vst_edits_headless(back);
+    let reads = s.vst_copy_reads(back);
+    drag(&mut s, back, id, v1, v2);
+    pump(&mut s, 400);
+    check(
+        &format!("{name}: with its editor open, the undo watch's read is the copy, and nothing else reads"),
+        copy(&s, track) == Some(saved(&s, track)) && s.vst_copy_reads(back) == reads,
+    );
+    s.set_unresponsive_for_checks(back, true);
+    s.checkpoint("Delete Track", None, true);
+    s.delete_tracks(&[track]);
+    s.undo();
+    let back = uid_of(&s, track).unwrap();
+    check(&format!("{name}: and stuck after that edit, it comes back with it"), near(s.vst_param(back, id), v2));
+}
+
 /// A controller whose plug-in a processing thread is stuck in (`set_unresponsive`) doesn't call it:
 /// its values read as unknown, edits and states go nowhere, the editor doesn't open, and the
 /// latency is the last one it reported. Marked responsive again, it's as before.
@@ -582,6 +672,7 @@ fn main() {
             live(&mut r, &d.name);
             unresponsive(&d, "Output gain");
             stuck(&mut r, &d.name);
+            fallback(&d, "Output gain", &tone, &scratch);
         }
         None => println!("SKIP LSP's Compressor Stereo isn't installed"),
     }
@@ -598,6 +689,7 @@ fn main() {
             let id = |n: &str| names.iter().find(|p| p.1 == n).map(|p| p.0).unwrap();
             let (uid, ro, own) = (r.uid, id("Gain Reduction"), id("Slew"));
             meters(&mut r.s, &d.name, uid, ro, own);
+            fallback(&d, "Makeup", &tone, &scratch);
         }
         None => println!("SKIP ZamCompX2 isn't installed"),
     }

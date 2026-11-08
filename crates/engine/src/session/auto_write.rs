@@ -494,6 +494,9 @@ impl Session {
         let uids: Vec<Id> = self.controllers.keys().copied().collect();
         for uid in uids {
             let mut gestures = self.controllers.get_mut(&uid).map(|c| c.take_gestures()).unwrap_or_default();
+            if !gestures.is_empty() {
+                self.plugin_changed(uid);
+            }
             // A plug-in's answers to undo putting it back are nobody's edits.
             if self.feed_vst_edits(uid, &gestures) {
                 gestures.clear();

@@ -3556,9 +3556,10 @@ Playback doesn't stop, but a recording does, as the take now has a gap.
 If the plug-in responds again later, the track comes back by itself, with the plug-in loaded
 afresh, and a message says so. Otherwise **Reset Audio Engine** in Settings › Audio loads the
 plug-ins again and brings the tracks back, along with the thread. Meanwhile bounces, exports,
-Freeze and Bounce in Place are refused, as those tracks would be missing from them, and saving
-keeps the settings the stuck plug-in was last saved with rather than asking it, as it may never
-answer. For the same reason Marbble leaves the plug-in alone in the meantime: its window stops
+Freeze and Bounce in Place are refused, as those tracks would be missing from them. Saving, and
+anything that loads the stuck plug-in again (Reset Audio Engine, undoing its track's deletion,
+duplicating the track), uses the settings it had a moment before it stopped responding, which
+Marbble keeps a copy of, rather than asking it, as it may never answer. For the same reason Marbble leaves the plug-in alone in the meantime: its window stops
 updating and won't open, its controls and automation don't reach it, and closing its window (or
 deleting its track) only hides the window until the plug-in responds or is unloaded. A plug-in
 that stops responding on the audio thread itself can't be left like this.

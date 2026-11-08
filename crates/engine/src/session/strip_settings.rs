@@ -137,9 +137,6 @@ impl Session {
             },
             None => None,
         };
-        // A running VST3's state lives in its controller; the document keeps it only while the
-        // plug-in is unloaded.
-        let new_slot = new_slot.map(|s| PluginSlot { state: if self.controllers.contains_key(&s.uid) { None } else { s.state.clone() }, ..s });
         // A plug-in a processing thread is left in keeps its editor, hidden, untold.
         self.mark_unresponsive();
         let old = std::mem::replace(self.slot_ref(track, slot).ok_or_else(|| anyhow!("no such slot"))?, new_slot);
