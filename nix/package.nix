@@ -23,7 +23,7 @@
 
 rustPlatform.buildRustPackage (finalAttrs: {
   pname = "marbble";
-  version = "0.1.0-alpha.9";
+  version = "0.1.0-alpha.10";
 
   # Only what the build reads, so editing docs doesn't trigger a rebuild.
   src = lib.fileset.toSource {

@@ -6,6 +6,8 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0-alpha.10] - 2026-11-07
+
 ### Fixed
 
 - **The project chooser's logo shows in the Nix package.** The Nix build left out the folder it
@@ -888,7 +890,8 @@ The first prerelease. Everything below is new.
 - The `takes_check` headless check "autopunch trims the take" fails about one run in five,
   from the null audio device's timing.
 
-[Unreleased]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.9...HEAD
+[Unreleased]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.10...HEAD
+[0.1.0-alpha.10]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.9...v0.1.0-alpha.10
 [0.1.0-alpha.9]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.8...v0.1.0-alpha.9
 [0.1.0-alpha.8]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.7...v0.1.0-alpha.8
 [0.1.0-alpha.7]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.6...v0.1.0-alpha.7
