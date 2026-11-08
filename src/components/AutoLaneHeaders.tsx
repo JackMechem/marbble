@@ -19,13 +19,13 @@ export function SubLaneHeader({ track, index, param, height, indent }: { track: 
       <div className="th-auto">
         <button
           className="popup auto-param"
-          title="Parameter shown on this lane"
+          title={`Parameter shown on this lane: ${paramLabel(param)}`}
           onMouseDown={async (e) => {
             const el = e.currentTarget;
             openMenuAt(el, await paramMenu(track, index));
           }}
         >
-          <span>{paramLabel(param)}</span>
+          <span className="truncate">{paramLabel(param)}</span>
           <Icon.chevron />
         </button>
         <AddLaneButton track={track} />
@@ -65,6 +65,13 @@ export function OutputTrackHeader({ row }: { row: OutputRow }) {
   const [volume, touch] = useAutomation(strip, VOLUME, project?.master.volume_db ?? 0);
   if (!strip) return null;
   const tier = headerTier(row.height);
+  const autoLine = automation && tier === "full";
+  const name = <LinesText className="th-name" text="Stereo Out" max={1} title="Stereo Out" />;
+  const volumeCell = (
+    <div className="th-volume">
+      <LevelSlider db={volume} onChange={(db) => act("set_master_volume", { db })} width={88} tier={tier} track={null} label="Stereo Out volume" {...touch} />
+    </div>
+  );
   const startResize = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
@@ -90,13 +97,21 @@ export function OutputTrackHeader({ row }: { row: OutputRow }) {
             <Icon.waveform />
           </div>
         )}
+        {/* With automation shown the slider moves up beside the name, as a track's sits beside its
+            buttons, so the automation line below has the header's width (in the name's column it
+            was cut to "Volu…" and ran into the slider). */}
         <div className="th-main">
-          <LinesText className="th-name" text="Stereo Out" max={1} title="Stereo Out" />
-          {automation && tier === "full" && <AutomationControls track={strip} />}
+          {autoLine ? (
+            <div className="th-controls">
+              {name}
+              {volumeCell}
+            </div>
+          ) : (
+            name
+          )}
+          {autoLine && <AutomationControls track={strip} />}
         </div>
-        <div className="th-volume">
-          <LevelSlider db={volume} onChange={(db) => act("set_master_volume", { db })} width={88} tier={tier} track={null} label="Stereo Out volume" {...touch} />
-        </div>
+        {!autoLine && volumeCell}
         <div
           className="th-resize"
           title={`Drag to resize · double-click to reset`}

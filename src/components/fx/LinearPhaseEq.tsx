@@ -42,7 +42,7 @@ export function LinearPhaseEqPanel(p: FxPanelProps) {
             onMouseDown={(e) => openMenuAt(e.currentTarget, QUALITY_LABELS.map((label, i) => ({ label, checked: i === quality, onClick: () => p.set(QUALITY, i) })))}
             onContextMenu={learn(QUALITY)}
           >
-            {QUALITY_LABELS[quality]}
+            <span className="truncate">{QUALITY_LABELS[quality]}</span>
           </button>
           <span className="dim lpeq-latency" title="The latency delay compensation makes up for">
             {ms} ms

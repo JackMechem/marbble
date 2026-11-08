@@ -28,19 +28,20 @@ export function AutoModeButton({ track, compact }: { track: Track; compact?: boo
  *  short header's volume slider was. */
 export function AutomationControls({ track, width }: { track: Track; width?: number }) {
   const param = useStore((s) => s.autoLane[track.id]) ?? VOLUME;
+  const label = paramLabel(param);
   return (
     <div className={"th-auto" + (width ? " stacked" : "")} style={width ? { width } : undefined} onMouseDown={(e) => e.stopPropagation()}>
       <AutoModeButton track={track} compact />
       <button
         className="popup auto-param"
-        title="Parameter shown on the lane"
+        title={`Parameter shown on the lane: ${label}`}
         onContextMenu={learnContext(autoParamTarget(track.id, param))}
         onMouseDown={async (e) => {
           const el = e.currentTarget;
           openMenuAt(el, await paramMenu(track));
         }}
       >
-        <span>{paramLabel(param)}</span>
+        <span className="truncate">{label}</span>
         <Icon.chevron />
       </button>
       <AddLaneButton track={track} />

@@ -9,6 +9,7 @@ import { useStore } from "../../store";
 import { openMenu } from "../Menu";
 import { PanelContent, usePanelTitle } from "./FxPanel";
 import { PanelHeader } from "./PanelHeader";
+import { slotName } from "../../slotName";
 
 export function FxDock() {
   const panels = useStore((s) => s.fxDock);
@@ -70,8 +71,9 @@ export function FxDock() {
 }
 
 /**
- * A docked panel's tab. The front tab is closed by the header's ×; the others show their own ×
- * on hover. A middle-click closes a tab, and the right-click menu closes it, the others or all.
+ * A docked panel's tab: a built-in instrument by its model ("Uno", not "Marbble Uno" on every
+ * tab), then the track, cut first when the tab runs out of room; the tooltip has both in full.
+ * The front tab is closed by the header's ×; the others show their own × on hover. A middle-click closes a tab, and the right-click menu closes it, the others or all.
  */
 function DockTab({ panelKey, on, count }: { panelKey: PanelKey; on: boolean; count: number }) {
   const title = usePanelTitle(panelKey);
@@ -94,8 +96,8 @@ function DockTab({ panelKey, on, count }: { panelKey: PanelKey; on: boolean; cou
       onAuxClick={(e) => e.button === 1 && closePanel(panelKey)}
       onContextMenu={menu}
     >
-      <span className="fx-tab-name">{title.name}</span>
-      <span className="fx-tab-track">{title.track}</span>
+      <span className="fx-tab-name truncate">{slotName(title.type, title.name)}</span>
+      <span className="fx-tab-track truncate">{title.track}</span>
       {!on && (
         <span
           className="fx-tab-close"

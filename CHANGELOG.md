@@ -67,6 +67,13 @@ All notable changes to Marbble are recorded here. The format follows
   window. The transport and the LCD now keep their full size; as the window narrows the gaps
   tighten, the master volume slider shortens, Count-in reads 1234, and the Musical Typing, List
   Editors and Browsers buttons fold into one menu button, lit while any of them is on.
+- **Long names end in "…" instead of running over.** The automation parameter pop-up ends a
+  long name in "…" before its chevron, with the name in its tooltip, and on Stereo Out's header
+  (the Output track) it no longer reads "Volu…" and runs into the volume slider: with automation
+  shown the slider sits beside the name, and the automation line has the header's width.
+  Docked plug-in tabs name a built-in instrument by its model ("Uno Bass", not "Marbble Uno
+  B…") and shorten the track's name first. A plug-in's preset pop-up ("Warm Analog Brass") and
+  its other pop-ups end in "…" before their chevron. The tooltips have the whole names.
 
 ## [0.1.0-alpha.11] - 2026-11-08
 

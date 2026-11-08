@@ -238,14 +238,13 @@
   box-shadow: var(--btn-shadow);
 }
 
+/* Both are .truncate (text-fit.css); the track gives way long before the name does. */
 .fx-tab-name {
-  flex: none;
+  flex: 0 1 auto;
 }
 
 .fx-tab-track {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  flex: 0 1000 auto;
   color: var(--faint);
   font-weight: 400;
 }

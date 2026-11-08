@@ -34,3 +34,8 @@
   border-top: 1px solid var(--edge);
 }
 
+/* Stereo Out's name beside its volume slider, above the automation line (AutoLaneHeaders.tsx). */
+.output-header .th-controls > .th-name {
+  flex: 1 1 0;
+  min-width: 0;
+}

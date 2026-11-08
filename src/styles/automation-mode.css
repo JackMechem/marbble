@@ -30,10 +30,9 @@
   justify-content: space-between;
 }
 
-.auto-param span {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+/* The name is .truncate (text-fit.css); the chevron keeps its size. */
+.auto-param svg {
+  flex: none;
 }
 
 .strip-pan {

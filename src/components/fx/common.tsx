@@ -149,7 +149,7 @@ export function FxChoice({ spec, value, onChange, label }: { spec: FxParamSpec; 
       <div className="fx-choice" onContextMenu={learn}>
         <div className="fx-label">{label ?? spec.name}</div>
         <button className="fx-popup" onMouseDown={(e) => openMenuAt(e.currentTarget, labels.map((l, i) => ({ label: l, checked: i === cur, onClick: () => onChange(i) })))}>
-          {labels[cur]}
+          <span className="truncate">{labels[cur]}</span>
         </button>
       </div>
     );
@@ -232,8 +232,8 @@ export function FxSideChain({ uid }: { uid: Id }) {
   return (
     <span className="fx-sidechain">
       <span className="dim">Side Chain</span>
-      <button className="fx-popup" onMouseDown={open} title="The track whose output drives the detector">
-        {name}
+      <button className="fx-popup" onMouseDown={open} title={`Side Chain: ${name}\nThe track whose output drives the detector`}>
+        <span className="truncate">{name}</span>
       </button>
       {source !== null && (
         <span className="segmented fx-key-tap">
