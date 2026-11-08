@@ -156,6 +156,8 @@ mod tests {
         // A settings file from before the preferences existed: only the audio section.
         let s = parse(r#"{"audio":{"host":null,"input":null,"output":null,"sample_rate":44100,"buffer_size":128,"input_enabled":true}}"#).unwrap();
         assert_eq!(s.audio.sample_rate, 44100);
+        // Lock audio memory starts on, for those upgrading too.
+        assert!(s.audio.lock_memory);
         assert_eq!(s.prefs, Prefs::default());
         // Every interface default, except that Click Moves Playhead keeps its earlier default.
         assert_eq!(s.ui, UiPrefs { click_locates: "anywhere".into(), ..UiPrefs::default() });

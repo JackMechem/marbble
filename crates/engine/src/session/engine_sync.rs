@@ -67,12 +67,23 @@ impl Session {
     pub fn set_audio_config(&mut self, cfg: AudioConfig) {
         let reopen = !cfg.same_devices(&self.audio_config) || self.audio.is_none();
         self.graph_dirty |= cfg.processing_threads != self.audio_config.processing_threads;
+        let relock = cfg.lock_memory != self.audio_config.lock_memory;
         self.audio_config = cfg;
+        if relock {
+            self.apply_memory_lock();
+        }
         if reopen {
             self.restart_audio();
         }
         self.send(Cmd::AutoMonitor(self.audio_config.auto_monitor));
         self.sync_parallel();
+    }
+
+    /// Locks the process's memory in RAM, or lets it go, as Settings › Audio › Lock audio memory says
+    /// (see `memlock.rs`). The app calls it at startup and `set_audio_config` when the switch
+    /// changes; sessions in tests and checks leave their memory alone unless they ask.
+    pub fn apply_memory_lock(&mut self) {
+        self.memory_lock = crate::memlock::apply(self.audio_config.lock_memory);
     }
 
     /// Round trip from what the performer heard to when their playing reached the engine:

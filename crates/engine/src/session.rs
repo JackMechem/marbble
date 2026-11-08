@@ -204,6 +204,8 @@ pub struct Session {
     audio: Option<AudioIo>,
     pub audio_status: AudioStatus,
     pub audio_config: AudioConfig,
+    /// Whether the process's memory is locked (`apply_memory_lock`).
+    pub memory_lock: crate::memlock::MemoryLock,
     midi: MidiIo,
     midi_rec_rx: rtrb::Consumer<(i64, [u8; 3])>,
     recorder: Recorder,
@@ -372,6 +374,7 @@ impl Session {
             audio: None,
             audio_status: AudioStatus::default(),
             audio_config,
+            memory_lock: crate::memlock::MemoryLock::initial(),
             midi,
             midi_rec_rx: rec_rx,
             recorder: Recorder::new(),

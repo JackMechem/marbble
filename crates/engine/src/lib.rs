@@ -39,6 +39,7 @@ pub mod audio_io;
 pub mod clip;
 pub mod decode;
 pub mod denormals;
+pub mod memlock;
 pub mod midi;
 pub mod midi_io;
 pub mod old_name;

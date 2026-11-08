@@ -60,6 +60,7 @@ CHECKS=(
   "vst_sidechain_check tone dir"
   "multiout_check dir"
   "vst_undo_check tone dir"
+  "memlock_check dir"
 )
 # A check that hangs (a transport that never stops, say) fails instead of stalling CI.
 TIMEOUT=${HEADLESS_CHECK_TIMEOUT:-600}
