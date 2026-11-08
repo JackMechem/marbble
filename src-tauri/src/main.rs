@@ -284,6 +284,8 @@ fn main() {
             commands::flatten_take_folder,
             commands::merge_take_folder,
             commands::unpack_take_folder,
+            commands::unpack_to_existing_tracks,
+            commands::export_active_take,
             commands::pack_take_folder,
             commands::move_regions,
             commands::clear_undo_history,

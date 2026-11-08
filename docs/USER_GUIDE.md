@@ -1374,8 +1374,23 @@ Take folders follow Logic's Quick Swipe Comping.
 - **The take folder menu** (click the badge, right-click a take row, or region menu › Take
   Folder): the takes (pick one to hear), Open / Close Take Folder, Rename Take, Delete Take,
   Delete Unused Takes, **Flatten** (the comp becomes ordinary regions, one per stretch),
-  **Flatten and Merge** (the comp is rendered to one new audio file), and **Unpack to New
-  Tracks** (every take on its own new, muted track, and the comp flattened in place).
+  **Flatten and Merge** (the comp is rendered to one new audio file), **Unpack to New
+  Tracks** (every take on its own new, muted track, and the comp flattened in place), and
+  the items below.
+- **Unpack to Existing Tracks** puts the takes on the tracks below the folder's instead, one
+  per track in take order (Take 1 on the next track), muted, next to what those tracks already
+  have; tracks of another kind (an instrument track under an audio folder), hidden and frozen
+  tracks are passed over. Where there aren't enough tracks, new ones with the folder track's
+  settings are added below the last. The comp is flattened in place, as with Unpack to New
+  Tracks.
+- **Export Active Take to New Track** copies what the folder plays (the take heard, or the
+  comp flattened into regions) onto a new track below, with the folder track's settings and
+  named after the take or comp. The copy is muted so the song sounds the same; the folder is
+  unchanged. **Move Active Take to New Track** does the same but moves it: the copy plays,
+  the take (or comp) leaves the folder, and the folder is muted. Moving a folder's only take
+  moves the whole folder out; moving its only comp leaves a fresh one (the newest take
+  wherever it has audio). With a comp heard the items read Export / Move Active Comp.
+- Every Unpack, Export and Move is one undo step.
 - A folder moves, trims, splits, loops, fades, crossfades and changes gain like any audio
   region. Every comp edit can be undone, folders are saved with the project, and bounces,
   exports and Bounce in Place render the comp.

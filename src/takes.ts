@@ -265,6 +265,7 @@ export function takeFolderMenu(r: Region & { takes: TakeFolder }): MenuItem[] {
   const midi = isMidiFolder(r);
   const whole = midi ? (f.comp[0]?.take ?? f.takes[f.takes.length - 1]?.id) : wholeTake(f);
   const select = (ids: Id[] | null) => ids && setState({ selectedRegions: ids, focus: "regions" });
+  const active = whole === null ? "Comp" : "Take";
   return [
     ...(midi ? [] : compItems(r)),
     { label: "Takes", header: true },
@@ -278,6 +279,11 @@ export function takeFolderMenu(r: Region & { takes: TakeFolder }): MenuItem[] {
     { label: "Flatten", onClick: () => actMade("flatten_take_folder", { region: r.id }).then(select) },
     ...(midi ? [] : [{ label: "Flatten and Merge", onClick: () => actMade("merge_take_folder", { region: r.id }).then(select) }]),
     { label: "Unpack to New Tracks", onClick: () => actMade("unpack_take_folder", { region: r.id }) },
+    { label: "Unpack to Existing Tracks", onClick: () => actMade("unpack_to_existing_tracks", { region: r.id }) },
+    { separator: true },
+    // As in Logic, the items name the comp when one is heard rather than a whole take.
+    { label: `Export Active ${active} to New Track`, onClick: () => actMade("export_active_take", { region: r.id, remove: false }) },
+    { label: `Move Active ${active} to New Track`, onClick: () => actMade("export_active_take", { region: r.id, remove: true }) },
   ];
 }
 

@@ -483,9 +483,9 @@ most of it the everyday editing and mixing work.
 - [x] Create, save, rename and delete comps (p. 224–233)
 - [ ] Edit comp sections: move, alternate between lanes, remove a take (p. 227–229)
 - [ ] Edit take regions: trim, cut, slice at comp borders, move between lanes (p. 234–237)
-- [ ] Export the active take to a new track (p. 238)
+- [x] Export the active take to a new track (p. 238). *Or the comp, flattened; Move Active Take too.*
 - [x] Flatten, and Flatten and Merge (p. 241)
-- [~] Unpack to existing tracks, new tracks or track alternatives (p. 243–246). *Unpack to New Tracks only.*
+- [~] Unpack to existing tracks, new tracks or track alternatives (p. 243–246). *New and existing tracks; not track alternatives.*
 - [x] Pack regions into a take folder (p. 247). *From one track or several; the tracks left empty can be deleted.*
 
 ### Tracks: professional (p. 141–148, 161–167)

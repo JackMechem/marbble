@@ -1,6 +1,7 @@
 //! Takes recorded one per track, against a running engine (silent ALSA null output, rendered
 //! offline): Pack Take Folder from regions on several tracks, heard as one folder, and deleting
-//! the tracks it leaves empty; nudging regions on several tracks by samples.
+//! the tracks it leaves empty; nudging regions on several tracks by samples; Unpack to Existing
+//! Tracks and Export / Move Active Take to New Track, which leave the song sounding the same.
 //! usage: take_tracks_check <audio file> <scratch dir>
 use daw_engine::audio_io::AudioConfig;
 use daw_engine::model::{Id, InputSel, TrackKind};
@@ -94,6 +95,43 @@ fn main() {
     let starts: Vec<i64> = ids.iter().map(|&id| s.project.tracks.iter().flat_map(|t| &t.regions).find(|r| r.id == id).unwrap().start).collect();
     let again = render(&mut s, 0, len);
     check(&format!("past the start they stop together ({starts:?})"), starts == [0, 10, 0] && again.iter().zip(&before).all(|(a, b)| (a - b).abs() < 1e-6));
+
+    // ---- unpacking to existing tracks, exporting and moving the active take -----------------
+    s.move_region(ids[1], 0, None);
+    let folder = s.pack_take_folder(&ids).unwrap();
+    let packed = render(&mut s, 0, len);
+    let same = |a: &[f32]| a.iter().zip(&packed).all(|(x, y)| (x - y).abs() < 1e-6);
+    let peak_of = |a: &[f32]| peak(&a[window.clone()]);
+    s.checkpoint("Unpack Take Folder", None, false);
+    let used = s.unpack_to_existing_tracks(folder);
+    let out = render(&mut s, 0, len);
+    let muted = used.iter().all(|&t| s.project.track(t).unwrap().regions.iter().all(|r| r.muted));
+    check(
+        &format!("unpack to existing tracks fills the two below and adds one ({} tracks, {} used)", s.project.tracks.len(), used.len()),
+        used.len() == 3 && used[..2] == tracks[1..] && s.project.tracks.len() == 4 && muted,
+    );
+    check(&format!("the song sounds the same after it ({:.3} of take 1)", peak_of(&out) / first), same(&out));
+    s.undo();
+
+    s.checkpoint("Export Active Take", None, false);
+    let made = s.export_active_take(folder, false);
+    check("exporting the active take changes nothing heard", same(&render(&mut s, 0, len)));
+    let copy: Vec<Id> = s.project.track(made[0]).unwrap().regions.iter().map(|r| r.id).collect();
+    for &c in &copy {
+        s.set_region_muted(c, false);
+    }
+    s.set_region_muted(folder, true);
+    check("the copy on its new track plays what the folder played", copy.len() == 1 && same(&render(&mut s, 0, len)));
+    s.undo();
+
+    s.checkpoint("Move Active Take", None, false);
+    let made = s.export_active_take(folder, true);
+    let out = render(&mut s, 0, len);
+    let left = s.project.tracks.iter().flat_map(|t| &t.regions).find(|r| r.id == folder).map(|r| (r.muted, r.takes.as_ref().map(|f| f.takes.len())));
+    check(&format!("moving it takes the take out of the folder and mutes the folder ({left:?})"), made.len() == 1 && left == Some((true, Some(2))));
+    check(&format!("and the moved take plays instead ({:.3} of take 1)", peak_of(&out) / first), same(&out));
+    s.undo();
+    check("undo puts the take back", s.project.tracks.len() == 3);
 
     std::process::exit(if FAILED.load(std::sync::atomic::Ordering::Relaxed) { 1 } else { 0 });
 }

@@ -14,6 +14,10 @@ All notable changes to Marbble are recorded here. The format follows
 - **Nudge by samples.** Settings › Editing › Nudge Value has 1, 2, 5, 10 and 50 samples, and
   Nudge Regions Left / Right by Sample (Alt+Shift+Left / Right) moves the selected regions one
   sample whatever the Nudge Value is.
+- **Unpack to Existing Tracks, and Export or Move Active Take to New Track** in the take folder
+  menu. Unpack to Existing Tracks puts the takes on the tracks below the folder's, one each,
+  adding tracks where there aren't enough. Export copies the take heard (or the comp,
+  flattened) to a new track with the same settings; Move takes it out of the folder too.
 
 ### Fixed
 
