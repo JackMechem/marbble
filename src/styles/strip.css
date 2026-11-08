@@ -297,6 +297,27 @@
   text-overflow: ellipsis;
 }
 
+/* A track's strip: its icon before the name, no taller than the line, so the plates of strips
+   with and without one (VCAs) stay level. */
+.strip-name.with-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+
+.strip-icon {
+  flex: none;
+  display: flex;
+  height: 14px;
+}
+
+.strip-name-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 
 /* The Mixer's selected track: its name plate lit as the track's header is, with an accent line
    under the name. (The Inspector's strip is always the selected track's, so it isn't lit.) */

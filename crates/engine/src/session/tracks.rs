@@ -50,6 +50,7 @@ impl Session {
             instrument_output: None,
             eq_preset: None,
             off: false,
+            icon: None,
         };
         if kind == TrackKind::Instrument {
             let pid = instrument.unwrap_or_else(|| BUILTIN_SYNTH.to_string());

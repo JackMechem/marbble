@@ -2414,6 +2414,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `session/backups.rs` | Backups on save, pruning, Revert to, Revert to Saved, the fallback on open. |
 | `session/templates.rs` | User project templates: save, list, rename, delete, new project from one. |
 | `session/track_alternatives.rs` | Track alternatives: new, duplicate, switch, rename, delete. |
+| `session/track_icons.rs` | Track Icon: `set_track_icon` on several tracks. The icon is an id the UI draws (`Track::icon`); None shows the default `trackIcons.ts` works out. |
 | `session/patterns.rs` | Pattern regions: create, `set_pattern`, convert to and from MIDI regions, realizing them for `regions_dsp`. |
 | `takes.rs` | Pure take-folder logic: comp editing, playback pieces and crossfades, `RecPlan`. |
 | `arrangement.rs` | The Arrangement track's arithmetic: tiling sections and the time maps (`Piece`, `Plan`) for moving, copying and deleting them; automation through a time map. Pure. |
@@ -2575,6 +2576,8 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `sideChain.ts` | The key sources a side-chain menu offers; pure, tested. |
 | `threads.ts` | Settings › Audio › Processing Threads; pure, tested. |
 | `trackOff.ts` | Whether a track is off through its stacks, as `Project::is_off` has it; pure, tested. |
+| `trackIcons.ts` | Track icons: the set by group, the name table ("Kick In" → kick) and the icon a track shows (chosen, else its name's, else its kind's, worked out each time so it follows renames), the picker's arrow keys; pure, tested. |
+| `trackIconArt.tsx` | The track icons' drawings, and `TrackIcon` for a track. |
 | `keyRepeat.ts` | Which key commands run again while their key is held; pure, tested. |
 | `fxShapes.ts` | The curves the modulation, distortion and Gain panels draw, mirroring the engine; pure, tested. |
 | `linearPhaseEq.ts` | The Linear Phase EQ's parameters as Channel EQ settings, so its panel reuses the EQ editor; pure, tested. |
@@ -2617,7 +2620,8 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `TrackTools.tsx` | The Left-click and Command-click Tool pop-ups and the tools' icons. |
 | `Panels.tsx` | Inspector, Mixer, Library, Browser. |
 | `FadeRows.tsx`, `RegionParamRows.tsx` | The Region inspector's fade rows and playback parameter rows. |
-| `TrackInspector.tsx` | The Inspector's Track section: name, colour, input, output and freeze, editable; type, instrument, regions and group. |
+| `TrackInspector.tsx` | The Inspector's Track section: name, colour, icon, input, output and freeze, editable; type, instrument, regions and group. |
+| `TrackIconPicker.tsx` | The Track Icon picker (a grid in an in-window menu) from a header's icon, a strip's, the Track inspector and the track menu. |
 | `ChannelStrip.tsx` | A mixer channel strip. |
 | `StripSlots.tsx` | The strips' slot boxes (shared row count, a "+N more" menu past it) and blank stand-ins for sections a strip doesn't have, which keep strips level. |
 | `Sends.tsx` | The channel strip's Sends section and Output slot. |

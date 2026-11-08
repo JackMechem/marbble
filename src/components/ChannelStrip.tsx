@@ -28,6 +28,8 @@ import { keepRegionsOn } from "../ops";
 import { useVcas, VcaSlot } from "./Vca";
 import { slotName } from "../slotName";
 import { BlankButtons, BlankEq, BlankRow, BlankSlots, MoreSlot, SlotBox } from "./StripSlots";
+import { TrackIcon, TrackIconArt } from "../trackIconArt";
+import { openTrackIconPicker } from "./TrackIconPicker";
 import { slotLayout, stripRows, stripWants, type SlotRows } from "../stripRows";
 
 const PAN = { type: "pan" } as const;
@@ -440,7 +442,7 @@ export function ChannelStrip({ track, selected, rows }: { track: Track | null; s
       )}
 
       <div
-        className="strip-name"
+        className="strip-name with-icon"
         style={{ borderTopColor: isMaster ? "#8d9099" : track.color }}
         title={name}
         onContextMenu={(e) => {
@@ -449,7 +451,26 @@ export function ChannelStrip({ track, selected, rows }: { track: Track | null; s
           settingMenu(e.clientX, e.clientY);
         }}
       >
-        {name}
+        {/* The track's icon by its name, as on its header; Stereo Out's is the output's. */}
+        {isMaster ? (
+          <span className="strip-icon">
+            <TrackIconArt id="speaker" size={14} />
+          </span>
+        ) : (
+          <button
+            type="button"
+            className="strip-icon"
+            style={{ color: track.color }}
+            aria-label="Track Icon"
+            aria-haspopup="menu"
+            title="Choose an icon"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={(e) => openTrackIconPicker(e.currentTarget, track)}
+          >
+            <TrackIcon track={track} size={14} />
+          </button>
+        )}
+        <span className="strip-name-text">{name}</span>
       </div>
     </div>
   );

@@ -8,6 +8,13 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Added
 
+- **Track icons.** Click the icon in a track header, on a Mixer strip or in the Track inspector
+  (or right-click › Track Icon) to choose one of 38 icons in groups: drums (kick, snare, hi-hat,
+  toms, overheads, room, kit), percussion, bass, guitars and amp, keys, strings, brass,
+  woodwinds, vocals, effects and buses, and the usual track icons. It applies to every selected
+  track, is undoable, is saved with the project and kept by Duplicate Track and templates.
+  Until you choose one, a track's name picks it ("Kick In", "OH", "Vox", "Bass", "Gtr", "Keys"),
+  and renaming the track changes it; otherwise it's the track type's icon, as before.
 - **Pack Take Folder from several tracks.** Takes recorded one per track pack into one take
   folder on the topmost track, in track order, each at its own position. Marbble then offers to
   delete the tracks left with no regions.
