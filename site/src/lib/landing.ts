@@ -1,5 +1,6 @@
 // The landing page without this file is complete: a drawn phrase with a still playhead, and download
 // links that go to the releases page. This moves the playhead and points the links at the files.
+import { newestReleases, type Release } from "./releases";
 
 function runPlayhead() {
   const lane = document.querySelector<HTMLElement>("[data-lane]");
@@ -92,14 +93,6 @@ function runPlayhead() {
   update();
 }
 
-interface Release {
-  tag_name: string;
-  html_url: string;
-  draft: boolean;
-  prerelease: boolean;
-  assets: { name: string; browser_download_url: string }[];
-}
-
 const CHANNEL_NOTES = {
   stable: "Releases with a plain version: the most tested.",
   unstable: "Every release, prereleases included: new features sooner, with less testing.",
@@ -132,8 +125,7 @@ function watchDownloads() {
     try {
       const response = await fetch(section.dataset.releases!, { headers: { Accept: "application/vnd.github+json" } });
       if (!response.ok) return;
-      const releases: Release[] = (await response.json()).filter((r: Release) => !r.draft && r.assets.length);
-      const newest = { stable: releases.find((r) => !r.prerelease), unstable: releases[0] };
+      const newest = newestReleases(await response.json());
       if (!newest.unstable) return;
       const switcher = section.querySelector<HTMLElement>("[data-channels]");
       const note = section.querySelector<HTMLElement>("[data-channel-note]");
