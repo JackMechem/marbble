@@ -240,6 +240,31 @@ fn main() {
     s.undo();
     check("undo removes the repeat", spans(&s, b) == b0 && spans(&s, a) == a0);
 
+    // ---- Section edits with track A's region in an alternative that isn't playing: switched to
+    // afterwards, it plays as if it had been.
+    s.checkpoint("Insert Silence with Track Alternatives", None, false);
+    s.new_track_alternative(a, false).unwrap();
+    s.section_edit(SectionEdit::InsertSilence, l, r, None).unwrap();
+    s.switch_track_alternative(a, "A").unwrap();
+    let d = compare(&render(&mut s, &tracks, len + n), &r1, &[(0, 0, len + n)], sr);
+    check(
+        &format!("insert silence moves an inactive track alternative too (diff {d:?}): {:?}", spans(&s, a)),
+        ok(d) && spans(&s, a) == vec![(sr / 2, l, 0), (r, sr * 3, sr / 2)],
+    );
+    s.undo();
+    s.checkpoint("Cut and Insert with Track Alternatives", None, false);
+    s.new_track_alternative(a, false).unwrap();
+    s.section_edit(SectionEdit::Cut, l, r, None).unwrap();
+    let made = s.insert_cut_section(l).unwrap();
+    s.switch_track_alternative(a, "A").unwrap();
+    let d = compare(&render(&mut s, &tracks, len), &r0, &[(0, 0, len)], sr);
+    check(
+        &format!("cut section and insert cut section put an inactive alternative's part back in it (diff {d:?}, {} made in the active ones)", made.len()),
+        ok(d) && made.len() == 1 && spans(&s, a) == vec![(sr / 2, l, 0), (l, r, sr / 2), (r, sr * 5 / 2, sr)],
+    );
+    s.undo();
+    check("undo puts the alternatives back", spans(&s, a) == a0 && s.project.track(a).unwrap().alternatives.is_empty());
+
     // ---- Remove Gaps and Remove Overlaps on track B.
     let c = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
     let ids: Vec<Id> = [(0, 3), (5, 3), (9, 3)]

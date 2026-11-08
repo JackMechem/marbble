@@ -1257,7 +1257,9 @@ From the Track menu, the track header's right-click menu, or keys:
   click it to switch (the regions swap, and the track plays the new set), or to **Rename…**
   or **Delete** one (deleting the current one switches to another; the last one stays). Each
   is an undo step; inactive alternatives are saved with the project. A frozen track's
-  alternatives can't change.
+  alternatives can't change. Arrangement track moves and the Section Between Locators edits
+  move every alternative's regions with their time, not just the active one's; Insert Cut
+  Section puts each alternative's part back into the alternative it was cut from.
 - **Delete Track** (Ctrl+Backspace) and **Delete Unused Tracks** (tracks without regions;
   stacks that still hold tracks and auxes that something feeds are kept). Deleting a stack
   deletes its subtracks.

@@ -11,13 +11,17 @@
 
 use anyhow::{anyhow, Result};
 
-use super::arrangement::{cut_piece, remap_regions, untouched};
+use super::arrangement::{cut_piece, remap_track, track_touched};
 use super::range_edit::sub_region;
+use super::track_alternatives::active_name;
 use super::*;
 use crate::arrange_cmds::{butt_together, end_at_next, overlap_trims, remap_sections, section_pieces, SectionEdit, Span};
 use crate::arrangement::{map_pos, remap_points, Piece};
 use crate::drag_modes::{shuffle, Side};
 use crate::strip_silence::{sounding_parts, StripSettings};
+
+/// A track alternative's name and its regions in a cut section.
+type AltPart = (String, Vec<Region>);
 
 /// What Cut Section Between Locators took out, laid out from 0, for Insert Cut Section.
 #[derive(Clone)]
@@ -25,6 +29,9 @@ pub(super) struct SectionClip {
     length: i64,
     /// Per track: its regions and its automation in the section.
     tracks: Vec<(Id, Vec<Region>, Vec<AutoLane>)>,
+    /// Per track: the regions of each of its track alternatives in the section, by name, the
+    /// active one's first (the same regions as in `tracks`).
+    alternatives: Vec<(Id, Vec<AltPart>)>,
     /// Stereo Out's automation and the markers, when the cut was across all tracks.
     master: Vec<AutoLane>,
     markers: Vec<Marker>,
@@ -144,7 +151,7 @@ impl Session {
     /// (with nothing changed) when it would cut or move a frozen track's regions.
     fn apply_time_map(&mut self, pieces: &[Piece], scope: Option<&[Id]>) -> Result<()> {
         let in_scope = |id: Id| scope.is_none_or(|s| s.contains(&id));
-        let touched: Vec<Id> = self.project.tracks.iter().filter(|t| in_scope(t.id) && t.regions.iter().any(|r| !untouched(r, pieces))).map(|t| t.id).collect();
+        let touched: Vec<Id> = self.project.tracks.iter().filter(|t| in_scope(t.id) && track_touched(t, pieces)).map(|t| t.id).collect();
         self.check_unfrozen(&touched)?;
         let map = self.tempo_map();
         let mut next = self.project.next_id;
@@ -155,7 +162,7 @@ impl Session {
         let mut lanes_changed = Vec::new();
         for t in self.project.tracks.iter_mut().filter(|t| in_scope(t.id)) {
             if touched.contains(&t.id) {
-                t.regions = remap_regions(&t.regions, pieces, &map, &mut alloc);
+                remap_track(t, pieces, &map, &mut alloc);
             }
             if remap_lanes(&mut t.automation, pieces) {
                 lanes_changed.push(t.id);
@@ -190,16 +197,26 @@ impl Session {
     /// Cut Section.
     fn copy_section(&self, a: i64, b: i64, scope: Option<&[Id]>) -> SectionClip {
         let map = self.tempo_map();
-        let mut tracks = Vec::new();
-        for t in self.project.tracks.iter().filter(|t| scope.is_none_or(|s| s.contains(&t.id))) {
-            let mut regions = Vec::new();
-            for r in &t.regions {
+        let cut = |regions: &[Region]| {
+            let mut out = Vec::new();
+            for r in regions {
                 let passes = if r.is_looped() { r.real_copies() } else { vec![r.clone()] };
                 for p in passes.iter().filter(|p| p.start < b && p.start + p.length > a) {
                     let mut m = cut_piece(p, a, b, p.id, &map);
                     m.start -= a;
-                    regions.push(m);
+                    out.push(m);
                 }
+            }
+            out
+        };
+        let mut tracks = Vec::new();
+        let mut alternatives = Vec::new();
+        for t in self.project.tracks.iter().filter(|t| scope.is_none_or(|s| s.contains(&t.id))) {
+            let regions = cut(&t.regions);
+            if !t.alternatives.is_empty() {
+                let mut alts = vec![(active_name(t).to_string(), regions.clone())];
+                alts.extend(t.alternatives.iter().map(|x| (x.name.clone(), cut(&x.regions))));
+                alternatives.push((t.id, alts));
             }
             tracks.push((t.id, regions, copy_lanes(&t.automation, a, b)));
         }
@@ -207,6 +224,7 @@ impl Session {
         SectionClip {
             length: b - a,
             tracks,
+            alternatives,
             master: if global { copy_lanes(&self.project.master.automation, a, b) } else { Vec::new() },
             markers: if global {
                 self.project.markers.iter().filter(|m| m.pos >= a && m.pos < b).map(|m| Marker { pos: m.pos - a, ..m.clone() }).collect()
@@ -239,16 +257,17 @@ impl Session {
     /// regions.
     pub fn insert_cut_section(&mut self, at: i64) -> Result<Vec<Id>> {
         let clip = self.section_clip.clone().ok_or_else(|| anyhow!("Cut a section between the locators first."))?;
-        self.load_clips(clip.tracks.iter().flat_map(|(_, regions, _)| regions.iter().flat_map(|r| r.clips())));
+        let alt_regions = clip.alternatives.iter().flat_map(|(_, alts)| alts.iter().flat_map(|(_, regions)| regions.iter()));
+        self.load_clips(clip.tracks.iter().flat_map(|(_, regions, _)| regions.iter()).chain(alt_regions).flat_map(|r| r.clips()));
         let at = at.max(0);
         let len = clip.length;
-        let receiving: Vec<Id> = clip.tracks.iter().filter(|(_, r, _)| !r.is_empty()).map(|(t, _, _)| *t).collect();
+        let in_alternatives = |t: Id| clip.alternatives.iter().any(|(x, alts)| *x == t && alts.iter().any(|(_, r)| !r.is_empty()));
+        let receiving: Vec<Id> = clip.tracks.iter().filter(|(t, r, _)| !r.is_empty() || in_alternatives(*t)).map(|(t, _, _)| *t).collect();
         self.check_unfrozen(&receiving)?;
         let scope: Option<Vec<Id>> = (!clip.global).then(|| clip.tracks.iter().map(|(t, _, _)| *t).collect());
         self.apply_time_map(&section_pieces(SectionEdit::InsertSilence, at, at + len), scope.as_deref())?;
         let mut made = Vec::new();
         for (track, regions, lanes) in &clip.tracks {
-            let mut new = Vec::with_capacity(regions.len());
             // The clip outlives the project it was cut from: only what still fits goes in.
             let kind = self.project.track(*track).map(|t| t.kind);
             let fits = |r: &&Region| match (kind, &r.content) {
@@ -256,16 +275,35 @@ impl Session {
                 (Some(TrackKind::Instrument), RegionContent::Midi { .. }) => true,
                 _ => false,
             };
-            let fitting: Vec<Region> = regions.iter().filter(fits).cloned().collect();
-            for r in &fitting {
-                let id = self.project.alloc_id();
-                new.push(Region { id, start: r.start + at, ..r.clone() });
-                made.push(id);
+            // Each track alternative's part goes back to the alternative of that name, and
+            // the part of the one active at the cut to the active one if its name is gone.
+            // (name, regions, active at the cut); no name: the track had no alternatives.
+            let parts: Vec<(Option<&str>, &[Region], bool)> = match clip.alternatives.iter().find(|(t, _)| t == track) {
+                Some((_, alts)) => alts.iter().enumerate().map(|(k, (name, r))| (Some(name.as_str()), r.as_slice(), k == 0)).collect(),
+                None => vec![(None, regions.as_slice(), true)],
+            };
+            let mut active = false;
+            for (name, part, was_active) in parts {
+                let fitting: Vec<Region> = part.iter().filter(fits).cloned().collect();
+                if fitting.is_empty() {
+                    continue;
+                }
+                let new: Vec<Region> = fitting.iter().map(|r| Region { id: self.project.alloc_id(), start: r.start + at, ..r.clone() }).collect();
+                let Some(t) = self.project.track_mut(*track) else { continue };
+                let other = name.filter(|n| *n != active_name(t)).map(|n| t.alternatives.iter().position(|x| x.name == n));
+                match other {
+                    Some(Some(i)) => t.alternatives[i].regions.extend(new),
+                    Some(None) if !was_active => {}
+                    _ => {
+                        made.extend(new.iter().map(|r| r.id));
+                        t.regions.extend(new);
+                        active = true;
+                    }
+                }
             }
             let Some(t) = self.project.track_mut(*track) else { continue };
-            t.regions.extend(new);
             let lanes_changed = paste_lanes(&mut t.automation, lanes, at, len);
-            if !fitting.is_empty() {
+            if active {
                 self.push_regions(*track);
             }
             if lanes_changed {
@@ -711,6 +749,37 @@ mod tests {
         want.extend(before.iter().filter(|n| n.0 < bar).map(|&(x, p)| (x + bar, p)));
         want.sort();
         assert_eq!(heard(&s), want);
+    }
+
+    #[test]
+    fn section_edits_move_inactive_track_alternatives_and_put_them_back() {
+        let (mut s, t, clip) = session();
+        region(&mut s, t[0], clip, 1000, 2000, 0);
+        // A waits with the region; B is empty, then has one of its own after the section.
+        s.new_track_alternative(t[0], false).unwrap();
+        region(&mut s, t[0], clip, 4000, 500, 0);
+        s.section_edit(SectionEdit::InsertSilence, 1500, 2000, None).unwrap();
+        assert_eq!(spans(&s, t[0]), vec![(4500, 5000, 0)]);
+        let a = |s: &Session| {
+            let mut v: Vec<(i64, i64)> = s.project.track(t[0]).unwrap().alternatives[0].regions.iter().map(|r| (r.start, r.end())).collect();
+            v.sort();
+            v
+        };
+        assert_eq!(a(&s), vec![(1000, 1500), (2000, 3500)]);
+        // Cut 1200..2400 and put it back: A gets its part back, B nothing.
+        s.section_edit(SectionEdit::Cut, 1200, 2400, None).unwrap();
+        assert_eq!(a(&s), vec![(1000, 1200), (1200, 2300)]);
+        let made = s.insert_cut_section(1200).unwrap();
+        assert!(made.is_empty(), "nothing went into the active alternative");
+        assert_eq!(spans(&s, t[0]), vec![(4500, 5000, 0)]);
+        assert_eq!(a(&s), vec![(1000, 1200), (1200, 1500), (2000, 2400), (2400, 3500)]);
+        // Insert it again after switching: the part goes to A, now the active one.
+        s.switch_track_alternative(t[0], "A").unwrap();
+        s.section_edit(SectionEdit::Cut, 1200, 2400, None).unwrap();
+        s.switch_track_alternative(t[0], "B").unwrap();
+        s.switch_track_alternative(t[0], "A").unwrap();
+        assert_eq!(s.insert_cut_section(1200).unwrap().len(), 2);
+        assert_eq!(spans(&s, t[0]).len(), 4);
     }
 
     #[test]

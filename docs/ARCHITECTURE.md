@@ -2441,14 +2441,17 @@ deletes and Edit › Section Between Locators, are described as a **time map**: 
 lands. The pure side builds it (`arrangement::move_section`, `copy_section` and
 `delete_section` return a `Plan` of pieces plus the new sections; `arrange_cmds::section_pieces`
 for Insert Silence, Cut and Repeat Section), and one apply step maps everything through it:
-regions with `session/arrangement.rs` `remap_regions` (a region inside one piece moves whole,
+regions with `session/arrangement.rs` `remap_track` (each track's regions and its inactive
+track alternatives' through `remap_regions`: a region inside one piece moves whole,
 one across a piece edge is cut with `cut_piece`: `range_edit::sub_region`, and a pattern
 region's piece gets a `Pattern::offset` so it plays on from the cut), automation lanes with
 `arrangement::remap_points`, markers with `arrangement::map_pos`, and, for the section edits,
 the arrangement sections with `arrange_cmds::remap_sections`. The
 tempo and signature tracks never move. With a marquee, the section edits map only its tracks
 (`session/arrange_cmds.rs` `section_edit` takes a `scope`). Every apply refuses, changing
-nothing, when a frozen track's regions would change.
+nothing, when a frozen track's regions (or its alternatives') would change. Cut Section keeps
+each track alternative's part of the section by name, and Insert Cut Section puts it back into
+the alternative of that name.
 
 ### Sheets and key commands
 

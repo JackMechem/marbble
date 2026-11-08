@@ -2,7 +2,8 @@
 //! one-second sections with regions on two tracks (one across two section edges) and volume
 //! automation. Moving section 3 before section 2, copying section 1, and deleting section 2
 //! with its content must cut and move the regions and automation, and the offline render must
-//! play the old audio in the new order; one undo puts each edit back.
+//! play the old audio in the new order; one undo puts each edit back. A track alternative
+//! that isn't playing moves too, so switching to it afterwards plays it in the new order.
 //! usage: arrangement_check <scratch dir>
 use std::path::{Path, PathBuf};
 
@@ -210,6 +211,21 @@ fn main() {
             && s.project.arrangement[1].id == sec[1]
             && d == (0.0, 0.0),
     );
+
+    // ---- The same move with track A's region in an alternative that isn't playing.
+    s.checkpoint("Move with Track Alternatives", None, false);
+    s.new_track_alternative(a, false).unwrap();
+    s.move_arrangement_marker(sec[2], Some(sec[1]), false).unwrap();
+    s.switch_track_alternative(a, "A").unwrap();
+    let got = spans(&s, a);
+    let r1b = render(&mut s, &tracks, len);
+    let d = compare(&r1b, &r1, &[(0, 0, len)], sr);
+    check(
+        &format!("an inactive track alternative moves with its sections: switched to, it plays as the move did (diff {d:?}): {got:?}"),
+        got == vec![(sr / 2, sr, 0), (sr, sr * 3 / 2, sr * 3 / 2), (2 * sr, 3 * sr, sr / 2)] && ok(d),
+    );
+    s.undo();
+    check("undo puts the track's alternatives back", spans(&s, a) == vec![(sr / 2, 5 * sr / 2, 0)] && s.project.track(a).unwrap().alternatives.is_empty());
 
     // ---- Alt-drag: a copy of section 1 between sections 1 and 2.
     s.checkpoint("Copy Arrangement Marker", None, false);

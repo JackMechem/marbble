@@ -33,6 +33,12 @@ All notable changes to Marbble are recorded here. The format follows
   Section) that cut a pattern region started its pattern again at each cut, so the moved part
   played the pattern's first steps instead of its own. Each piece now plays on from where it
   was cut. Splitting a pattern region by hand still starts its pattern again.
+- **Arrangement moves and section edits take inactive track alternatives along.** Moving,
+  copying or deleting an Arrangement track section, or Insert Silence, Cut Section and Repeat
+  Section, moved only the active alternative's regions, so switching to another afterwards
+  showed it out of place. Every alternative now moves with its time, and Insert Cut Section
+  puts each alternative's part back where it was cut from. A frozen track's alternatives
+  refuse the move, as its regions do.
 
 ## [0.1.0-alpha.11] - 2026-11-08
 

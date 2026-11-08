@@ -1,7 +1,8 @@
 //! The Arrangement track (Logic's Global Tracks › Arrangement): named sections that tile the
 //! timeline. Adding, renaming, recolouring and resizing a section only changes the markers.
 //! Moving, copying or deleting one with its content rearranges the project: every region on
-//! every track is cut at the section edges and its pieces move with their section, and so do
+//! every track (its inactive track alternatives' too) is cut at the section edges and its
+//! pieces move with their section, and so do
 //! automation (Stereo Out's too) and the Marker track's markers. The tempo and signature tracks stay as they are.
 //! The order arithmetic is in `crate::arrangement`.
 
@@ -16,6 +17,20 @@ use crate::tempo::TempoMap;
 pub(super) fn untouched(r: &Region, pieces: &[Piece]) -> bool {
     let (lo, hi) = (r.start, r.end());
     pieces.iter().any(|p| p.is_identity() && p.contains(lo, hi)) && !pieces.iter().any(|p| p.copy && p.overlaps(lo, hi))
+}
+
+/// Whether the time map changes any of the track's regions, its inactive alternatives' included.
+pub(super) fn track_touched(t: &Track, pieces: &[Piece]) -> bool {
+    t.regions.iter().chain(t.alternatives.iter().flat_map(|a| a.regions.iter())).any(|r| !untouched(r, pieces))
+}
+
+/// Maps the track's regions through the time map, and its inactive alternatives' with them, so
+/// switching to one afterwards finds it in place.
+pub(super) fn remap_track(t: &mut Track, pieces: &[Piece], map: &TempoMap, alloc: &mut dyn FnMut() -> Id) {
+    t.regions = remap_regions(&t.regions, pieces, map, alloc);
+    for a in &mut t.alternatives {
+        a.regions = remap_regions(&a.regions, pieces, map, alloc);
+    }
 }
 
 /// The part of `r` between `a` and `b`, as the edits that move time cut it (Arrangement moves
@@ -133,7 +148,7 @@ impl Session {
     /// (with nothing changed) when it would cut or move a frozen track's regions.
     fn apply_arrangement(&mut self, plan: Plan) -> Result<Vec<Id>> {
         let pieces = &plan.pieces;
-        let touched: Vec<Id> = self.project.tracks.iter().filter(|t| t.regions.iter().any(|r| !untouched(r, pieces))).map(|t| t.id).collect();
+        let touched: Vec<Id> = self.project.tracks.iter().filter(|t| track_touched(t, pieces)).map(|t| t.id).collect();
         self.check_unfrozen(&touched)?;
         let map = self.tempo_map();
         let mut next = self.project.next_id;
@@ -144,7 +159,7 @@ impl Session {
         let mut lanes_changed = Vec::new();
         for t in self.project.tracks.iter_mut() {
             if touched.contains(&t.id) {
-                t.regions = remap_regions(&t.regions, pieces, &map, &mut alloc);
+                remap_track(t, pieces, &map, &mut alloc);
             }
             let mut changed = false;
             for lane in t.automation.iter_mut() {
@@ -404,6 +419,31 @@ mod tests {
         let second = s.project.track(t).unwrap().regions.iter().find(|r| r.start == bar / 2).unwrap();
         assert_eq!(second.pattern.as_ref().unwrap().offset, 0.0);
         assert!(heard(&s).contains(&(bar / 2, 36)));
+    }
+
+    #[test]
+    fn inactive_track_alternatives_move_with_their_sections() {
+        let (mut s, t, sec, clip) = session();
+        region(&mut s, t[0], clip, 1500, 1000);
+        // Alternative B is a copy, then loses its region for one in section 3 alone; A waits.
+        s.new_track_alternative(t[0], true).unwrap();
+        s.project.track_mut(t[0]).unwrap().regions.clear();
+        region(&mut s, t[0], clip, 2200, 300);
+        s.move_arrangement_marker(sec[2], Some(sec[1]), false).unwrap();
+        assert_eq!(spans(&s, t[0]), vec![(1200, 1500, 0)]);
+        // Switching to A finds its region cut and moved as the active one would have been.
+        s.switch_track_alternative(t[0], "A").unwrap();
+        assert_eq!(spans(&s, t[0]), vec![(1000, 1500, 500), (2500, 3000, 0)]);
+        let ids: Vec<Id> =
+            s.project.tracks.iter().flat_map(|x| x.regions.iter().chain(x.alternatives.iter().flat_map(|a| a.regions.iter()))).map(|r| r.id).collect();
+        assert!(ids.iter().all(|id| ids.iter().filter(|x| *x == id).count() == 1), "every piece has an id of its own: {ids:?}");
+        // A frozen track's alternatives can't change: a move that would cut one is refused.
+        s.delete_track_alternative(t[0], "B").unwrap();
+        s.new_track_alternative(t[0], false).unwrap();
+        s.project.track_mut(t[0]).unwrap().frozen = Some(FreezeInfo { clip, start: 0 });
+        assert!(s.move_arrangement_marker(sec[2], None, false).is_err());
+        s.switch_track_alternative(t[0], "A").unwrap_err();
+        assert_eq!(s.project.track(t[0]).unwrap().alternatives[0].regions.len(), 2, "nothing moved");
     }
 
     #[test]
