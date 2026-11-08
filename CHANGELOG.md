@@ -21,6 +21,11 @@ All notable changes to Marbble are recorded here. The format follows
   project.
 - **The Step Sequencer's bar no longer repeats its name.** After Functions it shows the pattern
   region's name, as the Piano Roll does, and nothing when no pattern region is selected.
+- **Autopunch and Replace say what they are.** The two mode buttons in the control bar show their
+  names, as Count-in does, while the window has room for them, as at 1280 px and 100 %; in a
+  narrower one they are icons again, before anything else in the bar gives way. Their tooltips
+  give the key command: Replace has one of its own, Replace Mode, with no key until you assign
+  one in Settings › Key Commands.
 
 ### Fixed
 

@@ -13,7 +13,7 @@ import { openMenuAt, type MenuItem } from "./Menu";
 import { transport } from "../transport";
 import { fmt, keyHint, tip } from "../keymap";
 import { withKey } from "../keyFormat";
-import { updateSettings, useSettings } from "../prefs";
+import { toggleReplace, useSettings } from "../prefs";
 
 const KEYS = ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
 
@@ -283,34 +283,39 @@ export function ControlBar() {
         <TransportButtons />
         <Lcd />
         <div className="cb-modes">
-          <button className={"mode-btn cycle" + (p?.cycle.enabled ? " on" : "")} title={tip("Cycle", "cycle")} aria-label={tip("Cycle", "cycle")} onClick={() => transport.toggleCycle()}>
+          <button className={"mode-btn cycle" + (p?.cycle.enabled ? " on" : "")} title={tip("Cycle", "cycle")} aria-label={tip("Cycle", "cycle")} aria-pressed={p.cycle.enabled} onClick={() => transport.toggleCycle()}>
             <Icon.cycle />
           </button>
-          <button className={"mode-btn punch" + (punchOn ? " on" : "")} title={tip("Autopunch", "autopunch")} aria-label={tip("Autopunch", "autopunch")} onClick={() => transport.togglePunch()}>
+          {/* Autopunch and Replace say their names, as Count-in does, and turn back into icons
+              where the bar has no room for them (control-bar.css). */}
+          <button className={"mode-btn punch labelled" + (punchOn ? " on" : "")} title={tip("Autopunch", "autopunch")} aria-label="Autopunch" aria-pressed={punchOn} onClick={() => transport.togglePunch()}>
             <svg width="18" height="16" viewBox="0 0 18 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
               <path d="M5 3.5H3v9h2M13 3.5h2v9h-2" />
               <path d="M6.5 8h5" strokeWidth="2.6" />
             </svg>
+            <span className="mode-label">Autopunch</span>
           </button>
           <button
-            className={"mode-btn replace" + (replace ? " on" : "")}
-            title="Replace: recordings replace what they overlap, audio and MIDI"
-            aria-label="Replace: recordings replace what they overlap, audio and MIDI"
-            onClick={() => updateSettings((st) => ({ ...st, prefs: { ...st.prefs, recording: { ...st.prefs.recording, replace: !replace } } }))}
+            className={"mode-btn replace labelled" + (replace ? " on" : "")}
+            title={tip("Replace", "replace-mode") + ": recordings replace what they overlap, audio and MIDI"}
+            aria-label="Replace"
+            aria-pressed={replace}
+            onClick={() => toggleReplace()}
           >
             <svg width="18" height="16" viewBox="0 0 18 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round">
               <rect x="1.5" y="4" width="15" height="8" rx="1.5" strokeDasharray="2 1.6" />
               <rect x="5.5" y="4" width="7" height="8" fill="currentColor" stroke="none" />
             </svg>
+            <span className="mode-label">Replace</span>
           </button>
           {/* Short of room, Logic's 1234 stands for the word. */}
-          <button className={"mode-btn purple countin" + (p?.count_in ? " on" : "")} title={tip("Count-in", "count-in")} aria-label={tip("Count-in", "count-in")} onClick={() => act("set_count_in", { on: !p?.count_in })}>
+          <button className={"mode-btn purple countin" + (p?.count_in ? " on" : "")} title={tip("Count-in", "count-in")} aria-label={tip("Count-in", "count-in")} aria-pressed={p.count_in} onClick={() => act("set_count_in", { on: !p?.count_in })}>
             <span className="countin-long">Count-in</span>
             <span className="countin-short" aria-hidden="true">
               1234
             </span>
           </button>
-          <button className={"mode-btn purple" + (p?.metronome ? " on" : "")} title={tip("Metronome", "metronome")} aria-label={tip("Metronome", "metronome")} onClick={() => act("set_metronome", { on: !p?.metronome })}>
+          <button className={"mode-btn purple" + (p?.metronome ? " on" : "")} title={tip("Metronome", "metronome")} aria-label={tip("Metronome", "metronome")} aria-pressed={p.metronome} onClick={() => act("set_metronome", { on: !p?.metronome })}>
             <Icon.metronome />
           </button>
         </div>

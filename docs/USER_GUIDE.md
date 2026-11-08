@@ -225,9 +225,11 @@ From left to right:
   - **Key:** click for the major and minor keys.
   - The **chevron** offers "Beats & Project", "Time" (the position as time) and
     "Project Settings…".
-- **Mode buttons:** Cycle (C), Autopunch, **Replace** (red when on: recordings replace what they
-  overlap; see [Overlapping recordings](#recording-audio)), **Count-in** (Shift+K), Metronome
-  (K).
+- **Mode buttons:** Cycle (C), **Autopunch** (Ctrl+P, Control+⌘P on macOS), **Replace** (red
+  when on: recordings replace what they overlap; see [Overlapping recordings](#recording-audio);
+  the key command Replace Mode has no key at first), **Count-in** (Shift+K), Metronome (K).
+  Autopunch and Replace show their names when the window is wide enough, and their icons in a
+  narrower one.
 - **Master volume** slider and the **CPU** meter with the load as a percentage. See
   [the CPU meter](#the-cpu-meter).
 - **Musical Typing** (Ctrl+K), **List Editors** (D, the Event List) and **Browsers** (F) buttons.
@@ -3174,6 +3176,7 @@ shown.
 | \` | Catch Playhead |
 | Alt+\` (⌥\` on macOS) | Scroll to Playhead |
 | Ctrl+P (Control+⌘P on macOS) | Autopunch Mode |
+| (none) | Replace Mode |
 | Ctrl+. (⌘. on macOS) | Discard Last Recording |
 | Alt+G (⌥G on macOS) | Mark Take as Good |
 | Alt+B (⌥B on macOS) | Mark Take as Bad |

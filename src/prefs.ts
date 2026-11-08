@@ -169,6 +169,11 @@ export async function updateSettings(f: (s: AppSettings) => AppSettings) {
   if (JSON.stringify(before.plugins.disabled) !== JSON.stringify(settings.plugins.disabled)) await refreshPlugins();
 }
 
+/** Turns the control bar's Replace mode on or off. */
+export function toggleReplace() {
+  return updateSettings((st) => ({ ...st, prefs: { ...st.prefs, recording: { ...st.prefs.recording, replace: !st.prefs.recording.replace } } }));
+}
+
 /** Reloads the plug-ins offered in the Library and slot menus. */
 export async function refreshPlugins() {
   const p = await call<PluginDesc[]>("list_plugins");

@@ -437,3 +437,20 @@
     width: auto;
   }
 }
+
+/* Autopunch and Replace say their names while the bar has room: about 72 px more than their icons,
+   so 1247 px with everything (1175 above, plus 72). They are the first to give way, before the
+   steps above start: below 1250 px they are icons again, named in their tooltips. */
+.mode-btn.labelled > svg {
+  display: none;
+}
+
+@container control-bar (max-width: 1250px) {
+  .mode-btn.labelled > svg {
+    display: block;
+  }
+
+  .mode-btn.labelled > .mode-label {
+    display: none;
+  }
+}

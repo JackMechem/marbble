@@ -1686,7 +1686,8 @@ Audio Track Editor and meters are canvas drawings. The common pattern:
   strips' room.
 - **The control bar's steps** (`control-bar.css`). The transport and the LCD keep their size
   longest. Below widths measured for the bar with the LCD showing the time, a long key and six
-  mode buttons, its `@container` rules tighten the gaps and view buttons, shorten the master
+  mode buttons, its `@container` rules first turn Autopunch's and Replace's names back into icons
+  (`.labelled`, below 1250 px), then tighten the gaps and view buttons, shorten the master
   volume slider (`HSlider` takes a CSS width, `--cb-master-w`, and drags by the width it's drawn
   at) and show Count-in as 1234, then fold the three view buttons on the right into one menu
   button (`.cb-more`, rendered always and shown only then), then drop the master volume slider,

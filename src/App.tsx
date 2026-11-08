@@ -48,7 +48,7 @@ import { exportSelectionMidi, importMidiDialog } from "./midiFiles";
 import { freezeTracks, unfreezeTracks } from "./freeze";
 import { PdcStatus } from "./components/Latency";
 import { marqueeCopy, marqueeCut, marqueeDelete, marqueePaste, openToolMenu } from "./trackTools";
-import { getSettings, updateSettings } from "./prefs";
+import { getSettings, toggleReplace, updateSettings } from "./prefs";
 import { createMarker, deleteMarker, deleteSelectedMarker, gotoMarker, markerAtPlayhead, openMarkerList } from "./markers";
 import { MarkerList } from "./components/MarkerList";
 import { moveSelectedSection, packTakeFolder, removeSelectedSection, stepTake } from "./takes";
@@ -468,6 +468,7 @@ const KEY_ACTIONS: Record<string, () => void> = {
   "project-settings": () => handleMenu("project-settings"),
   "settings-keys": () => handleMenu("settings-keys"),
   autopunch: () => handleMenu("autopunch"),
+  "replace-mode": () => void toggleReplace(),
   "create-marker": () => handleMenu("create-marker"),
   "delete-marker": () => handleMenu("delete-marker"),
   "previous-marker": () => handleMenu("previous-marker"),
