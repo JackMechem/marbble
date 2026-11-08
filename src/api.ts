@@ -258,6 +258,8 @@ export interface Track {
   alternative?: string;
   /** Extra automation lanes shown below the main lane. */
   auto_lanes?: AutoParam[];
+  /** The icon chosen for the track (trackIcons.ts ids); absent shows the name's or kind's. */
+  icon?: string | null;
 }
 
 export interface FreezeInfo {
@@ -623,6 +625,7 @@ export async function actMade(cmd: string, args?: Record<string, unknown>): Prom
 export const api = {
   updateTrack: (id: Id, patch: Partial<Omit<Track, "id" | "kind" | "regions" | "inserts" | "instrument" | "parent" | "group" | "hidden" | "sends" | "output" | "bus">>) =>
     act("update_track", { id, patch }),
+  setTrackIcon: (ids: Id[], icon: string | null) => act("set_track_icon", { ids, icon }),
   selectTrack: (id: Id | null) => act("select_track", { id }),
   setPlugin: (track: Id, slot: number, pluginId: string, open = true) =>
     act("set_plugin", { track, slot, pluginId, open }),

@@ -106,6 +106,7 @@ mod musical_moves;
 mod region_gain;
 mod sampler;
 mod threads;
+mod track_icons;
 mod track_off;
 mod vst_key;
 mod zero_crossings;

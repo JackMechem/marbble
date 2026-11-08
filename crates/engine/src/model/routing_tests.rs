@@ -37,6 +37,7 @@ fn track(p: &mut Project, kind: TrackKind) -> Id {
         instrument_output: None,
         eq_preset: None,
         off: false,
+        icon: None,
     });
     id
 }

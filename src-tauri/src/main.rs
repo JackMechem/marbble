@@ -178,6 +178,7 @@ fn main() {
             commands::add_tracks,
             commands::delete_track,
             commands::update_track,
+            commands::set_track_icon,
             commands::select_track,
             commands::reorder_tracks,
             commands::move_region,

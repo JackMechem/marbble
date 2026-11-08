@@ -71,6 +71,12 @@ pub fn update_track(state: State<AppState>, id: Id, patch: TrackPatch) -> Snapsh
     }
 }
 
+/// Logic's Track Icon for `ids` (None: back to the default the UI picks).
+#[tauri::command]
+pub fn set_track_icon(state: State<AppState>, ids: Vec<Id>, icon: Option<String>) -> Snapshot {
+    edit(&state, "Track Icon", None, false, |s| s.set_track_icon(&ids, icon))
+}
+
 #[tauri::command]
 pub fn delete_tracks(state: State<AppState>, ids: Vec<Id>) -> Snapshot {
     edit(&state, &plural(ids.len(), "Delete Track", "Delete Tracks"), None, true, |s| s.delete_tracks(&ids))
