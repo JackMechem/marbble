@@ -318,13 +318,31 @@
 }
 
 
-/* A narrow window (1280 px at 125 % is 1024 px): the bar tightens its gaps and buttons so the
-   view buttons at its right end stay in the window. It needs about 1140 px as drawn above. */
+/* The view buttons folded into one, and Count-in's short form, for a narrow bar (below). */
+.cb-more,
+.countin-short {
+  display: none;
+}
+
+/* A narrow window (1280 px at 125 % is a 1024 px page). The transport and the LCD keep their size
+   longest; the bar gives way around them, a step at a time. The widths are what the bar needs at
+   each step with the LCD showing the time, a long key and six mode buttons, plus 15 px:
+   1. 1175 px with everything: tighter gaps, smaller view buttons (then 1117);
+   2. the master volume slider shortens and Count-in reads 1234 (1055);
+   3. the three view buttons on the right fold into one menu button and the mode buttons narrow
+      (985), so a 1024 px bar has about 40 px to spare;
+   4. the master volume slider goes (Stereo Out in the Mixer has it) (925);
+   5. only then do the transport buttons and the LCD tighten (877);
+   6. and last the gaps and buttons around them (836; 1280 px at 150 % is an 853 px bar). */
 .control-bar {
   container: control-bar / inline-size;
 }
 
-@container control-bar (max-width: 1150px) {
+@container control-bar (max-width: 1190px) {
+  .control-bar {
+    gap: 8px;
+  }
+
   .cb-center {
     gap: 6px;
   }
@@ -337,12 +355,52 @@
     width: 28px;
   }
 
-  .tp-btn {
-    width: 30px;
+  .mode-btn {
+    padding: 0 4px;
+  }
+}
+
+@container control-bar (max-width: 1135px) {
+  .cb-master {
+    --cb-master-w: 52px;
+  }
+
+  .countin-long {
+    display: none;
+  }
+
+  .countin-short {
+    display: inline;
+  }
+}
+
+@container control-bar (max-width: 1075px) {
+  .control-bar {
+    padding: 0 8px;
+  }
+
+  .cb-group.right > .cb-btn {
+    display: none;
+  }
+
+  .cb-group.right > .cb-btn.cb-more {
+    display: grid;
   }
 
   .mode-btn {
-    padding: 0 4px;
+    min-width: 28px;
+  }
+}
+
+@container control-bar (max-width: 1000px) {
+  .cb-master {
+    display: none;
+  }
+}
+
+@container control-bar (max-width: 940px) {
+  .tp-btn {
+    width: 30px;
   }
 
   .lcd {
@@ -351,5 +409,31 @@
 
   .lcd-field {
     padding: 0 8px;
+  }
+}
+
+@container control-bar (max-width: 890px) {
+  .control-bar {
+    gap: 6px;
+  }
+
+  .cb-center {
+    gap: 4px;
+  }
+
+  .cb-group,
+  .transport,
+  .cb-modes {
+    gap: 2px;
+  }
+
+  .cb-btn,
+  .mode-btn {
+    min-width: 26px;
+    width: 26px;
+  }
+
+  .mode-btn.countin {
+    width: auto;
   }
 }

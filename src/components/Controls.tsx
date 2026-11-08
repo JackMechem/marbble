@@ -146,16 +146,21 @@ export function Knob({ value, onChange, size = 26, onTouchStart, onTouchEnd, lab
   );
 }
 
-export function HSlider({ db, onChange, width = 90, onTouchStart, onTouchEnd, label = "Volume" }: { db: number; onChange: (db: number) => void; width?: number; label?: string } & TouchProps) {
+/** A horizontal volume slider. `width` can be a CSS length (a variable a bar's stylesheet sets
+ *  for its width); a drag follows the width it's drawn at. */
+export function HSlider({ db, onChange, width = 90, onTouchStart, onTouchEnd, label = "Volume" }: { db: number; onChange: (db: number) => void; width?: number | string; label?: string } & TouchProps) {
   const pos = useRef(dbToFader(db));
   pos.current = dbToFader(db);
+  const box = useRef<HTMLDivElement>(null);
   const start = useDrag((d, fine) => {
-    pos.current = Math.min(1, Math.max(0, pos.current + d / (width - 10) / (fine ? 6 : 1)));
+    const w = box.current?.offsetWidth || (typeof width === "number" ? width : 90);
+    pos.current = Math.min(1, Math.max(0, pos.current + d / Math.max(1, w - 10) / (fine ? 6 : 1)));
     onChange(Math.round(faderToDb(pos.current) * 10) / 10);
   }, onTouchEnd);
   const f = dbToFader(db);
   return (
     <div
+      ref={box}
       className="hslider"
       style={{ width }}
       {...sliderAria({ label, text: dbText(db), min: -96, max: 6, now: db })}

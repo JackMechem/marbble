@@ -1,4 +1,5 @@
 // The control bar: view buttons, transport, LCD, mode buttons, master volume and the CPU meter.
+// Short of room it gives way around the transport and the LCD (control-bar.css).
 import { useEffect, useRef, useState } from "react";
 import { act } from "../api";
 import { Icon } from "../icons";
@@ -302,15 +303,19 @@ export function ControlBar() {
               <rect x="5.5" y="4" width="7" height="8" fill="currentColor" stroke="none" />
             </svg>
           </button>
-          <button className={"mode-btn purple countin" + (p?.count_in ? " on" : "")} title={tip("Count-in", "count-in")} onClick={() => act("set_count_in", { on: !p?.count_in })}>
-            Count-in
+          {/* Short of room, Logic's 1234 stands for the word. */}
+          <button className={"mode-btn purple countin" + (p?.count_in ? " on" : "")} title={tip("Count-in", "count-in")} aria-label={tip("Count-in", "count-in")} onClick={() => act("set_count_in", { on: !p?.count_in })}>
+            <span className="countin-long">Count-in</span>
+            <span className="countin-short" aria-hidden="true">
+              1234
+            </span>
           </button>
           <button className={"mode-btn purple" + (p?.metronome ? " on" : "")} title={tip("Metronome", "metronome")} aria-label={tip("Metronome", "metronome")} onClick={() => act("set_metronome", { on: !p?.metronome })}>
             <Icon.metronome />
           </button>
         </div>
         <div className="cb-master" title="Master volume">
-          <HSlider db={p?.master.volume_db ?? 0} onChange={(db) => act("set_master_volume", { db })} width={92} label="Master volume" />
+          <HSlider db={p?.master.volume_db ?? 0} onChange={(db) => act("set_master_volume", { db })} width="var(--cb-master-w, 92px)" label="Master volume" />
         </div>
         <CpuMeter />
       </div>
@@ -329,6 +334,27 @@ export function ControlBar() {
         <ViewButton on={s.showBrowser} title={tip("Browsers", "browser")} onClick={() => setState({ showBrowser: !s.showBrowser })}>
           <Icon.browser />
         </ViewButton>
+        {/* Short of room the three buttons above fold into this one (control-bar.css), lit while
+            any of them is on. */}
+        <button
+          className={"cb-btn cb-more" + (showTyping || s.bottom === "list" || s.showBrowser ? " on" : "")}
+          title="Musical Typing, List Editors, Browsers"
+          aria-label="Musical Typing, List Editors, Browsers"
+          aria-haspopup="menu"
+          onMouseDown={(e) =>
+            openMenuAt(e.currentTarget, [
+              { label: "Musical Typing", hint: fmt("Mod+K"), checked: showTyping, onClick: () => setState({ showTyping: !getState().showTyping }) },
+              { label: "List Editors", hint: keyHint("list-editors"), checked: s.bottom === "list", onClick: () => setState({ bottom: getState().bottom === "list" ? "none" : "list" }) },
+              { label: "Browsers", hint: keyHint("browser"), checked: s.showBrowser, onClick: () => setState({ showBrowser: !getState().showBrowser }) },
+            ])
+          }
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <circle cx="3.5" cy="8" r="1.4" />
+            <circle cx="8" cy="8" r="1.4" />
+            <circle cx="12.5" cy="8" r="1.4" />
+          </svg>
+        </button>
       </div>
     </div>
   );

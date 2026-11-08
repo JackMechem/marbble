@@ -1684,6 +1684,14 @@ Audio Track Editor and meters are canvas drawings. The common pattern:
   bottom until scrolled up, so faders and names show first. The Mixer's default height is 560 px,
   the Editors' 360 px. The stack brackets' rows (the row's top padding) don't count as the
   strips' room.
+- **The control bar's steps** (`control-bar.css`). The transport and the LCD keep their size
+  longest. Below widths measured for the bar with the LCD showing the time, a long key and six
+  mode buttons, its `@container` rules tighten the gaps and view buttons, shorten the master
+  volume slider (`HSlider` takes a CSS width, `--cb-master-w`, and drags by the width it's drawn
+  at) and show Count-in as 1234, then fold the three view buttons on the right into one menu
+  button (`.cb-more`, rendered always and shown only then), then drop the master volume slider,
+  and only last tighten the transport and the LCD. At 1024 px (1280 px at 125 %) about 40 px are
+  left over.
 - **The Mixer's stacks and widths** (`mixerLayout.ts`, `mixer-stacks.css`). `mixerEntries` turns
   the strips shown into a tree: each stack is a bracket in its colour (name, kind, count, a
   disclosure) over its own strip and its members, which are tinted with it. The row keeps a

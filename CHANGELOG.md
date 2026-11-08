@@ -60,6 +60,11 @@ All notable changes to Marbble are recorded here. The format follows
   runs on above it to the header's edge, and a header 72 px tall or more (96 px with automation
   shown) puts a long name on two lines, broken between words. A name that's still cut shows in
   full in its tooltip.
+- **The control bar has room to spare at 125 % and 1280 px.** It used to fit there with no spare
+  pixel, so the time display or a long key name pushed the view buttons on its right out of the
+  window. The transport and the LCD now keep their full size; as the window narrows the gaps
+  tighten, the master volume slider shortens, Count-in reads 1234, and the Musical Typing, List
+  Editors and Browsers buttons fold into one menu button, lit while any of them is on.
 
 ## [0.1.0-alpha.11] - 2026-11-08
 
