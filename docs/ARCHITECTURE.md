@@ -126,7 +126,8 @@ Failures on the audio thread are contained rather than fatal:
   hits `RLIMIT_RTTIME` (about 200 ms) and the kernel kills the app with SIGXCPU.
   `EngineStatus::overloads` counts these; `Session::check_overload` (run with each tick) stops
   playback or recording and shows "System overload: …". Offline renders (`offline`) are
-  exempt, since they are meant to run flat out.
+  exempt, since they are meant to run flat out, and a render clears any shedding left from
+  playing live (a shed block holds the transport, so the render would come out late).
 
 - **Panics.** `audio_io::build_output` runs `Engine::process` inside `catch_unwind`, because a
   panic unwinding into the driver's C callback would abort the process. On the worker pool each
@@ -912,8 +913,8 @@ real plug-in.
 `Engine::render` (`dsp/offline.rs`) runs the real graph on the calling thread with the engine
 lock held, faster than real time:
 
-- It saves the transport state, turns off cycle, metronome, count-in, live MIDI, the analyzer
-  and Low Latency Mode, clears every delay line and settles its taps, tells built-in effects
+- It saves the transport state, ends a Stop's drain and any shedding after an overload, turns
+  off cycle, metronome, count-in, live MIDI, the analyzer and Low Latency Mode, clears every delay line and settles its taps, tells built-in effects
   it is offline (`Effect::set_offline`: they may block, so background work lands at the same
   point every render), starts like playback (automation sent afresh, notes and controllers
   chased), plays `[from, to)`, then the frames still in the delay compensation with the
@@ -1866,7 +1867,9 @@ events, converting ticks through the file's own map. The UI is
   Each instance has a worker thread: parameter changes reach it through atomics, it designs at
   most every 25 ms and passes `Kernel`s over `rtrb` queues (used ones go back to it to be
   freed); the `Convolver` crossfades old and new kernel outputs over 20 ms, sharing the input
-  spectra. Offline it waits for the worker instead. The panel reuses the Channel EQ editor
+  spectra. Offline it waits for the worker instead, at most every 25 ms of audio, counted
+  from the reset that starts the render, so a render's kernel changes land at the same frames
+  whatever played before it. The panel reuses the Channel EQ editor
   (`EqEditor` in `Eq.tsx`) through `src/linearPhaseEq.ts`.
 
 To add an effect: write `fx/<name>.rs` with `pub fn info() -> EffectInfo` and

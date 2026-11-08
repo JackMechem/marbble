@@ -304,12 +304,8 @@ fn plugins_get_the_position_in_the_map() {
     assert!((t.bar_start_quarters - 4.0).abs() < 1e-9);
 }
 
-#[test]
-fn audio_in_the_compensation_after_a_stop_keeps_following_automation() {
-    use crate::model::AutoPoint;
-    const DELAY: u32 = 4800;
-    // A steady 0.5 that its volume lane takes down to -60 dB at 9600.
-    let mut r = rig();
+/// An audio track at unity, centred, playing `channels` from the start of the timeline.
+fn audio_track(id: Id, channels: Vec<Vec<f32>>) -> TrackDsp {
     let p = TrackParams {
         volume: 1.0,
         pan: 0.0,
@@ -331,19 +327,30 @@ fn audio_in_the_compensation_after_a_stop_keeps_following_automation() {
         off: false,
         instrument_output: None,
     };
-    let mut t = TrackDsp::new(1, TrackKind::Audio, p, Arc::new(Meter::default()));
-    let len = 48_000;
-    let clip = Arc::new(Clip::from_channels("dc.wav".into(), 48_000, vec![vec![0.5; len]; 2]));
+    let mut t = TrackDsp::new(id, TrackKind::Audio, p, Arc::new(Meter::default()));
+    let len = channels[0].len() as i64;
+    let clip = Arc::new(Clip::from_channels("track.wav".into(), 48_000, channels));
     t.set_regions(Arc::new(vec![RegionDsp::Audio {
         start: 0,
-        length: len as i64,
+        length: len,
         offset: 0,
         gain: 1.0,
         clip,
         fade_in: (0, 0),
-        fade_out: (len as i64, 0),
+        fade_out: (len, 0),
         laws: Default::default(),
     }]));
+    t
+}
+
+#[test]
+fn audio_in_the_compensation_after_a_stop_keeps_following_automation() {
+    use crate::model::AutoPoint;
+    const DELAY: u32 = 4800;
+    // A steady 0.5 that its volume lane takes down to -60 dB at 9600.
+    let mut r = rig();
+    let len = 48_000;
+    let t = audio_track(1, vec![vec![0.5; len]; 2]);
     r.tx.push(Cmd::AddTrack(Box::new(t), 0)).ok().unwrap();
     let point = |pos, value| AutoPoint { pos, value, curve: 0.0 };
     let lane = LaneDsp { target: AutoTarget::Volume, points: vec![point(0, 0.0), point(9600, 0.0), point(9601, -60.0)] };
@@ -373,4 +380,29 @@ fn audio_in_the_compensation_after_a_stop_keeps_following_automation() {
     assert!(after[..loud - 300].iter().all(|&x| (x - 0.5).abs() < 1e-3), "it plays out");
     assert!(peak(&after[loud + 1200..DELAY as usize]) < 0.01, "at the lane's level, not the fader's: {}", peak(&after[loud + 1200..DELAY as usize]));
     assert!(!r.engine.playing && r.engine.pos == stopped_at, "then the transport stops where it stopped");
+}
+
+/// A large project can be more than the device's callbacks keep up with while it plays live,
+/// and then the callbacks after the overload are shed. A render that starts meanwhile must not
+/// lose its first blocks to that (silence, with the transport held), or it comes out late, unlike
+/// the renders after it.
+#[test]
+fn a_render_after_an_overload_starts_on_time() {
+    let mut r = rig();
+    let len = 20_000;
+    let ramp: Vec<f32> = (0..len).map(|i| i as f32 / len as f32).collect();
+    r.tx.push(Cmd::AddTrack(Box::new(audio_track(1, vec![ramp.clone(), ramp])), 0)).ok().unwrap();
+    // A latent plug-in elsewhere: the track waits in its line, and the render drops the lead-in.
+    const DELAY: u32 = 1500;
+    let pdc = PdcParams { output: DELAY, output_time: DELAY, ..Default::default() };
+    r.tx.push(Cmd::Pdc { track: 1, params: pdc, line: Some(Box::new(DelayLine::new(8192))), feed_line: None }).ok().unwrap();
+    r.tx.push(Cmd::PdcGlobal(PdcGlobal { total: DELAY, low_latency: false })).ok().unwrap();
+    r.engine.process(&[], 0, &mut [], 0);
+    let clean = r.engine.render(0, len as i64, 0, None, &mut |_| {});
+    assert!(clean[0][1..].iter().all(|&x| x > 0.0), "the ramp from its first frame");
+    // As a sustained overload leaves it (`a_sustained_overload_sheds_load`).
+    r.engine.shedding = 12;
+    let after = r.engine.render(0, len as i64, 0, None, &mut |_| {});
+    let bits = |x: &[Vec<f32>]| x.iter().flatten().map(|s| s.to_bits()).collect::<Vec<u32>>();
+    assert_eq!(bits(&after), bits(&clean), "the same render, from the same frame");
 }

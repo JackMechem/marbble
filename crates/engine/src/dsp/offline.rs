@@ -108,6 +108,11 @@ impl Engine {
         self.process(&[], 0, &mut [], 0);
         // A Stop still draining live is over: the render's own drain comes at its end.
         self.finish_stop();
+        // So is shedding after a live overload (a large project that the device's callbacks
+        // couldn't keep up with): a shed block outputs silence and holds the transport, so the
+        // render would start late by however many blocks were left. It runs flat out instead.
+        self.shedding = 0;
+        self.behind_secs = 0.0;
         let saved = Saved {
             pos: self.pos,
             playing: self.playing,

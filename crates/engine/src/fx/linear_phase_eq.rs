@@ -261,8 +261,9 @@ pub struct LinearPhaseEq {
     offline: bool,
     /// Reset (or new) and not yet run: a new kernel replaces the old one without a fade.
     fresh: bool,
-    /// Frames since an offline render last waited for a kernel, and the least it waits between
-    /// two (`DESIGN_INTERVAL` in frames, so renders follow automation as playback does).
+    /// Frames since an offline render last waited for a kernel (as good as `design_frames` after
+    /// a reset), and the least it waits between two (`DESIGN_INTERVAL` in frames, so renders
+    /// follow automation as playback does).
     since_design: usize,
     design_frames: usize,
 }
@@ -413,6 +414,9 @@ impl Effect for LinearPhaseEq {
         if self.offline && self.stale() {
             self.wait_for_kernel();
         }
+        // Whatever played before (live, or an earlier render), the next change may be waited
+        // for at once: a render that starts here follows its automation the same every time.
+        self.since_design = self.design_frames;
         self.dispose_retired();
     }
 
@@ -620,6 +624,31 @@ mod tests {
         let (mut l, mut r) = (noise(20_000), noise(20_000));
         run(&mut e, &mut l, &mut r, 1024);
         assert!(l.iter().all(|x| x.is_finite()));
+    }
+
+    #[test]
+    fn a_render_follows_automation_the_same_whatever_played_before() {
+        // A render waits for a new kernel at most every `DESIGN_INTERVAL`. When the first of
+        // those waits comes mustn't depend on how long the instance played before the render:
+        // in a large project the device's callbacks are slow, so a render right after an edit
+        // that made the instance can follow only a few frames of it, a later one many.
+        let render = |live: usize| {
+            let mut e = LinearPhaseEq::new(SR);
+            let (mut l, mut r) = (noise(live), noise(live));
+            run(&mut e, &mut l, &mut r, 512);
+            e.set_offline(true);
+            e.reset();
+            let (mut l, mut r) = (noise(20_000), noise(20_000));
+            for (k, (bl, br)) in l.chunks_mut(512).zip(r.chunks_mut(512)).enumerate() {
+                // A lane on Bell 3's gain that starts moving with the second block.
+                if k > 0 {
+                    e.set_param(gain(4), (k % 12) as f32);
+                }
+                e.process(bl, br, None, &CTX);
+            }
+            l.iter().map(|x| x.to_bits()).collect::<Vec<u32>>()
+        };
+        assert!(render(0) == render(48_000), "the same render after a second of playing as after none");
     }
 
     #[test]

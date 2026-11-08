@@ -32,6 +32,13 @@ All notable changes to Marbble are recorded here. The format follows
   folder, track alternatives, freeze files); the rest stays on disk and in the project, and
   loads by itself if an edit brings it back. A finished recording also gives back the spare
   room its buffers had grown.
+- **A bounce right after an overload starts on time.** When a large project was more than the
+  computer could play, a bounce or export started just then came out late, starting with a
+  moment of silence, unlike the same bounce made again. It now plays from its first frame
+  whatever playback was doing.
+- **Bounces with an automated Linear Phase EQ come out the same every time.** Where a bounce
+  followed the EQ's automation could depend on how long the EQ had played before it, so a bounce
+  right after adding the EQ, undoing or opening a large project could differ from the next one.
 
 ## [0.1.0-alpha.10] - 2026-11-07
 
