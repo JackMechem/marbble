@@ -6,6 +6,11 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **Double-clicking the Tempo track's line adds a tempo change.** It used to add one and then
+  remove it again, since the second click landed on the new point.
+
 ## [0.1.0-alpha.10] - 2026-11-07
 
 ### Fixed

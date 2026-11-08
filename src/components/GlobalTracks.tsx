@@ -41,6 +41,9 @@ const project = () => getState().snap?.project;
 
 /** The tempo change selected by a click, for Delete. Cleared by clicks elsewhere. */
 let selectedTempo: number | null = null;
+/** Where the last single click added a tempo change, so the double-click it may begin doesn't
+ *  find the new point and remove it again. Cleared by the next click. */
+let addedByClick: number | null = null;
 
 function commitTempo(events: TempoEvent[]) {
   return act("set_tempo_map", { events, moveMidi: getState().moveMidiWithTempo });
@@ -298,7 +301,9 @@ export function GlobalTracks() {
     const range = tempoRange(events);
     let i = pointAt(p, x, y);
     const isNew = i === null;
-    if (i !== null && e.detail === 2) {
+    const added = addedByClick;
+    addedByClick = null;
+    if (i !== null && e.detail === 2 && events[i].pos !== added) {
       selectedTempo = null;
       if (i > 0) commitTempo(events.filter((_, k) => k !== i));
       return;
@@ -365,8 +370,10 @@ export function GlobalTracks() {
       window.removeEventListener("mouseup", up);
       const pv = preview.current;
       preview.current = null;
-      if (pv && (axis || isNew)) commitTempo(pv.events);
-      else draw();
+      if (pv && (axis || isNew)) {
+        commitTempo(pv.events);
+        if (isNew && !axis) addedByClick = pv.events[idx].pos;
+      } else draw();
     };
     window.addEventListener("mousemove", move);
     window.addEventListener("mouseup", up);
