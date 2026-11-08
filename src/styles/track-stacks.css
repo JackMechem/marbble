@@ -51,7 +51,7 @@
   border-style: dashed;
 }
 
-/* A folder's strip keeps the plug-in sections' height, with a note in their place. */
+/* A folder's strip keeps the plug-in sections' height (blank), with its kind in their place. */
 .strip-folder-blank {
   position: relative;
   display: flex;
@@ -61,12 +61,18 @@
 
 .strip-folder-note {
   position: absolute;
-  inset: 0 0 auto;
+  inset: 0;
+  display: grid;
+  place-items: center;
   color: var(--faint);
   font-size: var(--fs-sm);
-  text-align: center;
-  padding: 10px 4px;
-  line-height: 1.35;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+/* A folder stack's strip, set apart from the strips with audio by a darker face. */
+.strip.folder {
+  background-image: linear-gradient(var(--folder-shade), var(--folder-shade));
 }
 
 .group-sheet {

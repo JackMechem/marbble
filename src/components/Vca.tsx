@@ -10,7 +10,8 @@ import { canNest, vcaSlotLabel } from "../vca";
 import { Fader } from "./Controls";
 import { openMenu, openMenuAt, type MenuItem } from "./Menu";
 import type { SlotRows } from "../stripRows";
-import { BlankEq, BlankRow, BlankSlots } from "./StripSlots";
+import { BlankEq, BlankRow, BlankSlots, PlateName } from "./StripSlots";
+import { METER_W, plateInk } from "../mixerLayout";
 
 const NO_VCAS: Vca[] = [];
 
@@ -43,7 +44,7 @@ function Slot({ label, assigned, title, onOpen }: { label: string; assigned: boo
         if (e.button === 0) onOpen(e.currentTarget);
       }}
     >
-      {assigned ? label : <span className="slot-name dim">VCA</span>}
+      {assigned ? <span className="slot-text">{label}</span> : <span className="slot-name dim">VCA</span>}
     </div>
   );
 }
@@ -103,8 +104,8 @@ export function VcaStrip({ vca, rows }: { vca: Vca; rows: SlotRows }) {
       <BlankRow />
       <div className="strip-section">
         <div className="strip-label">VCA</div>
-        <div className="slot static" title="Strips whose VCA slot is set to this VCA">
-          {count ? `${count} ${count === 1 ? "strip" : "strips"}` : "No strips"}
+        <div className="slot static" title={`${count ? `${count} ${count === 1 ? "strip" : "strips"}` : "No strips"}: the strips whose VCA slot is set to this VCA`}>
+          <span className="slot-text">{count ? `${count} ${count === 1 ? "strip" : "strips"}` : "No strips"}</span>
         </div>
       </div>
       <BlankEq />
@@ -123,7 +124,7 @@ export function VcaStrip({ vca, rows }: { vca: Vca; rows: SlotRows }) {
       </div>
       <div className="strip-fader" ref={faderBox}>
         <Fader db={vca.level_db} onChange={(db) => update({ level_db: db })} height={faderHeight} label={`${vca.name} level`} />
-        <div style={{ width: 11 }} />
+        <div style={{ width: METER_W }} />
       </div>
       <div className="strip-buttons">
         <span className="tbtn power ghost" />
@@ -146,7 +147,7 @@ export function VcaStrip({ vca, rows }: { vca: Vca; rows: SlotRows }) {
           <span className="tbtn ghost" />
         </div>
       </div>
-      <div className="strip-name" style={{ borderTopColor: vca.color }} title={vca.name} onDoubleClick={() => setRenaming(true)}>
+      <div className={"strip-name ink-" + plateInk(vca.color)} style={{ "--plate": vca.color } as React.CSSProperties} title={vca.name} onDoubleClick={() => setRenaming(true)}>
         {renaming ? (
           <input
             className="vca-rename"
@@ -165,7 +166,7 @@ export function VcaStrip({ vca, rows }: { vca: Vca; rows: SlotRows }) {
             }}
           />
         ) : (
-          vca.name
+          <PlateName name={vca.name} />
         )}
       </div>
     </div>

@@ -1,9 +1,11 @@
 // Track heights and positions: `trackLayout` turns heights, stacks, take rows and automation lanes into
-// each track's top, `indexAt` finds a track from y, and heights are kept per project in localStorage.
+// each track's top, `indexAt` finds a track from y, and heights are kept per project in localStorage
+// (and so are the Mixer's strip widths, their horizontal twin).
 import type { Id, Track } from "./api";
 import { getState, setState, useStore } from "./store";
 import { takeRowsHeight } from "./takes";
 import { OUTPUT_ID, subLaneHeight } from "./autoLanes";
+import { parseMixerView } from "./mixerLayout";
 
 /** Smallest track height: one line of text. Headers lay out in tiers by height (see
  *  trackHeader.ts), and regions slim their name bar (regionBar.ts). */
@@ -179,5 +181,27 @@ export function saveHeights(path: string) {
     localStorage.setItem(key(path), JSON.stringify({ base: s.trackHeight, heights: s.trackHeights, output: s.showOutput }));
   } catch {
     // Not critical: heights fall back to the default next time.
+  }
+}
+
+// ---- persistence: the Mixer's strip widths, a view preference per project folder like the heights
+
+const mixerKey = (path: string) => `marbble.mixerView:${path}`;
+
+export function loadMixerView(path: string) {
+  let text: string | null = null;
+  try {
+    text = localStorage.getItem(mixerKey(path));
+  } catch {
+    // Normal widths are fine.
+  }
+  setState({ mixerView: parseMixerView(text) });
+}
+
+export function saveMixerView(path: string) {
+  try {
+    localStorage.setItem(mixerKey(path), JSON.stringify(getState().mixerView));
+  } catch {
+    // Not critical: the strips fall back to Normal next time.
   }
 }

@@ -1096,6 +1096,7 @@ Interface-only state lives in the webview's `localStorage`:
 | `marbble.waveStyle` | `waveform.ts` | Waveform drawing style (a copy of `ui.wave_style`). |
 | `marbble.paneSizes` | `components/Splitter.tsx` | Library, Inspector, Browser, Mixer, Editor, docked-panel and header sizes, read through `paneSizes.ts` (within limits; malformed values are the defaults). |
 | `marbble.trackHeights:<project path>` | `layout.ts` | `{ base, heights, output }` for one project (`output`: the Output track shown). |
+| `marbble.mixerView:<project path>` | `layout.ts` | `{ size, widths }` for one project: the Mixer's strip size and the strips given a width of their own (read through `mixerLayout.ts`). |
 | `marbble.bounce` | `components/Bounce.tsx` | Tail, format, resolution, sample rate and normalize of the bounce and export dialogs. |
 | `marbble.bounce-in-place` | `components/Bounce.tsx` | Bounce in Place options. |
 | `marbble.pianoRoll` | `components/pianoRollEditor/prefs.ts` | Piano Roll view and Time Quantize settings. |
@@ -1603,7 +1604,24 @@ Audio Track Editor and meters are canvas drawings. The common pattern:
   fader at its least, and `fitStripRows` (`stripRows.ts`) takes slot rows away, sends first,
   while the fader would get less than 120 px. Below one row each the strips scroll, pinned to the
   bottom until scrolled up, so faders and names show first. The Mixer's default height is 560 px,
-  the Editors' 360 px.
+  the Editors' 360 px. The stack brackets' rows (the row's top padding) don't count as the
+  strips' room.
+- **The Mixer's stacks and widths** (`mixerLayout.ts`, `mixer-stacks.css`). `mixerEntries` turns
+  the strips shown into a tree: each stack is a bracket in its colour (name, kind, count, a
+  disclosure) over its own strip and its members, which are tinted with it. The row keeps a
+  20 px row per level of stacks above every strip (`--bracket-rows`), so all strips are the same
+  height and their faders stay level. The disclosure toggles the track's own `collapsed`, so the
+  Mixer and the Tracks area open and close a stack together (as Logic's Mixer follows the stack);
+  collapsed, the stack shows its strip and an "N tracks" marker. Each strip sits in a
+  `.mixer-cell` at its width: the Mixer's size (Narrow 72, Normal 104, Wide 140 px; a folder's
+  strip stays at 72) or a width of its own from dragging its right edge (double-click resets it).
+  `mixerView` in the store holds both; it is shared with detached windows and the main window
+  saves it per project folder, like track heights. Name plates are filled with the track's
+  colour, their ink chosen by contrast (`plateInk`), and hold two lines of name, broken at
+  spaces only (`fitLines` in `textFit.ts`, measured by `PlateName`), each line ending in "…" when
+  cut. Section labels and slot texts stay on one line at every width (a narrow strip's Audio FX
+  label shows only its latency when it has one), and `useStripFit` measures the strip with the
+  least fader, so every strip fits the view.
 
 ### Key commands
 
@@ -2667,7 +2685,8 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `stripMeters.ts` | The clip indicator's readout and the gain-reduction meter's scale and fall; pure, tested. |
 | `vca.ts` | VCA offsets and loop checks for drawing the Mixer (mirrors `vca.rs`); pure, tested. |
 | `stripRows.ts` | How many insert and send rows strips side by side share (the Mixer's, the Inspector's pair), so their faders line up, and how many fit a short Mixer; pure, tested. |
-| `textFit.ts` | Shortening a long path at a separator for `PathText.tsx`; pure, tested. |
+| `mixerLayout.ts` | The Mixer's stacks as brackets (collapsible), its strip widths and their saved form, and name plate ink by contrast; pure, tested. |
+| `textFit.ts` | Shortening a long path at a separator for `PathText.tsx`, and breaking a strip's name onto two lines at spaces for `PlateName`; pure, tested. |
 | `slotName.ts` | A plug-in slot's short name (a built-in instrument's model without "Marbble"); pure, tested. |
 | `slotDrag.ts` | Dragging plug-ins between Audio FX slots. |
 | `waveform.ts` | Waveform fetching, caching and the four drawing styles. |

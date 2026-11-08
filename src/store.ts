@@ -10,6 +10,7 @@ import type { DockPanels } from "./fxDock";
 import type { WaveStyle } from "./waveform";
 import { DEFAULT_TOOLS, type Tools } from "./tools";
 import type { Marquee } from "./marquee";
+import { DEFAULT_MIXER_VIEW, type MixerView } from "./mixerLayout";
 
 export type Snap = "smart" | "bar" | "beat" | "division" | "ticks" | "off";
 /** What the bottom section shows; "fx" is the docked plug-in panels (fxDock.ts), "list" the
@@ -124,6 +125,9 @@ export interface State {
   stripClip: StripSetting | null;
   pluginClip: PluginSlot | null;
   eqClip: ChannelEq | null;
+  /** The Mixer's strip size and the strips sized by hand (mixerLayout.ts), remembered per
+   *  project like track heights. */
+  mixerView: MixerView;
 }
 
 export interface MidiSelection {
@@ -186,6 +190,7 @@ let state: State = {
   stripClip: null,
   pluginClip: null,
   eqClip: null,
+  mixerView: DEFAULT_MIXER_VIEW,
 };
 
 const listeners = new Set<() => void>();

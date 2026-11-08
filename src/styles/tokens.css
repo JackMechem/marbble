@@ -104,6 +104,8 @@
   --mute-ink: #ffffff;
   --green-ink: #ffffff;
   --swatch-ink: #141416;
+  --swatch-ink-light: #ffffff;
+  --folder-shade: rgba(0, 0, 0, 0.16);
   --warn: #f0b43c;
   --meter-stops: #2f9e44, #55c23b 55%, #d8d33a 80%, #e9a23b 90%, #e5483a;
   --meter-hold: #e8e8e8;

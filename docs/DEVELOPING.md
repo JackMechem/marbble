@@ -305,7 +305,7 @@ instead and enforce rules that would otherwise only fail in the running app.
 | `stepInput.test.ts` | Step Input: step lengths through the tempo map, the chord and advance state machine, the region edits. |
 | `stepSeq.test.ts` | The Step Sequencer: step edits, rows, paint values for each edit mode, names, the rows of a new pattern by instrument, the playing step of each row. |
 | `snap.test.ts` | The snap grid (`snapStep`, `snapPos` in `src/time.ts`): Bar, Beat, Division, Ticks and Smart in each signature. |
-| `textFit.test.ts` | Long paths shortened at a separator (`src/textFit.ts`). |
+| `textFit.test.ts` | Long paths shortened at a separator, and strip names on two lines broken at spaces (`src/textFit.ts`). |
 | `tempo.test.ts` | `src/tempo.ts`, the mirror of the engine's tempo map. |
 | `musicalMove.test.ts` | Region moves and nudges in bars and beats through the tempo map. |
 | `audioEdit.test.ts` | The Audio Track Editor's range arithmetic (`src/audioRange.ts`). |
@@ -336,6 +336,7 @@ instead and enforce rules that would otherwise only fail in the running app.
 | `focusRing.test.ts` | When the keyboard focus ring shows (`src/focusRing.ts`): on after Tab, off after a mouse press. |
 | `stripMeters.test.ts` | The clip indicator readout and the gain-reduction meter. |
 | `vca.test.ts` | VCA offsets and loop checks in the Mixer. |
+| `mixerLayout.test.ts` | The Mixer's stacks (nesting, counts, collapse, filtered strips), strip widths and their saved form, and name plate ink. |
 | `trackOff.test.ts` | Whether a track is off through its stacks (`src/trackOff.ts`), and the power button's tooltip. |
 | `controllers.test.ts` | Controller assignment types and labels (MIDI Learn). |
 | `keyFormat.test.ts` | Shortcuts written as each platform's menu bar writes them; on Linux against `gtkKeyLabels.json`, the pairs `menu.rs`'s tests check against GTK. |

@@ -13,7 +13,7 @@
 }
 
 .strip.selected {
-  background: var(--strip-sel);
+  background-color: var(--strip-sel);
 }
 
 .strip-section {
@@ -22,11 +22,35 @@
   gap: 2px;
 }
 
+/* A section's label: one line at every width, so the rows below stay level across the strips. */
 .strip-label {
+  height: 15px;
+  line-height: 15px;
   font-size: var(--fs-sm);
   color: var(--faint);
   text-align: center;
   letter-spacing: 0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* "Audio FX" with the strip's latency: the latency (first in the markup) shows after the name and
+   keeps its room; the name gives way, and a narrow Mixer strip drops it (mixer-stacks.css). */
+.strip-label.with-badge {
+  display: flex;
+  justify-content: center;
+}
+
+.strip-label.with-badge .strip-latency {
+  order: 1;
+  flex: none;
+}
+
+.strip-label-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .slot {
@@ -38,6 +62,18 @@
   background: var(--slot-empty);
   box-shadow: var(--slot-empty-shadow);
   overflow: hidden;
+  white-space: nowrap;
+}
+
+/* A fixed slot's text (Setting, "Σ Subtracks", Stereo Out's output): one line, "…" when cut,
+   the whole text in the slot's tooltip. */
+.slot-text {
+  flex: 1;
+  min-width: 0;
+  padding: 0 4px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .slot.empty:hover {
@@ -247,6 +283,9 @@
   box-shadow: var(--field-shadow);
   font-size: var(--fs-sm);
   color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  min-width: 0;
 }
 
 .readout.peak.clip {
@@ -284,45 +323,62 @@
   font-size: var(--fs-md);
 }
 
+/* The name plate, filled with the track's colour as in Logic (`--plate`, set on the element), its
+   text dark or light by contrast (mixerLayout.ts plateInk). Names take two lines, broken at spaces
+   (PlateName), each ending in "…" when cut; the plate is two lines tall on every strip, so the
+   faders above stay level. */
 .strip-name {
   margin: 2px -5px 0;
-  padding: 5px 4px 6px;
-  border-top: 3px solid;
-  background: var(--strip-name);
-  text-align: center;
-  font-weight: 600;
-  font-size: var(--fs-sm);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* A track's strip: its icon before the name, no taller than the line, so the plates of strips
-   with and without one (VCAs) stay level. */
-.strip-name.with-icon {
+  padding: 0 4px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 3px;
+  background: var(--plate, var(--strip-name));
+  text-align: center;
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  overflow: hidden;
 }
 
+.strip-name.ink-dark {
+  color: var(--swatch-ink);
+}
+
+.strip-name.ink-light {
+  color: var(--swatch-ink-light);
+}
+
+/* A track's icon before the name, in the plate's ink. */
 .strip-icon {
   flex: none;
   display: flex;
   height: 14px;
+  color: inherit;
 }
 
 .strip-name-text {
+  flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 13px;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
+.strip-name-text > .truncate {
+  display: block;
+}
 
-/* The Mixer's selected track: its name plate lit as the track's header is, with an accent line
-   under the name. (The Inspector's strip is always the selected track's, so it isn't lit.) */
+/* A summing stack's mark before its name. */
+.strip-sum {
+  flex: none;
+  font-weight: 700;
+}
+
+/* The Mixer's selected track: an accent line under its name plate. (The Inspector's strip is
+   always the selected track's, so it isn't marked.) */
 .mixer .strip.selected .strip-name {
-  background: var(--header-sel);
-  color: var(--text);
-  box-shadow: inset 0 -2px 0 var(--accent);
+  box-shadow: inset 0 -3px 0 var(--accent);
 }

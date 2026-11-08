@@ -1,0 +1,169 @@
+/* The Mixer's strips at their widths, track stacks as brackets over their strips, and the strip
+   width controls (Panels.tsx Mixer, mixerLayout.ts). */
+
+/* Room above the strips for a row of brackets per level of stacks (`--bracket-rows`), so every
+   strip keeps the same height and their faders stay level. */
+.mixer-row {
+  --bracket-h: 20px;
+  padding-top: calc(var(--bracket-rows, 0) * var(--bracket-h));
+}
+
+/* A strip at its width (set on the cell), with its resize handle on the right edge. */
+.mixer-cell {
+  position: relative;
+  flex: none;
+  display: flex;
+}
+
+.mixer-cell > .strip {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+}
+
+/* Narrow strips leave the icon off the name plate, so the name has the room, and "Audio FX" off
+   its label when the strip's latency is there. */
+.mixer-cell.slim .strip-icon {
+  display: none;
+}
+
+.mixer-cell.slim .strip-latency + .strip-label-text {
+  display: none;
+}
+
+.mixer-cell.slim .strip-latency {
+  margin-left: 0;
+}
+
+/* Over the strip's right padding, so the last strip's doesn't stick out of the row. */
+.strip-resize {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 5px;
+  z-index: 2;
+  cursor: col-resize;
+}
+
+.strip-resize:hover,
+.strip-resize.dragging {
+  background: var(--accent);
+  opacity: 0.45;
+}
+
+/* A stack: its bracket in the row above its strips, at its depth. */
+.mixer-stack {
+  position: relative;
+  flex: none;
+  display: flex;
+}
+
+.mixer-bracket {
+  position: absolute;
+  top: calc((var(--stack-depth, 0) - var(--bracket-rows, 0)) * var(--bracket-h));
+  left: 1px;
+  right: 1px;
+  height: calc(var(--bracket-h) - 2px);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 6px;
+  border-radius: 4px 4px 0 0;
+  background: var(--plate);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-align: left;
+}
+
+.mixer-bracket.ink-dark {
+  color: var(--swatch-ink);
+}
+
+.mixer-bracket.ink-light {
+  color: var(--swatch-ink-light);
+}
+
+.mixer-bracket svg {
+  flex: none;
+}
+
+/* The kind and count give way first, then the name ends in "…". */
+.mixer-bracket-name {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mixer-bracket-kind {
+  flex: 0 100 auto;
+  min-width: 0;
+  font-weight: 400;
+  opacity: 0.75;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* A stack's strips are tinted with its colour (the innermost stack's), over their own face. */
+.mixer-stack .mixer-cell > .strip {
+  background-image: linear-gradient(var(--stack-tint), var(--stack-tint));
+}
+
+.mixer-stack .mixer-cell > .strip.folder {
+  background-image: linear-gradient(var(--stack-tint), var(--stack-tint)), linear-gradient(var(--folder-shade), var(--folder-shade));
+}
+
+/* A collapsed stack's marker after its strip: "5 tracks ▸", which opens it. */
+.mixer-stack-more {
+  flex: none;
+  width: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: linear-gradient(var(--stack-tint), var(--stack-tint));
+  border-right: 1px solid var(--strip-line);
+  color: var(--dim);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.mixer-stack-more span {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  white-space: nowrap;
+}
+
+.mixer-stack-more:hover {
+  color: var(--text);
+  background: var(--tbtn-hi);
+}
+
+/* A subtrack playing through its summing stack: "→ Σ Drums", dashed, not a bus. */
+.slot.output.to-sum {
+  background: none;
+  box-shadow: none;
+  border: 1px dashed var(--line);
+  color: var(--dim);
+}
+
+.slot.output.to-sum:hover {
+  background: var(--slot-static-hi);
+}
+
+/* Narrow, Normal, Wide in the local bar: a segmented choice, apart from the strip filters. */
+.mixer-widths {
+  display: flex;
+  gap: 2px;
+  margin-left: 10px;
+  padding-left: 10px;
+  border-left: 1px solid var(--edge);
+}
+
+.mixer-widths .filter:hover {
+  background: var(--btn);
+}

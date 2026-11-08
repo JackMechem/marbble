@@ -8,6 +8,18 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Changed
 
+- **Track stacks read clearly in the Mixer.** A stack's strips sit under a bracket in its colour
+  with its name, kind and track count, a summing stack inside a folder nested under the
+  folder's, and they are tinted with it. A summing stack's strip is marked Σ, and its subtracks'
+  Output slots say "→ Σ Drums" instead of a cut-off bus name. A folder's strip is narrow, with
+  just its fader, buttons and name. The bracket's ▾ collapses a stack to its own strip and an
+  "N tracks" marker, together with the stack in the Tracks area.
+- **Strip widths.** Narrow, Normal and Wide in the Mixer's bar (and its Options menu) size every
+  strip; drag a strip's right edge to give it a width of its own, double-click the edge to reset
+  it, or Options › Reset Strip Widths. They are remembered per project.
+- **Names and colours on strips.** The name plate is filled with the track's colour, its text
+  dark or light to read on it, and holds two lines of name; names, slots and outputs cut off
+  show in full in a tooltip. The level meters beside the fader are wider.
 - CI runs the headless engine checks on macOS as well as Linux.
 
 ### Fixed

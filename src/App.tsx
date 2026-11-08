@@ -36,7 +36,7 @@ import { currentTick, getState, pushTick, setState, useStore } from "./store";
 import { transport } from "./transport";
 import { applyTheme } from "./themes";
 import { applyUiScale, stepUiScale } from "./uiScale";
-import { currentLayout, loadHeights, saveHeights, stepVisible, zoomTracks } from "./layout";
+import { currentLayout, loadHeights, loadMixerView, saveHeights, saveMixerView, stepVisible, zoomTracks } from "./layout";
 import { revealTop, scrollTo, viewport } from "./view";
 import { installNativeDrop } from "./dnd";
 import { newAux } from "./routing";
@@ -561,22 +561,27 @@ function StatusLine() {
   );
 }
 
-/** Remembers track heights per project folder. */
+/** Remembers track heights, and the Mixer's strip widths, per project folder. */
 function useHeightPersistence() {
   const path = useStore((s) => s.snap?.path);
   const base = useStore((s) => s.trackHeight);
   const heights = useStore((s) => s.trackHeights);
   const output = useStore((s) => s.showOutput);
+  const mixerView = useStore((s) => s.mixerView);
   const [loaded, setLoaded] = useState<string | null>(null);
   useEffect(() => {
     if (path && path !== loaded) {
       loadHeights(path);
+      loadMixerView(path);
       setLoaded(path);
     }
   }, [path, loaded]);
   useEffect(() => {
     if (path && path === loaded) saveHeights(path);
   }, [path, loaded, base, heights, output]);
+  useEffect(() => {
+    if (path && path === loaded) saveMixerView(path);
+  }, [path, loaded, mixerView]);
 }
 
 export default function App() {

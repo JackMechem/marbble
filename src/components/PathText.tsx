@@ -6,7 +6,7 @@ import { fitPath } from "../textFit";
 let ctx: CanvasRenderingContext2D | null = null;
 
 /** The width `text` takes in `el`'s font. */
-function textWidth(el: HTMLElement, text: string): number {
+export function textWidth(el: HTMLElement, text: string): number {
   ctx ??= document.createElement("canvas").getContext("2d");
   if (!ctx) return 0;
   const cs = getComputedStyle(el);

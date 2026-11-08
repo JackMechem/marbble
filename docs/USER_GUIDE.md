@@ -1987,8 +1987,23 @@ Open the Mixer with X. It shows a channel strip for every track (stacks included
 auxes, then the [VCA strips](#vca-faders), then Stereo Out. The **Audio**, **Inst** and **Aux**
 buttons show or hide those strips; each has a light that is lit while its strips are shown.
 The **Options** menu has Create New VCA, New Aux, the same three filters, Show Hidden Tracks
-(hidden tracks appear only in hide mode) and Reset All Clip Indicators. The Inspector shows the
-selected track's strip and Stereo Out.
+(hidden tracks appear only in hide mode), the strip widths and Reset All Clip Indicators. The
+Inspector shows the selected track's strip and Stereo Out.
+
+**Stacks** show as a bracket in the stack's colour over its strips, with its name, its kind
+(Folder, or Σ for a summing stack) and how many tracks it holds; a stack inside another sits
+under a bracket of its own, under its parent's. The stack's own strip comes first, and every
+strip in it is tinted with its colour. Click the bracket (its ▾) to collapse the stack to its own
+strip and a slim **N tracks** marker; click the marker or the bracket to open it again. This is
+the stack's own open state, so it collapses in the Tracks area too, and the project keeps it.
+A summing stack's strip has Σ before its name, and its subtracks' Output slots say **→ Σ** and
+the stack's name, dashed, while they play through it.
+
+**Strip widths:** **Narrow**, **Normal** and **Wide** in the Mixer's bar (or the Options menu)
+size every strip. Drag a strip's right edge to give that strip a width of its own (it keeps it
+when you choose another size); double-click the edge to give it back, or choose Options › Reset
+Strip Widths for all of them. The widths are remembered with the project on this computer, like
+track heights. A folder stack's strip stays narrow at every size.
 
 The strips line up across the Mixer: each shows as many insert and send slots as the strip that
 needs the most (its plug-ins or sends plus an empty slot), up to 6 Audio FX rows and 4 Sends
@@ -2003,8 +2018,7 @@ The Mixer opens tall enough for a whole strip with its fader. Made shorter, it k
 first: the Audio FX and Sends sections show fewer rows (down to one each, sends first; the rest
 go behind **+N more** in the last row), and when even that doesn't fit, the strips
 scroll up and down from the bottom, so the faders, meters and names stay in view and Setting and
-Input are scrolled up. The selected track's strip has its name plate lit, with an accent line
-under the name.
+Input are scrolled up. The selected track's strip is lit, with an accent line under its name.
 
 ### The channel strip
 
@@ -2013,11 +2027,11 @@ From top to bottom:
 | Part | What it does |
 |---|---|
 | **Setting** | The channel strip settings menu (see [Channel strip settings](#channel-strip-settings)). |
-| **Input** | Audio tracks: the mono/stereo button and the input ("No Input", "Input 1"..., "Input 1–2"...). Instrument tracks: the **instrument slot** (No Plug-in, Marbble Synth, other built-in instruments by group, or a VST3 instrument by category or vendor). A built-in instrument shows its model ("Tre", "Sampler"); the tooltip has the full name. Auxes show their bus ("Bus 1"), or the instrument output they're on ("Drums: Direct out 0", see [Multi-output instruments](#multi-output-instruments)); summing stacks show "Subtracks". |
+| **Input** | Audio tracks: the mono/stereo button and the input ("No Input", "Input 1"..., "Input 1–2"...). Instrument tracks: the **instrument slot** (No Plug-in, Marbble Synth, other built-in instruments by group, or a VST3 instrument by category or vendor). A built-in instrument shows its model ("Tre", "Sampler"); the tooltip has the full name. Auxes show their bus ("Bus 1"), or the instrument output they're on ("Drums: Direct out 0", see [Multi-output instruments](#multi-output-instruments)); summing stacks show "Σ Subtracks". |
 | **EQ thumbnail** | The Channel EQ curve; click to open the editor. |
 | **Audio FX** | Insert slots (8 in all), in the rows the strips share (see above). An empty slot shows a faint **+**; click it to choose a plug-in. A filled slot's power and pop-up buttons show when you point at it. The label shows the strip's plug-in latency. |
 | **Sends** | Send slots (8 in all), in the rows the strips share. Click an empty slot (**+**) to add a send. |
-| **Output** | Stereo Out, the summing stack, or an aux. |
+| **Output** | Stereo Out, the summing stack ("→ Σ Drums"), or an aux. |
 | **VCA** | The VCA fader that controls the strip (see [VCA faders](#vca-faders)). |
 | **Automation mode** | Off, Read, Touch, Latch, Write (see [Automation](#13-automation)). |
 | **Pan** | Drag vertically (Shift for fine); double-click to centre. |
@@ -2025,14 +2039,14 @@ From top to bottom:
 | **Fader and meter** | Drag the fader (Shift for fine), double-click for 0 dB. -96 to +6 dB. On a strip assigned to a VCA, an outlined cap marks where the strip really plays (its fader plus the VCA). The meter holds peaks for 2 s, and its top lights red while the clip indicator is on. With a Compressor, Limiter, Noise Gate or De-Esser on the strip, a thin **gain-reduction meter** beside it grows down from the top as the first one that isn't bypassed reduces the gain (up to 30 dB). |
 | **Power** | Turns the track off: silent, and it runs nothing (see [Turning tracks off](#turning-tracks-off)). Not on Stereo Out. |
 | **M S R I** | Mute, Solo, Record Enable, Input Monitoring. |
-| **Name** | With the track colour and icon (click the icon to choose another). Right-click it for the channel strip settings menu. |
+| **Name** | Filled with the track colour, with the track's icon (click it to choose another; narrow strips leave it out) and up to two lines of name, broken between words. Right-click it for the channel strip settings menu. Any name or slot cut short shows in full in its tooltip. |
 
 The clip indicators keep their peak until you reset them, as in Logic: playing again doesn't
 reset them, and they are the same in the Mixer, the Inspector and a Mixer in its own window.
 Opening another project starts them afresh; bounces and exports don't touch them.
 
-A folder stack's strip shows only its fader, buttons and automation mode ("A folder has no audio
-of its own"), with the plug-in sections left blank so its fader lines up with the others.
+A folder stack's strip is narrow and darker, and shows only its fader, buttons, automation mode
+and name, with the other sections left blank so its fader lines up with the others.
 Stereo Out has Channel EQ, Audio FX, its fader and meter, and an automation mode pop-up for the
 Output track's lanes; its Input and Sends rows are left blank. A VCA strip shows its count in the
 Input row and the VCA it is on in the VCA row.

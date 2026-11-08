@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 // The channel strip's Sends section and Output slot, laid out like Logic's.
 import { useRef, useState } from "react";
 import { SEND_SLOTS, type Send, type Track } from "../api";
-import { emptySendMenu, outputLabel, outputMenu, sendLabel, sendMenu, setSendLevel } from "../routing";
+import { defaultOutput, emptySendMenu, outputLabel, outputMenu, sendLabel, sendMenu, setSendLevel } from "../routing";
 import { getState, useStore } from "../store";
 import { dbToFader, faderToDb, formatDb } from "../time";
 import { openMenuAt, type MenuItem } from "./Menu";
@@ -135,19 +135,21 @@ export function SendsSection({ track, rows }: { track: Track; rows: number }) {
   );
 }
 
-/** The Output slot: Stereo Out, the track's summing stack, or an aux. */
+/** The Output slot: Stereo Out, the track's summing stack, or an aux. A subtrack playing through
+ *  its summing stack (no output of its own) says so, "→ Σ Drums", dashed, rather than a bus name. */
 export function OutputSlot({ track }: { track: Track }) {
   const label = useStore((s) => (s.snap ? outputLabel(s.snap.project, track) : "Stereo Out"));
+  const sum = useStore((s) => (s.snap && track.output === null ? defaultOutput(s.snap.project, track)?.name ?? null : null));
   return (
     <div
-      className="slot output output-pick"
+      className={"slot output output-pick" + (sum !== null ? " to-sum" : "")}
       onMouseDown={(e) => {
         e.stopPropagation();
         openMenuAt(e.currentTarget as HTMLElement, outputMenu(track));
       }}
-      title="Output"
+      title={sum !== null ? `Output: through the summing stack “${sum}” · click to choose another` : `Output: ${label}`}
     >
-      <span className="slot-name">{label}</span>
+      <span className="slot-name">{sum !== null ? `→ Σ ${sum}` : label}</span>
     </div>
   );
 }

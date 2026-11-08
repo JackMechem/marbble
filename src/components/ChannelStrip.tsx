@@ -27,12 +27,15 @@ import { auxInput, hasExtraOutputs, nextOutput } from "../multiOut";
 import { keepRegionsOn } from "../ops";
 import { useVcas, VcaSlot } from "./Vca";
 import { slotName } from "../slotName";
-import { BlankButtons, BlankEq, BlankRow, BlankSlots, MoreSlot, SlotBox } from "./StripSlots";
+import { BlankButtons, BlankEq, BlankRow, BlankSlots, MoreSlot, PlateName, SlotBox } from "./StripSlots";
 import { TrackIcon, TrackIconArt } from "../trackIconArt";
 import { openTrackIconPicker } from "./TrackIconPicker";
 import { slotLayout, stripRows, stripWants, type SlotRows } from "../stripRows";
+import { METER_W, plateInk } from "../mixerLayout";
 
 const PAN = { type: "pan" } as const;
+/** Stereo Out's name plate. */
+const MASTER_PLATE = "#8d9099";
 
 /** Opens a slot's plug-in: a built-in effect's panel, a VST3's editor. A frozen track's plug-ins
  *  are unloaded, and a missing VST3 or a built-in without a panel has nothing to open. */
@@ -222,19 +225,11 @@ export function ChannelStrip({ track, selected, rows }: { track: Track | null; s
   // Every strip shows the shared rows (empty slots below its plug-ins); past them, "+N more".
   const fx = slotLayout(inserts, rowsHere.inserts, inserts.length);
   const name = isMaster ? "Stereo Out" : track.name;
+  // A folder stack has no audio of its own: its strip is a fader, its buttons and a name, with
+  // blank rows where the others have slots so its fader lines up with theirs.
   const folder = track?.kind === "folder";
-  // Subtracks of a summing stack play through it (a folder passes them on).
+  const summing = track?.kind === "summing";
   const tracks = useStore((s) => s.snap?.project.tracks);
-  const output = (() => {
-    let p = track?.parent ?? null;
-    while (p !== null) {
-      const up = tracks?.find((t) => t.id === p);
-      if (!up) break;
-      if (up.kind === "summing") return up.name;
-      p = up.parent;
-    }
-    return "Stereo Out";
-  })();
   const setVolume = (db: number) => (isMaster ? act("set_master_volume", { db }) : api.updateTrack(id, { volume_db: db }));
   // While playing, the fader and pan knob follow the automation.
   // Stereo Out's fader follows its lane on the Output track.
@@ -252,24 +247,26 @@ export function ChannelStrip({ track, selected, rows }: { track: Track | null; s
   // A strip on a VCA shows where it really plays on its fader.
   const vcas = useVcas();
   const vca = track && canAssignVca(track.kind) && track.vca != null ? vcaOffset(vcas, track.vca).db : undefined;
+  // The name plate is filled with the track's colour, as in Logic; Stereo Out's is grey.
+  const plate = isMaster ? MASTER_PLATE : track.color;
   const settingMenu = async (x: number, y: number, minWidth?: number) => {
     if (folder) return;
     openMenu(x, y, await stripSettingMenu(id, name), minWidth);
   };
 
   return (
-    <div className={"strip" + (selected ? " selected" : "") + (off ? " is-off" : "")} onMouseDown={() => {
+    <div className={"strip" + (folder ? " folder" : summing ? " summing" : "") + (selected ? " selected" : "") + (off ? " is-off" : "")} onMouseDown={() => {
         if (!track || selected) return;
         keepRegionsOn([track.id]);
         api.selectTrack(track.id);
       }} onContextMenu={(e) => stripLearnMenu(e, isMaster ? null : id)}>
-      <div className="strip-section">
-        {folder ? (
-          <div className="slot static" />
-        ) : (
+      {folder ? (
+        <BlankRow />
+      ) : (
+        <div className="strip-section">
           <div
             className="slot static output strip-setting"
-            title="Channel strip settings: copy, paste, reset, save and load"
+            title="Setting: copy, paste, reset, save and load the channel strip's settings"
             onMouseDown={(e) => {
               e.stopPropagation();
               if (e.button !== 0) return;
@@ -277,20 +274,20 @@ export function ChannelStrip({ track, selected, rows }: { track: Track | null; s
               settingMenu(r.left, r.bottom + 2, r.width);
             }}
           >
-            Setting
+            <span className="slot-text">Setting</span>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {isMaster ? (
-        // Stereo Out has no input to choose: the row stays, empty, so the strips line up.
+      {isMaster || folder ? (
+        // Stereo Out and folders have no input: the row stays, empty, so the strips line up.
         <BlankRow label />
       ) : (
         <div className="strip-section">
           <div className="strip-label">Input</div>
           {isStack(track.kind) ? (
-            <div className="slot static" title={track.kind === "summing" ? "Its subtracks play through this strip" : "Folder: its fader, mute and solo apply to its subtracks"}>
-              {track.kind === "summing" ? "Subtracks" : "Folder"}
+            <div className="slot static" title="Σ Subtracks: this summing stack's subtracks play through its strip">
+              <span className="slot-text">Σ Subtracks</span>
             </div>
           ) : track.kind === "aux" ? (
             <div className={"slot static output" + (auxIn?.silent ? " no-output" : "")} title={auxIn?.title}>
@@ -314,6 +311,7 @@ export function ChannelStrip({ track, selected, rows }: { track: Track | null; s
               </button>
               <span
                 className="slot-name"
+                title={`Input: ${inputLabel(track.input)}`}
                 onMouseDown={(e) => {
                   e.stopPropagation();
                   openMenuAt(e.currentTarget.parentElement as HTMLElement, inputMenu(track, inputs));
@@ -327,11 +325,11 @@ export function ChannelStrip({ track, selected, rows }: { track: Track | null; s
       )}
 
       {folder ? (
-        <div className="strip-folder-blank">
+        <div className="strip-folder-blank" title="A folder stack: its fader, mute and solo act on its subtracks">
           <BlankEq />
           <BlankSlots rows={rowsHere.inserts} />
           <BlankSlots rows={rowsHere.sends} />
-          <div className="strip-folder-note">A folder has no audio of its own.</div>
+          <div className="strip-folder-note">Folder</div>
         </div>
       ) : (
         <>
@@ -340,9 +338,10 @@ export function ChannelStrip({ track, selected, rows }: { track: Track | null; s
           </div>
 
           <div className="strip-section">
-            <div className="strip-label">
-              Audio FX
+            {/* The latency comes first so a narrow strip can drop "Audio FX" for it (CSS puts it after). */}
+            <div className="strip-label with-badge">
               <StripLatencyBadge id={id} />
+              <span className="strip-label-text">Audio FX</span>
             </div>
             <SlotBox rows={rowsHere.inserts}>
               {inserts.slice(0, fx.shown).map((p, i) => (
@@ -356,11 +355,31 @@ export function ChannelStrip({ track, selected, rows }: { track: Track | null; s
         </>
       )}
 
-      <div className="strip-section">
-        {isMaster || folder ? <div className="slot static output">{isMaster ? "Output 1–2" : output}</div> : <OutputSlot track={track} />}
-      </div>
+      {folder ? (
+        <BlankRow />
+      ) : (
+        <div className="strip-section">
+          {isMaster ? (
+            <div className="slot static output" title="Output 1–2">
+              <span className="slot-text">Output 1–2</span>
+            </div>
+          ) : (
+            <OutputSlot track={track} />
+          )}
+        </div>
+      )}
 
-      <div className="strip-section">{track && canAssignVca(track.kind) ? <VcaSlot track={track} /> : <div className="slot static" />}</div>
+      {track && canAssignVca(track.kind) ? (
+        <div className="strip-section">
+          <VcaSlot track={track} />
+        </div>
+      ) : folder ? (
+        <BlankRow />
+      ) : (
+        <div className="strip-section">
+          <div className="slot static" />
+        </div>
+      )}
 
       <div className="strip-pan">
         {/* Logic puts the automation mode right above the pan knob. */}
@@ -384,11 +403,9 @@ export function ChannelStrip({ track, selected, rows }: { track: Track | null; s
 
       <div className="strip-fader" ref={faderBox}>
         <Fader db={autoVolume} onChange={setVolume} height={faderHeight} vca={vca} {...(isMaster ? {} : volumeTouch)} />
-        {folder ? (
-          <div style={{ width: 11 }} />
-        ) : (
+        {folder ? null : (
           <div className="strip-meters">
-            <Meter source={isMaster ? { kind: "master" } : { kind: "track", id }} height={faderHeight} width={11} />
+            <Meter source={isMaster ? { kind: "master" } : { kind: "track", id }} height={faderHeight} width={METER_W} />
             {dynamics && <GrMeter source={isMaster ? { kind: "master" } : { kind: "track", id }} height={faderHeight} />}
           </div>
         )}
@@ -442,9 +459,9 @@ export function ChannelStrip({ track, selected, rows }: { track: Track | null; s
       )}
 
       <div
-        className="strip-name with-icon"
-        style={{ borderTopColor: isMaster ? "#8d9099" : track.color }}
-        title={name}
+        className={"strip-name with-icon ink-" + plateInk(plate)}
+        style={{ "--plate": plate } as React.CSSProperties}
+        title={summing ? `${name} (summing stack)` : folder ? `${name} (folder stack)` : name}
         onContextMenu={(e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -460,7 +477,6 @@ export function ChannelStrip({ track, selected, rows }: { track: Track | null; s
           <button
             type="button"
             className="strip-icon"
-            style={{ color: track.color }}
             aria-label="Track Icon"
             aria-haspopup="menu"
             title="Choose an icon"
@@ -470,7 +486,12 @@ export function ChannelStrip({ track, selected, rows }: { track: Track | null; s
             <TrackIcon track={track} size={14} />
           </button>
         )}
-        <span className="strip-name-text">{name}</span>
+        {summing && (
+          <span className="strip-sum" title="Summing stack">
+            Σ
+          </span>
+        )}
+        <PlateName name={name} />
       </div>
     </div>
   );
