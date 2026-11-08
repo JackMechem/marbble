@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Draws Marbble's logo: a dark glass marble with a ribbon inside shaped like one cycle of a sine
 wave, a cat's-eye marble and a waveform at once. Writes src-tauri/icons/source.svg (the app icon
-on its rounded square) and site/public/favicon.svg. After changing it, render source.svg to a
+on its rounded square), site/public/favicon.svg, and public/logo.svg (the marble alone, cropped to
+it, for the app's own UI). After changing it, render source.svg to a
 1024 px source.png (`rsvg-convert -w 1024 src-tauri/icons/source.svg -o src-tauri/icons/source.png`)
 and run `pnpm tauri icon src-tauri/icons/source.png`, then delete the android/ and ios/ folders it
 makes."""
@@ -24,12 +25,13 @@ def ribbon(cx, cy, half, amp, thick, n=120):
     return "M" + " L".join(f"{x:.1f} {y:.1f}" for x,y in pts) + " Z"
 
 def svg(size=1024, bg=True):
-    """The logo, on its rounded square when `bg`."""
+    """The logo, on its rounded square when `bg`; without it, the view is cropped to the marble."""
     s = size/1024
     C, R = 512, 368
+    view = "0 0 1024 1024" if bg else f"{C-R} {C-R} {2*R} {2*R}"
     rib = ribbon(C, C, R*1.15, R*0.40, R*0.34)
     rib2 = ribbon(C, C-R*0.035, R*1.15, R*0.40, R*0.08)
-    out = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="{size}" height="{size}">
+    out = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="{view}" width="{size}" height="{size}">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2c2c31"/><stop offset="1" stop-color="#19191c"/></linearGradient>
     <radialGradient id="glass" cx="0.38" cy="0.32" r="0.78"><stop offset="0" stop-color="#6a6a78"/><stop offset="0.55" stop-color="#2c2c34"/><stop offset="1" stop-color="#0d0d10"/></radialGradient>
@@ -57,3 +59,5 @@ def svg(size=1024, bg=True):
 root = Path(__file__).resolve().parent.parent
 (root / "src-tauri/icons/source.svg").write_text(svg())
 (root / "site/public/favicon.svg").write_text(svg())
+(root / "public").mkdir(exist_ok=True)
+(root / "public/logo.svg").write_text(svg(64, bg=False))

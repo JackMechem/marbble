@@ -261,10 +261,7 @@ export function ProjectChooser() {
       <div ref={box} className="chooser" onMouseDown={(e) => e.stopPropagation()} onKeyDown={(e) => sheetKey(e, close)}>
         <aside className="chooser-side">
           <div className="chooser-brand">
-            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-              <path d="M3 15a8 8 0 0 1 16 0" stroke="var(--cycle)" strokeWidth="2.4" strokeLinecap="round" />
-              <circle cx="11" cy="14" r="2.2" fill="var(--text)" />
-            </svg>
+            <img src="/logo.svg" width="22" height="22" alt="" />
             <span>Marbble</span>
           </div>
           <button className={"chooser-nav" + (tab === "new" ? " on" : "")} onClick={() => setState({ chooserTab: "new" })}>
