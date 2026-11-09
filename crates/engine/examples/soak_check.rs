@@ -10,11 +10,23 @@
 //! Plays on four threads throughout (`threads`, 1 for the callback alone): the null device's
 //! callback runs every block through the worker pool while the edits land, renders go through the
 //! pool too, and every so often one is compared with the serial loop's, bit for bit.
-//! usage: soak_check <scratch dir> [edits] [seed] [threads]
+//! usage: soak_check <scratch dir> [edits] [seed] [threads] [tracks]
+//! A seed makes the same edits every run: each choice comes from the seed and the document,
+//! never the playhead or the clock. `edits.log` in the scratch folder has a line for each edit
+//! (what it drew, the tracks and document it left, and renders), so two runs can be compared
+//! line for line; at the end a second process makes the first 60 edits again and must log the
+//! same (SOAK_REPLAY=<edits> for more, 0 for none; none by default in the large mode, which
+//! would grow the project again). SOAK_LIVE_TOUCH=1 lets a built-in effect's knob moved in
+//! Touch write its pass at the live playhead, as the app does, rather than writing seeded
+//! points into its lane; such a run can't be replayed.
+//! With `tracks`, the large mode: first duplicating tracks (one undo step each) up to that many,
+//! which must render the same twice; the edits then duplicate no further, and a reopened project
+//! must render the same twice too. A few hundred tracks take minutes per render (#112).
 //! To find the edit that broke a save and reopen, set SOAK_REOPEN_EVERY=1 (and
 //! SOAK_REOPEN_FROM=<edit> to start checking there). When undoing them all doesn't give the
 //! first document back, it names the edit whose undo went wrong; SOAK_DUMP=1 also writes the
 //! documents before and after it, and what its undo gave, into the scratch folder.
+use std::io::Write;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::PathBuf;
 
@@ -39,35 +51,72 @@ fn check(name: &str, ok: bool) {
     println!("{} {name}", if ok { "PASS" } else { "FAIL" });
 }
 
-/// xorshift64*: small, and the same sequence everywhere.
-struct Rng(u64);
+/// xorshift64*: small, and the same sequence everywhere. Keeps what it hands out since the
+/// last `take_drawn`, for the edit log.
+struct Rng {
+    state: u64,
+    drawn: String,
+}
 
 impl Rng {
+    fn new(seed: u64) -> Rng {
+        Rng { state: seed, drawn: String::new() }
+    }
     fn next(&mut self) -> u64 {
-        self.0 ^= self.0 >> 12;
-        self.0 ^= self.0 << 25;
-        self.0 ^= self.0 >> 27;
-        self.0.wrapping_mul(0x2545_f491_4f6c_dd1d)
+        self.state ^= self.state >> 12;
+        self.state ^= self.state << 25;
+        self.state ^= self.state >> 27;
+        self.state.wrapping_mul(0x2545_f491_4f6c_dd1d)
+    }
+    fn note(&mut self, x: impl std::fmt::Display) {
+        use std::fmt::Write;
+        let _ = write!(self.drawn, " {x}");
     }
     fn below(&mut self, n: usize) -> usize {
-        (self.next() % n.max(1) as u64) as usize
+        let x = (self.next() % n.max(1) as u64) as usize;
+        self.note(x);
+        x
     }
     fn range(&mut self, a: i64, b: i64) -> i64 {
-        a + (self.next() % (b - a).max(1) as u64) as i64
+        let x = a + (self.next() % (b - a).max(1) as u64) as i64;
+        self.note(x);
+        x
     }
+    /// (Logged as one letter each, run together: `some` asks this once per track.)
     fn chance(&mut self, percent: u64) -> bool {
-        self.next() % 100 < percent
+        let x = self.next() % 100 < percent;
+        if !self.drawn.ends_with(['y', 'n']) {
+            self.drawn.push(' ');
+        }
+        self.drawn.push(if x { 'y' } else { 'n' });
+        x
     }
     fn pick<T: Clone>(&mut self, v: &[T]) -> Option<T> {
         (!v.is_empty()).then(|| v[self.below(v.len())].clone())
     }
     fn unit(&mut self) -> f32 {
-        (self.next() % 10_000) as f32 / 10_000.0
+        let x = (self.next() % 10_000) as f32 / 10_000.0;
+        self.note(x);
+        x
+    }
+    fn take_drawn(&mut self) -> String {
+        std::mem::take(&mut self.drawn)
     }
 }
 
 fn render(s: &mut Session) -> Vec<Vec<f32>> {
     s.render(0, LEN, 0, None, &mut |_| {}).unwrap()
+}
+
+/// A render by its hash, for the edit log.
+fn hash_render(a: &[Vec<f32>]) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut h = std::hash::DefaultHasher::new();
+    for x in a {
+        x.len().hash(&mut h);
+        x.iter().for_each(|v| v.to_bits().hash(&mut h));
+    }
+    h.finish()
 }
 
 fn same(a: &[Vec<f32>], b: &[Vec<f32>]) -> bool {
@@ -249,10 +298,22 @@ fn random_points(g: &mut Rng, lo: f32, hi: f32) -> Vec<daw_engine::model::AutoPo
     pos.into_iter().map(|p| pt(p, lo + (hi - lo) * g.unit(), if g.chance(50) { g.unit() * 2.0 - 1.0 } else { 0.0 })).collect()
 }
 
+/// How the edits are made, beyond the seed.
+struct Opts {
+    /// Duplicating stops at this many tracks (the large mode).
+    max_tracks: Option<usize>,
+    /// A built-in effect's knob moved in Touch writes its pass at the live playhead, as in the
+    /// app (SOAK_LIVE_TOUCH), so the run can't be replayed.
+    live_touch: bool,
+}
+
 /// One random edit, made as the app makes it: a checkpoint, then the edit (an error abandons
 /// the checkpoint). A move recorded as automation takes none, as in the app: its pass makes the
 /// step. Returns its name, and whether it left an undo step.
-fn edit(s: &mut Session, g: &mut Rng, w: &World) -> (String, bool) {
+///
+/// Every choice comes from `g` and the document, never from the playhead or the clock, so a
+/// seed makes the same edits every time (the edit log shows it).
+fn edit(s: &mut Session, g: &mut Rng, w: &World, o: &Opts) -> (String, bool) {
     let all = regions(s);
     let audio = regions_where(s, |r| matches!(r.content, RegionContent::Audio { .. }));
     let midi = regions_where(s, |r| matches!(r.content, RegionContent::Midi { .. }));
@@ -579,12 +640,22 @@ fn edit(s: &mut Session, g: &mut Rng, w: &World) -> (String, bool) {
                     if let Some((k, id)) = g.pick(&slots) {
                         if let Some(info) = daw_engine::fx::find(&id) {
                             let p = &info.params[g.below(info.params.len())];
-                            // In Touch, the pass goes into its lane, as one step, straight away.
-                            if s.automation_writing(t) {
-                                s.abandon_checkpoint();
-                                checkpointed = false;
+                            let value = p.min + (p.max - p.min) * g.unit();
+                            let touch = s.project.track(t).is_some_and(|t| t.auto_mode.writes());
+                            if touch && !o.live_touch {
+                                // Playing in Touch, the move would write a pass at the playhead,
+                                // wherever the engine has got to: the lane gets seeded points
+                                // instead.
+                                let uid = s.project.track(t).unwrap().inserts[k].as_ref().unwrap().uid;
+                                s.set_automation_lane(t, AutoParam::Plugin { uid, param: p.id, name: p.name.into() }, random_points(g, 0.0, 1.0));
+                            } else {
+                                // In Touch, the pass goes into its lane, as one step, straight away.
+                                if s.automation_writing(t) {
+                                    s.abandon_checkpoint();
+                                    checkpointed = false;
+                                }
+                                s.set_builtin_param(t, k, p.id, value)?;
                             }
-                            s.set_builtin_param(t, k, p.id, p.min + (p.max - p.min) * g.unit())?;
                         }
                     }
                 }
@@ -614,7 +685,10 @@ fn edit(s: &mut Session, g: &mut Rng, w: &World) -> (String, bool) {
                 }
             }
             47 => {
-                let ids = some(g, &leaves);
+                let mut ids = some(g, &leaves);
+                if let Some(max) = o.max_tracks {
+                    ids.truncate(max.saturating_sub(tracks.len()));
+                }
                 s.duplicate_tracks(&ids, g.chance(60));
             }
             48 => {
@@ -730,12 +804,22 @@ fn main() {
     let count: usize = args.next().map(|x| x.parse().unwrap()).unwrap_or(300);
     let seed: u64 = args.next().map(|x| x.parse().unwrap()).unwrap_or(0x5eed_f00d);
     let threads: u32 = args.next().map(|x| x.parse().unwrap()).unwrap_or(4);
+    let grow: Option<usize> = args.next().map(|x| x.parse().unwrap());
+    let opts = Opts { max_tracks: grow, live_touch: std::env::var_os("SOAK_LIVE_TOUCH").is_some() };
+    // How many of the edits a second process makes again, which must come out the same.
+    let replay: usize =
+        std::env::var("SOAK_REPLAY").ok().and_then(|v| v.parse().ok()).unwrap_or(if grow.is_none() && !opts.live_touch { 60 } else { 0 }).min(count);
+    // One line for each edit: what it drew, and the document (and render) it made. Written as
+    // it goes, to follow a long run.
+    let mut log = std::io::LineWriter::new(std::fs::File::create(scratch.join("edits.log")).expect("edit log"));
+    let mut note = |line: String| writeln!(log, "{line}").unwrap();
     // Patient: a loaded machine may keep a worker from a block for as long as it likes.
     let pool_on = |s: &mut Session| {
         if threads > 1 {
             s.set_threads_for_checks(threads, ParallelTest { always: true, renders: true, patient: true });
         }
     };
+    let started = std::time::Instant::now();
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg.clone(), Vec::new());
     s.prefs.general.undo_limit = 100_000;
@@ -752,12 +836,14 @@ fn main() {
     check(&format!("the all-features project holds together ({:?})", invariants(&s.project)), invariants(&s.project).is_none());
     let first = render(&mut s);
     let first_doc = doc(&s);
+    note(format!("seed {seed:#x}, {threads} threads, up to {grow:?} tracks"));
+    note(format!("the all-features project: doc {:016x}, render {:016x}", print(&first_doc, false).0, hash_render(&first)));
 
     // How often the project is saved and reopened (SOAK_REOPEN_EVERY, for hunting a failure
     // down to its edit).
     let every: usize = std::env::var("SOAK_REOPEN_EVERY").ok().and_then(|v| v.parse().ok()).unwrap_or(50).max(1);
     let from: usize = std::env::var("SOAK_REOPEN_FROM").ok().and_then(|v| v.parse().ok()).unwrap_or(0);
-    let mut g = Rng(seed);
+    let mut g = Rng::new(seed);
     let mut depth = 0usize;
     let mut redo = 0usize;
     let mut broken = None;
@@ -768,6 +854,41 @@ fn main() {
     // documents into the scratch folder).
     let dump = std::env::var_os("SOAK_DUMP").is_some();
     let mut docs = vec![(print(&first_doc, dump), "the all-features project".to_string())];
+
+    // The large mode: duplicating tracks, one undo step each, up to `grow` (the edits then
+    // duplicate no further). #112 showed only in a project of hundreds of tracks.
+    if let Some(n) = grow {
+        let grew = std::time::Instant::now();
+        let mut k = 0;
+        while s.project.tracks.len() < n {
+            let mut ids: Vec<Id> = tracks_of(&s, |t| !t.kind.is_stack()).into_iter().filter(|_| g.chance(50)).collect();
+            ids.truncate(n - s.project.tracks.len());
+            if ids.is_empty() {
+                continue;
+            }
+            s.checkpoint("grow", None, false);
+            s.duplicate_tracks(&ids, g.chance(60));
+            depth += 1;
+            let v = print(&doc(&s), dump);
+            note(format!("grow {k}:{} -> {} tracks, doc {:016x}", g.take_drawn(), s.project.tracks.len(), v.0));
+            docs.push((v, format!("growing {k}")));
+            k += 1;
+        }
+        s.idle();
+        let problem = invariants(&s.project).or_else(|| pdc_problem(&s));
+        check(&format!("the project grew to {} tracks in {k} duplications ({:?})", s.project.tracks.len(), problem), problem.is_none());
+        let a = render(&mut s);
+        let b = render(&mut s);
+        check(
+            &format!(
+                "the large project renders the same twice ({}; {:.0} s to grow and render)",
+                if same(&a, &b) { "bit-identical".into() } else { first_diff(&a, &b) },
+                grew.elapsed().as_secs_f64()
+            ),
+            same(&a, &b),
+        );
+        note(format!("grown: render {:016x}", hash_render(&a)));
+    }
     for i in 0..count {
         // Now and then an undo or redo of earlier edits, as a user would.
         let undid = if depth > 0 && g.chance(8) {
@@ -784,6 +905,7 @@ fn main() {
             None
         };
         if let Some(what) = undid {
+            note(format!("{i:>4} {what}:{} -> doc {:016x}", g.take_drawn(), print(&doc(&s), false).0));
             if let Some(problem) = invariants(&s.project).or_else(|| pdc_problem(&s)) {
                 check(&format!("after {what} {i} the project holds together: {problem}"), false);
                 broken = Some(i);
@@ -792,7 +914,7 @@ fn main() {
             continue;
         }
         let before = (i % 20 == 0).then(|| (render(&mut s), doc(&s)));
-        let made = catch_unwind(AssertUnwindSafe(|| edit(&mut s, &mut g, &w)));
+        let made = catch_unwind(AssertUnwindSafe(|| edit(&mut s, &mut g, &w, &opts)));
         let (name, stepped) = match made {
             Ok(x) => x,
             Err(_) => {
@@ -801,11 +923,13 @@ fn main() {
                 break;
             }
         };
+        let now = print(&doc(&s), dump);
+        note(format!("{i:>4} {name}:{} -> {} tracks, doc {:016x}", g.take_drawn(), s.project.tracks.len(), now.0));
         if stepped {
             depth += 1;
             redo = 0;
             docs.truncate(depth);
-            docs.push((print(&doc(&s), dump), format!("edit {i} ({name})")));
+            docs.push((now, format!("edit {i} ({name})")));
         }
         if i % 7 == 0 {
             s.idle();
@@ -832,6 +956,7 @@ fn main() {
                 }
             };
             let after_doc = doc(&s);
+            note(format!("{i:>4}   render {:016x}", hash_render(&after)));
             if stepped {
                 s.undo();
                 let undone = render(&mut s);
@@ -871,6 +996,18 @@ fn main() {
             pool_on(&mut t);
             t.open(&saved).unwrap();
             let reopened = render(&mut t);
+            note(format!("{i:>4}   saved and reopened: render {:016x}", hash_render(&reopened)));
+            // In the large mode, again: #112's first render of a reopened project differed from the next.
+            if grow.is_some() {
+                let again = render(&mut t);
+                check(
+                    &format!(
+                        "after edit {i} ({name}), the reopened project renders the same twice ({})",
+                        if same(&reopened, &again) { "bit-identical".into() } else { first_diff(&reopened, &again) }
+                    ),
+                    same(&reopened, &again),
+                );
+            }
             check(
                 &format!(
                     "after edit {i} ({name}), the project saves and reopens with the same render ({})",
@@ -933,6 +1070,45 @@ fn main() {
     check("and the last document", doc(&s) == last_doc);
     let dropped = s.status.cmds_dropped.load(std::sync::atomic::Ordering::Relaxed);
     check(&format!("no command for the engine was dropped ({dropped})"), dropped == 0);
+    // (Linux only.)
+    if let Some(peak) =
+        std::fs::read_to_string("/proc/self/status").ok().and_then(|x| x.lines().find(|l| l.starts_with("VmHWM:")).map(|l| l[6..].trim().to_string()))
+    {
+        println!("  {:.0} s, at most {peak} in memory", started.elapsed().as_secs_f64());
+    }
+    log.flush().unwrap();
+    drop(log);
+    drop(s);
+
+    // A second process makes the first edits again, which must draw the same, and make the same
+    // documents and renders, line for line.
+    if replay > 0 {
+        let dir = scratch.join("replay");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let out = std::process::Command::new(std::env::current_exe().unwrap())
+            .arg(&dir)
+            .args([replay.to_string(), seed.to_string(), threads.to_string()])
+            .args(grow.map(|n| n.to_string()))
+            .env("SOAK_REPLAY", "0")
+            .output()
+            .expect("replay");
+        std::fs::write(dir.join("output.log"), &out.stdout).unwrap();
+        let mine = std::fs::read_to_string(scratch.join("edits.log")).unwrap();
+        let theirs = std::fs::read_to_string(dir.join("edits.log")).unwrap_or_default();
+        let (mine, theirs): (Vec<&str>, Vec<&str>) = (mine.lines().collect(), theirs.lines().collect());
+        let differs = (0..theirs.len()).find(|&k| mine.get(k) != theirs.get(k));
+        check(
+            &format!(
+                "a second process makes the first {replay} edits the same, line for line in the edit log ({})",
+                match differs {
+                    None => format!("{} lines", theirs.len()),
+                    Some(k) => format!("line {} differs: {:?} then {:?}", k + 1, mine.get(k).unwrap_or(&""), theirs[k]),
+                }
+            ),
+            theirs.len() > 2 && differs.is_none(),
+        );
+    }
 
     if FAILED.load(std::sync::atomic::Ordering::Relaxed) {
         std::process::exit(1);
