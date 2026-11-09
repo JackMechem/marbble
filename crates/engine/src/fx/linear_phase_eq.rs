@@ -13,9 +13,10 @@
 //!   through a lock-free queue, and the convolver crossfades to it over about
 //!   [`FADE_SECS`]. A fast automation sweep is therefore followed in steps of about 25 ms,
 //!   each faded into the next.
-//! - Offline renders (bounces, freezes) may block, so the effect waits for the worker instead:
-//!   changes land at the same point of every render, and the result doesn't depend on the
-//!   speed of the machine.
+//! - Offline renders (bounces, freezes) may block, so a render designs each kernel it needs
+//!   itself (unless the worker has it ready) and uses it at once: changes land at the same point
+//!   of every render, and the result doesn't depend on the speed of the machine or on when the
+//!   worker gets to run.
 
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
@@ -109,8 +110,8 @@ struct Shared {
     values: [AtomicU32; ID_SPACE],
     /// Bumped after every parameter change.
     gen: AtomicU64,
-    /// An offline render waits: design now, whatever the interval.
-    urgent: AtomicBool,
+    /// The effect is rendering offline, and designs the kernels it needs itself.
+    offline: AtomicBool,
     stop: AtomicBool,
 }
 
@@ -123,19 +124,18 @@ struct Link {
 }
 
 /// The worker: designs a kernel whenever the parameters changed, no more often than
-/// `DESIGN_INTERVAL` unless an offline render asks, and frees kernels the effect is done with.
+/// `DESIGN_INTERVAL` and not during an offline render, and frees kernels the effect is done with.
 fn run_worker(shared: Arc<Shared>, mut out: rtrb::Producer<Box<Kernel>>, mut spent: rtrb::Consumer<Box<Kernel>>, sample_rate: f32, mut done: u64) {
     let fft = plan_forward();
     let mut last: Option<Instant> = None;
     while !shared.stop.load(Ordering::Acquire) {
         while spent.pop().is_ok() {}
         let gen = shared.gen.load(Ordering::Acquire);
-        let urgent = shared.urgent.load(Ordering::Acquire);
+        let offline = shared.offline.load(Ordering::Acquire);
         let since = last.map(|t| t.elapsed()).unwrap_or(DESIGN_INTERVAL);
-        if gen != done && (urgent || since >= DESIGN_INTERVAL) && out.slots() > 0 {
+        if gen != done && !offline && since >= DESIGN_INTERVAL && out.slots() > 0 {
             // The values are at least as new as `gen` (they're stored before it).
             let values: [f32; ID_SPACE] = std::array::from_fn(|i| f32::from_bits(shared.values[i].load(Ordering::Relaxed)));
-            shared.urgent.store(false, Ordering::Release);
             let k = design(&values, sample_rate, gen, fft.as_ref());
             if out.push(k).is_ok() {
                 done = gen;
@@ -177,6 +177,8 @@ pub struct LinearPhaseEq {
     /// follow automation as playback does).
     since_design: usize,
     design_frames: usize,
+    /// The FFT plan renders design kernels with, made by the first that needs one.
+    offline_fft: Option<Arc<dyn realfft::RealToComplex<f32>>>,
 }
 
 impl LinearPhaseEq {
@@ -191,7 +193,7 @@ impl LinearPhaseEq {
         let shared = Arc::new(Shared {
             values: std::array::from_fn(|i| AtomicU32::new(values[i].to_bits())),
             gen: AtomicU64::new(0),
-            urgent: AtomicBool::new(false),
+            offline: AtomicBool::new(false),
             stop: AtomicBool::new(false),
         });
         let (k_tx, k_rx) = rtrb::RingBuffer::new(2);
@@ -213,6 +215,7 @@ impl LinearPhaseEq {
             fresh: true,
             since_design: 0,
             design_frames: (DESIGN_INTERVAL.as_secs_f32() * sample_rate) as usize,
+            offline_fft: None,
         }
     }
 
@@ -240,28 +243,26 @@ impl LinearPhaseEq {
         }
     }
 
-    /// Waits for the kernel of the current settings (offline only: this blocks).
+    /// Puts the kernel of the current settings to use (offline only: this blocks and allocates).
+    /// The worker's serves if it has one ready; otherwise the render designs it here rather than
+    /// wait for the worker, which a loaded machine may not run for a long while: what a render
+    /// plays mustn't depend on that.
     fn wait_for_kernel(&mut self) {
         let want = self.gen;
-        let Some(link) = &mut self.link else { return };
-        let deadline = Instant::now() + Duration::from_secs(10);
-        let mut best: Option<Box<Kernel>> = None;
-        loop {
+        let mut ready: Option<Box<Kernel>> = None;
+        if let Some(link) = &mut self.link {
             while let Ok(k) = link.kernels.pop() {
-                if let Some(old) = best.replace(k) {
-                    drop(old);
-                }
+                ready = Some(k);
             }
-            if best.as_ref().is_some_and(|k| k.gen >= want) || Instant::now() > deadline {
-                break;
+        }
+        let k = match ready {
+            Some(k) if k.gen == want => k,
+            _ => {
+                let fft = self.offline_fft.get_or_insert_with(plan_forward);
+                design(&self.values, self.sample_rate, want, fft.as_ref())
             }
-            link.shared.urgent.store(true, Ordering::Release);
-            link.worker.unpark();
-            std::thread::sleep(Duration::from_micros(200));
-        }
-        if let Some(k) = best {
-            self.adopt(k);
-        }
+        };
+        self.adopt(k);
         self.since_design = 0;
     }
 
@@ -341,6 +342,10 @@ impl Effect for LinearPhaseEq {
 
     fn set_offline(&mut self, offline: bool) {
         self.offline = offline;
+        if let Some(l) = &self.link {
+            l.shared.offline.store(offline, Ordering::Release);
+            l.worker.unpark();
+        }
     }
 }
 
@@ -560,6 +565,34 @@ mod tests {
             l.iter().map(|x| x.to_bits()).collect::<Vec<u32>>()
         };
         assert!(render(0) == render(48_000), "the same render after a second of playing as after none");
+    }
+
+    /// A render plays the new settings at the same frame whether the worker keeps up or not: here
+    /// it has stopped altogether, as a loaded machine may not run it for a long while.
+    #[test]
+    fn a_render_takes_the_new_filter_without_the_worker() {
+        let render = |worker: bool, change: bool| {
+            let mut e = offline(&[]);
+            if !worker {
+                let l = e.link.as_ref().unwrap();
+                l.shared.stop.store(true, Ordering::Release);
+                l.worker.unpark();
+                std::thread::sleep(Duration::from_millis(50));
+            }
+            let (mut l, mut r) = (noise(8192), noise(8192));
+            for (k, (bl, br)) in l.chunks_mut(512).zip(r.chunks_mut(512)).enumerate() {
+                if k == 4 && change {
+                    e.set_param(gain(4), 12.0);
+                }
+                e.process(bl, br, None, &CTX);
+            }
+            l.iter().map(|x| x.to_bits()).collect::<Vec<u32>>()
+        };
+        let t = Instant::now();
+        let without = render(false, true);
+        assert!(t.elapsed() < Duration::from_secs(2), "it didn't wait for the worker: {:?}", t.elapsed());
+        assert!(without != render(false, false), "the new filter plays");
+        assert!(without == render(true, true), "the same render with the worker stalled as without");
     }
 
     #[test]

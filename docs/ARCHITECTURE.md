@@ -913,7 +913,7 @@ The parallel tests, `parallel_check` and `soak_check` ran clean under ThreadSani
 
 **Plug-ins with threads of their own.** TONE3000 runs its model on its own pool of worker threads, and
 the Linear Phase EQ designs filters on a thread. Their output depends on timing, serial or not, which
-is why `parallel_check` doesn't use TONE3000, and swaps the EQ out live (a render waits for it).
+is why `parallel_check` doesn't use TONE3000, and swaps the EQ out live (a render designs its filters itself).
 
 **The CPU meter** (`Tick.cpu`, `cpu_peak`, `late_blocks`) is still the wall-clock time of the callback
 over the buffer's duration, as that is what decides a dropout. `Tick.threads` says how many threads are
@@ -1992,9 +1992,10 @@ it opens so tracks don't come and go during edits.
   Each instance has a worker thread: parameter changes reach it through atomics, it designs at
   most every 25 ms and passes `Kernel`s over `rtrb` queues (used ones go back to it to be
   freed); the `Convolver` crossfades old and new kernel outputs over 20 ms, sharing the input
-  spectra. Offline it waits for the worker instead, at most every 25 ms of audio, counted
-  from the reset that starts the render, so a render's kernel changes land at the same frames
-  whatever played before it. The panel reuses the Channel EQ editor
+  spectra. Offline the render designs the kernels itself instead (the worker pauses), at most
+  every 25 ms of audio, counted from the reset that starts the render, and uses each at once,
+  so a render's kernel changes land at the same frames whatever played before it and however
+  loaded the machine is. The panel reuses the Channel EQ editor
   (`EqEditor` in `Eq.tsx`) through `src/linearPhaseEq.ts`.
 
 To add an effect: write `fx/<name>.rs` with `pub fn info() -> EffectInfo` and

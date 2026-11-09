@@ -63,6 +63,11 @@ All notable changes to Marbble are recorded here. The format follows
   column.
 ### Fixed
 
+- **Bounces with the Linear Phase EQ come out the same every time.** During a bounce, export,
+  Freeze or Bounce in Place, an automated or edited Linear Phase EQ could carry on with its old
+  filter if the computer was so busy that the new one took more than 10 seconds to arrive, so two
+  bounces of the same project could differ. A render now makes each new filter itself, at the
+  same point every time, and no longer waits on another thread.
 - **A side-chain change on a track sitting out answers at once.** While a track sits out
   because a plug-in on it stopped responding, choosing or clearing the side-chain of a VST3 on
   it says at once that it can't change until the track is back. Before, it held the window up
