@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { AUTO_LINE_H, COMPACT_TIER_H, FULL_TIER_H, headerTier, levelSliderSize, meterScale, meterTravel, nameLines, SLIDER_METER_FLOOR, thumbCenter, TWO_LINE_H } from "../src/trackHeader.ts";
-import { MIN_BODY_H, regionBar, fadeZone } from "../src/regionBar.ts";
+import { BAR_ONLY_H, drawnBar, regionBar, fadeZone } from "../src/regionBar.ts";
 import { dragsTrack, HEADER_CONTROLS, REORDER_SLOP, reorderIndex } from "../src/trackHeader.ts";
 
 // The fader taper from time.ts (which can't be loaded here: it imports the tempo module).
@@ -119,14 +119,34 @@ test("a level reaches the thumb set to the same dB", () => {
 });
 
 test("region name bar: unchanged on tall regions, slim on short ones, never past the region", () => {
-  assert.deepEqual(regionBar(61), { bar: 14, font: "sm", bodyTop: 16, bodyH: 43 });
+  assert.deepEqual(regionBar(61), { barOnly: false, bar: 14, font: "sm", bodyTop: 16, bodyH: 43 });
   for (let h = MIN_TRACK_H - 3; h <= 300; h++) {
     const g = regionBar(h);
     assert.ok(g.bodyTop >= g.bar);
     assert.ok(g.bodyTop + g.bodyH <= h, `body inside a ${h} px region`);
   }
-  // The smallest track still shows a strip of waveform or notes.
-  assert.ok(regionBar(MIN_TRACK_H - 3).bodyH >= MIN_BODY_H);
+});
+
+test("short regions are drawn as their name bar alone, from where the track header goes to one line", () => {
+  // A region is 3 px shorter than its lane.
+  assert.equal(BAR_ONLY_H, COMPACT_TIER_H - 3);
+  for (let h = MIN_TRACK_H - 3; h <= 300; h++) {
+    const g = regionBar(h);
+    assert.equal(g.barOnly, h < BAR_ONLY_H, `${h} px`);
+    if (g.barOnly) {
+      // The bar fills the region, with room for the name at the larger size.
+      assert.equal(drawnBar(g, h), h);
+      assert.equal(g.font, "sm");
+    } else {
+      // Whatever has a body shows enough of it to read a waveform or notes.
+      assert.equal(drawnBar(g, h), g.bar);
+      assert.ok(g.bodyH >= 12, `a ${h} px region's body is ${g.bodyH} px`);
+    }
+    // Presses still divide a bar-only region: the loop handle above, the trims below.
+    assert.ok(g.bodyTop < h, `${h} px`);
+  }
+  assert.equal(regionBar(MIN_TRACK_H - 3).barOnly, true);
+  assert.equal(regionBar(61).barOnly, false);
 });
 
 test("fade handles take at most the top half of a short body", () => {

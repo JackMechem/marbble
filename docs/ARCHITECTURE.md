@@ -2737,7 +2737,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `fades.ts` | Fade curves and crossfades for drawing (mirrors `fades.rs`), the inspector's fade types, the handles' places; pure, tested. |
 | `dragModes.ts` | The drag modes' rules for drawing a drag's outcome (mirrors `drag_modes.rs`); pure, tested. |
 | `drumReplace.ts` | Drum Replacement/Doubling's settings, the threshold over the engine's candidate hits (pure, tested), and the markers the Tracks area draws while its sheet (`components/DrumReplace.tsx`) is open. |
-| `regionBar.ts` | A region's name bar and body at a given track height; pure, tested. |
+| `regionBar.ts` | A region's name bar and body at a given track height, and the height below which it's drawn as its bar alone; pure, tested. |
 | `trackHeader.ts` | Track header layouts by height (and how many lines the name may take), the volume slider's meter scale, and which presses drag a track and where it drops; pure, tested. |
 | `headerColumns.ts` | The button columns the track headers share, with gaps where a track has no such button; pure, tested. |
 | `regionParams.ts` | The Region inspector's playback parameter values and how they show; pure, tested. |

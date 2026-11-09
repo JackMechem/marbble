@@ -29,8 +29,9 @@ export function grabKind(h: RegionPress, pps: number, crossfades: (id: Id) => Re
   const edge = Math.min(8, rw / 4);
   // The name bar (see regionBar; regions are drawn 1 px into the lane and 3 px shorter) and
   // the lane margin above it: the loop handle is up there, trims and fades below.
-  const { bodyTop, bodyH } = regionBar(h.laneH - 3);
-  const zone = fadeZone(bodyH, FADE_ZONE);
+  // A region drawn as its bar alone shows no fades, so it has no fade handles either.
+  const { barOnly, bodyTop, bodyH } = regionBar(h.laneH - 3);
+  const zone = barOnly ? 0 : fadeZone(bodyH, FADE_ZONE);
   const looped = isLooped(r);
   const endX = regionEnd(r) * pps;
   if (h.localY <= bodyTop && h.x > endX - (looped ? Math.min(8, (endX - rx - rw) / 2) : edge)) return "loop";

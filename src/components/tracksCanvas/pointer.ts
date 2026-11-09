@@ -18,7 +18,7 @@ import { draggedFadeOut } from "../../fades";
 import { edgeNear, folderBarHit, isMidiFolder, sectionAt } from "../../comps";
 import { isFolder, isOpen, moveCompEdge, swipeComp, takeAtRow, takeFolderMenu, takeShift, toggleFolder } from "../../takes";
 import { toggleOverview } from "../Overview";
-import { regionBar } from "../../regionBar";
+import { drawnBar, regionBar } from "../../regionBar";
 import { moveAutomationAnswer } from "../../moveAutomation";
 import { movedStart, placedAt } from "../../musicalMove";
 import { lanesPast, splitDrop } from "../../newTrackDrag";
@@ -93,12 +93,15 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
   /** What a press at `h` on a region grabs (see regionGrab.ts). */
   const grabKind = (h: NonNullable<ReturnType<typeof hit>>) => regionGrabKind(h, live.current.pps, regionCrossfades);
 
-  /** On a take folder's name bar, whether `h` is on its triangle or its badge (see comps.ts). */
+  /** On a take folder's name bar, whether `h` is on its triangle or its badge (see comps.ts).
+   *  A short folder is its name bar alone; below where the bar would end, its trims win. */
   const folderHit = (h: NonNullable<ReturnType<typeof hit>>) => {
     const r = h.region;
     if (!r || !isFolder(r) || h.inLoop) return null;
+    const g = regionBar(h.laneH - 3);
+    if (g.barOnly && h.localY > g.bar + 1 && grabKind(h) !== "move") return null;
     const bx = Math.max(r.start * live.current.pps, scrollRef.current!.scrollLeft);
-    return folderBarHit(h.x - bx, h.localY, regionBar(h.laneH - 3).bar);
+    return folderBarHit(h.x - bx, h.localY, drawnBar(g, h.laneH - 3));
   };
 
   /** What the tools (trackTools.ts) need to handle the pointer. */

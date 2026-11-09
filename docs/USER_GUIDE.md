@@ -328,8 +328,10 @@ Track headers:
 - **Button columns:** each button has its column, the same on every header, with a gap where a
   track has no such button (an instrument track has no I, an aux no R, I or Freeze). On one-line
   headers the columns are those of the switches that are on somewhere, so one track's M lines up
-  with another's. Regions on short tracks get a slimmer name bar over a
-  thin strip of waveform or notes.
+  with another's. Regions on short tracks get a slimmer name bar, and on tracks below 32 px
+  (where the header goes to one line) a region is a bar of its colour with just its name,
+  centred: no waveform, notes or fades. Its edges still trim it. An open take folder's take
+  rows keep showing their takes.
 - **Volume:** drag the slider (Shift for fine), double-click or Alt-click it for 0 dB; its
   tooltip shows the level. In a group with volume linked, the other members follow. The line is
   brighter up to the thumb. The meter in the line is post-fader and uses the slider's own scale, so a full-scale signal

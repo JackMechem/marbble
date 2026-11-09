@@ -8,7 +8,7 @@ import { loopPasses } from "./loops";
 import { crossfadeLaws, crossfadesByRegion, fadeCurve, fadeHandles, resized, shapeOf, type Crossfade, type RegionCrossfades } from "./fades";
 import { FOLDER_BADGE_W, folderLabel } from "./comps";
 import { drawCompWave, drawFolderBadge, isFolder } from "./takes";
-import { MIN_BODY_H, regionBar } from "./regionBar";
+import { drawnBar, regionBar } from "./regionBar";
 import { playedNotes } from "./regionParams";
 import { drawPatternMini } from "./stepSeq";
 import { gainScale } from "./regionGain";
@@ -50,9 +50,10 @@ export function drawRegion(
   waveScale = 1,
 ) {
   const color = r.muted ? MUTED_COLOR : r.color ?? t.color;
-  // Short tracks get a slimmer name bar, so the body keeps a strip of its own.
+  // Short tracks get a slimmer name bar, so the body keeps a strip of its own; the shortest
+  // regions are the bar alone.
   const geom = regionBar(h);
-  const headerH = geom.bar;
+  const headerH = drawnBar(geom, h);
   const style = theme.region;
   // Body, name bar and content (waveform / notes) colours for each region style:
   //   glass — translucent tint over the lane (Studio)
@@ -79,7 +80,7 @@ export function drawRegion(
   ctx.clip();
   ctx.fillStyle = bar;
   ctx.fillRect(x, y, w, headerH);
-  if (style === "glass") {
+  if (style === "glass" && !geom.barOnly) {
     ctx.fillStyle = "rgba(0,0,0,0.18)";
     ctx.fillRect(x, y + headerH, w, 1);
   }
@@ -99,8 +100,8 @@ export function drawRegion(
   }
   const bodyTop = y + geom.bodyTop;
   const bodyH = geom.bodyH;
-  // A body too short to read (the smallest track heights) shows no waveform or notes.
-  const showBody = bodyH >= MIN_BODY_H;
+  // A region too short to read (the smallest track heights) shows no waveform, notes or fades.
+  const showBody = !geom.barOnly;
   if (showBody && r.content.type === "audio") {
     const wave = waveCache.get(r.content.clip);
     if (isFolder(r)) drawCompWave(ctx, r, x, w, bodyTop, bodyH, pps, content, visX0, visX1, shift, waveScale * 10 ** (r.content.gain_db / 20));
@@ -199,7 +200,7 @@ export function drawLoops(
     // The notch: a small wedge at the top edge and a hairline down the name bar.
     const nx = Math.round(x) + 0.5;
     ctx.fillStyle = "rgba(0,0,0,0.45)";
-    ctx.fillRect(nx - 0.5, y, 1, regionBar(h).bar);
+    ctx.fillRect(nx - 0.5, y, 1, drawnBar(regionBar(h), h));
     ctx.beginPath();
     ctx.moveTo(nx - 4, y);
     ctx.lineTo(nx + 4, y);

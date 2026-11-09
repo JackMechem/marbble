@@ -25,6 +25,10 @@ All notable changes to Marbble are recorded here. The format follows
   its icon or number. The buttons, the volume slider and a name being edited keep their own
   presses; a click without moving still selects the track and a double-click on the name still
   renames it.
+- **Regions on very short tracks are clean bars with their name.** Below 32 px, where the track
+  header goes to one line, a region no longer squeezes its waveform or notes into a few pixels:
+  it's drawn as a bar of its colour with its name centred in it, and shows no fades (its edges
+  still trim it). An open take folder's take rows still show their takes.
 - **Text drawn in the editors is on the interface's type scale.** The ruler, region and marker
   names, notes, the Piano Roll's keys, the tempo and signature tracks and the effect panels'
   graphs drew their text at their own sizes from 8 to 12 px, some in a different font. They now

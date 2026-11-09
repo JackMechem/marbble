@@ -66,3 +66,16 @@ test("looping: the handle is at the loop's end, repetitions move, and the fade-o
   // At the body's right end the fade band trims rather than sets a fade.
   assert.equal(grabKind(press(looped, 198, inFadeBand), pps, none), "right");
 });
+
+test("a region drawn as its bar alone has no fade handles, but still trims and loops", () => {
+  const short = 24; // a 21 px region: bar only
+  assert.ok(regionBar(short - 3).barOnly);
+  const g = regionBar(short - 3);
+  const at = (region: Region, x: number, localY: number) => grabKind({ region, x, localY, laneH: short, inLoop: false }, pps, none);
+  const below = g.bodyTop + 1;
+  assert.equal(at(audio(), 102, below), "left");
+  assert.equal(at(audio(), 198, below), "right");
+  assert.equal(at(audio({}, 300, 300), 130, below), "move", "no fade-in handle at the fade point");
+  assert.equal(at(audio(), 195, g.bodyTop - 1), "loop");
+  assert.equal(at(audio(), 150, below), "move");
+});

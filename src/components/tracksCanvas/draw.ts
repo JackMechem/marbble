@@ -13,7 +13,7 @@ import { viewport } from "../../view";
 import { isLooped, loopEnd, regionEnd } from "../../loops";
 import { drawAutomation } from "../../automation";
 import { drawTakeRows, isFolder, isOpen } from "../../takes";
-import { MIN_BODY_H, regionBar } from "../../regionBar";
+import { drawnBar, regionBar } from "../../regionBar";
 import { dragOutcome, type Outcome } from "../../dragModes";
 import { movedStart } from "../../musicalMove";
 import { newLaneId } from "../../newTrackDrag";
@@ -318,8 +318,8 @@ function drawLiveTakes(ctx: CanvasRenderingContext2D, project: Project, layout: 
     ctx.clip();
     ctx.fillStyle = theme.red;
     const g = regionBar(h);
-    ctx.fillRect(x, y, w, g.bar);
-    if (g.bodyH >= MIN_BODY_H) drawWave(ctx, { frames: take.frames, bucket: PEAK_BUCKET, levels: [{ min: null, max: take.peaks }] }, passFrom, x, w, y + g.bodyTop, g.bodyH, pps, theme.region === "light" ? mix(theme.red, "#000000", 0.35) : mix(theme.red, "#ffffff", 0.4), 0, W);
+    ctx.fillRect(x, y, w, drawnBar(g, h));
+    if (!g.barOnly) drawWave(ctx, { frames: take.frames, bucket: PEAK_BUCKET, levels: [{ min: null, max: take.peaks }] }, passFrom, x, w, y + g.bodyTop, g.bodyH, pps, theme.region === "light" ? mix(theme.red, "#000000", 0.35) : mix(theme.red, "#ffffff", 0.4), 0, W);
     ctx.restore();
   }
 }
