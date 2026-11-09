@@ -20,6 +20,25 @@
   margin: 0 0 0 6px;
 }
 
+/* Each input with the output its controller feedback goes to. */
+.midi-feedback {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.midi-feedback-row {
+  display: grid;
+  grid-template-columns: minmax(0, 220px) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.midi-feedback-row .midi-port-name {
+  white-space: nowrap;
+}
+
 .velocity-graph rect {
   fill: var(--field);
   stroke: var(--line);

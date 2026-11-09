@@ -101,6 +101,9 @@ impl Session {
         if old.midi.disabled_inputs != p.midi.disabled_inputs {
             self.midi.set_disabled(p.midi.disabled_inputs.clone());
         }
+        if old.midi.disabled_outputs != p.midi.disabled_outputs {
+            self.midi_out.set_disabled(p.midi.disabled_outputs.clone());
+        }
         self.midi.set_velocity(p.midi.velocity, p.midi.fixed_velocity);
         let limit = p.general.undo_limit.max(1);
         if self.undo_stack.len() > limit {
@@ -333,9 +336,14 @@ impl Session {
         self.auto_crossfade(ids, pairs);
     }
 
-    /// MIDI input ports and whether each is in use.
+    /// MIDI input ports, whether each is in use, and the output paired with it automatically.
     pub fn midi_ports(&self) -> Vec<MidiPort> {
-        self.midi.ports()
+        let outputs = self.midi_out.keys();
+        let mut ports = self.midi.ports();
+        for p in &mut ports {
+            p.auto_output = crate::feedback::auto_output(&p.key, &outputs).map(str::to_string);
+        }
+        ports
     }
 
     /// The latest messages from hardware MIDI inputs.

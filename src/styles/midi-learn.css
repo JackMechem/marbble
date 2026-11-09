@@ -24,7 +24,7 @@
 .ctl-head,
 .ctl-row {
   display: grid;
-  grid-template-columns: 74px 46px minmax(0, 1.1fr) minmax(0, 1.6fr) 86px 64px 64px auto;
+  grid-template-columns: 74px 46px minmax(0, 1.1fr) minmax(0, 1.6fr) 86px 64px 64px 60px auto;
   align-items: center;
   gap: 8px;
 }
@@ -70,3 +70,12 @@
   color: var(--faint);
 }
 
+/* The Feedback checkbox, centred under its heading. */
+.ctl-row .ctl-feedback {
+  justify-self: center;
+}
+
+/* No output is paired with the controller's input: the setting waits for one. */
+.ctl-row .ctl-feedback.dim input {
+  opacity: 0.5;
+}

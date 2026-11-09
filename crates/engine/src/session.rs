@@ -73,6 +73,7 @@ mod drag_modes;
 mod strip_meters;
 pub use strip_meters::PeakHolds;
 mod controllers;
+mod feedback;
 mod marquee;
 mod strip_settings;
 pub use controllers::{controller_label, AssignmentRow};
@@ -220,6 +221,8 @@ pub struct Session {
     /// Whether the process's memory is locked (`apply_memory_lock`).
     pub memory_lock: crate::memlock::MemoryLock,
     midi: MidiIo,
+    /// MIDI outputs, for controller feedback (see `session/feedback.rs`).
+    midi_out: crate::midi_out::MidiOut,
     midi_rec_rx: rtrb::Consumer<(i64, [u8; 3])>,
     recorder: Recorder,
     controllers: HashMap<Id, PluginController>,
@@ -294,6 +297,8 @@ pub struct Session {
     regions_tempo: Option<crate::tempo::TempoMap>,
     /// Controller assignments (see `session/controllers.rs`).
     controls: controllers::Controls,
+    /// What controllers show, for feedback (see `session/feedback.rs`).
+    feedback: feedback::Feedback,
     /// The sequence number of the next MIDI input message the ticks haven't reported.
     midi_seen: u64,
     /// What Cut Section Between Locators took out last, for Insert Cut Section.
@@ -388,6 +393,8 @@ impl Session {
         let engine = Arc::new(Mutex::new(Engine::new(audio_config.sample_rate as f64, cmd_rx, garbage_tx, status.clone(), live_rx, rec_tx, an_tx)));
         let mut midi = MidiIo::new(live_tx);
         midi.refresh();
+        let mut midi_out = crate::midi_out::MidiOut::new();
+        midi_out.refresh();
         let engine_rate = audio_config.sample_rate as f64;
         let mut s = Session {
             project: Project::new("Untitled", audio_config.sample_rate),
@@ -406,6 +413,7 @@ impl Session {
             audio_config,
             memory_lock: crate::memlock::MemoryLock::initial(),
             midi,
+            midi_out,
             midi_rec_rx: rec_rx,
             recorder: Recorder::new(),
             sampler: Default::default(),
@@ -452,6 +460,7 @@ impl Session {
             peak_holds: PeakHolds::default(),
             regions_tempo: None,
             controls: Default::default(),
+            feedback: Default::default(),
             midi_seen: 0,
             section_clip: None,
             vst_watches: HashMap::new(),

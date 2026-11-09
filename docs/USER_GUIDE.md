@@ -2755,7 +2755,9 @@ orange in Touch and Latch, red in Write.
 ## 14. Controller assignments (MIDI Learn)
 
 A knob, fader or button on a MIDI controller can drive a mixer control, a plug-in parameter or
-a transport button, as with Logic's Control Surfaces › Learn Assignment.
+a transport button, as with Logic's Control Surfaces › Learn Assignment. Controllers with lights
+or motor faders are sent the values back, so they show what Marbble does (see
+[Feedback to the controller](#feedback-to-the-controller)).
 
 ### Learning an assignment
 
@@ -2806,11 +2808,40 @@ one:
   (the mouse, automation, undo) lets go of it again.
 - **Min %** and **Max %**: the stretch of the parameter's travel the controller sweeps. Min
   above Max turns the controller round.
+- **Feedback**: send the parameter's value back to the controller (on by default). Greyed when
+  the controller's input has no output paired with it in Settings › MIDI; the setting is kept for
+  when it has.
 - **Delete** removes it; that controller plays the instrument again.
 
 An assignment whose track or plug-in isn't in the open project is greyed and does nothing.
 **Learn Transport Button…** assigns a button to Play / Stop, Record or Cycle. Learn Assignment
 (Ctrl+L) and the transport keys work while the window is open; editing keys don't.
+
+### Feedback to the controller
+
+Each assignment sends its parameter's value back to the controller, so a button's light shows
+whether the track is muted and a motor fader stands where the fader on screen does:
+
+- It goes out on the **output paired with the controller's input**. Most controllers have an
+  input and an output of the same name, and those are paired automatically; choose another
+  output, or none, under Settings › MIDI › Feedback.
+- It is sent as the kind of message the controller sends: a CC value (through the assignment's
+  Min and Max, on the fader's taper for levels), a 14-bit pitch bend, or for Mute, Solo, Record
+  Enable, a Channel EQ band's on/off and the transport buttons 127 for on and 0 for off.
+- It follows every change, whatever made it: the mouse, a plug-in's own window, automation
+  playing in Read, Touch or Latch, undo and redo, opening a project, editing the assignment.
+  When an output is connected (a controller plugged in, or switched on in Settings › MIDI), all
+  its assignments are sent at once.
+- At most about 30 messages a second go to one controller, always ending on the latest value.
+- Nothing is sent to a controller while you move it, nor for half a second after, so a motor
+  fader doesn't fight your hand; then it is told where the parameter is (with **Pickup**, a
+  fader that hadn't caught the parameter goes there). A button's light is set as soon as you
+  let go of it.
+- An assignment whose parameter isn't in the open project sends nothing.
+
+To watch what Marbble sends, on Linux: start `aseqdump` (from alsa-utils) in a terminal. It opens
+a port named "aseqdump", which Settings › MIDI lists as an output within a few seconds; choose it
+under Feedback for your controller's input, and every message Marbble sends is printed.
 
 ---
 
@@ -3140,6 +3171,8 @@ new project folder; the project refers to them where they are.
 | Setting | Choices | Default |
 |---|---|---|
 | MIDI Inputs | A checkbox per input, with its connection status | All on |
+| MIDI Outputs | A checkbox per output, with its connection status: where controller feedback goes | All on |
+| Feedback | Per input: the output its controller assignments send their values back to: Automatic (the output of the same device, named in brackets), No feedback, or any output | Automatic |
 | MIDI Thru | Play the selected instrument track live | On |
 | Velocity | As played; Soft (light touch plays louder); Hard (needs a firmer touch); Fixed velocity (1 to 127) | As played (fixed: 100) |
 | Chase | Notes; Controllers: when playback starts, jumps or cycles back inside a region, start the notes held there and send the controller values in effect | Both on |

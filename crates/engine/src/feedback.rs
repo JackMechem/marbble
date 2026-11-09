@@ -1,0 +1,325 @@
+//! Controller feedback, as Logic sends it to a control surface: each assignment's target value
+//! goes back to the controller it was learnt from, so button lights and motor faders show the
+//! DAW's state after a mouse move, an undo, automation or opening a project.
+//!
+//! This module is the pure part: the message that shows a value on a controller (the inverse of
+//! how its moves are applied), which output port a controller's input is paired with, and the
+//! per-controller [`Throttle`] that limits the rate and keeps quiet while the controller itself
+//! is moving. The session reads the values and decides what to send on the main thread
+//! (`session/feedback.rs`); `midi_out.rs` sends it from a thread of its own.
+
+use std::time::{Duration, Instant};
+
+use crate::controllers::{Assignment, CtlKind};
+
+/// The least time between two messages to one controller: at most 40 a second (the 30 ms idle
+/// tick makes it about 33), always with the latest value.
+pub const MIN_GAP: Duration = Duration::from_millis(25);
+
+/// How long after a controller's last move feedback to it waits, so a motor fader isn't driven
+/// against the hand moving it. The same half second after which a controller lets go of its
+/// parameter (`session/controllers.rs`).
+pub const QUIET: Duration = Duration::from_millis(500);
+
+/// What a controller should show.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Shown {
+    /// A switch (Mute, Solo, Record, a transport button): full on or off, for a button's light.
+    Switch(bool),
+    /// A position on the target's own 0..1 travel (the fader's taper for levels).
+    Travel(f32),
+}
+
+/// The controller value (0..1) that puts the parameter at `travel`: the inverse of
+/// [`Assignment::scale`], so a controller whose range is a stretch of the travel shows where the
+/// parameter is inside it (pinned to an end outside it).
+pub fn unscale(a: &Assignment, travel: f32) -> f32 {
+    let (lo, hi) = (a.min.clamp(0.0, 1.0), a.max.clamp(0.0, 1.0));
+    if (hi - lo).abs() < 1e-6 {
+        return 0.0;
+    }
+    ((travel - lo) / (hi - lo)).clamp(0.0, 1.0)
+}
+
+/// The message that shows `value` on the assignment's controller, as the same kind of message
+/// the controller sends. None for a controller that has nothing to show.
+pub fn message(a: &Assignment, value: Shown) -> Option<[u8; 3]> {
+    let v = match value {
+        Shown::Switch(on) => on as u8 as f32,
+        Shown::Travel(t) => unscale(a, t),
+    };
+    encode(a.controller.kind, a.controller.channel, v)
+}
+
+/// A controller value (0..1) as that controller's message. A new kind of controller needs its
+/// arm here (a note: note on with velocity 127 for on, 0 for off).
+pub fn encode(kind: CtlKind, channel: u8, v: f32) -> Option<[u8; 3]> {
+    let ch = channel & 0x0F;
+    let v = if v.is_finite() { v.clamp(0.0, 1.0) } else { 0.0 };
+    match kind {
+        CtlKind::Cc { number } => Some([0xB0 | ch, number & 0x7F, (v * 127.0).round() as u8]),
+        CtlKind::PitchBend => {
+            let n = (v * 16383.0).round() as u16;
+            Some([0xE0 | ch, (n & 0x7F) as u8, (n >> 7) as u8])
+        }
+    }
+}
+
+/// A message as a controller shows it: a note off is a note on with velocity 0, which is how
+/// feedback switches a note's light off.
+fn canonical(d: [u8; 3]) -> [u8; 3] {
+    if d[0] & 0xF0 == 0x80 {
+        [0x90 | (d[0] & 0x0F), d[1], 0]
+    } else {
+        d
+    }
+}
+
+/// What one controller shows and when it was last sent to or moved.
+#[derive(Debug, Clone, Default)]
+pub struct Throttle {
+    /// The last message sent to the controller or received from it: what it shows now. None
+    /// when that isn't known (a new assignment, an output that was just connected).
+    shown: Option<[u8; 3]>,
+    sent_at: Option<Instant>,
+    /// Feedback waits until then: the controller is being moved.
+    quiet_until: Option<Instant>,
+}
+
+impl Throttle {
+    /// The controller sent `data` at `now`: it shows that, and is being moved for [`QUIET`].
+    /// A button's release (`released`) ends the move at once, so its light is set right away.
+    pub fn heard(&mut self, data: [u8; 3], released: bool, now: Instant) {
+        self.shown = Some(canonical(data));
+        self.quiet_until = Some(if released { now } else { now + QUIET });
+    }
+
+    /// The message to send at `now` so the controller shows `want`, if any: none when it shows
+    /// that already, while it is being moved, or within [`MIN_GAP`] of the last message (a
+    /// later call sends the value then current, so the last one always goes).
+    pub fn due(&mut self, want: [u8; 3], now: Instant) -> Option<[u8; 3]> {
+        if self.shown == Some(want) || self.quiet_until.is_some_and(|t| now < t) || self.sent_at.is_some_and(|t| now.saturating_duration_since(t) < MIN_GAP) {
+            return None;
+        }
+        self.shown = Some(want);
+        self.sent_at = Some(now);
+        Some(want)
+    }
+
+    /// What the controller shows is unknown again (its output was connected anew): the next
+    /// [`Throttle::due`] sends the value whatever it is.
+    pub fn forget(&mut self) {
+        self.shown = None;
+    }
+}
+
+/// The device a port belongs to: ALSA's client name ("nanoKONTROL2" of "nanoKONTROL2:nanoKONTROL2
+/// MIDI 1"), or the name inside Windows' "MIDIIN2 (…)" and "MIDIOUT2 (…)". `key` is a port name as
+/// `controllers::port_key` gives it.
+pub fn device_name(key: &str) -> &str {
+    if let Some((client, _)) = key.split_once(':') {
+        return client;
+    }
+    for prefix in ["MIDIIN", "MIDIOUT"] {
+        if let Some(rest) = key.strip_prefix(prefix) {
+            let rest = rest.trim_start_matches(|c: char| c.is_ascii_digit());
+            if let Some(inner) = rest.strip_prefix(" (").and_then(|r| r.strip_suffix(')')) {
+                return inner;
+            }
+        }
+    }
+    key
+}
+
+/// The output paired with the input `input` when none is chosen in Settings › MIDI: the output
+/// port of the same name (on Linux a device's input and output are one ALSA port), or else the
+/// only output of the same device. `outputs` are the connected outputs' keys.
+pub fn auto_output<'a>(input: &str, outputs: &'a [String]) -> Option<&'a str> {
+    if let Some(o) = outputs.iter().find(|o| *o == input) {
+        return Some(o);
+    }
+    let dev = device_name(input);
+    let mut same = outputs.iter().filter(|o| device_name(o) == dev);
+    match (same.next(), same.next()) {
+        (Some(o), None) => Some(o),
+        _ => None,
+    }
+}
+
+/// The output feedback for controllers on `input` goes to: `chosen` in Settings › MIDI (an
+/// empty name for none), else [`auto_output`]. None when that output isn't connected.
+pub fn paired_output<'a>(input: &str, chosen: Option<&str>, outputs: &'a [String]) -> Option<&'a str> {
+    match chosen {
+        Some(c) => outputs.iter().find(|o| !c.is_empty() && *o == c).map(|o| o.as_str()),
+        None => auto_output(input, outputs),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::controllers::{Controller, CtlTarget};
+
+    fn assignment(kind: CtlKind, channel: u8) -> Assignment {
+        Assignment::new(Controller { port: "P".into(), channel, kind }, CtlTarget::MasterVolume)
+    }
+
+    #[test]
+    fn cc_carries_the_travel() {
+        let a = assignment(CtlKind::Cc { number: 7 }, 2);
+        assert_eq!(message(&a, Shown::Travel(1.0)), Some([0xB2, 7, 127]));
+        assert_eq!(message(&a, Shown::Travel(0.0)), Some([0xB2, 7, 0]));
+        assert_eq!(message(&a, Shown::Travel(0.5)), Some([0xB2, 7, 64]));
+        assert_eq!(message(&a, Shown::Travel(f32::NAN)), Some([0xB2, 7, 0]));
+    }
+
+    #[test]
+    fn feedback_inverts_the_input_scaling() {
+        // A controller value goes in through the range and back out unchanged, for every value.
+        let mut a = assignment(CtlKind::Cc { number: 1 }, 0);
+        for (min, max) in [(0.0, 1.0), (0.25, 0.75), (1.0, 0.0), (0.1, 0.9)] {
+            a.min = min;
+            a.max = max;
+            for v in 0..=127u8 {
+                let travel = a.scale(v as f32 / 127.0);
+                assert_eq!(message(&a, Shown::Travel(travel)), Some([0xB0, 1, v]), "{min}..{max} at {v}");
+            }
+        }
+    }
+
+    #[test]
+    fn outside_the_range_pins_to_an_end() {
+        let mut a = assignment(CtlKind::Cc { number: 1 }, 0);
+        a.min = 0.25;
+        a.max = 0.75;
+        assert_eq!(message(&a, Shown::Travel(0.1)), Some([0xB0, 1, 0]));
+        assert_eq!(message(&a, Shown::Travel(0.9)), Some([0xB0, 1, 127]));
+        // A range of one point shows the bottom.
+        a.max = 0.25;
+        assert_eq!(message(&a, Shown::Travel(0.9)), Some([0xB0, 1, 0]));
+    }
+
+    #[test]
+    fn level_feedback_follows_the_fader_taper() {
+        use crate::controllers::{db_to_fader, fader_to_db};
+        let a = assignment(CtlKind::Cc { number: 7 }, 0);
+        // 0 dB sits where CC 111 puts the fader, as on screen.
+        let unity = message(&a, Shown::Travel(db_to_fader(0.0))).unwrap()[2];
+        assert!((fader_to_db(unity as f32 / 127.0)).abs() < 0.5, "{unity}");
+        assert_eq!(message(&a, Shown::Travel(db_to_fader(6.0))), Some([0xB0, 7, 127]));
+        assert_eq!(message(&a, Shown::Travel(db_to_fader(-120.0))), Some([0xB0, 7, 0]));
+    }
+
+    #[test]
+    fn pitch_bend_is_fourteen_bits() {
+        let a = assignment(CtlKind::PitchBend, 1);
+        assert_eq!(message(&a, Shown::Travel(1.0)), Some([0xE1, 0x7F, 0x7F]));
+        assert_eq!(message(&a, Shown::Travel(0.0)), Some([0xE1, 0, 0]));
+        // The centre is 8192 (0x2000): LSB 0, MSB 0x40.
+        assert_eq!(message(&a, Shown::Travel(8192.0 / 16383.0)), Some([0xE1, 0, 0x40]));
+        // It reads back as the value it was made from.
+        let m = message(&a, Shown::Travel(0.3)).unwrap();
+        assert!((crate::controllers::parse(&m).unwrap().value - 0.3).abs() < 1.0 / 16383.0);
+    }
+
+    #[test]
+    fn switches_are_full_on_or_off() {
+        let mut a = assignment(CtlKind::Cc { number: 30 }, 0);
+        // The range is a fader's business, not a button's.
+        a.min = 0.25;
+        a.max = 0.5;
+        assert_eq!(message(&a, Shown::Switch(true)), Some([0xB0, 30, 127]));
+        assert_eq!(message(&a, Shown::Switch(false)), Some([0xB0, 30, 0]));
+        let a = assignment(CtlKind::PitchBend, 0);
+        assert_eq!(message(&a, Shown::Switch(true)), Some([0xE0, 0x7F, 0x7F]));
+    }
+
+    #[test]
+    fn throttle_sends_changes_only() {
+        let t0 = Instant::now();
+        let mut t = Throttle::default();
+        assert_eq!(t.due([0xB0, 7, 10], t0), Some([0xB0, 7, 10]), "the first value always goes");
+        let t1 = t0 + Duration::from_millis(100);
+        assert_eq!(t.due([0xB0, 7, 10], t1), None, "unchanged");
+        assert_eq!(t.due([0xB0, 7, 11], t1), Some([0xB0, 7, 11]));
+        t.forget();
+        let t2 = t1 + Duration::from_millis(100);
+        assert_eq!(t.due([0xB0, 7, 11], t2), Some([0xB0, 7, 11]), "sent again once forgotten");
+    }
+
+    #[test]
+    fn throttle_limits_the_rate_but_keeps_the_last_value() {
+        let t0 = Instant::now();
+        let mut t = Throttle::default();
+        let mut sent = Vec::new();
+        // A value changing every millisecond for half a second, asked every millisecond.
+        for ms in 0..500u64 {
+            if let Some(m) = t.due([0xB0, 7, (ms / 4) as u8], t0 + Duration::from_millis(ms)) {
+                sent.push((ms, m[2]));
+            }
+        }
+        assert!(sent.len() <= 500 / MIN_GAP.as_millis() as usize + 1, "{} sent", sent.len());
+        assert!(sent.windows(2).all(|w| w[1].0 - w[0].0 >= MIN_GAP.as_millis() as u64));
+        // The value stops changing; the next ask after the gap sends the final one.
+        let last = (499 / 4) as u8;
+        let after = t0 + Duration::from_millis(500) + MIN_GAP;
+        if sent.last().map(|s| s.1) != Some(last) {
+            assert_eq!(t.due([0xB0, 7, last], after), Some([0xB0, 7, last]));
+        }
+        assert_eq!(t.due([0xB0, 7, last], after + MIN_GAP), None);
+    }
+
+    #[test]
+    fn throttle_keeps_quiet_while_the_controller_moves() {
+        let t0 = Instant::now();
+        let mut t = Throttle::default();
+        t.heard([0xB0, 7, 90], false, t0);
+        // The parameter lands a little elsewhere (a stepped value): not sent back while moving.
+        assert_eq!(t.due([0xB0, 7, 88], t0 + Duration::from_millis(100)), None);
+        assert_eq!(t.due([0xB0, 7, 88], t0 + QUIET - Duration::from_millis(1)), None);
+        // After it stops, the controller is told where the parameter is.
+        assert_eq!(t.due([0xB0, 7, 88], t0 + QUIET), Some([0xB0, 7, 88]));
+        // Where the parameter is what the controller sent, nothing goes back at all.
+        t.heard([0xB0, 7, 40], false, t0 + Duration::from_secs(2));
+        assert_eq!(t.due([0xB0, 7, 40], t0 + Duration::from_secs(3)), None);
+    }
+
+    #[test]
+    fn a_button_light_is_set_on_release() {
+        let t0 = Instant::now();
+        let mut t = Throttle::default();
+        // A press switches Mute on; the controller's own light goes out on release.
+        t.heard([0xB0, 30, 127], false, t0);
+        assert_eq!(t.due([0xB0, 30, 127], t0), None, "it shows it already");
+        t.heard([0xB0, 30, 0], true, t0 + Duration::from_millis(80));
+        assert_eq!(t.due([0xB0, 30, 127], t0 + Duration::from_millis(80)), Some([0xB0, 30, 127]));
+        // A note off counts as velocity 0.
+        t.heard([0x81, 36, 64], true, t0 + Duration::from_secs(1));
+        assert_eq!(t.due([0x91, 36, 0], t0 + Duration::from_secs(1)), None);
+    }
+
+    #[test]
+    fn device_names() {
+        assert_eq!(device_name("nanoKONTROL2:nanoKONTROL2 MIDI 1"), "nanoKONTROL2");
+        assert_eq!(device_name("MIDIIN2 (nanoKONTROL2)"), "nanoKONTROL2");
+        assert_eq!(device_name("MIDIOUT2 (nanoKONTROL2)"), "nanoKONTROL2");
+        assert_eq!(device_name("Launch Control XL"), "Launch Control XL");
+    }
+
+    #[test]
+    fn pairs_by_port_then_device() {
+        let outs = |v: &[&str]| v.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        let o = outs(&["nanoKONTROL2:nanoKONTROL2 MIDI 1", "Launchpad:Launchpad MIDI 1", "Launchpad:Launchpad MIDI 2", "MIDIOUT2 (X-Touch)"]);
+        assert_eq!(auto_output("nanoKONTROL2:nanoKONTROL2 MIDI 1", &o), Some("nanoKONTROL2:nanoKONTROL2 MIDI 1"));
+        assert_eq!(auto_output("Launchpad:Launchpad MIDI 2", &o), Some("Launchpad:Launchpad MIDI 2"));
+        // Two outputs of the device and neither has the input's name: no guess.
+        assert_eq!(auto_output("Launchpad:Launchpad In", &o), None);
+        assert_eq!(auto_output("MIDIIN2 (X-Touch)", &o), Some("MIDIOUT2 (X-Touch)"));
+        assert_eq!(auto_output("Keystation 49", &o), None);
+        // A choice wins; an empty one is none; a choice that isn't connected sends nowhere.
+        assert_eq!(paired_output("Keystation 49", Some("Launchpad:Launchpad MIDI 1"), &o), Some("Launchpad:Launchpad MIDI 1"));
+        assert_eq!(paired_output("nanoKONTROL2:nanoKONTROL2 MIDI 1", Some(""), &o), None);
+        assert_eq!(paired_output("nanoKONTROL2:nanoKONTROL2 MIDI 1", Some("Gone"), &o), None);
+        assert_eq!(paired_output("nanoKONTROL2:nanoKONTROL2 MIDI 1", None, &o), Some("nanoKONTROL2:nanoKONTROL2 MIDI 1"));
+    }
+}

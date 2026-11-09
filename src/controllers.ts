@@ -43,6 +43,8 @@ export interface Assignment {
   /** The stretch of the parameter's travel (0..1) the controller sweeps; min > max inverts. */
   min: number;
   max: number;
+  /** Send the target's value back to the controller when its input has a paired output. */
+  feedback: boolean;
 }
 
 /** A row of the Controller Assignments window (`controller_assignments`). */
@@ -52,6 +54,8 @@ export interface AssignmentRow extends Assignment {
   available: boolean;
   /** A switch or transport button: no mode or range. */
   button: boolean;
+  /** The output (its port key) feedback goes to, or null when none is paired. */
+  output: string | null;
 }
 
 export const MODE_OPTIONS: [Takeover, string][] = [
@@ -69,6 +73,46 @@ export const TRANSPORT_TARGETS: { label: string; target: CtlTarget }[] = [
 /** "CC 7" or "Pitch Bend". */
 export function controllerLabel(c: Controller): string {
   return c.kind.type === "cc" ? `CC ${c.kind.number}` : "Pitch Bend";
+}
+
+/** The Feedback checkbox's tooltip: where the value goes, or why nothing does. */
+export function feedbackTitle(row: Pick<AssignmentRow, "feedback" | "output" | "controller">): string {
+  if (!row.output) return `No MIDI output is paired with ${row.controller.port}: choose one in Settings › MIDI, and feedback starts`;
+  return `${row.feedback ? "Sends" : "Send"} the parameter's value back to ${row.output}, for button lights and motor faders`;
+}
+
+/** A MIDI port as Settings › MIDI lists it (`midi_ports`, `midi_outputs`). */
+export interface MidiPort {
+  name: string;
+  /** The name without ALSA's client:port numbers, as assignments and pairings name ports. */
+  key: string;
+  enabled: boolean;
+  connected: boolean;
+  /** For an input: the output its feedback goes to on Automatic. */
+  auto_output: string | null;
+}
+
+/** What an input's Feedback pop-up shows: "auto", "none" or "out:" and an output's key. */
+export function feedbackChoice(chosen: Record<string, string> | undefined, input: string): string {
+  const c = chosen?.[input];
+  return c === undefined ? "auto" : c === "" ? "none" : `out:${c}`;
+}
+
+/** The pairing to save for a pop-up choice: undefined for Automatic, "" for none. */
+export function feedbackSetting(choice: string): string | undefined {
+  return choice === "auto" ? undefined : choice === "none" ? "" : choice.slice(4);
+}
+
+/** An input's Feedback pop-up: Automatic (naming what it picks), none, and every output. A chosen
+ *  output that isn't connected now stays listed so the choice shows. */
+export function feedbackOptions(input: Pick<MidiPort, "auto_output">, outputs: Pick<MidiPort, "key">[], current: string): [string, string][] {
+  const keys = outputs.map((o) => o.key).filter((k, i, all) => all.indexOf(k) === i);
+  if (current.startsWith("out:") && !keys.includes(current.slice(4))) keys.push(current.slice(4));
+  return [
+    ["auto", input.auto_output ? `Automatic (${input.auto_output})` : "Automatic (none found)"],
+    ["none", "No feedback"],
+    ...keys.map((k): [string, string] => [`out:${k}`, k]),
+  ];
 }
 
 /** "Ch 1" (channels are shown 1-based). */

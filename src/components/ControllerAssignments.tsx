@@ -1,10 +1,10 @@
 // Logic's Controller Assignments window (Control Surfaces › Controller Assignments): every
-// assignment with its controller, parameter, takeover mode and range, and the banner shown
-// while an assignment is being learned. Assignments are global settings, saved by the engine
-// in the config folder, so editing them isn't an undo step.
+// assignment with its controller, parameter, takeover mode, range and feedback, and the banner
+// shown while an assignment is being learned. Assignments are global settings, saved by the
+// engine in the config folder, so editing them isn't an undo step.
 import { useEffect, useState } from "react";
 import { call } from "../api";
-import { channelLabel, controllerLabel, fromPercent, MODE_OPTIONS, toPercent, TRANSPORT_TARGETS, type AssignmentRow, type Takeover } from "../controllers";
+import { channelLabel, controllerLabel, feedbackTitle, fromPercent, MODE_OPTIONS, toPercent, TRANSPORT_TARGETS, type AssignmentRow, type Takeover } from "../controllers";
 import { keyHint } from "../keymap";
 import { cancelLearn, learn } from "../learn";
 import { onTick, setState, useStore } from "../store";
@@ -35,6 +35,15 @@ function Row({ row, index, onChange }: { row: AssignmentRow; index: number; onCh
           <NumberField value={toPercent(row.max)} min={0} max={100} width={64} onChange={(v) => update(row.mode, row.min, fromPercent(v))} />
         </>
       )}
+      {/* Without a paired output the setting is kept for when there is one. */}
+      <label className={"check ctl-feedback" + (row.output ? "" : " dim")} title={feedbackTitle(row)}>
+        <input
+          type="checkbox"
+          aria-label="Feedback"
+          checked={row.feedback}
+          onChange={(e) => call<AssignmentRow[]>("set_controller_feedback", { index, on: e.target.checked }).then(onChange)}
+        />
+      </label>
       <button className="push" title="Delete this assignment" onClick={() => call<AssignmentRow[]>("delete_controller_assignment", { index }).then(onChange)}>
         Delete
       </button>
@@ -62,7 +71,7 @@ export function ControllerAssignmentsSheet() {
   const learnKey = keyHint("learn-assignment");
   return (
     // Non-modal, like Logic's window: Learn Assignment and the transport keys still work.
-    <Sheet title="Controller Assignments" onClose={close} width={800} mode="non-modal">
+    <Sheet title="Controller Assignments" onClose={close} width={860} mode="non-modal">
       <div className="ctl-head">
         <span>Controller</span>
         <span>Channel</span>
@@ -71,6 +80,7 @@ export function ControllerAssignmentsSheet() {
         <span>Mode</span>
         <span>Min %</span>
         <span>Max %</span>
+        <span title="Send the parameter's value back to the controller (Settings › MIDI pairs inputs with outputs)">Feedback</span>
         <span />
       </div>
       <div className="ctl-list">

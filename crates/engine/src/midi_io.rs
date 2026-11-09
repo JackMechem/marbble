@@ -32,12 +32,24 @@ pub struct MidiLogEntry {
     pub data: [u8; 3],
 }
 
-/// A MIDI input port and whether Marbble listens to it.
+/// A MIDI input or output port and whether Marbble uses it.
 #[derive(Debug, Clone, Serialize)]
 pub struct MidiPort {
     pub name: String,
+    /// The name without ALSA's client and port numbers (`controllers::port_key`).
+    pub key: String,
     pub enabled: bool,
     pub connected: bool,
+    /// For an input: the output (its key) its controllers' feedback goes to when Settings ›
+    /// MIDI leaves it on Automatic (`feedback::auto_output`).
+    pub auto_output: Option<String>,
+}
+
+/// Whether a port is offered in Settings › MIDI and connected: not ALSA's Midi Through, and not
+/// one of Marbble's own (its ALSA ports would otherwise be listed as the other direction's,
+/// and feedback would come back in as playing).
+pub fn listed_port(name: &str) -> bool {
+    !name.contains("Midi Through") && !name.starts_with("Marbble:")
 }
 
 /// Velocity shaping, shared with the input callbacks (which run on midir's threads).
@@ -154,8 +166,14 @@ impl MidiIo {
     pub fn ports(&self) -> Vec<MidiPort> {
         Self::port_names()
             .into_iter()
-            .filter(|n| !n.contains("Midi Through"))
-            .map(|name| MidiPort { enabled: !self.disabled.contains(&name), connected: self.connections.iter().any(|(n, _)| *n == name), name })
+            .filter(|n| listed_port(n))
+            .map(|name| MidiPort {
+                key: controllers::port_key(&name).to_string(),
+                enabled: !self.disabled.contains(&name),
+                connected: self.connections.iter().any(|(n, _)| *n == name),
+                auto_output: None,
+                name,
+            })
             .collect()
     }
 
@@ -184,7 +202,7 @@ impl MidiIo {
         let Ok(probe) = MidiInput::new("Marbble") else { return };
         for port in probe.ports() {
             let Ok(name) = probe.port_name(&port) else { continue };
-            if self.connections.iter().any(|(n, _)| *n == name) || name.contains("Midi Through") || self.disabled.contains(&name) {
+            if self.connections.iter().any(|(n, _)| *n == name) || !listed_port(&name) || self.disabled.contains(&name) {
                 continue;
             }
             let Ok(mut input) = MidiInput::new("Marbble") else { continue };

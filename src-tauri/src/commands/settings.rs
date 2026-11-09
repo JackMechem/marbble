@@ -129,6 +129,12 @@ pub fn midi_ports(state: State<AppState>) -> Vec<daw_engine::midi_io::MidiPort> 
     with(&state, |s| s.midi_ports())
 }
 
+/// MIDI output ports, for controller feedback.
+#[tauri::command]
+pub fn midi_outputs(state: State<AppState>) -> Vec<daw_engine::midi_io::MidiPort> {
+    with(&state, |s| s.midi_outputs())
+}
+
 #[tauri::command]
 pub fn midi_monitor(state: State<AppState>) -> Vec<daw_engine::midi_io::MidiLogEntry> {
     with(&state, |s| s.midi_monitor())

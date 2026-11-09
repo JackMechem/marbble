@@ -39,6 +39,7 @@ CHECKS=(
   "region_params_check tone dir"
   "strip_check tone dir"
   "controller_check tone dir"
+  "feedback_check dir"
   "vca_check tone dir"
   "chase_check dir"
   "midi_replace_check dir"

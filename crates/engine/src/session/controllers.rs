@@ -55,6 +55,8 @@ pub struct AssignmentRow {
     pub available: bool,
     /// The target is a switch or transport button (no mode or range).
     pub button: bool,
+    /// The output (its key) feedback for the controller goes to, if one is paired.
+    pub output: Option<String>,
 }
 
 /// "CC 7, channel 1" or "Pitch Bend, channel 1".
@@ -92,6 +94,7 @@ impl Session {
                     available: name.is_some(),
                     name: name.unwrap_or_else(|| missing_name(&a.target)),
                     button: a.target.is_button(),
+                    output: self.feedback_output(&a.controller.port),
                     assignment: a.clone(),
                 }
             })
@@ -106,6 +109,18 @@ impl Session {
         a.max = if max.is_finite() { max.clamp(0.0, 1.0) } else { 1.0 };
         self.ctl_list_changed(true);
         Ok(())
+    }
+
+    /// Turns sending the target's value back to the controller on or off.
+    pub fn set_controller_feedback(&mut self, index: usize, on: bool) -> Result<()> {
+        self.controls.list.get_mut(index).ok_or_else(|| anyhow!("no such assignment"))?.feedback = on;
+        self.save_controller_assignments();
+        Ok(())
+    }
+
+    /// The assignments, in the window's order (for feedback).
+    pub(super) fn ctl_list(&self) -> &[Assignment] {
+        &self.controls.list
     }
 
     pub fn delete_controller_assignment(&mut self, index: usize) -> Result<()> {
@@ -289,7 +304,7 @@ impl Session {
 
     /// What an assignment to the old fixed Channel EQ drives now: that parameter of the strip's
     /// first Channel EQ insert. None for other targets, and when the strip has none.
-    fn ctl_legacy_eq(&self, t: &CtlTarget) -> Option<CtlTarget> {
+    pub(super) fn ctl_legacy_eq(&self, t: &CtlTarget) -> Option<CtlTarget> {
         use crate::fx::channel_eq as ceq;
         let (track, param) = match *t {
             CtlTarget::Eq { track, band, field } => {
@@ -354,7 +369,7 @@ impl Session {
 
     /// The target's value on its own 0..1 travel (the fader's taper for levels), or None
     /// when it isn't in the open project. Cheap enough for every controller message.
-    fn ctl_value(&self, t: &CtlTarget) -> Option<f32> {
+    pub(super) fn ctl_value(&self, t: &CtlTarget) -> Option<f32> {
         let tr = |id: Id| self.project.track(id);
         Some(match t {
             CtlTarget::Volume { track } => ctl::db_to_fader(tr(*track)?.volume_db),
@@ -547,6 +562,7 @@ impl Session {
                 continue;
             }
             let Some(i) = ctl::find(&self.controls.list, &m.port, &msg) else { continue };
+            self.feedback_heard(i, m.data, msg.pressed);
             let target = self.controls.list[i].target.clone();
             if target.is_button() {
                 if self.controls.follow[i].press(msg.pressed) && self.ctl_value(&target).is_some() {

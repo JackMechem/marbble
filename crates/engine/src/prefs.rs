@@ -261,6 +261,12 @@ impl Default for RecordingPrefs {
 pub struct MidiPrefs {
     /// Names of MIDI input ports that are not connected.
     pub disabled_inputs: Vec<String>,
+    /// Names of MIDI output ports that are not connected.
+    pub disabled_outputs: Vec<String>,
+    /// The output each input's controller feedback goes to, chosen in Settings › MIDI: input
+    /// port key to output port key (`controllers::port_key`), an empty one for no feedback.
+    /// Inputs left out are paired automatically (`feedback::auto_output`).
+    pub feedback_outputs: std::collections::BTreeMap<String, String>,
     /// Live MIDI plays the selected instrument track. Off, it is only recorded.
     pub thru: bool,
     pub velocity: VelocityCurve,
@@ -275,7 +281,16 @@ pub struct MidiPrefs {
 
 impl Default for MidiPrefs {
     fn default() -> Self {
-        MidiPrefs { disabled_inputs: Vec::new(), thru: true, velocity: VelocityCurve::Linear, fixed_velocity: 100, chase_notes: true, chase_controllers: true }
+        MidiPrefs {
+            disabled_inputs: Vec::new(),
+            disabled_outputs: Vec::new(),
+            feedback_outputs: Default::default(),
+            thru: true,
+            velocity: VelocityCurve::Linear,
+            fixed_velocity: 100,
+            chase_notes: true,
+            chase_controllers: true,
+        }
     }
 }
 
@@ -394,6 +409,8 @@ mod tests {
         let mut p = Prefs::default();
         p.general.project_folder = Some("/tmp/x".into());
         p.midi.disabled_inputs = vec!["Port A".into()];
+        p.midi.disabled_outputs = vec!["Port B".into()];
+        p.midi.feedback_outputs.insert("Port A".into(), "Port C".into());
         p.midi.velocity = VelocityCurve::Fixed;
         p.recording.audio_overlap = AudioOverlap::Replace;
         p.click.bar_pitch = -5;

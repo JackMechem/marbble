@@ -6,6 +6,16 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **Controllers show what Marbble does: MIDI outputs and feedback.** Settings › MIDI lists the
+  MIDI outputs, and each assigned controller is sent its parameter's value back on the output
+  paired with its input (the same device's, automatically, or one you choose), as the same kind of
+  message it sends: button lights follow Mute, Solo, Record, Play, Record and Cycle, and motor
+  faders and LED rings follow the faders and knobs, whatever moved them: the mouse, automation,
+  undo or opening a project. Nothing is sent back while you move a control, so motor faders don't
+  fight your hand. Each assignment has a Feedback switch in Controller Assignments.
+
 ## [0.1.0-alpha.12] - 2026-11-09
 
 ### Changed

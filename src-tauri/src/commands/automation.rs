@@ -53,6 +53,12 @@ pub fn update_controller_assignment(state: State<AppState>, index: usize, mode: 
     with(&state, |s| s.update_controller_assignment(index, mode, min, max).map(|_| s.controller_assignments())).map_err(|e| e.to_string())
 }
 
+/// Turns an assignment's feedback to its controller on or off (a global setting).
+#[tauri::command]
+pub fn set_controller_feedback(state: State<AppState>, index: usize, on: bool) -> R<Vec<AssignmentRow>> {
+    with(&state, |s| s.set_controller_feedback(index, on).map(|_| s.controller_assignments())).map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 pub fn delete_controller_assignment(state: State<AppState>, index: usize) -> R<Vec<AssignmentRow>> {
     with(&state, |s| s.delete_controller_assignment(index).map(|_| s.controller_assignments())).map_err(|e| e.to_string())

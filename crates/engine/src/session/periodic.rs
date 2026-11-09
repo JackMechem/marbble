@@ -35,6 +35,7 @@ impl Session {
         let stepped = self.vst_undo_idle();
         self.state_copies_idle();
         let controlled = self.controller_idle();
+        self.feedback_idle();
         self.bring_back();
         before != self.open_editors().len() || written || latency_changed || controlled || stepped
     }
@@ -52,6 +53,7 @@ impl Session {
     /// Connects MIDI ports that have appeared since the last call. Runs every 3 s in the app.
     pub fn refresh_midi(&mut self) {
         self.midi.refresh();
+        self.midi_out.refresh();
     }
 
     pub fn midi_inputs(&self) -> Vec<String> {

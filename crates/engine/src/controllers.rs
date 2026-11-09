@@ -169,11 +169,19 @@ pub struct Assignment {
     pub min: f32,
     #[serde(default = "one")]
     pub max: f32,
+    /// Send the target's value back to the controller (`feedback.rs`) when its input is paired
+    /// with an output. On by default, and for assignments saved before there was feedback.
+    #[serde(default = "yes")]
+    pub feedback: bool,
+}
+
+fn yes() -> bool {
+    true
 }
 
 impl Assignment {
     pub fn new(controller: Controller, target: CtlTarget) -> Assignment {
-        Assignment { controller, target, mode: Takeover::Jump, min: 0.0, max: 1.0 }
+        Assignment { controller, target, mode: Takeover::Jump, min: 0.0, max: 1.0, feedback: true }
     }
 
     /// Where on the parameter's travel a controller value (0..1) lands.
@@ -457,7 +465,7 @@ mod tests {
         let json = r#"{"assignments":[{"controller":{"port":"P","channel":0,"kind":{"type":"cc","number":7}},"target":{"type":"volume","track":3}}]}"#;
         let f: AssignmentFile = serde_json::from_str(json).unwrap();
         let a = &f.assignments[0];
-        assert_eq!((a.mode, a.min, a.max), (Takeover::Jump, 0.0, 1.0));
+        assert_eq!((a.mode, a.min, a.max, a.feedback), (Takeover::Jump, 0.0, 1.0, true));
         assert_eq!(a.target, CtlTarget::Volume { track: 3 });
         let back: AssignmentFile = serde_json::from_str(&serde_json::to_string(&f).unwrap()).unwrap();
         assert_eq!(back.assignments, f.assignments);

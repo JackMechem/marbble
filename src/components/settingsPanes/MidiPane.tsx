@@ -1,17 +1,13 @@
-// Settings › MIDI: inputs, the velocity curve and the input monitor.
+// Settings › MIDI: inputs, outputs and controller feedback, the velocity curve and the input
+// monitor.
 import { useEffect, useState } from "react";
 import { call } from "../../api";
+import { feedbackChoice, feedbackOptions, feedbackSetting, type MidiPort } from "../../controllers";
 import { useSettings, type VelocityCurve } from "../../prefs";
 import { useStore } from "../../store";
 import { Check, NumberField, Select } from "../Form";
 import { Foot, Row, Section, setPrefs } from "./parts";
 import { describeMidi } from "../../settingsText";
-
-interface MidiPort {
-  name: string;
-  enabled: boolean;
-  connected: boolean;
-}
 
 interface MidiLogEntry {
   seq: number;
@@ -39,13 +35,17 @@ export function MidiPane({ close }: { close: () => void }) {
   const m = useSettings((s) => s.prefs.midi);
   const target = useStore((s) => s.snap?.midi_target);
   const [ports, setPorts] = useState<MidiPort[] | null>(null);
+  const [outputs, setOutputs] = useState<MidiPort[] | null>(null);
   const [log, setLog] = useState<MidiLogEntry[]>([]);
-  const loadPorts = () => call<MidiPort[]>("midi_ports").then((p) => p && setPorts(p));
+  const loadPorts = () => {
+    call<MidiPort[]>("midi_ports").then((p) => p && setPorts(p));
+    call<MidiPort[]>("midi_outputs").then((p) => p && setOutputs(p));
+  };
   useEffect(() => {
     loadPorts();
     const t = window.setInterval(loadPorts, 3000);
     return () => window.clearInterval(t);
-  }, [m.disabled_inputs]);
+  }, [m.disabled_inputs, m.disabled_outputs]);
   useEffect(() => {
     let last = -1;
     const t = window.setInterval(async () => {
@@ -60,6 +60,18 @@ export function MidiPane({ close }: { close: () => void }) {
   }, []);
   const toggle = (name: string, on: boolean) =>
     setPrefs("midi", { disabled_inputs: on ? m.disabled_inputs.filter((n) => n !== name) : [...m.disabled_inputs, name] });
+  const offOutputs = m.disabled_outputs ?? [];
+  const toggleOutput = (name: string, on: boolean) => setPrefs("midi", { disabled_outputs: on ? offOutputs.filter((n) => n !== name) : [...offOutputs, name] });
+  const connectedOutputs = (outputs ?? []).filter((o) => o.connected);
+  // One row per input device (ALSA lists a port again under a new number when replugged).
+  const inputs = (ports ?? []).filter((p, i, all) => all.findIndex((q) => q.key === p.key) === i);
+  const pair = (input: string, choice: string) => {
+    const next = { ...(m.feedback_outputs ?? {}) };
+    const v = feedbackSetting(choice);
+    if (v === undefined) delete next[input];
+    else next[input] = v;
+    setPrefs("midi", { feedback_outputs: next });
+  };
   return (
     <>
       <Section title="Inputs">
@@ -108,6 +120,46 @@ export function MidiPane({ close }: { close: () => void }) {
             <Check checked={m.chase_controllers ?? true} onChange={(v) => setPrefs("midi", { chase_controllers: v })}>
               Controllers
             </Check>
+          </div>
+        </Row>
+      </Section>
+      <Section title="Outputs">
+        <Row label="MIDI Outputs:" note="Controller feedback (button lights, motor faders) goes out through these. New devices are picked up within a few seconds.">
+          <div className="midi-ports">
+            {outputs === null ? null : outputs.length === 0 ? (
+              <span className="dim">No MIDI outputs found</span>
+            ) : (
+              outputs.map((p) => (
+                <div key={p.name} className="midi-port">
+                  <Check checked={p.enabled} onChange={(v) => toggleOutput(p.name, v)}>
+                    {p.name}
+                  </Check>
+                  <span className={"status-dot " + (p.connected ? "ok" : "off")} title={p.connected ? "Connected" : "Not connected"} />
+                </div>
+              ))
+            )}
+          </div>
+        </Row>
+        <Row
+          label="Feedback:"
+          note="Where each input's controller assignments send the values back, so lights and motor faders follow Marbble. Automatic picks the output of the same device. Each assignment can turn it off in Controller Assignments."
+        >
+          <div className="midi-feedback">
+            {inputs.length === 0 ? (
+              <span className="dim">No MIDI inputs found</span>
+            ) : (
+              inputs.map((p) => {
+                const choice = feedbackChoice(m.feedback_outputs, p.key);
+                return (
+                  <div key={p.key} className="midi-feedback-row">
+                    <span className="midi-port-name" title={p.key}>
+                      {p.key}
+                    </span>
+                    <Select value={choice} options={feedbackOptions(p, connectedOutputs, choice)} onChange={(c) => pair(p.key, c)} width={240} title={`Feedback for ${p.key}`} />
+                  </div>
+                );
+              })
+            )}
           </div>
         </Row>
       </Section>

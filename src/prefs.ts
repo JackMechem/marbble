@@ -36,6 +36,11 @@ export interface Prefs {
   };
   midi: {
     disabled_inputs: string[];
+    /** Output ports left unconnected (controller feedback). */
+    disabled_outputs?: string[];
+    /** Input port key → the output key its controllers' feedback goes to ("" for none); inputs
+     *  left out pair automatically. */
+    feedback_outputs?: Record<string, string>;
     thru: boolean;
     velocity: VelocityCurve;
     fixed_velocity: number;
@@ -113,7 +118,7 @@ const DEFAULTS: AppSettings = {
       replace: false,
       color_takes: false,
     },
-    midi: { disabled_inputs: [], thru: true, velocity: "linear", fixed_velocity: 100, chase_notes: true, chase_controllers: true },
+    midi: { disabled_inputs: [], disabled_outputs: [], feedback_outputs: {}, thru: true, velocity: "linear", fixed_velocity: 100, chase_notes: true, chase_controllers: true },
     editing: { fade_ms: 0, move_automation: "never", crossfade_ms: 20, crossfade_curve: 0.5 },
     click: DEFAULT_CLICK,
     latency: { compensation: "all", low_latency: false, low_latency_limit_ms: 5 },

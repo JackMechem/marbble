@@ -664,6 +664,17 @@ impl Session {
     pub fn automation_writing(&self, track: Id) -> bool {
         self.is_playing() && self.auto_mode_of(track).map(|m| m.writes()).unwrap_or(false)
     }
+
+    /// What a control shows while the transport plays: its lane's value (native units) in Read,
+    /// Touch and Latch, unless a pass is writing it. None when it shows its own value. As
+    /// `useAutomation` in the frontend; controller feedback follows it (`session/feedback.rs`).
+    pub(super) fn automation_shown(&self, track: Id, param: &AutoParam) -> Option<f32> {
+        let follows = matches!(self.auto_mode_of(track)?, AutoMode::Read | AutoMode::Touch | AutoMode::Latch);
+        if !follows || !self.is_playing() || self.auto.passes.iter().any(|p| p.track == track && p.param.same(param)) {
+            return None;
+        }
+        self.curve_value(track, param, self.position())
+    }
 }
 
 #[cfg(test)]

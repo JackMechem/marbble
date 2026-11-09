@@ -60,14 +60,15 @@ flowchart LR
 
 | Thread or process | Created in | What it does | What it may not do |
 |---|---|---|---|
-| **Main / UI thread** | Tauri | Runs synchronous Tauri commands (most edits, including audio import with its decoding and resampling), the native menu, the GTK main loop on Linux, the 30 ms idle timer (`Session::idle`: plug-in controller idle, latency changes, draining `Garbage`, automation follow and writes), and taking autosaves. All VST3 *controllers* and editor windows live here. | Block for long. Renders are async commands for that reason. |
+| **Main / UI thread** | Tauri | Runs synchronous Tauri commands (most edits, including audio import with its decoding and resampling), the native menu, the GTK main loop on Linux, the 30 ms idle timer (`Session::idle`: plug-in controller idle, latency changes, draining `Garbage`, automation follow and writes, controller assignments and their feedback), and taking autosaves. All VST3 *controllers* and editor windows live here. | Block for long. Renders are async commands for that reason. |
 | **`audio-io`** | `audio_io::start` | Builds and owns the cpal streams, then waits until the device is closed. | |
 | **Audio callback** | cpal (output stream) | Calls `Engine::process` once per device buffer, inside `catch_unwind`; the input stream's callback only fills the input ring. Runs with real-time priority (rtkit on Linux). | Allocate, lock, block, do I/O. See [Real-time rules](#3-real-time-rules). |
 | **`marbble-dsp-N`** | `dsp/pool.rs`, started by `Session::sync_parallel` | Plays strips alongside the audio callback when Settings › Audio › Processing Threads allows it and a project is heavy enough, then blocks until the next block. Real-time like the callback; one refused that plays nothing. See [Multi-core processing](#multi-core-processing). | The same as the audio callback. |
 | **`recorder`** | `recorder.rs` | Every 10 ms, drains the ring buffer of each armed track into its WAV file and an in-memory copy, and keeps a peak preview for the UI. | Touch the engine or the project. |
 | **`ui-tick`** | `src-tauri/src/main.rs` | Every 33 ms: locks the session, builds a `Tick` (playhead, meters, input levels, recording previews, CPU, latency, analyzer spectrum, warnings, meters of open built-in effect panels, the clip indicators' held peaks, each strip's gain reduction) and emits it as the `tick` event. | Edit anything. |
-| **MIDI refresh** | `main.rs` | Every 3 s: `Session::refresh_midi`, so devices plugged in later get connected. | |
+| **MIDI refresh** | `main.rs` | Every 3 s: `Session::refresh_midi`, so input and output devices plugged in later get connected. | |
 | **MIDI input callbacks** | midir, in `midi_io.rs` (one per port) | Drop system messages, take assigned controllers (all of them while learning) into a queue for `Session::idle` (controller assignments), apply the velocity curve, push the rest into the `live_midi` ring the engine reads, and log the message for Settings › MIDI. | |
+| **`midi-out`** | `midi_out.rs` | Sends the controller feedback `Session::idle` hands it (batches through a channel) to the output ports. | Touch the session. |
 | **Async command workers** | Tauri's async runtime (`#[tauri::command(async)]`) | Offline renders (bounce, export, Bounce in Place, Freeze), plug-in rescans, waveform and transient requests, device lists, recent projects, the input level check, folder listings. Renders hold the session lock and the engine lock for their whole length; the parts that edit tracks or plug-ins are handed back to the main thread with `run_on_main_thread`. | Touch plug-in controllers. |
 | **Autosave writer** | `main.rs::autosave` | Writes an `AutosaveJob` (already serialized on the main thread) to disk, atomically. | |
 | **Plug-in scan subprocess** | `plugin_db.rs` | `marbble --scan-vst3 <bundle>` loads one bundle in a child process and prints its descriptors, so a crashing plug-in can't take the app down. Four scan worker threads start the children and wait for them (at first launch before the window opens, otherwise from Rescan). | Load plug-ins in the app's own process. |
@@ -1130,7 +1131,7 @@ at its new place (`old_name::relocated`).
 | `plugin-scan.json` | `plugin_db.rs` | The last scan's report (bundles, plug-ins, failures with reasons), for Settings › Plug-ins. |
 | `presets/<effect>/<name>.json` | `presets.rs` | User presets of the built-in effects, the Channel EQ among them (see [Presets](#presets)). |
 | `channel-strips/<name>.json` | `strip_settings.rs` | Saved channel strip settings (see [Channel strip settings](#channel-strip-settings)). |
-| `controller-assignments.json` | `session/controllers.rs` | MIDI Learn's controller assignments: controller (port without ALSA's client:port numbers, channel, CC number or pitch bend), target (track id and parameter, plug-in instance id with its plug-in id, a setting of the old fixed Channel EQ, Stereo Out or transport), mode and range. Global, like Logic's; written atomically. |
+| `controller-assignments.json` | `session/controllers.rs` | MIDI Learn's controller assignments: controller (port without ALSA's client:port numbers, channel, CC number or pitch bend), target (track id and parameter, plug-in instance id with its plug-in id, a setting of the old fixed Channel EQ, Stereo Out or transport), mode, range and whether feedback goes back to the controller (missing in older files: on). Global, like Logic's; written atomically. |
 | `templates/<name>.json` | `session/templates.rs` | User project templates (File › Save as Template…): a `Project` without regions, clips, freeze state or alternatives, with plug-in states. `new_from_template` loads one as a new untitled project at the device's rate, keeping its ids. |
 
 Interface-only state lives in the webview's `localStorage`:
@@ -2548,6 +2549,42 @@ field rather than in a module variable: the region, channel strip and plug-in cl
 Synced values are compared by identity, so replace them, never mutate them. View state that is
 per window (which bottom pane shows, zoom, scroll) stays out.
 
+### MIDI controllers in and out
+
+A controller's message comes in on a midir input thread (`midi_io.rs`), which takes it off the
+live path when an assignment (or a learn) wants it; `Session::idle` applies it on the main thread
+through the same edit paths as the mouse (`session/controllers.rs`). The way back is
+`session/feedback.rs`, also run from `idle`, after the controllers are applied:
+
+- **Values, not events.** Each tick it reads every assignment's target value where the session
+  keeps it (`ctl_value`), or what the automation plays over it while the transport runs in Read,
+  Touch or Latch (`automation_shown`, the same rule as `useAutomation` in the frontend), and turns
+  it into the controller's own kind of message (`feedback::message`): a CC through the inverse of
+  the assignment's range on the fader's taper, pitch bend in 14 bits, 127 or 0 for a switch. Only
+  what differs from what the controller shows is sent, so every source of change (mouse, plug-in
+  editor, automation, undo, opening a project, an assignment edit) is covered by one path and
+  nothing has to remember to notify it.
+- **What the controller shows** is a `feedback::Throttle` per controller: the last message sent to
+  it or received from it. A message it sends counts too, so nothing is echoed back when the
+  parameter lands where the controller put it. While the controller moves, and for `QUIET`
+  (0.5 s) after (a button: until its release), nothing is sent to it, so a motor fader isn't driven
+  against the hand on it; a Pickup controller that didn't catch its parameter is then told where
+  the parameter is. Messages to one controller are at least `MIN_GAP` (25 ms) apart; as the value
+  is read again every tick, the latest one always goes, never a stale one.
+- **Pairing.** Each input port is paired with an output (`feedback::paired_output`): the one
+  chosen in Settings › MIDI (`MidiPrefs::feedback_outputs`, by port key), else the output with
+  the same key (on Linux a device's input and output are one ALSA port), else the only output of
+  the same device. An output connected anew (a replugged device, a switched-on port) makes its
+  controllers forget what they show, so everything is sent again.
+- **Threads.** The main thread decides what to send and hands it to the `midi-out` thread
+  (`midi_out.rs`) through a channel; the audio thread never sees any of it. Marbble's own ALSA
+  ports (`Marbble:…`) are never listed or connected (`midi_io::listed_port`), or feedback would
+  come back in on its inputs.
+
+New kinds of controller message and new targets need an arm in `feedback::encode` (the message
+for a value) and, for a target with an automation lane, in `Session::ctl_auto_param`; a target
+with a value at all already gets one through `ctl_value`.
+
 ### Guard tests
 
 Some rules are enforced by tests that read the sources rather than import them:
@@ -2636,6 +2673,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `session/takes.rs` | Recording into take folders, Autopunch trimming, comp edits, Flatten, Merge, Pack (from one track or several), Unpack (to new or existing tracks), Export and Move Active Take. |
 | `session/auto_write.rs` | Automation writing (Touch, Latch, Write), plug-in editors following automation, lane edit commands. |
 | `session/controllers.rs` | Controller assignments: the last touched parameter, learning, the saved list, applying controller moves through the normal edit paths (undo steps, automation touches that let go 0.5 s after the controller stops). Run from `idle`. |
+| `session/feedback.rs` | Controller feedback: each assignment's target value as the screen shows it, sent to the paired output where it changed (see [MIDI controllers in and out](#midi-controllers-in-and-out)). Run from `idle`. |
 | `session/builtin.rs` | Built-in effects in slots: instantiation, parameters, side-chains, meters for open panels. |
 | `session/vst_key.rs` | VST3 side-chain inputs: keeping each plug-in's aux bus in line with its slot's key source. |
 | `session/vst_undo.rs` | Undo steps for edits in a VST3's own editor: the last known states, which edits make a step and when, and putting a plug-in back. |
@@ -2674,6 +2712,8 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `memlock.rs` | Settings › Audio › Lock audio memory: `mlockall` on Linux when `RLIMIT_MEMLOCK` allows, `/proc/self/status` figures. See [Memory locking](#memory-locking). |
 | `recorder.rs` | The recording disk-writer thread and live previews. |
 | `midi_io.rs` | MIDI inputs (midir), velocity curves, the MIDI activity log, assigned controllers taken off the live path (`inject_from` feeds a message in as a port would, for tests). |
+| `midi_out.rs` | MIDI outputs (midir), connected like the inputs, and the `midi-out` thread that sends controller feedback. |
+| `feedback.rs` | Controller feedback, the pure part: the message showing a value (the inverse of an assignment's range), input/output pairing, the per-controller rate limit and quiet time. |
 | `plugin_db.rs` | Out-of-process plug-in scanning, the cache, the scan report, the config folder. |
 | `prefs.rs` | `Prefs` (Settings) and the metronome and bit-depth types saved in projects. |
 | `clip.rs` | Audio held in memory, the waveform overview, and the zero-crossing search. |
@@ -2745,7 +2785,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `sheetKeys.ts`, `sheetKeysModel.ts` | Key commands while a sheet is open (`useSheetKeys`, `installSheetKeys`, `sheetBlocks`); the rule itself, pure and tested. See [Sheets and key commands](#sheets-and-key-commands). |
 | `pluginKeys.ts` | Keys a plug-in's editor window passes on (macOS), dispatched as if pressed in the main window; pure, tested. |
 | `wheel.ts` | What the mouse wheel scrolls in the time views (Settings › Editing › Mouse Wheel Scrolls). |
-| `controllers.ts` | Controller assignment types and labels, strip and lane targets; pure, tested. |
+| `controllers.ts` | Controller assignment types and labels, strip and lane targets, the Feedback tooltip and the inputs' feedback pop-ups; pure, tested. |
 | `learn.ts` | MIDI Learn: Learn Assignment, the right-click Learn menus, `FxLearnContext` for effect panels. |
 | `keyFormat.ts` | Shortcuts written the way each platform's menu bar does ("Shift+Ctrl+Z" on Linux, "Ctrl+Shift+Z" on Windows, "⇧⌘Z"); pure, tested. |
 | `menuBar.ts` | Keeps the native menu bar in step with the app (`installMenuBar`, main window). |
