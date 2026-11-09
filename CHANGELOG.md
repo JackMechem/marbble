@@ -71,11 +71,11 @@ All notable changes to Marbble are recorded here. The format follows
   project.
 - **The Step Sequencer's bar no longer repeats its name.** After Functions it shows the pattern
   region's name, as the Piano Roll does, and nothing when no pattern region is selected.
-- **Autopunch and Replace say what they are.** The two mode buttons in the control bar show their
-  names, as Count-in does, while the window has room for them, as at 1280 px and 100 %; in a
-  narrower one they are icons again, before anything else in the bar gives way. Their tooltips
-  give the key command: Replace has one of its own, Replace Mode, with no key until you assign
-  one in Settings › Key Commands.
+- **Every control bar button is an icon.** Count-in, which read "Count-in" (or "1234" in a narrow
+  window), and Autopunch and Replace have icons of their own: four beats and play for Count-in,
+  brackets around a record dot for Autopunch, a waveform cut by a new take for Replace. Their
+  tooltips name them and give the key command: Replace has one of its own, Replace Mode, with no
+  key until you assign one in Settings › Key Commands.
 
 ### Fixed
 
@@ -144,7 +144,7 @@ All notable changes to Marbble are recorded here. The format follows
 - **The control bar has room to spare at 125 % and 1280 px.** It used to fit there with no spare
   pixel, so the time display or a long key name pushed the view buttons on its right out of the
   window. The transport and the LCD now keep their full size; as the window narrows the gaps
-  tighten, the master volume slider shortens, Count-in reads 1234, and the Musical Typing, List
+  tighten, the master volume slider shortens, and the Musical Typing, List
   Editors and Browsers buttons fold into one menu button, lit while any of them is on.
 - **Long names end in "…" instead of running over.** The automation parameter pop-up ends a
   long name in "…" before its chevron, with the name in its tooltip, and on Stereo Out's header

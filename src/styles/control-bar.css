@@ -218,9 +218,6 @@
   border-radius: var(--radius);
   background: var(--btn);
   color: var(--btn-text);
-  font-size: var(--fs-sm);
-  font-weight: 700;
-  letter-spacing: 0.3px;
   box-shadow: var(--btn-shadow);
 }
 
@@ -318,19 +315,19 @@
 }
 
 
-/* The view buttons folded into one, and Count-in's short form, for a narrow bar (below). */
-.cb-more,
-.countin-short {
+/* The view buttons folded into one, for a narrow bar (below). */
+.cb-more {
   display: none;
 }
 
 /* A narrow window (1280 px at 125 % is a 1024 px page). The transport and the LCD keep their size
    longest; the bar gives way around them, a step at a time. The widths are what the bar needs at
-   each step with the LCD showing the time, a long key and six mode buttons, plus 15 px:
+   each step with the LCD showing the time, a long key and six mode buttons, plus 15 px, measured
+   while Count-in was a word: as an icon it's some 30 px narrower, which each step now has spare.
    1. 1175 px with everything: tighter gaps, smaller view buttons (then 1117);
-   2. the master volume slider shortens and Count-in reads 1234 (1055);
+   2. the master volume slider shortens (1055);
    3. the three view buttons on the right fold into one menu button and the mode buttons narrow
-      (985), so a 1024 px bar has about 40 px to spare;
+      (985), so a 1024 px bar has about 70 px to spare;
    4. the master volume slider goes (Stereo Out in the Mixer has it) (925);
    5. only then do the transport buttons and the LCD tighten (877);
    6. and last the gaps and buttons around them (836; 1280 px at 150 % is an 853 px bar). */
@@ -363,14 +360,6 @@
 @container control-bar (max-width: 1135px) {
   .cb-master {
     --cb-master-w: 52px;
-  }
-
-  .countin-long {
-    display: none;
-  }
-
-  .countin-short {
-    display: inline;
   }
 }
 
@@ -431,26 +420,5 @@
   .mode-btn {
     min-width: 26px;
     width: 26px;
-  }
-
-  .mode-btn.countin {
-    width: auto;
-  }
-}
-
-/* Autopunch and Replace say their names while the bar has room: about 72 px more than their icons,
-   so 1247 px with everything (1175 above, plus 72). They are the first to give way, before the
-   steps above start: below 1250 px they are icons again, named in their tooltips. */
-.mode-btn.labelled > svg {
-  display: none;
-}
-
-@container control-bar (max-width: 1250px) {
-  .mode-btn.labelled > svg {
-    display: block;
-  }
-
-  .mode-btn.labelled > .mode-label {
-    display: none;
   }
 }

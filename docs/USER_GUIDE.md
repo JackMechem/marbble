@@ -228,8 +228,8 @@ From left to right:
 - **Mode buttons:** Cycle (C), **Autopunch** (Ctrl+P, Control+⌘P on macOS), **Replace** (red
   when on: recordings replace what they overlap; see [Overlapping recordings](#recording-audio);
   the key command Replace Mode has no key at first), **Count-in** (Shift+K), Metronome (K).
-  Autopunch and Replace show their names when the window is wide enough, and their icons in a
-  narrower one.
+  They are icons (Count-in's is four beats and a play arrow); hover over one for its name and
+  key.
 - **Master volume** slider and the **CPU** meter with the load as a percentage. See
   [the CPU meter](#the-cpu-meter).
 - **Musical Typing** (Ctrl+K), **List Editors** (D, the Event List) and **Browsers** (F) buttons.

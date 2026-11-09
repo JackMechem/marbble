@@ -1690,12 +1690,12 @@ Audio Track Editor and meters are canvas drawings. The common pattern:
   strips' room.
 - **The control bar's steps** (`control-bar.css`). The transport and the LCD keep their size
   longest. Below widths measured for the bar with the LCD showing the time, a long key and six
-  mode buttons, its `@container` rules first turn Autopunch's and Replace's names back into icons
-  (`.labelled`, below 1250 px), then tighten the gaps and view buttons, shorten the master
-  volume slider (`HSlider` takes a CSS width, `--cb-master-w`, and drags by the width it's drawn
-  at) and show Count-in as 1234, then fold the three view buttons on the right into one menu
+  mode buttons (measured while Count-in was a word; as an icon it leaves some 30 px more), its
+  `@container` rules tighten the gaps and view buttons,
+  shorten the master volume slider (`HSlider` takes a CSS width, `--cb-master-w`, and drags by
+  the width it's drawn at), then fold the three view buttons on the right into one menu
   button (`.cb-more`, rendered always and shown only then), then drop the master volume slider,
-  and only last tighten the transport and the LCD. At 1024 px (1280 px at 125 %) about 40 px are
+  and only last tighten the transport and the LCD. At 1024 px (1280 px at 125 %) about 70 px are
   left over.
 - **The Mixer's stacks and widths** (`mixerLayout.ts`, `mixer-stacks.css`). `mixerEntries` turns
   the strips shown into a tree: each stack is a bracket in its colour (name, kind, count, a

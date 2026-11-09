@@ -1,9 +1,9 @@
 // Hand-drawn glyphs in the style of Logic's control bar: 1.4px strokes on a 16px grid.
 import type { ReactNode } from "react";
 
-const S = (props: { children: ReactNode; size?: number; vb?: string }) => (
+const S = (props: { children: ReactNode; size?: number; width?: number; vb?: string }) => (
   <svg
-    width={props.size ?? 16}
+    width={props.width ?? props.size ?? 16}
     height={props.size ?? 16}
     viewBox={props.vb ?? "0 0 16 16"}
     fill="none"
@@ -88,6 +88,28 @@ export const Icon = {
     <S>
       <path d="M5.6 2.5h4.8l2.4 11H3.2z" />
       <path d="M8 11 11.8 4.2" />
+    </S>
+  ),
+  /** Autopunch: the punch range's brackets around a record dot. */
+  autopunch: () => (
+    <S>
+      <path d="M4.5 3H2.5v10h2M11.5 3h2v10h-2" />
+      <circle cx="8" cy="8" r="2.4" fill="currentColor" stroke="none" />
+    </S>
+  ),
+  /** Replace: a waveform with its middle overwritten by a new recording (the solid block). */
+  replace: () => (
+    <S>
+      <path d="M1.5 8 2.7 5.5 4 10.5 5 8M11 8l1.1-2.5 1.3 5 1.1-2.5" />
+      <rect x="6.3" y="3" width="3.4" height="10" rx=".8" fill="currentColor" strokeWidth={1} />
+    </S>
+  ),
+  /** Count-in: four beats, the first accented, then play. Wider than the 16 px grid so the
+   *  ticks stay apart at 100 %. */
+  countIn: () => (
+    <S width={18} vb="0 0 18 16">
+      <path d="M2 3.5v9M5 6v4M8 6v4M11 6v4" />
+      <path d="M13.5 4.5 17 8l-3.5 3.5z" fill="currentColor" strokeWidth={1} />
     </S>
   ),
   plus: () => (
