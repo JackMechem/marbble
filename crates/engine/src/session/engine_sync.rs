@@ -100,6 +100,9 @@ impl Session {
     /// Closes and reopens the device with the current config.
     pub fn restart_audio(&mut self) {
         self.audio = None;
+        // What the old device didn't take goes to the engine now, so that the count of commands
+        // done keeps up with `cmds_sent` and nothing queued waits on whether the new one starts.
+        self.engine.lock().take_queued();
         let (io, status) = audio_io::start(self.engine.clone(), &self.audio_config);
         if !status.running {
             log::error!("audio failed to start: {:?}", status.error);
@@ -111,8 +114,6 @@ impl Session {
         // promoted for its buffer, with any given up on in a stuck plug-in back.
         self.graph_dirty = true;
         self.threads.renew = true;
-        // The command counter restarts with the engine's view of it.
-        self.cmds_sent = self.status.cmds_done.load(Ordering::Relaxed);
         self.pending_pos = None;
         let new_rate = rate != self.project.sample_rate || (self.engine_rate as u32) != rate;
         if new_rate {
@@ -569,9 +570,9 @@ impl Session {
 
     /// Recreates every track and plugin from the project document.
     pub(super) fn rebuild_graph(&mut self) {
-        // Every command dropped is made good by this, unless the engine has yet to apply some sent
-        // before it, which would undo part of what this sets up.
-        self.engine_resync &= !self.cmd_queue_empty();
+        // Every command dropped is made good by this: those still queued are applied to the old
+        // graph before the swap (`Engine::replace_graph`), so none undoes part of the new one.
+        self.engine_resync = false;
         // The plug-ins threads are still left in keep their editors hidden, untold.
         self.mark_unresponsive();
         let snapshot = self.capture_plugin_states();
@@ -764,5 +765,64 @@ mod tests {
         assert_eq!(engine_volume(&s), volume_gain(-3.0));
         assert_eq!(dropped(&s), 101);
         assert!(s.warning.is_none());
+    }
+
+    /// A command the engine has yet to take, as when the device stops before its next callback:
+    /// pushed straight onto the queue, with nothing to drain it.
+    fn queue(s: &mut Session, cmd: Cmd) {
+        assert!(s.audio.is_none());
+        assert!(s.cmd_tx.push(cmd).is_ok());
+        s.cmds_sent += 1;
+    }
+
+    /// A new track the engine hasn't taken yet: in the project, its strip still in the queue.
+    fn queue_new_track(s: &mut Session) -> Id {
+        let first = s.add_track(TrackKind::Audio, InputSel::None, None, None).unwrap();
+        let mut t = s.project.track(first).unwrap().clone();
+        t.id = s.project.alloc_id();
+        s.project.tracks.push(t.clone());
+        let strip = s.build_track(&t);
+        queue(s, Cmd::AddTrack(strip, usize::MAX));
+        t.id
+    }
+
+    /// The engine is rebuilt (reopening the device at another rate, opening a project) while
+    /// commands for the old graph are still queued, as when the device has yet to call back: they
+    /// are applied to that graph before the swap, not on top of the new one.
+    #[test]
+    fn a_rebuild_applies_what_is_queued_to_the_old_graph() {
+        let mut s = session();
+        s.audio = None;
+        // The same project: the queued strip would be a second one for its track.
+        let id = queue_new_track(&mut s);
+        s.rebuild_graph();
+        assert_eq!(s.status.cmds_done.load(Ordering::Acquire), s.cmds_sent);
+        let ids = s.engine.lock().track_ids_for_tests();
+        assert_eq!(ids.iter().filter(|&&t| t == id).count(), 1, "one strip per track: {ids:?}");
+        assert_eq!(ids.len(), s.project.tracks.len());
+
+        // Another project: the old one's strip would play in it, under an id of the new one's.
+        queue_new_track(&mut s);
+        s.project = Project::new("Other", s.project.sample_rate);
+        s.rebuild_graph();
+        assert_eq!(s.status.cmds_done.load(Ordering::Acquire), s.cmds_sent);
+        assert_eq!(s.engine.lock().track_ids_for_tests(), Vec::<Id>::new());
+    }
+
+    /// Reopened, the device takes what the old one didn't, in order, and the count of commands
+    /// done still matches those sent, so waiting for the engine waits for what's sent afterwards.
+    #[test]
+    fn reopening_the_device_keeps_the_queue_and_its_count() {
+        let mut s = session();
+        s.audio = None;
+        let id = queue_new_track(&mut s);
+        s.restart_audio();
+        assert!(s.audio.is_some());
+        std::thread::sleep(Duration::from_millis(100));
+        assert_eq!(s.status.cmds_done.load(Ordering::Acquire), s.cmds_sent, "the queue was taken and counted");
+        assert!(s.engine.lock().track_ids_for_tests().contains(&id));
+        s.set_master_volume(-9.0);
+        s.wait_for_engine();
+        assert_eq!(engine_volume(&s), volume_gain(-9.0));
     }
 }

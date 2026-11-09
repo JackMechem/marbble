@@ -122,8 +122,13 @@ session sets `engine_resync`: from then on a command that finds the ring full is
 without waiting, so the UI isn't held up a second per command. Once the ring is empty again,
 `idle` (`resync_engine`) stops a running transport through the session, then on a later idle
 rebuilds the engine from the project with `rebuild_graph`, as Reset Audio Engine does without
-reopening the device. It waits for the ring to empty because commands queued before the
-dropped one would otherwise land on the new graph and undo part of it.
+reopening the device.
+
+Any graph swap (`Engine::replace_graph`: a rebuild, opening a project, a new sample rate) first
+applies what is still queued to the old graph (`Engine::take_queued`), so a command sent for it,
+say a new track's strip or the last project's, can't land on the new one and undo part of it.
+Reopening the device does the same as soon as the old stream has gone, before the new one
+starts, so `cmds_done` keeps counting up to `cmds_sent`.
 
 Failures on the audio thread are contained rather than fatal:
 

@@ -29,19 +29,7 @@ impl Engine {
         }
         self.release_held();
 
-        let mut applied = 0;
-        while let Ok(cmd) = self.cmd_rx.pop() {
-            self.apply(cmd);
-            applied += 1;
-        }
-        if applied > 0 {
-            // Publish the transport as the commands left it before counting them done: once
-            // the session sees a locate done, it reads the position from `status.pos`, which
-            // must not still hold the old one (see `Session::position`).
-            self.publish_transport();
-            self.status.recording.store(self.recording, Ordering::Relaxed);
-            self.status.cmds_done.fetch_add(applied, Ordering::Release);
-        }
+        self.take_commands();
 
         self.live.clear();
         while let Ok(m) = self.live_midi.pop() {
@@ -202,10 +190,41 @@ impl Engine {
         self.master_volume
     }
 
+    /// The ids of the strips the engine plays, in order.
+    #[cfg(test)]
+    pub(crate) fn track_ids_for_tests(&self) -> Vec<Id> {
+        self.tracks.iter().map(|t| t.id).collect()
+    }
+
     /// Whether a block given up on is still open.
     #[cfg(test)]
     pub(crate) fn stalled_for_tests(&self) -> bool {
         self.parallel.stalled
+    }
+
+    /// Applies every command queued, in order, and counts them done.
+    fn take_commands(&mut self) {
+        let mut applied = 0;
+        while let Ok(cmd) = self.cmd_rx.pop() {
+            self.apply(cmd);
+            applied += 1;
+        }
+        if applied > 0 {
+            // Publish the transport as the commands left it before counting them done: once
+            // the session sees a locate done, it reads the position from `status.pos`, which
+            // must not still hold the old one (see `Session::position`).
+            self.publish_transport();
+            self.status.recording.store(self.recording, Ordering::Relaxed);
+            self.status.cmds_done.fetch_add(applied, Ordering::Release);
+        }
+    }
+
+    /// Applies what the audio thread has yet to take, from the session's thread with the engine
+    /// locked and no device calling back (or before a graph is swapped in), once a block given up
+    /// on is over: commands are for the graph they were sent to, never one replacing it.
+    pub(crate) fn take_queued(&mut self) {
+        self.settle();
+        self.take_commands();
     }
 
     /// Waits for a block given up on to end (never on the audio thread), so that what it was using

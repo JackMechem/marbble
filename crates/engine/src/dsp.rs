@@ -205,14 +205,16 @@ impl Engine {
     }
 
     /// Replaces the whole graph (project load, sample-rate change). Called with the engine lock
-    /// held from a non-audio thread; returns the old graph for the caller to drop.
+    /// held from a non-audio thread; returns the old graph for the caller to drop. Commands still
+    /// queued were sent for the old graph, so they are applied to it first: taken afterwards, an
+    /// old track's strip or another project's would land in the new one.
     pub fn replace_graph(
         &mut self,
         sample_rate: f64,
         tracks: Vec<Box<TrackDsp>>,
         master_inserts: Vec<Option<InsertDsp>>,
     ) -> (Vec<Box<TrackDsp>>, Vec<Option<InsertDsp>>) {
-        self.settle();
+        self.take_queued();
         // New strips throughout: none sits out, and what threads still hold is no track's.
         self.status.release_all();
         self.sample_rate = sample_rate;

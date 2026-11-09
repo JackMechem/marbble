@@ -61,6 +61,12 @@ All notable changes to Marbble are recorded here. The format follows
 - **Controller Assignments' column headings sit over their columns.** "Min %", "Max %" and the
   others were one column off from the rows, as the heading had no Delete button to size its last
   column.
+### Fixed
+
+- **An edit made just before Reset Audio Engine or opening a project is no longer applied twice.**
+  If the audio device hadn't yet taken the last change (a new track, say) when the engine was
+  rebuilt, the change could land on top of the rebuilt engine: the track then played twice, or
+  the previous project's track played in the new one.
 
 ## [0.1.0-alpha.12] - 2026-11-09
 
