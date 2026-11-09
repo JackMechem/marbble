@@ -32,7 +32,8 @@ import { BlankButtons, BlankEq, BlankRow, BlankSlots, MoreSlot, PlateName, SlotB
 import { TrackIcon, TrackIconArt } from "../trackIconArt";
 import { openTrackIconPicker } from "./TrackIconPicker";
 import { slotLayout, stripRows, stripWants, type SlotRows } from "../stripRows";
-import { METER_W, plateInk } from "../mixerLayout";
+import { METER_W, PAN_KNOB, plateInk } from "../mixerLayout";
+import { panLabel } from "../panText";
 import { onPress } from "../keyNav";
 
 const PAN = { type: "pan" } as const;
@@ -417,7 +418,17 @@ export function ChannelStrip({ track, selected, rows }: { track: Track | null; s
       <div className="strip-pan">
         {/* Logic puts the automation mode right above the pan knob. */}
         {strip && automatable(strip) ? <AutoModeButton track={strip} /> : <div className="auto-mode-spacer" />}
-        {isMaster || folder ? <div style={{ height: 26 }} /> : <Knob value={autoPan} onChange={(pan) => api.updateTrack(id, { pan })} {...panTouch} />}
+        {isMaster || folder ? (
+          <div className="strip-pan-knob" />
+        ) : (
+          <div className="strip-pan-knob">
+            <Knob value={autoPan} size={PAN_KNOB} onChange={(pan) => api.updateTrack(id, { pan })} {...panTouch} />
+            {/* The knob's own aria-valuetext says it; this is for the eye. */}
+            <span className="pan-value" aria-hidden>
+              {panLabel(autoPan)}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="strip-readouts">

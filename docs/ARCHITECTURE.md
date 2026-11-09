@@ -2788,6 +2788,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `stripSettings.ts` | The channel strip Setting menu: the strip clipboard (a store field), Reset, saving and loading; resetting clip indicators. |
 | `cpuMeter.ts` | The CPU meter's tooltip, figure, colour bands and where its peak tick goes; pure, tested. |
 | `sliderKeys.ts` | Keyboard steps for knobs, faders and sliders, and their ARIA props; pure, tested. |
+| `panText.ts` | A pan position as the strips' pan knobs show and say it ("C", "L 23", "R 40"; "Centre" spoken); pure, tested. |
 | `focusRing.ts` | Shows the focus ring only after Tab (`data-keyboard-focus` on `<html>`); tested. |
 | `stripMeters.ts` | The clip indicator's readout and the gain-reduction meter's scale and fall; pure, tested. |
 | `vca.ts` | VCA offsets and loop checks for drawing the Mixer (mirrors `vca.rs`); pure, tested. |

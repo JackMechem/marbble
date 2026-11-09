@@ -276,6 +276,25 @@
   margin-top: auto;
 }
 
+/* The pan knob (PAN_KNOB, 34 px) with its value under it: "C", "L 23", "R 40" (panText.ts). As
+   tall on every strip, a blank one too, so the readouts and faders below stay level. */
+.strip-pan-knob {
+  height: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.pan-value {
+  height: 13px;
+  line-height: 13px;
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--dim);
+  white-space: nowrap;
+}
+
 .strip-readouts {
   display: flex;
   gap: 3px;

@@ -120,7 +120,7 @@ export function VcaStrip({ vca, rows }: { vca: Vca; rows: SlotRows }) {
       </div>
       <div className="strip-pan strip-blank" aria-hidden>
         <div className="auto-mode-spacer" />
-        <div style={{ height: 26 }} />
+        <div className="strip-pan-knob" />
       </div>
       <div className="strip-readouts">
         <span className="readout">{formatDb(vca.level_db)}</span>

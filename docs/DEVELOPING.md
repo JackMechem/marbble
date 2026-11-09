@@ -354,6 +354,7 @@ instead and enforce rules that would otherwise only fail in the running app.
 | `focusRing.test.ts` | When the keyboard focus ring shows (`src/focusRing.ts`): on after Tab, off after a mouse press. |
 | `stripMeters.test.ts` | The clip indicator readout and the gain-reduction meter. |
 | `vca.test.ts` | VCA offsets and loop checks in the Mixer. |
+| `panText.test.ts` | The pan knob's value as text (`src/panText.ts`): steps, rounding, ends, the label and the spoken value. |
 | `mixerLayout.test.ts` | The Mixer's stacks (nesting, counts, collapse, filtered strips), strip widths and their saved form, and name plate ink. |
 | `trackOff.test.ts` | Whether a track is off through its stacks (`src/trackOff.ts`), and the power button's tooltip. |
 | `controllers.test.ts` | Controller assignment types and labels (MIDI Learn). |

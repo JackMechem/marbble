@@ -2079,7 +2079,7 @@ From top to bottom:
 | **Output** | Stereo Out, the summing stack ("→ Σ Drums"), or an aux. |
 | **VCA** | The VCA fader that controls the strip (see [VCA faders](#vca-faders)). |
 | **Automation mode** | Off, Read, Touch, Latch, Write (see [Automation](#13-automation)). |
-| **Pan** | Drag vertically (Shift for fine); double-click to centre. |
+| **Pan** | Drag vertically (Shift for fine); double-click to centre. The value shows under the knob: **C** at the centre, **L 1** to **L 64** or **R 1** to **R 64** either side. |
 | **Readouts** | Volume in dB and the clip indicator: the highest peak since you last reset it, in dBFS, red once a peak went over 0 dBFS. Click it to reset it, Alt-click to reset every strip's (or use the key command **Reset All Clip Indicators**, unassigned at first). |
 | **Fader and meter** | Drag the fader (Shift for fine), double-click for 0 dB. -96 to +6 dB. On a strip assigned to a VCA, an outlined cap marks where the strip really plays (its fader plus the VCA). The meter holds peaks for 2 s, and its top lights red while the clip indicator is on. With a Compressor, Limiter, Noise Gate or De-Esser on the strip, a thin **gain-reduction meter** beside it grows down from the top as the first one that isn't bypassed reduces the gain (up to 30 dB). |
 | **Power** | Turns the track off: silent, and it runs nothing (see [Turning tracks off](#turning-tracks-off)). Not on Stereo Out. |

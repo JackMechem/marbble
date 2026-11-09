@@ -8,6 +8,10 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Changed
 
+- **Bigger pan knobs, with their value under them.** The pan knobs on the Mixer's and the
+  Inspector's channel strips are larger, and show the pan below: **C** at the centre, **L 23** or
+  **R 40** either side (64 steps each way), updating as you drag. The tooltip and screen readers
+  give the same value.
 - **Text drawn in the editors is on the interface's type scale.** The ruler, region and marker
   names, notes, the Piano Roll's keys, the tempo and signature tracks and the effect panels'
   graphs drew their text at their own sizes from 8 to 12 px, some in a different font. They now

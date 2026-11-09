@@ -122,6 +122,10 @@ export const SLIM_W = 90;
  *  so its fader sits where theirs do). */
 export const METER_W = 15;
 
+/** A channel strip's pan knob, in CSS pixels; its value goes under it (strip.css,
+ *  .strip-pan-knob, is as tall as the two, on every strip). */
+export const PAN_KNOB = 34;
+
 /** The Mixer's size, and the strips given a width of their own (by `stripKey`). */
 export interface MixerView {
   size: StripSize;

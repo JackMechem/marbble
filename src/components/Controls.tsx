@@ -9,6 +9,7 @@ import { dbToFader, faderToDb, formatDb, gainToDb } from "../time";
 import { effectiveDb } from "../vca";
 import { grFraction, isClip, nextGr } from "../stripMeters";
 import { keyValue, SLIDER_KEYS, sliderAria } from "../sliderKeys";
+import { PAN_STEPS, panSteps, panText } from "../panText";
 
 /** Shared vertical/horizontal drag helper. Shift gives fine control, like Logic. */
 export function useDrag(onDelta: (d: number, fine: boolean) => void, onEnd?: () => void) {
@@ -94,18 +95,13 @@ export function Fader({ db, onChange, height = 180, onTouchStart, onTouchEnd, vc
   );
 }
 
-/** A pan position (-1..1) as the knob shows it: "Centre", "L 12", "R 12". */
-export function panText(v: number): string {
-  const n = Math.round(v * 64);
-  return n === 0 ? "Centre" : n < 0 ? `L ${-n}` : `R ${n}`;
-}
-
+/** A pan knob, -1..1 in 64 steps either side (panText.ts). */
 export function Knob({ value, onChange, size = 26, onTouchStart, onTouchEnd, label = "Pan" }: { value: number; onChange: (v: number) => void; size?: number; label?: string } & TouchProps) {
   const v = useRef(value);
   v.current = value;
   const start = useDrag((d, fine) => {
     v.current = Math.min(1, Math.max(-1, v.current + d / (fine ? 600 : 120)));
-    onChange(Math.round(v.current * 64) / 64);
+    onChange(Math.round(v.current * PAN_STEPS) / PAN_STEPS);
   }, onTouchEnd);
   const angle = value * 135;
   const r = size / 2 - 3;
@@ -119,14 +115,14 @@ export function Knob({ value, onChange, size = 26, onTouchStart, onTouchEnd, lab
     <div
       className="knob"
       style={{ width: size, height: size }}
-      {...sliderAria({ label, text: panText(value), min: -64, max: 64, now: Math.round(value * 64) })}
-      onKeyDown={sliderKeyDown((value + 1) / 2, value, (p) => Math.round((p * 2 - 1) * 64) / 64, onChange, { onTouchStart, onTouchEnd })}
+      {...sliderAria({ label, text: panText(value), min: -PAN_STEPS, max: PAN_STEPS, now: panSteps(value) })}
+      onKeyDown={sliderKeyDown((value + 1) / 2, value, (p) => Math.round((p * 2 - 1) * PAN_STEPS) / PAN_STEPS, onChange, { onTouchStart, onTouchEnd })}
       onMouseDown={(e) => {
         onTouchStart?.();
         start(e, "y");
       }}
       onDoubleClick={() => onChange(0)}
-      title={`Pan ${Math.round(value * 64)}`}
+      title={`${label}: ${panText(value)} — double-click to centre`}
     >
       <svg width={size} height={size}>
         <circle cx={size / 2} cy={size / 2} r={r} className="knob-ring" />
