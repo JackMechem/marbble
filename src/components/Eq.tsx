@@ -11,6 +11,7 @@ import { CHANNEL_EQ, copyEq, eqClipboard, eqMenu, pasteEq } from "../fxHost";
 import { openMenu } from "./Menu";
 import { PresetButton } from "./fx/Presets";
 import { learnContext } from "../learn";
+import { canvasFont } from "../canvasText";
 
 // ---- state helpers ------------------------------------------------------------------------
 
@@ -336,7 +337,7 @@ export function EqEditor({ eq, sr, onChange, extra, bypassed, analyzerTrack, lea
     const accent = cssVar("--accent");
 
     // Grid
-    ctx.font = "10px Inter, system-ui, sans-serif";
+    ctx.font = canvasFont("xs");
     ctx.textBaseline = "middle";
     for (const f of [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]) {
       const x = Math.round(fx(f, W)) + 0.5;

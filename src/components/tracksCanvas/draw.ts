@@ -23,6 +23,7 @@ import { drumMarks } from "../../drumReplace";
 import { drawLoops, drawNewLane, drawRegion, MUTED_COLOR, roundRect } from "../../regionDraw";
 import { dragNewLanes, dragTarget, type TracksRefs } from "./drag";
 import type { Viewport } from "../../view";
+import { canvasFont } from "../../canvasText";
 
 type Refs = TracksRefs & {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
@@ -346,7 +347,7 @@ function drawDropTarget(ctx: CanvasRenderingContext2D, project: Project, layout:
     ctx.fillRect(x - 1, y, 2, h);
     const b = toBbt(project, drop.sample);
     const label = `${isNew ? "New track · " : ""}${b.bar} ${b.beat}`;
-    ctx.font = "600 11px Inter, system-ui, sans-serif";
+    ctx.font = canvasFont("sm", 600);
     const tw = ctx.measureText(label).width + 12;
     // The tag shrinks to fit the shortest lanes.
     const tagH = Math.min(18, h - 4);

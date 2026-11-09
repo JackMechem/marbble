@@ -3,6 +3,7 @@
 import type { FxPanelProps } from "../../fx";
 import { useStore } from "../../store";
 import { cssVar, fitCanvas, formatMs, noteMs, SpKnob, SpNote, SpSegments, SpToggle, useCanvas, val } from "./Reverb";
+import { canvasFont } from "../../canvasText";
 
 /** Parameter ids (crates/engine/src/fx/delay.rs). */
 const D = {
@@ -93,7 +94,7 @@ function DelayGraph({ mode, times, gains, cross, freeze, beatMs }: { mode: numbe
       const faint = cssVar("--faint");
       const accent = cssVar("--accent", "#4c9eff");
       const text = cssVar("--text");
-      ctx.font = "9.5px Inter, system-ui, sans-serif";
+      ctx.font = canvasFont("xs");
 
       // Beat grid when synced, otherwise a plain time grid.
       const step = beatMs ? beatMs / 1000 : [0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1].find((s) => span / s <= 10) ?? 1;

@@ -6,6 +6,7 @@ import type { FxPanelProps, FxParamSpec } from "../../fx";
 import { distortionCurve, overdriveCurve } from "../../fxShapes";
 import { FxChoice, FxGroup, FxKnob } from "./common";
 import { cssVar, fitCanvas, useCanvas } from "./Reverb";
+import { canvasFont } from "../../canvasText";
 
 const spec = (p: FxPanelProps, id: number): FxParamSpec => p.info.params.find((s) => s.id === id)!;
 
@@ -66,7 +67,7 @@ function CurveGraph({ shape, driveDb, deps }: { shape: (x: number) => number; dr
       ctx.lineJoin = "round";
       ctx.stroke();
 
-      ctx.font = "9.5px Inter, system-ui, sans-serif";
+      ctx.font = canvasFont("xs");
       ctx.fillStyle = faint;
       ctx.fillText("In", x0 + size - 12, py(0) + 12);
       ctx.fillText("Out", px(0) + 5, y0 + 10);

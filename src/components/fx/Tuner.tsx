@@ -6,6 +6,7 @@ import type { FxPanelProps } from "../../fx";
 import { onFrame } from "../../frame";
 import { useStore } from "../../store";
 import { pixelRatio } from "../../uiScale";
+import { canvasFont } from "../../canvasText";
 
 // Parameter ids and meter indexes (crates/engine/src/fx/tuner.rs).
 const REFERENCE = 0;
@@ -188,7 +189,7 @@ function TunerDial({ target }: { target: React.RefObject<Target> }) {
 
       // Ticks every 5 cents, long ones every 25 with labels.
       ctx.lineWidth = 1;
-      ctx.font = "600 9.5px system-ui, sans-serif";
+      ctx.font = canvasFont("xs", 600);
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       for (let c = -50; c <= 50; c += 5) {
@@ -260,7 +261,7 @@ function TunerDial({ target }: { target: React.RefObject<Target> }) {
       ctx.lineTo(w / 2, top - 2);
       ctx.fill();
       ctx.globalAlpha = 1;
-      ctx.font = "600 9.5px system-ui, sans-serif";
+      ctx.font = canvasFont("xs", 600);
       ctx.textBaseline = "middle";
       ctx.fillStyle = col.dim;
       ctx.textAlign = "left";

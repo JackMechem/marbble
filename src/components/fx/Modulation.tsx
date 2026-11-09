@@ -7,6 +7,7 @@ import { phaserHz, sweptMs, tremoloEdge, tremoloGain, tremoloShape, unipolarSine
 import { useStore } from "../../store";
 import { FxChoice, FxGroup, FxKnob, FxToggle } from "./common";
 import { cssVar, fitCanvas, formatMs, noteMs, useCanvas } from "./Reverb";
+import { canvasFont } from "../../canvasText";
 
 const spec = (p: FxPanelProps, id: number): FxParamSpec => p.info.params.find((s) => s.id === id)!;
 
@@ -65,7 +66,7 @@ function SweepGraph({
       const line = cssVar("--line");
       const faint = cssVar("--faint");
       const accent = cssVar("--accent", "#4c9eff");
-      ctx.font = "9.5px Inter, system-ui, sans-serif";
+      ctx.font = canvasFont("xs");
 
       // A line per quarter of the range, and one per half cycle.
       ctx.fillStyle = line;

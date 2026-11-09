@@ -17,6 +17,7 @@ import { keyHint } from "../keymap";
 import { setLocatorsByRegions } from "../ops";
 import { transport } from "../transport";
 import { rulerMenu } from "../rulerMenu";
+import { canvasFont } from "../canvasText";
 
 const CYCLE_H = 12;
 /** Bottom of the bar numbers; the Autopunch strip and the marker lane are below. */
@@ -83,7 +84,7 @@ export function Ruler() {
       ctx.fill();
     }
 
-    ctx.font = "500 11px Inter, 'SF Pro Text', system-ui, sans-serif";
+    ctx.font = canvasFont("sm", 500);
     ctx.textBaseline = "alphabetic";
     // Bars through the tempo map, so their numbers follow tempo and signature changes.
     for (const b of map.bars(Math.max(0, vp.left / pps), (vp.left + W) / pps)) {

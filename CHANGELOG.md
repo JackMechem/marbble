@@ -8,6 +8,12 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Changed
 
+- **Text drawn in the editors is on the interface's type scale.** The ruler, region and marker
+  names, notes, the Piano Roll's keys, the tempo and signature tracks and the effect panels'
+  graphs drew their text at their own sizes from 8 to 12 px, some in a different font. They now
+  use the sizes and the font of the rest of the interface: nothing is smaller than 10 px (the
+  Piano Roll's note and key names at small note heights were 8 or 9 px; the Sampler's key names
+  were 8 px), and marker, arrangement section and take names are 11 px instead of 10.
 - **Tidier instrument panels.** The built-in instruments' sections (Tre, Sei, Cinque, Uno, Onda,
   Sedici and the Sampler's) no longer repeat their names in every control: Oscillator 1 shows
   Range and Wave, not Osc 1 Range and Osc 1 Wave. A part's on/off switch is a light by its knob's

@@ -14,6 +14,7 @@ import type { Viewport } from "../view";
 import { addLane, closeLane, showUsedAutomation } from "./menus";
 import { fromUnit, fromUnitExact, isOutput, laneOf, outputTrack, paramLabel, stripOf, toUnit } from "./params";
 import { formatValue, liveValue, shownParam } from "./values";
+import { canvasFont } from "../canvasText";
 
 const POINT_R = 3;
 const HIT_R = 6;
@@ -85,7 +86,7 @@ function lineColor(t: Track): string {
 }
 
 function tag(ctx: CanvasRenderingContext2D, x: number, y: number, text: string, W: number) {
-  ctx.font = "600 11px Inter, system-ui, sans-serif";
+  ctx.font = canvasFont("sm", 600);
   const w = ctx.measureText(text).width + 10;
   const tx = Math.min(W - w - 2, x + 8);
   const ty = Math.max(2, y - 22);

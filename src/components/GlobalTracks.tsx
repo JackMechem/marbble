@@ -26,6 +26,7 @@ import { ArrangementHeader, ArrangementLane } from "./ArrangementTrack";
 import { saveGlobalView } from "../layout";
 import { clampTempoH, GLOBAL_TRACK_LABELS, GLOBAL_TRACKS, globalRowsHeight, SIGNATURE_H, toggleGlobalTrack, type GlobalTrackId } from "../globalTracks";
 import { keyHint } from "../keymap";
+import { canvasFont } from "../canvasText";
 
 /** Inset of the tempo graph from the lane's top and bottom. */
 const PAD = 7;
@@ -162,7 +163,7 @@ export function GlobalTracks() {
     ctx.fillRect(0, H - 1, W, 1);
 
     // Signatures at their bars.
-    ctx.font = "600 10px Inter, 'SF Pro Text', system-ui, sans-serif";
+    ctx.font = canvasFont("xs", 600);
     ctx.textBaseline = "middle";
     for (const s of sigH ? map.sigs : []) {
       const x = Math.round(xOf(map.barStart(s.bar))) + 0.5;

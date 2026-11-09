@@ -89,7 +89,7 @@ test("a level reaches the thumb set to the same dB", () => {
 });
 
 test("region name bar: unchanged on tall regions, slim on short ones, never past the region", () => {
-  assert.deepEqual(regionBar(61), { bar: 14, font: 11, bodyTop: 16, bodyH: 43 });
+  assert.deepEqual(regionBar(61), { bar: 14, font: "sm", bodyTop: 16, bodyH: 43 });
   for (let h = MIN_TRACK_H - 3; h <= 300; h++) {
     const g = regionBar(h);
     assert.ok(g.bodyTop >= g.bar);

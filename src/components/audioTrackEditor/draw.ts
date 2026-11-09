@@ -9,6 +9,7 @@ import { pixelRatio } from "../../uiScale";
 import { ensureWave, waveCache, type Wave } from "../../waveform";
 import { drawRegion } from "../../regionDraw";
 import { dbGain, DB_MARKS, CYCLE_STRIP, geometry, lowerBound, RULER, SCALE_W, type Drag } from "../../audioEditorModel";
+import { canvasFont } from "../../canvasText";
 
 /** The latest values for the imperative draw and pointer code. */
 export interface AudioLive {
@@ -162,7 +163,7 @@ export function editorDrawer({ canvasRef, scaleRef, scrollRef, playheadRef, drag
     }
     if (!track.regions.length) {
       ctx.fillStyle = theme.rulerTick;
-      ctx.font = "12px Inter, system-ui, sans-serif";
+      ctx.font = canvasFont("md");
       ctx.textAlign = "center";
       ctx.fillText("This track has no regions yet. Record or drop an audio file on it.", W / 2, g.top + g.h / 2);
       ctx.textAlign = "left";
@@ -223,14 +224,14 @@ export function editorDrawer({ canvasRef, scaleRef, scrollRef, playheadRef, drag
         ctx.fillStyle = theme.rulerTick;
         ctx.fillRect(x, CYCLE_STRIP + 1, 1, RULER - CYCLE_STRIP - 2);
         ctx.fillStyle = theme.rulerText;
-        ctx.font = "500 11px Inter, 'SF Pro Text', system-ui, sans-serif";
+        ctx.font = canvasFont("sm", 500);
         ctx.fillText(String(b + 1), x + 3, RULER - 5);
       } else if (barPx >= 4) {
         ctx.fillStyle = theme.rulerMinor;
         ctx.fillRect(x, RULER - 7, 1, 6);
       }
       if (beatPx < 10) continue;
-      ctx.font = "10px Inter, 'SF Pro Text', system-ui, sans-serif";
+      ctx.font = canvasFont("xs");
       for (let k = 1; k < bar.num; k++) {
         const bx = beatX(k);
         ctx.fillStyle = theme.rulerMinor;
@@ -258,7 +259,7 @@ export function editorDrawer({ canvasRef, scaleRef, scrollRef, playheadRef, drag
     ctx.fillRect(0, 0, SCALE_W, RULER);
     ctx.fillStyle = theme.rulerEdge;
     ctx.fillRect(0, RULER - 1, SCALE_W, 1);
-    ctx.font = "10px Inter, 'SF Pro Text', system-ui, sans-serif";
+    ctx.font = canvasFont("xs");
     ctx.textBaseline = "middle";
     ctx.textAlign = "right";
     ctx.fillStyle = theme.rulerTick;

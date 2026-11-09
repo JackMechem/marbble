@@ -373,6 +373,7 @@ instead and enforce rules that would otherwise only fail in the running app.
 | `compressorModel.test.ts` | The transfer curve's copy of `static_reduction` for each circuit. |
 | `dynScale.test.ts` | The dynamics panels' value formatting and knob maths. |
 | `styles.test.ts` | Guard: `src/styles/index.css` imports every stylesheet exactly once with the tokens first, no other file imports CSS, and each file's braces balance; no raw hex, `rgb()` or `hsl()` colour outside `tokens.css`; every font size from the type scale; `tokens.css` matches Studio in `themes.ts`; the focus ring. |
+| `canvasText.test.ts` | Guard: `canvasText.ts`'s defaults and font match `tokens.css` and `base.css`, and every canvas `font` in `src/` comes from `canvasFont`. |
 | `browserDialogs.test.ts` | Guard: no `window.prompt`, `confirm` or `alert` in `src/` (macOS's web view doesn't implement them; use `askName` or the dialog plug-in). |
 | `contrast.test.ts` | Guard: in every theme of `themes.ts`, `--text`, `--dim` and `--faint` are at least 4.5:1 (WCAG) on each surface text sits on, `--lcd-label` on the LCD, and the three stay in that order. |
 
@@ -506,7 +507,10 @@ These keep the code maintainable and the merges clean.
     body), `--fs-lg` 13, `--fs-xl` 15, `--fs-xxl` 17. Text uses `--fs-sm` and up; `--fs-xs` is
     only for tiny numbers and captions inside fixed-size readouts (meter scales, the CPU figure,
     the LCD's captions). Display numerals sized to their box (the LCD's digits, the Tuner's note)
-    set a px size of 18 or more. Canvas text (rulers, regions, notes) is sized in its draw code.
+    set a px size of 18 or more. Canvas text (rulers, regions, notes, graphs) is on the same
+    scale: `ctx.font = canvasFont("sm", 600)` (`canvasText.ts`), never a px literal; "xs" there
+    too is for numbers and captions in fixed-size boxes (axis labels, note names, the slim
+    region bar).
   - **Default states stay quiet.** Colour marks what differs from the default: Read is grey and
     Touch, Latch and Write are coloured; the power button is grey while the track plays and
     stands out when it's off.

@@ -9,6 +9,7 @@ import { pixelRatio } from "../../uiScale";
 import { useStore } from "../../store";
 import { sliderAria } from "../../sliderKeys";
 import { sliderKeyDown } from "../Controls";
+import { canvasFont } from "../../canvasText";
 
 // ---- shared controls ------------------------------------------------------------------------
 
@@ -329,7 +330,7 @@ function ReverbGraph({ p, predelayMs }: { p: FxPanelProps; predelayMs: number })
       const faint = cssVar("--faint");
       const accent = cssVar("--accent", "#4c9eff");
       const text = cssVar("--dim");
-      ctx.font = "9.5px Inter, system-ui, sans-serif";
+      ctx.font = canvasFont("xs");
 
       // Grid: dB rows and time columns.
       ctx.fillStyle = line;

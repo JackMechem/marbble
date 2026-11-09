@@ -12,6 +12,7 @@ import { MIN_BODY_H, regionBar } from "./regionBar";
 import { playedNotes } from "./regionParams";
 import { drawPatternMini } from "./stepSeq";
 import { gainScale } from "./regionGain";
+import { canvasFont } from "./canvasText";
 
 export function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   r = Math.min(r, w / 2, h / 2);
@@ -89,7 +90,7 @@ export function drawRegion(
   if (badge) drawFolderBadge(ctx, r as Region & { takes: NonNullable<Region["takes"]> }, x, y, style === "light" ? "#ffffff" : theme.ink);
   if (w > 24 + badge && !ghost) {
     ctx.fillStyle = style === "light" ? "#ffffff" : theme.ink;
-    ctx.font = `600 ${geom.font}px Inter, 'SF Pro Text', system-ui, sans-serif`;
+    ctx.font = canvasFont(geom.font, 600);
     ctx.textBaseline = "middle";
     // A take folder names the comp (or whole take) it plays, as Logic's "Audio 1: Comp 2".
     const label = folderLabel(r);
@@ -155,7 +156,7 @@ export function drawNewLane(ctx: CanvasRenderingContext2D, y: number, h: number,
   ctx.strokeRect(1, y + 1, W - 2, h - 2);
   ctx.setLineDash([]);
   const label = "New track";
-  ctx.font = "600 11px Inter, system-ui, sans-serif";
+  ctx.font = canvasFont("sm", 600);
   const tagH = Math.min(18, h - 4);
   const tagY = y + Math.min(4, (h - tagH) / 2);
   ctx.beginPath();

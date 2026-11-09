@@ -14,6 +14,7 @@ import { getState, setState, useStore } from "../../store";
 import { AUDIO_EXTENSIONS } from "../../dnd";
 import { FxGroup } from "./common";
 import { InstSection, wheelAcross } from "./Instrument";
+import { canvasFont } from "../../canvasText";
 
 type Result<T> = { snapshot: Snapshot; result: T };
 
@@ -95,7 +96,7 @@ function ZoneMap({ zones, selected, playing, track, onSelect, onChange }: { zone
       ctx.fillRect(z.root * px, r.y, Math.max(1, px), Math.min(4, r.h));
       if (r.w > 40 && r.h > 14) {
         ctx.fillStyle = "#fff";
-        ctx.font = "10px system-ui, sans-serif";
+        ctx.font = canvasFont("xs");
         ctx.fillText(z.name, r.x + 4, r.y + 11, r.w - 8);
       }
     }
@@ -109,7 +110,7 @@ function ZoneMap({ zones, selected, playing, track, onSelect, onChange }: { zone
       }
       if (k % 12 === 0) {
         ctx.fillStyle = "#26272b";
-        ctx.font = "8px system-ui, sans-serif";
+        ctx.font = canvasFont("xs");
         ctx.fillRect(k * px, h - STRIP, 1, STRIP);
         if (k % 24 === 0) ctx.fillText(keyName(k).replace("♯", "#"), k * px + 2, h - 2);
       }
@@ -219,7 +220,7 @@ function Waveform({ track, zone, onChange }: { track: Id; zone: ZoneView; onChan
     ctx.fillRect(0, 0, w, h);
     if (shown.error) {
       ctx.fillStyle = "#e0695e";
-      ctx.font = "12px system-ui, sans-serif";
+      ctx.font = canvasFont("md");
       ctx.fillText(`${shown.file}: ${shown.error}`, 10, h / 2, w - 20);
       return;
     }
@@ -261,7 +262,7 @@ function Waveform({ track, zone, onChange }: { track: Id; zone: ZoneView; onChan
       ctx.fillRect(x - 0.5, 0, 1.5, h);
       ctx.fillRect(x - 0.5, top ? 0 : h - 12, 12, 12);
       ctx.fillStyle = "#000";
-      ctx.font = "bold 9px system-ui, sans-serif";
+      ctx.font = canvasFont("xs", 700);
       ctx.fillText(label, x + 2, top ? 9 : h - 3);
     };
     handle(pts.start, "S", "#f0d264", true);

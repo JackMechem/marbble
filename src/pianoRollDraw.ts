@@ -6,6 +6,7 @@ import type { TempoMap } from "./tempo";
 import { mix, theme } from "./theme";
 import { pixelRatio } from "./uiScale";
 import { curve, type CurveShape } from "./ccCurves";
+import { canvasFont } from "./canvasText";
 import { BLACK, LANE_PAD, laneValue, laneY, pitchAt, timeAt, xOf, yOf, type PrView } from "./pianoRollModel";
 
 export { BLACK, LANE_PAD, laneValue, laneY, pitchAt, timeAt, xOf, yOf, type PrView };
@@ -20,7 +21,6 @@ const NAMES = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A�
 /** Logic's octave numbering: middle C (MIDI 60) is C3. */
 export const noteName = (p: number) => `${NAMES[p % 12]}${Math.floor(p / 12) - 2}`;
 
-const FONT = "Inter, 'SF Pro Text', system-ui, sans-serif";
 
 // Logic-style velocity colours: violet for soft notes through green and yellow to red.
 const VEL_STOPS: [number, string][] = [
@@ -190,7 +190,7 @@ export function drawNotes(ctx: CanvasRenderingContext2D, v: PrView, notes: PNote
   const pHi = pitchAt(v, 0) + 1;
   const h = Math.max(2, v.noteH - 1);
   const labels = v.noteH >= 11;
-  ctx.font = `600 ${Math.min(10, v.noteH - 3)}px ${FONT}`;
+  ctx.font = canvasFont("xs", 600);
   ctx.textBaseline = "middle";
   const outline = theme.selectOutline;
   const ink = theme.region === "light" ? "rgba(255,255,255,0.95)" : theme.ink;
@@ -235,7 +235,7 @@ export function drawKeys(ctx: CanvasRenderingContext2D, v: PrView, pressed: numb
   const sep = mix(theme.pianoBlackKey, theme.pianoWhiteKey, 0.72);
   const pLo = pitchAt(v, H);
   const pHi = pitchAt(v, 0);
-  ctx.font = `500 ${Math.max(8, Math.min(10, v.noteH - 1))}px ${FONT}`;
+  ctx.font = canvasFont("xs", 500);
   ctx.textBaseline = "middle";
   ctx.textAlign = "right";
   for (let p = pLo; p <= pHi; p++) {
@@ -295,7 +295,7 @@ export function drawRuler(ctx: CanvasRenderingContext2D, v: PrView, g: Grid, s: 
     ctx.roundRect(xOf(v, c.start), 1.5, (c.end - c.start) * v.pps, CYCLE_H - 3, 2);
     ctx.fill();
   }
-  ctx.font = `500 11px ${FONT}`;
+  ctx.font = canvasFont("sm", 500);
   ctx.textBaseline = "alphabetic";
   for (const bar of g.map.bars(Math.max(0, timeAt(v, 0)), timeAt(v, W))) {
     const b = bar.bar - 1;
@@ -315,9 +315,9 @@ export function drawRuler(ctx: CanvasRenderingContext2D, v: PrView, g: Grid, s: 
         ctx.fillStyle = theme.rulerMinor;
         ctx.fillRect(bx, H - 10, 1, 5);
         if (beatPx >= 48) {
-          ctx.font = `400 10px ${FONT}`;
+          ctx.font = canvasFont("xs");
           ctx.fillText(`${b + 1}.${k + 1}`, bx + 3, H - 8);
-          ctx.font = `500 11px ${FONT}`;
+          ctx.font = canvasFont("sm", 500);
         }
       }
     }
@@ -488,7 +488,7 @@ export function drawLaneScale(ctx: CanvasRenderingContext2D, H: number, kind: Cc
   ctx.fillStyle = theme.rulerEdge;
   ctx.fillRect(KEY_W - 1, 0, 1, H);
   ctx.fillRect(0, 0, KEY_W, 1);
-  ctx.font = `500 9px ${FONT}`;
+  ctx.font = canvasFont("xs", 500);
   ctx.fillStyle = theme.pianoLabel;
   ctx.textAlign = "right";
   const labels = kind?.type === "pitch_bend" ? ["+8191", "0", "−8192"] : kind?.type === "controller" && kind.cc === 64 ? ["On", "", "Off"] : ["127", "64", "0"];

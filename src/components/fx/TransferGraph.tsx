@@ -4,6 +4,7 @@ import { useStore } from "../../store";
 import { pixelRatio } from "../../uiScale";
 import { ABI_SHIFT, Circuit, P, staticReduction } from "../../compressorModel";
 import { cssVar } from "./dynControls";
+import { canvasFont } from "../../canvasText";
 
 const G_MIN = -60;
 const G_MAX = 0;
@@ -66,7 +67,7 @@ export function TransferGraph({ v, level, size = 150 }: { v: (id: number) => num
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    ctx.font = "9px Inter, system-ui, sans-serif";
+    ctx.font = canvasFont("xs");
     ctx.fillStyle = faint;
     ctx.textBaseline = "top";
     ctx.fillText("out", 4, 4);

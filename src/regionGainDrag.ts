@@ -7,6 +7,7 @@ import { coalesced } from "./frame";
 import { regionBar } from "./regionBar";
 import { dragDelta, gainLabel, handleRect, inRect, shiftedGains, type Rect } from "./regionGain";
 import { theme } from "./theme";
+import { canvasFont } from "./canvasText";
 
 /** The gains a drag in progress shows, ahead of the engine's. */
 let live: Map<Id, number> | null = null;
@@ -48,7 +49,7 @@ export function drawGainHandle(ctx: CanvasRenderingContext2D, r: Region, x: numb
   ctx.fill();
   ctx.globalAlpha = 1;
   ctx.fillStyle = theme.text;
-  ctx.font = `600 ${Math.min(10, rc.h - 2)}px Inter, 'SF Pro Text', system-ui, sans-serif`;
+  ctx.font = canvasFont("xs", 600);
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(gainLabel(r.content.gain_db), rc.x + rc.w / 2, rc.y + rc.h / 2 + 0.5);

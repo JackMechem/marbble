@@ -13,6 +13,7 @@ import { MUTED_COLOR } from "./regionDraw";
 import { getState, setState } from "./store";
 import { hasBadTakes, RATING_MARKS, takeLabel, toggledRating } from "./takeRatings";
 import { mix, theme } from "./theme";
+import { canvasFont } from "./canvasText";
 import { drawWave, ensureWave, waveCache } from "./waveform";
 
 /** Height of one take row in an open folder. */
@@ -94,7 +95,7 @@ export function drawFolderBadge(ctx: CanvasRenderingContext2D, r: Region & { tak
   ctx.fill();
   ctx.globalAlpha /= 0.85;
   ctx.fillStyle = theme.region === "light" ? "#ffffff" : mix(ink, "#ffffff", 0.9);
-  ctx.font = "700 9px Inter, 'SF Pro Text', system-ui, sans-serif";
+  ctx.font = canvasFont("xs", 700);
   ctx.textAlign = "center";
   ctx.fillText(badgeText(r.takes), bx + 8, y + 7.5);
   ctx.textAlign = "left";
@@ -172,7 +173,7 @@ export function drawTakeRows(
       }
       drawTakeNotes(ctx, t, x, tt0, ry + 2, rh - 4, pps, light ? mix(color, "#000000", 0.5) : theme.ink, visX0, visX1);
       ctx.fillStyle = light ? "rgba(0,0,0,0.6)" : "rgba(255,255,255,0.75)";
-      ctx.font = "600 10px Inter, 'SF Pro Text', system-ui, sans-serif";
+      ctx.font = canvasFont("sm", 600);
       ctx.textBaseline = "middle";
       ctx.fillText(takeLabel(t), visX0 + 4, ry + rh / 2 + 0.5);
       ctx.restore();
@@ -209,7 +210,7 @@ export function drawTakeRows(
       ctx.strokeRect(sx0 + 0.75, ry + 1.25, Math.max(0, sx1 - sx0 - 1.5), rh - 1.5);
     }
     ctx.fillStyle = light ? "rgba(0,0,0,0.6)" : "rgba(255,255,255,0.75)";
-    ctx.font = "600 10px Inter, 'SF Pro Text', system-ui, sans-serif";
+    ctx.font = canvasFont("sm", 600);
     ctx.textBaseline = "middle";
     ctx.fillText(takeLabel(t), visX0 + 4, ry + rh / 2 + 0.5);
     ctx.restore();

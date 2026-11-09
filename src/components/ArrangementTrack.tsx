@@ -19,6 +19,7 @@ import { pixelRatio } from "../uiScale";
 import { onViewport, viewport } from "../view";
 import { openMenu, type MenuItem } from "./Menu";
 import { askName, notEmpty } from "./NameSheet";
+import { canvasFont } from "../canvasText";
 
 /** Height of the Arrangement lane. */
 export const ARR_H = ARRANGEMENT_H;
@@ -126,7 +127,7 @@ export function ArrangementLane() {
 
     const pv = preview.current;
     const list = pv?.kind === "resize" ? pv.list : sections(project);
-    ctx.font = "600 10px Inter, 'SF Pro Text', system-ui, sans-serif";
+    ctx.font = canvasFont("sm", 600);
     ctx.textBaseline = "middle";
     labels.current = new Map();
     const box = (s: ArrangementMarker, x0: number, x1: number, alpha: number, on: boolean) => {

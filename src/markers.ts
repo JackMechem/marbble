@@ -9,6 +9,7 @@ import { colorMenu } from "./ops";
 import { currentTick, getState, setState } from "./store";
 import { barsFrom, snapPos } from "./time";
 import { mix, theme } from "./theme";
+import { canvasFont } from "./canvasText";
 
 const project = () => getState().snap?.project;
 const playhead = () => currentTick()?.pos ?? 0;
@@ -115,7 +116,7 @@ export function drawMarkers(ctx: CanvasRenderingContext2D, p: Project, pps: numb
   const selected = getState().selectedMarker;
   const list = p.markers.map((m) => (moving && m.id === moving.id ? { ...m, pos: moving.pos, length: moving.length === undefined ? m.length : moving.length } : m)).sort((a, b) => a.pos - b.pos);
   const proj = { ...p, markers: list };
-  ctx.font = "600 10px Inter, 'SF Pro Text', system-ui, sans-serif";
+  ctx.font = canvasFont("sm", 600);
   ctx.textBaseline = "middle";
   flags = [];
   list.forEach((m) => {

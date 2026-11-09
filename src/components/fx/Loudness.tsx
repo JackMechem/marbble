@@ -6,6 +6,7 @@ import type { FxPanelProps } from "../../fx";
 import { onFrame } from "../../frame";
 import { useStore } from "../../store";
 import { pixelRatio } from "../../uiScale";
+import { canvasFont } from "../../canvasText";
 import { Check, Select } from "../Form";
 
 // Parameter ids and meter indexes (crates/engine/src/fx/loudness.rs).
@@ -182,7 +183,7 @@ function History({
       ctx.stroke();
       ctx.setLineDash([]);
       ctx.fillStyle = label;
-      ctx.font = "600 9px system-ui, sans-serif";
+      ctx.font = canvasFont("xs", 600);
       ctx.textBaseline = "top";
       ctx.fillText(`−${HISTORY_SECS} s`, 4, 3);
     };

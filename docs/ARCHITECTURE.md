@@ -1603,6 +1603,9 @@ Audio Track Editor and meters are canvas drawings. The common pattern:
   a theme switch.
 - Backing stores are sized with `pixelRatio()` (`uiScale.ts`), which accounts for both the
   display density and the interface zoom.
+- Text sets its font with `canvasFont(size, weight)` (`canvasText.ts`): a step of the type scale,
+  read from the `--fs-*` tokens, in the body's font. Drawing is in CSS pixels, so the size matches
+  the stylesheet's text at every interface size (`tests/canvasText.test.ts` holds this).
 - Redraws are triggered by store changes, ticks and viewport changes, coalesced to one per
   frame.
 - Waveforms (`waveform.ts`) are fetched once per clip as binary (`clip_waveform` returns raw
@@ -2800,6 +2803,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `appearance.ts` | Saving and loading theme, interface size and waveform style in `settings.json`. |
 | `theme.ts` | `CanvasTheme` and the live canvas colours. |
 | `uiScale.ts` | Interface scale and canvas pixel ratio. |
+| `canvasText.ts` | `canvasFont`: canvas text on the type scale, in the interface's font. |
 | `icons.tsx` | Hand-drawn control bar glyphs. |
 | `styles/` | All styles, using the theme variables: `index.css` imports one file per area, in cascade order; `tokens.css` holds the `:root` variables. |
 | `detach.ts` | Detached panel windows: the panel kind registry, sharing UI state and snapshots between windows, detaching and attaching, remembered geometry. |
