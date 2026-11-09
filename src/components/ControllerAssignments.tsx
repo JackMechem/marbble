@@ -19,8 +19,9 @@ import {
   type AssignmentPatch,
   type AssignmentRow,
 } from "../controllers";
-import { keyHint } from "../keymap";
-import { cancelLearn, learn } from "../learn";
+import { commandLabel, keyHint, midiCommands } from "../keymap";
+import { cancelLearn, learn, learnCommand } from "../learn";
+import type { MenuItem } from "./Menu";
 import { onTick, setState, useStore } from "../store";
 import { Sheet } from "./Dialogs";
 import { Check, NumberField, Select } from "./Form";
@@ -31,15 +32,19 @@ function Row({ row, index, onChange }: { row: AssignmentRow; index: number; onCh
   const update = (patch: AssignmentPatch) => call<AssignmentRow[]>("update_controller_assignment", { index, patch }).then(onChange);
   const c = row.controller;
   const editor = rowEditor(row);
+  // Key commands are named here; the engine only knows their ids.
+  const command = row.target.type === "command" ? commandLabel(row.target.id) : undefined;
+  const name = row.target.type === "command" ? `Key Command › ${command ?? row.target.id}` : row.name;
+  const available = row.available && command !== null;
   return (
-    <div className={"ctl-row" + (row.available ? "" : " unavailable")} title={row.available ? undefined : "Not in this project: the assignment does nothing here"}>
+    <div className={"ctl-row" + (available ? "" : " unavailable")} title={available ? undefined : "Not in this project: the assignment does nothing here"}>
       <span className="ctl-controller">{controllerLabel(c)}</span>
       <span className="ctl-channel">{channelLabel(c)}</span>
       <span className="ctl-port" title={c.port}>
         {c.port}
       </span>
-      <span className="ctl-param" title={row.name}>
-        {row.name}
+      <span className="ctl-param" title={name}>
+        {name}
       </span>
       {editor === "takeover" ? (
         <Select value={row.mode} options={MODE_OPTIONS} onChange={(mode) => update({ mode })} width={104} />
@@ -48,7 +53,7 @@ function Row({ row, index, onChange }: { row: AssignmentRow; index: number; onCh
       )}
       {editor === "button" ? (
         <>
-          <span className="ctl-button dim">{buttonHint(row.button_mode)}</span>
+          <span className="ctl-button dim">{buttonHint(row.button_mode, row.target.type === "command")}</span>
           {offersLatching(row) ? (
             <Check
               checked={row.latching}
@@ -88,6 +93,13 @@ function Row({ row, index, onChange }: { row: AssignmentRow; index: number; onCh
       </button>
     </div>
   );
+}
+
+/** Learn Key Command…'s menu: every command a controller can fire, a submenu per group. */
+function commandMenu(): MenuItem[] {
+  const all = midiCommands();
+  const groups = [...new Set(all.map((c) => c.group))];
+  return groups.map((g) => ({ label: g, children: all.filter((c) => c.group === g).map((c) => ({ label: c.label, onClick: () => learnCommand(c.id) })) }));
 }
 
 /** The Controller Assignments sheet. */
@@ -135,9 +147,14 @@ export function ControllerAssignmentsSheet() {
         ))}
       </div>
       <div className="sheet-foot">
-        <button className="push" {...onPress((e) => openMenuAt(e.currentTarget, TRANSPORT_TARGETS.map(({ label, target }) => ({ label, onClick: () => learn(target) }))))}>
-          Learn Transport Button…
-        </button>
+        <div className="sheet-buttons">
+          <button className="push" {...onPress((e) => openMenuAt(e.currentTarget, TRANSPORT_TARGETS.map(({ label, target }) => ({ label, onClick: () => learn(target) }))))}>
+            Learn Transport Button…
+          </button>
+          <button className="push" title="Assign a pad or button to any key command or menu item" {...onPress((e) => openMenuAt(e.currentTarget, commandMenu()))}>
+            Learn Key Command…
+          </button>
+        </div>
         <div className="sheet-buttons">
           <button className="push default" onClick={close}>
             Done

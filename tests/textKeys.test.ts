@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { deleteBackStart, fieldEdit, fieldMenuAction, isTextField, keepsKeys, MENU_ACCELERATORS, textFieldMenu } from "../src/textKeys.ts";
+import { deleteBackStart, fieldEdit, fieldMenuAction, isTextField, keepsKeys, MENU_ACCELERATORS, textFieldMenu, typingInField } from "../src/textKeys.ts";
 
 /** A text input with a caret or selection, recording what's done to it. */
 function input(value: string, start: number, end = start, type = "text") {
@@ -35,6 +35,15 @@ test("text inputs, textareas and editable content are text fields; checkboxes an
   assert.equal(isTextField({ tagName: "SELECT" }), false);
   assert.equal(isTextField({ tagName: "CANVAS" }), false);
   assert.equal(isTextField(null), false);
+});
+
+test("a MIDI-fired key command is held back only while a text field in a focused window is typed in", () => {
+  assert.equal(typingInField(doc(input("Bass", 4).el)), true);
+  // The window doesn't have the focus: the field isn't being typed in, the controller's command runs.
+  assert.equal(typingInField(doc(input("Bass", 4).el, false)), false);
+  // A focused slider or checkbox would keep its keys, but takes nothing a controller sends.
+  assert.equal(typingInField(doc({ tagName: "INPUT", type: "range" })), false);
+  assert.equal(typingInField(doc({ tagName: "BODY" })), false);
 });
 
 test("any input, pop-up, textarea or editable content keeps its keys", () => {

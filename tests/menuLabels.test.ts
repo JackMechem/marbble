@@ -114,15 +114,18 @@ test("a key belongs to the menu bar or to a key command, never both", () => {
 });
 
 test("Settings › Key Commands lists the menu bar's own keys as they are", () => {
-  const listed = [...keymap.matchAll(/\{ label: "([^"]+)", menu: "([^"]+)", key: (?:IS_MAC \? "[^"]+" : "([^"]+)"|"([^"]+)") \}/g)].map((m) => ({
-    label: m[1],
-    key: m[3] ?? m[4],
+  const listed = [...keymap.matchAll(/\{ id: "([^"]+)", label: "([^"]+)", menu: "([^"]+)", key: (?:IS_MAC \? "[^"]+" : "([^"]+)"|"([^"]+)") \}/g)].map((m) => ({
+    id: m[1],
+    label: m[2],
+    key: m[4] ?? m[5],
   }));
   const accelerated = items(rsSpec()).filter((i) => i.accel && i.accel !== "BOUNCE_IN_PLACE_KEY");
   for (const i of accelerated) {
     const l = listed.find((x) => x.label === i.label);
     assert.ok(l, `${i.label} isn't in MENU_SHORTCUTS`);
     assert.equal(fromAccel(l.key), fromAccel(i.accel!), i.label);
+    // MIDI controllers fire the item by this id.
+    assert.equal(l.id, i.id, i.label);
   }
   assert.equal(listed.length, accelerated.length + 1, "MENU_SHORTCUTS lists an item menu.rs doesn't have (Bounce in Place aside)");
 });

@@ -9,7 +9,9 @@
 //! Touch pass ends.
 //!
 //! The input threads take assigned controllers off the live MIDI path (`midi_io.rs`); `idle`
-//! applies them here, on the main thread, where plug-in controllers may be called.
+//! applies them here, on the main thread, where plug-in controllers may be called. A key
+//! command assigned to a controller can't run here: its id goes out with the next tick
+//! (`take_ctl_commands`), and the main window runs it as it would for the key.
 //!
 //! Assignments learnt when every strip had a fixed Channel EQ (`CtlTarget::Eq`, `EqOutput`)
 //! drive the same setting of the strip's first Channel EQ insert, which is what opening an
@@ -46,6 +48,8 @@ pub(super) struct Controls {
     /// A button just learnt and when: if it sends nothing (no release) within
     /// `ctl::LATCH_WAIT`, it latches by itself.
     latch_probe: Option<(Controller, Instant)>,
+    /// Key commands controllers fired since the last tick, oldest first.
+    commands: Vec<String>,
 }
 
 /// An assignment as the Controller Assignments window shows it.
@@ -206,14 +210,26 @@ impl Session {
     /// Waits for a controller to assign to `target`, or to the last touched parameter. Returns
     /// the parameter's name.
     pub fn start_learn(&mut self, target: Option<CtlTarget>) -> Result<String> {
+        self.start_learn_named(target, None)
+    }
+
+    /// `start_learn`, with the name to show for the target: a key command's, which only the
+    /// interface knows.
+    pub fn start_learn_named(&mut self, target: Option<CtlTarget>, name: Option<String>) -> Result<String> {
         let target = target
             .or_else(|| self.controls.touched.clone())
             .ok_or_else(|| anyhow!("Move a fader, knob or plug-in parameter first, then learn an assignment for it"))?;
         let target = self.ctl_complete(target);
-        let name = self.ctl_target_name(&target).ok_or_else(|| anyhow!("That parameter isn't in this project any more"))?;
+        let known = self.ctl_target_name(&target).ok_or_else(|| anyhow!("That parameter isn't in this project any more"))?;
+        let name = name.filter(|n| !n.is_empty()).unwrap_or(known);
         self.controls.learn = Some((target, name.clone()));
         self.midi.set_learning(true);
         Ok(name)
+    }
+
+    /// The key commands controllers fired since the last call, oldest first (for the tick).
+    pub fn take_ctl_commands(&mut self) -> Vec<String> {
+        std::mem::take(&mut self.controls.commands)
     }
 
     pub fn cancel_learn(&mut self) {
@@ -409,6 +425,8 @@ impl Session {
                 TransportAction::Record => "Transport › Record".into(),
                 TransportAction::Cycle => "Transport › Cycle".into(),
             },
+            // The window names it from its own list of commands.
+            CtlTarget::Command { id } => format!("Key Command › {id}"),
         })
     }
 
@@ -437,6 +455,8 @@ impl Session {
                 TransportAction::Record => self.is_recording() as u8 as f32,
                 TransportAction::Cycle => self.project.cycle.enabled as u8 as f32,
             },
+            // Nothing to show: a command has no state.
+            CtlTarget::Command { .. } => return None,
         })
     }
 
@@ -494,7 +514,7 @@ impl Session {
                 self.ctl_hold(MASTER_ID, AutoParam::Volume);
                 self.set_master_volume_linked(round_to(ctl::fader_to_db(n), 0.1));
             }
-            CtlTarget::Mute { .. } | CtlTarget::Solo { .. } | CtlTarget::Arm { .. } | CtlTarget::Transport { .. } => {}
+            CtlTarget::Mute { .. } | CtlTarget::Solo { .. } | CtlTarget::Arm { .. } | CtlTarget::Transport { .. } | CtlTarget::Command { .. } => {}
         }
     }
 
@@ -655,6 +675,12 @@ impl Session {
     /// goes to the press value or the bottom of the range.
     fn ctl_button(&mut self, i: usize, act: ButtonAct, msg: &CtlMsg) -> bool {
         let a = self.controls.list[i].clone();
+        if let CtlTarget::Command { id } = &a.target {
+            // Fired on each press, and in Momentary on the release too (Show/Hide Mixer shows it
+            // while held). The window runs it; the project hasn't changed yet.
+            self.controls.commands.push(id.clone());
+            return false;
+        }
         if self.ctl_value(&a.target).is_none() {
             return false;
         }
@@ -712,6 +738,7 @@ fn missing_name(t: &CtlTarget) -> String {
         CtlTarget::Eq { band, .. } => format!("Channel EQ › {}", BAND_NAMES.get(*band as usize).copied().unwrap_or("Band")),
         CtlTarget::EqOutput { .. } => "Channel EQ › Output".into(),
         CtlTarget::MasterVolume | CtlTarget::Transport { .. } => String::new(),
+        CtlTarget::Command { id } => format!("Key Command › {id}"),
     };
     match t.track() {
         Some(MASTER_ID) => format!("Stereo Out › {what}"),

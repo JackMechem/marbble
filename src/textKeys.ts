@@ -44,6 +44,15 @@ export function isTextField(el: unknown): el is FieldLike {
   return f.tagName === "INPUT" && TEXT_INPUTS.has((f.type ?? "").toLowerCase());
 }
 
+/**
+ * Whether something is being typed in this window: it has the focus and a text field has it. A
+ * key command a MIDI controller fires is held back then, as its key would go to the field (a
+ * menu item's goes through `textFieldMenu` instead).
+ */
+export function typingInField(doc: Pick<DocLike, "activeElement" | "hasFocus"> = document): boolean {
+  return doc.hasFocus() && isTextField(doc.activeElement);
+}
+
 /** Whether a key pressed in `el` belongs to it, not to the key commands: any input, pop-up or
  *  textarea (a focused checkbox or slider keeps its keys too), and editable content. */
 export function keepsKeys(el: unknown): boolean {

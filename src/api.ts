@@ -540,6 +540,9 @@ export interface Tick {
   learn?: string | null;
   /** What the learn that just finished assigned; sent once. */
   learned?: string | null;
+  /** Key commands (keymap.ts ids, or menu item ids) MIDI controllers fired since the last tick;
+   *  the main window runs them as their keys would. */
+  commands?: string[];
   /** Messages from hardware MIDI inputs since the last tick (Step Input listens to them). */
   midi_in?: [number, number, number][];
 }

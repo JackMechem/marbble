@@ -3,9 +3,9 @@
 //! connects to it as one of its outputs, and the controller's moves come in through the hardware
 //! input path (`inject_midi_from`) under the same port name, so the two pair automatically.
 //! It checks what reaches the port after a mouse-style change, an undo, automation playback, a
-//! button press and the transport, a pitch bend's 14 bits, a button matrix's pads (notes), the
-//! rate limit, that nothing is echoed while the controller moves, Feedback off, pairing and a
-//! reconnected output.
+//! button press and the transport, a pitch bend's 14 bits, a button matrix's pads (notes) and
+//! none for a key command's, the rate limit, that nothing is echoed while the controller moves,
+//! Feedback off, pairing and a reconnected output.
 //! Prints SKIP when the system has no MIDI sequencer or virtual ports (Windows, CI runners
 //! without the ALSA sequencer).
 //! usage: feedback_check <scratch dir>
@@ -360,6 +360,14 @@ fn main() {
     r.s.idle();
     let got = take(&r.rx);
     check(&format!("and unmuting puts it out ({got:?})"), got == vec![[0x90, 37, 0]]);
+
+    // A key command has no state to show: its pad is sent nothing.
+    r.s.start_learn_named(Some(CtlTarget::Command { id: "next-marker".into() }), Some("Key Command › Go to Next Marker".into())).unwrap();
+    r.send(&[0x90, 38, 100]);
+    r.send(&[0x80, 38, 0]);
+    r.settle();
+    let got = take(&r.rx);
+    check(&format!("a key command's pad gets no feedback ({got:?})"), of(&got, 0x90, 38).is_empty());
 
     // Feedback off for one assignment.
     let i = r.index_of(CtlKind::Cc { number: 7 });

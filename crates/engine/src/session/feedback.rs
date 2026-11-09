@@ -118,7 +118,7 @@ impl Session {
             CtlTarget::Plugin { track, uid, param, .. } => (*track, AutoParam::Plugin { uid: *uid, param: *param, name: String::new() }),
             CtlTarget::Eq { .. } | CtlTarget::EqOutput { .. } => return self.ctl_auto_param(&self.ctl_legacy_eq(t)?),
             CtlTarget::MasterVolume => (MASTER_ID, AutoParam::Volume),
-            CtlTarget::Solo { .. } | CtlTarget::Arm { .. } | CtlTarget::Transport { .. } => return None,
+            CtlTarget::Solo { .. } | CtlTarget::Arm { .. } | CtlTarget::Transport { .. } | CtlTarget::Command { .. } => return None,
         })
     }
 }

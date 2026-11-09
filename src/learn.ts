@@ -1,18 +1,25 @@
 // MIDI Learn: Learn Assignment for the last touched parameter (a key command and the Control
-// Surfaces menu), and the "Learn MIDI Assignment" item of the right-click menus on faders,
-// knobs and plug-in parameters. The engine waits for the next controller move and assigns it
+// Surfaces menu), the "Learn MIDI Assignment" item of the right-click menus on faders, knobs and
+// plug-in parameters, and Learn MIDI for key commands (Settings › Key Commands). The engine waits for the next controller move and assigns it
 // (session/controllers.rs); the banner in ControllerAssignments.tsx shows the learn from the
 // ticks. The types and pure helpers are in controllers.ts.
 import { createContext, useContext } from "react";
 import { call, type Id } from "./api";
 import { stripTarget, type CtlTarget } from "./controllers";
+import { commandLabel } from "./keymap";
 import { runInMain } from "./detach";
 import { openMenu, type MenuItem } from "./components/Menu";
 import { currentTick, setState } from "./store";
 
-/** Starts learning for `target`, or for the last touched parameter with null. */
-export function learn(target: CtlTarget | null) {
-  call<string>("start_learn", { target });
+/** Starts learning for `target`, or for the last touched parameter with null. `name` names a key
+ *  command, which the engine has no names for. */
+export function learn(target: CtlTarget | null, name?: string): Promise<string | null> {
+  return call<string>("start_learn", { target, name: name ?? null });
+}
+
+/** Learn MIDI for a key command or menu item: the next pad, button or program change fires it. */
+export function learnCommand(id: string): Promise<string | null> {
+  return learn({ type: "command", id }, `Key Command › ${commandLabel(id) ?? id}`);
 }
 
 export function cancelLearn() {

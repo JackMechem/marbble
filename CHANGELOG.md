@@ -41,6 +41,12 @@ All notable changes to Marbble are recorded here. The format follows
   off at the next) are recognised when learnt and marked **Latching**, so they act on every press
   rather than every other one. Assigned notes don't play the instrument or get recorded. Older
   assignment files load as before.
+- **Any key command can be fired from a MIDI controller.** In Settings › Key Commands each command
+  (and each menu bar item with a key, such as Undo, Redo and Split) has a **MIDI** button: click
+  it and press a pad or button, and that pad runs the command as its key would, held back by the
+  same things (an open dialog, typing in a text field). Its triggers are listed beside its keys.
+  Controller Assignments has **Learn Key Command…** too. A pad in Momentary mode runs the command
+  again on release, so Show/Hide Mixer shows the Mixer while held.
 
 ### Fixed
 

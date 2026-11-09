@@ -8,7 +8,7 @@ import { isBouncing, openBounce } from "./bounce";
 import * as ops from "./ops";
 import { ProjectChooser } from "./components/ProjectChooser";
 import { ProjectSettingsSheet, RecoverySheet } from "./components/Settings";
-import { commandForEvent } from "./keymap";
+import { commandForEvent, isMenuCommand } from "./keymap";
 import { runsOnKey } from "./keyRepeat";
 import { installPluginKeys } from "./pluginKeys";
 import { loadSettings, nudgeSamples, offerRecoveryFor, runStartup, type Nudge } from "./prefs";
@@ -71,7 +71,7 @@ import { checkForUpdates, checkUpdatesAtLaunch } from "./updates";
 import { UpdateNotice } from "./components/UpdateNotice";
 import { keyboardFocus } from "./focusRing";
 import { leavesKeyToFocus } from "./keyNav";
-import { keepsKeys, textFieldMenu } from "./textKeys";
+import { keepsKeys, textFieldMenu, typingInField } from "./textKeys";
 
 function selectedTrack() {
   const s = getState().snap;
@@ -534,6 +534,21 @@ function onKey(e: KeyboardEvent) {
   if (id && runsOnKey(id, e.repeat)) run();
 }
 
+/**
+ * A key command or menu item a MIDI controller fired (Controller Assignments; the engine passes
+ * them on in the tick). It runs as its key would here, held back by the same things: an open
+ * dialog, a sheet that holds the key back, a text field being typed in (where a menu item's
+ * accelerator edits the field or is dropped). Step Input's commands go to it while it is open,
+ * as a key passed on from a panel's window does.
+ */
+function runMidiCommand(id: string) {
+  const menu = isMenuCommand(id);
+  if (menu ? textFieldMenu(id) : typingInField()) return;
+  if (getState().dialog || sheetBlocks(id)) return;
+  if (menu) handleMenu(id);
+  else if (!runStepInputCommand(id, false)) KEY_ACTIONS[id]?.();
+}
+
 export function Toast() {
   const toast = useStore((s) => s.toast);
   const [visible, setVisible] = useState(false);
@@ -644,7 +659,10 @@ export default function App() {
     call<PluginDesc[]>("list_plugins").then((p) => p && setState({ plugins: p }));
     loadFxList();
     const offs = [
-      listen<Tick>("tick", (e) => pushTick(e.payload)),
+      listen<Tick>("tick", (e) => {
+        pushTick(e.payload);
+        e.payload.commands?.forEach(runMidiCommand);
+      }),
       listen<Snapshot>("project", (e) => receiveSnapshot(e.payload)),
       // On this window only: menu items for a focused panel window go there (windows.rs), and a
       // plain listen() would hear those too.

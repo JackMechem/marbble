@@ -1,8 +1,8 @@
 //! Exercises controller assignments (MIDI Learn) against a running engine (silent ALSA null
 //! output), with controller messages fed in through the hardware input path: learning, levels
 //! and plug-in parameters following, Pickup, ranges, buttons, notes and program changes with
-//! Toggle, Momentary and Trigger, latching buttons, automation writing, consumed messages and the
-//! saved list.
+//! Toggle, Momentary and Trigger, latching buttons, key commands passed to the window,
+//! automation writing, consumed messages and the saved list.
 //! usage: controller_check <audio file> <scratch dir>
 use std::time::Duration;
 
@@ -330,6 +330,54 @@ fn main() {
     send(&mut s, &[0x89, 42, 0]);
     std::thread::sleep(Duration::from_millis(100));
     check(&format!("Momentary Play plays while held ({playing} {})", s.is_playing()), playing && !s.is_playing());
+
+    // Key commands: the session passes a fired command's id to the window in the tick.
+    let next = || CtlTarget::Command { id: "next-marker".into() };
+    s.start_learn_named(Some(next()), Some("Key Command › Go to Next Marker".into())).unwrap();
+    send(&mut s, &[0x99, 44, 100]);
+    let t = s.tick();
+    check(
+        &format!("a key command is learned, by the name the window gave ({:?})", t.learned),
+        t.learned.as_deref() == Some("Note G♯1, channel 10 assigned to Key Command › Go to Next Marker"),
+    );
+    check("the learning press doesn't fire it", t.commands.is_empty());
+    send(&mut s, &[0x89, 44, 0]);
+    let cmd = index_of_kind(&s, CtlKind::Note { number: 44 });
+    let row = &s.controller_assignments()[cmd];
+    check(
+        &format!("a command triggers ({:?}, {})", row.assignment.button_mode, row.name),
+        row.assignment.button_mode == ButtonMode::Trigger && row.button && row.available,
+    );
+    let seen = s.tick().midi_activity;
+    send(&mut s, &[0x99, 44, 100]);
+    send(&mut s, &[0x89, 44, 0]);
+    send(&mut s, &[0x99, 44, 100]);
+    send(&mut s, &[0x89, 44, 0]);
+    let t = s.tick();
+    check(&format!("each press fires it once ({:?})", t.commands), t.commands == ["next-marker", "next-marker"]);
+    check("and once only", s.tick().commands.is_empty());
+    std::thread::sleep(Duration::from_millis(50));
+    check("a command's note doesn't play the instrument", s.tick().midi_activity == seen);
+    set_button(&mut s, cmd, ButtonMode::Momentary);
+    send(&mut s, &[0x99, 44, 100]);
+    let pressed = s.tick().commands;
+    send(&mut s, &[0x89, 44, 0]);
+    let released = s.tick().commands;
+    check(&format!("Momentary fires on the press and the release ({pressed:?} {released:?})"), pressed == ["next-marker"] && released == ["next-marker"]);
+    // A control change fires on going above 63, once until it comes back down.
+    s.start_learn_named(Some(CtlTarget::Command { id: "undo".into() }), Some("Key Command › Undo".into())).unwrap();
+    cc(&mut s, 60, 127);
+    s.tick();
+    cc(&mut s, 60, 0);
+    cc(&mut s, 60, 127);
+    cc(&mut s, 60, 127);
+    cc(&mut s, 60, 0);
+    let t = s.tick();
+    check(&format!("a button sending CCs fires on its press ({:?})", t.commands), t.commands == ["undo"]);
+    for id in ["next-marker", "undo"] {
+        let i = s.controller_assignments().iter().position(|r| r.assignment.target == CtlTarget::Command { id: id.into() }).unwrap();
+        s.delete_controller_assignment(i).unwrap();
+    }
 
     // A target that isn't in the project is shown as missing and does nothing.
     learn(&mut s, CtlTarget::Volume { track: inst }, 40);

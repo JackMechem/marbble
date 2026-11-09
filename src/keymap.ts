@@ -138,36 +138,65 @@ export const KEY_COMMANDS: KeyCommand[] = [
   { id: "step-triplet", label: "Triplet", group: "Step Input", keys: ["0"] },
 ];
 
-/** Accelerators of the native menu (src-tauri/src/menu.rs); they can't be changed here. */
-export const MENU_SHORTCUTS: { label: string; menu: string; key: string }[] = [
-  { label: "Settings…", menu: "Marbble", key: "Mod+," },
-  { label: "Quit Marbble", menu: "Marbble", key: "Mod+Q" },
-  { label: "New…", menu: "File", key: "Mod+N" },
-  { label: "Open Recent…", menu: "File", key: "Mod+Shift+O" },
-  { label: "Open…", menu: "File", key: "Mod+O" },
-  { label: "Save", menu: "File", key: "Mod+S" },
-  { label: "Save As…", menu: "File", key: "Mod+Shift+S" },
-  { label: "Import Audio File…", menu: "File", key: "Mod+Shift+I" },
-  { label: "Bounce Project or Section…", menu: "File", key: "Mod+B" },
-  { label: "Export Selected Tracks as Audio Files…", menu: "File", key: "Mod+E" },
-  { label: "Export All Tracks as Audio Files…", menu: "File", key: "Mod+Shift+E" },
+/** Accelerators of the native menu (src-tauri/src/menu.rs, by its item ids); they can't be
+ *  changed here, but a MIDI controller can fire them (`midiCommands`). */
+export const MENU_SHORTCUTS: { id: string; label: string; menu: string; key: string }[] = [
+  { id: "settings", label: "Settings…", menu: "Marbble", key: "Mod+," },
+  { id: "quit", label: "Quit Marbble", menu: "Marbble", key: "Mod+Q" },
+  { id: "new", label: "New…", menu: "File", key: "Mod+N" },
+  { id: "chooser-recent", label: "Open Recent…", menu: "File", key: "Mod+Shift+O" },
+  { id: "open", label: "Open…", menu: "File", key: "Mod+O" },
+  { id: "save", label: "Save", menu: "File", key: "Mod+S" },
+  { id: "save-as", label: "Save As…", menu: "File", key: "Mod+Shift+S" },
+  { id: "import-audio", label: "Import Audio File…", menu: "File", key: "Mod+Shift+I" },
+  { id: "bounce", label: "Bounce Project or Section…", menu: "File", key: "Mod+B" },
+  { id: "export-selected-tracks", label: "Export Selected Tracks as Audio Files…", menu: "File", key: "Mod+E" },
+  { id: "export-tracks", label: "Export All Tracks as Audio Files…", menu: "File", key: "Mod+Shift+E" },
   // BOUNCE_IN_PLACE_KEY in menu.rs: Logic's ⌃B on macOS; elsewhere Ctrl+B is Bounce Project.
-  { label: "Bounce in Place…", menu: "Track", key: IS_MAC ? "Ctrl+B" : "Ctrl+Alt+B" },
-  { label: "Undo", menu: "Edit", key: "Mod+Z" },
-  { label: "Redo", menu: "Edit", key: "Mod+Shift+Z" },
-  { label: "Duplicate", menu: "Edit", key: "Mod+D" },
-  { label: "Split Regions at Playhead", menu: "Edit", key: "Mod+T" },
-  { label: "Join Regions", menu: "Edit", key: "Mod+J" },
-  { label: "Select All", menu: "Edit", key: "Mod+A" },
-  { label: "New Tracks…", menu: "Track", key: "Mod+Alt+N" },
-  { label: "Create Folder Stack", menu: "Track", key: "Mod+Shift+D" },
-  { label: "Group Selected Tracks", menu: "Track", key: "Mod+G" },
-  { label: "Delete Track", menu: "Track", key: "Mod+Backspace" },
-  { label: "Musical Typing", menu: "View", key: "Mod+K" },
-  { label: "Larger Interface", menu: "View", key: "Mod+=" },
-  { label: "Smaller Interface", menu: "View", key: "Mod+-" },
-  { label: "Actual Size", menu: "View", key: "Mod+0" },
+  { id: "bounce-in-place", label: "Bounce in Place…", menu: "Track", key: IS_MAC ? "Ctrl+B" : "Ctrl+Alt+B" },
+  { id: "undo", label: "Undo", menu: "Edit", key: "Mod+Z" },
+  { id: "redo", label: "Redo", menu: "Edit", key: "Mod+Shift+Z" },
+  { id: "duplicate", label: "Duplicate", menu: "Edit", key: "Mod+D" },
+  { id: "split", label: "Split Regions at Playhead", menu: "Edit", key: "Mod+T" },
+  { id: "join", label: "Join Regions", menu: "Edit", key: "Mod+J" },
+  { id: "select-all", label: "Select All", menu: "Edit", key: "Mod+A" },
+  { id: "new-tracks", label: "New Tracks…", menu: "Track", key: "Mod+Alt+N" },
+  { id: "folder-stack", label: "Create Folder Stack", menu: "Track", key: "Mod+Shift+D" },
+  { id: "group", label: "Group Selected Tracks", menu: "Track", key: "Mod+G" },
+  { id: "delete-track", label: "Delete Track", menu: "Track", key: "Mod+Backspace" },
+  { id: "musical-typing", label: "Musical Typing", menu: "View", key: "Mod+K" },
+  { id: "ui-larger", label: "Larger Interface", menu: "View", key: "Mod+=" },
+  { id: "ui-smaller", label: "Smaller Interface", menu: "View", key: "Mod+-" },
+  { id: "ui-actual", label: "Actual Size", menu: "View", key: "Mod+0" },
 ];
+
+/** A command a MIDI controller can fire: a key command, or a menu bar item with a key (`menu`). */
+export interface MidiCommand {
+  id: string;
+  label: string;
+  group: string;
+  menu: boolean;
+}
+
+/** The menu bar's group in Settings › Key Commands. */
+export const MENU_GROUP = "Menu Bar";
+
+/** Every command a MIDI controller can be assigned to (Learn MIDI): all the key commands, and the
+ *  menu bar's items with keys except Quit. */
+export function midiCommands(): MidiCommand[] {
+  return [
+    ...KEY_COMMANDS.map((c) => ({ id: c.id, label: c.label, group: c.group, menu: false })),
+    ...MENU_SHORTCUTS.filter((m) => m.id !== "quit").map((m) => ({ id: m.id, label: m.label, group: MENU_GROUP, menu: true })),
+  ];
+}
+
+/** Whether command `id` is a menu bar item (run through the menu's handler, not the keymap's). */
+export const isMenuCommand = (id: string) => MENU_SHORTCUTS.some((m) => m.id === id);
+
+/** A command's name, or null for an id that isn't one (any more). */
+export function commandLabel(id: string): string | null {
+  return KEY_COMMANDS.find((c) => c.id === id)?.label ?? MENU_SHORTCUTS.find((m) => m.id === id)?.label ?? null;
+}
 
 /** Puts a key string into canonical form (modifier order, and Ctrl = Mod outside macOS). */
 export function normalizeKey(k: string): string {

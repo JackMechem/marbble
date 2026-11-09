@@ -1,9 +1,45 @@
-// Settings › Key Commands: listing, rebinding and conflicts.
+// Settings › Key Commands: listing, rebinding and conflicts, and each command's MIDI triggers
+// (Learn MIDI): controller assignments to the command, kept with the others by the engine.
 import { useEffect, useRef, useState } from "react";
+import { call } from "../../api";
+import { channelLabel, controllerLabel, type AssignmentRow } from "../../controllers";
 import { formatKey, KEY_COMMANDS, KEY_GROUPS, eventKey, keyConflict, keysFor, MENU_SHORTCUTS, normalizeKey } from "../../keymap";
+import { cancelLearn, learnCommand } from "../../learn";
 import { getSettings, useSettings } from "../../prefs";
 import { grabKeys } from "../../sheetKeys";
+import { onTick } from "../../store";
 import { Foot, setUi } from "./parts";
+
+/** A command's MIDI triggers: the assignments to it, with their place in the list. */
+const triggersOf = (rows: AssignmentRow[], id: string) =>
+  rows.flatMap((r, index) => (r.target.type === "command" && r.target.id === id ? [{ index, label: `${controllerLabel(r.controller)} · ${channelLabel(r.controller)}`, port: r.controller.port }] : []));
+
+/** The MIDI part of a command's row: its triggers, and Learn MIDI. */
+function MidiTriggers({ id, rows, learning, onRows, onLearn }: { id: string; rows: AssignmentRow[]; learning: boolean; onRows: (r: AssignmentRow[]) => void; onLearn: () => void }) {
+  return (
+    <>
+      {triggersOf(rows, id).map((t) => (
+        <span key={t.index} className="key-chip midi" title={`MIDI: ${t.label}, ${t.port}`}>
+          {t.label}
+          <button
+            title="Remove this MIDI trigger"
+            aria-label="Remove this MIDI trigger"
+            onClick={() => call<AssignmentRow[]>("delete_controller_assignment", { index: t.index }).then((r) => r && onRows(r))}
+          >
+            ×
+          </button>
+        </span>
+      ))}
+      {learning ? (
+        <span className="key-chip capturing">Press a pad or button on your MIDI controller… (Esc cancels)</span>
+      ) : (
+        <button className="key-add key-midi" title="Learn MIDI: the next pad, button or program change you press runs this command" onClick={onLearn}>
+          MIDI
+        </button>
+      )}
+    </>
+  );
+}
 
 export function KeysPane({ close }: { close: () => void }) {
   const overrides = useSettings((s) => s.ui.keymap);
@@ -12,6 +48,35 @@ export function KeysPane({ close }: { close: () => void }) {
   const [message, setMessage] = useState<string | null>(null);
   const captureRef = useRef(capture);
   captureRef.current = capture;
+  // Controller assignments (for the MIDI triggers), and the command a MIDI trigger is being
+  // learnt for.
+  const [assigned, setAssigned] = useState<AssignmentRow[]>([]);
+  const [midiFor, setMidiFor] = useState<string | null>(null);
+  useEffect(() => {
+    const load = () => call<AssignmentRow[]>("controller_assignments").then((r) => r && setAssigned(r));
+    load();
+    let was: string | null = null;
+    return onTick((t) => {
+      if (t.learned) load();
+      // The learn ended: assigned, cancelled, or taken over by another learn.
+      if (was && !t.learn) setMidiFor(null);
+      was = t.learn ?? null;
+    });
+  }, []);
+  useEffect(() => {
+    if (!midiFor) return;
+    return grabKeys((e) => {
+      e.preventDefault();
+      if (e.key !== "Escape") return;
+      cancelLearn();
+      setMidiFor(null);
+    });
+  }, [midiFor]);
+  const startMidi = (id: string) => {
+    setCapture(null);
+    learnCommand(id).then((name) => name && setMidiFor(id));
+  };
+  const midi = (id: string) => <MidiTriggers id={id} rows={assigned} learning={midiFor === id} onRows={setAssigned} onLearn={() => startMidi(id)} />;
 
   const setKeys = (map: Record<string, string[]>) => setUi({ keymap: map });
   const withKeys = (map: Record<string, string[]>, id: string, keys: string[]) => {
@@ -70,10 +135,11 @@ export function KeysPane({ close }: { close: () => void }) {
     setMessage(moved.length ? `Moved ${moved.join(", ")}.` : null);
   };
 
-  const match = (label: string, keys: string[]) => {
+  const match = (label: string, keys: string[], id?: string) => {
     if (!q) return true;
     const t = q.toLowerCase();
-    return label.toLowerCase().includes(t) || keys.some((k) => formatKey(k).toLowerCase().includes(t) || k.toLowerCase().includes(t));
+    const midiLabels = id ? triggersOf(assigned, id).map((x) => x.label.toLowerCase()) : [];
+    return label.toLowerCase().includes(t) || keys.some((k) => formatKey(k).toLowerCase().includes(t) || k.toLowerCase().includes(t)) || midiLabels.some((l) => l.includes(t));
   };
   const customized = Object.keys(overrides).length > 0;
 
@@ -81,11 +147,11 @@ export function KeysPane({ close }: { close: () => void }) {
     <>
       <div className="pm-toolbar">
         <input className="search pm-search" placeholder="Search commands or keys" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.stopPropagation()} />
-        <span className="dim">{message ?? "Click + and press a key to add a shortcut."}</span>
+        <span className="dim">{message ?? "Click + and press a key to add a shortcut, or MIDI and press a pad or button on a MIDI controller."}</span>
       </div>
       <div className="key-table">
         {KEY_GROUPS.map((g) => {
-          const rows = KEY_COMMANDS.filter((c) => c.group === g && match(c.label, keysFor(c.id, overrides)));
+          const rows = KEY_COMMANDS.filter((c) => c.group === g && match(c.label, keysFor(c.id, overrides), c.id));
           if (!rows.length) return null;
           return (
             <div key={g}>
@@ -111,6 +177,7 @@ export function KeysPane({ close }: { close: () => void }) {
                           +
                         </button>
                       )}
+                      {midi(c.id)}
                     </span>
                     {overrides[c.id] ? (
                       <button className="link-btn" onClick={() => restoreDefault(c.id, c.keys)}>
@@ -125,20 +192,22 @@ export function KeysPane({ close }: { close: () => void }) {
             </div>
           );
         })}
-        {MENU_SHORTCUTS.some((m) => match(m.label, [m.key])) && <div className="key-group">Menu Bar (fixed)</div>}
-        {MENU_SHORTCUTS.filter((m) => match(m.label, [m.key])).map((m) => (
+        {MENU_SHORTCUTS.some((m) => match(m.label, [m.key], m.id)) && <div className="key-group">Menu Bar (fixed)</div>}
+        {MENU_SHORTCUTS.filter((m) => match(m.label, [m.key], m.id)).map((m) => (
           <div key={m.label} className="key-row fixed">
             <span className="key-label">
               {m.label} <span className="dim">— {m.menu}</span>
             </span>
             <span className="key-keys">
               <span className="key-chip">{formatKey(m.key)}</span>
+              {/* Quit is left to the keyboard. */}
+              {m.id !== "quit" && midi(m.id)}
             </span>
             <span />
           </div>
         ))}
       </div>
-      <div className="pref-hint">Shortcuts work in the main window, not while typing in a text field.</div>
+      <div className="pref-hint">Shortcuts and MIDI triggers work in the main window, not while typing in a text field.</div>
       <Foot close={close}>
         <button className="push" disabled={!customized} onClick={() => setKeys({})}>
           Reset All

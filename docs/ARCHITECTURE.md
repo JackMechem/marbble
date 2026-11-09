@@ -1131,7 +1131,7 @@ at its new place (`old_name::relocated`).
 | `plugin-scan.json` | `plugin_db.rs` | The last scan's report (bundles, plug-ins, failures with reasons), for Settings › Plug-ins. |
 | `presets/<effect>/<name>.json` | `presets.rs` | User presets of the built-in effects, the Channel EQ among them (see [Presets](#presets)). |
 | `channel-strips/<name>.json` | `strip_settings.rs` | Saved channel strip settings (see [Channel strip settings](#channel-strip-settings)). |
-| `controller-assignments.json` | `session/controllers.rs` | MIDI Learn's controller assignments: controller (port without ALSA's client:port numbers, channel, and a CC number, pitch bend, a note number or a program number), target (track id and parameter, plug-in instance id with its plug-in id, a setting of the old fixed Channel EQ, Stereo Out or transport), takeover mode, range, button mode (`toggle`, `momentary`, `trigger`), whether the button latches by itself, whether a note's velocity sets the value, and whether feedback goes back to the controller. Fields added later have serde defaults, so older files load. Global, like Logic's; written atomically. |
+| `controller-assignments.json` | `session/controllers.rs` | MIDI Learn's controller assignments: controller (port without ALSA's client:port numbers, channel, and a CC number, pitch bend, a note number or a program number), target (track id and parameter, plug-in instance id with its plug-in id, a setting of the old fixed Channel EQ, Stereo Out, transport, or a key command by its keymap or menu id), takeover mode, range, button mode (`toggle`, `momentary`, `trigger`), whether the button latches by itself, whether a note's velocity sets the value, and whether feedback goes back to the controller. Fields added later have serde defaults, so older files load. Global, like Logic's; written atomically. |
 | `templates/<name>.json` | `session/templates.rs` | User project templates (File › Save as Template…): a `Project` without regions, clips, freeze state or alternatives, with plug-in states. `new_from_template` loads one as a new untitled project at the device's rate, keeping its ids. |
 
 Interface-only state lives in the webview's `localStorage`:
@@ -1718,7 +1718,8 @@ Audio Track Editor and meters are canvas drawings. The common pattern:
 ### Key commands
 
 - `src/keymap.ts` lists every rebindable command (`KEY_COMMANDS`: id, label, group, default
-  keys) and, read-only, the native menu's accelerators (`MENU_SHORTCUTS`).
+  keys) and, read-only, the native menu's accelerators (`MENU_SHORTCUTS`, with `menu.rs`'s item
+  ids). `midiCommands` is both, Quit aside: what a MIDI trigger can fire.
 - A key string is modifiers then key: `Mod` is ⌘ on macOS and Ctrl elsewhere, `Ctrl` is the
   Control key on macOS (folded into `Mod` elsewhere by `normalizeKey`), then `Alt`, `Shift`.
   `eventKey` names the physical letter or punctuation for Alt/⌘ chords, since macOS Option
@@ -1740,6 +1741,14 @@ Audio Track Editor and meters are canvas drawings. The common pattern:
   Musical Typing, Step Input, automation selection) handle them in their own listeners when
   they have focus. Edit › Select's key commands act on notes and events while the Piano Roll or
   the Event List has focus (`src/noteSelect.ts`).
+- A MIDI controller can fire any of them (Settings › Key Commands › MIDI, or Controller
+  Assignments): the assignment's target is `CtlTarget::Command { id }`, the session puts the id
+  in the next tick's `commands`, and the main window's tick listener runs it with
+  `runMidiCommand`. That applies the key's rules: nothing while a dialog is open or a sheet holds
+  the command back; a key command is held back while a text field in the focused main window is
+  typed in (`typingInField`), and a menu item goes through `textFieldMenu` then `handleMenu`;
+  Step Input's commands go to it first, as keys passed on from a panel window do. A text field
+  focused in a detached panel window doesn't hold a MIDI command back.
 - `tests/commands.test.ts` reads `keymap.ts`, `App.tsx` and `menu.rs` and fails when a key
   command or menu id has no handler, or two commands share a default key.
 
@@ -2680,7 +2689,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `session/arrangement.rs` | Arrangement track edits: add, rename, colour, resize, and moving, copying or deleting a section with its content. |
 | `session/takes.rs` | Recording into take folders, Autopunch trimming, comp edits, Flatten, Merge, Pack (from one track or several), Unpack (to new or existing tracks), Export and Move Active Take. |
 | `session/auto_write.rs` | Automation writing (Touch, Latch, Write), plug-in editors following automation, lane edit commands. |
-| `session/controllers.rs` | Controller assignments: the last touched parameter, learning, the saved list, applying controller moves and button presses and releases through the normal edit paths (undo steps, automation touches that let go 0.5 s after the controller stops). Run from `idle`. |
+| `session/controllers.rs` | Controller assignments: the last touched parameter, learning, the saved list, applying controller moves and button presses and releases through the normal edit paths (undo steps, automation touches that let go 0.5 s after the controller stops). Run from `idle`. A key command target can't run in the engine: its id goes out in the next tick (`Tick::commands`), and the main window runs it as its key (`runMidiCommand` in App.tsx: the same dialog, sheet and text-field rules, Step Input first, menu items through `handleMenu`). |
 | `session/feedback.rs` | Controller feedback: each assignment's target value as the screen shows it, sent to the paired output where it changed (see [MIDI controllers in and out](#midi-controllers-in-and-out)). Run from `idle`. |
 | `session/builtin.rs` | Built-in effects in slots: instantiation, parameters, side-chains, meters for open panels. |
 | `session/vst_key.rs` | VST3 side-chain inputs: keeping each plug-in's aux bus in line with its slot's key source. |
@@ -2789,12 +2798,12 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `layout.ts` | Track heights, depth and positions; per-project persistence of heights, the Mixer's widths and the global tracks shown; vertical zoom. |
 | `time.ts` | Samples to bars/beats and back; the snap grid (`snapStep`: Bar, Beat, Division, Ticks, Smart). |
 | `transport.ts` | Cycle, Autopunch and locate helpers. |
-| `keymap.ts` | `KEY_COMMANDS`, `MENU_SHORTCUTS`, key normalisation. |
+| `keymap.ts` | `KEY_COMMANDS`, `MENU_SHORTCUTS`, key normalisation, the commands MIDI can fire (`midiCommands`). |
 | `sheetKeys.ts`, `sheetKeysModel.ts` | Key commands while a sheet is open (`useSheetKeys`, `installSheetKeys`, `sheetBlocks`); the rule itself, pure and tested. See [Sheets and key commands](#sheets-and-key-commands). |
 | `pluginKeys.ts` | Keys a plug-in's editor window passes on (macOS), dispatched as if pressed in the main window; pure, tested. |
 | `wheel.ts` | What the mouse wheel scrolls in the time views (Settings › Editing › Mouse Wheel Scrolls). |
 | `controllers.ts` | Controller assignment types and labels, strip and lane targets, the Feedback tooltip and the inputs' feedback pop-ups; pure, tested. |
-| `learn.ts` | MIDI Learn: Learn Assignment, the right-click Learn menus, `FxLearnContext` for effect panels. |
+| `learn.ts` | MIDI Learn: Learn Assignment, the right-click Learn menus, Learn MIDI for key commands, `FxLearnContext` for effect panels. |
 | `keyFormat.ts` | Shortcuts written the way each platform's menu bar does ("Shift+Ctrl+Z" on Linux, "Ctrl+Shift+Z" on Windows, "⇧⌘Z"); pure, tested. |
 | `menuBar.ts` | Keeps the native menu bar in step with the app (`installMenuBar`, main window). |
 | `menuBarModel.ts` | The menu bar's item states from the in-app menus and the key commands, and what changed; pure, tested. |

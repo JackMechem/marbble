@@ -2775,8 +2775,9 @@ orange in Touch and Latch, red in Write.
 
 ## 14. Controller assignments (MIDI Learn)
 
-A knob, fader, button or pad on a MIDI controller can drive a mixer control, a plug-in parameter
-or a transport button, as with Logic's Control Surfaces › Learn Assignment. Controllers with lights
+A knob, fader, button or pad on a MIDI controller can drive a mixer control, a plug-in parameter,
+a transport button or any key command, as with Logic's Control Surfaces › Learn Assignment and
+Key Commands › Learn New Assignment. Controllers with lights
 or motor faders are sent the values back, so they show what Marbble does (see
 [Feedback to the controller](#feedback-to-the-controller)).
 
@@ -2840,6 +2841,28 @@ parameter: learning it again moves it to the new one.
   tracks and plug-ins by their position in the project's numbering, so an assignment learned
   in one project acts on the same-numbered track in another.
 
+### Key commands from a controller
+
+Any key command, and any menu bar item with a key (Undo, Redo, Split, Duplicate, Save…; Quit
+aside), can be fired from a pad, a button or a program change, so a controller can do anything
+the keyboard does: undo and redo, markers, navigation, zoom, selecting the next track, showing and
+hiding windows, every transport command.
+
+- In **Settings › Key Commands**, point at a command and click **MIDI**, then press the pad or
+  button (Esc cancels). Its MIDI triggers are listed beside its keys (**Note C1 · Ch 10**); ×
+  removes one. The search finds commands by their triggers too.
+- Or in **Controller Assignments**, click **Learn Key Command…** and choose the command.
+
+A trigger fires on a press: a note on, a program change, or a control change going above 63 (a
+button that keeps sending 127 while held fires once). In the **Trigger** mode (the default) it
+fires once per press; in **Momentary** it fires again on release, so Show/Hide Mixer shows the
+Mixer while you hold the pad. The command runs in the main window as its key would there, and is
+held back where its key would be: while a dialog or a sheet that holds keys back is open (only the
+transport and Control Surfaces commands get through Controller Assignments), and while you type in
+a text field of the main window, where Undo, Redo and Select All edit the field and the menu bar's
+other items are dropped. Commands that act on a detached window (the Mixer, the Editors) work as
+their keys do. A command has no state, so its pad gets no feedback.
+
 ### The Controller Assignments window
 
 **Marbble › Control Surfaces › Controller Assignments…** (Shift+Ctrl+L) lists every assignment:
@@ -2865,7 +2888,8 @@ channel and input port) and the parameter. For each one:
 - **Delete** removes it; that controller plays the instrument again.
 
 An assignment whose track or plug-in isn't in the open project is greyed and does nothing.
-**Learn Transport Button…** assigns a button to Play / Stop, Record or Cycle. Learn Assignment
+**Learn Transport Button…** assigns a button to Play / Stop, Record or Cycle; **Learn Key
+Command…** to any key command (see above), listed as **Key Command › …**. Learn Assignment
 (Ctrl+L) and the transport keys work while the window is open; editing keys don't.
 
 ### Feedback to the controller
@@ -3263,8 +3287,11 @@ Tracks, Editing, Windows, Control Surfaces and Step Input.
   bar can't be used.
 - **Default** restores a command's own keys; **Reset All** restores everything.
 - The menu bar's shortcuts are listed at the end, read-only ("Menu Bar (fixed)").
-- Shortcuts work in the main window, not while typing in a text field or while a sheet is
-  open (see [The menu bar](#the-menu-bar)).
+- **MIDI** learns a MIDI trigger for the command (or menu item): press a pad, button or program
+  change on a controller; Esc cancels. Triggers show beside the keys, and × removes one. See
+  [Key commands from a controller](#key-commands-from-a-controller).
+- Shortcuts and MIDI triggers work in the main window, not while typing in a text field or while
+  a sheet is open (see [The menu bar](#the-menu-bar)).
 
 ### Appearance
 

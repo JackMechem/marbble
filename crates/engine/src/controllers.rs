@@ -1,6 +1,6 @@
 //! Controller assignments, as Logic's Control Surfaces › Learn Assignment and the Controller
 //! Assignments window: a knob, fader, button or pad on a MIDI controller drives a mixer
-//! control, a plug-in parameter or a transport button.
+//! control, a plug-in parameter, a transport button or any key command.
 //!
 //! This module is the pure part: reading controller messages, recognising a port again after
 //! it was plugged back in, scaling a controller's travel onto a parameter's range (with the
@@ -125,6 +125,11 @@ pub enum CtlTarget {
     Transport {
         action: TransportAction,
     },
+    /// A key command (an id of src/keymap.ts's KEY_COMMANDS, or of a menu item with a key):
+    /// the session passes it to the main window, which runs it as if its key was pressed.
+    Command {
+        id: String,
+    },
 }
 
 impl CtlTarget {
@@ -133,7 +138,12 @@ impl CtlTarget {
     pub fn is_button(&self) -> bool {
         matches!(
             self,
-            CtlTarget::Mute { .. } | CtlTarget::Solo { .. } | CtlTarget::Arm { .. } | CtlTarget::Transport { .. } | CtlTarget::Eq { field: EqField::On, .. }
+            CtlTarget::Mute { .. }
+                | CtlTarget::Solo { .. }
+                | CtlTarget::Arm { .. }
+                | CtlTarget::Transport { .. }
+                | CtlTarget::Eq { field: EqField::On, .. }
+                | CtlTarget::Command { .. }
         )
     }
 
@@ -150,7 +160,7 @@ impl CtlTarget {
             | CtlTarget::Eq { track, .. }
             | CtlTarget::EqOutput { track } => Some(*track),
             CtlTarget::MasterVolume => Some(crate::model::MASTER_ID),
-            CtlTarget::Transport { .. } => None,
+            CtlTarget::Transport { .. } | CtlTarget::Command { .. } => None,
         }
     }
 }
@@ -236,8 +246,10 @@ pub struct Assignment {
 
 impl Assignment {
     pub fn new(controller: Controller, target: CtlTarget) -> Assignment {
-        // A pad on a fader sets a level: it fires on press rather than toggling.
-        let button_mode = if controller.kind.is_button() && !target.is_button() { ButtonMode::Trigger } else { ButtonMode::Toggle };
+        // A pad on a fader sets a level, and a command runs: they fire on a press rather than
+        // toggling.
+        let fires = matches!(target, CtlTarget::Command { .. }) || controller.kind.is_button() && !target.is_button();
+        let button_mode = if fires { ButtonMode::Trigger } else { ButtonMode::Toggle };
         Assignment { controller, target, mode: Takeover::Jump, min: 0.0, max: 1.0, button_mode, velocity: true, latching: false, feedback: true }
     }
 
@@ -541,7 +553,9 @@ mod tests {
         assert_eq!(f.button_value(ButtonAct::Flip, 0.9, 0.2), 0.2);
         assert_eq!(f.button_value(ButtonAct::Set(true), 0.9, 0.2), 0.9);
         assert_eq!(f.button_value(ButtonAct::Set(false), 0.9, 0.2), 0.2);
-        // A note on a switch toggles it, as a control change does.
+        // A command fires; a note on a switch toggles it, as a control change does.
+        let c = Controller { port: "P".into(), channel: 0, kind: CtlKind::Cc { number: 20 } };
+        assert_eq!(Assignment::new(c, CtlTarget::Command { id: "undo".into() }).button_mode, ButtonMode::Trigger);
         let c = Controller { port: "P".into(), channel: 0, kind: CtlKind::Note { number: 60 } };
         assert_eq!(Assignment::new(c, CtlTarget::Mute { track: 1 }).button_mode, ButtonMode::Toggle);
     }
@@ -662,5 +676,12 @@ mod tests {
         assert_eq!(a.target, CtlTarget::Volume { track: 3 });
         let back: AssignmentFile = serde_json::from_str(&serde_json::to_string(&f).unwrap()).unwrap();
         assert_eq!(back.assignments, f.assignments);
+    }
+
+    #[test]
+    fn commands_are_saved_by_id() {
+        let t = CtlTarget::Command { id: "next-marker".into() };
+        assert_eq!(serde_json::to_string(&t).unwrap(), r#"{"type":"command","id":"next-marker"}"#);
+        assert!(t.is_button() && t.track().is_none());
     }
 }

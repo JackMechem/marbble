@@ -32,7 +32,9 @@ export type CtlTarget =
   | { type: "eq"; track: Id; band: number; field: EqField }
   | { type: "eq_output"; track: Id }
   | { type: "master_volume" }
-  | { type: "transport"; action: TransportAction };
+  | { type: "transport"; action: TransportAction }
+  /** A key command (keymap.ts id) or a menu item with a key, run by the main window as its key. */
+  | { type: "command"; id: string };
 
 export type Takeover = "jump" | "pickup";
 
@@ -100,8 +102,9 @@ export function buttonOptions(row: Pick<AssignmentRow, "controller">): [ButtonMo
   return row.controller.kind.type === "program" ? BUTTON_MODES.filter(([m]) => m !== "momentary") : BUTTON_MODES;
 }
 
-/** What a switch's button mode does, in a few words, for the window. */
-export function buttonHint(mode: ButtonMode): string {
+/** What a switch's or command's button mode does, in a few words, for the window. */
+export function buttonHint(mode: ButtonMode, command = false): string {
+  if (command) return mode === "momentary" ? "Runs on press and release" : "Runs on press";
   return mode === "toggle" ? "Press: on or off" : mode === "momentary" ? "On while held" : "Press: on";
 }
 

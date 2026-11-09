@@ -116,6 +116,7 @@ impl Session {
             gain_reduction: self.gain_reductions(),
             learn: self.learning(),
             learned: self.take_learned(),
+            commands: self.take_ctl_commands(),
             midi_in: self.midi_since_last_tick(),
         }
     }

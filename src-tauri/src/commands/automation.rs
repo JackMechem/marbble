@@ -36,10 +36,11 @@ pub fn controller_assignments(state: State<AppState>) -> Vec<AssignmentRow> {
 }
 
 /// Learn Assignment: the next controller moved is assigned to `target`, or (null) to the last
-/// touched parameter. Returns the parameter's name.
+/// touched parameter. `name` names a key command target (the engine doesn't know their
+/// names). Returns the parameter's name.
 #[tauri::command]
-pub fn start_learn(state: State<AppState>, target: Option<CtlTarget>) -> R<String> {
-    with(&state, |s| s.start_learn(target)).map_err(|e| e.to_string())
+pub fn start_learn(state: State<AppState>, target: Option<CtlTarget>, name: Option<String>) -> R<String> {
+    with(&state, |s| s.start_learn_named(target, name)).map_err(|e| e.to_string())
 }
 
 #[tauri::command]

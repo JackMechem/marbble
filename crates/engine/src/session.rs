@@ -177,6 +177,9 @@ pub struct Tick {
     pub learn: Option<String>,
     /// What the learn that just finished assigned; shown once.
     pub learned: Option<String>,
+    /// Key commands MIDI controllers fired since the last tick, oldest first: the main window
+    /// runs each as if its key was pressed.
+    pub commands: Vec<String>,
     /// Messages from hardware MIDI inputs since the last tick, oldest first (for Step Input).
     pub midi_in: Vec<[u8; 3]>,
 }

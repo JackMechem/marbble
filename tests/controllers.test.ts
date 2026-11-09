@@ -52,6 +52,8 @@ test("each row edits what its controller and target need", () => {
   assert.deepEqual(modes({ type: "note", number: 36 }), ["toggle", "momentary", "trigger"]);
   assert.deepEqual(modes({ type: "program", number: 2 }), ["toggle", "trigger"]);
   assert.match(buttonHint("momentary"), /held/);
+  assert.equal(buttonHint("trigger", true), "Runs on press");
+  assert.match(buttonHint("momentary", true), /release/);
   // A program change is never released, so it can't latch either.
   assert.ok(offersLatching(row({ type: "cc", number: 20 }, true)) && offersLatching(row({ type: "note", number: 36 }, true)));
   assert.ok(!offersLatching(row({ type: "program", number: 2 }, true)) && !offersLatching(row({ type: "note", number: 36 }, false)));

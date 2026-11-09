@@ -67,10 +67,10 @@ function normalize(k: string, mac: boolean): string {
 
 function menuShortcuts(): { label: string; mac: string; other: string }[] {
   const body = slice(keymap, "export const MENU_SHORTCUTS", "\n];");
-  return [...body.matchAll(/\{ label: "([^"]+)", menu: "[^"]+", key: (?:IS_MAC \? "([^"]+)" : "([^"]+)"|"([^"]+)") \}/g)].map((m) => ({
-    label: m[1],
-    mac: m[2] ?? m[4],
-    other: m[3] ?? m[4],
+  return [...body.matchAll(/\{ id: "([^"]+)", label: "([^"]+)", menu: "[^"]+", key: (?:IS_MAC \? "([^"]+)" : "([^"]+)"|"([^"]+)") \}/g)].map((m) => ({
+    label: m[2],
+    mac: m[3] ?? m[5],
+    other: m[4] ?? m[5],
   }));
 }
 
