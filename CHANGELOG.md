@@ -15,6 +15,22 @@ All notable changes to Marbble are recorded here. The format follows
   faders and LED rings follow the faders and knobs, whatever moved them: the mouse, automation,
   undo or opening a project. Nothing is sent back while you move a control, so motor faders don't
   fight your hand. Each assignment has a Feedback switch in Controller Assignments.
+- **Lists work from the keyboard.** The Library's plug-ins, the Project Chooser's recent
+  projects, Project Alternatives and the Marker List are each one Tab stop: Up and Down move
+  (and select), Home and End go to the ends, typing a name's first letters goes to it, Return
+  does what a click or double-click does there (load the plug-in, open the project, switch to the
+  alternative, go to the marker), and Delete removes a recent project from the list, deletes an
+  alternative (asking first) or a marker (undoable). Screen readers hear them as lists, with the
+  selected row.
+- **Sheets take the focus as they open.** The Marker List, Project Alternatives, the Project
+  Chooser, Settings and the other sheets take the keyboard focus as a dialog does, so Tab moves
+  through the sheet instead of the window behind it, and closing one gives the focus back to what
+  had it. Controller Assignments, which leaves the transport keys to the window, doesn't.
+
+### Fixed
+
+- **The Marker List's column headings line up.** Length sat over the Go To buttons; each
+  heading is over its column now.
 
 ## [0.1.0-alpha.12] - 2026-11-09
 

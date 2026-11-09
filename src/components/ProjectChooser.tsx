@@ -11,6 +11,7 @@ import { confirmDiscard } from "../files";
 import { setState, useStore } from "../store";
 import { NumberField, Select, sheetKey } from "./Form";
 import { useSheetKeys } from "../sheetKeys";
+import { useListKeys } from "../listKeys";
 import { getSettings, openProjectPath, updateSettings, type Startup } from "../prefs";
 import { PathText } from "./PathText";
 
@@ -256,6 +257,19 @@ export function ProjectChooser() {
     setRecent((r) => r?.filter((p) => p.path !== path) ?? null);
   };
 
+  // The recent projects are one Tab stop (listKeys.ts): Up and Down select, letters type ahead,
+  // Return opens as a double-click does, Delete removes from the list as × does.
+  const rows = recent ?? [];
+  const exists = (path: string) => rows.some((p) => p.path === path && p.exists);
+  const { listProps, rowProps } = useListKeys({
+    keys: rows.map((p) => p.path),
+    labels: rows.map((p) => p.name),
+    selected,
+    move: (path) => exists(path) && setSelected(path),
+    open: (path) => exists(path) && openPath(path),
+    remove: forget,
+  });
+
   return (
     <div className="chooser-backdrop">
       <div ref={box} className="chooser" onMouseDown={(e) => e.stopPropagation()} onKeyDown={(e) => sheetKey(e, close)}>
@@ -373,7 +387,7 @@ export function ProjectChooser() {
           ) : (
             <>
               <div className="chooser-title">Recent projects</div>
-              <div className="recent-list">
+              <div className="recent-list" role="listbox" aria-label="Recent projects" {...listProps}>
                 {recent === null ? null : recent.length === 0 ? (
                   <div className="recent-empty">
                     Projects you save or open appear here.
@@ -386,8 +400,12 @@ export function ProjectChooser() {
                     <div
                       key={p.path}
                       className={"recent" + (selected === p.path ? " on" : "") + (p.exists ? "" : " missing")}
+                      role="option"
+                      aria-selected={selected === p.path}
+                      aria-disabled={!p.exists || undefined}
                       onMouseDown={() => p.exists && setSelected(p.path)}
                       onDoubleClick={() => p.exists && openPath(p.path)}
+                      {...rowProps(p.path)}
                     >
                       <div className="recent-icon">
                         <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4">
@@ -411,7 +429,7 @@ export function ProjectChooser() {
                           <span className="warn-text">Missing</span>
                         )}
                       </div>
-                      <button className="recent-forget" title="Remove from list" aria-label="Remove from list" onMouseDown={(e) => e.stopPropagation()} onClick={() => forget(p.path)}>
+                      <button className="recent-forget" title="Remove from list" aria-label="Remove from list" tabIndex={-1} onMouseDown={(e) => e.stopPropagation()} onClick={() => forget(p.path)}>
                         ×
                       </button>
                     </div>

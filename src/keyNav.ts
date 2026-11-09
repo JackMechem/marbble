@@ -198,3 +198,60 @@ export function onPress<E extends { detail: number }>(h: (e: E) => void): { onMo
     },
   };
 }
+
+/** The letters typed so far for type-ahead, and when the last one was. */
+export interface Typed {
+  text: string;
+  at: number;
+}
+
+/** A pause this long (ms) starts the type-ahead letters afresh. */
+export const TYPE_AHEAD_MS = 700;
+
+/**
+ * `key` added to the type-ahead letters typed before it (at time `now`): forgotten after a pause,
+ * and a space only once a word has begun. Null when the key isn't one (the letters stay as they
+ * were).
+ */
+export function typeAheadText(prev: Typed, key: string, now: number): Typed | null {
+  const text = now - prev.at > TYPE_AHEAD_MS ? "" : prev.text;
+  if (key.length !== 1 || (key === " " && !text)) return null;
+  return { text: text + key, at: now };
+}
+
+/** What a key does on a focused row of a list: move to another row (-1: none matched), open or
+ *  choose the row, or remove it. */
+export type ListKey = { move: number } | { open: true } | { remove: true } | null;
+
+/**
+ * A key on a focused row of a list (the Library, the Project Chooser's recent projects, Project
+ * Alternatives, the Marker List), `from` its index among `count`: Up and Down move one row,
+ * stopping at the ends, Home and End go to the ends, Return and Space open or choose it (what a
+ * click or double-click does there), Delete and Backspace remove it. With `labels`, letters type
+ * ahead (`typed` as for menuKey, from typeAheadText). Keys with Ctrl, Cmd or Alt are left to the
+ * app, and so are the arrows with Shift.
+ */
+export function listKey(count: number, from: number, e: Keyish, typed = "", labels?: readonly string[]): ListKey {
+  if (!plain(e) || count <= 0) return null;
+  if (labels && e.key.length === 1 && typed) {
+    return { move: typeAhead(labels.map((label) => ({ label })), from, typed) };
+  }
+  if (e.shiftKey) return null;
+  switch (e.key) {
+    case "ArrowDown":
+      return { move: stepIndex(count, from, 1) };
+    case "ArrowUp":
+      return { move: stepIndex(count, from, -1) };
+    case "Home":
+      return { move: 0 };
+    case "End":
+      return { move: count - 1 };
+    case "Enter":
+    case " ":
+      return { open: true };
+    case "Delete":
+    case "Backspace":
+      return { remove: true };
+  }
+  return null;
+}

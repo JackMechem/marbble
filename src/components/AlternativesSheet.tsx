@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { call, type ProjectFiles } from "../api";
 import { deleteAlternative, newAlternative, renameAlternative, switchAlternative } from "../projectFiles";
 import { setState, useStore } from "../store";
+import { useListKeys } from "../listKeys";
 import { Sheet } from "./Dialogs";
 
 export function AlternativesSheet() {
@@ -24,12 +25,31 @@ export function AlternativesSheet() {
   const after = (p: Promise<unknown>) => p.then(() => setTick((t) => t + 1));
   const list = files?.alternatives ?? [];
   const sel = selected && list.includes(selected) ? selected : null;
+  // One Tab stop (listKeys.ts): Up and Down select, Return switches as a double-click does, Delete
+  // asks to delete as Delete… does.
+  const { listProps, rowProps } = useListKeys({
+    keys: list,
+    labels: list,
+    selected: sel,
+    move: setSelected,
+    open: (name) => after(switchAlternative(name)),
+    remove: list.length > 1 ? (name) => after(deleteAlternative(name)) : undefined,
+  });
   return (
     <Sheet title="Project Alternatives" onClose={close} width={420}>
-      <div className="alt-list">
+      <div className="alt-list" role="listbox" aria-label="Alternatives" {...listProps}>
         {list.map((name) => (
-          <div key={name} className={"alt-row" + (name === sel ? " on" : "")} onMouseDown={() => setSelected(name)} onDoubleClick={() => after(switchAlternative(name))}>
-            <span className="alt-check">{name === files?.active ? "✓" : ""}</span>
+          <div
+            key={name}
+            className={"alt-row" + (name === sel ? " on" : "")}
+            role="option"
+            aria-selected={name === sel}
+            aria-current={name === files?.active || undefined}
+            onMouseDown={() => setSelected(name)}
+            onDoubleClick={() => after(switchAlternative(name))}
+            {...rowProps(name)}
+          >
+            <span className="alt-check" aria-hidden>{name === files?.active ? "✓" : ""}</span>
             <span className="alt-name">{name}</span>
             {name === files?.active && <span className="dim">current</span>}
           </div>

@@ -12,6 +12,7 @@ import { RegionParamRows } from "./RegionParamRows";
 import { TrackRows } from "./TrackInspector";
 import { NumberField } from "./Form";
 import { useSelectedTrack } from "./TrackHeaders";
+import { useListKeys } from "../listKeys";
 import { isLooped } from "../loops";
 import { toggleCollapsed, toggleLoop, toggleShowHidden } from "../ops";
 import { keyHint } from "../keymap";
@@ -425,6 +426,20 @@ export function Library() {
     }
   };
   const current = (t: Track | null) => (t?.kind === "instrument" ? t.instrument?.plugin_id : undefined);
+  // The items in the order shown, under their headings: the built-in instruments (Marbble's
+  // first) or effects (by category), then the plug-ins by vendor.
+  const sections: { key: string; title?: string; items: { id: string; name: string; tip?: string }[] }[] = [];
+  if (isInst && !instList.length) sections.push({ key: "builtin", items: [{ id: BUILTIN_SYNTH, name: "Marbble Synth" }] });
+  if (isInst)
+    for (const [group, is] of [...instGroups.entries()].sort((a, b) => (a[0] === "Marbble" ? -1 : b[0] === "Marbble" ? 1 : a[0].localeCompare(b[0]))))
+      sections.push({ key: `inst:${group}`, title: group, items: is.map((i) => ({ id: i.id, name: i.name, tip: i.about })) });
+  for (const [cat, fs] of [...fxGroups.entries()].sort((a, b) => a[0].localeCompare(b[0])))
+    sections.push({ key: `fx:${cat}`, title: cat, items: fs.map((f) => ({ id: f.id, name: f.name, tip: `Marbble ${f.category}` })) });
+  for (const [vendor, ps] of groups.entries()) sections.push({ key: `vendor:${vendor}`, title: vendor, items: ps.map((p) => ({ id: p.id, name: p.name, tip: p.subcategories })) });
+  const items = sections.flatMap((g) => g.items);
+  const on = current(track);
+  // One Tab stop (listKeys.ts): Up and Down move, letters type ahead, Return loads, as a click does.
+  const { listProps, rowProps } = useListKeys({ keys: items.map((i) => i.id), labels: items.map((i) => i.name), start: on, open: load });
   return (
     <div className="library">
       <div className="pane-title">Library</div>
@@ -435,44 +450,20 @@ export function Library() {
         // A folder stack has no channel strip of its own to put plug-ins on.
         <div className="insp-empty">Folder stacks have no plug-ins</div>
       ) : (
-        <div className="lib-list">
-          <div className="lib-group">{isInst ? "Instruments" : "Audio FX"}</div>
-          {isInst && !instList.length && (
-            <div className={"lib-item" + (current(track) === BUILTIN_SYNTH ? " on" : "")} onClick={() => load(BUILTIN_SYNTH)}>
-              Marbble Synth
-            </div>
-          )}
-          {isInst &&
-            [...instGroups.entries()]
-              .sort((a, b) => (a[0] === "Marbble" ? -1 : b[0] === "Marbble" ? 1 : a[0].localeCompare(b[0])))
-              .map(([group, is]) => (
-                <div key={`inst:${group}`}>
-                  <div className="lib-vendor">{group}</div>
-                  {is.map((i) => (
-                    <div key={i.id} className={"lib-item" + (current(track) === i.id ? " on" : "")} onClick={() => load(i.id)} title={i.about}>
-                      {i.name}
-                    </div>
-                  ))}
+        <div className="lib-list" role="listbox" aria-label={isInst ? "Instruments" : "Audio FX"} {...listProps}>
+          <div className="lib-group" aria-hidden>
+            {isInst ? "Instruments" : "Audio FX"}
+          </div>
+          {sections.map((g) => (
+            <div key={g.key} role="group" aria-label={g.title}>
+              {g.title && (
+                <div className="lib-vendor" aria-hidden>
+                  {g.title}
                 </div>
-              ))}
-          {[...fxGroups.entries()]
-            .sort((a, b) => a[0].localeCompare(b[0]))
-            .map(([cat, fs]) => (
-              <div key={`fx:${cat}`}>
-                <div className="lib-vendor">{cat}</div>
-                {fs.map((f) => (
-                  <div key={f.id} className="lib-item" onClick={() => load(f.id)} title={`Marbble ${f.category}`}>
-                    {f.name}
-                  </div>
-                ))}
-              </div>
-            ))}
-          {[...groups.entries()].map(([vendor, ps]) => (
-            <div key={vendor}>
-              <div className="lib-vendor">{vendor}</div>
-              {ps.map((p) => (
-                <div key={p.id} className={"lib-item" + (current(track) === p.id ? " on" : "")} onClick={() => load(p.id)} title={p.subcategories}>
-                  {p.name}
+              )}
+              {g.items.map((i) => (
+                <div key={i.id} className={"lib-item" + (on === i.id ? " on" : "")} role="option" aria-selected={on === i.id} onClick={() => load(i.id)} title={i.tip} {...rowProps(i.id)}>
+                  {i.name}
                 </div>
               ))}
             </div>

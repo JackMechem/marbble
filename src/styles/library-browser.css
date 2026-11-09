@@ -149,3 +149,13 @@
   color: var(--accent);
 }
 
+
+/* The Library's items are one Tab stop (listKeys.ts): the ring goes inside the row, clear of the
+   pane's edges, and turns light on the loaded item's highlight. */
+.lib-item:focus-visible {
+  outline-offset: -2px;
+}
+
+.lib-item.on:focus-visible {
+  outline-color: var(--accent-ink);
+}

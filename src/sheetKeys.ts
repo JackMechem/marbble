@@ -14,7 +14,7 @@
 //
 // Keys passed on from a panel's window, and capture-phase listeners that see a key before this
 // one can stop it, ask `sheetBlocks`.
-import { useEffect, useRef, type RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { commandForEvent } from "./keymap";
 import { heldBack, outsideKey, type SheetMode } from "./sheetKeysModel";
 
@@ -38,8 +38,34 @@ export function sheetBlocks(id: string | null): boolean {
   );
 }
 
-/** Registers a sheet while it is shown; `ref` is the sheet's box (not its backdrop). */
+/** The attribute on a sheet's box that took the focus: it draws no ring (sheets.css). */
+export const SHEET_BOX_ATTR = "data-sheet-box";
+
+/**
+ * Registers a sheet while it is shown; `ref` is the sheet's box (not its backdrop).
+ *
+ * A modal sheet takes the focus as it opens, as a dialog does, unless something in it already has
+ * (a field with autoFocus): its box, so the next Tab goes to the first control in it rather than
+ * to the window behind. A non-modal one (Controller Assignments) leaves the focus where it was,
+ * since keys typed in a sheet stay there and its transport keys must reach the window. When the
+ * sheet closes, the focus goes back to what had it when the sheet opened, unless it has moved
+ * somewhere else meanwhile.
+ */
 export function useSheetKeys(ref: RefObject<HTMLElement | null>, onClose: () => void, mode: SheetMode = "modal") {
+  // Read while the sheet is first drawn, before a field in it can take the focus.
+  const [opener] = useState(() => (document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : null));
+  useEffect(() => {
+    const box = ref.current;
+    if (box && mode === "modal" && !box.contains(document.activeElement)) {
+      if (!box.hasAttribute("tabindex")) box.tabIndex = -1;
+      box.setAttribute(SHEET_BOX_ATTR, "");
+      box.focus({ preventScroll: true });
+    }
+    return () => {
+      const a = document.activeElement;
+      if (opener?.isConnected && (!a || a === document.body || box?.contains(a))) opener.focus({ preventScroll: true });
+    };
+  }, [ref, mode, opener]);
   const close = useRef(onClose);
   useEffect(() => {
     close.current = onClose;

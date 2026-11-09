@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { adjacentRegion, laneKey, leavesKeyToFocus, menuEdge, menuKey, menuStep, slotKey, stepIndex, typeAhead, type NavItem } from "../src/keyNav.ts";
+import { adjacentRegion, laneKey, leavesKeyToFocus, listKey, menuEdge, menuKey, menuStep, slotKey, stepIndex, typeAhead, typeAheadText, TYPE_AHEAD_MS, type NavItem } from "../src/keyNav.ts";
 import { keyboardFocus, KEYBOARD_FOCUS_ATTR } from "../src/focusRing.ts";
 
 const key = (k: string, mods: Partial<{ altKey: boolean; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean }> = {}) => ({
@@ -144,4 +144,53 @@ test("keyboardFocus reads the focus ring's attribute", () => {
   assert.equal(keyboardFocus(root), false);
   attrs.add(KEYBOARD_FOCUS_ATTR);
   assert.equal(keyboardFocus(root), true);
+});
+
+test("type-ahead letters build up, and start afresh after a pause", () => {
+  const a = typeAheadText({ text: "", at: 0 }, "c", 1000);
+  assert.deepEqual(a, { text: "c", at: 1000 });
+  const b = typeAheadText(a!, "h", 1200);
+  assert.deepEqual(b, { text: "ch", at: 1200 });
+  assert.deepEqual(typeAheadText(b!, " ", 1300), { text: "ch ", at: 1300 }, "a space once a word has begun");
+  assert.equal(typeAheadText({ text: "", at: 0 }, " ", 1000), null, "but not to begin one");
+  assert.deepEqual(typeAheadText(b!, "v", 1200 + TYPE_AHEAD_MS + 1), { text: "v", at: 1901 }, "after a pause");
+  assert.equal(typeAheadText(b!, "ArrowDown", 1250), null, "not a letter");
+  assert.equal(typeAheadText(b!, " ", 1200 + TYPE_AHEAD_MS + 1), null, "a space after a pause begins nothing");
+});
+
+test("a list row moves with Up, Down, Home and End, stopping at the ends", () => {
+  assert.deepEqual(listKey(4, 1, key("ArrowDown")), { move: 2 });
+  assert.deepEqual(listKey(4, 1, key("ArrowUp")), { move: 0 });
+  assert.deepEqual(listKey(4, 3, key("ArrowDown")), { move: 3 }, "the last row stays");
+  assert.deepEqual(listKey(4, 0, key("ArrowUp")), { move: 0 }, "the first row stays");
+  assert.deepEqual(listKey(4, 2, key("Home")), { move: 0 });
+  assert.deepEqual(listKey(4, 0, key("End")), { move: 3 });
+  assert.equal(listKey(0, -1, key("ArrowDown")), null, "an empty list");
+});
+
+test("Return and Space open a list row, Delete and Backspace remove it", () => {
+  assert.deepEqual(listKey(3, 1, key("Enter")), { open: true });
+  assert.deepEqual(listKey(3, 1, key(" ")), { open: true });
+  assert.deepEqual(listKey(3, 1, key("Delete")), { remove: true });
+  assert.deepEqual(listKey(3, 1, key("Backspace")), { remove: true });
+});
+
+test("keys with modifiers, and Shift with the arrows, stay the app's", () => {
+  assert.equal(listKey(3, 1, key("Backspace", { metaKey: true })), null, "Delete Track");
+  assert.equal(listKey(3, 1, key("ArrowDown", { altKey: true })), null);
+  assert.equal(listKey(3, 1, key("ArrowDown", { shiftKey: true })), null);
+  assert.equal(listKey(3, 1, key("Enter", { ctrlKey: true })), null);
+  assert.equal(listKey(3, 1, key("ArrowLeft")), null);
+  assert.equal(listKey(3, 1, key("m")), null, "no type-ahead without labels");
+});
+
+test("letters type ahead through a list's names", () => {
+  const names = ["Bass", "Chorus", "Compressor", "Delay"];
+  assert.deepEqual(listKey(4, 0, key("c"), "c", names), { move: 1 });
+  assert.deepEqual(listKey(4, 1, key("c"), "cc", names), { move: 2 }, "the same letter again steps on");
+  assert.deepEqual(listKey(4, 1, key("o"), "co", names), { move: 2 });
+  assert.deepEqual(listKey(4, 0, key("D", { shiftKey: true }), "D", names), { move: 3 }, "a capital");
+  assert.deepEqual(listKey(4, 0, key("x"), "x", names), { move: -1 }, "no match: taken, but nothing moves");
+  assert.deepEqual(listKey(4, 0, key(" "), "", names), { open: true }, "Space opens before a word has begun");
+  assert.deepEqual(listKey(2, 0, key(" "), "my ", ["My Song", "My Song 2"]), { move: 0 }, "and types ahead after");
 });

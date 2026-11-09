@@ -6,6 +6,23 @@
   grid-template-columns: 10px 86px 1fr 112px auto auto;
 }
 
+/* The columns belong to the list and every row (the header too) takes them as a subgrid, so the
+   header, whose Go To and Delete columns are empty, lines up with the rows below it. */
+.marker-list {
+  display: grid;
+  grid-template-columns: 10px 86px 1fr 112px auto auto;
+  column-gap: 8px;
+  align-content: start;
+}
+
+.marker-list > * {
+  grid-column: 1 / -1;
+}
+
+.marker-list > .marker-row {
+  grid-template-columns: subgrid;
+}
+
 .marker-row.selected {
   background: var(--accent-soft);
   border-radius: 5px;

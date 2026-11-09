@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Icon } from "../icons";
 import { keyboardFocus } from "../focusRing";
-import { menuEdge, menuKey, menuStep, type NavItem } from "../keyNav";
+import { menuEdge, menuKey, menuStep, typeAheadText, type NavItem, type Typed } from "../keyNav";
 
 export interface MenuItem {
   /** The menu bar item it matches (src/menuLabels.ts ids), so the menu bar can follow its state. */
@@ -101,16 +101,14 @@ export function closeMenu(restore = true) {
 }
 
 /** The keys typed for type-ahead, forgotten after a pause. */
-let typed = { text: "", at: 0 };
-const TYPE_AHEAD_MS = 700;
+let typed: Typed = { text: "", at: 0 };
 
-/** `key` added to the type-ahead letters (a space only once a word has begun), or "" when it isn't one. */
-function typeAheadText(key: string): string {
-  const now = performance.now();
-  const text = now - typed.at > TYPE_AHEAD_MS ? "" : typed.text;
-  if (key.length !== 1 || (key === " " && !text)) return "";
-  typed = { text: text + key, at: now };
-  return typed.text;
+/** `key` added to the type-ahead letters (keyNav.ts), or "" when it isn't one. */
+function typedSoFar(key: string): string {
+  const next = typeAheadText(typed, key, performance.now());
+  if (!next) return "";
+  typed = next;
+  return next.text;
 }
 
 /** The menu's rows as navigation sees them (keyNav.ts). */
@@ -184,7 +182,7 @@ function List({ items, x, y, minWidth, depth, autoFocus, onBack }: { items: Menu
     // Keys pressed in a submenu are its own, and a picker's (a swatch, an icon grid) are the picker's.
     if (!menu || target.closest(".menu") !== menu || (target !== menu && !target.closest("[data-i]"))) return;
     const from = focusedRow(menu);
-    const k = menuKey(navItems(items), from, e, typeAheadText(e.key));
+    const k = menuKey(navItems(items), from, e, typedSoFar(e.key));
     if (!k) return;
     e.preventDefault();
     e.stopPropagation();

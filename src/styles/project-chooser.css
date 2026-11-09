@@ -383,3 +383,17 @@
   white-space: nowrap;
 }
 
+
+/* The recent projects are one Tab stop (listKeys.ts): the ring goes inside, light on the selected
+   row, and the focused row shows its × as hovering does (Delete does the same). */
+.recent:focus-visible {
+  outline-offset: -2px;
+}
+
+.recent.on:focus-visible {
+  outline-color: var(--accent-ink);
+}
+
+.recent:focus-visible .recent-forget {
+  opacity: 1;
+}

@@ -20,6 +20,12 @@
   animation: sheet-in 0.16s ease-out;
 }
 
+/* A modal sheet takes the focus as it opens (sheetKeys.ts) so that Tab goes on inside it; the box
+   itself is no control and draws no ring. */
+[data-sheet-box]:focus {
+  outline: none;
+}
+
 @keyframes sheet-in {
   from {
     transform: translateY(-12px);

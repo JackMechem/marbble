@@ -140,3 +140,18 @@
   color: var(--dim);
 }
 
+
+/* The Marker List's rows are one Tab stop (listKeys.ts); a cell holds a field or a button. */
+.marker-row:focus-visible {
+  border-radius: 5px;
+}
+
+.marker-cell {
+  display: flex;
+  min-width: 0;
+}
+
+.marker-cell > * {
+  flex: 1;
+  min-width: 0;
+}

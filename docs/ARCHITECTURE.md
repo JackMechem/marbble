@@ -2534,7 +2534,12 @@ the name sheet, the Project Chooser) register with `useSheetKeys` (`src/sheetKey
 (`sheetKey` in `Form.tsx` stops them); keys pressed with the focus outside it never reach the
 app, except that Esc closes the top sheet, Return presses its default button and Tab moves the
 focus. A `"non-modal"` sheet (Controller Assignments, a window in Logic) lets the transport and
-Control Surfaces commands through (`NON_MODAL_COMMANDS`) and holds back the rest. `onKey` and
+Control Surfaces commands through (`NON_MODAL_COMMANDS`) and holds back the rest. A modal sheet
+takes the focus as it opens, unless a field in it has already (its box gets tabIndex -1 and
+`data-sheet-box`, which draws no ring), so Tab goes on inside it and not in the window behind; a
+non-modal one leaves the focus where it was, as keys typed in a sheet stay there and its transport
+keys must reach the window. Closing a sheet gives the focus back to what had it when it opened,
+unless it has moved elsewhere meanwhile. `onKey` and
 keys passed on from panel windows ask `sheetBlocks(id)`. A new sheet should use `Sheet` or call
 `useSheetKeys`; `tests/sheetKeys.test.ts` checks that every sheet does.
 

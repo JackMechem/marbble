@@ -106,3 +106,12 @@
   color: var(--dim);
 }
 
+
+/* The rows are one Tab stop (listKeys.ts): the ring goes inside, light on the selected row. */
+.alt-row:focus-visible {
+  outline-offset: -2px;
+}
+
+.alt-row.on:focus-visible {
+  outline-color: var(--accent-ink);
+}

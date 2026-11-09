@@ -352,7 +352,7 @@ instead and enforce rules that would otherwise only fail in the running app.
 | `cpuMeter.test.ts` | The CPU meter's tooltip, its figure and colour bands, and where its peak tick goes. |
 | `sliderKeys.test.ts` | Keyboard control of knobs, faders and sliders (`src/sliderKeys.ts`): steps, ends, rounding and switch positions, the ARIA props. |
 | `buttonKeys.test.ts` | Guard: every `<button>` that acts on `onMouseDown` also works with Return and Space (`onPress` in `src/keyNav.ts`, which is checked too), unless it's out of the Tab order. |
-| `keyNav.test.ts` | The keys of a focused slot, menu or Tracks area (`src/keyNav.ts`): what each does, stepping through a strip's slots, menu items (past lines, headers and disabled items, round the ends), type-ahead, a lane's regions in time order, and when Return and Space press the focused button. |
+| `keyNav.test.ts` | The keys of a focused slot, menu, list row or Tracks area (`src/keyNav.ts`): what each does, stepping through a strip's slots, menu items (past lines, headers and disabled items, round the ends) and list rows (stopping at the ends), type-ahead and its pause, a lane's regions in time order, and when Return and Space press the focused button. |
 | `focusRing.test.ts` | When the keyboard focus ring shows (`src/focusRing.ts`): on after Tab, off after a mouse press. |
 | `textKeys.test.ts` | Text fields keep their editing keys (`src/textKeys.ts`): Select All, Undo, Redo and the clipboard items from the menu bar edit a focused field, Delete Track's key deletes a word there, the other accelerators but Save are dropped there (the list checked against `menu.rs`), and guards that both windows' menu and key handlers go through it. |
 | `tooltip.test.ts` | Tooltips (`src/tooltip.ts`): placed below or above the control (by the pointer on a large one), inside the window, never over the pointer; the delay, the instant next one, no tooltip with a button down or after a press until the pointer leaves; when an emptied title's text becomes the aria-label. |
@@ -539,11 +539,13 @@ These keep the code maintainable and the merges clean.
     through the same `onChange` and touch path as a drag; an icon-only button gets an
     `aria-label`, usually its tooltip. A toggle button says it's on with `aria-pressed` (a guard
     test checks). A channel strip slot spreads `slotProps` (`src/slotKeys.ts`) for its Tab stop
-    and keys; `src/keyNav.ts` decides what the keys do in slots, menus and the Tracks area. These
-    take keys only while Tab moves the focus, and the main window leaves Return and Space to the
-    focused button then (`leavesKeyToFocus`): after a click they stay key commands. A button that
-    acts as the mouse goes down spreads `{...onPress(handler)}` instead of `onMouseDown`, so Return
-    and Space press it too (a guard test checks).
+    and keys, and a list of rows (the Library, recent projects, alternatives, markers) uses
+    `useListKeys` (`src/listKeys.ts`) for its one Tab stop; `src/keyNav.ts` decides what the keys
+    do in slots, menus, lists and the Tracks area. These take keys only while Tab moves the
+    focus, and the main window leaves Return and Space to the focused button then
+    (`leavesKeyToFocus`): after a click they stay key commands. A button that acts as the mouse
+    goes down spreads `{...onPress(handler)}` instead of `onMouseDown`, so Return and Space press
+    it too (a guard test checks).
 - **Formatting.** `cargo fmt --all` for Rust, which CI checks. `rustfmt.toml` allows lines up to 160
   columns; `#[rustfmt::skip]` stays on tables that would otherwise fall apart. The one project-wide
   pass is listed in `.git-blame-ignore-revs`, so `git config blame.ignoreRevsFile .git-blame-ignore-revs`

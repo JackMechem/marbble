@@ -469,6 +469,27 @@ the keyboard, the focus goes back to what opened it.
 Right select the region before or after on the selected track (Up and Down still select the
 track), and Return opens the selected region in its editor, as a double-click does.
 
+A sheet (the Marker List, Project Alternatives, the Project Chooser, Settings, Bounce…) takes the
+focus as it opens, as a dialog does, so the next Tab goes to the first control in it; closing it
+gives the focus back to what had it. Controller Assignments, which leaves the transport keys to
+the window, doesn't.
+
+**Lists** are one Tab stop each, landing on the selected row: the Library's plug-ins, the Project
+Chooser's recent projects, Project Alternatives and the Marker List. As with the slots, a row
+takes these keys once Tab has moved the focus; after a click they do what they did before.
+
+| Key | Does |
+|---|---|
+| Up / Down arrow | The row above or below (it selects it, except in the Library) |
+| Home / End | The first or last row |
+| Letters | The next row whose name starts with them, as in a menu |
+| Return or Space | What a click or double-click does there: loads the plug-in, opens the project, switches to the alternative, goes to the marker |
+| Delete or Backspace | Removes the row where the mouse can: a recent project from the list (as ×), an alternative (as Delete…, which asks first), a marker (undoable) |
+| Esc | Closes the sheet the list is in |
+
+In the Marker List, Tab goes on from a row into its name, length and buttons, and then out of the
+list.
+
 ### Separate windows
 
 The Mixer, the Editors, the Event List, the Channel EQ and the built-in effect panels can each
