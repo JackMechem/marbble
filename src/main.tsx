@@ -15,6 +15,7 @@ import { DetachedWindow } from "./components/DetachedWindow";
 import { installSheetKeys } from "./sheetKeys";
 import { migrateStorage } from "./oldName";
 import { installFocusRing } from "./focusRing";
+import { installTooltips } from "./tooltip";
 import { invoke } from "@tauri-apps/api/core";
 import { KEY_STYLE, setGtkKeyNames, type GtkKeyNames } from "./keyFormat";
 
@@ -24,6 +25,8 @@ migrateStorage();
 // First, so open sheets see every key press before anything else does.
 installSheetKeys();
 installFocusRing();
+// Marbble's own tooltips for every `title`, in this window (a detached panel's too).
+installTooltips();
 
 applyTheme(savedThemeId(), false);
 const scale = savedUiScale();

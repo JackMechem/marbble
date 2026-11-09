@@ -2799,6 +2799,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `panText.ts` | A pan position as the strips' pan knobs show and say it ("C", "L 23", "R 40"; "Centre" spoken); pure, tested. |
 | `focusRing.ts` | Shows the focus ring only after Tab (`data-keyboard-focus` on `<html>`); tested. |
 | `textKeys.ts` | Text fields keep their editing keys: which elements keep keys from the key commands, the native menu's Select All, Undo, Redo and Delete Track acting on a focused field, and its other accelerators dropped there; tested. |
+| `tooltip.ts` | Marbble's tooltips for every `title` (`installTooltips`, from `main.tsx`, so detached windows have them): empties the hovered element's title so the webview shows none, follows React's changes to it, and shows a themed box (`tooltip.css`) after a delay; placement and timing pure, tested. |
 | `stripMeters.ts` | The clip indicator's readout and the gain-reduction meter's scale and fall; pure, tested. |
 | `vca.ts` | VCA offsets and loop checks for drawing the Mixer (mirrors `vca.rs`); pure, tested. |
 | `stripRows.ts` | How many insert and send rows strips side by side share (the Mixer's, the Inspector's pair), so their faders line up, and how many fit a short Mixer; pure, tested. |

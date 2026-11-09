@@ -353,6 +353,7 @@ instead and enforce rules that would otherwise only fail in the running app.
 | `keyNav.test.ts` | The keys of a focused slot, menu or Tracks area (`src/keyNav.ts`): what each does, stepping through a strip's slots, menu items (past lines, headers and disabled items, round the ends), type-ahead, a lane's regions in time order, and when Return and Space press the focused button. |
 | `focusRing.test.ts` | When the keyboard focus ring shows (`src/focusRing.ts`): on after Tab, off after a mouse press. |
 | `textKeys.test.ts` | Text fields keep their editing keys (`src/textKeys.ts`): Select All, Undo, Redo and the clipboard items from the menu bar edit a focused field, Delete Track's key deletes a word there, the other accelerators but Save are dropped there (the list checked against `menu.rs`), and guards that both windows' menu and key handlers go through it. |
+| `tooltip.test.ts` | Tooltips (`src/tooltip.ts`): placed below or above the control (by the pointer on a large one), inside the window, never over the pointer; the delay, the instant next one, no tooltip with a button down or after a press until the pointer leaves; when an emptied title's text becomes the aria-label. |
 | `stripMeters.test.ts` | The clip indicator readout and the gain-reduction meter. |
 | `vca.test.ts` | VCA offsets and loop checks in the Mixer. |
 | `panText.test.ts` | The pan knob's value as text (`src/panText.ts`): steps, rounding, ends, the label and the spoken value. |
@@ -516,6 +517,14 @@ These keep the code maintainable and the merges clean.
     scale: `ctx.font = canvasFont("sm", 600)` (`canvasText.ts`), never a px literal; "xs" there
     too is for numbers and captions in fixed-size boxes (axis labels, note names, the slim
     region bar).
+  - **Tooltips.** Give an element a `title`, as in plain HTML: `src/tooltip.ts` shows it in
+    Marbble's own box (`tooltip.css`, `--tip-shadow`) once the pointer rests on it for 600 ms (at
+    once when moving from one tooltip to the next), not while a mouse button is down, and hides it
+    on a press, wheel, scroll or key. While the pointer is on the element its title is empty, so
+    the webview shows none of its own, and given back when the pointer leaves; a title React
+    changes meanwhile (a level, the CPU figures) updates the box. Write the key command into it
+    with `tip()` or `withKey()` (`keymap.ts`), and lines with `\n`. Don't draw a tooltip of
+    your own for a control or read `title` back from the DOM.
   - **Default states stay quiet.** Colour marks what differs from the default: Read is grey and
     Touch, Latch and Write are coloured; the power button is grey while the track plays and
     stands out when it's off.

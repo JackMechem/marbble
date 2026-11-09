@@ -71,6 +71,14 @@ All notable changes to Marbble are recorded here. The format follows
   project.
 - **The Step Sequencer's bar no longer repeats its name.** After Functions it shows the pattern
   region's name, as the Piano Roll does, and nothing when no pattern region is selected.
+- **Quieter tooltips, in the app's own style.** Tooltips were the system's: they came up quickly,
+  covered what you were working on and didn't match the theme. They are now drawn in the theme's
+  colours and small type, show once the pointer has rested on a control for a moment (at once
+  as you move along a row of buttons), never while a mouse button is down, and go below the
+  control (above it near the bottom of the window, by the pointer on a large area) without
+  covering the pointer. A click, the scroll wheel or a key puts them away until you move to
+  another control. They work in detached windows too, and a control focused with Tab shows its
+  tooltip.
 - **Every control bar button is an icon.** Count-in, which read "Count-in" (or "1234" in a narrow
   window), and Autopunch and Replace have icons of their own: four beats and play for Count-in,
   brackets around a record dot for Autopunch, a waveform cut by a new take for Replace. Their

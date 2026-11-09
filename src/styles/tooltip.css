@@ -1,0 +1,38 @@
+/* Marbble's tooltips (tooltip.ts), which stand in for the webview's own: one box for the window,
+   placed by the script below or above what it describes. Quiet: small type, a light shadow, a
+   quick fade in and none out, so moving along a row of buttons doesn't flicker. */
+.tooltip {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 1000;
+  max-width: 320px;
+  padding: 3px 7px 4px;
+  border-radius: 4px;
+  background: var(--menu-bg);
+  box-shadow: var(--tip-shadow);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  font-weight: 400;
+  line-height: 1.35;
+  letter-spacing: normal;
+  text-align: left;
+  /* Titles break lines with \n (the CPU meter, the latency figures). */
+  white-space: pre-line;
+  overflow-wrap: break-word;
+  pointer-events: none;
+  visibility: hidden;
+  opacity: 0;
+}
+
+.tooltip.shown {
+  visibility: visible;
+  opacity: 1;
+  transition: opacity 80ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tooltip.shown {
+    transition: none;
+  }
+}

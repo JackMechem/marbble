@@ -435,6 +435,10 @@ presses on one control undoes as one step. Key commands with Ctrl, Alt or Cmd st
 app. Screen readers hear each control's name and value ("Volume, -6.0 dB", "Pan, L 12"), and
 the buttons that show only an icon read their tooltip.
 
+Tooltips show when the pointer rests on a control for a moment, and at once as you move along
+to the next one; a click, the scroll wheel or a key press puts them away. With Tab, the focused
+control shows its tooltip too.
+
 Once Tab has moved the focus, **Return** and **Space** press the focused button instead of
 going to the beginning and playing. After a click they are key commands again.
 
