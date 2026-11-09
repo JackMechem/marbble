@@ -1632,7 +1632,7 @@ Audio Track Editor and meters are canvas drawings. The common pattern:
   the order they were written, so an area can come in more than one file (see the comment there).
   `tokens.css` holds Studio's values for the first paint (a test keeps it equal to `studioCss`),
   then the things no theme changes: the six font sizes (`--fs-xs` to `--fs-xxl`) and the focus
-  ring. `tests/styles.test.ts` fails on a hex colour or a font size outside the tokens, and
+  ring. `tests/styles.test.ts` fails on a hex, `rgb()` or `hsl()` colour or a font size outside the tokens, and
   `tests/contrast.test.ts` on `--text`, `--dim` or `--faint` under 4.5:1 (WCAG) on any surface
   text sits on, in any theme (it reads `themes.ts` as text and builds each theme's map with its
   spread), or on the three out of order.

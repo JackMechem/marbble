@@ -45,6 +45,12 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Fixed
 
+- **The Light and High Contrast themes' tints suit their grounds.** The last fixed tints, white or
+  black at an opacity, now come from each theme. On Light, the Dynamics panels' zero line and the
+  Plug-in Manager's row stripes are dark instead of white (so they show), and the dimming behind a
+  sheet or the Project Chooser, the recessed meter edges and the colour swatches' outlines are
+  lighter. On High Contrast, the dim text and icon tint on a selected row (a menu item's shortcut,
+  a recent project's path, an alternative's "current") are dark, to read on its light blue.
 - **Move MIDI Regions with Tempo moves every track alternative.** A tempo edit with it on moved
   only the active alternative's MIDI regions, so switching to another afterwards found its MIDI
   off its bars and beats. The inactive alternatives' MIDI regions now move with the tempo too.

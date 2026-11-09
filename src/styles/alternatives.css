@@ -46,7 +46,7 @@
 }
 
 .alt-row.on .dim {
-  color: rgba(255, 255, 255, 0.78);
+  color: var(--select-dim);
 }
 
 .alt-check {

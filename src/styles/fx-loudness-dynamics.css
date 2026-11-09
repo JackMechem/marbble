@@ -191,7 +191,7 @@
   left: 0;
   right: 0;
   height: 1px;
-  background: rgba(255, 255, 255, 0.22);
+  background: var(--zero-line);
 }
 
 .dyn-level-label {
@@ -248,7 +248,7 @@
   padding: 8px 6px;
   border-radius: 8px;
   background: var(--panel-2);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 0 0 0.5px var(--edge);
+  box-shadow: inset 0 1px 0 var(--sheen), 0 0 0 0.5px var(--edge);
 }
 
 .dyn-big {

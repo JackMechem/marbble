@@ -42,16 +42,17 @@ test("main.tsx is what loads the stylesheet, and nothing else loads CSS", () => 
 
 // ---- the design rules: colours from tokens, the type scale, the focus ring ------------------------
 
-/** Raw hex colours allowed outside tokens.css, as "file: colour" with the reason. None so far: a
- *  colour that's the same in every theme (a piano key, the VU meter's face) still gets a token. */
-const HEX_EXCEPTIONS: Record<string, string> = {};
+/** Raw colours allowed outside tokens.css, as "file: colour" with the reason. None so far: a
+ *  colour that's the same in every theme (a piano key, the VU meter's face) still gets a token, and
+ *  so does a tint (white or black at an opacity), which each theme sets for its own ground. */
+const COLOUR_EXCEPTIONS: Record<string, string> = {};
 
-test("colours come from tokens: no raw hex colour outside tokens.css", () => {
+test("colours come from tokens: no raw hex, rgb() or hsl() colour outside tokens.css", () => {
   const found: string[] = [];
   for (const f of files.filter((f) => f !== "tokens.css")) {
-    for (const m of css(read(f)).matchAll(/#[0-9a-fA-F]{3,8}\b/g)) {
+    for (const m of css(read(f)).matchAll(/#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?)\([^)]*\)/g)) {
       const at = `${f}: ${m[0]}`;
-      if (!(at in HEX_EXCEPTIONS)) found.push(at);
+      if (!(at in COLOUR_EXCEPTIONS)) found.push(at);
     }
   }
   assert.deepEqual(found, [], "use a token from tokens.css (and themes.ts) instead");

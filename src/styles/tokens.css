@@ -106,6 +106,21 @@
   --swatch-ink: #141416;
   --swatch-ink-light: #ffffff;
   --folder-shade: rgba(0, 0, 0, 0.16);
+  /* Tints: black or white at an opacity, laid over whatever is beneath. */
+  --scrim: rgba(0, 0, 0, 0.28);
+  --scrim-strong: rgba(0, 0, 0, 0.45);
+  --shade: rgba(0, 0, 0, 0.2);
+  --recess: rgba(0, 0, 0, 0.35);
+  --recess-edge: rgba(0, 0, 0, 0.6);
+  --swatch-edge: rgba(0, 0, 0, 0.6);
+  --drop-shadow: rgba(0, 0, 0, 0.35);
+  --sheen: rgba(255, 255, 255, 0.04);
+  --row-stripe: rgba(255, 255, 255, 0.025);
+  --zero-line: rgba(255, 255, 255, 0.22);
+  --select-dim: rgba(255, 255, 255, 0.78);
+  --select-tint: rgba(255, 255, 255, 0.16);
+  --warn-soft: rgba(243, 154, 38, 0.12);
+  --warn-line: rgba(243, 154, 38, 0.45);
   --warn: #f0b43c;
   --meter-stops: #2f9e44, #55c23b 55%, #d8d33a 80%, #e9a23b 90%, #e5483a;
   --meter-hold: #e8e8e8;

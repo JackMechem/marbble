@@ -7,7 +7,7 @@
   z-index: 60;
   display: grid;
   place-items: center;
-  background: rgba(0, 0, 0, 0.45);
+  background: var(--scrim-strong);
 }
 
 .chooser {
@@ -66,7 +66,7 @@
   min-width: 20px;
   padding: 0 6px;
   border-radius: 9px;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--shade);
   font-size: var(--fs-sm);
   text-align: center;
 }
@@ -281,7 +281,7 @@
 .recent.on .recent-path,
 .recent.on .recent-meta,
 .recent.on .dim {
-  color: rgba(255, 255, 255, 0.78);
+  color: var(--select-dim);
 }
 
 .recent.missing {
@@ -300,7 +300,7 @@
 }
 
 .recent.on .recent-icon {
-  background: rgba(255, 255, 255, 0.16);
+  background: var(--select-tint);
   color: var(--accent-ink);
 }
 
@@ -354,7 +354,7 @@
 }
 
 .recent-forget:hover {
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--shade);
   color: var(--text);
 }
 

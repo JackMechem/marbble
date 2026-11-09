@@ -119,6 +119,21 @@ const studioCss: Record<string, string> = {
   "--swatch-ink": "#141416",
   "--swatch-ink-light": "#ffffff",
   "--folder-shade": "rgba(0,0,0,0.16)",
+  // Tints: black or white at an opacity, laid over whatever is beneath.
+  "--scrim": "rgba(0,0,0,0.28)",
+  "--scrim-strong": "rgba(0,0,0,0.45)",
+  "--shade": "rgba(0,0,0,0.2)",
+  "--recess": "rgba(0,0,0,0.35)",
+  "--recess-edge": "rgba(0,0,0,0.6)",
+  "--swatch-edge": "rgba(0,0,0,0.6)",
+  "--drop-shadow": "rgba(0,0,0,0.35)",
+  "--sheen": "rgba(255,255,255,0.04)",
+  "--row-stripe": "rgba(255,255,255,0.025)",
+  "--zero-line": "rgba(255,255,255,0.22)",
+  "--select-dim": "rgba(255,255,255,0.78)",
+  "--select-tint": "rgba(255,255,255,0.16)",
+  "--warn-soft": "rgba(243,154,38,0.12)",
+  "--warn-line": "rgba(243,154,38,0.45)",
   "--warn": "#f0b43c",
   "--meter-stops": "#2f9e44, #55c23b 55%, #d8d33a 80%, #e9a23b 90%, #e5483a",
   "--meter-hold": "#e8e8e8",
@@ -273,6 +288,7 @@ const flatCss: Record<string, string> = {
   "--scroll-thumb": "#3a3c44",
   "--status-bg": "#1e1f23",
   "--toast-bg": "#2a2c31",
+  "--sheen": "transparent",
   "--radius": "4px",
 };
 
@@ -513,6 +529,18 @@ const lightCss: Record<string, string> = {
   "--toast-bg": "#ffffff",
   "--warn": "#e39a2b",
   "--meter-hold": "#1c1f25",
+  // Tints darken on the pale ground, where white lines would vanish.
+  "--scrim": "rgba(20,30,50,0.18)",
+  "--scrim-strong": "rgba(20,30,50,0.32)",
+  "--shade": "rgba(0,0,0,0.1)",
+  "--recess": "rgba(0,0,0,0.16)",
+  "--recess-edge": "rgba(0,0,0,0.3)",
+  "--swatch-edge": "rgba(0,0,0,0.25)",
+  "--drop-shadow": "rgba(20,30,50,0.2)",
+  "--row-stripe": "rgba(0,0,0,0.03)",
+  "--zero-line": "rgba(0,0,0,0.3)",
+  "--warn-soft": "rgba(227,154,43,0.14)",
+  "--warn-line": "rgba(196,120,20,0.55)",
 };
 
 const lightCanvas: CanvasTheme = {
@@ -641,6 +669,17 @@ const contrastCss: Record<string, string> = {
   "--mute-ink": "#000000",
   "--green-ink": "#000000",
   "--meter-hold": "#ffffff",
+  // The selection is a light blue with black ink, so what sits on it darkens; edges and lines are
+  // brighter to read on black.
+  "--scrim": "rgba(0,0,0,0.6)",
+  "--scrim-strong": "rgba(0,0,0,0.7)",
+  "--swatch-edge": "#8a8a8a",
+  "--row-stripe": "rgba(255,255,255,0.06)",
+  "--zero-line": "rgba(255,255,255,0.55)",
+  "--select-dim": "rgba(0,0,0,0.75)",
+  "--select-tint": "rgba(0,0,0,0.18)",
+  "--warn-soft": "rgba(243,154,38,0.16)",
+  "--warn-line": "#f39a26",
 };
 
 const contrastCanvas: CanvasTheme = {

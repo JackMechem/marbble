@@ -372,7 +372,7 @@ instead and enforce rules that would otherwise only fail in the running app.
 | `updateCheck.test.ts` | The update check (`src/updateCheck.ts`): reading tags as versions, semver precedence with prereleases, each channel's newest release (drafts and non-version tags skipped), when an update is offered, and what the check says. |
 | `compressorModel.test.ts` | The transfer curve's copy of `static_reduction` for each circuit. |
 | `dynScale.test.ts` | The dynamics panels' value formatting and knob maths. |
-| `styles.test.ts` | Guard: `src/styles/index.css` imports every stylesheet exactly once with the tokens first, no other file imports CSS, and each file's braces balance; no raw hex colour outside `tokens.css`; every font size from the type scale; `tokens.css` matches Studio in `themes.ts`; the focus ring. |
+| `styles.test.ts` | Guard: `src/styles/index.css` imports every stylesheet exactly once with the tokens first, no other file imports CSS, and each file's braces balance; no raw hex, `rgb()` or `hsl()` colour outside `tokens.css`; every font size from the type scale; `tokens.css` matches Studio in `themes.ts`; the focus ring. |
 | `browserDialogs.test.ts` | Guard: no `window.prompt`, `confirm` or `alert` in `src/` (macOS's web view doesn't implement them; use `askName` or the dialog plug-in). |
 | `contrast.test.ts` | Guard: in every theme of `themes.ts`, `--text`, `--dim` and `--faint` are at least 4.5:1 (WCAG) on each surface text sits on, `--lcd-label` on the LCD, and the three stay in that order. |
 
@@ -496,9 +496,12 @@ These keep the code maintainable and the merges clean.
   to, and the reason goes in a comment.
 - **UI.** Use the existing CSS variables and components (`Form.tsx`, `Controls.tsx`,
   `Menu.tsx`). Follow the Logic-like visual language; don't introduce a new look.
-  - **Colours** come from tokens: no hex colour in an area file (`styles.test.ts` fails on one).
-    A colour that's the same in every theme (a piano key, the VU meter's face) still gets a
-    token; see [Add a theme colour](#add-a-theme-colour).
+  - **Colours** come from tokens: no hex, `rgba()` or `hsla()` colour in an area file
+    (`styles.test.ts` fails on one). A colour that's the same in every theme (a piano key, the VU
+    meter's face) still gets a token, and so does a tint, white or black at an opacity: the tints
+    in `tokens.css` (`--scrim`, `--shade`, `--recess`, `--zero-line`, `--select-dim`, ...) are set
+    per theme, since a white line that reads on Studio vanishes on Light's pale ground. See
+    [Add a theme colour](#add-a-theme-colour).
   - **Type scale.** Six sizes in `tokens.css`: `--fs-xs` 10 px, `--fs-sm` 11, `--fs-md` 12 (the
     body), `--fs-lg` 13, `--fs-xl` 15, `--fs-xxl` 17. Text uses `--fs-sm` and up; `--fs-xs` is
     only for tiny numbers and captions inside fixed-size readouts (meter scales, the CPU figure,
@@ -756,7 +759,7 @@ For a CSS colour:
 2. `src/styles/tokens.css`: the same value in the first `:root` block, for the first paint
    (`styles.test.ts` checks the two match).
 3. Use `var(--my-colour)` in the area's file in `src/styles/` (new rules go at the end of it).
-   A hex colour there fails `styles.test.ts`.
+   A hex or `rgba()` colour there fails `styles.test.ts`.
 
 For a canvas colour:
 

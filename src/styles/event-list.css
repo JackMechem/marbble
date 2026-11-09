@@ -152,7 +152,7 @@
 
 .el-row.sel .el-part:hover,
 .el-row.sel .el-edit:not(.el-pos):not(.el-len):hover {
-  background: rgba(255, 255, 255, 0.16);
+  background: var(--select-tint);
 }
 
 .el-input {
