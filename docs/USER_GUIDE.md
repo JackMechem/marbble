@@ -245,7 +245,9 @@ From left to right:
 - **Ruler**, from the top:
   - the **cycle strip** (yellow): drag to make a cycle range, drag it or its edges to move or
     resize it, click it to switch Cycle on and off;
-  - the **bar numbers**: click or drag to move the playhead;
+  - the **bar numbers**: click or drag to move the playhead. Grab the playhead's head (anywhere
+    near it) to drag it from where it is, without it jumping to the pointer; a click on the head
+    leaves it in place;
   - the **Autopunch strip** (red): works like the cycle strip, for the punch range;
   - the **marker lane** (see [Markers](#markers)).
 

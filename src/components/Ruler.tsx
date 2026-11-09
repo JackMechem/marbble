@@ -18,10 +18,8 @@ import { setLocatorsByRegions } from "../ops";
 import { transport } from "../transport";
 import { rulerMenu } from "../rulerMenu";
 import { canvasFont } from "../canvasText";
+import { BARS_H, CYCLE_H, HEAD_W, onPlayheadHead, playheadStyle } from "../rulerHead";
 
-const CYCLE_H = 12;
-/** Bottom of the bar numbers; the Autopunch strip and the marker lane are below. */
-const BARS_H = 30;
 const PUNCH_H = 6;
 const MARKERS_Y = BARS_H + PUNCH_H;
 
@@ -120,18 +118,29 @@ export function Ruler() {
   // view, zoom or cycle changes.
   const handleRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const a = onViewport(() => requestDraw());
+    // Where the playhead's element sits in the window, for putting its line on device pixels;
+    // it moves only when the Tracks area's size or the track list's width does.
+    let origin = 0;
+    const measure = () => (origin = handleRef.current?.parentElement?.getBoundingClientRect().left ?? 0);
+    measure();
+    const a = onViewport(() => {
+      measure();
+      requestDraw();
+    });
     let last = "";
     const b = onFrame((now) => {
       const { project, pxPerBeat } = live.current;
       const el = handleRef.current;
       if (!project || !el) return;
       const x = (framePos(now) * pxPerBeat) / samplesPerBeat(project) - viewport().left;
-      const tf = `translate3d(${x.toFixed(1)}px,0,0)`;
+      // On whole device pixels, as the global tracks and the Tracks area draw it.
+      const st = playheadStyle(x, pixelRatio(), origin);
+      const tf = st.transform + st.width;
       if (tf !== last) {
         last = tf;
-        el.style.transform = tf;
-        el.style.visibility = x < -6 || x > viewport().width + 6 ? "hidden" : "visible";
+        el.style.transform = st.transform;
+        el.style.width = st.width;
+        el.style.visibility = x < -HEAD_W || x > viewport().width + HEAD_W ? "hidden" : "visible";
       }
     });
     // A click anywhere else drops the marker selection, so Delete goes back to regions (the
@@ -160,6 +169,10 @@ export function Ruler() {
     const snap = (v: number) => Math.max(0, snapPos(project, v, getState().snapMode === "off" ? "beat" : getState().snapMode, pxPerBeat));
     const at = toSample(e.clientX);
 
+    // The playhead's head, grabbed: it follows the pointer from where it was, without jumping
+    // to the press.
+    const head = framePos() * pps;
+    if (onPlayheadHead(at * pps - head, y)) return headDown(e, head / pps, toSample, snap);
     if (y >= MARKERS_Y) return markerDown(e, at, toSample, snap);
     if (y >= BARS_H) return stripDown(e, "punch", at, toSample, snap);
     if (y > CYCLE_H) {
@@ -177,6 +190,40 @@ export function Ruler() {
     }
 
     stripDown(e, "cycle", at, toSample, snap);
+  };
+
+  /** Dragging the playhead's head: it moves by as much as the pointer does, snapped; a click
+   *  without a drag leaves it where it is. */
+  const headDown = (e: React.MouseEvent, from: number, toSample: (cx: number) => number, snap: (v: number) => number) => {
+    e.preventDefault();
+    const cv = ref.current!;
+    cv.style.cursor = "grabbing";
+    const x0 = e.clientX;
+    const at0 = toSample(x0);
+    let moved = false;
+    const move = (ev: MouseEvent) => {
+      if (!moved && Math.abs(ev.clientX - x0) < 2) return;
+      moved = true;
+      act("locate", { pos: Math.round(Math.max(0, snap(from + toSample(ev.clientX) - at0))) });
+    };
+    const up = () => {
+      cv.style.cursor = "grab";
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+    };
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+  };
+
+  // Over the head, the pointer says it can be grabbed.
+  const onMouseMove = (e: React.MouseEvent) => {
+    const { project, pxPerBeat } = live.current;
+    const cv = ref.current;
+    if (!project || !cv || e.buttons) return;
+    const rect = cv.getBoundingClientRect();
+    const dx = e.clientX - rect.left + viewport().left - (framePos() * pxPerBeat) / samplesPerBeat(project);
+    const cursor = onPlayheadHead(dx, e.clientY - rect.top) ? "grab" : "";
+    if (cv.style.cursor !== cursor) cv.style.cursor = cursor;
   };
 
   /** The cycle strip (top) and the Autopunch strip (below the bar numbers): drag to set or
@@ -365,7 +412,7 @@ export function Ruler() {
 
   return (
     <div className="ruler-wrap">
-      <canvas ref={ref} className="ruler" onMouseDown={onMouseDown} onContextMenu={onContextMenu} onWheel={onWheel} />
+      <canvas ref={ref} className="ruler" onMouseDown={onMouseDown} onMouseMove={onMouseMove} onContextMenu={onContextMenu} onWheel={onWheel} />
       <div className="ruler-playhead" ref={handleRef} style={{ ["--ph" as string]: theme.playhead }} />
     </div>
   );

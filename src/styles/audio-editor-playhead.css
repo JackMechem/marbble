@@ -6,7 +6,7 @@
   overflow-y: hidden;
 }
 
-/* The playhead: a 1px line with the ruler's triangle at the top. */
+/* The playhead: a 1px line with the Tracks area ruler's head at the top. */
 .aed-playhead {
   position: absolute;
   left: 0;
@@ -21,12 +21,12 @@
 .aed-playhead::before {
   content: "";
   position: absolute;
-  left: -5px;
+  left: -6px;
   top: 7px;
-  width: 11px;
-  height: 7px;
+  width: 13px;
+  height: 11px;
   background: var(--ph);
-  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  clip-path: polygon(1px 0, calc(100% - 1px) 0, 100% 1px, 100% 45%, 50% 100%, 0 45%, 0 1px);
 }
 
 .aed-gain {

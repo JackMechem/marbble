@@ -98,6 +98,21 @@ All notable changes to Marbble are recorded here. The format follows
   the field. They now act on the field: select its text, undo or redo the typing, delete the word
   before the caret (⌘⌫: to the start of the line). Edit › Cut, Copy and Paste chosen from the
   menu bar act on the field too.
+- **The playhead is one line from the ruler down, and its head is easy to grab.** The line no
+  longer stops under the bar numbers and starts again in the tracks: it runs on through the
+  Autopunch strip, the marker lane and the global tracks in one colour. The head is larger and
+  cleaner, a press anywhere near it grabs it, and dragging it moves the playhead from where it
+  was instead of jumping to the pointer first.
+  Autopunch strip, the marker lane and the global tracks as one solid column of one colour,
+  on whole screen pixels at every interface size (above the tracks it could be spread over two
+  pixels, softer and greyer). The head is larger, cleaner and centred on the line; a press
+  anywhere near it grabs it, and dragging it moves the playhead from where it was instead of
+  jumping to the pointer first.
+- **A take folder's triangle is easy to click, and its badge is centred.** A click anywhere in
+  the start of the folder's name bar, over its full height, opens or closes the folder (the
+  triangle used to need a press about as small as itself), and the pointer shows it can be
+  clicked. The take number badge and the triangle sit in the middle of the name bar instead of
+  near its top.
 - **The Light and High Contrast themes' tints suit their grounds.** The last fixed tints, white or
   black at an opacity, now come from each theme. On Light, the Dynamics panels' zero line and the
   Plug-in Manager's row stripes are dark instead of white (so they show), and the dimming behind a

@@ -322,6 +322,7 @@ instead and enforce rules that would otherwise only fail in the running app.
 | `textFit.test.ts` | Long paths shortened at a separator, and names on lines broken at spaces (`src/textFit.ts`). |
 | `tempo.test.ts` | `src/tempo.ts`, the mirror of the engine's tempo map. |
 | `musicalMove.test.ts` | Region moves and nudges in bars and beats through the tempo map. |
+| `rulerHead.test.ts` | Where a press grabs the playhead's head in the ruler (`src/rulerHead.ts`): the drawn head, the larger area around it, the strips it leaves alone; the line on whole device pixels at every interface size. |
 | `audioEdit.test.ts` | The Audio Track Editor's range arithmetic (`src/audioRange.ts`). |
 | `regionSelect.test.ts` | Edit › Select's region criteria (`src/regionSelect.ts`). |
 | `regionParams.test.ts` | The Region inspector's playback parameter values. |

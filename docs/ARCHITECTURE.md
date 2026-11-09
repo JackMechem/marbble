@@ -2763,6 +2763,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `regionDraw.ts` | Drawing a region on a canvas (body, name bar, waveform or notes, fades, loops), for the Tracks area and the Audio Track Editor; the crossfade handle drag in progress. |
 | `regionGrab.ts` | What a press on a region in the Tracks area grabs; pure, tested. |
 | `regionEditor.ts` | Which bottom pane a double-clicked region opens (Piano Roll, Audio Track Editor, Step Sequencer); pure, tested. |
+| `rulerHead.ts` | The ruler's strip heights, where a press grabs the playhead's head, and the playhead line's place and width on whole device pixels (the ruler, global tracks and Tracks area all use it); pure, tested. |
 | `rulerMenu.ts` | The ruler's right-click menu above the marker lane, built from state and commands passed in; pure, tested. |
 | `eventList.ts` | The Event List's positions, lengths, typed values and edits; pure, tested. |
 | `noteSelect.ts` | Edit › Select on notes and events while the Piano Roll or the Event List has focus; pure, tested. |

@@ -7,6 +7,9 @@ import { getState, liveTakes, onTick, setState, currentTick, useStore } from "..
 import { ensureWave } from "../waveform";
 import { coalesced, framePos, onFrame } from "../frame";
 import { samplesPerBeat } from "../time";
+import { theme } from "../theme";
+import { pixelRatio } from "../uiScale";
+import { playheadStyle } from "../rulerHead";
 import { useLayout, zoomTracks } from "../layout";
 import { onViewport, registerScroller, setViewport, viewport } from "../view";
 import { regionEnd } from "../loops";
@@ -85,18 +88,24 @@ export function Arrange() {
   redraw = requestDraw;
 
   const lastPlayhead = useRef("");
+  // Where the playhead's element sits in the window, for putting its line on device pixels
+  // (measured when the viewport changes).
+  const playheadOrigin = useRef(0);
   const positionPlayhead = (pos: number = framePos()) => {
     const ph = playheadRef.current;
     const { project, pps } = live.current;
     if (!ph || !project) return;
     const x = pos * pps - viewport().left;
-    const tf = `translate3d(${x.toFixed(1)}px,0,0)`;
+    // On whole device pixels, as the ruler and the global tracks draw it.
+    const st = playheadStyle(x, pixelRatio(), playheadOrigin.current);
+    const tf = st.transform + st.width;
     const visible = !(x < -2 || x > viewport().width + 2);
     // Touch the DOM only when something changed.
     const key = visible ? tf : "hidden";
     if (key === lastPlayhead.current) return;
     lastPlayhead.current = key;
-    ph.style.transform = tf;
+    ph.style.transform = st.transform;
+    ph.style.width = st.width;
     ph.style.display = visible ? "block" : "none";
   };
 
@@ -121,7 +130,12 @@ export function Arrange() {
       el.scrollLeft = left;
       if (top !== undefined) el.scrollTop = top;
     });
-    const off = onViewport(() => requestDraw());
+    const measure = () => (playheadOrigin.current = playheadRef.current?.parentElement?.getBoundingClientRect().left ?? 0);
+    measure();
+    const off = onViewport(() => {
+      measure();
+      requestDraw();
+    });
     // Ctrl/Cmd + wheel zooms horizontally around the pointer.
     const wheel = (e: WheelEvent) => {
       if (e.altKey) {
@@ -258,7 +272,7 @@ export function Arrange() {
   return (
     <div className="arrange">
       <canvas ref={canvasRef} className="arrange-canvas" />
-      <div className="playhead" ref={playheadRef} />
+      <div className="playhead" ref={playheadRef} style={{ ["--ph" as string]: theme.playhead }} />
       <div
         className="arrange-scroll"
         ref={scrollRef}

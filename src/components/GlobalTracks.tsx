@@ -17,6 +17,7 @@ import { fmtBpm, MAX_BPM, MIN_BPM, SIG_DENOMINATORS, tempoMap, type SigEvent, ty
 import { samplesPerBeat, snapPos } from "../time";
 import { mix, theme } from "../theme";
 import { pixelRatio } from "../uiScale";
+import { playheadStyle } from "../rulerHead";
 import { onViewport, scrollTo, viewport } from "../view";
 import { NumberField } from "./Form";
 import { openMenu, type MenuItem } from "./Menu";
@@ -219,7 +220,14 @@ export function GlobalTracks() {
   const [requestDraw] = useState(() => coalesced(() => drawRef.current()));
   useLayoutEffect(() => draw());
   useEffect(() => {
-    const a = onViewport(() => requestDraw());
+    // Where the playhead's element sits in the window, for putting its line on device pixels.
+    let origin = 0;
+    const measure = () => (origin = phRef.current?.parentElement?.getBoundingClientRect().left ?? 0);
+    measure();
+    const a = onViewport(() => {
+      measure();
+      requestDraw();
+    });
     let last = "";
     const b = onFrame((now) => {
       const el = phRef.current;
@@ -227,10 +235,13 @@ export function GlobalTracks() {
       if (!el || !project) return;
       const { pps, left } = geometry();
       const x = framePos(now) * pps - left;
-      const tf = `translate3d(${x.toFixed(1)}px,0,0)`;
+      // On whole device pixels, as the ruler and the Tracks area draw it.
+      const st = playheadStyle(x, pixelRatio(), origin);
+      const tf = st.transform + st.width;
       if (tf !== last) {
         last = tf;
-        el.style.transform = tf;
+        el.style.transform = st.transform;
+        el.style.width = st.width;
         el.style.visibility = x < -2 || x > viewport().width + 2 ? "hidden" : "visible";
       }
     });

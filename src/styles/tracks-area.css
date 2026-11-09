@@ -139,36 +139,31 @@
   overflow: hidden;
 }
 
-/* Playhead handle in the ruler: a downward triangle on a 1px stem. */
+/* The playhead in the ruler: its line, running to the ruler's bottom where the global tracks'
+   and the Tracks area's lines go on, with the head on top (rulerHead.ts has its sizes and the
+   larger area a press grabs it in). Ruler.tsx puts the line on a whole device pixel and sets
+   its width (1px below until it does); the head is centred on the line. */
 .ruler-playhead {
   position: absolute;
-  left: -5px;
+  left: 0;
   top: 12px;
-  width: 11px;
-  height: 18px;
+  bottom: 0;
+  width: 1px;
+  background: var(--ph);
   pointer-events: none;
   will-change: transform;
 }
 
+/* A pentagon pointing down: square shoulders read better than a thin triangle at this size. */
 .ruler-playhead::before {
   content: "";
   position: absolute;
-  left: 0;
+  left: calc(50% - 6.5px);
   top: 0;
-  width: 11px;
-  height: 7px;
+  width: 13px;
+  height: 11px;
   background: var(--ph);
-  clip-path: polygon(0 0, 100% 0, 50% 100%);
-}
-
-.ruler-playhead::after {
-  content: "";
-  position: absolute;
-  left: 5px;
-  top: 6px;
-  width: 1px;
-  height: 12px;
-  background: var(--ph);
+  clip-path: polygon(1px 0, calc(100% - 1px) 0, 100% 1px, 100% 45%, 50% 100%, 0 45%, 0 1px);
 }
 
 .headers {
@@ -433,7 +428,7 @@
   bottom: 10px;
   left: 0;
   width: 1px;
-  background: var(--text);
+  background: var(--ph);
   pointer-events: none;
   z-index: 2;
 }
