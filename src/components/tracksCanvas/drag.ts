@@ -4,6 +4,7 @@ import { type Id, type Project, type Track } from "../../api";
 import { stepVisible, type Layout } from "../../layout";
 import { newLanes, sourceTracks } from "../../newTrackDrag";
 import type { GrabKind } from "../../regionGrab";
+import type { Span } from "../../regionTrim";
 import type { CompDrag } from "../../takes";
 
 /** The latest values for the imperative draw and pointer code. */
@@ -38,6 +39,8 @@ export interface Drag {
   /** For trims, the new start/length of the grabbed region. */
   start?: number;
   length?: number;
+  /** For trims, the new start/length of each region the trim changes, the grabbed one too. */
+  spans?: Map<Id, Span>;
   /** For fade drags, the new fade length. */
   fade?: number;
   /** For loop drags, the new loop end. */

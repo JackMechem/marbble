@@ -27,6 +27,7 @@ import { activeTool, notePointer, pressOnMarquee, toolHover, toolMouseDown, type
 import { regionCrossfades, setCrossfadeDrag } from "../../regionDraw";
 import { grabKind as regionGrabKind } from "../../regionGrab";
 import { editorPaneFor } from "../../regionEditor";
+import { trimAll, trimDelta, trimLimits } from "../../regionTrim";
 import { dragNewLanes, dragTarget, type TracksRefs } from "./drag";
 
 /** Logic's loop tool pointer: a circular arrow. */
@@ -172,17 +173,22 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
     const startScrollTop = scrollRef.current!.scrollTop;
     const startIndex = h.ti;
     let moved = false;
-    dragRef.current = { kind, ids: kind === "move" ? sel : [r.id], dx: 0, dTrack: 0, grabbed: r.id };
+    // A trim moves the same edge of every selected region, as in Logic (frozen tracks' stay).
+    const trimEdge = kind === "left" || kind === "right" ? kind : null;
+    const trimming = trimEdge
+      ? project.tracks.flatMap((t) =>
+          t.frozen
+            ? []
+            : t.regions
+                .filter((x) => x.id === r.id || sel.includes(x.id))
+                .map((x) => ({ id: x.id, span: { start: x.start, length: x.length }, lim: trimLimits(x, x.content.type === "audio" ? waveCache.get(x.content.clip)?.frames : undefined) })),
+        )
+      : [];
+    dragRef.current = { kind, ids: kind === "move" ? sel : trimEdge ? trimming.map((x) => x.id) : [r.id], dx: 0, dTrack: 0, grabbed: r.id };
     const fadeFrom = r.content.type === "audio" ? (kind === "fadeIn" ? r.content.fade_in : r.content.fade_out) : 0;
     // Dragging a crossfade's handle resizes it about its centre.
     const crossfading = kind === "fadeOut" && !!regionCrossfades(r.id)?.out;
     const snap = (v: number) => snapPos(project, v, getState().snapMode, getState().pxPerBeat);
-    // An audio region can't be trimmed out past the ends of its file.
-    const audio = r.content.type === "audio" ? r.content : null;
-    const wave = audio ? waveCache.get(audio.clip) : undefined;
-    const minStart = audio ? r.start - audio.offset : 0;
-    // A take folder reaches as far as its takes do.
-    const maxLength = audio && r.takes ? Math.max(0, ...r.takes.takes.map((t) => t.end)) - audio.offset : audio && wave ? wave.frames - audio.offset : Infinity;
 
     const move = (ev: MouseEvent) => {
       const dxPx = ev.clientX - startX;
@@ -201,13 +207,13 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
         const v = fadeFrom + (kind === "fadeIn" ? d.dx : -d.dx);
         d.fade = crossfading ? draggedFadeOut(fadeFrom, d.dx, true, r.length - other) : Math.round(Math.max(0, Math.min(r.length - other, v)));
         if (crossfading) setCrossfadeDrag({ region: r.id, length: d.fade });
-      } else if (kind === "right") {
-        d.start = r.start;
-        d.length = Math.min(maxLength, Math.max(PEAK_BUCKET, snap(r.start + r.length + d.dx) - r.start));
-      } else if (kind === "left") {
-        const ns = Math.min(r.start + r.length - PEAK_BUCKET, Math.max(0, minStart, snap(r.start + d.dx)));
-        d.start = ns;
-        d.length = r.length - (ns - r.start);
+      } else if (trimEdge) {
+        // The dragged region's edge snaps; the others' move by as much, each within its own
+        // limits (an audio region's file, a take folder's takes).
+        d.spans = trimAll(trimming, trimEdge, trimDelta(r, trimEdge, d.dx, snap), PEAK_BUCKET);
+        const own = d.spans.get(r.id) ?? r;
+        d.start = own.start;
+        d.length = own.length;
       } else if (kind === "loop") {
         // Dragging back onto the region's own end turns the loop off.
         d.loopEnd = Math.max(r.start + r.length, snap(regionEnd(r) + d.dx));
@@ -260,8 +266,11 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
         act("set_region_loop", { id: r.id, loopEnd: end > r.start + r.length ? end : null });
       } else if (d.fade !== undefined) {
         act("set_region_fades", { ids: [r.id], fadeIn: kind === "fadeIn" ? d.fade : null, fadeOut: kind === "fadeOut" ? d.fade : null });
-      } else if (d.start !== undefined && d.length !== undefined) {
-        act("resize_region", { id: r.id, start: Math.round(d.start), length: Math.round(d.length) });
+      } else if (d.spans?.size) {
+        // One undo step for them all.
+        const resizes = [...d.spans].map(([id, x]) => [id, Math.round(x.start), Math.round(x.length)]);
+        if (resizes.length === 1) act("resize_region", { id: resizes[0][0], start: resizes[0][1], length: resizes[0][2] });
+        else act("resize_regions", { resizes });
       }
     };
     window.addEventListener("mousemove", move);

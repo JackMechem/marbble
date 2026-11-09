@@ -93,6 +93,13 @@ pub fn resize_region(state: State<AppState>, id: Id, start: i64, length: i64) ->
     edit(&state, "Resize Region", None, false, |s| s.drag_resize_region(id, start, length))
 }
 
+/// A trim in the Tracks area that trims every selected region: each `(id, start, length)`
+/// is a region's new span, from where the regions were. One undo step.
+#[tauri::command]
+pub fn resize_regions(state: State<AppState>, resizes: Vec<(Id, i64, i64)>) -> Snapshot {
+    edit(&state, &plural(resizes.len(), "Resize Region", "Resize Regions"), None, false, |s| s.drag_resize_regions(&resizes))
+}
+
 #[tauri::command]
 pub fn delete_regions(state: State<AppState>, ids: Vec<Id>) -> Snapshot {
     edit(&state, if ids.len() > 1 { "Delete Regions" } else { "Delete Region" }, None, false, |s| s.drag_delete_regions(&ids))

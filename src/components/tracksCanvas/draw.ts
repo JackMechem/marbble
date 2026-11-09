@@ -127,10 +127,12 @@ export function drawTracks({ canvasRef, live, dragRef, swipeRef, marqueeRef, hov
         fades = drag.kind === "fadeIn" ? [drag.fade, r.content.fade_out] : [r.content.fade_in, drag.fade];
       } else if (r.id === drag.grabbed && drag.loopEnd !== undefined) {
         loop = drag.loopEnd;
-      } else if (r.id === drag.grabbed && drag.start !== undefined && drag.length !== undefined) {
-        shift = drag.start - r.start;
-        start = drag.start;
-        length = drag.length;
+      } else if (drag.spans?.has(r.id)) {
+        // A trim: every selected region's edge moves with the grabbed one's.
+        const s = drag.spans.get(r.id)!;
+        shift = s.start - r.start;
+        start = s.start;
+        length = s.length;
       }
     }
     const o = still ? undefined : outcome?.get(r.id);

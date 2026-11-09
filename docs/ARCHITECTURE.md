@@ -2584,7 +2584,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `session/threads.rs` | Processing Threads: starting and stopping the workers, sending the task graph (`sync_parallel`). |
 | `session/multi_out.rs` | Multi-output instruments: the instruments' outputs for the UI, `add_output_aux`, `sync_output_buses` (called from `update_pdc`), what Freeze and Bounce in Place refuse. The design notes are at its top. |
 | `session/crossfades.rs` | Fade shapes and types from the inspector, the Crossfade command, the X-Fade drag mode (`auto_crossfade`), Crossfade Time (`crossfade_frames`). |
-| `session/drag_modes.rs` | Region edits as the Tracks area makes them: `drag_move_regions`, `drag_nudge_regions`, `drag_resize_region`, `drag_delete_regions`, `drag_paste_regions`, in the drag mode and with Move Automation with Regions. |
+| `session/drag_modes.rs` | Region edits as the Tracks area makes them: `drag_move_regions`, `drag_nudge_regions`, `drag_resize_region`, `drag_resize_regions` (a trim of every selected region, each applied relative to where earlier ones' shuffles left it), `drag_delete_regions`, `drag_paste_regions`, in the drag mode and with Move Automation with Regions. |
 | `session/drum_replace.rs` | Drum Replacement/Doubling: an audio track's regions as parts of clips (loop passes, a take folder's comp segments) for `drum_replace.rs`, and the sampler track it makes, with its made sample written to `Samples/Drum Replacement`. |
 | `session/auto_lanes.rs` | Stereo Out's lanes (`strip_lanes`), folder stacks' volume and mute automation, the extra lanes shown under a track (`set_auto_lanes`). |
 | `session/recovery.rs` | Crash safety: atomic project writes (`write_atomic`), recording journals, recovering interrupted takes, the fallback from a damaged project.json. |
@@ -2762,6 +2762,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `pianoRollDraw.ts` | Piano Roll canvas drawing. |
 | `regionDraw.ts` | Drawing a region on a canvas (body, name bar, waveform or notes, fades, loops), for the Tracks area and the Audio Track Editor; the crossfade handle drag in progress. |
 | `regionGrab.ts` | What a press on a region in the Tracks area grabs; pure, tested. |
+| `regionTrim.ts` | Trimming every selected region by the dragged one's snapped amount, each within its own limits; pure, tested. |
 | `regionEditor.ts` | Which bottom pane a double-clicked region opens (Piano Roll, Audio Track Editor, Step Sequencer); pure, tested. |
 | `rulerHead.ts` | The ruler's strip heights, where a press grabs the playhead's head, and the playhead line's place and width on whole device pixels (the ruler, global tracks and Tracks area all use it); pure, tested. |
 | `rulerMenu.ts` | The ruler's right-click menu above the marker lane, built from state and commands passed in; pure, tested. |

@@ -903,7 +903,7 @@ The pointer changes over a region's hot zones:
 | Where | Drag to |
 |---|---|
 | The body or the name bar | Move the region (and the rest of the selection). Drag up or down to move it to another track of the same kind. |
-| Lower left or right edge | Trim the start or end. |
+| Lower left or right edge | Trim the start or end (of every selected region: see below). |
 | Top left or right corner, below the name bar (audio) | Set the fade-in or fade-out length. |
 | Top right corner of the name bar | Set where a loop stops (see Loops). |
 | The gain handle at the top centre of the name bar (audio, shown on hover) | Change the region gain (see Gain and reverse). |
@@ -912,6 +912,10 @@ The pointer changes over a region's hot zones:
   Off). **Division** is a quarter of a beat, the third number of the position display: a
   sixteenth in 4/4, a thirty-second in 6/8. **Ticks** is 1/240 of a division (960 to a beat).
   Smart snaps to divisions, beats or bars depending on the zoom. Fades are never snapped.
+- **Trimming a selection:** with several regions selected, dragging one's start or end trims
+  the same edge of each by the same amount, audio and MIDI alike, in one undo step. The region
+  you drag snaps; the others follow it by as much, each stopping at its own limits (the start
+  or end of its audio file, the project's start, a minimum length).
 - **Across tempo changes**, a snapped move counts in bars and beats: the region you drag snaps
   to the grid where it lands, and the others in the selection keep their distance from it in
   bars and beats, so a region dragged from a 120 BPM section into a 90 BPM one still lands on

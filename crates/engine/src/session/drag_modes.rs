@@ -52,6 +52,23 @@ impl Session {
         }
     }
 
+    /// Trims several regions in the drag mode, as one drag trims every selected region:
+    /// `resizes` holds each region's new `(id, start, length)`, measured from where the
+    /// regions were before any of them changed. In the Shuffle modes one trim moves the
+    /// regions after (or before) it along its lane, so each is applied as the same change to
+    /// its region's edges from wherever the trims before it left the region.
+    pub fn drag_resize_regions(&mut self, resizes: &[(Id, i64, i64)]) {
+        let was: Vec<(Id, i64, i64)> = resizes.iter().filter_map(|&(id, ..)| self.region(id).map(|r| (id, r.start, r.start + r.length))).collect();
+        for &(id, start, length) in resizes {
+            let Some(&(_, start0, end0)) = was.iter().find(|w| w.0 == id) else { continue };
+            // No Overlap may have removed it on the way.
+            let Some(r) = self.region(id) else { continue };
+            let new_start = r.start + start - start0;
+            let new_end = r.start + r.length + start + length - end0;
+            self.drag_resize_region(id, new_start, new_end - new_start);
+        }
+    }
+
     /// Deletes regions; in the Shuffle modes the regions after (Shuffle L) or before
     /// (Shuffle R) close the gap.
     pub fn drag_delete_regions(&mut self, ids: &[Id]) {
@@ -270,6 +287,41 @@ mod tests {
         let r = s.region(b).unwrap().clone();
         let made = s.drag_paste_regions(&[(t, r)], 0);
         assert_eq!(lane(&s, t), vec![(a, 0, 600), (made[0], 600, 1000)]);
+    }
+
+    #[test]
+    fn trimming_several_regions_trims_each_once() {
+        let (mut s, t) = session();
+        let a = midi(&mut s, t, 0, 1000);
+        let b = midi(&mut s, t, 2000, 1000);
+        // Both ends 200 later, then both starts 100 later: the plain edits.
+        s.drag_resize_regions(&[(a, 0, 1200), (b, 2000, 1200)]);
+        assert_eq!(lane(&s, t), vec![(a, 0, 1200), (b, 2000, 1200)]);
+        s.drag_resize_regions(&[(a, 100, 1100), (b, 2100, 1100)]);
+        assert_eq!(lane(&s, t), vec![(a, 100, 1100), (b, 2100, 1100)]);
+    }
+
+    #[test]
+    fn trimming_several_regions_shuffles_one_trim_after_another() {
+        let (mut s, t) = session();
+        s.set_drag_mode(DragMode::ShuffleL);
+        let a = midi(&mut s, t, 0, 1000);
+        let b = midi(&mut s, t, 2000, 1000);
+        let notes = |s: &Session, id: Id| match &s.region(id).unwrap().content {
+            RegionContent::Midi { notes, .. } => notes.iter().map(|n| (n.start, n.length)).collect::<Vec<_>>(),
+            _ => Vec::new(),
+        };
+        let before = notes(&s, b);
+        assert!(!before.is_empty());
+        // a's longer end pushes b along, and b's own trim still lengthens its end without
+        // touching its notes: it isn't taken for a trim of its start.
+        s.drag_resize_regions(&[(a, 0, 1200), (b, 2000, 1200)]);
+        assert_eq!(lane(&s, t), vec![(a, 0, 1200), (b, 2200, 1200)]);
+        assert_eq!(notes(&s, b), before);
+        // Shorter again, in the other order: the lane is as after one trim and then the other.
+        s.drag_resize_regions(&[(b, 2200, 1000), (a, 0, 1000)]);
+        assert_eq!(lane(&s, t), vec![(a, 0, 1000), (b, 2000, 1000)]);
+        assert_eq!(notes(&s, b), before);
     }
 
     #[test]

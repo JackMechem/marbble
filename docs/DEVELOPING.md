@@ -371,6 +371,7 @@ instead and enforce rules that would otherwise only fail in the running app.
 | `commands.test.ts` | Guard: every key command and native menu item is handled, and no two key commands share a default key. |
 | `tauriCommands.test.ts` | Guard: every Tauri command the frontend calls is registered, and each call passes its required arguments in camelCase and nothing else. |
 | `pianoRollModel.test.ts` | The Piano Roll's lanes, what a point hits, its grid sums in musical time, where a region opens and the lane's share. |
+| `regionTrim.test.ts` | Trimming a selection (`src/regionTrim.ts`): each region's limits, one edge moved, the dragged region's snapped amount, every region held within its own limits. |
 | `regionGrab.test.ts` | What a press on a region in the Tracks area grabs: the loop tool, trims and fades. |
 | `audioEditorModel.test.ts` | The Audio Track Editor's layout, zoom range and what a press grabs. |
 | `automationParams.test.ts` | Automation parameters: labels, each strip's list, Stereo Out as a track, the lane's scale. |

@@ -185,6 +185,7 @@ fn main() {
             commands::reorder_tracks,
             commands::move_region,
             commands::resize_region,
+            commands::resize_regions,
             commands::delete_regions,
             commands::set_region_muted,
             commands::rename_region,
