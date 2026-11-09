@@ -80,6 +80,14 @@
   background: var(--slot-empty-hi);
 }
 
+/* Slots are Tab stops (slotKeys.ts): the ring goes inside, clear of the rows beside them, and so
+   does a power button's or send knob's, which the slot's rounded box would cut off. */
+.slot:focus-visible,
+.slot :focus-visible,
+.eq-thumb:focus-visible {
+  outline-offset: -2px;
+}
+
 /* An empty insert or send slot: a faint "+" that says it can be clicked. */
 .slot-add {
   flex: 1;

@@ -29,6 +29,7 @@ import { QuantizePanel } from "./pianoRollEditor/QuantizePanel";
 import { installWheel } from "./pianoRollEditor/wheel";
 import { fitPitchScroll, LANE_MIN_PX, laneShort, midiRegions, timeBase } from "../pianoRollModel";
 import type { PCc, PNote } from "../midiEdit";
+import { onPress } from "../keyNav";
 
 // App.tsx, DetachedWindow.tsx and TrackTools.tsx import these from here.
 export { pianoRollHasFocus, pianoRollMenu } from "./pianoRollEditor/keys";
@@ -265,7 +266,7 @@ export function PianoRoll({ track, region }: { track: Track; region: Region | nu
             <div className="pr-split" onMouseDown={onSplitDown} title="Drag to resize the lane" />
             <div className="pr-lane-head">
               <canvas ref={scaleCv} />
-              <button className="pr-lane-pick" title="Choose what the lane shows" onMouseDown={(e) => openMenuAt(e.currentTarget, laneItems())}>
+              <button className="pr-lane-pick" title="Choose what the lane shows" {...onPress((e) => openMenuAt(e.currentTarget, laneItems()))}>
                 {laneShort(pr.lane)} <Icon.chevron />
               </button>
             </div>

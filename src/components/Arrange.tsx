@@ -20,6 +20,10 @@ import { drawTracks } from "./tracksCanvas/draw";
 import type { Drag, TracksLive } from "./tracksCanvas/drag";
 import { tracksPointer } from "./tracksCanvas/pointer";
 import { onDrumMarks } from "../drumReplace";
+import { keyboardFocus } from "../focusRing";
+import { adjacentRegion, laneKey } from "../keyNav";
+import { linkedRegions } from "../ops";
+import { editorPaneFor } from "../regionEditor";
 
 // ---- peaks ----------------------------------------------------------------------------------
 
@@ -218,6 +222,39 @@ export function Arrange() {
 
   const { onMouseDown, onHover, onContextMenu } = tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, hoverRef, requestDraw, showAutomation });
 
+  // From the keyboard (keyNav.ts), once Tab has focused the Tracks area: Left and Right select
+  // the region before or after on the selected track, Return opens the selection in its editor.
+  // What was selected is read out (`said`), as a screen reader can't see the canvas.
+  const [said, setSaid] = useState("");
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.target !== e.currentTarget || !keyboardFocus()) return;
+    const k = laneKey(e.nativeEvent);
+    const { project: p, selectedTrack: tid, selectedRegions: sel, pps } = live.current;
+    if (!k || !p) return;
+    const regions = p.tracks.flatMap((t) => t.regions);
+    if (k === "open") {
+      const r = regions.find((x) => x.id === sel[0]);
+      if (!r) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setState({ bottom: editorPaneFor(r, getState().bottom) });
+      return;
+    }
+    // The selected track's lane, or with none selected the lane of the selected region.
+    const track = p.tracks.find((t) => t.id === tid) ?? p.tracks.find((t) => t.regions.some((r) => sel.includes(r.id)));
+    if (!track) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const id = adjacentRegion(track.regions, sel, k === "next" ? 1 : -1);
+    const r = track.regions.find((x) => x.id === id);
+    if (!r) return;
+    setState({ selectedRegions: linkedRegions(r.id), focus: "regions" });
+    const el = e.currentTarget;
+    const left = revealLeft(r.start * pps, el.scrollLeft, el.clientWidth);
+    if (left !== null) el.scrollLeft = left;
+    setSaid(`${r.name || "Region"}, ${track.name}`);
+  };
+
   return (
     <div className="arrange">
       <canvas ref={canvasRef} className="arrange-canvas" />
@@ -225,6 +262,11 @@ export function Arrange() {
       <div
         className="arrange-scroll"
         ref={scrollRef}
+        tabIndex={0}
+        role="group"
+        aria-label="Regions"
+        aria-keyshortcuts="ArrowLeft ArrowRight Enter"
+        onKeyDown={onKeyDown}
         onScroll={(e) => {
           const el = e.currentTarget;
           setViewport({ left: el.scrollLeft, top: el.scrollTop });
@@ -238,6 +280,9 @@ export function Arrange() {
         onContextMenu={onContextMenu}
       >
         <div style={{ width: contentW, height: contentH }} />
+      </div>
+      <div className="visually-hidden" aria-live="polite">
+        {said}
       </div>
     </div>
   );

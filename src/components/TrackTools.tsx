@@ -7,6 +7,7 @@ import type { TrackTool } from "../tools";
 import { toolMenuItems } from "../trackTools";
 import { openMenuAt } from "./Menu";
 import { ToolIcon } from "./pianoRollEditor/ToolIcon";
+import { onPress } from "../keyNav";
 
 /** A Tracks-area tool's icon: the Piano Roll's where the two share a tool. */
 export function TrackToolIcon({ tool }: { tool: TrackTool }) {
@@ -36,11 +37,11 @@ export function ToolPopups({ cmd = true }: { cmd?: boolean }) {
   const hint = keyHint("tool-menu");
   return (
     <>
-      <button className="popup tool-popup left" title={`Left-click Tool${hint ? ` (${hint})` : ""}`} aria-label={`Left-click Tool${hint ? ` (${hint})` : ""}`} onMouseDown={(e) => openMenuAt(e.currentTarget, toolMenuItems("left"))}>
+      <button className="popup tool-popup left" title={`Left-click Tool${hint ? ` (${hint})` : ""}`} aria-label={`Left-click Tool${hint ? ` (${hint})` : ""}`} {...onPress((e) => openMenuAt(e.currentTarget, toolMenuItems("left")))}>
         <TrackToolIcon tool={tools.left} /> <Icon.chevron />
       </button>
       {cmd && (
-        <button className="popup tool-popup cmd" title={`${fmt("Mod")}-click Tool`} aria-label={`${fmt("Mod")}-click Tool`} onMouseDown={(e) => openMenuAt(e.currentTarget, toolMenuItems("cmd"))}>
+        <button className="popup tool-popup cmd" title={`${fmt("Mod")}-click Tool`} aria-label={`${fmt("Mod")}-click Tool`} {...onPress((e) => openMenuAt(e.currentTarget, toolMenuItems("cmd")))}>
           <TrackToolIcon tool={tools.cmd} /> <Icon.chevron />
         </button>
       )}

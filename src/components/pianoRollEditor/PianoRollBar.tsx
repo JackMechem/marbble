@@ -14,6 +14,7 @@ import type { Commands } from "./commands";
 import type { Menus } from "./menus";
 import { setPrefs, type Prefs } from "./prefs";
 import { ToolIcon } from "./ToolIcon";
+import { onPress } from "../../keyNav";
 
 /** What the bar shows and does; everything else it reaches through the editor's parts. */
 export interface PianoRollBarProps {
@@ -60,26 +61,26 @@ export function PianoRollBar({ pr, title, toolBtn, qBtn, qOpen, setQOpen, selNot
     <div ref={fit.ref} className={"local-bar editor-bar fit-bar pr-bar" + fit.className}>
       <EditorTabs current="editor" short={gone("tabs")} />
       <div className="local-menus">
-        <button className="local-menu" onMouseDown={(e) => openMenuAt(e.currentTarget, editItems())}>
+        <button className="local-menu" {...onPress((e) => openMenuAt(e.currentTarget, editItems()))}>
           Edit
         </button>
-        <button className="local-menu" onMouseDown={(e) => openMenuAt(e.currentTarget, functionItems())}>
+        <button className="local-menu" {...onPress((e) => openMenuAt(e.currentTarget, functionItems()))}>
           Functions
         </button>
-        <button className="local-menu" onMouseDown={(e) => openMenuAt(e.currentTarget, view())}>
+        <button className="local-menu" {...onPress((e) => openMenuAt(e.currentTarget, view()))}>
           View
         </button>
         {!gone("title") && <span className="local-title">{title}</span>}
       </div>
       <div className="local-right">
-        <button ref={toolBtn} className="popup pr-tool" title="Tool (T)" aria-label="Tool (T)" onMouseDown={(e) => openMenuAt(e.currentTarget, toolItems())}>
+        <button ref={toolBtn} className="popup pr-tool" title="Tool (T)" aria-label="Tool (T)" {...onPress((e) => openMenuAt(e.currentTarget, toolItems()))}>
           <ToolIcon tool={pr.tool} /> <Icon.chevron />
         </button>
         {!gone("quantize") && (
           <>
             <span className="lb-label">Quantize</span>
             <span className="pr-qgroup">
-              <button ref={qBtn} className="popup" title="Time Quantize settings" aria-expanded={qOpen} onMouseDown={() => setQOpen(!qOpen)}>
+              <button ref={qBtn} className="popup" title="Time Quantize settings" aria-expanded={qOpen} {...onPress(() => setQOpen(!qOpen))}>
                 {pr.qValue}
                 {pr.qSwing ? ` · ${pr.qSwing}%` : ""} <Icon.chevron />
               </button>
@@ -95,7 +96,7 @@ export function PianoRollBar({ pr, title, toolBtn, qBtn, qOpen, setQOpen, selNot
             <button
               className="popup"
               title="Grid and note length for the Pencil"
-              onMouseDown={(e) => openMenuAt(e.currentTarget, me.GRID_VALUES.map((g) => ({ label: g, checked: g === pr.grid, onClick: () => setPrefs({ grid: g }) })))}
+              {...onPress((e) => openMenuAt(e.currentTarget, me.GRID_VALUES.map((g) => ({ label: g, checked: g === pr.grid, onClick: () => setPrefs({ grid: g }) }))))}
             >
               {pr.grid} <Icon.chevron />
             </button>

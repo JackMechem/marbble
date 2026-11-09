@@ -41,6 +41,7 @@ import {
   type MixerView,
   type StripSize,
 } from "../mixerLayout";
+import { onPress } from "../keyNav";
 
 /** The insert and send rows shared by `tracks`' strips and Stereo Out's. */
 function rowsFor(project: Project, tracks: Track[]): SlotRows {
@@ -325,7 +326,7 @@ export function Mixer() {
         <div className="local-menus">
           <button
             className="local-menu"
-            onMouseDown={(e) =>
+            {...onPress((e) =>
               openMenuAt(e.currentTarget, [
                 { label: "Create New VCA", onClick: () => createVca() },
                 { label: "New Aux", onClick: () => newAux() },
@@ -338,7 +339,7 @@ export function Mixer() {
                 { separator: true },
                 { label: "Reset All Clip Indicators", hint: keyHint("reset-clips"), onClick: () => resetClipIndicators(null) },
               ])
-            }
+            )}
           >
             Options
           </button>

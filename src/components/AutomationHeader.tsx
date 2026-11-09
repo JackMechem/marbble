@@ -6,6 +6,7 @@ import { useStore } from "../store";
 import { openMenuAt } from "./Menu";
 import { autoParamTarget } from "../controllers";
 import { learnContext } from "../learn";
+import { onPress } from "../keyNav";
 
 /** The automation mode pop-up: green in Read, orange-red in the writing modes, as in Logic. */
 export function AutoModeButton({ track, compact }: { track: Track; compact?: boolean }) {
@@ -13,10 +14,10 @@ export function AutoModeButton({ track, compact }: { track: Track; compact?: boo
     <button
       className={`auto-mode ${track.auto_mode}` + (compact ? " compact" : "")}
       title="Automation mode"
-      onMouseDown={(e) => {
+      {...onPress((e) => {
         e.stopPropagation();
         openMenuAt(e.currentTarget, modeMenu(track));
-      }}
+      })}
     >
       {MODE_LABELS[track.auto_mode]}
     </button>
@@ -36,10 +37,10 @@ export function AutomationControls({ track, width }: { track: Track; width?: num
         className="popup auto-param"
         title={`Parameter shown on the lane: ${label}`}
         onContextMenu={learnContext(autoParamTarget(track.id, param))}
-        onMouseDown={async (e) => {
+        {...onPress(async (e) => {
           const el = e.currentTarget;
           openMenuAt(el, await paramMenu(track));
-        }}
+        })}
       >
         <span className="truncate">{label}</span>
         <Icon.chevron />
@@ -57,10 +58,10 @@ export function AddLaneButton({ track }: { track: Track }) {
       className="tbtn auto-lane-btn"
       title="Show another automation lane"
       aria-label="Show another automation lane"
-      onMouseDown={(e) => {
+      {...onPress((e) => {
         e.stopPropagation();
         addLane(track);
-      }}
+      })}
     >
       +
     </button>

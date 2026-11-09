@@ -6,6 +6,7 @@ import { Icon } from "../icons";
 import { useStore } from "../store";
 import { NumberField } from "./Form";
 import { openMenuAt } from "./Menu";
+import { onPress } from "../keyNav";
 
 /** A label or value that opens a menu of choices, drawn as text with a small chevron. */
 function InlinePopup<T extends string>({ value, options, onChange }: { value: T; options: [T, string][]; onChange: (v: T) => void }) {
@@ -13,14 +14,14 @@ function InlinePopup<T extends string>({ value, options, onChange }: { value: T;
     <button
       type="button"
       className="insp-popup"
-      onMouseDown={(e) => {
+      {...onPress((e) => {
         e.preventDefault();
         e.stopPropagation();
         openMenuAt(
           e.currentTarget,
           options.map(([v, label]) => ({ label, checked: v === value, onClick: () => onChange(v) })),
         );
-      }}
+      })}
     >
       {options.find((o) => o[0] === value)?.[1] ?? ""}
       <Icon.chevron />

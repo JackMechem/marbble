@@ -27,11 +27,13 @@ import { auxInput, hasExtraOutputs, nextOutput } from "../multiOut";
 import { keepRegionsOn } from "../ops";
 import { useVcas, VcaSlot } from "./Vca";
 import { slotName } from "../slotName";
+import { slotProps } from "../slotKeys";
 import { BlankButtons, BlankEq, BlankRow, BlankSlots, MoreSlot, PlateName, SlotBox } from "./StripSlots";
 import { TrackIcon, TrackIconArt } from "../trackIconArt";
 import { openTrackIconPicker } from "./TrackIconPicker";
 import { slotLayout, stripRows, stripWants, type SlotRows } from "../stripRows";
 import { METER_W, plateInk } from "../mixerLayout";
+import { onPress } from "../keyNav";
 
 const PAN = { type: "pan" } as const;
 /** Stereo Out's name plate. */
@@ -103,47 +105,73 @@ export function PluginSlotView({
   const rate = useStore((s) => s.snap?.project.sample_rate ?? 48000);
   // A VST3 keyed by another track: built-in effects show theirs in the panel.
   const keyedBy = useStore((s) => (plugin && s.snap?.key_inputs?.includes(plugin.uid) ? keyName(s.snap.project.tracks, plugin) : null));
-  const menu = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (e.button !== 0 || refuseFrozen([trackId])) return;
+  const remove = () => api.removePlugin(trackId, slot);
+  // The plug-in menu, beside the slot `el` is in.
+  const menuBy = (el: Element) => {
+    if (refuseFrozen([trackId])) return;
     const items = pluginMenu(plugins, {
       instrument: !!instrument,
       current: plugin?.plugin_id,
       pick: (id) => loadPlugin(trackId, slot, id),
-      remove: () => api.removePlugin(trackId, slot),
+      remove,
     });
-    const r = (e.currentTarget as HTMLElement).closest(".slot")!.getBoundingClientRect();
+    const r = el.closest(".slot")!.getBoundingClientRect();
     openMenu(r.right - 4, r.top, [...slotSideChainItems(trackId, slot, plugin), ...items]);
   };
+  const menu = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (e.button === 0) menuBy(e.currentTarget);
+  };
   // Right-click: Copy and Paste Plug-in.
+  const contextAt = (x: number, y: number) => {
+    if (!refuseFrozen([trackId])) openMenu(x, y, slotMenu(trackId, slot, plugin));
+  };
   const context = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (refuseFrozen([trackId])) return;
-    openMenu(e.clientX, e.clientY, slotMenu(trackId, slot, plugin));
+    contextAt(e.clientX, e.clientY);
   };
+  // From the keyboard (slotKeys.ts): the menus open at the slot, Delete empties it as No Plug-in does.
+  const keyed = (open: (el: HTMLElement) => void) =>
+    slotProps(
+      `${instrument ? "Instrument" : `Audio FX ${slot + 1}`}: ${plugin ? slotName(plugin.plugin_id, plugin.name) : "empty"}`,
+      {
+        open,
+        menu: menuBy,
+        context: (el) => {
+          const r = el.getBoundingClientRect();
+          contextAt(r.left, r.bottom + 2);
+        },
+        remove: plugin ? () => !refuseFrozen([trackId]) && remove() : undefined,
+      },
+      { group: !!plugin, popup: !plugin },
+    );
   // Audio FX slots are drop targets for dragged plug-ins (see slotDrag.ts).
   const target = instrument ? {} : { "data-track": trackId, "data-slot": slot };
   if (!plugin) {
     return (
-      <div className={"slot empty" + (instrument ? " instrument" : "")} {...target} onMouseDown={menu} onContextMenu={context} title={instrument ? "Choose an instrument" : "Add an Audio FX plug-in"}>
+      <div className={"slot empty" + (instrument ? " instrument" : "")} {...target} {...keyed(menuBy)} onMouseDown={menu} onContextMenu={context} title={instrument ? "Choose an instrument" : "Add an Audio FX plug-in"}>
         {instrument ? <span className="slot-name dim">Instrument</span> : <span className="slot-add" />}
       </div>
     );
   }
   const open = openEditors.includes(plugin.uid) || fxOpen;
   return (
-    <div className={"slot filled" + (plugin.bypass ? " bypassed" : "") + (open ? " editing" : "") + (instrument ? " instrument" : "") + (frozen ? " frozen" : "") + (missing ? " missing" : "") + (keyedBy ? " keyed" : "")} {...target} onContextMenu={context}>
+    <div
+      className={"slot filled" + (plugin.bypass ? " bypassed" : "") + (open ? " editing" : "") + (instrument ? " instrument" : "") + (frozen ? " frozen" : "") + (missing ? " missing" : "") + (keyedBy ? " keyed" : "")}
+      {...target}
+      {...keyed(() => openSlot(trackId, plugin, title, missing))}
+      onContextMenu={context}
+    >
       <button
         className="slot-power"
         title={plugin.bypass ? "Turn on" : "Bypass"}
         aria-label="Plug-in On"
         aria-pressed={!plugin.bypass}
-        onMouseDown={(e) => {
+        {...onPress((e) => {
           e.stopPropagation();
-          if (refuseFrozen([trackId])) return;
-          api.setBypass(trackId, slot, !plugin.bypass);
-        }}
+          if (!refuseFrozen([trackId])) api.setBypass(trackId, slot, !plugin.bypass);
+        })}
       >
         <Icon.power />
       </button>
@@ -160,7 +188,7 @@ export function PluginSlotView({
       >
         {slotName(plugin.plugin_id, plugin.name)}
       </span>
-      <button className="slot-arrow" onMouseDown={menu} aria-label="Plug-in menu">
+      <button className="slot-arrow" tabIndex={-1} onMouseDown={menu} aria-label="Plug-in menu">
         <Icon.chevron />
       </button>
     </div>
@@ -254,6 +282,11 @@ export function ChannelStrip({ track, selected, rows }: { track: Track | null; s
     if (folder) return;
     openMenu(x, y, await stripSettingMenu(id, name), minWidth);
   };
+  // The Setting slot's menu, under it.
+  const settingUnder = (el: HTMLElement) => {
+    const r = el.getBoundingClientRect();
+    settingMenu(r.left, r.bottom + 2, r.width);
+  };
 
   return (
     <div className={"strip" + (folder ? " folder" : summing ? " summing" : "") + (selected ? " selected" : "") + (off ? " is-off" : "")} onMouseDown={() => {
@@ -268,11 +301,10 @@ export function ChannelStrip({ track, selected, rows }: { track: Track | null; s
           <div
             className="slot static output strip-setting"
             title="Setting: copy, paste, reset, save and load the channel strip's settings"
+            {...slotProps("Channel strip setting", { open: settingUnder }, { popup: true })}
             onMouseDown={(e) => {
               e.stopPropagation();
-              if (e.button !== 0) return;
-              const r = e.currentTarget.getBoundingClientRect();
-              settingMenu(r.left, r.bottom + 2, r.width);
+              if (e.button === 0) settingUnder(e.currentTarget);
             }}
           >
             <span className="slot-text">Setting</span>
@@ -297,16 +329,16 @@ export function ChannelStrip({ track, selected, rows }: { track: Track | null; s
           ) : track.kind === "instrument" ? (
             <PluginSlotView trackId={id} slot={INSTRUMENT_SLOT} plugin={track.instrument} instrument title={name} />
           ) : (
-            <div className="slot input-slot">
+            <div className="slot input-slot" {...slotProps(`Input: ${inputLabel(track.input)}`, { open: (el) => openMenuAt(el, inputMenu(track, inputs)) }, { group: true })}>
               <button
                 className="slot-format"
                 title="Mono / Stereo"
                 aria-label={track.input.type === "stereo" ? "Stereo input" : "Mono input"}
-                onMouseDown={(e) => {
+                {...onPress((e) => {
                   e.stopPropagation();
                   const ch = track.input.type === "none" ? 0 : track.input.ch;
                   api.updateTrack(id, { input: track.input.type === "stereo" ? { type: "mono", ch } : { type: "stereo", ch: ch - (ch % 2) } });
-                }}
+                })}
               >
                 {track.input.type === "stereo" ? <Icon.stereo /> : <Icon.mono />}
               </button>
@@ -414,14 +446,14 @@ export function ChannelStrip({ track, selected, rows }: { track: Track | null; s
 
       {!isMaster ? (
         <div className="strip-buttons">
-          <button className={"tbtn power" + (track.off ? " on" : "")} title={powerTitle(tracks ?? [], track)} aria-label="Track On" aria-pressed={!track.off} onMouseDown={(e) => { e.stopPropagation(); api.updateTrack(id, { off: !track.off }); }}>
+          <button className={"tbtn power" + (track.off ? " on" : "")} title={powerTitle(tracks ?? [], track)} aria-label="Track On" aria-pressed={!track.off} {...onPress((e) => { e.stopPropagation(); api.updateTrack(id, { off: !track.off }); })}>
             <Icon.power />
           </button>
           <div className="btn-row">
-            <button className={"tbtn mute" + (track.mute ? " on" : "")} aria-label="Mute" aria-pressed={track.mute} onMouseDown={(e) => { e.stopPropagation(); api.updateTrack(id, { mute: !track.mute }); }}>
+            <button className={"tbtn mute" + (track.mute ? " on" : "")} aria-label="Mute" aria-pressed={track.mute} {...onPress((e) => { e.stopPropagation(); api.updateTrack(id, { mute: !track.mute }); })}>
               M
             </button>
-            <button className={"tbtn solo" + (track.solo ? " on" : "")} aria-label="Solo" aria-pressed={track.solo} onMouseDown={(e) => { e.stopPropagation(); api.updateTrack(id, { solo: !track.solo }); }}>
+            <button className={"tbtn solo" + (track.solo ? " on" : "")} aria-label="Solo" aria-pressed={track.solo} {...onPress((e) => { e.stopPropagation(); api.updateTrack(id, { solo: !track.solo }); })}>
               S
             </button>
           </div>
@@ -429,12 +461,12 @@ export function ChannelStrip({ track, selected, rows }: { track: Track | null; s
             {!canRecord(track.kind) ? (
               <span className="tbtn ghost" />
             ) : (
-              <button className={"tbtn rec" + (track.armed ? " on" : "")} aria-label="Record Enable" aria-pressed={track.armed} onMouseDown={(e) => { e.stopPropagation(); api.updateTrack(id, { armed: !track.armed }); }}>
+              <button className={"tbtn rec" + (track.armed ? " on" : "")} aria-label="Record Enable" aria-pressed={track.armed} {...onPress((e) => { e.stopPropagation(); api.updateTrack(id, { armed: !track.armed }); })}>
                 R
               </button>
             )}
             {track.kind === "audio" ? (
-              <button className={"tbtn mon" + (track.monitor ? " on" : "")} aria-label="Input Monitoring" aria-pressed={track.monitor} onMouseDown={(e) => { e.stopPropagation(); api.updateTrack(id, { monitor: !track.monitor }); }}>
+              <button className={"tbtn mon" + (track.monitor ? " on" : "")} aria-label="Input Monitoring" aria-pressed={track.monitor} {...onPress((e) => { e.stopPropagation(); api.updateTrack(id, { monitor: !track.monitor }); })}>
                 I
               </button>
             ) : extraOutputs ? (
@@ -443,10 +475,10 @@ export function ChannelStrip({ track, selected, rows }: { track: Track | null; s
                 disabled={!nextOut}
                 title={nextOut ? `New aux for this instrument's next output: ${nextOut.name}` : "Every output of this instrument has an aux"}
                 aria-label={nextOut ? `New aux for this instrument's next output: ${nextOut.name}` : "Every output of this instrument has an aux"}
-                onMouseDown={(e) => {
+                {...onPress((e) => {
                   e.stopPropagation();
                   if (e.button === 0 && nextOut) actMade("add_output_aux", { track: id });
-                }}
+                })}
               >
                 +
               </button>

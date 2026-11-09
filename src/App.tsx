@@ -69,6 +69,8 @@ import { DrumReplaceHost, openDrumReplace } from "./components/DrumReplace";
 import { installMenuBar } from "./menuBar";
 import { checkForUpdates, checkUpdatesAtLaunch } from "./updates";
 import { UpdateNotice } from "./components/UpdateNotice";
+import { keyboardFocus } from "./focusRing";
+import { leavesKeyToFocus } from "./keyNav";
 
 function selectedTrack() {
   const s = getState().snap;
@@ -518,6 +520,8 @@ function onKey(e: KeyboardEvent) {
   const tgt = e.target as HTMLElement;
   if (tgt && (tgt.tagName === "INPUT" || tgt.tagName === "SELECT" || tgt.tagName === "TEXTAREA")) return;
   if (getState().dialog) return;
+  // Return and Space press what Tab focused (keyNav.ts) instead of going to the beginning and playing.
+  if (leavesKeyToFocus(e, tgt, keyboardFocus())) return;
   // Shortcuts the native menu owns never reach here; everything else comes from the keymap.
   const id = commandForEvent(e);
   const run = id ? KEY_ACTIONS[id] : undefined;

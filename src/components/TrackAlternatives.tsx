@@ -5,16 +5,17 @@ import type { Track } from "../api";
 import { activeTrackAlt } from "../alternativesModel";
 import { trackAltMenu } from "../trackAlternatives";
 import { openMenuAt } from "./Menu";
+import { onPress } from "../keyNav";
 
 export function TrackAltButton({ track }: { track: Track }) {
   return (
     <button
       className="th-alt"
       title={`Track Alternative: ${activeTrackAlt(track)}`}
-      onMouseDown={(e) => {
+      {...onPress((e) => {
         e.stopPropagation();
         openMenuAt(e.currentTarget, trackAltMenu(track));
-      }}
+      })}
     >
       <span className="th-alt-name">{activeTrackAlt(track)}</span>
       <svg width="7" height="5" viewBox="0 0 7 5" fill="currentColor">

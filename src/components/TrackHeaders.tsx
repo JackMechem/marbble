@@ -23,6 +23,7 @@ import { TrackAltButton } from "./TrackAlternatives";
 import { showsTrackAlts } from "../alternativesModel";
 import { TrackIcon } from "../trackIconArt";
 import { openTrackIconPicker } from "./TrackIconPicker";
+import { onPress } from "../keyNav";
 
 const INDENT = 12;
 /** Smallest full header with room for the automation controls on a line of their own. */
@@ -59,10 +60,10 @@ function GroupBadge({ group, onClick }: { group: Group; onClick: () => void }) {
       className={"th-group" + (group.enabled ? "" : " off")}
       style={{ background: group.enabled ? group.color : undefined, borderColor: group.color }}
       title={`${group.name}${group.enabled ? "" : " (off)"} — click for settings`}
-      onMouseDown={(e) => {
+      {...onPress((e) => {
         e.stopPropagation();
         onClick();
-      }}
+      })}
     >
       {/^\d+$/.test(short) ? `G${short}` : short}
     </button>
@@ -148,10 +149,10 @@ function Header({
       title={withKey(sw.title, sw.hint ?? "")}
       aria-label={sw.name}
       aria-pressed={sw.checked ?? sw.on}
-      onMouseDown={(e) => {
+      {...onPress((e) => {
         e.stopPropagation();
         sw.toggle();
-      }}
+      })}
     >
       {sw.label}
     </button>
@@ -204,10 +205,10 @@ function Header({
           title={track.hidden ? "Hidden: click to show this track" : "Hide this track"}
           aria-label="Hide Track"
           aria-pressed={track.hidden}
-          onMouseDown={(e) => {
+          {...onPress((e) => {
             e.stopPropagation();
             setHidden([track.id], !track.hidden);
-          }}
+          })}
         >
           H
         </button>
@@ -218,10 +219,10 @@ function Header({
           className="tbtn th-more"
           title="On/Off, Mute, Solo, Record and more"
           aria-label="On/Off, Mute, Solo, Record and more"
-          onMouseDown={(e) => {
+          {...onPress((e) => {
             e.stopPropagation();
             openMore(e.currentTarget);
-          }}
+          })}
         >
           <MoreIcon />
         </button>
@@ -264,10 +265,10 @@ function Header({
           className="th-disclosure"
           title={track.collapsed ? "Show subtracks" : "Hide subtracks"}
           aria-label={track.collapsed ? "Show subtracks" : "Hide subtracks"}
-          onMouseDown={(e) => {
+          {...onPress((e) => {
             e.stopPropagation();
             toggleCollapsed(track);
-          }}
+          })}
         >
           {Icon.disclosure(!track.collapsed)}
         </button>

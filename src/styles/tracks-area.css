@@ -421,6 +421,11 @@
   overflow: auto;
 }
 
+/* A Tab stop for the regions' keys (Arrange.tsx): the ring inside the area's edges. */
+.arrange-scroll:focus-visible {
+  outline-offset: -2px;
+}
+
 .playhead {
   will-change: transform;
   position: absolute;

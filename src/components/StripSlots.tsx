@@ -5,6 +5,7 @@
 import { Icon } from "../icons";
 import { openMenuAt, type MenuItem } from "./Menu";
 import { LinesText } from "./PathText";
+import { slotProps } from "../slotKeys";
 
 /** A strip's box of insert or send slots: `rows` slots tall. */
 export function SlotBox({ rows, children }: { rows: number; children?: React.ReactNode }) {
@@ -24,6 +25,7 @@ export function MoreSlot({ n, shown, noun, menu }: { n: number; shown: number; n
     <div
       className="slot more"
       title={`${n} more ${noun[n === 1 ? 0 : 1]} than fit: click for them`}
+      {...slotProps(`${n} more ${noun[n === 1 ? 0 : 1]}`, { open: (el) => openMenuAt(el, menu()) }, { popup: true })}
       onMouseDown={(e) => {
         e.stopPropagation();
         if (e.button === 0) openMenuAt(e.currentTarget, menu());

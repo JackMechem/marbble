@@ -9,6 +9,7 @@ import { changedParams, eqFromValues, latencyFrames, OUTPUT, paramId, QUALITY, Q
 import { useStore } from "../../store";
 import { EqEditor, type EqControl } from "../Eq";
 import { openMenuAt } from "../Menu";
+import { onPress } from "../../keyNav";
 
 const idOf = (c: EqControl) => (c.band === null ? OUTPUT : paramId(c.band, c.field));
 
@@ -39,7 +40,7 @@ export function LinearPhaseEqPanel(p: FxPanelProps) {
           <button
             className="fx-popup lpeq-quality"
             title="Longer filters shape low frequencies more precisely, with more latency"
-            onMouseDown={(e) => openMenuAt(e.currentTarget, QUALITY_LABELS.map((label, i) => ({ label, checked: i === quality, onClick: () => p.set(QUALITY, i) })))}
+            {...onPress((e) => openMenuAt(e.currentTarget, QUALITY_LABELS.map((label, i) => ({ label, checked: i === quality, onClick: () => p.set(QUALITY, i) }))))}
             onContextMenu={learn(QUALITY)}
           >
             <span className="truncate">{QUALITY_LABELS[quality]}</span>

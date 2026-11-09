@@ -9,9 +9,11 @@ import { colorMenu, selectedTracks } from "../ops";
 import { canNest, vcaSlotLabel } from "../vca";
 import { Fader } from "./Controls";
 import { openMenu, openMenuAt, type MenuItem } from "./Menu";
+import { slotProps } from "../slotKeys";
 import type { SlotRows } from "../stripRows";
 import { BlankEq, BlankRow, BlankSlots, PlateName } from "./StripSlots";
 import { METER_W, plateInk } from "../mixerLayout";
+import { onPress } from "../keyNav";
 
 const NO_VCAS: Vca[] = [];
 
@@ -39,6 +41,7 @@ function Slot({ label, assigned, title, onOpen }: { label: string; assigned: boo
     <div
       className={"slot static vca-slot" + (assigned ? " assigned" : "")}
       title={title}
+      {...slotProps(`VCA: ${label || "none"}`, { open: onOpen }, { popup: true })}
       onMouseDown={(e) => {
         e.stopPropagation();
         if (e.button === 0) onOpen(e.currentTarget);
@@ -134,10 +137,10 @@ export function VcaStrip({ vca, rows }: { vca: Vca; rows: SlotRows }) {
             aria-pressed={vca.mute}
             title="Mute every strip on this VCA"
             aria-label="Mute every strip on this VCA"
-            onMouseDown={(e) => {
+            {...onPress((e) => {
               e.stopPropagation();
               update({ mute: !vca.mute });
-            }}
+            })}
           >
             M
           </button>

@@ -433,6 +433,32 @@ presses on one control undoes as one step. Key commands with Ctrl, Alt or Cmd st
 app. Screen readers hear each control's name and value ("Volume, -6.0 dB", "Pan, L 12"), and
 the buttons that show only an icon read their tooltip.
 
+Once Tab has moved the focus, **Return** and **Space** press the focused button instead of
+going to the beginning and playing. After a click they are key commands again.
+
+**Channel strip slots** (Setting, Input, the Channel EQ, Audio FX, Sends, Output and VCA, in the
+Mixer and the Inspector) are Tab stops too:
+
+| Key | Does |
+|---|---|
+| Return or Space | What a click does: opens the plug-in's panel or editor, or the slot's menu |
+| Alt+Down | Opens a filled plug-in slot's menu (the arrow beside its name) |
+| Delete or Backspace | Empties the slot: No Plug-in for a plug-in, Remove Send for a send (undoable) |
+| Up / Down arrow | The slot above or below in the strip |
+| Menu key or Shift+F10 | The slot's right-click menu |
+
+A plug-in slot's power button and a send's level knob come next in the Tab order.
+
+**Menus** work from the keyboard: Up and Down move through the items (Home and End to the ends),
+typing a name's first letters goes to it, Right opens a submenu and Left or Esc closes it,
+Return or Space chooses, and Esc or Tab closes the menu. Opened from the keyboard, a menu starts
+on its checked item or its first; opened with the mouse, the arrows step into it. Closed from
+the keyboard, the focus goes back to what opened it.
+
+**The Tracks area** (where the regions are) is a Tab stop too. While it has the focus, Left and
+Right select the region before or after on the selected track (Up and Down still select the
+track), and Return opens the selected region in its editor, as a double-click does.
+
 ### Separate windows
 
 The Mixer, the Editors, the Event List, the Channel EQ and the built-in effect panels can each

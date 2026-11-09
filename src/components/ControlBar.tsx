@@ -14,6 +14,7 @@ import { transport } from "../transport";
 import { fmt, keyHint, tip } from "../keymap";
 import { withKey } from "../keyFormat";
 import { toggleReplace, useSettings } from "../prefs";
+import { onPress } from "../keyNav";
 
 const KEYS = ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
 
@@ -346,13 +347,13 @@ export function ControlBar() {
           title="Musical Typing, List Editors, Browsers"
           aria-label="Musical Typing, List Editors, Browsers"
           aria-haspopup="menu"
-          onMouseDown={(e) =>
+          {...onPress((e) =>
             openMenuAt(e.currentTarget, [
               { label: "Musical Typing", hint: fmt("Mod+K"), checked: showTyping, onClick: () => setState({ showTyping: !getState().showTyping }) },
               { label: "List Editors", hint: keyHint("list-editors"), checked: s.bottom === "list", onClick: () => setState({ bottom: getState().bottom === "list" ? "none" : "list" }) },
               { label: "Browsers", hint: keyHint("browser"), checked: s.showBrowser, onClick: () => setState({ showBrowser: !getState().showBrowser }) },
             ])
-          }
+          )}
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
             <circle cx="3.5" cy="8" r="1.4" />

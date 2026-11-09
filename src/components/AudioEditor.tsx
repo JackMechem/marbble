@@ -19,6 +19,7 @@ import { editorDrawer, type AudioLive } from "./audioTrackEditor/draw";
 import { GainField } from "./audioTrackEditor/GainField";
 import { InfoStrip } from "./audioTrackEditor/InfoStrip";
 import { editorPointer } from "./audioTrackEditor/pointer";
+import { onPress } from "../keyNav";
 
 /** Scroll position kept while the editor is closed, like its zoom. */
 let lastLeft = 0;
@@ -220,13 +221,13 @@ export function AudioEditor({ track, region }: { track: Track; region: Region | 
     <div className="editor audio-editor">
       <div ref={fit.ref} className={"local-bar editor-bar fit-bar aed-bar" + fit.className}>
         <div className="local-menus">
-          <button className="local-menu" onMouseDown={(e) => openMenuAt(e.currentTarget, ed.editMenu())}>
+          <button className="local-menu" {...onPress((e) => openMenuAt(e.currentTarget, ed.editMenu()))}>
             Edit
           </button>
-          <button className="local-menu" onMouseDown={(e) => openMenuAt(e.currentTarget, ed.functionsMenu())}>
+          <button className="local-menu" {...onPress((e) => openMenuAt(e.currentTarget, ed.functionsMenu()))}>
             Functions
           </button>
-          <button className="local-menu" onMouseDown={(e) => openMenuAt(e.currentTarget, ed.viewMenu())}>
+          <button className="local-menu" {...onPress((e) => openMenuAt(e.currentTarget, ed.viewMenu()))}>
             View
           </button>
           {!fit.has("title") && <span className="local-title">Audio Track: {track.name}</span>}

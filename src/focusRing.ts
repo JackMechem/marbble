@@ -11,6 +11,9 @@ interface Root {
   removeAttribute(name: string): void;
 }
 
+/** Whether the keyboard is moving the focus now (Tab since the last mouse press). */
+export const keyboardFocus = (root: { hasAttribute(name: string): boolean } = document.documentElement) => root.hasAttribute(KEYBOARD_FOCUS_ATTR);
+
 /** Starts following Tab and the mouse; returns a function that stops. */
 export function installFocusRing(win: EventTarget = window, root: Root = document.documentElement): () => void {
   const key = (e: Event) => {

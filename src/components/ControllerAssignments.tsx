@@ -11,6 +11,7 @@ import { onTick, setState, useStore } from "../store";
 import { Sheet } from "./Dialogs";
 import { NumberField, Select } from "./Form";
 import { openMenuAt } from "./Menu";
+import { onPress } from "../keyNav";
 
 function Row({ row, index, onChange }: { row: AssignmentRow; index: number; onChange: (rows: AssignmentRow[] | null) => void }) {
   const update = (mode: Takeover, min: number, max: number) => call<AssignmentRow[]>("update_controller_assignment", { index, mode, min, max }).then(onChange);
@@ -84,7 +85,7 @@ export function ControllerAssignmentsSheet() {
         ))}
       </div>
       <div className="sheet-foot">
-        <button className="push" onMouseDown={(e) => openMenuAt(e.currentTarget, TRANSPORT_TARGETS.map(({ label, target }) => ({ label, onClick: () => learn(target) })))}>
+        <button className="push" {...onPress((e) => openMenuAt(e.currentTarget, TRANSPORT_TARGETS.map(({ label, target }) => ({ label, onClick: () => learn(target) }))))}>
           Learn Transport Button…
         </button>
         <div className="sheet-buttons">

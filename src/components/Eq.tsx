@@ -9,6 +9,7 @@ import { refuseFrozen } from "../freeze";
 import { fmt } from "../keymap";
 import { CHANNEL_EQ, copyEq, eqClipboard, eqMenu, pasteEq } from "../fxHost";
 import { openMenu } from "./Menu";
+import { slotProps } from "../slotKeys";
 import { PresetButton } from "./fx/Presets";
 import { learnContext } from "../learn";
 import { canvasFont } from "../canvasText";
@@ -115,6 +116,13 @@ export function EqThumb({ trackId, name }: { trackId: Id; name: string }) {
     <div
       className={"eq-thumb" + (open ? " open" : "") + (eq && !eq.on ? " off" : "")}
       title={`Channel EQ — ${name}`}
+      {...slotProps("Channel EQ", {
+        open: () => toggleEqPanel(trackId),
+        context: (el) => {
+          const r = el.getBoundingClientRect();
+          openMenu(r.left, r.bottom + 2, eqMenu(trackId, eq));
+        },
+      })}
       onMouseDown={(e) => {
         e.stopPropagation();
         if (e.button !== 0) return;

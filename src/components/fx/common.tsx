@@ -12,6 +12,7 @@ import { keySourceItems } from "../../sideChain";
 import { useFxLearn } from "../../learn";
 import { sliderAria } from "../../sliderKeys";
 import { sliderKeyDown } from "../Controls";
+import { onPress } from "../../keyNav";
 
 export { formatValue, toNorm, fromNorm, tidy, parseValue, clampValue };
 
@@ -151,7 +152,7 @@ export function FxChoice({ spec, value, onChange, label }: { spec: FxParamSpec; 
     return (
       <div className="fx-choice" onContextMenu={learn}>
         <div className="fx-label">{label ?? spec.name}</div>
-        <button className="fx-popup" onMouseDown={(e) => openMenuAt(e.currentTarget, labels.map((l, i) => ({ label: l, checked: i === cur, onClick: () => onChange(i) })))}>
+        <button className="fx-popup" {...onPress((e) => openMenuAt(e.currentTarget, labels.map((l, i) => ({ label: l, checked: i === cur, onClick: () => onChange(i) }))))}>
           <span className="truncate">{labels[cur]}</span>
         </button>
       </div>
@@ -235,15 +236,15 @@ export function FxSideChain({ uid }: { uid: Id }) {
   return (
     <span className="fx-sidechain">
       <span className="dim">Side Chain</span>
-      <button className="fx-popup" onMouseDown={open} title={`Side Chain: ${name}\nThe track whose output drives the detector`}>
+      <button className="fx-popup" {...onPress(open)} title={`Side Chain: ${name}\nThe track whose output drives the detector`}>
         <span className="truncate">{name}</span>
       </button>
       {source !== null && (
         <span className="segmented fx-key-tap">
-          <button className={pre ? "on" : ""} aria-pressed={pre} onMouseDown={() => setPre(true)} title="Key from the source before its fader (its mute still silences it)">
+          <button className={pre ? "on" : ""} aria-pressed={pre} {...onPress(() => setPre(true))} title="Key from the source before its fader (its mute still silences it)">
             Pre
           </button>
-          <button className={pre ? "" : "on"} aria-pressed={!pre} onMouseDown={() => setPre(false)} title="Key from the source after its fader">
+          <button className={pre ? "" : "on"} aria-pressed={!pre} {...onPress(() => setPre(false))} title="Key from the source after its fader">
             Post
           </button>
         </span>

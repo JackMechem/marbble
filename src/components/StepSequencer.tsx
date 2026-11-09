@@ -20,6 +20,7 @@ import { EditorTabs } from "./EventList";
 import { NumberField } from "./Form";
 import { openMenu, openMenuAt, type MenuItem } from "./Menu";
 import { useBarFit } from "./useBarFit";
+import { onPress } from "../keyNav";
 
 /** What the local bar gives way with, in order (barFit.ts); the detach button moves into Functions. */
 const BAR_STEPS = ["tight", "tabs", "title", "detach"] as const;
@@ -302,7 +303,7 @@ export function StepSequencer() {
       <EditorTabs current="steps" short={fit.has("tabs")} />
       <div className="local-menus">
         {/* Functions stays open without a region while it holds the detach command. */}
-        <button className="local-menu" disabled={!region && !fit.has("detach")} onMouseDown={(e) => openMenuAt(e.currentTarget, functionsMenu())}>
+        <button className="local-menu" disabled={!region && !fit.has("detach")} {...onPress((e) => openMenuAt(e.currentTarget, functionsMenu()))}>
           Functions
         </button>
         {/* The region's name, as the Piano Roll has there (the tab already says Step Sequencer);
@@ -346,7 +347,7 @@ export function StepSequencer() {
       {bar}
       <div ref={toolsFit.ref} className={"ss-tools fit-bar" + toolsFit.className}>
         {toolsFit.has("modes") ? (
-          <button className="popup ss-mode-pick" title={`Edit mode: ${modeOf(mode).title}`} onMouseDown={(e) => openMenuAt(e.currentTarget, ss.EDIT_MODES.map((m) => ({ label: m.label, checked: m.id === mode, onClick: () => setMode(m.id) })))}>
+          <button className="popup ss-mode-pick" title={`Edit mode: ${modeOf(mode).title}`} {...onPress((e) => openMenuAt(e.currentTarget, ss.EDIT_MODES.map((m) => ({ label: m.label, checked: m.id === mode, onClick: () => setMode(m.id) }))))}>
             {modeOf(mode).label} <Icon.chevron />
           </button>
         ) : (
@@ -359,11 +360,11 @@ export function StepSequencer() {
           </div>
         )}
         <span className="lb-label">Length</span>
-        <button className="popup" title="Pattern length in steps" onMouseDown={(e) => openMenuAt(e.currentTarget, lengthItems(pattern.length, (v) => v && edit("Pattern Length", (p) => ({ ...p, length: v })), null))}>
+        <button className="popup" title="Pattern length in steps" {...onPress((e) => openMenuAt(e.currentTarget, lengthItems(pattern.length, (v) => v && edit("Pattern Length", (p) => ({ ...p, length: v })), null)))}>
           {pattern.length} <Icon.chevron />
         </button>
         <span className="lb-label">Rate</span>
-        <button className="popup" title="Step rate: how long each step is" onMouseDown={(e) => openMenuAt(e.currentTarget, rateItems(pattern.rate, (v) => v && edit("Step Rate", (p) => ({ ...p, rate: v })), null))}>
+        <button className="popup" title="Step rate: how long each step is" {...onPress((e) => openMenuAt(e.currentTarget, rateItems(pattern.rate, (v) => v && edit("Step Rate", (p) => ({ ...p, rate: v })), null)))}>
           {ss.rateLabel(pattern.rate)} <Icon.chevron />
         </button>
         <span className="lb-label">Swing</span>
@@ -403,14 +404,14 @@ export function StepSequencer() {
                   <button className={"tbtn solo" + (row.solo ? " on" : "")} aria-pressed={!!row.solo} title="Solo Row" aria-label="Solo Row" onClick={() => edit("Solo Row", (p) => ss.setRow(p, r, { solo: !row.solo }))}>
                     S
                   </button>
-                  <button className="ss-name" title="Row pitch: choose a drum or note, or Learn one from a MIDI keyboard" onMouseDown={(e) => openMenuAt(e.currentTarget, pitchItems(r))}>
+                  <button className="ss-name" title="Row pitch: choose a drum or note, or Learn one from a MIDI keyboard" {...onPress((e) => openMenuAt(e.currentTarget, pitchItems(r)))}>
                     <span className="ss-name-text">{ss.rowName(row.pitch, kit)}</span>
                     {kit && <span className="ss-note">{ss.noteName(row.pitch)}</span>}
                   </button>
-                  <button className={"ss-opt" + (row.rate != null ? " set" : "")} title="Row step rate" onMouseDown={(e) => openMenuAt(e.currentTarget, rateItems(row.rate, (v) => edit("Row Rate", (p) => ss.setRow(p, r, { rate: v })), `Pattern (${ss.rateLabel(pattern.rate)})`))}>
+                  <button className={"ss-opt" + (row.rate != null ? " set" : "")} title="Row step rate" {...onPress((e) => openMenuAt(e.currentTarget, rateItems(row.rate, (v) => edit("Row Rate", (p) => ss.setRow(p, r, { rate: v })), `Pattern (${ss.rateLabel(pattern.rate)})`)))}>
                     {ss.rateLabel(rate)}
                   </button>
-                  <button className={"ss-opt" + (row.length != null ? " set" : "")} title="Row length in steps (rows of different lengths repeat on their own)" onMouseDown={(e) => openMenuAt(e.currentTarget, lengthItems(row.length, (v) => edit("Row Length", (p) => ss.setRow(p, r, { length: v })), `Pattern (${pattern.length})`))}>
+                  <button className={"ss-opt" + (row.length != null ? " set" : "")} title="Row length in steps (rows of different lengths repeat on their own)" {...onPress((e) => openMenuAt(e.currentTarget, lengthItems(row.length, (v) => edit("Row Length", (p) => ss.setRow(p, r, { length: v })), `Pattern (${pattern.length})`)))}>
                     {len}
                   </button>
                 </div>

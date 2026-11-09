@@ -10,6 +10,7 @@ import { useStore } from "../../store";
 import { sliderAria } from "../../sliderKeys";
 import { sliderKeyDown } from "../Controls";
 import { canvasFont } from "../../canvasText";
+import { onPress } from "../../keyNav";
 
 // ---- shared controls ------------------------------------------------------------------------
 
@@ -180,7 +181,7 @@ export function SpNote({ p, id, label }: { p: FxPanelProps; id: number; label: s
       <button
         type="button"
         className="sp-note"
-        onMouseDown={(e) => {
+        {...onPress((e) => {
           e.preventDefault();
           e.stopPropagation();
           openMenuAt(
@@ -190,7 +191,7 @@ export function SpNote({ p, id, label }: { p: FxPanelProps; id: number; label: s
               { label: l, hint: formatMs(noteMs(i, tempo)), checked: i === v, onClick: () => p.set(id, i) },
             ]),
           );
-        }}
+        })}
       >
         {NOTE_LABELS[v]}
       </button>

@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 // The channel strip's Sends section and Output slot, laid out like Logic's.
 import { useRef, useState } from "react";
 import { SEND_SLOTS, type Send, type Track } from "../api";
-import { defaultOutput, emptySendMenu, outputLabel, outputMenu, sendLabel, sendMenu, setSendLevel } from "../routing";
+import { defaultOutput, emptySendMenu, outputLabel, outputMenu, sendLabel, sendMenu, setSend, setSendLevel } from "../routing";
 import { getState, useStore } from "../store";
 import { dbToFader, faderToDb, formatDb } from "../time";
 import { openMenuAt, type MenuItem } from "./Menu";
@@ -12,6 +12,7 @@ import { sliderAria } from "../sliderKeys";
 import { sliderKeyDown } from "./Controls";
 import { slotLayout } from "../stripRows";
 import { MoreSlot, SlotBox } from "./StripSlots";
+import { slotProps } from "../slotKeys";
 
 /** A small unipolar level knob, on the fader's taper. Shift-drag adjusts finely; double-click
  *  is 0 dB. */
@@ -74,20 +75,25 @@ function SendKnob({ db, pre, onChange, onDrag }: { db: number; pre: boolean; onC
 function SendSlot({ track, slot, send }: { track: Track; slot: number; send: Send | null }) {
   const aux = useStore((s) => (send ? s.snap?.project.tracks.find((t) => t.id === send.bus) : undefined));
   const [dragging, setDragging] = useState(false);
+  const menuAt = (el: HTMLElement) => openMenuAt(el.closest(".slot") as HTMLElement, send ? sendMenu(track, slot, send) : emptySendMenu(track, slot));
   const menu = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const el = (e.currentTarget as HTMLElement).closest(".slot") as HTMLElement;
-    openMenuAt(el, send ? sendMenu(track, slot, send) : emptySendMenu(track, slot));
+    menuAt(e.currentTarget as HTMLElement);
   };
   if (!send)
     return (
-      <div className="slot empty send" onMouseDown={menu} title="Add a send">
+      <div className="slot empty send" {...slotProps(`Send ${slot + 1}: empty`, { open: menuAt }, { popup: true })} onMouseDown={menu} title="Add a send">
         <span className="slot-add" />
       </div>
     );
   const name = aux ? sendLabel(aux) : "—";
   return (
-    <div className={"slot filled send" + (send.muted ? " muted" : "")} onContextMenu={learnContext({ type: "send", track: track.id, slot })}>
+    <div
+      className={"slot filled send" + (send.muted ? " muted" : "")}
+      // Delete is the menu's Remove Send.
+      {...slotProps(`Send ${slot + 1}: ${name}${send.muted ? ", muted" : ""}`, { open: menuAt, remove: () => setSend(track.id, slot, null) }, { group: true })}
+      onContextMenu={learnContext({ type: "send", track: track.id, slot })}
+    >
       <span className="slot-name" onMouseDown={menu} title={`${aux ? `${name} → ${aux.name}` : name}${send.pre_fader ? " · pre fader" : ""}${send.muted ? " · muted" : ""}`}>
         {dragging ? formatDb(send.level_db) : name}
       </span>
@@ -143,6 +149,7 @@ export function OutputSlot({ track }: { track: Track }) {
   return (
     <div
       className={"slot output output-pick" + (sum !== null ? " to-sum" : "")}
+      {...slotProps(`Output: ${sum !== null ? `through ${sum}` : label}`, { open: (el) => openMenuAt(el, outputMenu(track)) }, { popup: true })}
       onMouseDown={(e) => {
         e.stopPropagation();
         openMenuAt(e.currentTarget as HTMLElement, outputMenu(track));

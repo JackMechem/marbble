@@ -349,6 +349,8 @@ instead and enforce rules that would otherwise only fail in the running app.
 | `linearPhaseEq.test.ts` | The Linear Phase EQ's parameters as Channel EQ settings. |
 | `cpuMeter.test.ts` | The CPU meter's tooltip, its figure and colour bands, and where its peak tick goes. |
 | `sliderKeys.test.ts` | Keyboard control of knobs, faders and sliders (`src/sliderKeys.ts`): steps, ends, rounding and switch positions, the ARIA props. |
+| `buttonKeys.test.ts` | Guard: every `<button>` that acts on `onMouseDown` also works with Return and Space (`onPress` in `src/keyNav.ts`, which is checked too), unless it's out of the Tab order. |
+| `keyNav.test.ts` | The keys of a focused slot, menu or Tracks area (`src/keyNav.ts`): what each does, stepping through a strip's slots, menu items (past lines, headers and disabled items, round the ends), type-ahead, a lane's regions in time order, and when Return and Space press the focused button. |
 | `focusRing.test.ts` | When the keyboard focus ring shows (`src/focusRing.ts`): on after Tab, off after a mouse press. |
 | `stripMeters.test.ts` | The clip indicator readout and the gain-reduction meter. |
 | `vca.test.ts` | VCA offsets and loop checks in the Mixer. |
@@ -521,7 +523,13 @@ These keep the code maintainable and the merges clean.
     off, and an editor focused only by a click (tabIndex -1) may too. Custom controls get a role
     and a name: knobs and faders use `sliderAria` and `sliderKeyDown` (`Controls.tsx`), which go
     through the same `onChange` and touch path as a drag; an icon-only button gets an
-    `aria-label`, usually its tooltip.
+    `aria-label`, usually its tooltip. A toggle button says it's on with `aria-pressed` (a guard
+    test checks). A channel strip slot spreads `slotProps` (`src/slotKeys.ts`) for its Tab stop
+    and keys; `src/keyNav.ts` decides what the keys do in slots, menus and the Tracks area. These
+    take keys only while Tab moves the focus, and the main window leaves Return and Space to the
+    focused button then (`leavesKeyToFocus`): after a click they stay key commands. A button that
+    acts as the mouse goes down spreads `{...onPress(handler)}` instead of `onMouseDown`, so Return
+    and Space press it too (a guard test checks).
 - **Formatting.** `cargo fmt --all` for Rust, which CI checks. `rustfmt.toml` allows lines up to 160
   columns; `#[rustfmt::skip]` stays on tables that would otherwise fall apart. The one project-wide
   pass is listed in `.git-blame-ignore-revs`, so `git config blame.ignoreRevsFile .git-blame-ignore-revs`

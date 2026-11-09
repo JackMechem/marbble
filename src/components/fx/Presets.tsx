@@ -9,6 +9,7 @@ import { act, call, type ChannelEq, type Id, type PresetRef, type Snapshot } fro
 import { presetBoxLabel } from "../../presetBox";
 import { setState } from "../../store";
 import { openMenuAt, type MenuItem } from "../Menu";
+import { onPress } from "../../keyNav";
 
 /** A preset as the engine stores it. */
 export interface Preset {
@@ -180,7 +181,7 @@ export function PresetButton({
       <button className="fx-step" title="Previous Preset" aria-label="Previous Preset" onClick={() => step(-1)}>
         ‹
       </button>
-      <button className="fx-popup fx-preset" onMouseDown={(e) => menu(e.currentTarget)} title={`Presets: ${label}${edited ? " (edited)" : ""}`}>
+      <button className="fx-popup fx-preset" {...onPress((e) => menu(e.currentTarget))} title={`Presets: ${label}${edited ? " (edited)" : ""}`}>
         <span className="truncate">
           {label}
           {edited && <span className="dim"> (edited)</span>}

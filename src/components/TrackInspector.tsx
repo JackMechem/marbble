@@ -14,6 +14,7 @@ import { openMenuAt, type MenuItem } from "./Menu";
 import { TrackIcon } from "../trackIconArt";
 import { iconLabel } from "../trackIcons";
 import { openTrackIconPicker } from "./TrackIconPicker";
+import { onPress } from "../keyNav";
 
 const KIND_NAMES: Record<Track["kind"], string> = { audio: "Audio", instrument: "Software Instrument", folder: "Folder Stack", summing: "Summing Stack", aux: "Aux" };
 
@@ -32,11 +33,11 @@ function Popup({ text, items }: { text: string; items: () => MenuItem[] }) {
     <button
       type="button"
       className="insp-popup"
-      onMouseDown={(e) => {
+      {...onPress((e) => {
         e.preventDefault();
         e.stopPropagation();
         openMenuAt(e.currentTarget, items());
-      }}
+      })}
     >
       <span className="insp-popup-text">{text}</span>
       <Icon.chevron />
@@ -90,11 +91,11 @@ export function TrackRows({ project, track }: { project: Project; track: Track }
           style={{ background: track.color }}
           title="Track Color"
           aria-label="Track Color"
-          onMouseDown={(e) => {
+          {...onPress((e) => {
             e.preventDefault();
             e.stopPropagation();
             openMenuAt(e.currentTarget, colorMenu(track.color, (c) => c && api.updateTrack(track.id, { color: c })));
-          }}
+          })}
         />
       </Row>
       <Row label="Icon">

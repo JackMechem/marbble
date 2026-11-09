@@ -9,6 +9,7 @@ import { AddLaneButton, AutomationControls } from "./AutomationHeader";
 import { LevelSlider } from "./LevelSlider";
 import { openMenuAt } from "./Menu";
 import { LinesText } from "./PathText";
+import { onPress } from "../keyNav";
 
 /** The header of one of a track's extra automation lanes: its parameter pop-up, and buttons to
  *  add a lane below or close this one. */
@@ -20,10 +21,10 @@ export function SubLaneHeader({ track, index, param, height, indent }: { track: 
         <button
           className="popup auto-param"
           title={`Parameter shown on this lane: ${paramLabel(param)}`}
-          onMouseDown={async (e) => {
+          {...onPress(async (e) => {
             const el = e.currentTarget;
             openMenuAt(el, await paramMenu(track, index));
-          }}
+          })}
         >
           <span className="truncate">{paramLabel(param)}</span>
           <Icon.chevron />
@@ -33,10 +34,10 @@ export function SubLaneHeader({ track, index, param, height, indent }: { track: 
           className="tbtn auto-lane-btn"
           title="Close this lane"
           aria-label="Close this lane"
-          onMouseDown={(e) => {
+          {...onPress((e) => {
             e.stopPropagation();
             closeLane(track, index);
-          }}
+          })}
         >
           −
         </button>

@@ -6,6 +6,7 @@ import { Icon } from "../icons";
 import { DELAY_MS_MAX, DELAY_TICKS_MAX, DYNAMICS_OPTIONS, GATE_OPTIONS, optionLabel, paramsOf, QUANTIZE_OPTIONS, shared } from "../regionParams";
 import { NumberField } from "./Form";
 import { openMenuAt } from "./Menu";
+import { onPress } from "../keyNav";
 
 type Patch = Partial<RegionParams>;
 
@@ -25,14 +26,14 @@ function Choice({ value, options, onChange }: { value: number | null; options: [
     <button
       type="button"
       className="insp-popup"
-      onMouseDown={(e) => {
+      {...onPress((e) => {
         e.preventDefault();
         e.stopPropagation();
         openMenuAt(
           e.currentTarget,
           options.map(([v, label]) => ({ label, checked: v === value, onClick: () => onChange(v) })),
         );
-      }}
+      })}
     >
       {value === null ? "*" : optionLabel(options, value)}
       <Icon.chevron />

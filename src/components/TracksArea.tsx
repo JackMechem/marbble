@@ -31,6 +31,7 @@ import { arrangeItems } from "../arrangeCmds";
 import { EDIT_MENU, layMenu, menuLabel } from "../menuLabels";
 import { packTakeFolder } from "../takes";
 import { releaseFieldFocus } from "../focusRing";
+import { onPress } from "../keyNav";
 
 /** Logic's Drag pop-up; only Overlap and X-Fade so far. */
 /** In the order of Logic's Drag pop-up. */
@@ -193,13 +194,13 @@ export function TracksArea() {
     <div className="tracks-area" style={{ minHeight }}>
       <div ref={fit.ref} className={"local-bar fit-bar tracks-bar" + fit.className}>
         <div className="local-menus">
-          <button className="local-menu" onMouseDown={(e) => openMenuAt(e.currentTarget, editMenu())}>
+          <button className="local-menu" {...onPress((e) => openMenuAt(e.currentTarget, editMenu()))}>
             Edit
           </button>
-          <button className="local-menu" onMouseDown={(e) => openMenuAt(e.currentTarget, functionsMenu())}>
+          <button className="local-menu" {...onPress((e) => openMenuAt(e.currentTarget, functionsMenu()))}>
             Functions
           </button>
-          <button className="local-menu" onMouseDown={(e) => openMenuAt(e.currentTarget, view())}>
+          <button className="local-menu" {...onPress((e) => openMenuAt(e.currentTarget, view()))}>
             View
           </button>
         </div>
@@ -228,7 +229,7 @@ export function TracksArea() {
           {!gone("snap") && (
             <>
               <span className="lb-label">Snap:</span>
-              <button className="popup" onMouseDown={(e) => openMenuAt(e.currentTarget, snapItems())}>
+              <button className="popup" {...onPress((e) => openMenuAt(e.currentTarget, snapItems()))}>
                 {SNAP_LABELS[s.snapMode]} <Icon.chevron />
               </button>
             </>
@@ -236,7 +237,7 @@ export function TracksArea() {
           {!gone("drag") && (
             <>
               <span className="lb-label">Drag:</span>
-              <button className="popup" title={DRAG_TIPS[dragMode]} onMouseDown={(e) => openMenuAt(e.currentTarget, dragItems())}>
+              <button className="popup" title={DRAG_TIPS[dragMode]} {...onPress((e) => openMenuAt(e.currentTarget, dragItems()))}>
                 {DRAG_LABELS[dragMode]} <Icon.chevron />
               </button>
             </>

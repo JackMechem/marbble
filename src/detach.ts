@@ -40,6 +40,8 @@ import { getSettings, onSettingsChange, receiveSettings, type AppSettings } from
 import { getState, pushTick, setState, subscribeState, useStore, type BottomPane, type State } from "./store";
 import { applyTheme } from "./themes";
 import { applyUiScale } from "./uiScale";
+import { keyboardFocus } from "./focusRing";
+import { leavesKeyToFocus } from "./keyNav";
 
 const LABEL = getCurrentWindow().label;
 
@@ -517,6 +519,7 @@ export function installPanelWindow(opts: { menu: (id: string) => boolean }): () 
     if (e.defaultPrevented || getState().dialog) return;
     const t = e.target as HTMLElement | null;
     if (t && (t.tagName === "INPUT" || t.tagName === "SELECT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+    if (leavesKeyToFocus(e, t, keyboardFocus())) return;
     const id = commandForEvent(e);
     if (!id) return;
     e.preventDefault();

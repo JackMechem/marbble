@@ -21,6 +21,7 @@ import { barLines, tempoMap } from "../tempo";
 import { DetachButton } from "./DetachButton";
 import { openMenuAt, type MenuItem } from "./Menu";
 import { useBarFit } from "./useBarFit";
+import { onPress } from "../keyNav";
 
 /** Row height in CSS pixels (the rows are laid out at multiples of it). */
 const ROW_H = 18;
@@ -656,10 +657,10 @@ export function EventList() {
       <div ref={fit.ref} className={"local-bar editor-bar fit-bar" + fit.className}>
         <EditorTabs current="list" short={fit.has("tabs")} />
         <div className="local-menus">
-          <button className="local-menu" onMouseDown={(e) => openMenuAt(e.currentTarget, editItems())}>
+          <button className="local-menu" {...onPress((e) => openMenuAt(e.currentTarget, editItems()))}>
             Edit
           </button>
-          <button className="local-menu" onMouseDown={(e) => openMenuAt(e.currentTarget, viewItems())}>
+          <button className="local-menu" {...onPress((e) => openMenuAt(e.currentTarget, viewItems()))}>
             View
           </button>
           {!fit.has("title") && <span className="local-title">{title}</span>}
@@ -686,7 +687,7 @@ export function EventList() {
         <button className="lb-btn" title={`Add ${typeName(p.addType)} at Playhead`} aria-label={`Add ${typeName(p.addType)} at Playhead`} disabled={!scope} onClick={() => addEvent()}>
           <Icon.plus />
         </button>
-        <button className="popup el-add-type" title="What + adds" onMouseDown={(e) => openMenuAt(e.currentTarget, typeItems())}>
+        <button className="popup el-add-type" title="What + adds" {...onPress((e) => openMenuAt(e.currentTarget, typeItems()))}>
           {typeName(p.addType)} <Icon.chevron />
         </button>
         {!toolsFit.has("filters") && (

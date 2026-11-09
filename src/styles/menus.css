@@ -31,10 +31,18 @@
   white-space: nowrap;
 }
 
+/* Under the pointer, open, or the item the keyboard is on (Menu.tsx): the menu's own highlight
+   is its focus mark, so the ring stays off. */
 .menu-item:hover,
-.menu-item.open {
+.menu-item.open,
+.menu-item:focus {
   background: var(--select);
   color: var(--accent-ink);
+}
+
+.menu:focus,
+.menu-item:focus {
+  outline: none;
 }
 
 .menu-item.disabled {
@@ -62,7 +70,8 @@
 }
 
 .menu-item:hover .menu-hint,
-.menu-item.open .menu-hint {
+.menu-item.open .menu-hint,
+.menu-item:focus .menu-hint {
   color: var(--select-dim);
 }
 

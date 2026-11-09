@@ -14,6 +14,17 @@ All notable changes to Marbble are recorded here. The format follows
   use the sizes and the font of the rest of the interface: nothing is smaller than 10 px (the
   Piano Roll's note and key names at small note heights were 8 or 9 px; the Sampler's key names
   were 8 px), and marker, arrangement section and take names are 11 px instead of 10.
+- **Slots, menus and the Tracks area work from the keyboard.** Tab reaches every channel strip
+  slot (Setting, Input, Channel EQ, Audio FX, Sends, Output, VCA): Return or Space opens the
+  plug-in or the slot's menu, Delete empties it (undoable, as No Plug-in or Remove Send), Up and
+  Down move between a strip's slots. Menus step with the arrows, go to an item as you type its
+  name, choose with Return, close with Esc and give the focus back to what opened them. With the
+  Tracks area focused, Left and Right select the previous or next region on the selected track
+  and Return opens it in its editor. Once Tab has moved the focus, Return and Space press the
+  focused button instead of going to the beginning and playing (after a click they still do),
+  and that now includes the buttons that act as the mouse goes down: the local menus (Edit,
+  Functions, View), the pop-ups, and the track and strip switches (On, Mute, Solo, Record,
+  Input Monitoring, Hide).
 - **Tidier instrument panels.** The built-in instruments' sections (Tre, Sei, Cinque, Uno, Onda,
   Sedici and the Sampler's) no longer repeat their names in every control: Oscillator 1 shows
   Range and Wave, not Osc 1 Range and Osc 1 Wave. A part's on/off switch is a light by its knob's
