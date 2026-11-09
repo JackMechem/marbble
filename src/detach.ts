@@ -504,7 +504,8 @@ export function installPanelWindow(opts: { menu: (id: string) => boolean }): () 
     wv.listen<SyncMsg>("ui-sync", (e) => applySync(e.payload)),
     wv.listen<{ from: string; settings: AppSettings }>("ui-settings", (e) => applySettings(e.payload)),
     wv.listen<string>("menu", (e) => {
-      // A focused text field here takes its edits first (textKeys.ts).
+      // A focused text field here takes its edits first, and drops the other accelerators
+      // (textKeys.ts).
       if (!textFieldMenu(e.payload) && !opts.menu(e.payload)) emitTo("main", "menu", e.payload).catch(() => {});
     }),
     // The window's close button attaches the panel again (quitting closes it without asking).

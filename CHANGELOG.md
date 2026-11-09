@@ -79,6 +79,11 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Fixed
 
+- **Menu shortcuts leave the project alone while you type a name.** With a name or search field
+  focused, Ctrl+D (Duplicate), Ctrl+T (Split), Ctrl+J, Ctrl+G, Ctrl+B and the menu bar's other
+  shortcuts no longer act on the project; Ctrl+S still saves. Choosing such an item from the
+  menu bar with the mouse while the field still has the focus is ignored too: press Return or
+  click away from the field first.
 - **Ctrl+A in a name field selects its text.** While renaming a track (or typing in any name or
   search field), Ctrl+A (⌘A on macOS) selected every region in the project, Ctrl+Z undid the last
   project edit and Ctrl+Backspace deleted the track, because the menu bar took those keys before

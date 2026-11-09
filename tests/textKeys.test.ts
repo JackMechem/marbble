@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { deleteBackStart, fieldEdit, isTextField, keepsKeys, textFieldMenu } from "../src/textKeys.ts";
+import { deleteBackStart, fieldEdit, fieldMenuAction, isTextField, keepsKeys, MENU_ACCELERATORS, textFieldMenu } from "../src/textKeys.ts";
 
 /** A text input with a caret or selection, recording what's done to it. */
 function input(value: string, start: number, end = start, type = "text") {
@@ -105,6 +105,36 @@ test("Delete Track's key deletes the word before the caret in a field, not the t
   textFieldMenu("delete-track", ds, false);
   assert.deepEqual(sel.log, []);
   assert.deepEqual(ds.log, ["delete"]);
+});
+
+test("while a field has the focus, other accelerators are dropped; Save and click-only items run", () => {
+  for (const id of ["duplicate", "split", "join", "group", "folder-stack", "new-tracks", "bounce", "musical-typing", "ui-larger", "save-as"]) {
+    assert.equal(fieldMenuAction(id), "ignore", id);
+    const { el, log } = input("Bass", 2);
+    const d = doc(el);
+    assert.equal(textFieldMenu(id, d), true, `${id} is taken (and dropped)`);
+    assert.deepEqual(log, [], id);
+    assert.deepEqual(d.log, [], id);
+  }
+  for (const id of ["save", "quit", "delete", "join-per-track", "metronome", "repeat:2"]) {
+    assert.equal(fieldMenuAction(id), "run", id);
+    assert.equal(textFieldMenu(id, doc(input("Bass", 2).el)), false, id);
+  }
+  for (const id of ["select-all", "undo", "redo", "cut", "copy", "paste", "delete-track"]) assert.equal(fieldMenuAction(id), "edit", id);
+  // Without a focused field, or with the window behind, every accelerator runs as before.
+  assert.equal(textFieldMenu("duplicate", doc({ tagName: "BODY" })), false);
+  assert.equal(textFieldMenu("duplicate", doc({ tagName: "INPUT", type: "checkbox" })), false);
+  assert.equal(textFieldMenu("duplicate", doc(input("Bass", 2).el, false)), false);
+});
+
+test("the accelerator list matches the menu bar's", () => {
+  const rs = readFileSync(new URL("../src-tauri/src/menu.rs", import.meta.url), "utf8");
+  // menu.rs's own tests may build items of their own.
+  const end = rs.indexOf("#[cfg(test)]");
+  const spec = end < 0 ? rs : rs.slice(0, end);
+  const ids = [...spec.matchAll(/keyed\("([^"]+)"/g), ...spec.matchAll(/(?:Check|Radio)\("([^"]+)", "[^"]*", Some\(/g)].map((m) => m[1]);
+  assert.ok(ids.length > 10, "found menu.rs's accelerators");
+  assert.deepEqual([...MENU_ACCELERATORS].sort(), [...new Set(ids)].sort());
 });
 
 test("the word before the caret: past spaces and punctuation, then the word", () => {

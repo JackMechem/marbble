@@ -96,7 +96,8 @@ function moveSelection(d: number) {
 }
 
 function handleMenu(id: string) {
-  // Select All, Undo and the rest edit a focused name or search field (textKeys.ts).
+  // Select All, Undo and the rest edit a focused name or search field, and the other
+  // accelerators (Ctrl+D...) are dropped while it has the focus (textKeys.ts).
   if (textFieldMenu(id)) return;
   // With a range selected in the Audio Track editor, Split, Cut, Copy and Delete act on it.
   if (editorMenuCommand(id)) return;

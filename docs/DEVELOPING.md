@@ -352,7 +352,7 @@ instead and enforce rules that would otherwise only fail in the running app.
 | `buttonKeys.test.ts` | Guard: every `<button>` that acts on `onMouseDown` also works with Return and Space (`onPress` in `src/keyNav.ts`, which is checked too), unless it's out of the Tab order. |
 | `keyNav.test.ts` | The keys of a focused slot, menu or Tracks area (`src/keyNav.ts`): what each does, stepping through a strip's slots, menu items (past lines, headers and disabled items, round the ends), type-ahead, a lane's regions in time order, and when Return and Space press the focused button. |
 | `focusRing.test.ts` | When the keyboard focus ring shows (`src/focusRing.ts`): on after Tab, off after a mouse press. |
-| `textKeys.test.ts` | Text fields keep their editing keys (`src/textKeys.ts`): Select All, Undo, Redo and the clipboard items from the menu bar edit a focused field, Delete Track's key deletes a word there, and guards that both windows' menu and key handlers go through it. |
+| `textKeys.test.ts` | Text fields keep their editing keys (`src/textKeys.ts`): Select All, Undo, Redo and the clipboard items from the menu bar edit a focused field, Delete Track's key deletes a word there, the other accelerators but Save are dropped there (the list checked against `menu.rs`), and guards that both windows' menu and key handlers go through it. |
 | `stripMeters.test.ts` | The clip indicator readout and the gain-reduction meter. |
 | `vca.test.ts` | VCA offsets and loop checks in the Mixer. |
 | `panText.test.ts` | The pan knob's value as text (`src/panText.ts`): steps, rounding, ends, the label and the spoken value. |

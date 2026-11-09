@@ -2,8 +2,9 @@
 // which leaves a focused field alone (`keepsKeys`). The native menu's accelerators don't: the menu
 // bar takes Select All, Undo, Redo and Delete Track (menu.rs) before the web view sees the key, and
 // they arrive as menu items. While a text field has the focus, those items edit the field instead
-// (`textFieldMenu`), so Ctrl+A in a track's name selects its text rather than every region. Pure
-// apart from its `document` defaults, so the tests run it on stand-ins.
+// (`textFieldMenu`), so Ctrl+A in a track's name selects its text rather than every region, and
+// the other accelerators (Ctrl+D, Ctrl+T...) do nothing rather than edit the project, except Save.
+// Pure apart from its `document` defaults, so the tests run it on stand-ins.
 import { IS_MAC } from "./keyFormat.ts";
 
 /** The element a key goes to, as far as these checks need it. */
@@ -110,16 +111,67 @@ export function applyFieldEdit(el: FieldLike, edit: FieldEdit, doc: DocLike, mac
   doc.execCommand("delete");
 }
 
+/** The menu items that have an accelerator: menu.rs's `keyed` items and Musical Typing's check
+ *  item. A guard test keeps the list in step with menu.rs. */
+export const MENU_ACCELERATORS: readonly string[] = [
+  "settings",
+  "quit",
+  "new",
+  "chooser-recent",
+  "open",
+  "save",
+  "save-as",
+  "import-audio",
+  "bounce",
+  "export-selected-tracks",
+  "export-tracks",
+  "undo",
+  "redo",
+  "duplicate",
+  "split",
+  "join",
+  "select-all",
+  "new-tracks",
+  "bounce-in-place",
+  "folder-stack",
+  "group",
+  "delete-track",
+  "musical-typing",
+  "ui-larger",
+  "ui-smaller",
+  "ui-actual",
+];
+
+// Accelerators that still run while a field is being typed in: saving loses nothing typed. (Quit
+// never reaches the web view: menu.rs runs it.)
+const RUN_IN_FIELD = new Set(["save", "quit"]);
+
 /**
- * Runs native menu item `id` on the focused text field when it's one of the field's edits, and
- * says whether it did. Call it before anything else handles a menu item. Only while this window
+ * What native menu item `id` does while a text field has the focus: "edit" the field (Select
+ * All, Undo...), be "ignored" (an accelerator such as Duplicate's Ctrl+D, most likely pressed
+ * while typing), or "run" as usual (Save, and items with no accelerator, which only a click
+ * chooses).
+ */
+export function fieldMenuAction(id: string): "edit" | "ignore" | "run" {
+  if (fieldEdit(id)) return "edit";
+  return MENU_ACCELERATORS.includes(id) && !RUN_IN_FIELD.has(id) ? "ignore" : "run";
+}
+
+/**
+ * Takes native menu item `id` while a text field has the focus: runs it on the field when it's
+ * one of the field's edits, drops it when it's another accelerator (`fieldMenuAction`), and says
+ * whether it took it. Call it before anything else handles a menu item. Only while this window
  * has the focus: a field left focused in a window behind keeps it, and an item forwarded from a
  * panel window isn't for it.
+ *
+ * The menu bar doesn't say whether an item came from its key or a click, so an item with an
+ * accelerator chosen with the mouse while a field has the focus is dropped too; pressing Return
+ * or clicking away from the field first lets it run.
  */
 export function textFieldMenu(id: string, doc: DocLike = document, mac = IS_MAC): boolean {
-  const edit = fieldEdit(id);
+  const action = fieldMenuAction(id);
   const el = doc.activeElement;
-  if (!edit || !doc.hasFocus() || !isTextField(el)) return false;
-  applyFieldEdit(el, edit, doc, mac);
+  if (action === "run" || !doc.hasFocus() || !isTextField(el)) return false;
+  if (action === "edit") applyFieldEdit(el, fieldEdit(id)!, doc, mac);
   return true;
 }
