@@ -52,7 +52,7 @@ pub fn message(a: &Assignment, value: Shown) -> Option<[u8; 3]> {
 }
 
 /// A controller value (0..1) as that controller's message. A new kind of controller needs its
-/// arm here (a note: note on with velocity 127 for on, 0 for off).
+/// arm here.
 pub fn encode(kind: CtlKind, channel: u8, v: f32) -> Option<[u8; 3]> {
     let ch = channel & 0x0F;
     let v = if v.is_finite() { v.clamp(0.0, 1.0) } else { 0.0 };
@@ -62,6 +62,11 @@ pub fn encode(kind: CtlKind, channel: u8, v: f32) -> Option<[u8; 3]> {
             let n = (v * 16383.0).round() as u16;
             Some([0xE0 | ch, (n & 0x7F) as u8, (n >> 7) as u8])
         }
+        // A pad's light: a note on, velocity 127 for on and 0 for off (a level in between for a
+        // pad on a fader, which pads with colours or brightness show).
+        CtlKind::Note { number } => Some([0x90 | ch, number & 0x7F, (v * 127.0).round() as u8]),
+        // A program change has no state to show.
+        CtlKind::Program { .. } => None,
     }
 }
 
@@ -87,10 +92,19 @@ pub struct Throttle {
 }
 
 impl Throttle {
-    /// The controller sent `data` at `now`: it shows that, and is being moved for [`QUIET`].
-    /// A button's release (`released`) ends the move at once, so its light is set right away.
-    pub fn heard(&mut self, data: [u8; 3], released: bool, now: Instant) {
+    /// The controller (a fader or knob) sent `data` at `now`: it shows that, and is being moved
+    /// for [`QUIET`]. Buttons on switches go through [`Throttle::button`] instead.
+    pub fn heard(&mut self, data: [u8; 3], now: Instant) {
         self.shown = Some(canonical(data));
+        self.quiet_until = Some(now + QUIET);
+    }
+
+    /// The controller's button on a switch was pressed (`released`: let go) at `now`. A button's
+    /// light shows what the host last sent it, not its own presses, so what it shows is
+    /// unknown until then: once the button is let go, the switch's state is sent even when it
+    /// is what the button itself sent (a pad's note off after the press that switched Mute off).
+    pub fn button(&mut self, released: bool, now: Instant) {
+        self.shown = None;
         self.quiet_until = Some(if released { now } else { now + QUIET });
     }
 
@@ -223,6 +237,15 @@ mod tests {
     }
 
     #[test]
+    fn a_pad_is_lit_by_a_note() {
+        let a = assignment(CtlKind::Note { number: 36 }, 9);
+        assert_eq!(message(&a, Shown::Switch(true)), Some([0x99, 36, 127]));
+        assert_eq!(message(&a, Shown::Switch(false)), Some([0x99, 36, 0]));
+        assert_eq!(message(&a, Shown::Travel(0.5)), Some([0x99, 36, 64]));
+        assert_eq!(message(&assignment(CtlKind::Program { number: 3 }, 0), Shown::Switch(true)), None);
+    }
+
+    #[test]
     fn switches_are_full_on_or_off() {
         let mut a = assignment(CtlKind::Cc { number: 30 }, 0);
         // The range is a fader's business, not a button's.
@@ -273,14 +296,14 @@ mod tests {
     fn throttle_keeps_quiet_while_the_controller_moves() {
         let t0 = Instant::now();
         let mut t = Throttle::default();
-        t.heard([0xB0, 7, 90], false, t0);
+        t.heard([0xB0, 7, 90], t0);
         // The parameter lands a little elsewhere (a stepped value): not sent back while moving.
         assert_eq!(t.due([0xB0, 7, 88], t0 + Duration::from_millis(100)), None);
         assert_eq!(t.due([0xB0, 7, 88], t0 + QUIET - Duration::from_millis(1)), None);
         // After it stops, the controller is told where the parameter is.
         assert_eq!(t.due([0xB0, 7, 88], t0 + QUIET), Some([0xB0, 7, 88]));
         // Where the parameter is what the controller sent, nothing goes back at all.
-        t.heard([0xB0, 7, 40], false, t0 + Duration::from_secs(2));
+        t.heard([0xB0, 7, 40], t0 + Duration::from_secs(2));
         assert_eq!(t.due([0xB0, 7, 40], t0 + Duration::from_secs(3)), None);
     }
 
@@ -288,14 +311,39 @@ mod tests {
     fn a_button_light_is_set_on_release() {
         let t0 = Instant::now();
         let mut t = Throttle::default();
-        // A press switches Mute on; the controller's own light goes out on release.
-        t.heard([0xB0, 30, 127], false, t0);
-        assert_eq!(t.due([0xB0, 30, 127], t0), None, "it shows it already");
-        t.heard([0xB0, 30, 0], true, t0 + Duration::from_millis(80));
-        assert_eq!(t.due([0xB0, 30, 127], t0 + Duration::from_millis(80)), Some([0xB0, 30, 127]));
-        // A note off counts as velocity 0.
-        t.heard([0x81, 36, 64], true, t0 + Duration::from_secs(1));
-        assert_eq!(t.due([0x91, 36, 0], t0 + Duration::from_secs(1)), None);
+        t.due([0xB0, 30, 0], t0);
+        // A press switches Mute on: its light is lit once the button is let go, even though the
+        // button itself sent 127 (its own light isn't lit by the press).
+        t.button(false, t0 + Duration::from_secs(1));
+        assert_eq!(t.due([0xB0, 30, 127], t0 + Duration::from_secs(1)), None, "held");
+        t.button(true, t0 + Duration::from_millis(1080));
+        assert_eq!(t.due([0xB0, 30, 127], t0 + Duration::from_millis(1080)), Some([0xB0, 30, 127]));
+    }
+
+    #[test]
+    fn a_note_off_reads_as_velocity_0() {
+        let t0 = Instant::now();
+        let mut t = Throttle::default();
+        t.heard([0x81, 36, 64], t0);
+        assert_eq!(t.due([0x91, 36, 0], t0 + QUIET), None);
+    }
+
+    #[test]
+    fn a_pad_light_follows_its_switch_both_ways() {
+        let t0 = Instant::now();
+        let ms = |n| t0 + Duration::from_millis(n);
+        let mut t = Throttle::default();
+        assert_eq!(t.due([0x90, 36, 0], t0), Some([0x90, 36, 0]), "paired: out");
+        // Press 1 switches Mute on: nothing while held, lit on release.
+        t.button(false, ms(100));
+        assert_eq!(t.due([0x90, 36, 127], ms(150)), None);
+        t.button(true, ms(220));
+        assert_eq!(t.due([0x90, 36, 127], ms(220)), Some([0x90, 36, 127]));
+        // Press 2 switches it off. The pad's own note off isn't what its light shows: put out.
+        t.button(false, ms(1000));
+        t.button(true, ms(1120));
+        assert_eq!(t.due([0x90, 36, 0], ms(1120)), Some([0x90, 36, 0]));
+        assert_eq!(t.due([0x90, 36, 0], ms(1200)), None, "once");
     }
 
     #[test]

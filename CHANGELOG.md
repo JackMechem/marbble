@@ -31,6 +31,22 @@ All notable changes to Marbble are recorded here. The format follows
 
 - **The Marker List's column headings line up.** Length sat over the Go To buttons; each
   heading is over its column now.
+- **MIDI Learn takes notes and program changes, with Toggle, Momentary and Trigger buttons.**
+  Pads and button matrices that send notes can now be assigned, as can program changes: learn
+  as before and press the pad. In Controller Assignments each switch (Mute, Solo, Record, the
+  transport buttons) and each pad has a button mode: **Toggle** flips it on each press (as
+  before), **Momentary** keeps it on while held (Play while the pad is down), **Trigger** switches
+  it on with each press. A pad on a fader or plug-in knob sets it by its velocity within the
+  range, or to a fixed value with Velocity off. Buttons that latch by themselves (on at one press,
+  off at the next) are recognised when learnt and marked **Latching**, so they act on every press
+  rather than every other one. Assigned notes don't play the instrument or get recorded. Older
+  assignment files load as before.
+
+### Fixed
+
+- **Controller Assignments' column headings sit over their columns.** "Min %", "Max %" and the
+  others were one column off from the rows, as the heading had no Delete button to size its last
+  column.
 
 ## [0.1.0-alpha.12] - 2026-11-09
 

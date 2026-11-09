@@ -1,13 +1,15 @@
 //! Exercises controller assignments (MIDI Learn) against a running engine (silent ALSA null
 //! output), with controller messages fed in through the hardware input path: learning, levels
-//! and plug-in parameters following, Pickup, ranges, buttons, automation writing, consumed
-//! messages and the saved list. usage: controller_check <audio file> <scratch dir>
+//! and plug-in parameters following, Pickup, ranges, buttons, notes and program changes with
+//! Toggle, Momentary and Trigger, latching buttons, automation writing, consumed messages and the
+//! saved list.
+//! usage: controller_check <audio file> <scratch dir>
 use std::time::Duration;
 
 use daw_engine::audio_io::AudioConfig;
-use daw_engine::controllers::{CtlKind, CtlTarget, Takeover, TransportAction};
+use daw_engine::controllers::{ButtonMode, CtlKind, CtlTarget, Takeover, TransportAction};
 use daw_engine::model::{AutoMode, AutoParam, InputSel, TrackKind};
-use daw_engine::session::TrackPatch;
+use daw_engine::session::{AssignmentPatch, TrackPatch};
 use daw_engine::Session;
 
 /// Set by any failed check: the example then exits with status 1, so scripts notice.
@@ -28,14 +30,37 @@ fn cc(s: &mut Session, number: u8, value: u8) {
     s.idle();
 }
 
+/// Sends any message (a note, a program change) and lets the session handle it.
+fn send(s: &mut Session, msg: &[u8]) {
+    s.inject_midi_from(PORT, msg);
+    s.idle();
+}
+
 fn learn(s: &mut Session, target: CtlTarget, number: u8) -> Option<String> {
+    learn_msg(s, target, &[0xB0, number, 64])
+}
+
+fn learn_msg(s: &mut Session, target: CtlTarget, msg: &[u8]) -> Option<String> {
     s.start_learn(Some(target)).unwrap();
-    cc(s, number, 64);
+    send(s, msg);
     s.tick().learned
 }
 
 fn index_of(s: &Session, number: u8) -> usize {
-    s.controller_assignments().iter().position(|r| r.assignment.controller.kind == CtlKind::Cc { number }).expect("assignment")
+    index_of_kind(s, CtlKind::Cc { number })
+}
+
+fn index_of_kind(s: &Session, kind: CtlKind) -> usize {
+    s.controller_assignments().iter().position(|r| r.assignment.controller.kind == kind).expect("assignment")
+}
+
+/// Sets an assignment's takeover mode and range, as the window does.
+fn set_range(s: &mut Session, i: usize, mode: Takeover, min: f32, max: f32) {
+    s.update_controller_assignment(i, AssignmentPatch { mode: Some(mode), min: Some(min), max: Some(max), ..Default::default() }).unwrap();
+}
+
+fn set_button(s: &mut Session, i: usize, button: ButtonMode) {
+    s.update_controller_assignment(i, AssignmentPatch { button_mode: Some(button), ..Default::default() }).unwrap();
 }
 
 fn main() {
@@ -115,7 +140,7 @@ fn main() {
 
     // Pickup: ignored until the controller reaches the fader.
     let i = index_of(&s, 7);
-    s.update_controller_assignment(i, Takeover::Pickup, 0.0, 1.0).unwrap();
+    set_range(&mut s, i, Takeover::Pickup, 0.0, 1.0);
     s.update_track_linked(a, TrackPatch { volume_db: Some(-12.0), ..Default::default() });
     cc(&mut s, 7, 10);
     cc(&mut s, 7, 50);
@@ -132,7 +157,7 @@ fn main() {
     // A range: the controller covers the middle of the pan knob's travel.
     learn(&mut s, CtlTarget::Pan { track: a }, 10);
     let i = index_of(&s, 10);
-    s.update_controller_assignment(i, Takeover::Jump, 0.25, 0.75).unwrap();
+    set_range(&mut s, i, Takeover::Jump, 0.25, 0.75);
     cc(&mut s, 10, 127);
     let pan = s.project.track(a).unwrap().pan;
     check(&format!("the range limits the travel ({pan})"), (pan - 0.5).abs() < 0.02);
@@ -164,7 +189,7 @@ fn main() {
 
     // Automation: in Touch, controller moves are written like fader moves.
     let i = index_of(&s, 7);
-    s.update_controller_assignment(i, Takeover::Jump, 0.0, 1.0).unwrap();
+    set_range(&mut s, i, Takeover::Jump, 0.0, 1.0);
     s.set_auto_mode(a, AutoMode::Touch);
     s.locate(0);
     s.play();
@@ -181,6 +206,130 @@ fn main() {
     s.stop();
     std::thread::sleep(Duration::from_millis(60));
     s.set_auto_mode(a, AutoMode::Read);
+
+    // Notes: a pad on channel 10. Learning skips the release of a note already held.
+    let soloed = |s: &Session| s.project.track(a).unwrap().solo;
+    s.start_learn(Some(CtlTarget::Solo { track: a })).unwrap();
+    send(&mut s, &[0x89, 37, 0]);
+    check("a note's release isn't learned", s.tick().learn.is_some());
+    send(&mut s, &[0x99, 36, 100]);
+    let t = s.tick();
+    check(&format!("a note is learned ({:?})", t.learned), t.learned.as_deref().is_some_and(|l| l.starts_with("Note C1, channel 10")));
+    check("the learning press doesn't act", !soloed(&s));
+    send(&mut s, &[0x89, 36, 0]);
+    let pad = index_of_kind(&s, CtlKind::Note { number: 36 });
+    let row = &s.controller_assignments()[pad];
+    check(&format!("a pad on a switch toggles ({:?})", row.assignment.button_mode), row.assignment.button_mode == ButtonMode::Toggle);
+    send(&mut s, &[0x99, 36, 100]);
+    let on = soloed(&s);
+    send(&mut s, &[0x89, 36, 0]);
+    let held = soloed(&s);
+    send(&mut s, &[0x99, 36, 100]);
+    send(&mut s, &[0x99, 36, 0]);
+    check(&format!("Toggle: a press flips, the release doesn't ({on} {held} {})", soloed(&s)), on && held && !soloed(&s));
+    set_button(&mut s, pad, ButtonMode::Momentary);
+    send(&mut s, &[0x99, 36, 100]);
+    let on = soloed(&s);
+    send(&mut s, &[0x89, 36, 0]);
+    check(&format!("Momentary: on while held ({on} {})", soloed(&s)), on && !soloed(&s));
+    set_button(&mut s, pad, ButtonMode::Trigger);
+    send(&mut s, &[0x99, 36, 100]);
+    send(&mut s, &[0x89, 36, 0]);
+    let on = soloed(&s);
+    send(&mut s, &[0x99, 36, 100]);
+    send(&mut s, &[0x89, 36, 0]);
+    check(&format!("Trigger: each press switches it on ({on} {})", soloed(&s)), on && soloed(&s));
+    s.update_track_linked(a, TrackPatch { solo: Some(false), ..Default::default() });
+
+    // Assigned notes don't play the instrument or get recorded; other notes do.
+    std::thread::sleep(Duration::from_millis(50));
+    let seen = s.tick().midi_activity;
+    send(&mut s, &[0x99, 36, 90]);
+    send(&mut s, &[0x89, 36, 0]);
+    std::thread::sleep(Duration::from_millis(50));
+    let after = s.tick().midi_activity;
+    check(&format!("an assigned note is consumed ({seen} -> {after})"), after == seen);
+    send(&mut s, &[0x99, 38, 90]);
+    send(&mut s, &[0x89, 38, 0]);
+    s.inject_midi_from(PORT, &[0x99, 38, 90]);
+    std::thread::sleep(Duration::from_millis(50));
+    check("another note still plays", s.tick().midi_activity > seen);
+
+    // A pad on a fader: its velocity sets the level; without velocity it goes to the top of
+    // the range; Momentary goes back to the bottom on release.
+    learn_msg(&mut s, CtlTarget::Volume { track: a }, &[0x99, 40, 1]);
+    send(&mut s, &[0x89, 40, 0]);
+    let fader = index_of_kind(&s, CtlKind::Note { number: 40 });
+    check("a pad on a fader triggers", s.controller_assignments()[fader].assignment.button_mode == ButtonMode::Trigger);
+    send(&mut s, &[0x99, 40, 127]);
+    let top = vol(&s);
+    send(&mut s, &[0x89, 40, 0]);
+    let after = vol(&s);
+    send(&mut s, &[0x99, 40, 79]);
+    let mid = vol(&s);
+    check(&format!("the velocity sets the level ({top} {after} {mid})"), (top - 6.0).abs() < 0.01 && after == top && (mid + 12.0).abs() < 0.5);
+    s.update_controller_assignment(
+        fader,
+        AssignmentPatch { velocity: Some(false), min: Some(0.5), max: Some(0.8), button_mode: Some(ButtonMode::Momentary), ..Default::default() },
+    )
+    .unwrap();
+    send(&mut s, &[0x99, 40, 5]);
+    let held = vol(&s);
+    send(&mut s, &[0x89, 40, 0]);
+    let released = vol(&s);
+    let (hi, lo) = (daw_engine::controllers::fader_to_db(0.8), daw_engine::controllers::fader_to_db(0.5));
+    check(
+        &format!("a fixed value while held, the bottom of the range on release ({held} {released})"),
+        (held - hi).abs() < 0.06 && (released - lo).abs() < 0.06,
+    );
+    set_button(&mut s, fader, ButtonMode::Toggle);
+    send(&mut s, &[0x99, 40, 5]);
+    send(&mut s, &[0x89, 40, 0]);
+    let first = vol(&s);
+    send(&mut s, &[0x99, 40, 5]);
+    send(&mut s, &[0x89, 40, 0]);
+    check(&format!("Toggle on a fader goes between the two ({first} {})", vol(&s)), (first - hi).abs() < 0.06 && (vol(&s) - lo).abs() < 0.06);
+
+    // Program changes: a press each time, with no release.
+    let was = s.project.cycle.enabled;
+    let learned = learn_msg(&mut s, CtlTarget::Transport { action: TransportAction::Cycle }, &[0xC0, 4]);
+    check(&format!("a program change is learned ({learned:?})"), learned.as_deref().is_some_and(|l| l.starts_with("Program 5, channel 1")));
+    send(&mut s, &[0xC0, 4]);
+    let once = s.project.cycle.enabled;
+    send(&mut s, &[0xC0, 4]);
+    check(&format!("each program change toggles ({was} {once} {})", s.project.cycle.enabled), once != was && s.project.cycle.enabled == was);
+    send(&mut s, &[0xC0, 5]);
+    check("another program isn't assigned", s.project.cycle.enabled == was);
+
+    // A latching button (127 at one press, 0 at the next, nothing in between): found when no
+    // release follows the learnt press within a second; then every message is a press.
+    learn(&mut s, CtlTarget::Mute { track: a }, 70);
+    std::thread::sleep(Duration::from_millis(1100));
+    s.idle();
+    let latch = index_of(&s, 70);
+    check("a button with no release after its press is latching", s.controller_assignments()[latch].assignment.latching);
+    cc(&mut s, 70, 127);
+    let on = muted(&s);
+    cc(&mut s, 70, 0);
+    check(&format!("each of its messages toggles ({on} {})", muted(&s)), on && !muted(&s));
+    learn(&mut s, CtlTarget::Solo { track: a }, 71);
+    cc(&mut s, 71, 0);
+    std::thread::sleep(Duration::from_millis(1100));
+    s.idle();
+    check("one that sends its release isn't", !s.controller_assignments()[index_of(&s, 71)].assignment.latching);
+    s.update_track_linked(a, TrackPatch { solo: Some(false), mute: Some(false), ..Default::default() });
+
+    // Momentary on Play: plays while the pad is held.
+    learn_msg(&mut s, CtlTarget::Transport { action: TransportAction::Play }, &[0x99, 42, 100]);
+    send(&mut s, &[0x89, 42, 0]);
+    let play = index_of_kind(&s, CtlKind::Note { number: 42 });
+    set_button(&mut s, play, ButtonMode::Momentary);
+    send(&mut s, &[0x99, 42, 100]);
+    std::thread::sleep(Duration::from_millis(100));
+    let playing = s.is_playing();
+    send(&mut s, &[0x89, 42, 0]);
+    std::thread::sleep(Duration::from_millis(100));
+    check(&format!("Momentary Play plays while held ({playing} {})", s.is_playing()), playing && !s.is_playing());
 
     // A target that isn't in the project is shown as missing and does nothing.
     learn(&mut s, CtlTarget::Volume { track: inst }, 40);
@@ -200,6 +349,20 @@ fn main() {
         &format!("assignments are saved and load back ({} in the file)", saved.matches("\"controller\"").count()),
         again.len() == rows.len() && again.iter().zip(&rows).all(|(x, y)| x.assignment == y.assignment),
     );
+    check("notes, program changes and button modes are saved", saved.contains("\"note\"") && saved.contains("\"program\"") && saved.contains("\"momentary\""));
+    // A file from before notes were learnable loads with today's defaults.
+    let old = scratch.join("old-assignments.json");
+    std::fs::write(&old, r#"{"assignments":[{"controller":{"port":"P","channel":0,"kind":{"type":"cc","number":7}},"target":{"type":"mute","track":3},"mode":"pickup","min":0.0,"max":1.0}]}"#).unwrap();
+    s.load_controller_assignments(old);
+    let rows_old = s.controller_assignments();
+    check(
+        "an older assignment file loads",
+        rows_old.len() == 1
+            && rows_old[0].assignment.button_mode == ButtonMode::Toggle
+            && rows_old[0].assignment.mode == Takeover::Pickup
+            && rows_old[0].assignment.velocity,
+    );
+    s.load_controller_assignments(file.clone());
     let i = index_of(&s, 40);
     s.delete_controller_assignment(i).unwrap();
     check("delete removes one", s.controller_assignments().len() == rows.len() - 1);

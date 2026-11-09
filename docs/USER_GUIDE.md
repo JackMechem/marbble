@@ -2775,8 +2775,8 @@ orange in Touch and Latch, red in Write.
 
 ## 14. Controller assignments (MIDI Learn)
 
-A knob, fader or button on a MIDI controller can drive a mixer control, a plug-in parameter or
-a transport button, as with Logic's Control Surfaces › Learn Assignment. Controllers with lights
+A knob, fader, button or pad on a MIDI controller can drive a mixer control, a plug-in parameter
+or a transport button, as with Logic's Control Surfaces › Learn Assignment. Controllers with lights
 or motor faders are sent the values back, so they show what Marbble does (see
 [Feedback to the controller](#feedback-to-the-controller)).
 
@@ -2786,8 +2786,8 @@ or motor faders are sent the values back, so they show what Marbble does (see
    Channel EQ setting, a built-in effect's knob, or a parameter in a plug-in's own window.
 2. Press **Ctrl+L** (Marbble › Control Surfaces › Learn Assignment for Last Touched
    Parameter). A banner says "Move a controller to assign it to …".
-3. Move a knob or fader (or press a button) on your controller. The banner closes and a message
-   names the assignment. **Cancel** or Esc stops learning without assigning anything; Ctrl+L
+3. Move a knob or fader (or press a button or pad) on your controller. The banner closes and a
+   message names the assignment. **Cancel** or Esc stops learning without assigning anything; Ctrl+L
    again does too.
 
 Or right-click the control and choose **Learn MIDI Assignment**. That works on the channel
@@ -2797,8 +2797,11 @@ every control of a built-in effect. For a VST3 plug-in, show the parameter on an
 lane and right-click the lane's parameter pop-up in the track header, or move it in the
 plug-in's window and press Ctrl+L.
 
-Control changes (CC 0–119) and pitch bend can be learned, on any MIDI input and channel. A
-controller drives one parameter: learning it again moves it to the new one.
+Control changes (CC 0–119), pitch bend, notes and program changes can be learned, on any MIDI
+input and channel. Pads and button matrices usually send notes: a note is learnt by its key
+(note on is the press, note off the release), and a key held down when the learn started isn't
+learnt by its release. A program change is learnt by its number. A controller drives one
+parameter: learning it again moves it to the new one.
 
 ### How assignments behave
 
@@ -2809,10 +2812,30 @@ controller drives one parameter: learning it again moves it to the new one.
   controller holds the parameter while it moves and lets go half a second after it stops,
   which ends a Touch pass.
 - Mute, Solo, Record Enable, a Channel EQ band's on/off and the transport buttons are
-  **buttons**: a press (a value above 63) toggles them and the release does nothing, so
-  momentary buttons work.
+  **switches**. A press is a note on, a program change, or a control change or pitch bend going
+  above its middle (a value above 63); the release is the note off, or the value going back
+  down. What they do depends on the assignment's button mode:
+  - **Toggle** (the default): each press switches it on or off; the release does nothing, so
+    momentary buttons work.
+  - **Momentary**: on while held, off on release (Play plays while you hold the pad; Solo solos
+    while held). A controller button that latches itself (127 on one press, 0 on the next) works
+    this way too.
+  - **Trigger**: each press switches it on; it never switches off.
+
+  Some controller buttons latch by themselves: they send on (127, or a note on) at one press and
+  off (0, or a note off) at the next, with nothing on release. Marbble notices this when you learn
+  one (no release comes within a second of the press) and ticks **Latching** for it in
+  Controller Assignments; you can tick or untick it there too. With Latching, every message is a
+  press: Toggle flips at each one, so the button works every time rather than every other time,
+  and Momentary follows the button's own state.
+- A note or program change on a fader, knob or plug-in parameter sets it on a press: the note's
+  velocity picks the value within the assignment's range (or, with Velocity off, the top of the
+  range; a program change always goes to the top). In Toggle each press goes to that value and
+  the next back to the bottom of the range; in Momentary the release goes back to the bottom of
+  the range; in Trigger (the default) the press sets it and the release does nothing.
 - Messages from an assigned controller are taken: they don't also play the selected instrument
-  or get recorded, as in Logic. They still show in Settings › MIDI › Monitor.
+  or get recorded, as in Logic. That includes an assigned note's note off. They still show in
+  Settings › MIDI › Monitor.
 - Assignments are global settings, kept when you quit and used in every project. They refer to
   tracks and plug-ins by their position in the project's numbering, so an assignment learned
   in one project acts on the same-numbered track in another.
@@ -2820,15 +2843,22 @@ controller drives one parameter: learning it again moves it to the new one.
 ### The Controller Assignments window
 
 **Marbble › Control Surfaces › Controller Assignments…** (Shift+Ctrl+L) lists every assignment:
-the controller (CC number or Pitch Bend, channel and input port) and the parameter. For each
-one:
+the controller (CC number, Pitch Bend, a note such as **Note C1**, or **Program 5**, with the
+channel and input port) and the parameter. For each one:
 
-- **Mode**: **Jump** (default) moves the parameter to the controller's value at once.
-  **Pickup** ignores the controller until it reaches or passes the parameter's current value,
-  so the value doesn't jump; once caught, it follows. Moving the parameter some other way
-  (the mouse, automation, undo) lets go of it again.
+- **Mode**, for a knob or fader moving a continuous parameter: **Jump** (default) moves the
+  parameter to the controller's value at once. **Pickup** ignores the controller until it
+  reaches or passes the parameter's current value, so the value doesn't jump; once caught, it
+  follows. Moving the parameter some other way (the mouse, automation, undo) lets go of it
+  again.
+- **Mode**, for a switch, or a note or program change: the button mode, **Toggle**,
+  **Momentary** or **Trigger** (see above; a program change has no release, so it offers no
+  Momentary). For a switch, what the mode does is written beside it, then **Latching** (see
+  above).
 - **Min %** and **Max %**: the stretch of the parameter's travel the controller sweeps. Min
-  above Max turns the controller round.
+  above Max turns the controller round. For a note, the stretch its velocity covers.
+- **Velocity**, for a note on a continuous parameter: off, every press goes to Max % whatever
+  the velocity (a fixed value; set Min % for where Toggle and Momentary go back to).
 - **Feedback**: send the parameter's value back to the controller (on by default). Greyed when
   the controller's input has no output paired with it in Settings › MIDI; the setting is kept for
   when it has.
@@ -2857,7 +2887,8 @@ whether the track is muted and a motor fader stands where the fader on screen do
 - Nothing is sent to a controller while you move it, nor for half a second after, so a motor
   fader doesn't fight your hand; then it is told where the parameter is (with **Pickup**, a
   fader that hadn't caught the parameter goes there). A button's light is set as soon as you
-  let go of it.
+  let go of it, on or off, whatever the button itself sent (a pad's own light only shows what
+  Marbble sends it).
 - An assignment whose parameter isn't in the open project sends nothing.
 
 To watch what Marbble sends, on Linux: start `aseqdump` (from alsa-utils) in a terminal. It opens

@@ -1,21 +1,36 @@
 // Logic's Controller Assignments window (Control Surfaces › Controller Assignments): every
-// assignment with its controller, parameter, takeover mode, range and feedback, and the banner
-// shown while an assignment is being learned. Assignments are global settings, saved by the
-// engine in the config folder, so editing them isn't an undo step.
+// assignment with its controller, parameter, takeover or button mode, range and
+// feedback, and the banner shown while an assignment is being learned. Assignments are global
+// settings, saved by the engine in the config folder, so editing them isn't an undo step.
 import { useEffect, useState } from "react";
 import { call } from "../api";
-import { channelLabel, controllerLabel, feedbackTitle, fromPercent, MODE_OPTIONS, toPercent, TRANSPORT_TARGETS, type AssignmentRow, type Takeover } from "../controllers";
+import {
+  buttonHint,
+  buttonOptions,
+  channelLabel,
+  controllerLabel,
+  feedbackTitle,
+  fromPercent,
+  MODE_OPTIONS,
+  offersLatching,
+  rowEditor,
+  toPercent,
+  TRANSPORT_TARGETS,
+  type AssignmentPatch,
+  type AssignmentRow,
+} from "../controllers";
 import { keyHint } from "../keymap";
 import { cancelLearn, learn } from "../learn";
 import { onTick, setState, useStore } from "../store";
 import { Sheet } from "./Dialogs";
-import { NumberField, Select } from "./Form";
+import { Check, NumberField, Select } from "./Form";
 import { openMenuAt } from "./Menu";
 import { onPress } from "../keyNav";
 
 function Row({ row, index, onChange }: { row: AssignmentRow; index: number; onChange: (rows: AssignmentRow[] | null) => void }) {
-  const update = (mode: Takeover, min: number, max: number) => call<AssignmentRow[]>("update_controller_assignment", { index, mode, min, max }).then(onChange);
+  const update = (patch: AssignmentPatch) => call<AssignmentRow[]>("update_controller_assignment", { index, patch }).then(onChange);
   const c = row.controller;
+  const editor = rowEditor(row);
   return (
     <div className={"ctl-row" + (row.available ? "" : " unavailable")} title={row.available ? undefined : "Not in this project: the assignment does nothing here"}>
       <span className="ctl-controller">{controllerLabel(c)}</span>
@@ -26,13 +41,37 @@ function Row({ row, index, onChange }: { row: AssignmentRow; index: number; onCh
       <span className="ctl-param" title={row.name}>
         {row.name}
       </span>
-      {row.button ? (
-        <span className="ctl-button dim">Button: press toggles</span>
+      {editor === "takeover" ? (
+        <Select value={row.mode} options={MODE_OPTIONS} onChange={(mode) => update({ mode })} width={104} />
+      ) : (
+        <Select value={row.button_mode} options={buttonOptions(row)} onChange={(button_mode) => update({ button_mode })} width={104} />
+      )}
+      {editor === "button" ? (
+        <>
+          <span className="ctl-button dim">{buttonHint(row.button_mode)}</span>
+          {offersLatching(row) ? (
+            <Check
+              checked={row.latching}
+              onChange={(latching) => update({ latching })}
+              title="The controller's button latches by itself: on at one press, off at the next (found when learning, if no release followed)"
+            >
+              Latching
+            </Check>
+          ) : (
+            <span />
+          )}
+        </>
       ) : (
         <>
-          <Select value={row.mode} options={MODE_OPTIONS} onChange={(m) => update(m, row.min, row.max)} width={86} />
-          <NumberField value={toPercent(row.min)} min={0} max={100} width={64} onChange={(v) => update(row.mode, fromPercent(v), row.max)} />
-          <NumberField value={toPercent(row.max)} min={0} max={100} width={64} onChange={(v) => update(row.mode, row.min, fromPercent(v))} />
+          <NumberField value={toPercent(row.min)} min={0} max={100} width={64} onChange={(v) => update({ min: fromPercent(v) })} />
+          <NumberField value={toPercent(row.max)} min={0} max={100} width={64} onChange={(v) => update({ max: fromPercent(v) })} />
+          {editor === "button-range" && c.kind.type === "note" ? (
+            <Check checked={row.velocity} onChange={(velocity) => update({ velocity })} title="The note's velocity picks the value in the range; off, a press goes to Max">
+              Velocity
+            </Check>
+          ) : (
+            <span />
+          )}
         </>
       )}
       {/* Without a paired output the setting is kept for when there is one. */}
@@ -71,7 +110,7 @@ export function ControllerAssignmentsSheet() {
   const learnKey = keyHint("learn-assignment");
   return (
     // Non-modal, like Logic's window: Learn Assignment and the transport keys still work.
-    <Sheet title="Controller Assignments" onClose={close} width={860} mode="non-modal">
+    <Sheet title="Controller Assignments" onClose={close} width={940} mode="non-modal">
       <div className="ctl-head">
         <span>Controller</span>
         <span>Channel</span>
@@ -80,14 +119,15 @@ export function ControllerAssignmentsSheet() {
         <span>Mode</span>
         <span>Min %</span>
         <span>Max %</span>
+        <span />
         <span title="Send the parameter's value back to the controller (Settings › MIDI pairs inputs with outputs)">Feedback</span>
         <span />
       </div>
       <div className="ctl-list">
         {rows.length === 0 && (
           <div className="pref-hint">
-            No assignments yet. Move a fader, knob or plug-in parameter, choose Learn Assignment{learnKey ? ` (${learnKey})` : ""}, then move a control on your MIDI
-            controller. Right-click a control to learn it directly.
+            No assignments yet. Move a fader, knob or plug-in parameter, choose Learn Assignment{learnKey ? ` (${learnKey})` : ""}, then move a control or press a
+            pad on your MIDI controller. Right-click a control to learn it directly.
           </div>
         )}
         {rows.map((r, i) => (
@@ -133,7 +173,7 @@ export function LearnBanner() {
   return (
     <div className="learn-banner">
       <span>
-        Move a controller to assign it to <b>{name}</b>…
+        Move a controller or press a pad to assign it to <b>{name}</b>…
       </span>
       <button className="push" onClick={cancelLearn}>
         Cancel

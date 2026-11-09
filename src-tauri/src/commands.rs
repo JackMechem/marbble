@@ -10,12 +10,12 @@
 use std::path::PathBuf;
 
 use daw_engine::audio_io::{list_devices, AudioConfig, AudioStatus, DeviceList};
-use daw_engine::controllers::{CtlTarget, Takeover};
+use daw_engine::controllers::CtlTarget;
 use daw_engine::fades::{Crossfade, DragMode, FadeInType, FadeOutType};
 use daw_engine::instrument::sampler::state::Zone;
 use daw_engine::model::{AutoMode, AutoParam, AutoPoint, Group, Id, InputSel, Project, Region, TakeRating, TrackKind, TrackSend, MASTER_ID};
 use daw_engine::prefs::{BitDepth, ClickSettings, Prefs};
-use daw_engine::session::AssignmentRow;
+use daw_engine::session::{AssignmentPatch, AssignmentRow};
 use daw_engine::session::{
     BipOptions, BipSource, BounceResult, ClipInfo, InstrumentOutputs, MidiContent, PdcReport, PlayedNotes, RangeEdit, RegionParamsPatch, RenderOptions,
     TrackPatch,

@@ -46,12 +46,19 @@ impl Session {
         self.midi_out.ports()
     }
 
-    /// Assignment `i`'s controller sent `data` (`pressed`: a press for a button): it shows that
-    /// now, and feedback to it waits while it moves.
+    /// Assignment `i`'s controller sent `data` (`pressed`: a press for a button). A fader or knob
+    /// shows that now, and feedback to it waits while it moves. A button on a switch shows what
+    /// was last sent to it, not its own press or release: its switch's state goes to it once it
+    /// is let go, whatever the button sent.
     pub(super) fn feedback_heard(&mut self, i: usize, data: [u8; 3], pressed: bool) {
         let Some(a) = self.ctl_list().get(i) else { return };
-        let (c, released) = (a.controller.clone(), a.target.is_button() && !pressed);
-        self.feedback.state(&c).heard(data, released, Instant::now());
+        let (c, switch) = (a.controller.clone(), a.target.is_button());
+        let state = self.feedback.state(&c);
+        if switch {
+            state.button(!pressed, Instant::now());
+        } else {
+            state.heard(data, Instant::now());
+        }
     }
 
     /// Sends each assignment's target value to its controller where it changed (`idle`).

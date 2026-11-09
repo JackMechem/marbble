@@ -21,15 +21,20 @@
   font-weight: 600;
 }
 
+/* The heading and each row are grids of their own, so every column but the two flexible ones
+   has a fixed width (Delete's too: an empty heading cell would be narrower than the button and
+   shift the flexible columns), and both keep room for the list's scroll bar. */
 .ctl-head,
 .ctl-row {
   display: grid;
-  grid-template-columns: 74px 46px minmax(0, 1.1fr) minmax(0, 1.6fr) 86px 64px 64px 60px auto;
+  grid-template-columns: 84px 46px minmax(0, 1fr) minmax(0, 1.6fr) 104px 64px 64px 76px 60px 78px;
   align-items: center;
   gap: 8px;
 }
 
 .ctl-head {
+  overflow: hidden;
+  scrollbar-gutter: stable;
   padding: 0 16px 6px;
   color: var(--dim);
   font-size: var(--fs-sm);
@@ -38,7 +43,14 @@
 .ctl-list {
   max-height: 380px;
   overflow-y: auto;
+  scrollbar-gutter: stable;
   padding: 4px 16px 10px;
+}
+
+/* The Delete button: its column is the button's own minimum width. */
+.ctl-row > .push:last-child {
+  min-width: 0;
+  width: 100%;
 }
 
 .ctl-row {
@@ -60,9 +72,9 @@
   color: var(--dim);
 }
 
-/* A button has no mode or range: its note spans those three columns. */
+/* A switch has no range: what its button mode does spans those two columns. */
 .ctl-row .ctl-button {
-  grid-column: span 3;
+  grid-column: span 2;
 }
 
 /* The track or plug-in isn't in this project. */

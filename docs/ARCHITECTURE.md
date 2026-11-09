@@ -67,7 +67,7 @@ flowchart LR
 | **`recorder`** | `recorder.rs` | Every 10 ms, drains the ring buffer of each armed track into its WAV file and an in-memory copy, and keeps a peak preview for the UI. | Touch the engine or the project. |
 | **`ui-tick`** | `src-tauri/src/main.rs` | Every 33 ms: locks the session, builds a `Tick` (playhead, meters, input levels, recording previews, CPU, latency, analyzer spectrum, warnings, meters of open built-in effect panels, the clip indicators' held peaks, each strip's gain reduction) and emits it as the `tick` event. | Edit anything. |
 | **MIDI refresh** | `main.rs` | Every 3 s: `Session::refresh_midi`, so input and output devices plugged in later get connected. | |
-| **MIDI input callbacks** | midir, in `midi_io.rs` (one per port) | Drop system messages, take assigned controllers (all of them while learning) into a queue for `Session::idle` (controller assignments), apply the velocity curve, push the rest into the `live_midi` ring the engine reads, and log the message for Settings › MIDI. | |
+| **MIDI input callbacks** | midir, in `midi_io.rs` (one per port) | Drop system messages, take assigned controllers (CCs, pitch bend, notes with their note offs, program changes; all of them while learning) into a queue for `Session::idle` (controller assignments), apply the velocity curve, push the rest into the `live_midi` ring the engine reads, and log the message for Settings › MIDI. | |
 | **`midi-out`** | `midi_out.rs` | Sends the controller feedback `Session::idle` hands it (batches through a channel) to the output ports. | Touch the session. |
 | **Async command workers** | Tauri's async runtime (`#[tauri::command(async)]`) | Offline renders (bounce, export, Bounce in Place, Freeze), plug-in rescans, waveform and transient requests, device lists, recent projects, the input level check, folder listings. Renders hold the session lock and the engine lock for their whole length; the parts that edit tracks or plug-ins are handed back to the main thread with `run_on_main_thread`. | Touch plug-in controllers. |
 | **Autosave writer** | `main.rs::autosave` | Writes an `AutosaveJob` (already serialized on the main thread) to disk, atomically. | |
@@ -1131,7 +1131,7 @@ at its new place (`old_name::relocated`).
 | `plugin-scan.json` | `plugin_db.rs` | The last scan's report (bundles, plug-ins, failures with reasons), for Settings › Plug-ins. |
 | `presets/<effect>/<name>.json` | `presets.rs` | User presets of the built-in effects, the Channel EQ among them (see [Presets](#presets)). |
 | `channel-strips/<name>.json` | `strip_settings.rs` | Saved channel strip settings (see [Channel strip settings](#channel-strip-settings)). |
-| `controller-assignments.json` | `session/controllers.rs` | MIDI Learn's controller assignments: controller (port without ALSA's client:port numbers, channel, CC number or pitch bend), target (track id and parameter, plug-in instance id with its plug-in id, a setting of the old fixed Channel EQ, Stereo Out or transport), mode, range and whether feedback goes back to the controller (missing in older files: on). Global, like Logic's; written atomically. |
+| `controller-assignments.json` | `session/controllers.rs` | MIDI Learn's controller assignments: controller (port without ALSA's client:port numbers, channel, and a CC number, pitch bend, a note number or a program number), target (track id and parameter, plug-in instance id with its plug-in id, a setting of the old fixed Channel EQ, Stereo Out or transport), takeover mode, range, button mode (`toggle`, `momentary`, `trigger`), whether the button latches by itself, whether a note's velocity sets the value, and whether feedback goes back to the controller. Fields added later have serde defaults, so older files load. Global, like Logic's; written atomically. |
 | `templates/<name>.json` | `session/templates.rs` | User project templates (File › Save as Template…): a `Project` without regions, clips, freeze state or alternatives, with plug-in states. `new_from_template` loads one as a new untitled project at the device's rate, keeping its ids. |
 
 Interface-only state lives in the webview's `localStorage`:
@@ -2570,8 +2570,11 @@ through the same edit paths as the mouse (`session/controllers.rs`). The way bac
   editor, automation, undo, opening a project, an assignment edit) is covered by one path and
   nothing has to remember to notify it.
 - **What the controller shows** is a `feedback::Throttle` per controller: the last message sent to
-  it or received from it. A message it sends counts too, so nothing is echoed back when the
-  parameter lands where the controller put it. While the controller moves, and for `QUIET`
+  it or received from it. A fader's or knob's own message counts too, so nothing is echoed back
+  when the parameter lands where the controller put it. A button on a switch doesn't: its light
+  shows what the host last sent, not its presses, so once it is let go its switch's state is sent
+  even when that's what the button sent (`Throttle::button`; a pad's note off after the press
+  that switched Mute off still puts the light out). While the controller moves, and for `QUIET`
   (0.5 s) after (a button: until its release), nothing is sent to it, so a motor fader isn't driven
   against the hand on it; a Pickup controller that didn't catch its parameter is then told where
   the parameter is. Messages to one controller are at least `MIN_GAP` (25 ms) apart; as the value
@@ -2677,7 +2680,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `session/arrangement.rs` | Arrangement track edits: add, rename, colour, resize, and moving, copying or deleting a section with its content. |
 | `session/takes.rs` | Recording into take folders, Autopunch trimming, comp edits, Flatten, Merge, Pack (from one track or several), Unpack (to new or existing tracks), Export and Move Active Take. |
 | `session/auto_write.rs` | Automation writing (Touch, Latch, Write), plug-in editors following automation, lane edit commands. |
-| `session/controllers.rs` | Controller assignments: the last touched parameter, learning, the saved list, applying controller moves through the normal edit paths (undo steps, automation touches that let go 0.5 s after the controller stops). Run from `idle`. |
+| `session/controllers.rs` | Controller assignments: the last touched parameter, learning, the saved list, applying controller moves and button presses and releases through the normal edit paths (undo steps, automation touches that let go 0.5 s after the controller stops). Run from `idle`. |
 | `session/feedback.rs` | Controller feedback: each assignment's target value as the screen shows it, sent to the paired output where it changed (see [MIDI controllers in and out](#midi-controllers-in-and-out)). Run from `idle`. |
 | `session/builtin.rs` | Built-in effects in slots: instantiation, parameters, side-chains, meters for open panels. |
 | `session/vst_key.rs` | VST3 side-chain inputs: keeping each plug-in's aux bus in line with its slot's key source. |
@@ -2722,7 +2725,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `plugin_db.rs` | Out-of-process plug-in scanning, the cache, the scan report, the config folder. |
 | `prefs.rs` | `Prefs` (Settings) and the metronome and bit-depth types saved in projects. |
 | `clip.rs` | Audio held in memory, the waveform overview, and the zero-crossing search. |
-| `controllers.rs` | Controller assignments, the pure part: targets, reading CC and pitch bend, port names without ALSA's numbers, the fader taper, ranges, Jump and Pickup. |
+| `controllers.rs` | Controller assignments, the pure part: targets, reading CCs, pitch bend, notes and program changes, port names without ALSA's numbers, the fader taper, ranges, Jump and Pickup, and the button modes (`Follow::button`: Toggle, Momentary, Trigger). |
 | `decode.rs` | Decoding audio files in any supported format, resampling, WAV writing. |
 | `decode/gapless.rs` | MP4/M4A encoder delay and padding (`iTunSMPB` tag or edit list), trimmed after decoding. |
 | `audio_file.rs` | Writing bounces: `AudioFormat`, `BitDepth`, the shared dithering `Quantizer`. |

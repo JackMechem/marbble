@@ -76,7 +76,7 @@ mod controllers;
 mod feedback;
 mod marquee;
 mod strip_settings;
-pub use controllers::{controller_label, AssignmentRow};
+pub use controllers::{controller_label, AssignmentPatch, AssignmentRow};
 mod plugin_states;
 mod vca;
 mod vst_undo;

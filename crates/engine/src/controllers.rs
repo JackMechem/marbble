@@ -1,10 +1,11 @@
 //! Controller assignments, as Logic's Control Surfaces › Learn Assignment and the Controller
-//! Assignments window: a knob, fader or button on a MIDI controller drives a mixer control, a
-//! plug-in parameter or a transport button.
+//! Assignments window: a knob, fader, button or pad on a MIDI controller drives a mixer
+//! control, a plug-in parameter or a transport button.
 //!
 //! This module is the pure part: reading controller messages, recognising a port again after
 //! it was plugged back in, scaling a controller's travel onto a parameter's range (with the
-//! fader's taper for levels), and the Jump and Pickup takeover modes. The session applies the
+//! fader's taper for levels), the Jump and Pickup takeover modes, and what a button press and
+//! release do (Toggle, Momentary, Trigger). The session applies the
 //! results (`session/controllers.rs`); `midi_io.rs` takes assigned controllers off the live
 //! MIDI path.
 
@@ -20,6 +21,19 @@ pub enum CtlKind {
     Cc { number: u8 },
     /// Pitch bend (14 bits).
     PitchBend,
+    /// A note, on any key: note on is the press (its velocity the value), note off (or note on
+    /// at velocity 0) the release. Pads and button matrices send these.
+    Note { number: u8 },
+    /// A program change: a press with no release.
+    Program { number: u8 },
+}
+
+impl CtlKind {
+    /// Notes and program changes are buttons whatever they drive: they press and release
+    /// rather than move.
+    pub fn is_button(&self) -> bool {
+        matches!(self, CtlKind::Note { .. } | CtlKind::Program { .. })
+    }
 }
 
 /// One physical control: where its messages come from.
@@ -152,8 +166,42 @@ pub enum Takeover {
     Pickup,
 }
 
+/// What pressing and releasing a button does: one on a controller (a note, a program change, or
+/// a control change used as a switch) or one driving a switch.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ButtonMode {
+    /// A press flips the switch; the release does nothing. On a continuous parameter a press
+    /// goes to the press value and the next one back to the bottom of the range.
+    #[default]
+    Toggle,
+    /// On while held: the press switches on, the release off (a continuous parameter goes to
+    /// the press value and back to the bottom of the range).
+    Momentary,
+    /// A press fires once and the release does nothing: a switch is switched on, a continuous
+    /// parameter goes to the press value.
+    Trigger,
+}
+
+/// How long after a learnt press a button has to send its release to be taken for one that is
+/// on while held; one that doesn't is latching (`Assignment::latching`).
+pub const LATCH_WAIT: std::time::Duration = std::time::Duration::from_secs(1);
+
+/// What one button message does, from [`Follow::button`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ButtonAct {
+    /// Switch it to the other state.
+    Flip,
+    /// Switch it on (true) or off.
+    Set(bool),
+}
+
 fn one() -> f32 {
     1.0
+}
+
+fn yes() -> bool {
+    true
 }
 
 /// A controller driving a target.
@@ -169,19 +217,41 @@ pub struct Assignment {
     pub min: f32,
     #[serde(default = "one")]
     pub max: f32,
+    /// What a press and a release do, for a button (a note, a program change) or a switch.
+    #[serde(default)]
+    pub button_mode: ButtonMode,
+    /// A note pressed on a continuous parameter goes to where its velocity falls in the range;
+    /// false sends it to the top of the range (`max`) whatever the velocity.
+    #[serde(default = "yes")]
+    pub velocity: bool,
+    /// The controller's button latches by itself: on (a value above 63, a note on) at one press
+    /// and off at the next, rather than on while held. Every message is then a press.
+    #[serde(default)]
+    pub latching: bool,
     /// Send the target's value back to the controller (`feedback.rs`) when its input is paired
     /// with an output. On by default, and for assignments saved before there was feedback.
     #[serde(default = "yes")]
     pub feedback: bool,
 }
 
-fn yes() -> bool {
-    true
-}
-
 impl Assignment {
     pub fn new(controller: Controller, target: CtlTarget) -> Assignment {
-        Assignment { controller, target, mode: Takeover::Jump, min: 0.0, max: 1.0, feedback: true }
+        // A pad on a fader sets a level: it fires on press rather than toggling.
+        let button_mode = if controller.kind.is_button() && !target.is_button() { ButtonMode::Trigger } else { ButtonMode::Toggle };
+        Assignment { controller, target, mode: Takeover::Jump, min: 0.0, max: 1.0, button_mode, velocity: true, latching: false, feedback: true }
+    }
+
+    /// Whether the controller acts as a button here: a note or program change, or any
+    /// controller on a switch.
+    pub fn is_button(&self) -> bool {
+        self.controller.kind.is_button() || self.target.is_button()
+    }
+
+    /// Where a press puts a continuous parameter (0..1 on its travel): the velocity's place in
+    /// the range, or the top of the range.
+    pub fn press_value(&self, msg: &CtlMsg) -> f32 {
+        let v = if self.velocity && matches!(msg.kind, CtlKind::Note { .. }) { msg.value } else { 1.0 };
+        self.scale(v)
     }
 
     /// Where on the parameter's travel a controller value (0..1) lands.
@@ -199,7 +269,8 @@ pub struct AssignmentFile {
 }
 
 /// A controller message: its channel, which controller, the value scaled to 0..1, and whether
-/// it counts as a button press (above 63, or above the centre for pitch bend).
+/// it counts as a button press (above 63, or above the centre for pitch bend; a note on; any
+/// program change).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CtlMsg {
     pub channel: u8,
@@ -208,11 +279,16 @@ pub struct CtlMsg {
     pub pressed: bool,
 }
 
-/// Reads a control change or pitch bend message; anything else is None.
+/// Reads a control change, pitch bend, note or program change message; anything else is None.
 pub fn parse(data: &[u8]) -> Option<CtlMsg> {
     let (&status, rest) = data.split_first()?;
     let channel = status & 0x0F;
     match (status & 0xF0, rest) {
+        (0x90, [number, velocity, ..]) if *velocity & 0x7F > 0 => {
+            Some(CtlMsg { channel, kind: CtlKind::Note { number: number & 0x7F }, value: (velocity & 0x7F) as f32 / 127.0, pressed: true })
+        }
+        (0x80 | 0x90, [number, ..]) => Some(CtlMsg { channel, kind: CtlKind::Note { number: number & 0x7F }, value: 0.0, pressed: false }),
+        (0xC0, [number, ..]) => Some(CtlMsg { channel, kind: CtlKind::Program { number: number & 0x7F }, value: 1.0, pressed: true }),
         (0xB0, [number, value, ..]) if *number < 120 => {
             let v = value & 0x7F;
             Some(CtlMsg { channel, kind: CtlKind::Cc { number: *number }, value: v as f32 / 127.0, pressed: v > 63 })
@@ -286,6 +362,8 @@ pub struct Follow {
     set: Option<f32>,
     /// A button is held down.
     down: bool,
+    /// A button toggling a continuous parameter left it at its press value.
+    lit: bool,
 }
 
 impl Follow {
@@ -315,10 +393,39 @@ impl Follow {
         self.set = Some(value);
     }
 
-    /// A button message: true for a press, false for the release and for repeats while held.
-    pub fn press(&mut self, pressed: bool) -> bool {
-        let was = std::mem::replace(&mut self.down, pressed);
-        pressed && !was
+    /// What a button message does in `mode`, if anything: a press (the button going down) and,
+    /// in Momentary, the release. A program change is a press every time and never released;
+    /// so is every message of a `latching` button, whose own state Momentary follows.
+    pub fn button(&mut self, mode: ButtonMode, msg: &CtlMsg, latching: bool) -> Option<ButtonAct> {
+        let was = std::mem::replace(&mut self.down, msg.pressed);
+        if latching || matches!(msg.kind, CtlKind::Program { .. }) {
+            self.down = false;
+            return Some(match mode {
+                ButtonMode::Toggle => ButtonAct::Flip,
+                ButtonMode::Momentary => ButtonAct::Set(msg.pressed),
+                ButtonMode::Trigger => ButtonAct::Set(true),
+            });
+        }
+        match (msg.pressed, was, mode) {
+            (true, false, ButtonMode::Toggle) => Some(ButtonAct::Flip),
+            (true, false, _) => Some(ButtonAct::Set(true)),
+            (false, true, ButtonMode::Momentary) => Some(ButtonAct::Set(false)),
+            _ => None,
+        }
+    }
+
+    /// Where a button sends a continuous parameter: `on` is its press value, `off` the bottom
+    /// of the range. Toggle remembers which of the two it went to last.
+    pub fn button_value(&mut self, act: ButtonAct, on: f32, off: f32) -> f32 {
+        self.lit = match act {
+            ButtonAct::Flip => !self.lit,
+            ButtonAct::Set(v) => v,
+        };
+        if self.lit {
+            on
+        } else {
+            off
+        }
     }
 }
 
@@ -340,11 +447,103 @@ mod tests {
         let m = parse(&[0xE1, 0x7F, 0x7F]).unwrap();
         assert_eq!((m.channel, m.kind, m.value), (1, CtlKind::PitchBend, 1.0));
         assert_eq!(parse(&[0xE0, 0, 0x40]).unwrap().value, 8192.0 / 16383.0);
-        // Notes, aftertouch and channel mode messages (120..127) aren't controllers.
-        assert!(parse(&[0x90, 60, 100]).is_none());
+        // Aftertouch and channel mode messages (120..127) aren't controllers.
+        assert!(parse(&[0xA0, 60, 10]).is_none());
         assert!(parse(&[0xD0, 60, 0]).is_none());
         assert!(parse(&[0xB0, 123, 0]).is_none());
         assert!(parse(&[0xB0]).is_none());
+    }
+
+    #[test]
+    fn parses_notes_and_program_changes() {
+        let m = parse(&[0x92, 36, 127]).unwrap();
+        assert_eq!((m.channel, m.kind, m.value, m.pressed), (2, CtlKind::Note { number: 36 }, 1.0, true));
+        // Note off, and note on at velocity 0, release it.
+        let m = parse(&[0x82, 36, 64]).unwrap();
+        assert_eq!((m.kind, m.pressed), (CtlKind::Note { number: 36 }, false));
+        assert!(!parse(&[0x92, 36, 0]).unwrap().pressed);
+        let m = parse(&[0xC5, 9, 0]).unwrap();
+        assert_eq!((m.channel, m.kind, m.pressed), (5, CtlKind::Program { number: 9 }, true));
+        // A program change has two bytes.
+        assert_eq!(parse(&[0xC0, 3]).unwrap().kind, CtlKind::Program { number: 3 });
+        assert!(CtlKind::Note { number: 1 }.is_button() && CtlKind::Program { number: 1 }.is_button());
+        assert!(!CtlKind::Cc { number: 1 }.is_button() && !CtlKind::PitchBend.is_button());
+    }
+
+    fn note(pressed: bool) -> CtlMsg {
+        CtlMsg { channel: 0, kind: CtlKind::Note { number: 60 }, value: if pressed { 0.5 } else { 0.0 }, pressed }
+    }
+
+    #[test]
+    fn toggle_flips_on_each_press() {
+        let mut f = Follow::default();
+        assert_eq!(f.button(ButtonMode::Toggle, &note(true), false), Some(ButtonAct::Flip));
+        assert_eq!(f.button(ButtonMode::Toggle, &note(true), false), None, "held");
+        assert_eq!(f.button(ButtonMode::Toggle, &note(false), false), None);
+        assert_eq!(f.button(ButtonMode::Toggle, &note(true), false), Some(ButtonAct::Flip));
+    }
+
+    #[test]
+    fn momentary_follows_the_button() {
+        let mut f = Follow::default();
+        assert_eq!(f.button(ButtonMode::Momentary, &note(true), false), Some(ButtonAct::Set(true)));
+        assert_eq!(f.button(ButtonMode::Momentary, &note(false), false), Some(ButtonAct::Set(false)));
+        assert_eq!(f.button(ButtonMode::Momentary, &note(false), false), None, "a second release");
+    }
+
+    #[test]
+    fn trigger_fires_once_per_press() {
+        let mut f = Follow::default();
+        assert_eq!(f.button(ButtonMode::Trigger, &note(true), false), Some(ButtonAct::Set(true)));
+        assert_eq!(f.button(ButtonMode::Trigger, &note(true), false), None);
+        assert_eq!(f.button(ButtonMode::Trigger, &note(false), false), None);
+        assert_eq!(f.button(ButtonMode::Trigger, &note(true), false), Some(ButtonAct::Set(true)));
+    }
+
+    #[test]
+    fn program_changes_press_every_time() {
+        let pc = CtlMsg { channel: 0, kind: CtlKind::Program { number: 4 }, value: 1.0, pressed: true };
+        let mut f = Follow::default();
+        assert_eq!(f.button(ButtonMode::Toggle, &pc, false), Some(ButtonAct::Flip));
+        assert_eq!(f.button(ButtonMode::Toggle, &pc, false), Some(ButtonAct::Flip));
+        assert_eq!(f.button(ButtonMode::Momentary, &pc, false), Some(ButtonAct::Set(true)));
+    }
+
+    #[test]
+    fn a_latching_button_presses_with_every_message() {
+        // It sends 127 at one press and 0 at the next, with nothing in between.
+        let cc = |v: u8| CtlMsg { channel: 0, kind: CtlKind::Cc { number: 20 }, value: v as f32 / 127.0, pressed: v > 63 };
+        let mut f = Follow::default();
+        assert_eq!(f.button(ButtonMode::Toggle, &cc(127), true), Some(ButtonAct::Flip));
+        assert_eq!(f.button(ButtonMode::Toggle, &cc(0), true), Some(ButtonAct::Flip));
+        assert_eq!(f.button(ButtonMode::Trigger, &cc(127), true), Some(ButtonAct::Set(true)));
+        assert_eq!(f.button(ButtonMode::Trigger, &cc(0), true), Some(ButtonAct::Set(true)));
+        // Momentary follows the button's own state.
+        assert_eq!(f.button(ButtonMode::Momentary, &cc(127), true), Some(ButtonAct::Set(true)));
+        assert_eq!(f.button(ButtonMode::Momentary, &cc(0), true), Some(ButtonAct::Set(false)));
+        // Not latching, the 0 is a release: Toggle acts every other message.
+        let mut f = Follow::default();
+        assert_eq!(f.button(ButtonMode::Toggle, &cc(127), false), Some(ButtonAct::Flip));
+        assert_eq!(f.button(ButtonMode::Toggle, &cc(0), false), None);
+    }
+
+    #[test]
+    fn buttons_on_a_continuous_parameter() {
+        let c = Controller { port: "P".into(), channel: 0, kind: CtlKind::Note { number: 60 } };
+        let mut a = Assignment::new(c, CtlTarget::MasterVolume);
+        assert_eq!(a.button_mode, ButtonMode::Trigger, "a pad on a fader sets it");
+        a.min = 0.2;
+        assert!((a.press_value(&note(true)) - 0.6).abs() < 1e-6, "the velocity's place in the range");
+        a.velocity = false;
+        assert_eq!(a.press_value(&note(true)), 1.0);
+        let mut f = Follow::default();
+        assert_eq!(f.button_value(ButtonAct::Flip, 0.9, 0.2), 0.9);
+        assert_eq!(f.button_value(ButtonAct::Flip, 0.9, 0.2), 0.2);
+        assert_eq!(f.button_value(ButtonAct::Set(true), 0.9, 0.2), 0.9);
+        assert_eq!(f.button_value(ButtonAct::Set(false), 0.9, 0.2), 0.2);
+        // A note on a switch toggles it, as a control change does.
+        let c = Controller { port: "P".into(), channel: 0, kind: CtlKind::Note { number: 60 } };
+        assert_eq!(Assignment::new(c, CtlTarget::Mute { track: 1 }).button_mode, ButtonMode::Toggle);
     }
 
     #[test]
@@ -436,15 +635,6 @@ mod tests {
     }
 
     #[test]
-    fn buttons_act_on_press() {
-        let mut f = Follow::default();
-        assert!(f.press(true));
-        assert!(!f.press(true), "held");
-        assert!(!f.press(false));
-        assert!(f.press(true));
-    }
-
-    #[test]
     fn finds_by_port_channel_and_controller() {
         let c = |port: &str, channel, number| Controller { port: port.into(), channel, kind: CtlKind::Cc { number } };
         let list = vec![
@@ -465,7 +655,10 @@ mod tests {
         let json = r#"{"assignments":[{"controller":{"port":"P","channel":0,"kind":{"type":"cc","number":7}},"target":{"type":"volume","track":3}}]}"#;
         let f: AssignmentFile = serde_json::from_str(json).unwrap();
         let a = &f.assignments[0];
-        assert_eq!((a.mode, a.min, a.max, a.feedback), (Takeover::Jump, 0.0, 1.0, true));
+        assert_eq!(
+            (a.mode, a.min, a.max, a.button_mode, a.velocity, a.latching, a.feedback),
+            (Takeover::Jump, 0.0, 1.0, ButtonMode::Toggle, true, false, true)
+        );
         assert_eq!(a.target, CtlTarget::Volume { track: 3 });
         let back: AssignmentFile = serde_json::from_str(&serde_json::to_string(&f).unwrap()).unwrap();
         assert_eq!(back.assignments, f.assignments);

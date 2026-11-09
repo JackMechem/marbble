@@ -3,8 +3,9 @@
 //! connects to it as one of its outputs, and the controller's moves come in through the hardware
 //! input path (`inject_midi_from`) under the same port name, so the two pair automatically.
 //! It checks what reaches the port after a mouse-style change, an undo, automation playback, a
-//! button press and the transport, a pitch bend's 14 bits, the rate limit, that nothing is echoed
-//! while the controller moves, Feedback off, pairing and a reconnected output.
+//! button press and the transport, a pitch bend's 14 bits, a button matrix's pads (notes), the
+//! rate limit, that nothing is echoed while the controller moves, Feedback off, pairing and a
+//! reconnected output.
 //! Prints SKIP when the system has no MIDI sequencer or virtual ports (Windows, CI runners
 //! without the ALSA sequencer).
 //! usage: feedback_check <scratch dir>
@@ -15,7 +16,7 @@ use daw_engine::audio_io::AudioConfig;
 use daw_engine::controllers::{db_to_fader, CtlKind, CtlTarget, Takeover, TransportAction};
 use daw_engine::feedback::MIN_GAP;
 use daw_engine::model::{AutoMode, AutoParam, AutoPoint, InputSel, TrackKind};
-use daw_engine::session::TrackPatch;
+use daw_engine::session::{AssignmentPatch, TrackPatch};
 use daw_engine::Session;
 use parking_lot::Mutex;
 
@@ -97,6 +98,17 @@ impl Rig {
         self.s.controller_assignments().iter().position(|r| r.assignment.controller.kind == kind).expect("assignment")
     }
 
+    /// Sets an assignment's takeover mode and range, as the window does.
+    fn set_range(&mut self, i: usize, mode: Takeover, min: f32, max: f32) {
+        self.s.update_controller_assignment(i, AssignmentPatch { mode: Some(mode), min: Some(min), max: Some(max), ..Default::default() }).unwrap();
+    }
+
+    /// A message from the controller (a pad's note), handled as `idle` does.
+    fn send(&mut self, msg: &[u8]) {
+        self.s.inject_midi_from(&self.port, msg);
+        self.s.idle();
+    }
+
     /// Idles past the quiet time after a controller's move.
     fn settle(&mut self) {
         std::thread::sleep(daw_engine::feedback::QUIET + Duration::from_millis(50));
@@ -160,13 +172,13 @@ fn main() {
 
     // A range: the controller shows where the fader is inside it.
     let i = r.index_of(CtlKind::Cc { number: 7 });
-    r.s.update_controller_assignment(i, Takeover::Jump, 0.0, 0.5).unwrap();
+    r.set_range(i, Takeover::Jump, 0.0, 0.5);
     r.s.update_track_linked(a, TrackPatch { volume_db: Some(-40.0), ..Default::default() });
     r.s.idle();
     let got = take(&r.rx);
     let want = ((db_to_fader(-40.0) / 0.5) * 127.0).round() as u8;
     check(&format!("feedback goes through the range ({got:?}, want {want})"), got == vec![[0xB0, 7, want]]);
-    r.s.update_controller_assignment(i, Takeover::Jump, 0.0, 1.0).unwrap();
+    r.set_range(i, Takeover::Jump, 0.0, 1.0);
     r.s.idle();
     take(&r.rx);
 
@@ -184,7 +196,7 @@ fn main() {
 
     // Pickup: the controller's moves don't reach the fader; once it stops, it is told where the
     // fader is (a motor fader goes there).
-    r.s.update_controller_assignment(i, Takeover::Pickup, 0.0, 1.0).unwrap();
+    r.set_range(i, Takeover::Pickup, 0.0, 1.0);
     r.s.update_track_linked(a, TrackPatch { volume_db: Some(0.0), ..Default::default() });
     r.s.idle();
     take(&r.rx);
@@ -199,7 +211,7 @@ fn main() {
         &format!("a Pickup controller that didn't catch the fader is told where it is once it stops ({during:?} then {after:?})"),
         during.is_empty() && after == vec![[0xB0, 7, cc_of(0.0)]] && vol(&r.s) == 0.0,
     );
-    r.s.update_controller_assignment(i, Takeover::Jump, 0.0, 1.0).unwrap();
+    r.set_range(i, Takeover::Jump, 0.0, 1.0);
 
     // The rate limit: the mouse moves the fader every 2 ms for 400 ms.
     let t0 = Instant::now();
@@ -317,6 +329,38 @@ fn main() {
     let n = (0.75f32 * 16383.0).round() as u16;
     check(&format!("a pitch bend controller gets 14 bits ({got:?})"), got == vec![[0xE0, (n & 0x7F) as u8, (n >> 7) as u8]]);
 
+    // A button matrix sending notes: each pad's light follows its Mute, toggled by the pad (lit
+    // when the pad is let go) or by the mouse.
+    let pads =
+        [r.s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap(), r.s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap()];
+    let muted = |s: &Session, t| s.project.track(t).unwrap().mute;
+    r.learn(CtlTarget::Mute { track: pads[0] }, &[0x90, 36, 100]);
+    r.send(&[0x80, 36, 0]);
+    r.learn(CtlTarget::Mute { track: pads[1] }, &[0x90, 37, 100]);
+    r.send(&[0x80, 37, 0]);
+    r.settle();
+    take(&r.rx);
+    r.send(&[0x90, 36, 100]);
+    let pressed = take(&r.rx);
+    r.send(&[0x80, 36, 0]);
+    let released = take(&r.rx);
+    check(
+        &format!("a pad toggles Mute on and its light is lit on release ({pressed:?} then {released:?})"),
+        muted(&r.s, pads[0]) && pressed.is_empty() && released == vec![[0x90, 36, 127]],
+    );
+    r.send(&[0x90, 36, 100]);
+    r.send(&[0x80, 36, 0]);
+    let got = take(&r.rx);
+    check(&format!("pressed again, Mute goes off and its light is put out ({got:?})"), !muted(&r.s, pads[0]) && got == vec![[0x90, 36, 0]]);
+    r.s.update_track_linked(pads[1], TrackPatch { mute: Some(true), ..Default::default() });
+    r.s.idle();
+    let got = take(&r.rx);
+    check(&format!("muting with the mouse lights the other pad ({got:?})"), got == vec![[0x90, 37, 127]]);
+    r.s.update_track_linked(pads[1], TrackPatch { mute: Some(false), ..Default::default() });
+    r.s.idle();
+    let got = take(&r.rx);
+    check(&format!("and unmuting puts it out ({got:?})"), got == vec![[0x90, 37, 0]]);
+
     // Feedback off for one assignment.
     let i = r.index_of(CtlKind::Cc { number: 7 });
     r.s.set_controller_feedback(i, false).unwrap();
@@ -352,8 +396,9 @@ fn main() {
     let got = take(&r.rx);
     check(
         &format!("a reconnected output gets every assignment's value ({got:?})"),
-        got.len() == 5
+        got.len() == 7
             && of(&got, 0xB0, 7) == vec![[0xB0, 7, cc_of(-3.0)]]
+            && of(&got, 0x90, 36) == vec![[0x90, 36, 0]]
             && of(&got, 0xB0, 30) == vec![[0xB0, 30, 0]]
             && of(&got, 0xB0, 31) == vec![[0xB0, 31, 127]],
     );

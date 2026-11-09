@@ -5,7 +5,7 @@
 // This module only imports types, so it runs under plain Node for the tests in tests/.
 import type { AutoParam, Id } from "./api";
 
-export type CtlKind = { type: "cc"; number: number } | { type: "pitch_bend" };
+export type CtlKind = { type: "cc"; number: number } | { type: "pitch_bend" } | { type: "note"; number: number } | { type: "program"; number: number };
 
 /** A physical control: its port (without ALSA's client:port numbers), channel 0..15 and kind. */
 export interface Controller {
@@ -36,6 +36,10 @@ export type CtlTarget =
 
 export type Takeover = "jump" | "pickup";
 
+/** What a button's press and release do: Toggle flips, Momentary is on while held, Trigger
+ *  switches on (or fires) once per press. */
+export type ButtonMode = "toggle" | "momentary" | "trigger";
+
 export interface Assignment {
   controller: Controller;
   target: CtlTarget;
@@ -43,9 +47,18 @@ export interface Assignment {
   /** The stretch of the parameter's travel (0..1) the controller sweeps; min > max inverts. */
   min: number;
   max: number;
+  /** For a note or program change, or a switch. */
+  button_mode: ButtonMode;
+  /** A note on a continuous parameter: its velocity picks the value in the range (else the top). */
+  velocity: boolean;
+  /** The button latches by itself (on at one press, off at the next): every message is a press. */
+  latching: boolean;
   /** Send the target's value back to the controller when its input has a paired output. */
   feedback: boolean;
 }
+
+/** The settings `update_controller_assignment` changes; the ones left out stay. */
+export type AssignmentPatch = Partial<Pick<Assignment, "mode" | "min" | "max" | "button_mode" | "velocity" | "latching">>;
 
 /** A row of the Controller Assignments window (`controller_assignments`). */
 export interface AssignmentRow extends Assignment {
@@ -63,6 +76,38 @@ export const MODE_OPTIONS: [Takeover, string][] = [
   ["pickup", "Pickup"],
 ];
 
+/** Notes and program changes are buttons whatever they drive. */
+export const isButtonKind = (k: CtlKind) => k.type === "note" || k.type === "program";
+
+/**
+ * What a row of the window edits: a controller moving a continuous parameter has a takeover mode
+ * and a range ("takeover"); a button (a note or program change) on one has a button mode and a
+ * range ("button-range"); a switch or transport button has only a button mode ("button").
+ */
+export function rowEditor(row: Pick<AssignmentRow, "controller" | "button">): "takeover" | "button-range" | "button" {
+  if (row.button) return "button";
+  return isButtonKind(row.controller.kind) ? "button-range" : "takeover";
+}
+
+const BUTTON_MODES: [ButtonMode, string][] = [
+  ["toggle", "Toggle"],
+  ["momentary", "Momentary"],
+  ["trigger", "Trigger"],
+];
+
+/** The button modes a row offers. A program change has no release, so no Momentary. */
+export function buttonOptions(row: Pick<AssignmentRow, "controller">): [ButtonMode, string][] {
+  return row.controller.kind.type === "program" ? BUTTON_MODES.filter(([m]) => m !== "momentary") : BUTTON_MODES;
+}
+
+/** What a switch's button mode does, in a few words, for the window. */
+export function buttonHint(mode: ButtonMode): string {
+  return mode === "toggle" ? "Press: on or off" : mode === "momentary" ? "On while held" : "Press: on";
+}
+
+/** Whether a row offers Latching: a switch driven by a button that can have a release. */
+export const offersLatching = (row: Pick<AssignmentRow, "controller" | "button">) => row.button && row.controller.kind.type !== "program";
+
 /** The transport buttons the window can learn. */
 export const TRANSPORT_TARGETS: { label: string; target: CtlTarget }[] = [
   { label: "Play / Stop", target: { type: "transport", action: "play" } },
@@ -70,9 +115,23 @@ export const TRANSPORT_TARGETS: { label: string; target: CtlTarget }[] = [
   { label: "Cycle", target: { type: "transport", action: "cycle" } },
 ];
 
-/** "CC 7" or "Pitch Bend". */
+const NOTE_NAMES = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
+
+/** A note's name, Logic-style: C3 is middle C (60). */
+export const noteName = (n: number) => `${NOTE_NAMES[n % 12]}${Math.floor(n / 12) - 2}`;
+
+/** "CC 7", "Pitch Bend", "Note C1" or "Program 5" (numbered from 1, as Settings › MIDI shows them). */
 export function controllerLabel(c: Controller): string {
-  return c.kind.type === "cc" ? `CC ${c.kind.number}` : "Pitch Bend";
+  switch (c.kind.type) {
+    case "cc":
+      return `CC ${c.kind.number}`;
+    case "pitch_bend":
+      return "Pitch Bend";
+    case "note":
+      return `Note ${noteName(c.kind.number)}`;
+    case "program":
+      return `Program ${c.kind.number + 1}`;
+  }
 }
 
 /** The Feedback checkbox's tooltip: where the value goes, or why nothing does. */

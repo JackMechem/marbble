@@ -1,6 +1,6 @@
 //! Controller assignments on the session side (the pure parts are in `crate::controllers`):
 //! learning an assignment for the last touched parameter, the global assignment list, and
-//! applying controller moves.
+//! applying controller moves and button presses.
 //!
 //! A controller move goes through the same session paths as the mouse: it makes an undo step
 //! (coalesced per parameter, like a fader drag), and while the transport plays in Touch, Latch
@@ -18,7 +18,9 @@
 use std::path::PathBuf;
 
 use super::*;
-use crate::controllers::{self as ctl, Assignment, AssignmentFile, Controller, CtlKind, CtlTarget, EqField, Follow, Takeover, TransportAction};
+use crate::controllers::{
+    self as ctl, Assignment, AssignmentFile, ButtonAct, ButtonMode, Controller, CtlKind, CtlMsg, CtlTarget, EqField, Follow, Takeover, TransportAction,
+};
 
 /// How long a controller holds its parameter after its last move (s).
 const RELEASE_SECS: f64 = 0.5;
@@ -41,6 +43,9 @@ pub(super) struct Controls {
     touched: Option<CtlTarget>,
     /// Automation touches held by controllers, and when each last moved.
     holding: Vec<(Id, AutoParam, Instant)>,
+    /// A button just learnt and when: if it sends nothing (no release) within
+    /// `ctl::LATCH_WAIT`, it latches by itself.
+    latch_probe: Option<(Controller, Instant)>,
 }
 
 /// An assignment as the Controller Assignments window shows it.
@@ -59,12 +64,34 @@ pub struct AssignmentRow {
     pub output: Option<String>,
 }
 
-/// "CC 7, channel 1" or "Pitch Bend, channel 1".
+/// The settings of an assignment the window changes; None leaves one alone.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(default)]
+pub struct AssignmentPatch {
+    pub mode: Option<Takeover>,
+    pub min: Option<f32>,
+    pub max: Option<f32>,
+    pub button_mode: Option<ButtonMode>,
+    pub velocity: Option<bool>,
+    pub latching: Option<bool>,
+}
+
+/// A note's name as Logic writes it (C3 is middle C, 60).
+fn note_name(n: u8) -> String {
+    const NAMES: [&str; 12] = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
+    format!("{}{}", NAMES[n as usize % 12], n as i32 / 12 - 2)
+}
+
+/// "CC 7, channel 1", "Pitch Bend, channel 1", "Note C1, channel 10" or "Program 5, channel 1".
 pub fn controller_label(c: &Controller) -> String {
-    match c.kind {
-        CtlKind::Cc { number } => format!("CC {number}, channel {}", c.channel + 1),
-        CtlKind::PitchBend => format!("Pitch Bend, channel {}", c.channel + 1),
-    }
+    let what = match c.kind {
+        CtlKind::Cc { number } => format!("CC {number}"),
+        CtlKind::PitchBend => "Pitch Bend".into(),
+        CtlKind::Note { number } => format!("Note {}", note_name(number)),
+        // Numbered from 1, as Settings › MIDI › Monitor shows them.
+        CtlKind::Program { number } => format!("Program {}", number as u16 + 1),
+    };
+    format!("{what}, channel {}", c.channel + 1)
 }
 
 fn round_to(v: f32, step: f32) -> f32 {
@@ -101,12 +128,27 @@ impl Session {
             .collect()
     }
 
-    /// Changes an assignment's takeover mode and range.
-    pub fn update_controller_assignment(&mut self, index: usize, mode: Takeover, min: f32, max: f32) -> Result<()> {
+    /// Changes an assignment's takeover mode, range or button behaviour.
+    pub fn update_controller_assignment(&mut self, index: usize, patch: AssignmentPatch) -> Result<()> {
         let a = self.controls.list.get_mut(index).ok_or_else(|| anyhow!("no such assignment"))?;
-        a.mode = mode;
-        a.min = if min.is_finite() { min.clamp(0.0, 1.0) } else { 0.0 };
-        a.max = if max.is_finite() { max.clamp(0.0, 1.0) } else { 1.0 };
+        if let Some(mode) = patch.mode {
+            a.mode = mode;
+        }
+        if let Some(min) = patch.min {
+            a.min = if min.is_finite() { min.clamp(0.0, 1.0) } else { 0.0 };
+        }
+        if let Some(max) = patch.max {
+            a.max = if max.is_finite() { max.clamp(0.0, 1.0) } else { 1.0 };
+        }
+        if let Some(button_mode) = patch.button_mode {
+            a.button_mode = button_mode;
+        }
+        if let Some(velocity) = patch.velocity {
+            a.velocity = velocity;
+        }
+        if let Some(latching) = patch.latching {
+            a.latching = latching;
+        }
         self.ctl_list_changed(true);
         Ok(())
     }
@@ -193,7 +235,10 @@ impl Session {
         let label = controller_label(&controller);
         // A controller drives one parameter.
         self.controls.list.retain(|a| a.controller != controller);
-        self.controls.list.push(Assignment::new(controller, target));
+        let a = Assignment::new(controller.clone(), target);
+        // A button that sends no release after the press it was learnt from latches by itself.
+        self.controls.latch_probe = (a.is_button() && !matches!(controller.kind, CtlKind::Program { .. })).then(|| (controller, Instant::now()));
+        self.controls.list.push(a);
         self.midi.set_learning(false);
         self.ctl_list_changed(true);
         self.controls.learned = Some(format!("{label} assigned to {name}"));
@@ -493,31 +538,30 @@ impl Session {
         }
     }
 
-    /// A button target was pressed.
-    fn ctl_press(&mut self, t: &CtlTarget) {
+    /// Switches a switch or transport button: to the other state, or on or off (doing nothing
+    /// when it already is).
+    fn ctl_switch(&mut self, t: &CtlTarget, act: ButtonAct) {
+        let Some(now) = self.ctl_value(t).map(|v| v >= 0.5) else { return };
+        let on = match act {
+            ButtonAct::Flip => !now,
+            ButtonAct::Set(v) => v,
+        };
+        if on == now {
+            return;
+        }
         match t {
-            CtlTarget::Mute { track } => {
-                let on = self.project.track(*track).map(|t| !t.mute);
-                self.update_track_linked(*track, TrackPatch { mute: on, ..Default::default() });
-            }
-            CtlTarget::Solo { track } => {
-                let on = self.project.track(*track).map(|t| !t.solo);
-                self.update_track_linked(*track, TrackPatch { solo: on, ..Default::default() });
-            }
-            CtlTarget::Arm { track } => {
-                let on = self.project.track(*track).map(|t| !t.armed);
-                self.update_track_linked(*track, TrackPatch { armed: on, ..Default::default() });
-            }
+            CtlTarget::Mute { track } => self.update_track_linked(*track, TrackPatch { mute: Some(on), ..Default::default() }),
+            CtlTarget::Solo { track } => self.update_track_linked(*track, TrackPatch { solo: Some(on), ..Default::default() }),
+            CtlTarget::Arm { track } => self.update_track_linked(*track, TrackPatch { armed: Some(on), ..Default::default() }),
             CtlTarget::Eq { field: EqField::On, .. } => {
-                // A band's on switch: the insert's toggle, flipped.
+                // A band's on switch: the insert's toggle.
                 if let Some(p) = self.ctl_legacy_eq(t) {
-                    let on = self.ctl_value(&p).unwrap_or(0.0) >= 0.5;
-                    self.ctl_set(&p, if on { 0.0 } else { 1.0 });
+                    self.ctl_set(&p, on as u8 as f32);
                 }
             }
             CtlTarget::Transport { action: TransportAction::Play } => self.toggle_play(),
             CtlTarget::Transport { action: TransportAction::Record } => {
-                if self.is_recording() {
+                if !on {
                     self.stop();
                 } else if let Err(e) = self.record() {
                     self.warning = Some(e.to_string());
@@ -525,8 +569,8 @@ impl Session {
             }
             CtlTarget::Transport { action: TransportAction::Cycle } => {
                 let c = self.project.cycle.clone();
-                if c.end > c.start {
-                    self.set_cycle(!c.enabled, c.start, c.end);
+                if c.end > c.start || !on {
+                    self.set_cycle(on, c.start, c.end);
                 } else {
                     // No locators yet: four bars from the playhead's bar, as the Cycle button.
                     let map = self.tempo_map();
@@ -556,18 +600,26 @@ impl Session {
         let mut moves: Vec<(usize, f32)> = Vec::new();
         for m in self.midi.take_controls() {
             let Some(msg) = ctl::parse(&m.data) else { continue };
-            if let Some((target, name)) = self.controls.learn.take() {
+            if self.controls.learn.is_some() {
+                // The release of a note held when the learn started isn't one to learn.
+                if msg.kind.is_button() && !msg.pressed {
+                    continue;
+                }
                 // The move that was learned doesn't act yet.
+                let (target, name) = self.controls.learn.take().unwrap();
                 self.ctl_learned(Controller { port: m.port.to_string(), channel: msg.channel, kind: msg.kind }, target, name);
                 continue;
             }
             let Some(i) = ctl::find(&self.controls.list, &m.port, &msg) else { continue };
             self.feedback_heard(i, m.data, msg.pressed);
-            let target = self.controls.list[i].target.clone();
-            if target.is_button() {
-                if self.controls.follow[i].press(msg.pressed) && self.ctl_value(&target).is_some() {
-                    self.ctl_press(&target);
-                    changed = true;
+            let a = &self.controls.list[i];
+            if self.controls.latch_probe.as_ref().is_some_and(|(c, _)| *c == a.controller) {
+                // It sent its release: on while held.
+                self.controls.latch_probe = None;
+            }
+            if a.is_button() {
+                if let Some(act) = self.controls.follow[i].button(a.button_mode, &msg, a.latching) {
+                    changed |= self.ctl_button(i, act, &msg);
                 }
             } else {
                 match moves.iter_mut().find(|(j, _)| *j == i) {
@@ -579,8 +631,43 @@ impl Session {
         for (i, value) in moves {
             changed |= self.ctl_move(i, value);
         }
+        self.ctl_latch_probe();
         self.ctl_release();
         changed
+    }
+
+    /// A button learnt a moment ago that hasn't sent its release latches by itself: from now
+    /// on every message of it is a press.
+    fn ctl_latch_probe(&mut self) {
+        let Some((c, at)) = &self.controls.latch_probe else { return };
+        if at.elapsed() < ctl::LATCH_WAIT {
+            return;
+        }
+        let c = c.clone();
+        self.controls.latch_probe = None;
+        if let Some(a) = self.controls.list.iter_mut().find(|a| a.controller == c) {
+            a.latching = true;
+            self.ctl_list_changed(true);
+        }
+    }
+
+    /// A button press or release on assignment `i`: a switch switches, a continuous parameter
+    /// goes to the press value or the bottom of the range.
+    fn ctl_button(&mut self, i: usize, act: ButtonAct, msg: &CtlMsg) -> bool {
+        let a = self.controls.list[i].clone();
+        if self.ctl_value(&a.target).is_none() {
+            return false;
+        }
+        if a.target.is_button() {
+            self.ctl_switch(&a.target, act);
+        } else {
+            let want = self.controls.follow[i].button_value(act, a.press_value(msg), a.scale(0.0));
+            self.ctl_set(&a.target, want);
+            if let Some(v) = self.ctl_value(&a.target) {
+                self.controls.follow[i].applied(v);
+            }
+        }
+        true
     }
 
     fn ctl_move(&mut self, i: usize, value: f32) -> bool {

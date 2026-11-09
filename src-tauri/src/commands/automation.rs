@@ -47,10 +47,11 @@ pub fn cancel_learn(state: State<AppState>) {
     with(&state, |s| s.cancel_learn())
 }
 
-/// Changes an assignment's takeover mode and range (global settings, not an undo step).
+/// Changes an assignment's takeover mode, range or button behaviour (global settings, not an
+/// undo step).
 #[tauri::command]
-pub fn update_controller_assignment(state: State<AppState>, index: usize, mode: Takeover, min: f32, max: f32) -> R<Vec<AssignmentRow>> {
-    with(&state, |s| s.update_controller_assignment(index, mode, min, max).map(|_| s.controller_assignments())).map_err(|e| e.to_string())
+pub fn update_controller_assignment(state: State<AppState>, index: usize, patch: AssignmentPatch) -> R<Vec<AssignmentRow>> {
+    with(&state, |s| s.update_controller_assignment(index, patch).map(|_| s.controller_assignments())).map_err(|e| e.to_string())
 }
 
 /// Turns an assignment's feedback to its controller on or off (a global setting).
