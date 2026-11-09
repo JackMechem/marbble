@@ -1234,7 +1234,11 @@ changing it takes a handshake that blocks only the main thread (`session/vst_key
 `Cmd::VstGate` makes the processor crossfade to dry over 5 ms and stop calling the plug-in
 (`Gate` in `plugin.rs`; `parked` says it has), the main thread cycles `setActive` around
 `activateBus`, and another `Cmd::VstGate` starts the plug-in again and, after its latency,
-crossfades back. A plug-in `process` isn't reaching (bypassed, on an Off track) stops at once.
+crossfades back. A plug-in `process` isn't reaching (bypassed, on an Off track or one sitting
+out) stops at once. One whose strip a processing thread is left with (see
+[Multi-core processing](#multi-core-processing)) can't be reached at all, and mustn't be called:
+`set_sidechain` refuses at once, saying so (`key_unreachable`), and `sync_vst_keys` leaves it until
+the track comes back with a new instance, which takes its slot's input.
 `update_pdc` calls `sync_vst_keys`, so every way a source can change is covered: choosing one, undo,
 a deleted source track. A new instance gets the right bus before its first `setActive`
 (`instantiate_keyed`). Without a key source the bus is inactive and filled with silence, flagged in

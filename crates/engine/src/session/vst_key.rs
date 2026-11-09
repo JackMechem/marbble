@@ -78,9 +78,29 @@ impl Session {
         }
     }
 
+    /// Why a VST3's aux input can't be switched now: the plug-in's strip is with a thread left in
+    /// a plug-in (this one or another of the track's, see `left_out.rs`), so it mustn't be called,
+    /// and the engine has only a stand-in without inserts, which no `Cmd::VstGate` reaches. When
+    /// the track comes back, its new instance takes the input its slot says.
+    pub(super) fn key_unreachable(&self, track: Id, uid: Id) -> Option<String> {
+        let c = self.controllers.get(&uid)?;
+        let held = self.held().iter().any(|h| h.track == track && c.instance() <= h.before);
+        if c.responsive() && !held {
+            return None;
+        }
+        let (plugin, name) = self.who(track, uid);
+        let plugin = plugin.unwrap_or_else(|| "The plug-in".into());
+        Some(format!("{plugin} can't switch its side-chain input while \"{name}\" sits out after a plug-in on it stopped responding."))
+    }
+
     /// Activates or deactivates a running plug-in's aux input. Leaves it as it was if the audio
-    /// thread doesn't answer, which the next `sync_vst_keys` tries again.
+    /// thread doesn't answer, which the next `sync_vst_keys` tries again, or if its strip is out
+    /// of the engine's reach (`key_unreachable`), without waiting for it.
     fn switch_key(&mut self, track: Id, uid: Id, on: bool) {
+        if let Some(why) = self.key_unreachable(track, uid) {
+            log::info!("side-chain: {why}");
+            return;
+        }
         self.send(Cmd::VstGate { track, uid, gate: VstGate::Close });
         let deadline = Instant::now() + GATE_WAIT;
         while self.audio.is_some() && Instant::now() < deadline && !self.controllers.get(&uid).is_some_and(|c| c.parked()) {

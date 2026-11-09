@@ -319,6 +319,11 @@ impl Session {
         if source.is_some() && !self.takes_key(track, slot) {
             return Err(anyhow!("{name} has no side-chain input"));
         }
+        if self.controllers.get(&uid).is_some_and(|c| c.has_key_input()) {
+            if let Some(why) = self.key_unreachable(track, uid) {
+                return Err(anyhow!(why));
+            }
+        }
         self.apply_sidechain(track, slot, uid, source);
         // update_pdc has brought a VST3's aux input along, unless that failed.
         if source.is_some() && self.controllers.get(&uid).is_some_and(|c| !c.key_active()) {

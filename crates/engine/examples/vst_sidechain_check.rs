@@ -4,9 +4,13 @@
 //! working around it. Skips when LSP isn't installed.
 //! usage: vst_sidechain_check <audio file> <scratch dir>
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use daw_engine::audio_io::AudioConfig;
+use daw_engine::dsp::parallel::tar_for_checks;
+use daw_engine::dsp::ParallelTest;
 use daw_engine::model::{Id, InputSel, TrackKind, MASTER_ID};
 use daw_engine::session::{BipOptions, TrackPatch};
 use daw_engine::Session;
@@ -185,6 +189,37 @@ fn main() {
     s.stop();
     check("the engine reported no trouble", s.tick().warning.is_none());
     check(&format!("it plays keyed after that ({:.2} dB)", level_of(&mut s)), (level_of(&mut s) - loud).abs() < 0.5);
+
+    // ---- a plug-in that stops responding on a worker --------------------------------------------
+    // With the key's track left out, the compressor's track sits out (it waits for the key) but
+    // keeps its strip: the switch is done at once, as nothing plays the plug-in to finish a fade.
+    left_out(&mut s, key, |s| {
+        let t = Instant::now();
+        let off = s.set_sidechain(main, 0, None);
+        let ms = t.elapsed().as_millis();
+        check(&format!("a plug-in on a track sitting out switches at once ({ms} ms, {off:?})"), off.is_ok() && s.vst_key_active(uid) == Some(false) && ms < 60);
+        s.set_sidechain(main, 0, Some(key)).unwrap();
+    });
+    // With its own track's strip left with the worker, the switch can't reach it: it says so at
+    // once rather than waiting for the engine, and the plug-in is left alone. (Unkeyed first, so
+    // that the track waits for no other and a worker can take it.)
+    s.set_sidechain(main, 0, None).unwrap();
+    left_out(&mut s, main, |s| {
+        let t = Instant::now();
+        let on = s.set_sidechain(main, 0, Some(key));
+        let ms = t.elapsed().as_millis();
+        let why = on.as_ref().err().map(|e| e.to_string()).unwrap_or_default();
+        check(&format!("on a track left with the worker it's refused at once ({ms} ms, {why:?})"), why.contains("sits out") && ms < 60);
+        let slot = s.project.track(main).unwrap().inserts[0].clone().unwrap();
+        check("and the plug-in is left as it was", s.vst_key_active(uid) == Some(false) && slot.sidechain.is_none());
+    });
+    let uid = s.project.track(main).unwrap().inserts[0].as_ref().unwrap().uid;
+    s.set_sidechain(main, 0, Some(key)).unwrap();
+    check(
+        &format!("back, it switches and plays keyed ({:.2} dB)", level_of(&mut s)),
+        s.vst_key_active(uid) == Some(true) && (level_of(&mut s) - loud).abs() < 0.5,
+    );
+    check("with nothing more to say", s.tick().warning.is_none());
 
     // ---- undo, a deleted source ------------------------------------------------------------------
     s.checkpoint("Side Chain", None, false);
@@ -446,6 +481,46 @@ fn gate_click_and_state(comp: &PluginDescriptor) {
         worst = worst.max(run(&mut p, false).0);
     }
     check(&format!("switching off, the largest step is {worst:.4}"), worst < 1.5 * own);
+}
+
+/// Plays with every block on four threads and a plug-in on `stuck` that stops responding on a
+/// worker (Tar), until the track and what it feeds sit out; runs `meanwhile`, then lets the plug-in
+/// return, waits for the tracks to come back and stops. Idles and ticks as the app does meanwhile.
+fn left_out(s: &mut Session, stuck: Id, meanwhile: impl FnOnce(&mut Session)) {
+    let threads = s.audio_config.processing_threads;
+    let hold = Arc::new(AtomicBool::new(true));
+    s.set_threads_for_checks(4, ParallelTest { always: true, renders: false, patient: false });
+    s.insert_for_checks(stuck, 7, tar_for_checks(999_999, s.sample_rate() as f32, hold.clone()));
+    s.play();
+    let status = s.engine_for_checks().lock().status.clone();
+    let mut said = Vec::new();
+    idle_until(s, &mut said, "no track was left out", &|| status.left_out.load(Ordering::Relaxed) > 0);
+    meanwhile(s);
+    hold.store(false, Ordering::SeqCst);
+    idle_until(s, &mut said, "the tracks didn't come back", &|| status.left_out.load(Ordering::Relaxed) == 0 && status.held().is_empty());
+    s.stop();
+    s.set_threads_for_checks(threads, ParallelTest::default());
+    std::thread::sleep(Duration::from_millis(60));
+    said.extend(s.tick().warning);
+    let name = &s.project.track(stuck).unwrap().name;
+    check(
+        &format!("the plug-in on \"{name}\" stopped responding and came back ({said:?})"),
+        said.iter().any(|w| w.contains("stopped responding")) && said.iter().any(|w| w.contains("responds again")),
+    );
+}
+
+/// Idles and ticks as the app does, keeping what the ticks say, until `done`.
+fn idle_until(s: &mut Session, said: &mut Vec<String>, what: &str, done: &dyn Fn() -> bool) {
+    let started = Instant::now();
+    loop {
+        s.idle();
+        said.extend(s.tick().warning);
+        if done() {
+            return;
+        }
+        assert!(started.elapsed().as_secs() < 30, "{what}");
+        std::thread::sleep(Duration::from_millis(5));
+    }
 }
 
 fn off(s: &mut Session, id: Id, v: bool) {

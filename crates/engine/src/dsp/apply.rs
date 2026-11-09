@@ -459,10 +459,12 @@ impl Engine {
                 self.resolve_keys();
             }
             Cmd::VstGate { track, uid, gate } => {
+                let sits_out = self.track_mut(track).is_some_and(|t| t.left_out);
                 if let Some(InsertDsp { plugin: Plugin::Vst(p), bypass, .. }) = self.insert_mut(track, uid) {
                     match gate {
-                        // A bypassed plug-in isn't running, so nothing would finish the fade.
-                        VstGate::Close if *bypass => p.shut_gate(),
+                        // A bypassed plug-in isn't running, and neither is one on a strip sitting
+                        // out, so nothing would finish the fade.
+                        VstGate::Close if *bypass || sits_out => p.shut_gate(),
                         VstGate::Close => p.close_gate(),
                         VstGate::Shut => p.shut_gate(),
                         VstGate::Open(settle) => p.open_gate(settle),

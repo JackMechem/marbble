@@ -58,7 +58,7 @@ impl Session {
     }
 
     /// The plug-in's name, if it's known, and its track's, for a message.
-    fn who(&self, track: Id, uid: Id) -> (Option<String>, String) {
+    pub(super) fn who(&self, track: Id, uid: Id) -> (Option<String>, String) {
         let t = self.project.track(track);
         let name = t.map_or_else(|| "a track".to_string(), |t| t.name.clone());
         let plugin = t.and_then(|t| t.inserts.iter().flatten().chain(t.instrument.iter()).find(|s| s.uid == uid)).map(|s| s.name.clone());

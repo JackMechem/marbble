@@ -63,6 +63,12 @@ All notable changes to Marbble are recorded here. The format follows
   column.
 ### Fixed
 
+- **A side-chain change on a track sitting out answers at once.** While a track sits out
+  because a plug-in on it stopped responding, choosing or clearing the side-chain of a VST3 on
+  it says at once that it can't change until the track is back. Before, it held the window up
+  for a tenth of a second first, and after clearing a side-chain or undoing a change to one,
+  every later edit did too until the track came back. A VST3 on a track that sits out only because it is fed by such a
+  track switches at once.
 - **An edit made just before Reset Audio Engine or opening a project is no longer applied twice.**
   If the audio device hadn't yet taken the last change (a new track, say) when the engine was
   rebuilt, the change could land on top of the rebuilt engine: the track then played twice, or
