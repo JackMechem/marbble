@@ -42,6 +42,7 @@ import { applyTheme } from "./themes";
 import { applyUiScale } from "./uiScale";
 import { keyboardFocus } from "./focusRing";
 import { leavesKeyToFocus } from "./keyNav";
+import { keepsKeys, textFieldMenu } from "./textKeys";
 
 const LABEL = getCurrentWindow().label;
 
@@ -503,7 +504,8 @@ export function installPanelWindow(opts: { menu: (id: string) => boolean }): () 
     wv.listen<SyncMsg>("ui-sync", (e) => applySync(e.payload)),
     wv.listen<{ from: string; settings: AppSettings }>("ui-settings", (e) => applySettings(e.payload)),
     wv.listen<string>("menu", (e) => {
-      if (!opts.menu(e.payload)) emitTo("main", "menu", e.payload).catch(() => {});
+      // A focused text field here takes its edits first (textKeys.ts).
+      if (!textFieldMenu(e.payload) && !opts.menu(e.payload)) emitTo("main", "menu", e.payload).catch(() => {});
     }),
     // The window's close button attaches the panel again (quitting closes it without asking).
     win.onCloseRequested(async () => {
@@ -518,7 +520,7 @@ export function installPanelWindow(opts: { menu: (id: string) => boolean }): () 
   const onKey = (e: KeyboardEvent) => {
     if (e.defaultPrevented || getState().dialog) return;
     const t = e.target as HTMLElement | null;
-    if (t && (t.tagName === "INPUT" || t.tagName === "SELECT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+    if (keepsKeys(t)) return;
     if (leavesKeyToFocus(e, t, keyboardFocus())) return;
     const id = commandForEvent(e);
     if (!id) return;

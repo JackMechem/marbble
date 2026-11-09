@@ -1727,6 +1727,11 @@ Audio Track Editor and meters are canvas drawings. The common pattern:
   [Sheets and key commands](#sheets-and-key-commands)), looks the key up with `commandForEvent`
   (which honours the overrides in `settings.json` › `ui.keymap`) and runs the matching entry in
   `KEY_ACTIONS`.
+- The native menu's accelerators (Select All, Undo, Redo, Delete Track) never reach `onKey`: the
+  menu bar takes the key and sends the item. `handleMenu` (and a panel window's menu listener)
+  first hands it to `textFieldMenu` (`textKeys.ts`), which makes the edit in a focused text field
+  instead (select its text, the field's own undo, delete the word before the caret), so a name
+  being typed keeps its editing keys.
 - Editors with their own keys (Piano Roll, Event List, Step Sequencer, Audio Track Editor,
   Musical Typing, Step Input, automation selection) handle them in their own listeners when
   they have focus. Edit › Select's key commands act on notes and events while the Piano Roll or
@@ -2790,6 +2795,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `sliderKeys.ts` | Keyboard steps for knobs, faders and sliders, and their ARIA props; pure, tested. |
 | `panText.ts` | A pan position as the strips' pan knobs show and say it ("C", "L 23", "R 40"; "Centre" spoken); pure, tested. |
 | `focusRing.ts` | Shows the focus ring only after Tab (`data-keyboard-focus` on `<html>`); tested. |
+| `textKeys.ts` | Text fields keep their editing keys: which elements keep keys from the key commands, and the native menu's Select All, Undo, Redo and Delete Track acting on a focused field; tested. |
 | `stripMeters.ts` | The clip indicator's readout and the gain-reduction meter's scale and fall; pure, tested. |
 | `vca.ts` | VCA offsets and loop checks for drawing the Mixer (mirrors `vca.rs`); pure, tested. |
 | `stripRows.ts` | How many insert and send rows strips side by side share (the Mixer's, the Inspector's pair), so their faders line up, and how many fit a short Mixer; pure, tested. |

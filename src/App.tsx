@@ -71,6 +71,7 @@ import { checkForUpdates, checkUpdatesAtLaunch } from "./updates";
 import { UpdateNotice } from "./components/UpdateNotice";
 import { keyboardFocus } from "./focusRing";
 import { leavesKeyToFocus } from "./keyNav";
+import { keepsKeys, textFieldMenu } from "./textKeys";
 
 function selectedTrack() {
   const s = getState().snap;
@@ -95,6 +96,8 @@ function moveSelection(d: number) {
 }
 
 function handleMenu(id: string) {
+  // Select All, Undo and the rest edit a focused name or search field (textKeys.ts).
+  if (textFieldMenu(id)) return;
   // With a range selected in the Audio Track editor, Split, Cut, Copy and Delete act on it.
   if (editorMenuCommand(id)) return;
   const s = getState();
@@ -518,7 +521,7 @@ function nudgeRegions(dir: number, step: Nudge = getSettings().ui.nudge) {
 
 function onKey(e: KeyboardEvent) {
   const tgt = e.target as HTMLElement;
-  if (tgt && (tgt.tagName === "INPUT" || tgt.tagName === "SELECT" || tgt.tagName === "TEXTAREA")) return;
+  if (keepsKeys(tgt)) return;
   if (getState().dialog) return;
   // Return and Space press what Tab focused (keyNav.ts) instead of going to the beginning and playing.
   if (leavesKeyToFocus(e, tgt, keyboardFocus())) return;

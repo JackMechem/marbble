@@ -70,6 +70,12 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Fixed
 
+- **Ctrl+A in a name field selects its text.** While renaming a track (or typing in any name or
+  search field), Ctrl+A (⌘A on macOS) selected every region in the project, Ctrl+Z undid the last
+  project edit and Ctrl+Backspace deleted the track, because the menu bar took those keys before
+  the field. They now act on the field: select its text, undo or redo the typing, delete the word
+  before the caret (⌘⌫: to the start of the line). Edit › Cut, Copy and Paste chosen from the
+  menu bar act on the field too.
 - **The Light and High Contrast themes' tints suit their grounds.** The last fixed tints, white or
   black at an opacity, now come from each theme. On Light, the Dynamics panels' zero line and the
   Plug-in Manager's row stripes are dark instead of white (so they show), and the dimming behind a
