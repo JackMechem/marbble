@@ -78,3 +78,22 @@ export function meterScale(width: number, thumbW: number, taper: Taper): (db: nu
     return t > 0 && width > 0 ? Math.min(1, thumbCenter(t, width, thumbW) / width) : 0;
   };
 }
+
+/** The parts of a track header that keep their own presses: its buttons and pop-ups, the name
+ *  being edited, the volume slider, the automation controls and the resize edge. */
+export const HEADER_CONTROLS = "button, input, select, textarea, a, [role='slider'], [role='button'], .th-auto, .th-resize";
+
+/** Whether a press on `target` in a track header may drag the track: anywhere that isn't one of
+ *  its controls (the name, the number, empty space), as in Logic. */
+export function dragsTrack(target: { closest?(selectors: string): unknown } | null): boolean {
+  return !!target && typeof target.closest === "function" && !target.closest(HEADER_CONTROLS);
+}
+
+/** How far (px) the pointer moves before a press on a header becomes a drag; less is a click. */
+export const REORDER_SLOP = 4;
+
+/** Where a dragged track goes, as an index into the tracks: before the first one whose middle
+ *  is below the pointer at `y` (content px, as `tops`). */
+export function reorderIndex(tops: number[], heights: number[], y: number): number {
+  return tops.filter((t, i) => t + heights[i] / 2 < y).length;
+}

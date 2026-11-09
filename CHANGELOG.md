@@ -16,6 +16,11 @@ All notable changes to Marbble are recorded here. The format follows
   Inspector's channel strips the icon has its own row between the automation mode and the pan
   knob, larger than before and level across the strips, and narrow strips show it too. The name
   plate is all name. Click the icon to choose another, as before.
+- **Move a track by dragging anywhere on its header.** As in Logic, a drag that starts on the
+  name, the number or empty space in a track header moves the track, not only one that starts on
+  its icon or number. The buttons, the volume slider and a name being edited keep their own
+  presses; a click without moving still selects the track and a double-click on the name still
+  renames it.
 - **Text drawn in the editors is on the interface's type scale.** The ruler, region and marker
   names, notes, the Piano Roll's keys, the tempo and signature tracks and the effect panels'
   graphs drew their text at their own sizes from 8 to 12 px, some in a different font. They now

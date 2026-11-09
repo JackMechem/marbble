@@ -14,7 +14,7 @@ import { canFreeze, toggleFreeze } from "../freeze";
 import { takeRowsHeight } from "../takes";
 import { fmt, keyHint } from "../keymap";
 import { withKey } from "../keyFormat";
-import { headerTier, nameLines } from "../trackHeader";
+import { dragsTrack, headerTier, nameLines, REORDER_SLOP, reorderIndex } from "../trackHeader";
 import { headerColumns, type SwitchId } from "../headerColumns";
 import { LinesText } from "./PathText";
 import { isTrackOff, powerTitle } from "../trackOff";
@@ -251,12 +251,16 @@ function Header({
       className={`track-header tier-${tier}` + (selected ? " selected" : "") + (primary ? " primary" : "") + (stack ? " stack" : "") + (track.hidden ? " is-hidden" : "") + (track.frozen ? " frozen" : "") + (off ? " is-off" : "")}
       style={{ height }}
       onMouseDown={(e) => {
-        if (e.button === 0) clickTrack(track.id, e);
+        if (e.button !== 0) return;
+        // A press anywhere that isn't a control can drag the track, as in Logic; without moving
+        // it just selects. (The controls mostly stop their own presses; this catches the rest.)
+        if (dragsTrack(e.target as Element)) onReorderStart(e, index);
+        else clickTrack(track.id, e);
       }}
       onContextMenu={menu}
     >
       <div className="th-color" style={{ background: track.color }} />
-      <div className="th-num" onMouseDown={(e) => onReorderStart(e, index)} title="Drag to reorder">
+      <div className="th-num" title="Drag to reorder">
         {index + 1}
       </div>
       {depth > 0 && <div className="th-indent" style={{ width: depth * INDENT }} />}
@@ -282,8 +286,10 @@ function Header({
           aria-haspopup="menu"
           title={(stack ? (track.kind === "summing" ? "Summing Stack · " : "Folder Stack · ") : track.kind === "aux" ? `Aux · Bus ${track.bus} · ` : "") + "Click to choose an icon, drag to reorder"}
           onMouseDown={(e) => {
-            // Not focused by the press: Space must stay Play, not open the picker.
+            // Not focused by the press: Space must stay Play, not open the picker. The header
+            // mustn't take the press as well (it would select the track twice).
             e.preventDefault();
+            e.stopPropagation();
             const el = e.currentTarget;
             onReorderStart(e, index, () => openTrackIconPicker(el, track));
           }}
@@ -370,7 +376,6 @@ export function TrackHeaders() {
   // the stack of the track it's dropped above (or the stack whose header it's dropped below).
   const startReorder = (e: React.MouseEvent, index: number, click?: () => void) => {
     if (e.button !== 0 || !project) return;
-    e.stopPropagation();
     clickTrack(project.tracks[index].id, e);
     const startY = e.clientY;
     const headerTop = (e.currentTarget as HTMLElement).closest(".track-header")!.getBoundingClientRect().top;
@@ -378,11 +383,9 @@ export function TrackHeaders() {
     let target = index;
     let moved = false;
     const move = (ev: MouseEvent) => {
-      if (!moved && Math.abs(ev.clientY - startY) < 4) return;
+      if (!moved && Math.abs(ev.clientY - startY) < REORDER_SLOP) return;
       moved = true;
-      // Insert before the first track whose middle is below the pointer.
-      const y = startContentY + (ev.clientY - startY);
-      target = layout.tops.filter((t, i) => t + layout.heights[i] / 2 < y).length;
+      target = reorderIndex(layout.tops, layout.heights, startContentY + (ev.clientY - startY));
       setDrop(target);
     };
     const up = () => {

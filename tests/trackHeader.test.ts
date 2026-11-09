@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { AUTO_LINE_H, COMPACT_TIER_H, FULL_TIER_H, headerTier, levelSliderSize, meterScale, meterTravel, nameLines, SLIDER_METER_FLOOR, thumbCenter, TWO_LINE_H } from "../src/trackHeader.ts";
 import { MIN_BODY_H, regionBar, fadeZone } from "../src/regionBar.ts";
+import { dragsTrack, HEADER_CONTROLS, REORDER_SLOP, reorderIndex } from "../src/trackHeader.ts";
 
 // The fader taper from time.ts (which can't be loaded here: it imports the tempo module).
 function dbToFader(db: number): number {
@@ -38,6 +39,34 @@ test("a name takes two lines only on a full header with room for them", () => {
   assert.equal(nameLines(TWO_LINE_H + AUTO_LINE_H, true), 2);
   // Two 16 px lines, the 6 px gap and the 21 px button row, with a few px above and below.
   assert.ok(TWO_LINE_H >= 2 * 16 + 6 + 21 + 8);
+});
+
+/** A stand-in element: `closest` finds the selector parts listed as its own or its ancestors'. */
+const el = (...matches: string[]) => ({
+  closest: (sel: string) => (sel.split(",").some((s) => matches.includes(s.trim())) ? {} : null),
+});
+
+test("a press on the name, the number or empty space drags the track; the controls keep theirs", () => {
+  assert.equal(dragsTrack(el()), true, "the name, the number column, a gap");
+  for (const part of ["button", "input", "select", "[role='slider']", ".th-auto", ".th-resize"]) {
+    assert.ok(HEADER_CONTROLS.includes(part), part);
+    assert.equal(dragsTrack(el(part)), false, part);
+  }
+  assert.equal(dragsTrack(null), false);
+  assert.equal(dragsTrack({}), false, "not an element");
+});
+
+test("a dragged track goes before the first track whose middle is below the pointer", () => {
+  const tops = [0, 64, 128, 128, 192];
+  const heights = [64, 64, 0, 64, 64];
+  assert.equal(reorderIndex(tops, heights, 10), 0);
+  assert.equal(reorderIndex(tops, heights, 33), 1);
+  assert.equal(reorderIndex(tops, heights, 100), 2, "above the second's middle");
+  // A collapsed stack's hidden subtrack (height 0) sits at the next track's top.
+  assert.equal(reorderIndex(tops, heights, 140), 3);
+  assert.equal(reorderIndex(tops, heights, 170), 4);
+  assert.equal(reorderIndex(tops, heights, 1000), 5, "past the last: at the end");
+  assert.ok(REORDER_SLOP > 0 && REORDER_SLOP < 8, "a click with a little hand movement stays a click");
 });
 
 test("the slider fits the smallest row, and is taller than the old slider and meter", () => {

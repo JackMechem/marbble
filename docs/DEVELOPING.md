@@ -335,7 +335,7 @@ instead and enforce rules that would otherwise only fail in the running app.
 | `tools.test.ts` | The Tracks area's tools (`src/tools.ts`) and the marquee (`src/marquee.ts`). |
 | `overview.test.ts` | The overview strip's mapping: time, track rows, the visible-area box, scroll and zoom drags. |
 | `scrolling.test.ts` | Mouse Wheel Scrolls (`src/wheel.ts`) and bringing the playhead into view (`revealLeft` in `src/view.ts`). |
-| `trackHeader.test.ts` | Track header layouts by height (and the name's lines), the volume slider's meter scale, and region name bars (`src/regionBar.ts`). |
+| `trackHeader.test.ts` | Track header layouts by height (and the name's lines), the volume slider's meter scale, where a press drags the track and where it drops, and region name bars (`src/regionBar.ts`). |
 | `autoLanes.test.ts` | Automation curves, Show Used Automation, the extra lanes and their boxes. |
 | `laneFollow.test.ts` | The shown lane following a plug-in moved to another track. |
 | `alternatives.test.ts` | Backup labels, alternative names and track alternatives (`src/alternativesModel.ts`). |

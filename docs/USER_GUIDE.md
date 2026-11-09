@@ -304,8 +304,10 @@ Track headers:
   and changes with the name until you choose one. Other tracks show their type's icon. The icon
   is saved with the track, copied by Duplicate Track and kept by templates; channel strip
   settings leave it alone.
-- **Reorder** by dragging the track number or icon (just the number on the shortest tracks,
-  which have no icon). A track dropped among a stack's subtracks
+- **Reorder** by dragging the header anywhere that isn't a control: the name, the number, the
+  icon or empty space (the buttons, the volume slider and a name being edited keep their own
+  presses). A click without moving still selects the track, and double-clicking the name still
+  renames it. A track dropped among a stack's subtracks
   (or right under an open stack's header) goes into that stack.
 - **Resize** by dragging the header's bottom edge. Alt-drag resizes every track, and
   double-clicking the edge resets the track. Ctrl+Down and Ctrl+Up (or Alt+wheel, or View ›
