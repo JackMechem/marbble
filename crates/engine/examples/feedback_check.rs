@@ -91,6 +91,11 @@ impl Rig {
         self.s.start_learn(Some(target)).unwrap();
         self.s.inject_midi_from(&self.port, msg);
         self.s.idle();
+        // A CC 0..31 may be a 14-bit controller's coarse part: the learn waits for a fine part.
+        if self.s.learning().is_some() {
+            std::thread::sleep(Duration::from_millis(150));
+            self.s.idle();
+        }
         assert!(self.s.tick().learned.is_some(), "learned");
     }
 

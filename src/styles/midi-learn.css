@@ -27,7 +27,7 @@
 .ctl-head,
 .ctl-row {
   display: grid;
-  grid-template-columns: 84px 46px minmax(0, 1fr) minmax(0, 1.6fr) 104px 64px 64px 76px 60px 78px;
+  grid-template-columns: 92px 46px minmax(0, 1fr) minmax(0, 1.6fr) 120px 64px 64px 76px 60px 78px;
   align-items: center;
   gap: 8px;
 }

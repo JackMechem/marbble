@@ -69,9 +69,9 @@ impl Session {
             return;
         }
         let outputs = self.midi_out.keys();
-        // (controller, output, the message showing its target's value: None when the target
-        // isn't in the project).
-        let wanted: Vec<(Controller, String, Option<[u8; 3]>)> = self
+        // (controller, output, the messages showing its target's value: None when the target
+        // isn't in the project or there's nothing to show).
+        let wanted: Vec<(Controller, String, Option<fb::Msgs>)> = self
             .ctl_list()
             .iter()
             .filter(|a| a.feedback)
@@ -91,8 +91,8 @@ impl Session {
             if fresh.contains(&out) {
                 state.forget();
             }
-            if let Some(m) = msg.and_then(|m| state.due(m, now)) {
-                batch.push((out, m));
+            if let Some(ms) = msg.and_then(|m| state.due(m, now)) {
+                batch.extend(ms.into_iter().map(|m| (out.clone(), m)));
             }
         }
         self.midi_out.send(batch);
@@ -102,6 +102,8 @@ impl Session {
     /// travel as the screen shows it (automation playing over the control included). None when
     /// the target isn't in the open project.
     fn ctl_shown(&self, t: &CtlTarget) -> Option<Shown> {
+        // A Selected Track target shows the selected track's control.
+        let t = &self.ctl_resolve(t)?;
         let own = self.ctl_value(t)?;
         let v = self.ctl_auto_param(t).and_then(|(track, p)| Some(auto_travel(&p, self.automation_shown(track, &p)?))).unwrap_or(own);
         Some(if t.is_button() { Shown::Switch(v >= 0.5) } else { Shown::Travel(v) })
@@ -118,7 +120,16 @@ impl Session {
             CtlTarget::Plugin { track, uid, param, .. } => (*track, AutoParam::Plugin { uid: *uid, param: *param, name: String::new() }),
             CtlTarget::Eq { .. } | CtlTarget::EqOutput { .. } => return self.ctl_auto_param(&self.ctl_legacy_eq(t)?),
             CtlTarget::MasterVolume => (MASTER_ID, AutoParam::Volume),
-            CtlTarget::Solo { .. } | CtlTarget::Arm { .. } | CtlTarget::Transport { .. } | CtlTarget::Command { .. } => return None,
+            CtlTarget::Selected { .. } => return self.ctl_auto_param(&self.ctl_resolve(t)?),
+            // No lane: switches without automation, and VCAs.
+            CtlTarget::Solo { .. }
+            | CtlTarget::Arm { .. }
+            | CtlTarget::Transport { .. }
+            | CtlTarget::Command { .. }
+            | CtlTarget::Monitor { .. }
+            | CtlTarget::Bypass { .. }
+            | CtlTarget::VcaLevel { .. }
+            | CtlTarget::VcaMute { .. } => return None,
         })
     }
 }

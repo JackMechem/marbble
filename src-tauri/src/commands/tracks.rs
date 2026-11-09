@@ -258,8 +258,19 @@ pub fn update_vca(state: State<AppState>, id: Id, patch: daw_engine::session::Vc
         _ => None,
     };
     match label {
-        Some((label, key)) => edit(&state, label, key, false, |s| s.update_vca(id, patch)),
-        None => snap(&state, |s| s.update_vca(id, patch)),
+        Some((label, key)) => edit(&state, label, key, false, |s| {
+            // A fader drag: Learn Assignment learns the VCA's level.
+            if patch.level_db.is_some() {
+                s.touched(CtlTarget::VcaLevel { vca: id });
+            }
+            s.update_vca(id, patch)
+        }),
+        None => snap(&state, |s| {
+            if patch.mute.is_some() {
+                s.touched(CtlTarget::VcaMute { vca: id });
+            }
+            s.update_vca(id, patch)
+        }),
     }
 }
 

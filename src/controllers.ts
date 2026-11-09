@@ -5,7 +5,15 @@
 // This module only imports types, so it runs under plain Node for the tests in tests/.
 import type { AutoParam, Id } from "./api";
 
-export type CtlKind = { type: "cc"; number: number } | { type: "pitch_bend" } | { type: "note"; number: number } | { type: "program"; number: number };
+export type CtlKind =
+  | { type: "cc"; number: number }
+  | { type: "pitch_bend" }
+  | { type: "note"; number: number }
+  | { type: "program"; number: number }
+  /** CC `number` (0..31) and `number` + 32 as one 14-bit controller. */
+  | { type: "cc14"; number: number }
+  /** A non-registered parameter number, 0..16383. */
+  | { type: "nrpn"; number: number };
 
 /** A physical control: its port (without ALSA's client:port numbers), channel 0..15 and kind. */
 export interface Controller {
@@ -34,9 +42,31 @@ export type CtlTarget =
   | { type: "master_volume" }
   | { type: "transport"; action: TransportAction }
   /** A key command (keymap.ts id) or a menu item with a key, run by the main window as its key. */
-  | { type: "command"; id: string };
+  | { type: "command"; id: string }
+  | { type: "monitor"; track: Id }
+  /** An Audio FX slot's bypass. */
+  | { type: "bypass"; track: Id; slot: number }
+  | { type: "vca_level"; vca: Id }
+  | { type: "vca_mute"; vca: Id }
+  /** A control of whichever track is selected when the controller moves. */
+  | { type: "selected"; param: SelectedParam };
+
+/** A Selected Track control (`plugin_param`: the focused plug-in's parameter by position). */
+export type SelectedParam =
+  | { type: "volume" }
+  | { type: "pan" }
+  | { type: "mute" }
+  | { type: "solo" }
+  | { type: "arm" }
+  | { type: "monitor" }
+  | { type: "send"; slot: number }
+  | { type: "bypass"; slot: number }
+  | { type: "plugin_param"; index: number };
 
 export type Takeover = "jump" | "pickup";
+
+/** How a control change is read: a position, or a relative encoder's steps in one of three codes. */
+export type Encoding = "absolute" | "twos_complement" | "sign_magnitude" | "binary_offset";
 
 /** What a button's press and release do: Toggle flips, Momentary is on while held, Trigger
  *  switches on (or fires) once per press. */
@@ -57,10 +87,13 @@ export interface Assignment {
   latching: boolean;
   /** Send the target's value back to the controller when its input has a paired output. */
   feedback: boolean;
+  encoding: Encoding;
+  /** A relative encoder's speed: at 1 a step is 1/127 of the range. */
+  sensitivity: number;
 }
 
 /** The settings `update_controller_assignment` changes; the ones left out stay. */
-export type AssignmentPatch = Partial<Pick<Assignment, "mode" | "min" | "max" | "button_mode" | "velocity" | "latching">>;
+export type AssignmentPatch = Partial<Pick<Assignment, "mode" | "min" | "max" | "button_mode" | "velocity" | "latching" | "encoding" | "sensitivity">>;
 
 /** A row of the Controller Assignments window (`controller_assignments`). */
 export interface AssignmentRow extends Assignment {
@@ -77,6 +110,27 @@ export const MODE_OPTIONS: [Takeover, string][] = [
   ["jump", "Jump"],
   ["pickup", "Pickup"],
 ];
+
+/** The Mode pop-up of a 7-bit control change: a takeover mode, or a relative encoding. */
+export type CcMode = Takeover | Exclude<Encoding, "absolute">;
+
+export const CC_MODE_OPTIONS: [CcMode, string][] = [
+  ...MODE_OPTIONS,
+  ["twos_complement", "Rel. 2's Compl."],
+  ["sign_magnitude", "Rel. Signed Bit"],
+  ["binary_offset", "Rel. Offset 64"],
+];
+
+/** A row's Mode pop-up value: its relative encoding, else its takeover mode. */
+export const ccMode = (a: Pick<Assignment, "mode" | "encoding">): CcMode => (a.encoding === "absolute" ? a.mode : a.encoding);
+
+/** The change choosing `m` in the Mode pop-up makes. */
+export function ccModePatch(m: CcMode): AssignmentPatch {
+  return m === "jump" || m === "pickup" ? { mode: m, encoding: "absolute" } : { encoding: m };
+}
+
+/** Only 7-bit control changes can be relative encoders. */
+export const canBeRelative = (k: CtlKind) => k.type === "cc";
 
 /** Notes and program changes are buttons whatever they drive. */
 export const isButtonKind = (k: CtlKind) => k.type === "note" || k.type === "program";
@@ -111,6 +165,24 @@ export function buttonHint(mode: ButtonMode, command = false): string {
 /** Whether a row offers Latching: a switch driven by a button that can have a release. */
 export const offersLatching = (row: Pick<AssignmentRow, "controller" | "button">) => row.button && row.controller.kind.type !== "program";
 
+/** Learn Selected Track…'s menu: the selected track's controls, sends, insert bypasses and its
+ *  focused plug-in's first parameters (`plugins` of them). */
+export function selectedTargets(plugins = 16): { label: string; target?: CtlTarget; children?: { label: string; target: CtlTarget }[] }[] {
+  const sel = (param: SelectedParam): CtlTarget => ({ type: "selected", param });
+  const range = (n: number) => [...Array(n).keys()];
+  return [
+    { label: "Volume", target: sel({ type: "volume" }) },
+    { label: "Pan", target: sel({ type: "pan" }) },
+    { label: "Mute", target: sel({ type: "mute" }) },
+    { label: "Solo", target: sel({ type: "solo" }) },
+    { label: "Record Enable", target: sel({ type: "arm" }) },
+    { label: "Input Monitoring", target: sel({ type: "monitor" }) },
+    { label: "Send", children: range(8).map((i) => ({ label: `Send ${i + 1}`, target: sel({ type: "send", slot: i }) })) },
+    { label: "Insert Bypass", children: range(8).map((i) => ({ label: `Insert ${i + 1} Bypass`, target: sel({ type: "bypass", slot: i }) })) },
+    { label: "Focused Plug-in", children: range(plugins).map((i) => ({ label: `Parameter ${i + 1}`, target: sel({ type: "plugin_param", index: i }) })) },
+  ];
+}
+
 /** The transport buttons the window can learn. */
 export const TRANSPORT_TARGETS: { label: string; target: CtlTarget }[] = [
   { label: "Play / Stop", target: { type: "transport", action: "play" } },
@@ -134,6 +206,10 @@ export function controllerLabel(c: Controller): string {
       return `Note ${noteName(c.kind.number)}`;
     case "program":
       return `Program ${c.kind.number + 1}`;
+    case "cc14":
+      return `CC ${c.kind.number}/${c.kind.number + 32}`;
+    case "nrpn":
+      return `NRPN ${c.kind.number}`;
   }
 }
 

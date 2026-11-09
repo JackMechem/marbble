@@ -7,6 +7,10 @@ import { call } from "../api";
 import {
   buttonHint,
   buttonOptions,
+  canBeRelative,
+  CC_MODE_OPTIONS,
+  ccMode,
+  ccModePatch,
   channelLabel,
   controllerLabel,
   feedbackTitle,
@@ -14,6 +18,7 @@ import {
   MODE_OPTIONS,
   offersLatching,
   rowEditor,
+  selectedTargets,
   toPercent,
   TRANSPORT_TARGETS,
   type AssignmentPatch,
@@ -46,10 +51,12 @@ function Row({ row, index, onChange }: { row: AssignmentRow; index: number; onCh
       <span className="ctl-param" title={name}>
         {name}
       </span>
-      {editor === "takeover" ? (
-        <Select value={row.mode} options={MODE_OPTIONS} onChange={(mode) => update({ mode })} width={104} />
+      {editor === "takeover" && canBeRelative(c.kind) ? (
+        <Select value={ccMode(row)} options={CC_MODE_OPTIONS} onChange={(m) => update(ccModePatch(m))} width={120} />
+      ) : editor === "takeover" ? (
+        <Select value={row.mode} options={MODE_OPTIONS} onChange={(mode) => update({ mode })} width={120} />
       ) : (
-        <Select value={row.button_mode} options={buttonOptions(row)} onChange={(button_mode) => update({ button_mode })} width={104} />
+        <Select value={row.button_mode} options={buttonOptions(row)} onChange={(button_mode) => update({ button_mode })} width={120} />
       )}
       {editor === "button" ? (
         <>
@@ -74,6 +81,16 @@ function Row({ row, index, onChange }: { row: AssignmentRow; index: number; onCh
             <Check checked={row.velocity} onChange={(velocity) => update({ velocity })} title="The note's velocity picks the value in the range; off, a press goes to Max">
               Velocity
             </Check>
+          ) : editor === "takeover" && row.encoding !== "absolute" ? (
+            <NumberField
+              value={row.sensitivity}
+              min={0.1}
+              max={20}
+              step={0.1}
+              width={64}
+              title="Sensitivity: how far one step of the encoder moves the parameter (1 is 1/127 of the range)"
+              onChange={(sensitivity) => update({ sensitivity })}
+            />
           ) : (
             <span />
           )}
@@ -102,6 +119,13 @@ function commandMenu(): MenuItem[] {
   return groups.map((g) => ({ label: g, children: all.filter((c) => c.group === g).map((c) => ({ label: c.label, onClick: () => learnCommand(c.id) })) }));
 }
 
+/** Learn Selected Track…'s menu. */
+function selectedMenu(): MenuItem[] {
+  return selectedTargets().map(({ label, target, children }) =>
+    children ? { label, children: children.map((c) => ({ label: c.label, onClick: () => learn(c.target) })) } : { label, onClick: () => learn(target!) },
+  );
+}
+
 /** The Controller Assignments sheet. */
 export function ControllerAssignmentsSheet() {
   const [rows, setRows] = useState<AssignmentRow[]>([]);
@@ -122,7 +146,7 @@ export function ControllerAssignmentsSheet() {
   const learnKey = keyHint("learn-assignment");
   return (
     // Non-modal, like Logic's window: Learn Assignment and the transport keys still work.
-    <Sheet title="Controller Assignments" onClose={close} width={940} mode="non-modal">
+    <Sheet title="Controller Assignments" onClose={close} width={960} mode="non-modal">
       <div className="ctl-head">
         <span>Controller</span>
         <span>Channel</span>
@@ -153,6 +177,9 @@ export function ControllerAssignmentsSheet() {
           </button>
           <button className="push" title="Assign a pad or button to any key command or menu item" {...onPress((e) => openMenuAt(e.currentTarget, commandMenu()))}>
             Learn Key Command…
+          </button>
+          <button className="push" title="Assign a controller to a control of whichever track is selected" {...onPress((e) => openMenuAt(e.currentTarget, selectedMenu()))}>
+            Learn Selected Track…
           </button>
         </div>
         <div className="sheet-buttons">

@@ -3,6 +3,7 @@
 // crates/engine/src/vca.rs and session/vca.rs.
 import { useLayoutEffect, useRef, useState } from "react";
 import { act, actMade, type Id, type Track, type Vca } from "../api";
+import { learnItems } from "../learn";
 import { useStore } from "../store";
 import { formatDb } from "../time";
 import { colorMenu, selectedTracks } from "../ops";
@@ -99,6 +100,9 @@ export function VcaStrip({ vca, rows }: { vca: Vca; rows: SlotRows }) {
       { separator: true },
       { label: "Create New VCA", onClick: () => createVca() },
       { label: "Delete VCA", onClick: () => act("delete_vca", { id: vca.id }) },
+      { separator: true },
+      // The VCA's fader, from a MIDI controller.
+      ...learnItems({ type: "vca_level", vca: vca.id }),
     ]);
   };
   const count = members + nested;

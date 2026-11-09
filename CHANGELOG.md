@@ -47,6 +47,14 @@ All notable changes to Marbble are recorded here. The format follows
   same things (an open dialog, typing in a text field). Its triggers are listed beside its keys.
   Controller Assignments has **Learn Key Command…** too. A pad in Momentary mode runs the command
   again on release, so Show/Hide Mixer shows the Mixer while held.
+- **MIDI Learn follows the selected track, drives VCAs, and reads encoders and 14-bit
+  controllers.** Controller Assignments › **Learn Selected Track…** assigns a controller to the
+  selected track's volume, pan, mute, solo, record, input monitoring, sends 1–8, insert bypasses
+  1–8 or its focused plug-in's parameters, whichever track is selected when you move it. VCA
+  faders (and their mutes) can be learned: right-click a VCA strip, or move it and press Ctrl+L.
+  Endless knobs work in their relative modes (2's complement, signed bit, offset 64) with a
+  sensitivity, and 14-bit controllers (CC 0–31 with 32–63) and NRPNs are learned as one
+  high-resolution controller.
 
 ### Fixed
 

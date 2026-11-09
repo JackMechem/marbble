@@ -353,6 +353,7 @@ fn main() {
             commands::controller_assignments,
             commands::start_learn,
             commands::cancel_learn,
+            commands::focus_plugin,
             commands::update_controller_assignment,
             commands::set_controller_feedback,
             commands::delete_controller_assignment,

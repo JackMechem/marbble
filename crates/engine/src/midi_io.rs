@@ -87,7 +87,7 @@ impl Controls {
     /// learning). Returns whether it was taken.
     fn take(&self, port: &Arc<str>, data: [u8; 3]) -> bool {
         let Some(m) = controllers::parse(&data) else { return false };
-        let ours = self.learning.load(Ordering::Relaxed) || self.assigned.lock().iter().any(|(p, ch, k)| **p == **port && *ch == m.channel && *k == m.kind);
+        let ours = self.learning.load(Ordering::Relaxed) || self.assigned.lock().iter().any(|(p, ch, k)| **p == **port && *ch == m.channel && k.takes(m.kind));
         if ours {
             let mut q = self.taken.lock();
             if q.len() >= TAKEN_LEN {

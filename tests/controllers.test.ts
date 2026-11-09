@@ -5,6 +5,9 @@ import {
   autoParamTarget,
   buttonHint,
   buttonOptions,
+  canBeRelative,
+  ccMode,
+  ccModePatch,
   channelLabel,
   controllerLabel,
   feedbackChoice,
@@ -15,6 +18,7 @@ import {
   isButtonKind,
   offersLatching,
   rowEditor,
+  selectedTargets,
   stripTarget,
   toPercent,
   type Controller,
@@ -36,6 +40,35 @@ test("notes and program changes are labelled as Settings › MIDI shows them", (
   assert.equal(channelLabel(pad), "Ch 10");
   assert.equal(controllerLabel({ ...pad, kind: { type: "note", number: 61 } }), "Note C♯3");
   assert.equal(controllerLabel({ ...pad, kind: { type: "program", number: 4 } }), "Program 5");
+});
+
+test("14-bit controllers and NRPNs are labelled by their numbers", () => {
+  const c = (kind: CtlKind): Controller => ({ port: "P", channel: 0, kind });
+  assert.equal(controllerLabel(c({ type: "cc14", number: 1 })), "CC 1/33");
+  assert.equal(controllerLabel(c({ type: "nrpn", number: 389 })), "NRPN 389");
+  assert.equal(rowEditor({ controller: c({ type: "nrpn", number: 389 }), button: false }), "takeover");
+});
+
+test("a control change's Mode pop-up holds the takeover mode and the relative encodings", () => {
+  assert.equal(ccMode({ mode: "pickup", encoding: "absolute" }), "pickup");
+  assert.equal(ccMode({ mode: "pickup", encoding: "binary_offset" }), "binary_offset");
+  assert.deepEqual(ccModePatch("jump"), { mode: "jump", encoding: "absolute" });
+  assert.deepEqual(ccModePatch("twos_complement"), { encoding: "twos_complement" });
+  // Only 7-bit control changes send encoder steps.
+  assert.ok(canBeRelative({ type: "cc", number: 16 }));
+  assert.ok(!canBeRelative({ type: "cc14", number: 1 }) && !canBeRelative({ type: "pitch_bend" }) && !canBeRelative({ type: "nrpn", number: 1 }));
+});
+
+test("Learn Selected Track offers the track's controls, eight sends and inserts, and plug-in parameters", () => {
+  const menu = selectedTargets(4);
+  assert.deepEqual(menu[0].target, { type: "selected", param: { type: "volume" } });
+  assert.deepEqual(
+    menu.find((m) => m.label === "Send")?.children?.map((c) => c.target),
+    [0, 1, 2, 3, 4, 5, 6, 7].map((slot) => ({ type: "selected", param: { type: "send", slot } })),
+  );
+  assert.equal(menu.find((m) => m.label === "Insert Bypass")?.children?.[7].label, "Insert 8 Bypass");
+  assert.deepEqual(menu.find((m) => m.label === "Focused Plug-in")?.children?.[3].target, { type: "selected", param: { type: "plugin_param", index: 3 } });
+  assert.ok(menu.some((m) => m.label === "Input Monitoring"));
 });
 
 test("each row edits what its controller and target need", () => {

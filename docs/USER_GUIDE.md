@@ -2783,8 +2783,9 @@ or motor faders are sent the values back, so they show what Marbble does (see
 
 ### Learning an assignment
 
-1. Move the control in Marbble: a fader, pan knob, send knob, Mute, Solo or Record button, a
-   Channel EQ setting, a built-in effect's knob, or a parameter in a plug-in's own window.
+1. Move the control in Marbble: a fader, pan knob, send knob, Mute, Solo, Record or Input
+   Monitoring button, a plug-in slot's bypass button, a VCA fader or its mute, a Channel EQ
+   setting, a built-in effect's knob, or a parameter in a plug-in's own window.
 2. Press **Ctrl+L** (Marbble › Control Surfaces › Learn Assignment for Last Touched
    Parameter). A banner says "Move a controller to assign it to …".
 3. Move a knob or fader (or press a button or pad) on your controller. The banner closes and a
@@ -2794,15 +2795,30 @@ or motor faders are sent the values back, so they show what Marbble does (see
 Or right-click the control and choose **Learn MIDI Assignment**. That works on the channel
 strip's fader, pan knob and send knobs (for Mute, Solo and Record, click the button and press
 Ctrl+L), on the Channel EQ editor's band buttons, frequency, gain, Q and Output fields, and on
-every control of a built-in effect. For a VST3 plug-in, show the parameter on an automation
-lane and right-click the lane's parameter pop-up in the track header, or move it in the
-plug-in's window and press Ctrl+L.
+every control of a built-in effect, and on a VCA strip in the Mixer (its fader). For a VST3
+plug-in, show the parameter on an automation lane and right-click the lane's parameter pop-up in
+the track header, or move it in the plug-in's window and press Ctrl+L.
 
 Control changes (CC 0–119), pitch bend, notes and program changes can be learned, on any MIDI
 input and channel. Pads and button matrices usually send notes: a note is learnt by its key
 (note on is the press, note off the release), and a key held down when the learn started isn't
-learnt by its release. A program change is learnt by its number. A controller drives one
-parameter: learning it again moves it to the new one.
+learnt by its release. A program change is learnt by its number. High-resolution controllers
+are learnt as one controller: a **14-bit** knob or fader, which sends CC 0–31 with its fine part
+on CC 32–63 (the window shows **CC 1/33**), and an **NRPN** (CC 99 and 98 choose the number, data
+entry CC 6 and 38 the value; the window shows **NRPN 130**). A control change from 0 to 31 that
+sends no fine part straight after is learnt as an ordinary controller a moment later. A
+controller drives one parameter: learning it again moves it to the new one.
+
+### Selected Track controls
+
+A general-purpose controller can follow what you're working on, as with Logic's Selected Track
+assignments. In Controller Assignments, **Learn Selected Track…** offers the selected track's
+**Volume**, **Pan**, **Mute**, **Solo**, **Record Enable**, **Input Monitoring**, **Send 1–8**,
+**Insert 1–8 Bypass**, and the **Focused Plug-in**'s parameters 1–16, by their position in the
+plug-in's parameter list. The control acts on whichever track is selected when you move it; with
+no track selected it does nothing. The focused plug-in is the one on that track whose panel or
+window you last opened or whose parameter you last moved, or else the track's instrument, or
+else its first Audio FX plug-in.
 
 ### How assignments behave
 
@@ -2835,7 +2851,12 @@ parameter: learning it again moves it to the new one.
   the next back to the bottom of the range; in Momentary the release goes back to the bottom of
   the range; in Trigger (the default) the press sets it and the release does nothing.
 - Messages from an assigned controller are taken: they don't also play the selected instrument
-  or get recorded, as in Logic. That includes an assigned note's note off. They still show in
+  or get recorded, as in Logic. That includes an assigned note's note off, both halves of a
+  14-bit controller, and on a channel with an NRPN assigned, every NRPN and RPN message
+  (CC 6, 38, 96–101).
+- A VCA fader moves as when you drag it (one undo step for a run of moves, not automated); a VCA
+  mute and the switches act as their buttons do. A plug-in slot's bypass is an undo step, as a
+  click on its button is. They still show in
   Settings › MIDI › Monitor.
 - Assignments are global settings, kept when you quit and used in every project. They refer to
   tracks and plug-ins by their position in the project's numbering, so an assignment learned
@@ -2878,8 +2899,20 @@ channel and input port) and the parameter. For each one:
   **Momentary** or **Trigger** (see above; a program change has no release, so it offers no
   Momentary). For a switch, what the mode does is written beside it, then **Latching** (see
   above).
+- **Mode**, for a 7-bit control change, also offers the **relative** encodings of endless
+  knobs (encoders), which send how far they turned rather than where they are:
+  **Rel. 2's Compl.** (two's complement: 1 to 63 up, 127 down to 65 down), **Rel. Signed Bit**
+  (sign-magnitude: 1 to 63 up, 65 to 127 down) and **Rel. Offset 64** (binary offset: 65 and up
+  up, 63 and down down). The
+  encoder moves the parameter from wherever it is, so there's no jump and no pickup. Pick the one
+  your controller's manual names; a knob that only ever moves one way or jumps to the ends is
+  the wrong one.
+- **Sensitivity**, for a relative encoder: how far one step moves the parameter; at 1 a step is
+  1/127 of the range, at 4 four times that. A relative encoder gets no feedback: its value isn't a
+  position.
 - **Min %** and **Max %**: the stretch of the parameter's travel the controller sweeps. Min
-  above Max turns the controller round. For a note, the stretch its velocity covers.
+  above Max turns the controller round. For a note, the stretch its velocity covers; for an
+  encoder, the stretch it moves within.
 - **Velocity**, for a note on a continuous parameter: off, every press goes to Max % whatever
   the velocity (a fixed value; set Min % for where Toggle and Momentary go back to).
 - **Feedback**: send the parameter's value back to the controller (on by default). Greyed when
@@ -2901,8 +2934,13 @@ whether the track is muted and a motor fader stands where the fader on screen do
   input and an output of the same name, and those are paired automatically; choose another
   output, or none, under Settings › MIDI › Feedback.
 - It is sent as the kind of message the controller sends: a CC value (through the assignment's
-  Min and Max, on the fader's taper for levels), a 14-bit pitch bend, or for Mute, Solo, Record
-  Enable, a Channel EQ band's on/off and the transport buttons 127 for on and 0 for off.
+  Min and Max, on the fader's taper for levels), a 14-bit pitch bend, a 14-bit CC pair (coarse
+  then fine part), an NRPN (its number, then its value by data entry), or a note on for a pad
+  (velocity 127 lit, 0 out; a pad on a fader gets the level as its velocity). Switches (Mute,
+  Solo, Record Enable, Input Monitoring, an insert's bypass, a VCA's mute, a Channel EQ band's
+  on/off and the transport buttons) are sent full on or off. A Selected Track control shows the
+  selected track's. Program changes, key commands and relative encoders get nothing: they have
+  no position to show.
 - It follows every change, whatever made it: the mouse, a plug-in's own window, automation
   playing in Read, Touch or Latch, undo and redo, opening a project, editing the assignment.
   When an output is connected (a controller plugged in, or switched on in Settings › MIDI), all

@@ -21,7 +21,8 @@ use std::path::PathBuf;
 
 use super::*;
 use crate::controllers::{
-    self as ctl, Assignment, AssignmentFile, ButtonAct, ButtonMode, Controller, CtlKind, CtlMsg, CtlTarget, EqField, Follow, Takeover, TransportAction,
+    self as ctl, Assignment, AssignmentFile, ButtonAct, ButtonMode, Controller, CtlKind, CtlMsg, CtlTarget, Encoding, EqField, Follow, HiRes, Learner,
+    SelectedParam, Takeover, TransportAction,
 };
 
 /// How long a controller holds its parameter after its last move (s).
@@ -50,6 +51,15 @@ pub(super) struct Controls {
     latch_probe: Option<(Controller, Instant)>,
     /// Key commands controllers fired since the last tick, oldest first.
     commands: Vec<String>,
+    /// 14-bit controllers' and NRPNs' state, per port and channel.
+    hires: HiRes,
+    /// What the learn in progress has heard.
+    learner: Learner,
+    /// The plug-in last opened or touched: the Selected Track's focused plug-in, when it's on
+    /// that track.
+    focused: Option<Id>,
+    /// Plug-ins' parameter ids in list order, and when each list was read (`ctl_param_id`).
+    param_ids: std::cell::RefCell<Vec<(Id, Instant, Vec<u32>)>>,
 }
 
 /// An assignment as the Controller Assignments window shows it.
@@ -78,6 +88,8 @@ pub struct AssignmentPatch {
     pub button_mode: Option<ButtonMode>,
     pub velocity: Option<bool>,
     pub latching: Option<bool>,
+    pub encoding: Option<Encoding>,
+    pub sensitivity: Option<f32>,
 }
 
 /// A note's name as Logic writes it (C3 is middle C, 60).
@@ -94,6 +106,8 @@ pub fn controller_label(c: &Controller) -> String {
         CtlKind::Note { number } => format!("Note {}", note_name(number)),
         // Numbered from 1, as Settings › MIDI › Monitor shows them.
         CtlKind::Program { number } => format!("Program {}", number as u16 + 1),
+        CtlKind::Cc14 { number } => format!("CC {number}/{} (14-bit)", number + 32),
+        CtlKind::Nrpn { number } => format!("NRPN {number}"),
     };
     format!("{what}, channel {}", c.channel + 1)
 }
@@ -152,6 +166,12 @@ impl Session {
         }
         if let Some(latching) = patch.latching {
             a.latching = latching;
+        }
+        if let Some(encoding) = patch.encoding {
+            a.encoding = encoding;
+        }
+        if let Some(sensitivity) = patch.sensitivity.filter(|v| v.is_finite()) {
+            a.sensitivity = sensitivity.clamp(0.05, 20.0);
         }
         self.ctl_list_changed(true);
         Ok(())
@@ -223,6 +243,7 @@ impl Session {
         let known = self.ctl_target_name(&target).ok_or_else(|| anyhow!("That parameter isn't in this project any more"))?;
         let name = name.filter(|n| !n.is_empty()).unwrap_or(known);
         self.controls.learn = Some((target, name.clone()));
+        self.controls.learner = Learner::default();
         self.midi.set_learning(true);
         Ok(name)
     }
@@ -274,7 +295,16 @@ impl Session {
 
     /// The user moved a parameter; Learn Assignment without a target learns this one.
     pub fn touched(&mut self, target: CtlTarget) {
+        if let CtlTarget::Plugin { uid, .. } = target {
+            self.controls.focused = Some(uid);
+        }
         self.controls.touched = Some(self.ctl_complete(target));
+    }
+
+    /// A plug-in's window or panel was opened or brought forward: on the selected track, the
+    /// Selected Track targets' plug-in parameters are its.
+    pub fn focus_plugin(&mut self, uid: Id) {
+        self.controls.focused = Some(uid);
     }
 
     /// A track's volume, pan or a switch was changed from the interface.
@@ -289,6 +319,8 @@ impl Session {
             CtlTarget::Solo { track }
         } else if patch.armed.is_some() {
             CtlTarget::Arm { track }
+        } else if patch.monitor.is_some() {
+            CtlTarget::Monitor { track }
         } else {
             return;
         };
@@ -323,10 +355,48 @@ impl Session {
         if let Some((track, s)) = tracks.chain(master).find_map(|(id, s)| s.map(|s| (id, s))) {
             let t = CtlTarget::Plugin { track, uid, plugin: s.plugin_id.clone(), param };
             self.controls.touched = Some(t);
+            self.controls.focused = Some(uid);
         }
     }
 
     // ---- targets --------------------------------------------------------------------------
+
+    /// What a target stands for now: a Selected Track target, the selected track's control
+    /// (None with no track selected, or no such control there); any other, itself.
+    pub(super) fn ctl_resolve(&self, t: &CtlTarget) -> Option<CtlTarget> {
+        let CtlTarget::Selected { param } = t else { return Some(t.clone()) };
+        let track = self.selected.filter(|id| self.project.track(*id).is_some())?;
+        if let SelectedParam::PluginParam { index } = *param {
+            let slot = self.ctl_focused_plugin(track)?;
+            let p = self.ctl_param_id(slot.uid, index as usize)?;
+            return Some(CtlTarget::Plugin { track, uid: slot.uid, plugin: slot.plugin_id.clone(), param: p });
+        }
+        param.on(track)
+    }
+
+    /// A plug-in's parameter id at `index` in its list. The lists are kept a moment, as
+    /// feedback asks every idle tick and a VST3 plug-in describes every parameter to give one.
+    fn ctl_param_id(&self, uid: Id, index: usize) -> Option<u32> {
+        let fresh = |at: &Instant| at.elapsed() < Duration::from_secs(2);
+        if let Some((_, _, ids)) = self.controls.param_ids.borrow().iter().find(|(u, at, _)| *u == uid && fresh(at)) {
+            return ids.get(index).copied();
+        }
+        let ids: Vec<u32> = self.plugin_params(uid).iter().map(|p| p.id).collect();
+        let id = ids.get(index).copied();
+        let mut cache = self.controls.param_ids.borrow_mut();
+        cache.retain(|(u, at, _)| *u != uid && fresh(at));
+        cache.push((uid, Instant::now(), ids));
+        id
+    }
+
+    /// The track's focused plug-in: the one last opened or touched, if it's on the track, else
+    /// its instrument, else its first Audio FX.
+    fn ctl_focused_plugin(&self, track: Id) -> Option<&PluginSlot> {
+        let t = self.project.track(track)?;
+        let mut all = t.instrument.iter().chain(t.inserts.iter().flatten());
+        let focused = self.controls.focused.and_then(|uid| all.find(|s| s.uid == uid));
+        focused.or(t.instrument.as_ref()).or_else(|| t.inserts.iter().flatten().next())
+    }
 
     /// A plug-in slot on a strip: its insert index (None for the instrument slot) and the slot.
     fn ctl_slot(&self, track: Id, uid: Id) -> Option<(Option<usize>, &PluginSlot)> {
@@ -427,6 +497,11 @@ impl Session {
             },
             // The window names it from its own list of commands.
             CtlTarget::Command { id } => format!("Key Command › {id}"),
+            CtlTarget::Monitor { track: id } => format!("{} › Input Monitoring", track(*id)?),
+            CtlTarget::Bypass { track: id, slot } => format!("{} › Insert {} Bypass", self.ctl_strip(*id)?, slot + 1),
+            CtlTarget::VcaLevel { vca } => format!("{} › Level", self.vca(*vca)?.name),
+            CtlTarget::VcaMute { vca } => format!("{} › Mute", self.vca(*vca)?.name),
+            CtlTarget::Selected { param } => format!("Selected Track › {}", param.name()),
         })
     }
 
@@ -457,6 +532,15 @@ impl Session {
             },
             // Nothing to show: a command has no state.
             CtlTarget::Command { .. } => return None,
+            CtlTarget::Monitor { track } => tr(*track)?.monitor as u8 as f32,
+            CtlTarget::Bypass { track, slot } => {
+                let inserts = if *track == MASTER_ID { &self.project.master.inserts } else { &tr(*track)?.inserts };
+                inserts.get(*slot as usize)?.as_ref()?.bypass as u8 as f32
+            }
+            CtlTarget::VcaLevel { vca } => ctl::db_to_fader(self.vca(*vca)?.level_db),
+            CtlTarget::VcaMute { vca } => self.vca(*vca)?.mute as u8 as f32,
+            // The selected track's control, if any.
+            CtlTarget::Selected { .. } => return self.ctl_value(&self.ctl_resolve(t)?),
         })
     }
 
@@ -514,7 +598,20 @@ impl Session {
                 self.ctl_hold(MASTER_ID, AutoParam::Volume);
                 self.set_master_volume_linked(round_to(ctl::fader_to_db(n), 0.1));
             }
-            CtlTarget::Mute { .. } | CtlTarget::Solo { .. } | CtlTarget::Arm { .. } | CtlTarget::Transport { .. } | CtlTarget::Command { .. } => {}
+            CtlTarget::VcaLevel { vca } => {
+                // As a drag of the VCA fader: one undo step, not automated.
+                self.checkpoint("VCA Level", Some(format!("vca:{vca}:level")), false);
+                self.update_vca(*vca, VcaPatch { level_db: Some(round_to(ctl::fader_to_db(n), 0.1)), ..Default::default() });
+            }
+            CtlTarget::Mute { .. }
+            | CtlTarget::Solo { .. }
+            | CtlTarget::Arm { .. }
+            | CtlTarget::Transport { .. }
+            | CtlTarget::Command { .. }
+            | CtlTarget::Monitor { .. }
+            | CtlTarget::Bypass { .. }
+            | CtlTarget::VcaMute { .. }
+            | CtlTarget::Selected { .. } => {}
         }
     }
 
@@ -573,6 +670,16 @@ impl Session {
             CtlTarget::Mute { track } => self.update_track_linked(*track, TrackPatch { mute: Some(on), ..Default::default() }),
             CtlTarget::Solo { track } => self.update_track_linked(*track, TrackPatch { solo: Some(on), ..Default::default() }),
             CtlTarget::Arm { track } => self.update_track_linked(*track, TrackPatch { armed: Some(on), ..Default::default() }),
+            CtlTarget::Monitor { track } => self.update_track_linked(*track, TrackPatch { monitor: Some(on), ..Default::default() }),
+            CtlTarget::Bypass { track, slot } => {
+                // As the slot's power button: an undo step.
+                if !self.is_frozen(*track) {
+                    self.checkpoint(if on { "Bypass Plug-in" } else { "Enable Plug-in" }, None, false);
+                    self.set_bypass(*track, *slot as usize, on);
+                }
+            }
+            // A performance switch, as on a track: no undo step.
+            CtlTarget::VcaMute { vca } => self.update_vca(*vca, VcaPatch { mute: Some(on), ..Default::default() }),
             CtlTarget::Eq { field: EqField::On, .. } => {
                 // A band's on switch: the insert's toggle.
                 if let Some(p) = self.ctl_legacy_eq(t) {
@@ -618,19 +725,25 @@ impl Session {
         let mut changed = false;
         // Continuous controllers: only the latest value of each matters in one batch.
         let mut moves: Vec<(usize, f32)> = Vec::new();
+        // Relative encoders: their steps add up.
+        let mut turns: Vec<(usize, i32)> = Vec::new();
+        let now = Instant::now();
         for m in self.midi.take_controls() {
-            let Some(msg) = ctl::parse(&m.data) else { continue };
+            let Some(raw) = ctl::parse(&m.data) else { continue };
             if self.controls.learn.is_some() {
-                // The release of a note held when the learn started isn't one to learn.
-                if msg.kind.is_button() && !msg.pressed {
-                    continue;
+                // What was learned doesn't act yet.
+                if let Some(c) = self.controls.learner.feed(&m.port, raw, now) {
+                    let (target, name) = self.controls.learn.take().unwrap();
+                    self.ctl_learned(c, target, name);
                 }
-                // The move that was learned doesn't act yet.
-                let (target, name) = self.controls.learn.take().unwrap();
-                self.ctl_learned(Controller { port: m.port.to_string(), channel: msg.channel, kind: msg.kind }, target, name);
                 continue;
             }
-            let Some(i) = ctl::find(&self.controls.list, &m.port, &msg) else { continue };
+            let Controls { list, hires, .. } = &mut self.controls;
+            let here = |a: &Assignment| a.controller.channel == raw.channel && *a.controller.port == *m.port;
+            let pair = |n: u8| list.iter().any(|a| here(a) && a.controller.kind == CtlKind::Cc14 { number: n });
+            let nrpn = list.iter().any(|a| here(a) && matches!(a.controller.kind, CtlKind::Nrpn { .. }));
+            let Some(msg) = hires.read(&m.port, raw, pair, nrpn) else { continue };
+            let Some(i) = ctl::find(list, &m.port, &msg) else { continue };
             self.feedback_heard(i, m.data, msg.pressed);
             let a = &self.controls.list[i];
             if self.controls.latch_probe.as_ref().is_some_and(|(c, _)| *c == a.controller) {
@@ -641,12 +754,27 @@ impl Session {
                 if let Some(act) = self.controls.follow[i].button(a.button_mode, &msg, a.latching) {
                     changed |= self.ctl_button(i, act, &msg);
                 }
+            } else if let Some(steps) = a.relative_steps(&msg) {
+                match turns.iter_mut().find(|(j, _)| *j == i) {
+                    Some(t) => t.1 += steps,
+                    None => turns.push((i, steps)),
+                }
             } else {
                 match moves.iter_mut().find(|(j, _)| *j == i) {
                     Some(mv) => mv.1 = msg.value,
                     None => moves.push((i, msg.value)),
                 }
             }
+        }
+        // A coarse part whose fine part didn't follow is learned as a 7-bit controller.
+        if self.controls.learn.is_some() {
+            if let Some(c) = self.controls.learner.poll(now) {
+                let (target, name) = self.controls.learn.take().unwrap();
+                self.ctl_learned(c, target, name);
+            }
+        }
+        for (i, steps) in turns {
+            changed |= self.ctl_turn(i, steps);
         }
         for (i, value) in moves {
             changed |= self.ctl_move(i, value);
@@ -681,15 +809,16 @@ impl Session {
             self.controls.commands.push(id.clone());
             return false;
         }
-        if self.ctl_value(&a.target).is_none() {
+        let Some(target) = self.ctl_resolve(&a.target) else { return false };
+        if self.ctl_value(&target).is_none() {
             return false;
         }
-        if a.target.is_button() {
-            self.ctl_switch(&a.target, act);
+        if target.is_button() {
+            self.ctl_switch(&target, act);
         } else {
             let want = self.controls.follow[i].button_value(act, a.press_value(msg), a.scale(0.0));
-            self.ctl_set(&a.target, want);
-            if let Some(v) = self.ctl_value(&a.target) {
+            self.ctl_set(&target, want);
+            if let Some(v) = self.ctl_value(&target) {
                 self.controls.follow[i].applied(v);
             }
         }
@@ -698,13 +827,27 @@ impl Session {
 
     fn ctl_move(&mut self, i: usize, value: f32) -> bool {
         let a = self.controls.list[i].clone();
-        let Some(current) = self.ctl_value(&a.target) else { return false };
+        let Some(target) = self.ctl_resolve(&a.target) else { return false };
+        let Some(current) = self.ctl_value(&target) else { return false };
         let want = a.scale(value);
         if !self.controls.follow[i].take(a.mode, want, current) {
             return false;
         }
-        self.ctl_set(&a.target, want);
-        if let Some(v) = self.ctl_value(&a.target) {
+        self.ctl_set(&target, want);
+        if let Some(v) = self.ctl_value(&target) {
+            self.controls.follow[i].applied(v);
+        }
+        true
+    }
+
+    /// A relative encoder on assignment `i` turned `steps`.
+    fn ctl_turn(&mut self, i: usize, steps: i32) -> bool {
+        let a = self.controls.list[i].clone();
+        let Some(target) = self.ctl_resolve(&a.target) else { return false };
+        let Some(current) = self.ctl_value(&target) else { return false };
+        let Some(want) = self.controls.follow[i].relative(&a, steps, current) else { return false };
+        self.ctl_set(&target, want);
+        if let Some(v) = self.ctl_value(&target) {
             self.controls.follow[i].applied(v);
         }
         true
@@ -739,6 +882,11 @@ fn missing_name(t: &CtlTarget) -> String {
         CtlTarget::EqOutput { .. } => "Channel EQ › Output".into(),
         CtlTarget::MasterVolume | CtlTarget::Transport { .. } => String::new(),
         CtlTarget::Command { id } => format!("Key Command › {id}"),
+        CtlTarget::Monitor { .. } => "Input Monitoring".into(),
+        CtlTarget::Bypass { slot, .. } => format!("Insert {} Bypass", slot + 1),
+        CtlTarget::VcaLevel { .. } => "VCA › Level".into(),
+        CtlTarget::VcaMute { .. } => "VCA › Mute".into(),
+        CtlTarget::Selected { param } => format!("Selected Track › {}", param.name()),
     };
     match t.track() {
         Some(MASTER_ID) => format!("Stereo Out › {what}"),

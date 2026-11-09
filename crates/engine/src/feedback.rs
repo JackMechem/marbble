@@ -10,7 +10,7 @@
 
 use std::time::{Duration, Instant};
 
-use crate::controllers::{Assignment, CtlKind};
+use crate::controllers::{Assignment, CtlKind, Encoding};
 
 /// The least time between two messages to one controller: at most 40 a second (the 30 ms idle
 /// tick makes it about 33), always with the latest value.
@@ -20,6 +20,10 @@ pub const MIN_GAP: Duration = Duration::from_millis(25);
 /// against the hand moving it. The same half second after which a controller lets go of its
 /// parameter (`session/controllers.rs`).
 pub const QUIET: Duration = Duration::from_millis(500);
+
+/// The messages that show one value on a controller (one, or two for a 14-bit controller, four
+/// for an NRPN).
+pub type Msgs = Vec<[u8; 3]>;
 
 /// What a controller should show.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -41,9 +45,14 @@ pub fn unscale(a: &Assignment, travel: f32) -> f32 {
     ((travel - lo) / (hi - lo)).clamp(0.0, 1.0)
 }
 
-/// The message that shows `value` on the assignment's controller, as the same kind of message
-/// the controller sends. None for a controller that has nothing to show.
-pub fn message(a: &Assignment, value: Shown) -> Option<[u8; 3]> {
+/// The messages that show `value` on the assignment's controller, as the same kind of message
+/// the controller sends (two for a 14-bit controller, four for an NRPN). None for a controller
+/// that has nothing to show: a program change, or a relative encoder, whose value isn't a
+/// position.
+pub fn message(a: &Assignment, value: Shown) -> Option<Msgs> {
+    if a.encoding != Encoding::Absolute {
+        return None;
+    }
     let v = match value {
         Shown::Switch(on) => on as u8 as f32,
         Shown::Travel(t) => unscale(a, t),
@@ -51,20 +60,26 @@ pub fn message(a: &Assignment, value: Shown) -> Option<[u8; 3]> {
     encode(a.controller.kind, a.controller.channel, v)
 }
 
-/// A controller value (0..1) as that controller's message. A new kind of controller needs its
+/// A controller value (0..1) as that controller's messages. A new kind of controller needs its
 /// arm here.
-pub fn encode(kind: CtlKind, channel: u8, v: f32) -> Option<[u8; 3]> {
+pub fn encode(kind: CtlKind, channel: u8, v: f32) -> Option<Msgs> {
     let ch = channel & 0x0F;
     let v = if v.is_finite() { v.clamp(0.0, 1.0) } else { 0.0 };
+    let fine = (v * 16383.0).round() as u16;
+    let (msb, lsb) = ((fine >> 7) as u8, (fine & 0x7F) as u8);
+    let one = |m: [u8; 3]| Some(vec![m]);
     match kind {
-        CtlKind::Cc { number } => Some([0xB0 | ch, number & 0x7F, (v * 127.0).round() as u8]),
-        CtlKind::PitchBend => {
-            let n = (v * 16383.0).round() as u16;
-            Some([0xE0 | ch, (n & 0x7F) as u8, (n >> 7) as u8])
+        CtlKind::Cc { number } => one([0xB0 | ch, number & 0x7F, (v * 127.0).round() as u8]),
+        CtlKind::PitchBend => one([0xE0 | ch, lsb, msb]),
+        // The coarse part, then the fine part, as the controller sends them.
+        CtlKind::Cc14 { number } => Some(vec![[0xB0 | ch, number & 0x1F, msb], [0xB0 | ch, (number & 0x1F) + 32, lsb]]),
+        // The number (CC 99, 98), then the value by data entry (CC 6, 38).
+        CtlKind::Nrpn { number } => {
+            Some(vec![[0xB0 | ch, 99, (number >> 7) as u8 & 0x7F], [0xB0 | ch, 98, (number & 0x7F) as u8], [0xB0 | ch, 6, msb], [0xB0 | ch, 38, lsb]])
         }
         // A pad's light: a note on, velocity 127 for on and 0 for off (a level in between for a
         // pad on a fader, which pads with colours or brightness show).
-        CtlKind::Note { number } => Some([0x90 | ch, number & 0x7F, (v * 127.0).round() as u8]),
+        CtlKind::Note { number } => one([0x90 | ch, number & 0x7F, (v * 127.0).round() as u8]),
         // A program change has no state to show.
         CtlKind::Program { .. } => None,
     }
@@ -85,7 +100,7 @@ fn canonical(d: [u8; 3]) -> [u8; 3] {
 pub struct Throttle {
     /// The last message sent to the controller or received from it: what it shows now. None
     /// when that isn't known (a new assignment, an output that was just connected).
-    shown: Option<[u8; 3]>,
+    shown: Option<Msgs>,
     sent_at: Option<Instant>,
     /// Feedback waits until then: the controller is being moved.
     quiet_until: Option<Instant>,
@@ -95,7 +110,7 @@ impl Throttle {
     /// The controller (a fader or knob) sent `data` at `now`: it shows that, and is being moved
     /// for [`QUIET`]. Buttons on switches go through [`Throttle::button`] instead.
     pub fn heard(&mut self, data: [u8; 3], now: Instant) {
-        self.shown = Some(canonical(data));
+        self.shown = Some(vec![canonical(data)]);
         self.quiet_until = Some(now + QUIET);
     }
 
@@ -111,11 +126,14 @@ impl Throttle {
     /// The message to send at `now` so the controller shows `want`, if any: none when it shows
     /// that already, while it is being moved, or within [`MIN_GAP`] of the last message (a
     /// later call sends the value then current, so the last one always goes).
-    pub fn due(&mut self, want: [u8; 3], now: Instant) -> Option<[u8; 3]> {
-        if self.shown == Some(want) || self.quiet_until.is_some_and(|t| now < t) || self.sent_at.is_some_and(|t| now.saturating_duration_since(t) < MIN_GAP) {
+    pub fn due(&mut self, want: Msgs, now: Instant) -> Option<Msgs> {
+        if self.shown.as_ref() == Some(&want)
+            || self.quiet_until.is_some_and(|t| now < t)
+            || self.sent_at.is_some_and(|t| now.saturating_duration_since(t) < MIN_GAP)
+        {
             return None;
         }
-        self.shown = Some(want);
+        self.shown = Some(want.clone());
         self.sent_at = Some(now);
         Some(want)
     }
@@ -181,10 +199,10 @@ mod tests {
     #[test]
     fn cc_carries_the_travel() {
         let a = assignment(CtlKind::Cc { number: 7 }, 2);
-        assert_eq!(message(&a, Shown::Travel(1.0)), Some([0xB2, 7, 127]));
-        assert_eq!(message(&a, Shown::Travel(0.0)), Some([0xB2, 7, 0]));
-        assert_eq!(message(&a, Shown::Travel(0.5)), Some([0xB2, 7, 64]));
-        assert_eq!(message(&a, Shown::Travel(f32::NAN)), Some([0xB2, 7, 0]));
+        assert_eq!(message(&a, Shown::Travel(1.0)), Some(vec![[0xB2, 7, 127]]));
+        assert_eq!(message(&a, Shown::Travel(0.0)), Some(vec![[0xB2, 7, 0]]));
+        assert_eq!(message(&a, Shown::Travel(0.5)), Some(vec![[0xB2, 7, 64]]));
+        assert_eq!(message(&a, Shown::Travel(f32::NAN)), Some(vec![[0xB2, 7, 0]]));
     }
 
     #[test]
@@ -196,7 +214,7 @@ mod tests {
             a.max = max;
             for v in 0..=127u8 {
                 let travel = a.scale(v as f32 / 127.0);
-                assert_eq!(message(&a, Shown::Travel(travel)), Some([0xB0, 1, v]), "{min}..{max} at {v}");
+                assert_eq!(message(&a, Shown::Travel(travel)), Some(vec![[0xB0, 1, v]]), "{min}..{max} at {v}");
             }
         }
     }
@@ -206,11 +224,11 @@ mod tests {
         let mut a = assignment(CtlKind::Cc { number: 1 }, 0);
         a.min = 0.25;
         a.max = 0.75;
-        assert_eq!(message(&a, Shown::Travel(0.1)), Some([0xB0, 1, 0]));
-        assert_eq!(message(&a, Shown::Travel(0.9)), Some([0xB0, 1, 127]));
+        assert_eq!(message(&a, Shown::Travel(0.1)), Some(vec![[0xB0, 1, 0]]));
+        assert_eq!(message(&a, Shown::Travel(0.9)), Some(vec![[0xB0, 1, 127]]));
         // A range of one point shows the bottom.
         a.max = 0.25;
-        assert_eq!(message(&a, Shown::Travel(0.9)), Some([0xB0, 1, 0]));
+        assert_eq!(message(&a, Shown::Travel(0.9)), Some(vec![[0xB0, 1, 0]]));
     }
 
     #[test]
@@ -218,31 +236,57 @@ mod tests {
         use crate::controllers::{db_to_fader, fader_to_db};
         let a = assignment(CtlKind::Cc { number: 7 }, 0);
         // 0 dB sits where CC 111 puts the fader, as on screen.
-        let unity = message(&a, Shown::Travel(db_to_fader(0.0))).unwrap()[2];
+        let unity = message(&a, Shown::Travel(db_to_fader(0.0))).unwrap()[0][2];
         assert!((fader_to_db(unity as f32 / 127.0)).abs() < 0.5, "{unity}");
-        assert_eq!(message(&a, Shown::Travel(db_to_fader(6.0))), Some([0xB0, 7, 127]));
-        assert_eq!(message(&a, Shown::Travel(db_to_fader(-120.0))), Some([0xB0, 7, 0]));
+        assert_eq!(message(&a, Shown::Travel(db_to_fader(6.0))), Some(vec![[0xB0, 7, 127]]));
+        assert_eq!(message(&a, Shown::Travel(db_to_fader(-120.0))), Some(vec![[0xB0, 7, 0]]));
     }
 
     #[test]
     fn pitch_bend_is_fourteen_bits() {
         let a = assignment(CtlKind::PitchBend, 1);
-        assert_eq!(message(&a, Shown::Travel(1.0)), Some([0xE1, 0x7F, 0x7F]));
-        assert_eq!(message(&a, Shown::Travel(0.0)), Some([0xE1, 0, 0]));
+        assert_eq!(message(&a, Shown::Travel(1.0)), Some(vec![[0xE1, 0x7F, 0x7F]]));
+        assert_eq!(message(&a, Shown::Travel(0.0)), Some(vec![[0xE1, 0, 0]]));
         // The centre is 8192 (0x2000): LSB 0, MSB 0x40.
-        assert_eq!(message(&a, Shown::Travel(8192.0 / 16383.0)), Some([0xE1, 0, 0x40]));
+        assert_eq!(message(&a, Shown::Travel(8192.0 / 16383.0)), Some(vec![[0xE1, 0, 0x40]]));
         // It reads back as the value it was made from.
-        let m = message(&a, Shown::Travel(0.3)).unwrap();
+        let m = message(&a, Shown::Travel(0.3)).unwrap()[0];
         assert!((crate::controllers::parse(&m).unwrap().value - 0.3).abs() < 1.0 / 16383.0);
     }
 
     #[test]
     fn a_pad_is_lit_by_a_note() {
         let a = assignment(CtlKind::Note { number: 36 }, 9);
-        assert_eq!(message(&a, Shown::Switch(true)), Some([0x99, 36, 127]));
-        assert_eq!(message(&a, Shown::Switch(false)), Some([0x99, 36, 0]));
-        assert_eq!(message(&a, Shown::Travel(0.5)), Some([0x99, 36, 64]));
+        assert_eq!(message(&a, Shown::Switch(true)), Some(vec![[0x99, 36, 127]]));
+        assert_eq!(message(&a, Shown::Switch(false)), Some(vec![[0x99, 36, 0]]));
+        assert_eq!(message(&a, Shown::Travel(0.5)), Some(vec![[0x99, 36, 64]]));
         assert_eq!(message(&assignment(CtlKind::Program { number: 3 }, 0), Shown::Switch(true)), None);
+    }
+
+    #[test]
+    fn high_resolution_controllers_get_14_bits() {
+        let a = assignment(CtlKind::Cc14 { number: 7 }, 1);
+        assert_eq!(message(&a, Shown::Travel(1.0)), Some(vec![[0xB1, 7, 127], [0xB1, 39, 127]]));
+        assert_eq!(message(&a, Shown::Travel(8192.0 / 16383.0)), Some(vec![[0xB1, 7, 64], [0xB1, 39, 0]]));
+        let a = assignment(CtlKind::Nrpn { number: 130 }, 0);
+        assert_eq!(message(&a, Shown::Travel(1.0)), Some(vec![[0xB0, 99, 1], [0xB0, 98, 2], [0xB0, 6, 127], [0xB0, 38, 127]]));
+        // They read back as the value they were made from.
+        let mut h = crate::controllers::HiRes::default();
+        let a = assignment(CtlKind::Cc14 { number: 7 }, 0);
+        let got = message(&a, Shown::Travel(0.3))
+            .unwrap()
+            .iter()
+            .filter_map(|m| h.read("P", crate::controllers::parse(m).unwrap(), |n| n == 7, false))
+            .last()
+            .unwrap();
+        assert!((got.value - 0.3).abs() < 1.0 / 16383.0);
+    }
+
+    #[test]
+    fn relative_encoders_get_no_feedback() {
+        let mut a = assignment(CtlKind::Cc { number: 16 }, 0);
+        a.encoding = Encoding::TwosComplement;
+        assert_eq!(message(&a, Shown::Travel(0.5)), None);
     }
 
     #[test]
@@ -251,23 +295,23 @@ mod tests {
         // The range is a fader's business, not a button's.
         a.min = 0.25;
         a.max = 0.5;
-        assert_eq!(message(&a, Shown::Switch(true)), Some([0xB0, 30, 127]));
-        assert_eq!(message(&a, Shown::Switch(false)), Some([0xB0, 30, 0]));
+        assert_eq!(message(&a, Shown::Switch(true)), Some(vec![[0xB0, 30, 127]]));
+        assert_eq!(message(&a, Shown::Switch(false)), Some(vec![[0xB0, 30, 0]]));
         let a = assignment(CtlKind::PitchBend, 0);
-        assert_eq!(message(&a, Shown::Switch(true)), Some([0xE0, 0x7F, 0x7F]));
+        assert_eq!(message(&a, Shown::Switch(true)), Some(vec![[0xE0, 0x7F, 0x7F]]));
     }
 
     #[test]
     fn throttle_sends_changes_only() {
         let t0 = Instant::now();
         let mut t = Throttle::default();
-        assert_eq!(t.due([0xB0, 7, 10], t0), Some([0xB0, 7, 10]), "the first value always goes");
+        assert_eq!(t.due(vec![[0xB0, 7, 10]], t0), Some(vec![[0xB0, 7, 10]]), "the first value always goes");
         let t1 = t0 + Duration::from_millis(100);
-        assert_eq!(t.due([0xB0, 7, 10], t1), None, "unchanged");
-        assert_eq!(t.due([0xB0, 7, 11], t1), Some([0xB0, 7, 11]));
+        assert_eq!(t.due(vec![[0xB0, 7, 10]], t1), None, "unchanged");
+        assert_eq!(t.due(vec![[0xB0, 7, 11]], t1), Some(vec![[0xB0, 7, 11]]));
         t.forget();
         let t2 = t1 + Duration::from_millis(100);
-        assert_eq!(t.due([0xB0, 7, 11], t2), Some([0xB0, 7, 11]), "sent again once forgotten");
+        assert_eq!(t.due(vec![[0xB0, 7, 11]], t2), Some(vec![[0xB0, 7, 11]]), "sent again once forgotten");
     }
 
     #[test]
@@ -277,8 +321,8 @@ mod tests {
         let mut sent = Vec::new();
         // A value changing every millisecond for half a second, asked every millisecond.
         for ms in 0..500u64 {
-            if let Some(m) = t.due([0xB0, 7, (ms / 4) as u8], t0 + Duration::from_millis(ms)) {
-                sent.push((ms, m[2]));
+            if let Some(m) = t.due(vec![[0xB0, 7, (ms / 4) as u8]], t0 + Duration::from_millis(ms)) {
+                sent.push((ms, m[0][2]));
             }
         }
         assert!(sent.len() <= 500 / MIN_GAP.as_millis() as usize + 1, "{} sent", sent.len());
@@ -287,9 +331,9 @@ mod tests {
         let last = (499 / 4) as u8;
         let after = t0 + Duration::from_millis(500) + MIN_GAP;
         if sent.last().map(|s| s.1) != Some(last) {
-            assert_eq!(t.due([0xB0, 7, last], after), Some([0xB0, 7, last]));
+            assert_eq!(t.due(vec![[0xB0, 7, last]], after), Some(vec![[0xB0, 7, last]]));
         }
-        assert_eq!(t.due([0xB0, 7, last], after + MIN_GAP), None);
+        assert_eq!(t.due(vec![[0xB0, 7, last]], after + MIN_GAP), None);
     }
 
     #[test]
@@ -298,26 +342,26 @@ mod tests {
         let mut t = Throttle::default();
         t.heard([0xB0, 7, 90], t0);
         // The parameter lands a little elsewhere (a stepped value): not sent back while moving.
-        assert_eq!(t.due([0xB0, 7, 88], t0 + Duration::from_millis(100)), None);
-        assert_eq!(t.due([0xB0, 7, 88], t0 + QUIET - Duration::from_millis(1)), None);
+        assert_eq!(t.due(vec![[0xB0, 7, 88]], t0 + Duration::from_millis(100)), None);
+        assert_eq!(t.due(vec![[0xB0, 7, 88]], t0 + QUIET - Duration::from_millis(1)), None);
         // After it stops, the controller is told where the parameter is.
-        assert_eq!(t.due([0xB0, 7, 88], t0 + QUIET), Some([0xB0, 7, 88]));
+        assert_eq!(t.due(vec![[0xB0, 7, 88]], t0 + QUIET), Some(vec![[0xB0, 7, 88]]));
         // Where the parameter is what the controller sent, nothing goes back at all.
         t.heard([0xB0, 7, 40], t0 + Duration::from_secs(2));
-        assert_eq!(t.due([0xB0, 7, 40], t0 + Duration::from_secs(3)), None);
+        assert_eq!(t.due(vec![[0xB0, 7, 40]], t0 + Duration::from_secs(3)), None);
     }
 
     #[test]
     fn a_button_light_is_set_on_release() {
         let t0 = Instant::now();
         let mut t = Throttle::default();
-        t.due([0xB0, 30, 0], t0);
+        t.due(vec![[0xB0, 30, 0]], t0);
         // A press switches Mute on: its light is lit once the button is let go, even though the
         // button itself sent 127 (its own light isn't lit by the press).
         t.button(false, t0 + Duration::from_secs(1));
-        assert_eq!(t.due([0xB0, 30, 127], t0 + Duration::from_secs(1)), None, "held");
+        assert_eq!(t.due(vec![[0xB0, 30, 127]], t0 + Duration::from_secs(1)), None, "held");
         t.button(true, t0 + Duration::from_millis(1080));
-        assert_eq!(t.due([0xB0, 30, 127], t0 + Duration::from_millis(1080)), Some([0xB0, 30, 127]));
+        assert_eq!(t.due(vec![[0xB0, 30, 127]], t0 + Duration::from_millis(1080)), Some(vec![[0xB0, 30, 127]]));
     }
 
     #[test]
@@ -325,7 +369,7 @@ mod tests {
         let t0 = Instant::now();
         let mut t = Throttle::default();
         t.heard([0x81, 36, 64], t0);
-        assert_eq!(t.due([0x91, 36, 0], t0 + QUIET), None);
+        assert_eq!(t.due(vec![[0x91, 36, 0]], t0 + QUIET), None);
     }
 
     #[test]
@@ -333,17 +377,17 @@ mod tests {
         let t0 = Instant::now();
         let ms = |n| t0 + Duration::from_millis(n);
         let mut t = Throttle::default();
-        assert_eq!(t.due([0x90, 36, 0], t0), Some([0x90, 36, 0]), "paired: out");
+        assert_eq!(t.due(vec![[0x90, 36, 0]], t0), Some(vec![[0x90, 36, 0]]), "paired: out");
         // Press 1 switches Mute on: nothing while held, lit on release.
         t.button(false, ms(100));
-        assert_eq!(t.due([0x90, 36, 127], ms(150)), None);
+        assert_eq!(t.due(vec![[0x90, 36, 127]], ms(150)), None);
         t.button(true, ms(220));
-        assert_eq!(t.due([0x90, 36, 127], ms(220)), Some([0x90, 36, 127]));
+        assert_eq!(t.due(vec![[0x90, 36, 127]], ms(220)), Some(vec![[0x90, 36, 127]]));
         // Press 2 switches it off. The pad's own note off isn't what its light shows: put out.
         t.button(false, ms(1000));
         t.button(true, ms(1120));
-        assert_eq!(t.due([0x90, 36, 0], ms(1120)), Some([0x90, 36, 0]));
-        assert_eq!(t.due([0x90, 36, 0], ms(1200)), None, "once");
+        assert_eq!(t.due(vec![[0x90, 36, 0]], ms(1120)), Some(vec![[0x90, 36, 0]]));
+        assert_eq!(t.due(vec![[0x90, 36, 0]], ms(1200)), None, "once");
     }
 
     #[test]

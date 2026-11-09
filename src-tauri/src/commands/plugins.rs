@@ -44,7 +44,20 @@ pub fn remove_plugin(state: State<AppState>, track: Id, slot: i64) -> Snapshot {
 
 #[tauri::command]
 pub fn set_bypass(state: State<AppState>, track: Id, slot: i64, bypass: bool) -> Snapshot {
-    edit(&state, if bypass { "Bypass Plug-in" } else { "Enable Plug-in" }, None, false, |s| s.set_bypass(track, slot_index(slot), bypass))
+    edit(&state, if bypass { "Bypass Plug-in" } else { "Enable Plug-in" }, None, false, |s| {
+        // An Audio FX slot's bypass can be learned (Learn Assignment); the instrument's can't.
+        if let Ok(slot) = u8::try_from(slot) {
+            s.touched(CtlTarget::Bypass { track, slot });
+        }
+        s.set_bypass(track, slot_index(slot), bypass)
+    })
+}
+
+/// A plug-in's panel or window was opened or brought forward: the selected track's controller
+/// assignments to its focused plug-in follow it.
+#[tauri::command]
+pub fn focus_plugin(state: State<AppState>, uid: Id) {
+    with(&state, |s| s.focus_plugin(uid))
 }
 
 #[tauri::command]

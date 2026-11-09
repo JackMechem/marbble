@@ -96,6 +96,7 @@ impl Session {
         let c = self.controllers.get_mut(&uid).ok_or_else(|| anyhow!("this plug-in has no editor"))?;
         c.open_editor(title).map_err(|e| anyhow!(e))?;
         self.watch_vst_edits(uid, false);
+        self.focus_plugin(uid);
         Ok(())
     }
 

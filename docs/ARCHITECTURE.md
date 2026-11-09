@@ -67,7 +67,7 @@ flowchart LR
 | **`recorder`** | `recorder.rs` | Every 10 ms, drains the ring buffer of each armed track into its WAV file and an in-memory copy, and keeps a peak preview for the UI. | Touch the engine or the project. |
 | **`ui-tick`** | `src-tauri/src/main.rs` | Every 33 ms: locks the session, builds a `Tick` (playhead, meters, input levels, recording previews, CPU, latency, analyzer spectrum, warnings, meters of open built-in effect panels, the clip indicators' held peaks, each strip's gain reduction) and emits it as the `tick` event. | Edit anything. |
 | **MIDI refresh** | `main.rs` | Every 3 s: `Session::refresh_midi`, so input and output devices plugged in later get connected. | |
-| **MIDI input callbacks** | midir, in `midi_io.rs` (one per port) | Drop system messages, take assigned controllers (CCs, pitch bend, notes with their note offs, program changes; all of them while learning) into a queue for `Session::idle` (controller assignments), apply the velocity curve, push the rest into the `live_midi` ring the engine reads, and log the message for Settings › MIDI. | |
+| **MIDI input callbacks** | midir, in `midi_io.rs` (one per port) | Drop system messages, take assigned controllers (CCs, pitch bend, notes with their note offs, program changes, both CCs of a 14-bit pair, the NRPN and RPN CCs on a channel with an NRPN assigned; all of them while learning; `CtlKind::takes`) into a queue for `Session::idle` (controller assignments), apply the velocity curve, push the rest into the `live_midi` ring the engine reads, and log the message for Settings › MIDI. | |
 | **`midi-out`** | `midi_out.rs` | Sends the controller feedback `Session::idle` hands it (batches through a channel) to the output ports. | Touch the session. |
 | **Async command workers** | Tauri's async runtime (`#[tauri::command(async)]`) | Offline renders (bounce, export, Bounce in Place, Freeze), plug-in rescans, waveform and transient requests, device lists, recent projects, the input level check, folder listings. Renders hold the session lock and the engine lock for their whole length; the parts that edit tracks or plug-ins are handed back to the main thread with `run_on_main_thread`. | Touch plug-in controllers. |
 | **Autosave writer** | `main.rs::autosave` | Writes an `AutosaveJob` (already serialized on the main thread) to disk, atomically. | |
@@ -1131,7 +1131,7 @@ at its new place (`old_name::relocated`).
 | `plugin-scan.json` | `plugin_db.rs` | The last scan's report (bundles, plug-ins, failures with reasons), for Settings › Plug-ins. |
 | `presets/<effect>/<name>.json` | `presets.rs` | User presets of the built-in effects, the Channel EQ among them (see [Presets](#presets)). |
 | `channel-strips/<name>.json` | `strip_settings.rs` | Saved channel strip settings (see [Channel strip settings](#channel-strip-settings)). |
-| `controller-assignments.json` | `session/controllers.rs` | MIDI Learn's controller assignments: controller (port without ALSA's client:port numbers, channel, and a CC number, pitch bend, a note number or a program number), target (track id and parameter, plug-in instance id with its plug-in id, a setting of the old fixed Channel EQ, Stereo Out, transport, or a key command by its keymap or menu id), takeover mode, range, button mode (`toggle`, `momentary`, `trigger`), whether the button latches by itself, whether a note's velocity sets the value, and whether feedback goes back to the controller. Fields added later have serde defaults, so older files load. Global, like Logic's; written atomically. |
+| `controller-assignments.json` | `session/controllers.rs` | MIDI Learn's controller assignments: controller (port without ALSA's client:port numbers, channel, and a CC number, pitch bend, a note number, a program number, a 14-bit CC pair by its MSB number or an NRPN number), target (track id and parameter including input monitoring and an insert's bypass, plug-in instance id with its plug-in id, a setting of the old fixed Channel EQ, Stereo Out, a VCA's level or mute by its id, a Selected Track control, transport, or a key command by its keymap or menu id), takeover mode, range, button mode (`toggle`, `momentary`, `trigger`), whether a note's velocity sets the value, the relative encoding and its sensitivity, whether the button latches by itself, and whether feedback goes back to the controller. Fields added later have serde defaults, so older files load. Global, like Logic's; written atomically. |
 | `templates/<name>.json` | `session/templates.rs` | User project templates (File › Save as Template…): a `Project` without regions, clips, freeze state or alternatives, with plug-in states. `new_from_template` loads one as a new untitled project at the device's rate, keeping its ids. |
 
 Interface-only state lives in the webview's `localStorage`:
@@ -2574,7 +2574,12 @@ through the same edit paths as the mouse (`session/controllers.rs`). The way bac
   keeps it (`ctl_value`), or what the automation plays over it while the transport runs in Read,
   Touch or Latch (`automation_shown`, the same rule as `useAutomation` in the frontend), and turns
   it into the controller's own kind of message (`feedback::message`): a CC through the inverse of
-  the assignment's range on the fader's taper, pitch bend in 14 bits, 127 or 0 for a switch. Only
+  the assignment's range on the fader's taper, pitch bend in 14 bits, a 14-bit CC pair as its
+  coarse then fine part, an NRPN as its number then data entry, a note on (velocity) for a pad,
+  127 or 0 for a switch; nothing for a program change, a key command (no value: `ctl_value` is
+  None) or a relative encoder. A Selected Track target is resolved first (`ctl_resolve`), so it
+  shows the selected track's control; its plug-in parameters' ids by position are cached for 2 s
+  (`ctl_param_id`), as a VST3 describes every parameter to give one. Only
   what differs from what the controller shows is sent, so every source of change (mouse, plug-in
   editor, automation, undo, opening a project, an assignment edit) is covered by one path and
   nothing has to remember to notify it.
@@ -2734,7 +2739,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `plugin_db.rs` | Out-of-process plug-in scanning, the cache, the scan report, the config folder. |
 | `prefs.rs` | `Prefs` (Settings) and the metronome and bit-depth types saved in projects. |
 | `clip.rs` | Audio held in memory, the waveform overview, and the zero-crossing search. |
-| `controllers.rs` | Controller assignments, the pure part: targets, reading CCs, pitch bend, notes and program changes, port names without ALSA's numbers, the fader taper, ranges, Jump and Pickup, and the button modes (`Follow::button`: Toggle, Momentary, Trigger). |
+| `controllers.rs` | Controller assignments, the pure part: targets (Selected Track ones resolve in the session when the controller moves), reading CCs, pitch bend, notes and program changes, 14-bit pairs and NRPNs (`HiRes`, state per port and channel), what a learn heard (`Learner`: a CC 0–31 waits 120 ms for its fine part), port names without ALSA's numbers, the fader taper, ranges, Jump and Pickup, relative encoders (`Encoding`, `Follow::relative`), and the button modes (`Follow::button`: Toggle, Momentary, Trigger). |
 | `decode.rs` | Decoding audio files in any supported format, resampling, WAV writing. |
 | `decode/gapless.rs` | MP4/M4A encoder delay and padding (`iTunSMPB` tag or edit list), trimmed after decoding. |
 | `audio_file.rs` | Writing bounces: `AudioFormat`, `BitDepth`, the shared dithering `Quantizer`. |

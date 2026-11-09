@@ -43,8 +43,10 @@ export function findFxSlot(project: Project | undefined, uid: Id): { track: Id; 
  *  sections run in one row, across the width. Its panel can still be floated from there. */
 const panelModeFor = (uid: Id) => (getState().snap?.project.tracks.some((t) => t.instrument?.uid === uid) ? "docked" : undefined);
 
-/** Opens an effect's panel (or brings it forward), docked or floating as Settings say (fxDock.ts). */
+/** Opens an effect's panel (or brings it forward), docked or floating as Settings say (fxDock.ts).
+ *  It becomes the focused plug-in Selected Track assignments drive. */
 export function openFxPanel(uid: Id) {
+  call("focus_plugin", { uid });
   openPanel(fxKey(uid), panelModeFor(uid));
 }
 
@@ -54,6 +56,7 @@ export function closeFxPanel(uid: Id) {
 
 /** A slot click: closes the panel if it is on screen, otherwise opens or shows it. */
 export function toggleFxPanel(uid: Id) {
+  call("focus_plugin", { uid });
   togglePanel(fxKey(uid), panelModeFor(uid));
 }
 

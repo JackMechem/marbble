@@ -1,13 +1,14 @@
 //! Exercises controller assignments (MIDI Learn) against a running engine (silent ALSA null
 //! output), with controller messages fed in through the hardware input path: learning, levels
 //! and plug-in parameters following, Pickup, ranges, buttons, notes and program changes with
-//! Toggle, Momentary and Trigger, latching buttons, key commands passed to the window,
-//! automation writing, consumed messages and the saved list.
+//! Toggle, Momentary and Trigger, latching buttons, key commands passed to the window, relative
+//! encoders, Selected Track targets, VCAs, 14-bit controllers and NRPNs, automation writing,
+//! consumed messages and the saved list.
 //! usage: controller_check <audio file> <scratch dir>
 use std::time::Duration;
 
 use daw_engine::audio_io::AudioConfig;
-use daw_engine::controllers::{ButtonMode, CtlKind, CtlTarget, Takeover, TransportAction};
+use daw_engine::controllers::{ButtonMode, CtlKind, CtlTarget, Encoding, SelectedParam, Takeover, TransportAction};
 use daw_engine::model::{AutoMode, AutoParam, InputSel, TrackKind};
 use daw_engine::session::{AssignmentPatch, TrackPatch};
 use daw_engine::Session;
@@ -43,7 +44,17 @@ fn learn(s: &mut Session, target: CtlTarget, number: u8) -> Option<String> {
 fn learn_msg(s: &mut Session, target: CtlTarget, msg: &[u8]) -> Option<String> {
     s.start_learn(Some(target)).unwrap();
     send(s, msg);
+    learn_wait(s);
     s.tick().learned
+}
+
+/// A control change 0..31 may be the coarse part of a 14-bit pair: the learn waits a moment
+/// for the fine part before taking it as a 7-bit controller.
+fn learn_wait(s: &mut Session) {
+    if s.learning().is_some() {
+        std::thread::sleep(Duration::from_millis(150));
+        s.idle();
+    }
 }
 
 fn index_of(s: &Session, number: u8) -> usize {
@@ -88,6 +99,7 @@ fn main() {
     check("the tick shows the learn", s.tick().learn.as_deref() == Some(name.as_str()));
     let before = vol(&s);
     cc(&mut s, 7, 30);
+    learn_wait(&mut s);
     let t = s.tick();
     check(&format!("a control change is learned ({:?})", t.learned), t.learned.is_some() && t.learn.is_none());
     check("the learning move doesn't act", vol(&s) == before);
@@ -367,6 +379,7 @@ fn main() {
     // A control change fires on going above 63, once until it comes back down.
     s.start_learn_named(Some(CtlTarget::Command { id: "undo".into() }), Some("Key Command › Undo".into())).unwrap();
     cc(&mut s, 60, 127);
+    learn_wait(&mut s);
     s.tick();
     cc(&mut s, 60, 0);
     cc(&mut s, 60, 127);
@@ -378,6 +391,147 @@ fn main() {
         let i = s.controller_assignments().iter().position(|r| r.assignment.target == CtlTarget::Command { id: id.into() }).unwrap();
         s.delete_controller_assignment(i).unwrap();
     }
+
+    // Relative encoders: steps move the parameter from where it is, and add up within a batch.
+    let pan = |s: &Session, t| s.project.track(t).unwrap().pan;
+    learn(&mut s, CtlTarget::Pan { track: a }, 16);
+    let enc = index_of(&s, 16);
+    s.update_controller_assignment(enc, AssignmentPatch { encoding: Some(Encoding::TwosComplement), ..Default::default() }).unwrap();
+    s.update_track_linked(a, TrackPatch { pan: Some(0.0), ..Default::default() });
+    for _ in 0..4 {
+        s.inject_midi_from(PORT, &[0xB0, 16, 2]);
+    }
+    s.idle();
+    let up = pan(&s, a);
+    check(&format!("an encoder's steps add up (8 steps: {up})"), (up - 16.0 / 127.0).abs() < 1.0 / 64.0);
+    cc(&mut s, 16, 127);
+    cc(&mut s, 16, 120);
+    let down = pan(&s, a);
+    check(&format!("two's complement turns down ({up} -> {down})"), down < up && (down - (up - 18.0 / 127.0)).abs() < 1.0 / 64.0);
+    s.update_controller_assignment(enc, AssignmentPatch { encoding: Some(Encoding::BinaryOffset), sensitivity: Some(4.0), ..Default::default() }).unwrap();
+    s.update_track_linked(a, TrackPatch { pan: Some(0.0), ..Default::default() });
+    cc(&mut s, 16, 66);
+    check(&format!("binary offset with sensitivity 4 ({})", pan(&s, a)), (pan(&s, a) - 16.0 / 127.0).abs() < 1.0 / 64.0);
+    s.update_controller_assignment(enc, AssignmentPatch { encoding: Some(Encoding::SignMagnitude), sensitivity: Some(1.0), ..Default::default() }).unwrap();
+    for _ in 0..200 {
+        s.inject_midi_from(PORT, &[0xB0, 16, 0x40 | 10]);
+    }
+    s.idle();
+    check(&format!("sign-magnitude turns down and stops at the end ({})", pan(&s, a)), pan(&s, a) == -1.0);
+    s.update_track_linked(a, TrackPatch { pan: Some(0.0), ..Default::default() });
+
+    // Selected Track targets follow the selection, and do nothing without one.
+    let b = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
+    let vol_of = |s: &Session, t| s.project.track(t).unwrap().volume_db;
+    let name = learn(&mut s, CtlTarget::Selected { param: SelectedParam::Volume }, 17);
+    check(&format!("a Selected Track target is learned ({name:?})"), name.is_some_and(|n| n.ends_with("Selected Track › Volume")));
+    s.select_track(Some(a));
+    cc(&mut s, 17, 127);
+    s.select_track(Some(b));
+    cc(&mut s, 17, 0);
+    check(&format!("it moves the selected track's fader ({} {})", vol_of(&s, a), vol_of(&s, b)), vol_of(&s, a) == 6.0 && vol_of(&s, b) <= -96.0);
+    s.select_track(None);
+    cc(&mut s, 17, 79);
+    check("with nothing selected it does nothing", vol_of(&s, a) == 6.0 && vol_of(&s, b) <= -96.0);
+    learn_msg(&mut s, CtlTarget::Selected { param: SelectedParam::Mute }, &[0x99, 50, 100]);
+    send(&mut s, &[0x89, 50, 0]);
+    s.select_track(Some(b));
+    send(&mut s, &[0x99, 50, 100]);
+    send(&mut s, &[0x89, 50, 0]);
+    check("Selected Track › Mute mutes the selected track", s.project.track(b).unwrap().mute && !s.project.track(a).unwrap().mute);
+    learn_msg(&mut s, CtlTarget::Selected { param: SelectedParam::Bypass { slot: 0 } }, &[0x99, 51, 100]);
+    send(&mut s, &[0x89, 51, 0]);
+    s.select_track(Some(a));
+    send(&mut s, &[0x99, 51, 100]);
+    send(&mut s, &[0x89, 51, 0]);
+    let bypassed = |s: &Session| s.project.track(a).unwrap().inserts[0].as_ref().unwrap().bypass;
+    check("Selected Track › Insert 1 Bypass bypasses its compressor", bypassed(&s));
+    send(&mut s, &[0x99, 51, 100]);
+    send(&mut s, &[0x89, 51, 0]);
+    check("and enables it again", !bypassed(&s));
+    // The focused plug-in's parameters by position.
+    let first = s.plugin_params(comp)[0].id;
+    let p0 = |s: &Session| s.builtin_params(comp).iter().find(|p| p.0 == first).map(|p| p.1).unwrap();
+    learn(&mut s, CtlTarget::Selected { param: SelectedParam::PluginParam { index: 0 } }, 18);
+    s.focus_plugin(comp);
+    cc(&mut s, 18, 0);
+    let lo = p0(&s);
+    cc(&mut s, 18, 127);
+    let hi = p0(&s);
+    check(&format!("Selected Track › Plug-in Parameter 1 moves the focused plug-in's first parameter ({lo} .. {hi})"), hi > lo);
+    s.select_track(Some(b));
+    cc(&mut s, 18, 0);
+    check("a track without plug-ins leaves it alone", p0(&s) == hi);
+    s.update_track_linked(b, TrackPatch { mute: Some(false), ..Default::default() });
+
+    // A VCA fader (#63).
+    let vca = s.create_vca(&[b]);
+    let level = |s: &Session| s.vca(vca).unwrap().level_db;
+    let name = learn(&mut s, CtlTarget::VcaLevel { vca }, 21);
+    check(&format!("a VCA's level is learned ({name:?})"), name.is_some_and(|n| n.ends_with("› Level")));
+    cc(&mut s, 21, 127);
+    let top = level(&s);
+    cc(&mut s, 21, 0);
+    check(&format!("the VCA fader follows ({top} {})", level(&s)), top == 6.0 && level(&s) <= -96.0);
+    check(&format!("as an undo step ({:?})", s.undo_label()), s.undo_label().as_deref() == Some("VCA Level"));
+    learn_msg(&mut s, CtlTarget::VcaMute { vca }, &[0x99, 52, 100]);
+    send(&mut s, &[0x89, 52, 0]);
+    send(&mut s, &[0x99, 52, 100]);
+    check("a VCA's mute button", s.vca(vca).unwrap().mute);
+    send(&mut s, &[0x89, 52, 0]);
+
+    // 14-bit controllers: learned from the pair, fine steps between coarse ones.
+    s.start_learn(Some(CtlTarget::Volume { track: b })).unwrap();
+    s.inject_midi_from(PORT, &[0xB0, 1, 100]);
+    s.inject_midi_from(PORT, &[0xB0, 33, 0]);
+    s.idle();
+    let t = s.tick();
+    check(&format!("a 14-bit pair is learned as one controller ({:?})", t.learned), t.learned.as_deref().is_some_and(|l| l.starts_with("CC 1/33 (14-bit)")));
+    std::thread::sleep(Duration::from_millis(50));
+    let seen = s.tick().midi_activity;
+    s.inject_midi_from(PORT, &[0xB0, 1, 120]);
+    s.inject_midi_from(PORT, &[0xB0, 33, 0]);
+    s.idle();
+    let coarse = vol_of(&s, b);
+    s.inject_midi_from(PORT, &[0xB0, 1, 120]);
+    s.inject_midi_from(PORT, &[0xB0, 33, 127]);
+    s.idle();
+    let fine = vol_of(&s, b);
+    check(
+        &format!("the fine part moves it between coarse steps ({coarse} < {fine})"),
+        fine > coarse && fine < daw_engine::controllers::fader_to_db(121.0 / 127.0),
+    );
+    std::thread::sleep(Duration::from_millis(50));
+    check("both parts are taken off the live path", s.tick().midi_activity == seen);
+    // A controller in 0..31 that sends no fine part is learned as an ordinary one.
+    s.start_learn(Some(CtlTarget::Pan { track: b })).unwrap();
+    cc(&mut s, 2, 64);
+    check("a coarse part alone waits", s.tick().learn.is_some());
+    std::thread::sleep(Duration::from_millis(150));
+    s.idle();
+    let t = s.tick();
+    check(&format!("then is a 7-bit controller ({:?})", t.learned), t.learned.as_deref().is_some_and(|l| l.starts_with("CC 2, channel 1")));
+
+    // NRPN: number 130 (1, 2), data entry MSB and LSB.
+    let nrpn = |s: &mut Session, msb: u8, lsb: u8| {
+        for d in [[0xB0, 99, 1], [0xB0, 98, 2], [0xB0, 6, msb], [0xB0, 38, lsb]] {
+            s.inject_midi_from(PORT, &d);
+        }
+        s.idle();
+    };
+    s.start_learn(Some(CtlTarget::Pan { track: b })).unwrap();
+    nrpn(&mut s, 64, 0);
+    let t = s.tick();
+    check(&format!("an NRPN is learned ({:?})", t.learned), t.learned.as_deref().is_some_and(|l| l.starts_with("NRPN 130")));
+    nrpn(&mut s, 127, 127);
+    let right = pan(&s, b);
+    nrpn(&mut s, 0, 0);
+    check(&format!("the NRPN moves the pan ({right} {})", pan(&s, b)), right == 1.0 && pan(&s, b) == -1.0);
+    std::thread::sleep(Duration::from_millis(50));
+    let seen = s.tick().midi_activity;
+    nrpn(&mut s, 64, 0);
+    std::thread::sleep(Duration::from_millis(50));
+    check("its messages are taken off the live path", s.tick().midi_activity == seen);
 
     // A target that isn't in the project is shown as missing and does nothing.
     learn(&mut s, CtlTarget::Volume { track: inst }, 40);
@@ -398,6 +552,10 @@ fn main() {
         again.len() == rows.len() && again.iter().zip(&rows).all(|(x, y)| x.assignment == y.assignment),
     );
     check("notes, program changes and button modes are saved", saved.contains("\"note\"") && saved.contains("\"program\"") && saved.contains("\"momentary\""));
+    check(
+        "selected-track, VCA, encoder, 14-bit and NRPN assignments are saved",
+        ["\"selected\"", "\"vca_level\"", "\"sign_magnitude\"", "\"cc14\"", "\"nrpn\""].iter().all(|k| saved.contains(k)),
+    );
     // A file from before notes were learnable loads with today's defaults.
     let old = scratch.join("old-assignments.json");
     std::fs::write(&old, r#"{"assignments":[{"controller":{"port":"P","channel":0,"kind":{"type":"cc","number":7}},"target":{"type":"mute","track":3},"mode":"pickup","min":0.0,"max":1.0}]}"#).unwrap();
