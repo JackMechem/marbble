@@ -131,10 +131,6 @@ impl Session {
             if !same(&cur.regions, &t.regions) {
                 self.push_regions(t.id);
             }
-            if !same(&cur.eq, &t.eq) {
-                let c = self.eq_coeffs(t);
-                self.send(Cmd::Eq(t.id, c));
-            }
             if !same(&cur.automation, &t.automation) {
                 self.send(Cmd::Automation(t.id, lanes_dsp(&t.automation)));
                 self.resync_builtins(t.id);

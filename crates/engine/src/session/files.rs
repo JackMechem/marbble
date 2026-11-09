@@ -115,6 +115,7 @@ impl Session {
         let dir = if dir.is_file() { dir.parent().unwrap_or(dir).to_path_buf() } else { dir.to_path_buf() };
         let text = std::fs::read_to_string(dir.join(file)).with_context(|| format!("reading {}", dir.display()))?;
         let mut project: Project = serde_json::from_str(&text)?;
+        let upgrade_warning = self.upgrade_document(&mut project);
         // Files from the projects folder's old name are found under its new one.
         for c in &mut project.clips {
             if let Some(p) = Path::new(&c.path).is_absolute().then(|| crate::old_name::relocated(Path::new(&c.path))).flatten() {
@@ -158,6 +159,12 @@ impl Session {
         missing.dedup();
         if !missing.is_empty() {
             self.warning = Some(format!("Not installed: {}. Their settings are kept with the project.", missing.join(", ")));
+        }
+        if let Some(w) = upgrade_warning {
+            self.warning = Some(match self.warning.take() {
+                Some(other) => format!("{other} {w}"),
+                None => w,
+            });
         }
         self.sampler.pool.forget_unused();
         self.sampler_warn_missing();

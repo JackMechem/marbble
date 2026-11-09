@@ -1,10 +1,10 @@
 // Channel strip settings, as in Logic's channel strip Setting menu: copy and paste a strip's
-// instrument, Audio FX and Channel EQ, reset a strip, and save settings to load in any project
-// (stored by the engine, see crates/engine/src/strip_settings.rs). Also resetting the clip
-// indicators, which sit on the same strips.
+// instrument and Audio FX (Channel EQs among them), reset a strip, and save settings to load in
+// any project (stored by the engine, see crates/engine/src/strip_settings.rs). Also resetting
+// the clip indicators, which sit on the same strips.
 import { invoke } from "@tauri-apps/api/core";
 import { ask } from "@tauri-apps/plugin-dialog";
-import { act, call, MASTER_ID, type ChannelEq, type Id, type PluginSlot } from "./api";
+import { act, call, MASTER_ID, type Id, type PluginSlot } from "./api";
 import type { MenuItem } from "./components/Menu";
 import { askName } from "./components/NameSheet";
 import { getState, setState } from "./store";
@@ -15,7 +15,6 @@ export interface StripSetting {
   version: number;
   instrument?: PluginSlot | null;
   inserts: (PluginSlot | null)[];
-  eq?: ChannelEq | null;
 }
 
 

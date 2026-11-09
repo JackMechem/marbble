@@ -1,14 +1,13 @@
 // The plug-in panels' state in the store: fxDock.ts's transitions applied to `State.fxDock` and
-// `State.bottom`, with `fxPanels` and `eqEditor` kept in step for the code that reads them, plus
+// `State.bottom`, with `fxPanels` kept in step for the code that reads it, plus
 // the floating windows' remembered sizes.
-import type { Id } from "./api";
 import * as dock from "./fxDock";
-import { eqKey, fxKey, parseKey, type DockState, type PanelKey, type PanelMode, type Size } from "./fxDock";
+import { fxKey, parseKey, type DockState, type PanelKey, type PanelMode, type Size } from "./fxDock";
 import { closeDetached, detachPanel } from "./detach";
 import { getSettings } from "./prefs";
 import { getState, setState, useStore, type State } from "./store";
 
-export { eqKey, fxKey, parseKey, type PanelKey };
+export { fxKey, parseKey, type PanelKey };
 
 const dockOf = (s: State): DockState => ({ ...s.fxDock, bottom: s.bottom });
 
@@ -30,8 +29,7 @@ export function dockPatch(s: State, f: (s: DockState) => DockState): Partial<Sta
   return {
     fxDock,
     bottom,
-    fxPanels: refs.flatMap((r) => (r?.kind === "fx" ? [r.uid] : [])),
-    eqEditor: refs.find((r) => r?.kind === "eq")?.track ?? null,
+    fxPanels: refs.flatMap((r) => (r ? [r.uid] : [])),
   };
 }
 
@@ -70,9 +68,6 @@ export const escTarget = (): PanelKey | null => dock.escTarget(dockOf(getState()
 export function usePanelShown(key: PanelKey | null): boolean {
   return useStore((s) => key !== null && (dock.isShown(dockOf(s), key) || s.detached.includes(key)));
 }
-
-/** The Channel EQ thumbnail's click. */
-export const toggleEqPanel = (track: Id) => togglePanel(eqKey(track));
 
 // ---- remembered floating sizes ----------------------------------------------------------------
 

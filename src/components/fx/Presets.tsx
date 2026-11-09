@@ -1,11 +1,11 @@
-// The preset pop-up in built-in effect panels and the Channel EQ window: factory and user
+// The preset pop-up in built-in effect and instrument panels: factory and user
 // presets (shared by every project, see crates/engine/src/presets.rs), saving, renaming and
 // deleting user presets, and stepping through them. Which preset is loaded comes from the
-// project (`PluginSlot.preset`, a strip's `eq_preset`): the engine sets it when a preset is
+// project (`PluginSlot.preset`): the engine sets it when a preset is
 // loaded or saved, so it is saved with the project and follows undo.
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { act, call, type ChannelEq, type Id, type PresetRef, type Snapshot } from "../../api";
+import { act, call, type Id, type PresetRef, type Snapshot } from "../../api";
 import { presetBoxLabel } from "../../presetBox";
 import { setState } from "../../store";
 import { openMenuAt, type MenuItem } from "../Menu";
@@ -17,7 +17,6 @@ export interface Preset {
   effect: string;
   version: number;
   values?: [number, number][];
-  eq?: ChannelEq;
 }
 
 interface PresetList {
@@ -45,12 +44,12 @@ type Sheet = { mode: "save" | "rename"; text: string; error?: string; replace?: 
 /**
  * The preset pop-up.
  * - `effect`: the preset id ("builtin:deesser", "builtin:channel-eq").
- * - `track`/`slot`: where presets load to and save from (`EQ_SLOT` for the Channel EQ).
+ * - `track`/`slot`: where presets load to and save from.
  * - `loaded`: the preset the project has as loaded there.
  * - `current` and `normalize`: the settings now and a preset's, in one comparable form, which
  *   tells "(edited)" apart.
- * - `defaultName`: the factory preset that resets it ("Default", "Flat").
- * - `extra`: items for the end of the menu (the Channel EQ's Copy and Paste).
+ * - `defaultName`: the factory preset that resets it ("Default", "Flat" for the Channel EQ).
+ * - `extra`: items for the end of the menu.
  */
 export function PresetButton({
   effect,

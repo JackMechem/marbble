@@ -1,7 +1,7 @@
 //! Copying, pasting, saving and loading channel strip settings, and Reset Channel Strip (see
 //! `crate::strip_settings` for what a setting holds and where saved ones live).
 //!
-//! Applying a setting replaces the target's Audio FX inserts and Channel EQ and, on an
+//! Applying a setting replaces the target's Audio FX inserts (a Channel EQ among them) and, on an
 //! instrument track, its instrument when the setting has one. Every plug-in comes in as a new
 //! instance, as with Paste Plug-in. A VST3 that isn't installed here (or fails to load) stays
 //! in its slot with its saved state, shown as missing, like one in a project opened on another
@@ -30,7 +30,7 @@ impl Session {
                 version: 0,
                 instrument: None,
                 inserts: m.inserts.iter().map(|s| s.as_ref().map(capture)).collect(),
-                eq: Some(m.eq.clone()),
+                legacy_eq: None,
             });
         }
         let t = self.project.track(track).ok_or_else(|| anyhow!("no such track"))?;
@@ -42,20 +42,22 @@ impl Session {
             version: 0,
             instrument: t.instrument.as_ref().filter(|_| t.kind == TrackKind::Instrument).map(capture),
             inserts: t.inserts.iter().map(|s| s.as_ref().map(capture)).collect(),
-            eq: Some(t.eq.clone()),
+            legacy_eq: None,
         })
     }
 
-    /// Applies a setting to each strip (MASTER_ID for Stereo Out).
+    /// Applies a setting to each strip (MASTER_ID for Stereo Out). One copied before the Channel
+    /// EQ was an insert (the UI's clipboard) brings its EQ as one.
     pub fn paste_strip(&mut self, tracks: &[Id], setting: &StripSetting) -> Result<()> {
-        self.apply_strip(tracks, setting, false)
+        let mut setting = setting.clone();
+        setting.upgrade();
+        self.apply_strip(tracks, &setting, false)
     }
 
-    /// Logic's Reset Channel Strip: removes the instrument and every Audio FX plug-in, sets the
-    /// Channel EQ flat and the fader and pan to their defaults.
+    /// Logic's Reset Channel Strip: removes the instrument and every Audio FX plug-in (Channel
+    /// EQs too) and sets the fader and pan to their defaults.
     pub fn reset_strip(&mut self, tracks: &[Id]) -> Result<()> {
-        let empty = StripSetting { eq: Some(ChannelEq::default()), ..Default::default() };
-        self.apply_strip(tracks, &empty, true)?;
+        self.apply_strip(tracks, &StripSetting::default(), true)?;
         for &t in tracks {
             if t == MASTER_ID {
                 self.set_master_volume(0.0);
@@ -101,9 +103,6 @@ impl Session {
             let slots = if track == MASTER_ID { self.project.master.inserts.len() } else { self.project.track(track).map(|t| t.inserts.len()).unwrap_or(0) };
             for k in 0..slots {
                 self.put_strip_slot(track, k, setting.inserts.get(k).and_then(|s| s.as_ref()))?;
-            }
-            if let Some(eq) = &setting.eq {
-                self.set_eq(track, eq.clone());
             }
         }
         self.send(Cmd::Order(self.project.process_order()));
@@ -191,10 +190,8 @@ mod tests {
         s.set_plugin(src, 2, "builtin:limiter").unwrap();
         s.set_builtin_param(src, 0, crate::fx::compressor::param::THRESHOLD, -30.0).unwrap();
         s.set_bypass(src, 2, true);
-        let mut eq = ChannelEq::default();
-        eq.bands[4].on = true;
-        eq.bands[4].gain = 5.0;
-        s.set_eq(src, eq);
+        s.set_plugin(src, 1, crate::fx::channel_eq::ID).unwrap();
+        s.set_builtin_param(src, 1, crate::fx::channel_eq::gain(4), 5.0).unwrap();
         // Something already on the targets, which the paste replaces.
         s.set_plugin(audio, 1, "builtin:reverb").unwrap();
         s.set_plugin(audio, 5, "builtin:delay").unwrap();
@@ -205,13 +202,16 @@ mod tests {
         s.paste_strip(&[audio, inst], &st).unwrap();
 
         for t in [audio, inst] {
-            assert_eq!(ids(&s, t)[..3], [Some("builtin:compressor".to_string()), None, Some("builtin:limiter".to_string())]);
+            assert_eq!(
+                ids(&s, t)[..3],
+                [Some("builtin:compressor".to_string()), Some(crate::fx::channel_eq::ID.to_string()), Some("builtin:limiter".to_string())]
+            );
             assert!(ids(&s, t)[3..].iter().all(|x| x.is_none()), "the target's other plug-ins are gone");
             assert_ne!(uid(&s, t, 0), uid(&s, src, 0), "new instances");
             assert_eq!(s.builtin_params(uid(&s, t, 0)), s.builtin_params(uid(&s, src, 0)), "with the source's values");
             let tr = s.project.track(t).unwrap();
             assert!(tr.inserts[2].as_ref().unwrap().bypass, "bypass comes along");
-            assert_eq!(tr.eq.bands[4].gain, 5.0);
+            assert!(tr.inserts[1].as_ref().unwrap().params.contains(&(crate::fx::channel_eq::gain(4), 5.0)), "the Channel EQ with its values");
         }
         assert_ne!(uid(&s, audio, 0), uid(&s, inst, 0));
         assert!(s.project.track(audio).unwrap().instrument.is_none(), "an audio track gets no instrument");
@@ -224,7 +224,21 @@ mod tests {
         assert_eq!(ids(&s, audio)[5].as_deref(), Some("builtin:delay"));
         assert!(ids(&s, inst).iter().all(|x| x.is_none()));
         assert_eq!(s.project.track(inst).unwrap().instrument.as_ref().map(|i| i.uid), inst_before);
-        assert_eq!(s.project.track(audio).unwrap().eq.bands[4].gain, ChannelEq::default().bands[4].gain);
+        assert!(ids(&s, audio)[0].is_none());
+
+        // A setting copied before the Channel EQ was an insert pastes its EQ as one.
+        let mut old = serde_json::to_value(StripSetting {
+            name: "Old".into(),
+            inserts: vec![Some(s.project.track(src).unwrap().inserts[0].clone().unwrap())],
+            ..Default::default()
+        })
+        .unwrap();
+        let mut eq = ChannelEq::default();
+        eq.bands[4].gain = -3.0;
+        old["eq"] = serde_json::to_value(&eq).unwrap();
+        s.paste_strip(&[audio], &serde_json::from_value(old).unwrap()).unwrap();
+        assert_eq!(ids(&s, audio)[..2], [Some(crate::fx::channel_eq::ID.to_string()), Some("builtin:compressor".to_string())]);
+        assert!(s.builtin_params(uid(&s, audio, 0)).contains(&(crate::fx::channel_eq::gain(4), -3.0)));
     }
 
     #[test]
@@ -289,7 +303,6 @@ mod tests {
         let kept = t.inserts[0].as_ref().unwrap();
         assert_eq!((kept.name.as_str(), kept.state.as_deref()), ("Gone", Some("AAAA:")), "the slot and its state are kept");
         assert!(t.inserts[1].as_ref().unwrap().sidechain.is_none(), "a strip doesn't key itself");
-        assert_eq!(t.eq.bands.len(), ChannelEq::default().bands.len(), "no EQ in the setting leaves the EQ alone");
         let missing: Vec<&str> = s.missing_plugins().iter().map(|m| m.name.as_str()).collect();
         assert_eq!(missing, vec!["Gone"]);
     }

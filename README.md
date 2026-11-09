@@ -33,10 +33,11 @@ headless checks on a stand-in device but haven't been run on a real machine yet 
   ramps; Logic's Event List; a Step Sequencer for drum patterns and riffs (pattern regions);
   an Audio Track Editor with range edits, normalizing, fades to selection and Split at
   Transients; Standard MIDI File import and export.
-- **Mixing:** channel strips with an eight-band Channel EQ and analyzer, eight Audio FX slots,
-  eight pre- or post-fader sends, aux buses, output routing and VCA faders; clip indicators and
-  gain-reduction meters; channel strip settings to copy, paste and save; plug-in delay
-  compensation on every path, gliding without clicks, with a Low Latency Mode.
+- **Mixing:** channel strips with an EQ thumbnail that opens (or inserts) an eight-band Channel
+  EQ with an analyzer, eight Audio FX slots, eight pre- or post-fader sends, aux buses, output
+  routing and VCA faders; clip indicators and gain-reduction meters; channel strip settings to
+  copy, paste and save; plug-in delay compensation on every path, gliding without clicks, with a
+  Low Latency Mode.
 - **Automation:** volume, pan, mute, send levels and plug-in parameters, with Logic's Off,
   Read, Touch, Latch and Write modes, several lanes per track, curved segments, folder stack
   and Stereo Out (Output track) automation, and automation that can move with its regions.
@@ -44,7 +45,7 @@ headless checks on a stand-in device but haven't been run on a real machine yet 
   parameters and the transport (Learn Assignment, Controller Assignments window).
 - **Plug-ins:** VST3 instruments and effects, scanned out of process, with side-chain inputs,
   multi-output instruments, and undo for a knob moved in a plug-in's own window. Copy and paste
-  plug-ins (VST3 state included) and Channel EQ settings between strips and projects; drag
+  plug-ins (VST3 state included) between strips and projects; drag
   plug-ins to reorder them or move them to another strip (Alt copies).
 - **Built-in synths:** six models with panels, factory presets, automation, MIDI learn, undo,
   Freeze and Bounce. Under Vintage Synths, modelled on the documented behaviour of real instruments
@@ -66,11 +67,11 @@ headless checks on a stand-in device but haven't been run on a real machine yet 
   threads, sample for sample the same as on one (Settings › Audio › Processing Threads; Automatic
   stays on one thread on Windows and macOS for now). Track Off frees what a muted track keeps using.
 - **Built-in effects:** Compressor (five modelled circuits), Limiter, Noise Gate, De-Esser,
-  Reverb, Delay, Chorus, Flanger, Phaser, Tremolo, Overdrive, Distortion, Linear Phase EQ,
-  Gain, Tuner and Loudness Meter, in any Audio FX slot with Logic-style panels (docked,
+  Reverb, Delay, Chorus, Flanger, Phaser, Tremolo, Overdrive, Distortion, Channel EQ, Linear
+  Phase EQ, Gain, Tuner and Loudness Meter, in any Audio FX slot with Logic-style panels (docked,
   floating or in their own windows), factory and user presets, automatable parameters, pre- or
   post-fader side-chain input from any track, latency reported to delay compensation, and
-  freeze support. The Channel EQ has presets too.
+  freeze support.
 - **Bounce and export:** offline bounce of the project or a section, Export All or Selected
   Tracks, Export Region, Bounce in Place, as WAV, AIFF or FLAC at 16-bit (dithered), 24-bit or
   32-bit float.

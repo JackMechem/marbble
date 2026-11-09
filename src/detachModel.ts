@@ -7,7 +7,7 @@ export const PANEL_PREFIX = "panel-";
 
 /**
  * A panel key names one detachable panel: its kind ("mixer", "editor"), plus an argument for
- * kinds that have several instances ("eq:12" is the Channel EQ of track 12).
+ * kinds that have several instances ("fx:12" is the panel of built-in effect 12).
  */
 export function panelKey(kind: string, arg: string | number = ""): string {
   return arg === "" ? kind : `${kind}:${arg}`;
@@ -56,7 +56,7 @@ export function bottomAfterHide(kind: string, before: string, detached: string[]
 /**
  * The UI-store fields every window keeps the same, so a detached panel behaves as it would in
  * the main window: the selection (the editor follows it, the keys act on it), the region
- * clipboard (and the channel strip, plug-in and Channel EQ clipboards), the snap mode, what is shown of the tracks, the plug-in lists, the appearance,
+ * clipboard (and the channel strip and plug-in clipboards), the snap mode, what is shown of the tracks, the plug-in lists, the appearance,
  * which panels are detached, the notes selected in the Piano Roll and Event List, and the Mixer's
  * strip widths (saved per project by the main window, so a detached Mixer's go there). Window
  * layout (the bottom section, pane sizes, open sheets and floating editors, zoom) stays per
@@ -82,7 +82,6 @@ export const SYNCED_FIELDS = [
   "midiSelection",
   "stripClip",
   "pluginClip",
-  "eqClip",
   "mixerView",
 ] as const;
 

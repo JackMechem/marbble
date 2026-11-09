@@ -115,9 +115,11 @@ fn main() {
 
     // The Channel EQ with the settings, then the Linear Phase EQ with the same.
     let eq = settings();
-    s.set_eq(t, eq.clone());
+    s.set_plugin(t, 0, daw_engine::fx::channel_eq::ID).unwrap();
+    for (id, v) in daw_engine::fx::channel_eq::values_of(&eq) {
+        s.set_builtin_param(t, 0, id, v).unwrap();
+    }
     let channel = render(&mut s, len);
-    s.set_eq(t, ChannelEq::default());
     s.set_plugin(t, 0, "builtin:linear-phase-eq").unwrap();
     for (bi, band) in eq.bands.iter().enumerate() {
         s.set_builtin_param(t, 0, on(bi), if band.on { 1.0 } else { 0.0 }).unwrap();

@@ -23,42 +23,13 @@ use std::time::{Duration, Instant};
 
 use super::fir::{linear_phase_taps, plan_forward, Convolver, Kernel};
 use super::*;
-use crate::model::{BandKind, ChannelEq};
+use crate::model::ChannelEq;
 
-/// The bands, in the Channel EQ's order.
-pub const BANDS: usize = 8;
-/// The output level (dB).
-pub const OUTPUT: u32 = 64;
+pub use super::channel_eq::{channel_eq, freq, gain, is_cut, on, q, slope, BANDS, OUTPUT};
 /// The kernel length: 0 Low, 1 Medium, 2 High.
 pub const QUALITY: u32 = 65;
 /// One past the highest parameter id.
 const ID_SPACE: usize = 66;
-
-/// A band's on switch. Each band's parameters are `8 * band + field`.
-pub const fn on(band: usize) -> u32 {
-    (band * 8) as u32
-}
-/// A band's frequency (Hz).
-pub const fn freq(band: usize) -> u32 {
-    (band * 8 + 1) as u32
-}
-/// A band's gain (dB); the cut filters have none.
-pub const fn gain(band: usize) -> u32 {
-    (band * 8 + 2) as u32
-}
-/// A band's Q.
-pub const fn q(band: usize) -> u32 {
-    (band * 8 + 3) as u32
-}
-/// A cut filter's slope: 0 = 12, 1 = 24, 2 = 48 dB/octave.
-pub const fn slope(band: usize) -> u32 {
-    (band * 8 + 4) as u32
-}
-
-/// Whether a band is a cut filter (the first and last).
-pub const fn is_cut(band: usize) -> bool {
-    band == 0 || band == BANDS - 1
-}
 
 /// The fastest the worker designs new kernels while parameters keep changing.
 pub const DESIGN_INTERVAL: Duration = Duration::from_millis(25);
@@ -67,62 +38,20 @@ pub const FADE_SECS: f32 = 0.02;
 /// How often an idle worker looks for changes.
 const POLL: Duration = Duration::from_millis(10);
 
-const SLOPES: &[&str] = &["12 dB/Oct", "24 dB/Oct", "48 dB/Oct"];
 const QUALITIES: &[&str] = &["Low", "Medium", "High"];
 
-const fn toggle(id: u32, name: &'static str, default: f32) -> ParamSpec {
-    ParamSpec { id, name, min: 0.0, max: 1.0, default, unit: Unit::None, kind: ParamKind::Toggle, log: false }
-}
-const fn hz(id: u32, name: &'static str, default: f32) -> ParamSpec {
-    ParamSpec { id, name, min: 20.0, max: 20000.0, default, unit: Unit::Hz, kind: ParamKind::Continuous, log: true }
-}
-const fn db(id: u32, name: &'static str) -> ParamSpec {
-    ParamSpec { id, name, min: -24.0, max: 24.0, default: 0.0, unit: Unit::Db, kind: ParamKind::Continuous, log: false }
-}
-const fn qf(id: u32, name: &'static str, default: f32) -> ParamSpec {
-    ParamSpec { id, name, min: 0.1, max: 18.0, default, unit: Unit::None, kind: ParamKind::Continuous, log: true }
-}
-const fn slope_spec(id: u32, name: &'static str) -> ParamSpec {
-    ParamSpec { id, name, min: 0.0, max: 2.0, default: 1.0, unit: Unit::None, kind: ParamKind::Choice(SLOPES), log: false }
-}
-
-/// The parameters, defaulting to the Channel EQ's defaults (`ChannelEq::default`).
-static PARAMS: [ParamSpec; 34] = [
-    toggle(on(0), "Low Cut On", 0.0),
-    hz(freq(0), "Low Cut Frequency", 30.0),
-    qf(q(0), "Low Cut Q", 0.71),
-    slope_spec(slope(0), "Low Cut Slope"),
-    toggle(on(1), "Low Shelf On", 1.0),
-    hz(freq(1), "Low Shelf Frequency", 80.0),
-    db(gain(1), "Low Shelf Gain"),
-    qf(q(1), "Low Shelf Q", 0.71),
-    toggle(on(2), "Bell 1 On", 1.0),
-    hz(freq(2), "Bell 1 Frequency", 160.0),
-    db(gain(2), "Bell 1 Gain"),
-    qf(q(2), "Bell 1 Q", 1.1),
-    toggle(on(3), "Bell 2 On", 1.0),
-    hz(freq(3), "Bell 2 Frequency", 500.0),
-    db(gain(3), "Bell 2 Gain"),
-    qf(q(3), "Bell 2 Q", 1.1),
-    toggle(on(4), "Bell 3 On", 1.0),
-    hz(freq(4), "Bell 3 Frequency", 1500.0),
-    db(gain(4), "Bell 3 Gain"),
-    qf(q(4), "Bell 3 Q", 1.1),
-    toggle(on(5), "Bell 4 On", 1.0),
-    hz(freq(5), "Bell 4 Frequency", 5000.0),
-    db(gain(5), "Bell 4 Gain"),
-    qf(q(5), "Bell 4 Q", 1.1),
-    toggle(on(6), "High Shelf On", 1.0),
-    hz(freq(6), "High Shelf Frequency", 10000.0),
-    db(gain(6), "High Shelf Gain"),
-    qf(q(6), "High Shelf Q", 0.71),
-    toggle(on(7), "High Cut On", 0.0),
-    hz(freq(7), "High Cut Frequency", 18000.0),
-    qf(q(7), "High Cut Q", 0.71),
-    slope_spec(slope(7), "High Cut Slope"),
-    db(OUTPUT, "Output Gain"),
-    ParamSpec { id: QUALITY, name: "Quality", min: 0.0, max: 2.0, default: 1.0, unit: Unit::None, kind: ParamKind::Choice(QUALITIES), log: false },
-];
+/// The Channel EQ's parameters (`channel_eq::BAND_PARAMS`), then the Quality.
+static PARAMS: [ParamSpec; 34] = {
+    let quality =
+        ParamSpec { id: QUALITY, name: "Quality", min: 0.0, max: 2.0, default: 1.0, unit: Unit::None, kind: ParamKind::Choice(QUALITIES), log: false };
+    let mut out = [quality; 34];
+    let mut i = 0;
+    while i < 33 {
+        out[i] = super::channel_eq::BAND_PARAMS[i];
+        i += 1;
+    }
+    out
+};
 
 #[rustfmt::skip] // One row per preset's values: split per value, these tables run to thousands of lines.
 pub const PRESETS: &[FactoryPreset] = &[
@@ -151,24 +80,6 @@ pub fn taps(quality: usize, sample_rate: f32) -> usize {
     let base = [2048, 4096, 8192][quality.min(2)];
     let scale = ((sample_rate / 48_000.0).round() as usize).clamp(1, 4).next_power_of_two().min(4);
     base * scale - 1
-}
-
-/// The Channel EQ settings the parameter values describe.
-pub fn channel_eq(value: impl Fn(u32) -> f32) -> ChannelEq {
-    let mut eq = ChannelEq::default();
-    for (b, band) in eq.bands.iter_mut().enumerate() {
-        band.on = value(on(b)) >= 0.5;
-        band.freq = value(freq(b));
-        band.q = value(q(b));
-        if is_cut(b) {
-            band.slope = [12, 24, 48][(value(slope(b)).round().max(0.0) as usize).min(2)];
-        } else {
-            band.gain = value(gain(b));
-        }
-    }
-    debug_assert!(matches!(eq.bands[0].kind, BandKind::LowCut) && matches!(eq.bands[BANDS - 1].kind, BandKind::HighCut));
-    eq.output_db = value(OUTPUT);
-    eq
 }
 
 fn quality_of(values: &[f32; ID_SPACE]) -> usize {

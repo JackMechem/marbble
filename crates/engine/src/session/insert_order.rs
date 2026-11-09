@@ -89,6 +89,14 @@ impl Session {
         self.push_automation(to);
     }
 
+    /// The EQ thumbnail's click on a strip without a Channel EQ: puts one at the top of its Audio
+    /// FX, the plug-ins there moving down a slot, as in Logic. Returns its instance id.
+    pub fn insert_channel_eq(&mut self, track: Id) -> Result<Id> {
+        self.check_unfrozen(&[track])?;
+        self.make_room(track, 0)?;
+        self.set_plugin(track, 0, crate::fx::channel_eq::ID)
+    }
+
     /// Empties `slot` by moving the nearest free slot there, below it if there is one.
     fn make_room(&mut self, track: Id, slot: usize) -> Result<()> {
         let name = self.strip_name(track);

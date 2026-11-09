@@ -168,7 +168,7 @@ impl TaskGraph {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{AutoMode, ChannelEq, InputSel, InstrumentOutput, PluginSlot, Track, TrackKind, TrackSend, INSERT_SLOTS, SEND_SLOTS};
+    use crate::model::{AutoMode, InputSel, InstrumentOutput, PluginSlot, Track, TrackKind, TrackSend, INSERT_SLOTS, SEND_SLOTS};
 
     fn graph(ids: &[Id], edges: &[(Id, Id)]) -> TaskGraph {
         TaskGraph::new(ids.to_vec(), edges, |_| true).unwrap()
@@ -222,7 +222,7 @@ mod tests {
             instrument: None,
             inserts: vec![None; INSERT_SLOTS],
             regions: Vec::new(),
-            eq: ChannelEq::default(),
+            legacy_eq: None,
             parent: None,
             collapsed: false,
             group: None,
@@ -238,7 +238,7 @@ mod tests {
             alternative: String::new(),
             auto_lanes: Vec::new(),
             instrument_output: None,
-            eq_preset: None,
+            legacy_eq_preset: None,
             off: false,
             icon: None,
         }

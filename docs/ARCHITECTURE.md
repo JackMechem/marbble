@@ -481,11 +481,11 @@ Times are in samples at the project rate.
 
 `Track::frozen: Option<FreezeInfo { clip, start }>` (`session/freeze.rs`):
 
-- While set, `regions_dsp` returns just the freeze file, `eq_coeffs` returns a flat EQ, the
+- While set, `regions_dsp` returns just the freeze file, the
   plug-ins are unloaded from the engine, and their settings are kept in `PluginSlot::state`.
 - Freezing has two steps: `render_freeze` (an isolated render, may run on a worker thread) and
   `place_freeze` (main thread, one undo step capturing plug-ins).
-- Edits to a frozen track's regions, plug-ins or Channel EQ are refused twice over:
+- Edits to a frozen track's regions or plug-ins (Channel EQs among them) are refused twice over:
   `check_unfrozen` errors before the edit where it can, and `frozen_guard` (called by every
   `edit` wrapper) puts back anything that slipped through and reports why.
 - Freeze files live in the project's `Freeze Files/` folder. Unfreezing deletes the file but
@@ -539,7 +539,7 @@ flowchart TD
   C --> G
   D --> G
   F --> G
-  G["Channel EQ"] --> H["Insert plug-ins, VST3 or built-in<br/>(bypass / Low Latency skip; contain() after each)"]
+  G["Track Off fade-in"] --> H["Insert plug-ins, VST3 or built-in, a Channel EQ among them<br/>(bypass / Low Latency skip; contain() after each;<br/>the analyzer taps the one it watches)"]
   H --> I["PDC delay line write<br/>(side-chain key tapped here)"]
   I --> J["Pre-fader sends (own tap)"]
   J --> K["Fader + pan, smoothed; meter"]
@@ -551,7 +551,7 @@ A track that is **off** (`Track::off`, or a stack above it: `Project::is_off`, s
 `TrackParams::off`) skips all of this. It first fades through its fader like a muted one, then
 goes dormant (`dsp/track_off.rs`): its VST3s get `setProcessing(0)` (allowed on the audio
 thread, and meant to clear tails; `setActive` stays on and the plug-in loaded), built-in effects
-and synths reset, the EQ, delay line and key buffers empty, and each block only empties what
+and synths reset, the delay line and key buffers empty, and each block only empties what
 feeders wrote into its bus. Its meter stops being fed, so it falls. A VST3's editor edits still
 reach its processor, through one block of silence when any are pending. Back on, the source fades
 in over 5 ms before the plug-ins and the delay line, notes are released and chased, and
@@ -561,7 +561,7 @@ recording anyway (`session/track_off.rs`), so only an undo can get there.
 
 After every track:
 
-- **Stereo Out**: Channel EQ, its inserts, its volume (smoothed), its meter. Skipped (unity,
+- **Stereo Out**: its inserts, its volume (smoothed), its meter. Skipped (unity,
   no FX) in an isolated render.
 - **The click** is synthesized after the Stereo Out fader, delayed by `pdc.total` so it lines
   up with the compensated music. The count-in always clicks; otherwise the metronome follows
@@ -877,7 +877,7 @@ two serial runs differ).
 | `garbage: RefCell` | `discard`, from `apply` | Calling thread only; the strips' context doesn't hold the engine, so the compiler sees to it. |
 | `live_midi`, `live` | Filled before the strips | Read-only for the strips. |
 | `midi_rec` (recorded MIDI ring) | Also pushed by `process` (cycle marks) | Moved before the strips, for the serial loop too; it comes from one track anyway. |
-| `analyzer_tx` (SPSC, several pushers) | A strip's tap, Stereo Out's | On the pool the watched strip fills `Outlets::analysis`, and the calling thread pushes it after the strips. Stereo Out's is on the calling thread. |
+| `analyzer_tx` (SPSC, several pushers) | The tap after the watched insert, on a strip or Stereo Out | On the pool the watched strip fills `Outlets::analysis`, and the calling thread pushes it after the strips. Stereo Out's is on the calling thread. |
 | `inputs` | Copied in before the strips | Read-only for the strips. |
 | `bus_l`, `bus_r` | Stereo Out | Summed by the calling thread after the strips, in order. |
 | `tap_*`, `gain_*` | A strip's scratch | `Scratch`, one per thread. |
@@ -982,7 +982,7 @@ stack.
 
 - **Coalescing**: when `key` matches the top entry's key and less than 1.5 s has passed since
   the last edit with that key, no new entry is made (the timer restarts). Fader drags use
-  `track:<id>:volume`, the EQ `eq:<id>`, sends `send:<id>:<slot>`, nudges `nudge:<ids>`, the
+  `track:<id>:volume`, a built-in effect's parameter `fxparam:<uid>:<id>`, sends `send:<id>:<slot>`, nudges `nudge:<ids>`, the
   tempo `tempo`, and so on.
 - **Limit**: `prefs.general.undo_limit` (Settings › General, default 100) trims the oldest
   entries.
@@ -1128,9 +1128,9 @@ at its new place (`old_name::relocated`).
 | `recent.json` | `src-tauri/src/recent.rs` | Up to 20 canonical project paths, newest first (not written atomically). |
 | `plugins.json` | `plugin_db.rs` | The plug-in scan cache. |
 | `plugin-scan.json` | `plugin_db.rs` | The last scan's report (bundles, plug-ins, failures with reasons), for Settings › Plug-ins. |
-| `presets/<effect>/<name>.json` | `presets.rs` | User presets of the built-in effects and the Channel EQ (see [Presets](#presets)). |
+| `presets/<effect>/<name>.json` | `presets.rs` | User presets of the built-in effects, the Channel EQ among them (see [Presets](#presets)). |
 | `channel-strips/<name>.json` | `strip_settings.rs` | Saved channel strip settings (see [Channel strip settings](#channel-strip-settings)). |
-| `controller-assignments.json` | `session/controllers.rs` | MIDI Learn's controller assignments: controller (port without ALSA's client:port numbers, channel, CC number or pitch bend), target (track id and parameter, plug-in instance id with its plug-in id, Channel EQ setting, Stereo Out or transport), mode and range. Global, like Logic's; written atomically. |
+| `controller-assignments.json` | `session/controllers.rs` | MIDI Learn's controller assignments: controller (port without ALSA's client:port numbers, channel, CC number or pitch bend), target (track id and parameter, plug-in instance id with its plug-in id, a setting of the old fixed Channel EQ, Stereo Out or transport), mode and range. Global, like Logic's; written atomically. |
 | `templates/<name>.json` | `session/templates.rs` | User project templates (File › Save as Template…): a `Project` without regions, clips, freeze state or alternatives, with plug-in states. `new_from_template` loads one as a new untitled project at the device's rate, keeping its ids. |
 
 Interface-only state lives in the webview's `localStorage`:
@@ -1821,7 +1821,7 @@ Audio Track Editor and meters are canvas drawings. The common pattern:
   `components/Menu.tsx` (`MenuHost`); `src/ops.ts` builds the track, region and lane menus.
 - Dialogs are chosen by `state.dialog` (`new-tracks`, `settings`, `chooser`, `bounce`,
   `bounce-in-place`, `project-settings`, `recovery`, `alternatives`), plus separately flagged
-  sheets (group settings, Marker List, Channel EQ, Musical Typing, Controller Assignments,
+  sheets (group settings, Marker List, Musical Typing, Controller Assignments,
   Strip Silence, Drum Replacement/Doubling).
 - `askName` (`components/NameSheet.tsx`) asks for a name or a value in a small sheet above
   everything else, the Project Chooser included, and resolves with it or null. Never use
@@ -1857,10 +1857,10 @@ Other platforms have no GSettings; there the check always passes.
 
 ### Detached windows
 
-A detachable panel (the Mixer, the Editors, the Event List, the Step Sequencer, a Channel EQ, a
-built-in effect panel) can be shown in an OS window of its own, labelled `panel-<key>` (keys:
-`mixer`, `editor`, `list`, `steps`, `eq:<track>`, `fx:<uid>`, the last two shared with
-`fxDock.ts`). Every window loads the same frontend;
+A detachable panel (the Mixer, the Editors, the Event List, the Step Sequencer, a built-in
+effect panel, the Channel EQ's among them) can be shown in an OS window of its own, labelled
+`panel-<key>` (keys: `mixer`, `editor`, `list`, `steps`, `fx:<uid>`, the last shared with
+`fxDock.ts`; `eq:<track>`, the strips' fixed Channel EQ before it was an insert, opens nothing). Every window loads the same frontend;
 `main.tsx` renders `DetachedWindow` instead of `App` when the label is a panel's.
 
 - **Authority.** The main window decides what is detached (`state.detached`), remembers it with
@@ -1961,6 +1961,10 @@ it opens so tracks don't come and go during edits.
   Limiter), the delay line and note values in `fx/delay/primitives.rs`, which the Reverb and the
   modulation effects reuse, `fx/lfo.rs` (LFO, smoother, feedback guard) and `fx/oversample.rs`
   (4× half-band oversampling for the distortion effects, with a fixed latency they report).
+- **Channel EQ** (`fx/channel_eq.rs`): eight bands of `eq.rs` biquads and an output level, as
+  an insert (see [The Channel EQ](#the-channel-eq)). A parameter change marks the coefficients
+  stale and the next block computes them again (`eq::coefficients_of`, no allocation), keeping
+  the filters' state.
 - **Linear Phase EQ** (`fx/linear_phase_eq.rs`, `fx/fir.rs`): the Channel EQ's bands
   (`eq::coefficients`, `EqCoeffs::magnitude`) realized as a linear-phase FIR designed by
   frequency sampling (magnitude on a grid 4× the kernel, zero phase, inverse FFT, Blackman
@@ -2027,19 +2031,17 @@ it like any plug-in.
 
 `presets.rs` stores them; `session/presets.rs` applies them.
 
-- **Factory** presets ship in the code: each effect's `PRESETS`, and `eq_factory()` for the
-  Channel EQ (preset id `builtin:channel-eq`). A "Default" preset ("Flat" for the EQ) comes
-  first.
+- **Factory** presets ship in the code: each effect's `PRESETS`. A "Default" preset comes
+  first; the Channel EQ's own "Flat" stands for it.
 - **User** presets are global, not part of a project: `<config dir>/presets/<effect>/<name>.json`,
   with characters that file systems refuse replaced in the effect id (`builtin_deesser`).
-  Each file is a `Preset { name, effect, version, values | eq }`, written to a temporary file
-  and renamed into place. `clean_name` trims names and limits them to 64 characters.
+  Each file is a `Preset { name, effect, version, values }`, written to a temporary file
+  and renamed into place. A Channel EQ preset saved before the Channel EQ was an insert has its
+  bands in `eq` instead; `read_user` turns them into values (`channel_eq::values_of`). `clean_name` trims names and limits them to 64 characters.
 - Commands: `list_presets`, `get_preset`, `load_preset` (one undo step), `save_preset`,
-  `rename_preset`, `delete_preset`. The Channel EQ is addressed as slot `EQ_SLOT`
-  (`usize::MAX - 1`). The pop-up is `src/components/fx/Presets.tsx`.
+  `rename_preset`, `delete_preset`. The pop-up is `src/components/fx/Presets.tsx`.
 - **Which preset is loaded** is in the project, the one place the pop-up reads it from:
-  `PluginSlot::preset` and a strip's `eq_preset` (Stereo Out's on `Master`), each a
-  `PresetRef { name, factory }`, left out of the file when there is none. `load_preset` and
+  `PluginSlot::preset`, a `PresetRef { name, factory }`, left out of the file when there is none. `load_preset` and
   `save_preset` set it; `rename_preset` and `delete_preset` rename or clear what refers to that
   user preset in the open project (`Project::retarget_user_preset`), and return a snapshot.
   Undo, copy, paste and duplicating a track carry it with the slot. The parameters can change
@@ -2407,7 +2409,7 @@ Going to rest is by the sample (`instrument/common.rs`): a model that stopped at
   it survives opening another project. `copy_plugin` returns the `PluginSlot` with a VST3's
   state captured from its controller; `paste_plugin` makes new instances (new uids) on each
   target track, keeping a side-chain only where its source exists and causes no loop.
-  `paste_eq` replaces Channel EQ settings.
+  A Channel EQ is copied and pasted as any insert.
 - **Reordering** (`session/insert_order.rs`): `move_insert` permutes the project's slots and
   sends `Cmd::ReorderInserts { track, order }`; the engine moves the running `InsertDsp`s through
   a fixed array, so nothing is allocated or reloaded and each plug-in keeps its state, editor and
@@ -2424,10 +2426,10 @@ Going to rest is by the sample (`instrument/common.rs`): a model that stopped at
 
 ### Channel strip settings
 
-- A `StripSetting` (`strip_settings.rs`) is a strip's instrument, Audio FX slots and Channel
-  EQ. `copy_strip` captures one, VST3 states included, like `copy_plugin`; the clipboard lives
+- A `StripSetting` (`strip_settings.rs`) is a strip's instrument and Audio FX slots (Channel EQs
+  among them). `copy_strip` captures one, VST3 states included, like `copy_plugin`; the clipboard lives
   in the UI (`src/stripSettings.ts`).
-- `paste_strip` (`session/strip_settings.rs`) replaces every Audio FX slot and the EQ of each
+- `paste_strip` (`session/strip_settings.rs`) replaces every Audio FX slot of each
   target, and the instrument of an instrument track when the setting has one, with new
   instances (new uids; side-chains filtered as in `paste_plugin`). A VST3 that fails to
   instantiate stays in its slot with its state, as a missing plug-in. `reset_strip` applies an
@@ -2439,6 +2441,37 @@ Going to rest is by the sample (`instrument/common.rs`): a model that stopped at
 - Commands: `copy_strip`, `paste_strip`, `reset_strip`, `list_strip_settings`,
   `save_strip_setting`, `load_strip_setting`, `delete_strip_setting`, and, for the clip
   indicators, `reset_clip_indicators`.
+- A setting saved (or copied) when strips had a fixed Channel EQ holds it in `eq`;
+  `StripSetting::upgrade`, run by `read` and `paste_strip`, puts it at the top of the inserts as
+  a Channel EQ, as opening an older project does.
+
+### The Channel EQ
+
+The Channel EQ is a built-in effect (`builtin:channel-eq`, `fx/channel_eq.rs`) in an Audio FX
+slot, as in Logic: bypassed, moved, copied, removed, automated and learnt like any other, on any
+strip and Stereo Out, as many per strip as wanted. New tracks have none.
+
+- **The EQ thumbnail** above Audio FX (`EqThumb` in `src/components/Eq.tsx`) draws the strip's
+  first Channel EQ insert (`firstChannelEq` in `src/fxHost.ts`) and opens its panel; on a strip
+  without one, a click calls `insert_channel_eq` (`Session::insert_channel_eq`: `make_room` at
+  slot 0, so the plug-ins there move down, then `set_plugin`) and opens the new one.
+- **The panel** (`src/components/fx/ChannelEq.tsx`) is the `EqEditor` on the insert's parameters
+  (`src/linearPhaseEq.ts`, the layout the Linear Phase EQ shares). Its analyzer shows what comes
+  out of that insert: `set_analyzer(uid)` sends `Cmd::Analyzer(Some((strip, uid)))`, the strip
+  taps after that insert (`dsp/strip.rs`, Stereo Out's loop in `dsp/process.rs`), and the tick's
+  `spectrum` carries the uid.
+- **Older projects** had a fixed Channel EQ on every strip, ahead of the inserts. Its fields
+  (`Track::legacy_eq`, `Master::legacy_eq` and their `eq_preset`s) are read, never written.
+  `open_from` and `new_from_template` run `Project::upgrade_channel_eq` (`model/channel_eq_upgrade.rs`)
+  through `Session::upgrade_document`: an EQ that shapes the sound, or that a controller
+  assignment drives, becomes a Channel EQ insert at slot 0 with the same values
+  (`channel_eq::values_of`) and preset, the plug-ins moving down to the first free slot; a flat,
+  unused one goes; a strip with all eight slots taken loses it, with a warning naming it. The
+  insert plays sample for sample as the fixed EQ did (`session/channel_eq_tests.rs` renders an
+  old project and compares). The fixed EQ had no automation lanes and groups never linked it.
+- **Controller assignments** learnt for the fixed EQ (`CtlTarget::Eq`, `EqOutput`) stay as they
+  are, global as all assignments: they drive that setting of the strip's first Channel EQ insert
+  (`ctl_legacy_eq` in `session/controllers.rs`). New ones name the insert's parameter.
 
 ## 14. Cross-cutting patterns
 
@@ -2510,8 +2543,8 @@ Each window has its own store, and [detached windows](#detached-windows) agree o
 listed in `SYNCED_FIELDS` (`detachModel.ts`), sent as `ui-sync` patches, plus the settings
 (`ui-settings`) and the session's snapshot (`project-sync`). Anything a user would expect to
 be the same everywhere, such as a selection or a clipboard, belongs in the store as a synced
-field rather than in a module variable: the region, channel strip, plug-in and Channel EQ
-clipboards (`clipboard`, `stripClip`, `pluginClip`, `eqClip`) are store fields for that reason.
+field rather than in a module variable: the region, channel strip and plug-in clipboards
+(`clipboard`, `stripClip`, `pluginClip`) are store fields for that reason.
 Synced values are compared by identity, so replace them, never mutate them. View state that is
 per window (which bottom pane shows, zoom, scroll) stays out.
 
@@ -2533,11 +2566,12 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 |---|---|
 | `lib.rs` | Module list by theme; re-exports `Session` and `vst3_host`. |
 | `model.rs` | The project document (serde), everything saved: ids, slot counts, default colours, and the re-exports of `model/`. |
-| `model/track.rs` | `Track`, `TrackKind`, `InputSel`, `PluginSlot`, `ChannelEq`, sends, freeze info, track alternatives, `Group`, `Vca`. |
+| `model/track.rs` | `Track`, `TrackKind`, `InputSel`, `PluginSlot`, `ChannelEq` (the EQ settings older documents hold), sends, freeze info, track alternatives, `Group`, `Vca`. |
 | `model/region.rs` | `Region`, `RegionContent`, `Note`, `CcEvent` and the arithmetic of looped regions. |
 | `model/take_folder.rs` | `TakeFolder`, `Take`, `Comp`, `CompSegment`. |
 | `model/automation.rs` | `AutoParam`, `AutoPoint`, `AutoLane`, `AutoMode`. |
 | `model/project.rs` | `Project`, markers, punch, master, cycle. Tree and routing helpers: `normalize_tree`, `process_order`, `output_of`, `feeds`, `reaches`, `prune_routes`. |
+| `model/channel_eq_upgrade.rs` | Older projects' fixed Channel EQ turned into a Channel EQ insert at load (`upgrade_channel_eq`, `insert_first`). |
 | `dsp.rs` | The real-time graph's front page: `MAX_BLOCK` and the other limits, `Engine` and `Engine::new`. |
 | `dsp/process.rs` | `Engine::process` and `process_block`: the block loop, serial or on the pool, the master and the output. |
 | `dsp/strip.rs` | `run_strip`: one strip's whole block, on the serial loop or a worker. |
@@ -2563,10 +2597,11 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `fx/tuner.rs`, `loudness.rs` | Tuner (McLeod pitch method) and Loudness Meter (BS.1770 / EBU R128). |
 | `fx/chorus.rs`, `flanger.rs`, `phaser.rs`, `tremolo.rs` | Modulation: Chorus and Flanger (one swept delay, `ModDelay`, in `chorus.rs`), Phaser (all-pass chain), Tremolo (synced to the song position). |
 | `fx/overdrive.rs`, `distortion.rs`, `gain.rs` | Overdrive and Distortion (`DriveCore` in `distortion.rs`: 4× oversampled waveshaper, compensated drive, tone, mix), Gain (a smoothed 2×2 channel matrix). |
+| `fx/channel_eq.rs` | The Channel EQ effect, its parameter layout (shared with the Linear Phase EQ) and factory presets, and `values_of` for the fixed EQ's settings. |
 | `fx/linear_phase_eq.rs`, `fir.rs` | Linear Phase EQ (the Channel EQ's bands as one linear-phase FIR, designed on a worker thread); FIR design and partitioned FFT convolution. |
 | `fx/lfo.rs`, `oversample.rs` | LFO and smoothing for the modulation effects; half-band FIR oversampling. |
 | `fx/biquad.rs`, `dyn_common.rs` | Shared filter and dynamics building blocks. |
-| `presets.rs` | Factory presets of the Channel EQ, user preset files. |
+| `presets.rs` | Factory preset lists, user preset files (older Channel EQ presets read as values). |
 | `strip_settings.rs` | `StripSetting` and the saved channel strip setting files. |
 | `tempo.rs` | `TempoMap`: samples to beats and bars and back, tempo ramps, signatures, grid. |
 | `session.rs` | `Session`, `Tick`, `TrackPatch`, the module list and `Session::new`. |
@@ -2574,7 +2609,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `session/undo.rs` | `checkpoint`, `undo`, `redo`, `restore`. |
 | `session/transport.rs` | Play, stop, locate, record, placing a finished recording; cycle, tempo, signature, metronome. |
 | `session/tracks.rs` | Adding, deleting, duplicating and moving tracks; stacks. |
-| `session/groups.rs` | Groups and `update_track`, the Channel EQ, the analyzer's target, the selected track. |
+| `session/groups.rs` | Groups and `update_track`, the analyzer's target, the selected track. |
 | `session/regions.rs` | Region edits and audio import. |
 | `session/plugins.rs` | Insert slots: loading, removing, bypassing, editors, the plug-in list. |
 | `session/periodic.rs` | `idle` and `tick`, and the warnings the tick carries. |
@@ -2604,8 +2639,8 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `session/builtin.rs` | Built-in effects in slots: instantiation, parameters, side-chains, meters for open panels. |
 | `session/vst_key.rs` | VST3 side-chain inputs: keeping each plug-in's aux bus in line with its slot's key source. |
 | `session/vst_undo.rs` | Undo steps for edits in a VST3's own editor: the last known states, which edits make a step and when, and putting a plug-in back. |
-| `session/presets.rs` | Copy and paste of plug-ins and Channel EQ; loading and saving presets. |
-| `session/insert_order.rs` | Reordering Audio FX inserts; moving or copying a plug-in to another strip. |
+| `session/presets.rs` | Copy and paste of plug-ins; loading and saving presets. |
+| `session/insert_order.rs` | Reordering Audio FX inserts; moving or copying a plug-in to another strip; the EQ thumbnail's `insert_channel_eq`. |
 | `session/strip_settings.rs` | Copy, paste, reset, save and load channel strip settings. |
 | `session/strip_meters.rs` | The clip indicators' peak holds (`PeakHolds`) and each strip's gain reduction for the tick. |
 | `session/vca.rs` | VCA edits: create, delete, level, mute, name, colour, assigning strips, nesting. |
@@ -2647,7 +2682,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `decode/gapless.rs` | MP4/M4A encoder delay and padding (`iTunSMPB` tag or edit list), trimmed after decoding. |
 | `audio_file.rs` | Writing bounces: `AudioFormat`, `BitDepth`, the shared dithering `Quantizer`. |
 | `audio_file/wav.rs`, `aiff.rs`, `flac.rs` | The writers: WAV through hound, AIFF and AIFF-C by hand, FLAC through `flacenc`. |
-| `eq.rs` | Channel EQ biquads (f64), coefficient computation, the analyzer spectrum. |
+| `eq.rs` | Channel EQ biquads (f64), coefficient computation (allocation-free), the analyzer spectrum. |
 | `synth.rs` | Marbble Synth, the original small polyphonic instrument. Unchanged since it was written: old projects depend on its every sample. |
 | `instrument/` | Built-in instruments: the `Instrument` contract and registry (`mod.rs`), Marbble Synth in the registry (`basic.rs`), Marbble Tre (`tre/`), Sei (`sei/`), Cinque (`cinque/`), Uno (`uno/`), Sedici (`sedici/`), Onda (`onda/`), what they share (`common.rs`) and test with (`test_kit.rs`). See [Built-in instruments](#built-in-instruments). |
 | `synth_dsp/` | Parts for synth models: `osc`, `filter`, `env`, `lfo`, `alloc`, `analog`, `resample`, `smooth`. |
@@ -2779,7 +2814,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `fxFormat.ts` | Built-in effect value formatting and control mapping; pure, tested. |
 | `paneSizes.ts` | Pane size defaults and limits, reading the saved sizes, the Tracks area's minimum and the bottom section's room; pure, tested. |
 | `presetBox.ts` | What a preset pop-up shows: the loaded preset's name, "(edited)", "Default" or "Manual"; pure, tested. |
-| `fxHost.ts` | Built-in effect registry and panel windows, the plug-in and Channel EQ clipboards (store fields, shared between windows), the slot right-click menu. |
+| `fxHost.ts` | Built-in effect registry and panel windows, the plug-in clipboard (a store field, shared between windows), the slot right-click menu, the EQ thumbnail's first Channel EQ and its click. |
 | `fxDock.ts`, `fxDockState.ts` | Plug-in panels docked, floating or in separate windows: the pure transitions (tested), and applying them to the store with the floating panels' saved sizes. At most `MAX_DOCKED` (5) panels are docked: opening another closes the one shown longest ago (`recent`). |
 | `compressorModel.ts`, `dynScale.ts` | The Compressor's parameter ids, circuits and curve (mirrors `compressor.rs`), and the dynamics panels' value formatting and knob maths; pure, tested. |
 | `settingsText.ts` | The words Settings and the Recovery sheet show: MIDI messages, plug-in types, what crashed work left; pure, tested. |
@@ -2794,7 +2829,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `trackIconArt.tsx` | The track icons' drawings, and `TrackIcon` for a track. |
 | `keyRepeat.ts` | Which key commands run again while their key is held; pure, tested. |
 | `fxShapes.ts` | The curves the modulation, distortion and Gain panels draw, mirroring the engine; pure, tested. |
-| `linearPhaseEq.ts` | The Linear Phase EQ's parameters as Channel EQ settings, so its panel reuses the EQ editor; pure, tested. |
+| `linearPhaseEq.ts` | The Channel EQ's and Linear Phase EQ's parameters as Channel EQ settings, for the EQ editor; pure, tested. |
 | `stripSettings.ts` | The channel strip Setting menu: the strip clipboard (a store field), Reset, saving and loading; resetting clip indicators. |
 | `cpuMeter.ts` | The CPU meter's tooltip, figure, colour bands and where its peak tick goes; pure, tested. |
 | `sliderKeys.ts` | Keyboard steps for knobs, faders and sliders, and their ARIA props; pure, tested. |
@@ -2821,7 +2856,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `styles/` | All styles, using the theme variables: `index.css` imports one file per area, in cascade order; `tokens.css` holds the `:root` variables. |
 | `detach.ts` | Detached panel windows: the panel kind registry, sharing UI state and snapshots between windows, detaching and attaching, remembered geometry. |
 | `detachModel.ts` | Panel keys and window labels, the shared fields, fitting windows to monitors; pure, tested. |
-| `panelKinds.tsx` | The detachable panel kinds: Mixer, Editors, Event List, Step Sequencer, Channel EQ, effect panels. |
+| `panelKinds.tsx` | The detachable panel kinds: Mixer, Editors, Event List, Step Sequencer, effect panels. |
 
 ### `src/components`
 
@@ -2846,7 +2881,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `StripSlots.tsx` | The strips' slot boxes (shared row count, a "+N more" menu past it) and blank stand-ins for sections a strip doesn't have, which keep strips level. |
 | `Sends.tsx` | The channel strip's Sends section and Output slot. |
 | `Vca.tsx` | The Mixer's VCA strips and the channel strip's VCA slot. |
-| `Eq.tsx` | Channel EQ thumbnail and editor window. |
+| `Eq.tsx` | The EQ thumbnail (the strip's first Channel EQ insert) and the EQ editor both EQ panels use. |
 | `Latency.tsx` | Plug-in latency options, readouts and the PDC status. |
 | `Controls.tsx` | Fader, knob, slider and meter controls, the gain-reduction meter. |
 | `Form.tsx` | Themed form controls. |
@@ -2877,16 +2912,16 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `GlobalTracks.tsx` | The global tracks: the Arrangement, Tempo and Signature lanes. |
 | `ArrangementTrack.tsx` | The Arrangement track's lane: sections, the name pop-up, menus, move, copy and resize drags. |
 | `Overview.tsx` | The overview strip under the tracks (in place of the horizontal scroll bar): cached region layer, visible-area box, playhead, scroll and zoom drags. |
-| `fx/FxPanel.tsx` | A plug-in panel's content and header controls (power, presets, side chain), wherever it shows, effect, instrument or Channel EQ; the generic panel for effects without their own. |
+| `fx/FxPanel.tsx` | A plug-in panel's content and header controls (power, presets, side chain), wherever it shows, effect or instrument; the generic panel for effects without their own. |
 | `fx/PanelHeader.tsx` | The one header every plug-in panel has, docked, floating or in its own window: power, name, track, presets, the panel's pop-ups, then the window buttons in a fixed order (float or dock, separate window or attach, close). |
 | `fx/FxDock.tsx` | The bottom section's docked panels: a tab each where the header's name goes (at most `MAX_DOCKED`, scrolling when they don't fit), and the tab menu. |
-| `fx/FxWindow.tsx` | Floating panel windows for built-in effects and the Channel EQ. |
+| `fx/FxWindow.tsx` | Floating panel windows for built-in effects. |
 | `fx/common.tsx` | Shared panel controls: knobs, toggles, choices, meters, the side-chain pop-up. |
-| `fx/Presets.tsx` | The preset pop-up (built-in effects, instruments and Channel EQ). |
+| `fx/Presets.tsx` | The preset pop-up (built-in effects and instruments). |
 | `fx/Instrument.tsx` | The panel a built-in instrument gets from its spec: sections and a small keyboard (`pianoKeys.ts`, pure, tested). |
 | `fx/Sampler.tsx` | Marbble Sampler's panel: zone map, waveform handles, keyboard. |
 | `fx/dynControls.tsx`, `fx/TransferGraph.tsx` | The dynamics panels' knob, choices, section, level bar and GR meters; the Compressor's transfer curve. |
-| `fx/Compressor.tsx`, `Limiter.tsx`, `Gate.tsx`, `DeEsser.tsx`, `Reverb.tsx`, `Delay.tsx`, `Tuner.tsx`, `Loudness.tsx`, `Gain.tsx`, `LinearPhaseEq.tsx` | Each effect's panel. |
+| `fx/Compressor.tsx`, `Limiter.tsx`, `Gate.tsx`, `DeEsser.tsx`, `Reverb.tsx`, `Delay.tsx`, `Tuner.tsx`, `Loudness.tsx`, `Gain.tsx`, `ChannelEq.tsx`, `LinearPhaseEq.tsx` | Each effect's panel. |
 | `fx/Modulation.tsx`, `Distortion.tsx` | The Chorus, Flanger, Phaser and Tremolo panels; the Distortion and Overdrive panels. |
 | `DetachedWindow.tsx` | The root of a detached panel's window. |
 | `DetachButton.tsx` | The Open in Separate Window / Attach to Main Window button. |

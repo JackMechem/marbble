@@ -348,16 +348,6 @@ impl Engine {
                 }
             }
             Cmd::AutoMonitor(on) => self.auto_monitor = on,
-            Cmd::Eq(id, c) => {
-                if id == MASTER_ID {
-                    if !c.active {
-                        self.master_eq_state.reset();
-                    }
-                    self.master_eq = c;
-                } else if let Some(t) = self.track_mut(id) {
-                    t.set_eq(c);
-                }
-            }
             Cmd::Analyzer(t) => self.analyzer_target = t,
             Cmd::MidiTarget(t) => {
                 if t != self.midi_target {

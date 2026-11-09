@@ -214,6 +214,8 @@ export interface EqBand {
   slope: number;
 }
 
+/** A Channel EQ's settings as the editor works on them: the eight bands of a Channel EQ or Linear
+ *  Phase EQ insert's parameters (linearPhaseEq.ts). */
 export interface ChannelEq {
   on: boolean;
   bands: EqBand[];
@@ -237,9 +239,6 @@ export interface Track {
   instrument: PluginSlot | null;
   inserts: (PluginSlot | null)[];
   regions: Region[];
-  eq: ChannelEq;
-  /** The preset the Channel EQ last loaded or saved. */
-  eq_preset?: PresetRef | null;
   /** The track stack this track is in. */
   parent: Id | null;
   /** For stack main tracks: subtracks hidden. */
@@ -353,8 +352,6 @@ export interface Project {
   master: {
     volume_db: number;
     inserts: (PluginSlot | null)[];
-    eq: ChannelEq;
-    eq_preset?: PresetRef | null;
     /** Stereo Out's automation (volume and plug-in parameters), shown on the Output track. */
     automation?: AutoLane[];
     auto_mode?: AutoMode;
@@ -592,8 +589,6 @@ export interface AudioConfig {
 export const MASTER_ID = 0;
 export const INSTRUMENT_SLOT = -1;
 export const BUILTIN_SYNTH = "builtin:synth";
-/** The Channel EQ in the preset and paste commands (which take it in place of a slot). */
-export const EQ_SLOT = -2;
 
 function report(e: unknown) {
   const msg = typeof e === "string" ? e : (e as Error)?.message ?? String(e);

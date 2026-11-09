@@ -1,8 +1,9 @@
 //! Channel EQ DSP: RBJ-cookbook biquads in transposed direct form II, run in f64 so low
-//! frequencies stay accurate. Coefficients are computed off the audio thread and copied into
-//! the running filters, which keep their state so parameter drags don't click.
+//! frequencies stay accurate. Computing coefficients allocates nothing, so the Channel EQ effect
+//! (`fx/channel_eq.rs`) does it on the audio thread when a parameter changes; the running
+//! filters keep their state, so parameter drags don't click.
 
-use crate::model::{BandKind, ChannelEq};
+use crate::model::{BandKind, ChannelEq, EqBand};
 
 /// Enough sections for eight bands with both cuts at 48 dB/oct.
 pub const MAX_SECTIONS: usize = 16;
@@ -82,15 +83,20 @@ fn pass(sr: f64, f: f64, q: f64, high_pass: bool) -> Section {
     }
 }
 
-/// Q of each second-order stage of a Butterworth filter of the given (even) order. The first
+/// Q of stage `k` (0-based) of a Butterworth filter of the given (even) order. The first
 /// stage of a 12 dB/oct cut uses the band's own Q so it can resonate, as in Logic.
-pub fn butterworth_qs(order: usize) -> Vec<f64> {
-    (1..=order / 2).map(|k| 1.0 / (2.0 * (std::f64::consts::PI * (2 * k - 1) as f64 / (2 * order) as f64).cos())).collect()
+pub fn butterworth_q(order: usize, k: usize) -> f64 {
+    1.0 / (2.0 * (std::f64::consts::PI * (2 * k + 1) as f64 / (2 * order) as f64).cos())
 }
 
 pub fn coefficients(eq: &ChannelEq, sample_rate: f64) -> EqCoeffs {
+    coefficients_of(eq.on, &eq.bands, eq.output_db, sample_rate)
+}
+
+/// [`coefficients`] for a Channel EQ given by its parts. Allocates nothing.
+pub fn coefficients_of(on: bool, bands: &[EqBand], output_db: f32, sample_rate: f64) -> EqCoeffs {
     let mut out = EqCoeffs::default();
-    if eq.is_flat() {
+    if ChannelEq::flat(on, bands, output_db) {
         return out;
     }
     let nyq = sample_rate * 0.49;
@@ -100,7 +106,7 @@ pub fn coefficients(eq: &ChannelEq, sample_rate: f64) -> EqCoeffs {
             out.count += 1;
         }
     };
-    for b in eq.bands.iter().filter(|b| b.on) {
+    for b in bands.iter().filter(|b| b.on) {
         let f = (b.freq as f64).clamp(10.0, nyq);
         let q = (b.q as f64).clamp(0.1, 18.0);
         match b.kind {
@@ -114,15 +120,15 @@ pub fn coefficients(eq: &ChannelEq, sample_rate: f64) -> EqCoeffs {
                     _ => 8,
                 };
                 let hp = b.kind == BandKind::LowCut;
-                for (i, bq) in butterworth_qs(order).into_iter().enumerate() {
-                    let stage_q = if order == 2 && i == 0 { q } else { bq };
+                for i in 0..order / 2 {
+                    let stage_q = if order == 2 && i == 0 { q } else { butterworth_q(order, i) };
                     push(pass(sample_rate, f, stage_q, hp), &mut out);
                 }
             }
             _ => {}
         }
     }
-    out.output = 10f32.powf(eq.output_db / 20.0);
+    out.output = 10f32.powf(output_db / 20.0);
     out.active = true;
     out
 }

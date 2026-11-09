@@ -63,7 +63,6 @@ export function outputTrack(project: Project): Track {
     instrument: null,
     inserts: m.inserts,
     regions: [],
-    eq: m.eq,
     parent: null,
     collapsed: false,
     group: null,

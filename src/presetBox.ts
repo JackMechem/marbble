@@ -1,5 +1,5 @@
-// What a preset box shows. The preset a slot or Channel EQ last loaded or saved is in the
-// project (`PluginSlot.preset`, `eq_preset`), so it survives reopening the project and undo; the
+// What a preset box shows. The preset a slot last loaded or saved is in the
+// project (`PluginSlot.preset`), so it survives reopening the project and undo; the
 // box compares the settings now with that preset's. Pure, so it can be unit tested.
 import type { PresetRef } from "./api";
 

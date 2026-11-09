@@ -118,6 +118,9 @@ impl Session {
         let mut doc: Project = serde_json::from_slice(&std::fs::read(&path).map_err(|e| anyhow!("The template “{name}” can't be read: {e}"))?)
             .map_err(|e| anyhow!("The template “{name}” is damaged: {e}"))?;
         self.new_project();
+        if let Some(w) = self.upgrade_document(&mut doc) {
+            self.warning = Some(w);
+        }
         doc.name = self.project.name.clone();
         doc.alternative = String::new();
         // No audio to keep at the template's rate: the project runs at the device's.

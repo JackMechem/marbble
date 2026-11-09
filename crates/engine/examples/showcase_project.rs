@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use daw_engine::audio_io::AudioConfig;
 use daw_engine::model::{AutoParam, AutoPoint, Id, InputSel, Note, TrackKind, TrackSend, MASTER_ID};
 use daw_engine::presets::CHANNEL_EQ;
-use daw_engine::session::{MidiContent, TrackPatch, EQ_SLOT};
+use daw_engine::session::{MidiContent, TrackPatch};
 use daw_engine::Session;
 
 const SR: u32 = 48_000;
@@ -179,9 +179,11 @@ impl Song {
         self.s.set_send(t, slot, Some(TrackSend { bus, level_db, pre_fader: false, muted: false })).unwrap();
     }
 
-    /// A Channel EQ factory preset on the track's built-in EQ.
+    /// A Channel EQ with a factory preset at the top of the track's Audio FX, as its EQ
+    /// thumbnail puts one.
     fn eq(&mut self, t: Id, preset: &str) {
-        self.s.load_preset(t, EQ_SLOT, CHANNEL_EQ, preset, true).unwrap();
+        self.s.insert_channel_eq(t).unwrap();
+        self.s.load_preset(t, 0, CHANNEL_EQ, preset, true).unwrap();
     }
 }
 
@@ -376,15 +378,16 @@ fn main() {
     let delay = song.s.create_aux(Some("Delay".into())).unwrap();
     song.insert(reverb, 0, "builtin:reverb", None);
     song.insert(delay, 0, "builtin:delay", None);
-    song.eq(drums, "Kick Punch");
     song.insert(drums, 0, "builtin:compressor", None);
     song.insert(bass, 0, "builtin:compressor", None);
-    song.eq(guitar, "Acoustic Guitar");
-    song.eq(bass, "Bass Clarity");
     song.insert(guitar, 0, "builtin:chorus", None);
     song.insert(keys, 0, "builtin:chorus", None);
     song.insert(lead, 0, "builtin:overdrive", None);
     song.insert(MASTER_ID, 0, "builtin:limiter", None);
+    // Ahead of the plug-ins above.
+    song.eq(drums, "Kick Punch");
+    song.eq(guitar, "Acoustic Guitar");
+    song.eq(bass, "Bass Clarity");
     for (t, rev, del) in [
         (drums, -18.0, None),
         (guitar, -12.0, Some(-16.0)),

@@ -16,7 +16,6 @@ use vst3_host::{MidiEvent, PluginProcessor, TransportInfo};
 
 use crate::automation::{value_at, AutoTarget, LaneDsp};
 use crate::clip::Clip;
-use crate::eq::{EqCoeffs, EqState};
 use crate::fades::FadeLaw;
 use crate::model::{AutoMode, CcEvent, CcKind, Id, InputSel, InstrumentOutput, Note, TrackKind, CC_KINDS, INSERT_SLOTS, MASTER_ID, SEND_SLOTS};
 use crate::prefs::{ClickSettings, ClickSound};
@@ -86,11 +85,10 @@ pub struct Engine {
     midi_thru: bool,
     midi_target: Option<Id>,
     auto_monitor: bool,
-    master_eq: EqCoeffs,
-    master_eq_state: EqState,
     /// Stereo Out's automation lanes.
     master_auto: MasterAuto,
-    analyzer_target: Option<Id>,
+    /// The insert (strip, instance id) whose output feeds the Channel EQ editor's analyzer.
+    analyzer_target: Option<(Id, Id)>,
     analyzer_tx: rtrb::Producer<f32>,
     /// Commands from the session. A wait-free single-producer ring: the audio thread must never
     /// spin waiting on a sender (a crossbeam channel can, while a preempted sender finishes a
@@ -175,8 +173,6 @@ impl Engine {
             midi_thru: true,
             midi_target: None,
             auto_monitor: false,
-            master_eq: EqCoeffs::default(),
-            master_eq_state: EqState::default(),
             master_auto: MasterAuto::default(),
             analyzer_target: None,
             analyzer_tx,

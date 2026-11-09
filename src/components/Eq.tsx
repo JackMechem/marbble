@@ -1,54 +1,30 @@
-// The Channel EQ: the thumbnail on a channel strip and the editor, in a window or an effect panel.
+// The Channel EQ: the thumbnail on a channel strip, which shows and opens the strip's first
+// Channel EQ insert, and the editor that the Channel EQ's and the Linear Phase EQ's panels share
+// (fx/ChannelEq.tsx, fx/LinearPhaseEq.tsx).
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { call, EQ_SLOT, MASTER_ID, type ChannelEq, type EqBand, type Id, type PresetRef, type Project } from "../api";
+import { call, type ChannelEq, type EqBand, type Id } from "../api";
 import { BAND_COLORS, bandSections, defaultEq, eqSections, formatFreq, isFlat, responseDb } from "../eqMath";
-import { getState, onTick, setState, useStore } from "../store";
-import { eqKey, toggleEqPanel, usePanelShown } from "../fxDockState";
+import { onTick, useStore } from "../store";
+import { fxKey, usePanelShown } from "../fxDockState";
 import { pixelRatio } from "../uiScale";
-import { refuseFrozen } from "../freeze";
 import { fmt } from "../keymap";
-import { CHANNEL_EQ, copyEq, eqClipboard, eqMenu, pasteEq } from "../fxHost";
-import { openMenu } from "./Menu";
+import { CHANNEL_EQ, channelEqClick, firstChannelEq } from "../fxHost";
+import { valuesOf } from "../fxFormat";
+import { eqFromValues } from "../linearPhaseEq";
 import { slotProps } from "../slotKeys";
-import { PresetButton } from "./fx/Presets";
-import { learnContext } from "../learn";
 import { canvasFont } from "../canvasText";
 
 // ---- state helpers ------------------------------------------------------------------------
 
-export function eqOf(project: Project | undefined, id: Id): ChannelEq | undefined {
-  if (!project) return undefined;
-  return id === MASTER_ID ? project.master.eq : project.tracks.find((t) => t.id === id)?.eq;
-}
-
-/** The preset a strip's Channel EQ last loaded or saved. */
-function eqPresetOf(project: Project | undefined, id: Id): PresetRef | null {
-  if (!project) return null;
-  return (id === MASTER_ID ? project.master.eq_preset : project.tracks.find((t) => t.id === id)?.eq_preset) ?? null;
-}
-
-let pending: { track: Id; eq: ChannelEq } | null = null;
-let scheduled = false;
-
-/** Updates the strip's EQ in the UI immediately and sends it to the engine once per frame. */
-export function updateEq(track: Id, eq: ChannelEq) {
-  const snap = getState().snap;
-  // A frozen track's EQ is baked into its freeze file.
-  if (!snap || refuseFrozen([track])) return;
-  const project =
-    track === MASTER_ID
-      ? { ...snap.project, master: { ...snap.project.master, eq } }
-      : { ...snap.project, tracks: snap.project.tracks.map((t) => (t.id === track ? { ...t, eq } : t)) };
-  setState({ snap: { ...snap, project, dirty: true } });
-  pending = { track, eq };
-  if (!scheduled) {
-    scheduled = true;
-    requestAnimationFrame(() => {
-      scheduled = false;
-      if (pending) call("set_eq", pending);
-      pending = null;
-    });
-  }
+/** The settings of a strip's first Channel EQ insert (what its thumbnail shows), whether it is
+ *  bypassed, and its instance id; null when the strip has none. */
+function useFirstEq(trackId: Id): { eq: ChannelEq; bypass: boolean; uid: Id } | null {
+  const first = useStore((s) => firstChannelEq(s.snap?.project, trackId)?.plugin);
+  const info = useStore((s) => s.fxList.find((f) => f.id === CHANNEL_EQ));
+  if (!first) return null;
+  // Before the registry has loaded, the saved values (the engine writes them all) stand alone.
+  const values = info ? valuesOf(info.params, first.params) : Object.fromEntries(first.params ?? []);
+  return { eq: eqFromValues(values), bypass: first.bypass, uid: first.uid };
 }
 
 function cssVar(name: string): string {
@@ -63,9 +39,11 @@ const xf = (x: number, w: number) => MIN_F * Math.pow(MAX_F / MIN_F, Math.min(1,
 // ---- channel strip thumbnail ------------------------------------------------------------
 
 export function EqThumb({ trackId, name }: { trackId: Id; name: string }) {
-  const eq = useStore((s) => eqOf(s.snap?.project, trackId));
+  const first = useFirstEq(trackId);
+  const eq = first?.eq;
+  const on = !first?.bypass;
   const sr = useStore((s) => s.snap?.project.sample_rate ?? 48000);
-  const open = usePanelShown(eqKey(trackId));
+  const open = usePanelShown(first ? fxKey(first.uid) : null);
   const themeId = useStore((s) => s.themeId);
   const uiScale = useStore((s) => s.uiScale);
   const ref = useRef<HTMLCanvasElement>(null);
@@ -78,7 +56,7 @@ export function EqThumb({ trackId, name }: { trackId: Id; name: string }) {
   }, []);
   useLayoutEffect(() => {
     const cv = ref.current;
-    if (!cv || !eq) return;
+    if (!cv) return;
     const H = 30;
     const dpr = pixelRatio();
     cv.width = w * dpr;
@@ -88,6 +66,8 @@ export function EqThumb({ trackId, name }: { trackId: Id; name: string }) {
     const ctx = cv.getContext("2d")!;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, H);
+    // No Channel EQ: just the label, which a click turns into one.
+    if (!eq) return;
     const mid = H / 2;
     const scale = (H / 2 - 3) / 18;
     ctx.fillStyle = cssVar("--line");
@@ -101,41 +81,32 @@ export function EqThumb({ trackId, name }: { trackId: Id; name: string }) {
     db.forEach((d, i) => ctx.lineTo(i, mid - Math.max(-18, Math.min(18, d)) * scale));
     ctx.lineTo(w, mid);
     ctx.closePath();
-    ctx.globalAlpha = eq.on ? 0.28 : 0.1;
+    ctx.globalAlpha = on ? 0.28 : 0.1;
     ctx.fillStyle = accent;
     ctx.fill();
-    ctx.globalAlpha = eq.on ? 1 : 0.4;
+    ctx.globalAlpha = on ? 1 : 0.4;
     ctx.beginPath();
     db.forEach((d, i) => (i ? ctx.lineTo : ctx.moveTo).call(ctx, i, mid - Math.max(-18, Math.min(18, d)) * scale));
     ctx.strokeStyle = accent;
     ctx.lineWidth = 1.25;
     ctx.stroke();
     ctx.globalAlpha = 1;
-  }, [eq, w, sr, themeId, uiScale]);
+  }, [eq && JSON.stringify(eq), on, w, sr, themeId, uiScale]);
+  const title = first ? `Channel EQ — ${name}` : `Channel EQ — ${name}: click to insert one at the top of Audio FX`;
   return (
     <div
-      className={"eq-thumb" + (open ? " open" : "") + (eq && !eq.on ? " off" : "")}
-      title={`Channel EQ — ${name}`}
-      {...slotProps("Channel EQ", {
-        open: () => toggleEqPanel(trackId),
-        context: (el) => {
-          const r = el.getBoundingClientRect();
-          openMenu(r.left, r.bottom + 2, eqMenu(trackId, eq));
-        },
-      })}
+      className={"eq-thumb" + (open ? " open" : "") + (first && !on ? " off" : "")}
+      title={title}
+      {...slotProps(first ? "Channel EQ" : "Channel EQ, none: insert one", { open: () => channelEqClick(trackId) })}
+      aria-pressed={first ? open : undefined}
       onMouseDown={(e) => {
         e.stopPropagation();
         if (e.button !== 0) return;
-        toggleEqPanel(trackId);
-      }}
-      onContextMenu={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        openMenu(e.clientX, e.clientY, eqMenu(trackId, eq));
+        channelEqClick(trackId);
       }}
     >
       <canvas ref={ref} />
-      {eq && isFlat(eq) && <span className="eq-thumb-label">EQ</span>}
+      {(!eq || isFlat(eq)) && <span className="eq-thumb-label">EQ</span>}
     </div>
   );
 }
@@ -218,6 +189,9 @@ function Scrub({
   );
 }
 
+/** The insert feeding the analyzer now, so an editor closing only turns off its own. */
+let analyzerOwner: Id | null = null;
+
 /** A control of the editor, for Learn and Touch: a band's field, or the output level. */
 export type EqControl = { band: number; field: "on" | "freq" | "gain" | "q" } | { band: null; field: "output" };
 
@@ -228,10 +202,9 @@ export interface EqEditorProps {
   onChange: (eq: ChannelEq) => void;
   /** Toolbar controls before the Output level. */
   extra?: ReactNode;
-  /** Switched off: the graph and bands dim, as a bypassed effect's panel does. */
-  bypassed?: boolean;
-  /** The strip whose spectrum the analyzer shows; without one there is no analyzer. */
-  analyzerTrack?: Id;
+  /** The insert whose output the analyzer shows (the Channel EQ itself); without one there is
+   *  no analyzer. */
+  analyzerUid?: Id;
   /** A control's right-click handler (Learn MIDI Assignment). */
   learn?: (c: EqControl) => ((e: React.MouseEvent) => void) | undefined;
   /** A drag starts or ends, with the controls it moves (for Touch and Latch automation). */
@@ -239,70 +212,13 @@ export interface EqEditorProps {
 }
 
 /**
- * The Channel EQ editor for one strip (MASTER_ID = Stereo Out): the Analyzer and Output toolbar,
- * graph and bands. Its power button and presets are in the panel's header (fx/PanelHeader.tsx),
- * as an effect's are. It fills the box it is given (docked in the bottom section or in a
- * floating window, see fxDock.ts); the graph takes the height the toolbar and bands leave.
+ * The graph and band controls of the Channel EQ, for any eight-band setting: the parameters of
+ * a Channel EQ (fx/ChannelEq.tsx) or Linear Phase EQ (fx/LinearPhaseEq.tsx) insert.
  */
-export function EqPanel({ track: trackId }: { track: Id }) {
-  const project = useStore((s) => s.snap?.project);
-  const eq = eqOf(project, trackId);
-  const sr = project?.sample_rate ?? 48000;
-  if (!eq) return null;
-  return (
-    <EqEditor
-      eq={eq}
-      sr={sr}
-      onChange={(e) => updateEq(trackId, e)}
-      analyzerTrack={trackId}
-      bypassed={!eq.on}
-      learn={(c) => learnContext(c.band === null ? { type: "eq_output", track: trackId } : { type: "eq", track: trackId, band: c.band, field: c.field })}
-    />
-  );
-}
-
-/** The Channel EQ's power button, for its panel's header: on, or bypassed. */
-export function EqPower({ track }: { track: Id }) {
-  const eq = useStore((s) => eqOf(s.snap?.project, track));
-  if (!eq) return null;
-  const label = eq.on ? "Bypass" : "Turn On";
-  return (
-    <button className={"fx-power" + (eq.on ? " on" : "")} title={label} aria-label="Channel EQ On" aria-pressed={eq.on} onClick={() => updateEq(track, { ...eq, on: !eq.on })}>
-      ⏻
-    </button>
-  );
-}
-
-/** The Channel EQ's preset pop-up, for its panel's header, with Copy and Paste in its menu. */
-export function EqPresets({ track }: { track: Id }) {
-  const project = useStore((s) => s.snap?.project);
-  const eq = eqOf(project, track);
-  if (!eq) return null;
-  return (
-    <PresetButton
-      effect={CHANNEL_EQ}
-      track={track}
-      slot={EQ_SLOT}
-      loaded={eqPresetOf(project, track)}
-      current={JSON.stringify(eq)}
-      normalize={(p) => JSON.stringify(p.eq)}
-      defaultName="Flat"
-      extra={[
-        { label: "Copy Channel EQ", onClick: () => copyEq(eq) },
-        { label: "Paste Channel EQ", disabled: !eqClipboard(), onClick: () => pasteEq([track]) },
-      ]}
-    />
-  );
-}
-
-/**
- * The graph and band controls of the Channel EQ, for any eight-band setting: a strip's
- * Channel EQ (EqPanel) or the Linear Phase EQ's parameters (fx/LinearPhaseEq.tsx).
- */
-export function EqEditor({ eq, sr, onChange, extra, bypassed, analyzerTrack, learn, onGrab }: EqEditorProps) {
+export function EqEditor({ eq, sr, onChange, extra, analyzerUid, learn, onGrab }: EqEditorProps) {
   const [sel, setSel] = useState<number | null>(null);
   const [analyzerOn, setAnalyzer] = useState(true);
-  const analyzer = analyzerOn && analyzerTrack !== undefined;
+  const analyzer = analyzerOn && analyzerUid !== undefined;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const spectrum = useRef<Float32Array | null>(null);
@@ -311,15 +227,19 @@ export function EqEditor({ eq, sr, onChange, extra, bypassed, analyzerTrack, lea
   useStore((s) => s.themeId);
   useStore((s) => s.uiScale);
 
-  // Feed the analyzer from this strip while the editor is open.
+  // Feed the analyzer from this insert while the editor is open. One insert feeds it at a time:
+  // the editor shown last takes it, and closing one that no longer has it leaves it alone.
   useEffect(() => {
-    if (analyzerTrack === undefined) return;
-    call("set_analyzer", { track: analyzer ? analyzerTrack : null });
+    if (analyzerUid === undefined || !analyzer) return;
+    analyzerOwner = analyzerUid;
+    call("set_analyzer", { uid: analyzerUid });
     spectrum.current = null;
     return () => {
-      call("set_analyzer", { track: null });
+      if (analyzerOwner !== analyzerUid) return;
+      analyzerOwner = null;
+      call("set_analyzer", { uid: null });
     };
-  }, [analyzerTrack, analyzer]);
+  }, [analyzerUid, analyzer]);
 
   const draw = () => {
     const cv = canvasRef.current;
@@ -444,7 +364,7 @@ export function EqEditor({ eq, sr, onChange, extra, bypassed, analyzerTrack, lea
     const ro = new ResizeObserver(() => draw());
     if (wrapRef.current) ro.observe(wrapRef.current);
     const off = onTick((t) => {
-      if (!t.spectrum || t.spectrum[0] !== analyzerTrack) return;
+      if (!t.spectrum || t.spectrum[0] !== analyzerUid) return;
       const fresh = t.spectrum[1];
       const prev = spectrum.current;
       // Fast attack, slow release, like an analyzer's peak response.
@@ -455,7 +375,7 @@ export function EqEditor({ eq, sr, onChange, extra, bypassed, analyzerTrack, lea
       ro.disconnect();
       off();
     };
-  }, [analyzerTrack]);
+  }, [analyzerUid]);
 
   const setBand = (i: number, patch: Partial<EqBand>) => {
     const cur = live.current.eq;
@@ -526,9 +446,9 @@ export function EqEditor({ eq, sr, onChange, extra, bypassed, analyzerTrack, lea
 
   const defaults = defaultEq();
   return (
-    <div className={"eq-panel" + (bypassed ? " bypassed" : "")}>
+    <div className="eq-panel">
       <div className="eq-toolbar">
-        {analyzerTrack !== undefined && (
+        {analyzerUid !== undefined && (
           <button className={"eq-toggle" + (analyzer ? " on" : "")} aria-pressed={analyzer} onClick={() => setAnalyzer(!analyzer)} title="Show the post-EQ spectrum">
             Analyzer
           </button>

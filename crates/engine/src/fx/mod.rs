@@ -16,6 +16,7 @@
 //!   never renumber.
 
 pub mod biquad;
+pub mod channel_eq;
 pub mod chorus;
 pub mod compressor;
 pub mod deesser;
@@ -178,6 +179,7 @@ pub fn registry() -> Vec<EffectInfo> {
         overdrive::info(),
         distortion::info(),
         gain::info(),
+        channel_eq::info(),
         linear_phase_eq::info(),
     ]
 }
@@ -205,6 +207,7 @@ pub fn factory_presets(id: &str) -> &'static [FactoryPreset] {
         "builtin:overdrive" => overdrive::PRESETS,
         "builtin:distortion" => distortion::PRESETS,
         "builtin:gain" => gain::PRESETS,
+        channel_eq::ID => channel_eq::PRESETS,
         "builtin:linear-phase-eq" => linear_phase_eq::PRESETS,
         _ => &[],
     }

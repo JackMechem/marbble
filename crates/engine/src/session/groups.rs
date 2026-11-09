@@ -1,6 +1,6 @@
 //! Track groups, and changing a track's settings: `update_track` and `update_track_linked`, which
-//! applies an edit to the rest of the group too. Also the Channel EQ,
-//! the analyzer's target and the selected track.
+//! applies an edit to the rest of the group too. Also the analyzer's target and the selected
+//! track.
 
 use super::*;
 
@@ -173,27 +173,21 @@ impl Session {
         self.dirty = true;
     }
 
-    /// Replaces a strip's channel EQ settings (`MASTER_ID` for Stereo Out).
-    pub fn set_eq(&mut self, track: Id, eq: ChannelEq) {
-        let coeffs = crate::eq::coefficients(&eq, self.sample_rate());
-        if track == MASTER_ID {
-            self.project.master.eq = eq;
-        } else if let Some(t) = self.project.track_mut(track) {
-            t.eq = eq;
-        } else {
-            return;
-        }
-        // A frozen track's EQ is in its freeze file; `frozen_guard` puts the edit back.
-        if !self.is_frozen(track) {
-            self.send(Cmd::Eq(track, coeffs));
-        }
-        self.dirty = true;
-    }
-
-    /// Chooses which strip feeds the analyzer (None turns it off).
-    pub fn set_analyzer(&mut self, target: Option<Id>) {
+    /// Feeds the analyzer from the output of the insert `uid` (a Channel EQ whose editor is
+    /// open), on whichever strip it is; None, or an instance that isn't there, turns it off.
+    pub fn set_analyzer(&mut self, uid: Option<Id>) {
+        let target = uid.and_then(|uid| self.strip_of_insert(uid).map(|track| (track, uid)));
         self.analyzer_target = target;
         self.send(Cmd::Analyzer(target));
+    }
+
+    /// The strip (MASTER_ID for Stereo Out) whose Audio FX hold the instance `uid`.
+    pub fn strip_of_insert(&self, uid: Id) -> Option<Id> {
+        let holds = |slots: &[Option<PluginSlot>]| slots.iter().flatten().any(|s| s.uid == uid);
+        if holds(&self.project.master.inserts) {
+            return Some(MASTER_ID);
+        }
+        self.project.tracks.iter().find(|t| holds(&t.inserts)).map(|t| t.id)
     }
 
     pub fn select_track(&mut self, id: Option<Id>) {

@@ -1,5 +1,5 @@
 // The panels that can be detached into windows of their own (detach.ts): the Mixer and the
-// Editors from the bottom section, and the Channel EQ and built-in effect panels (fxDock.ts),
+// Editors from the bottom section, and the built-in effect and instrument panels (fxDock.ts),
 // docked or floating. main.tsx imports this before anything renders.
 import { useEffect } from "react";
 import { MASTER_ID, type Id, type Project, type Region, type Track } from "./api";
@@ -7,7 +7,7 @@ import { bottomPanel, registerPanelKind, type PanelKind } from "./detach";
 import { panelKey } from "./detachModel";
 import * as dock from "./fxDock";
 import { closePanel, dockPatch, panelMode, savedPanelSize } from "./fxDockState";
-import { CHANNEL_EQ, findFxSlot, fxInfo } from "./fxHost";
+import { findFxSlot, fxInfo } from "./fxHost";
 import type { BottomPane, State } from "./store";
 import { getState } from "./store";
 import { Editor } from "./components/Editor";
@@ -98,15 +98,15 @@ registerPanelKind(
 );
 
 /**
- * An effect panel or Channel EQ (fxDock.ts keys "fx:<uid>" and "eq:<track>"). It counts as shown
+ * A built-in effect's or instrument's panel (fxDock.ts key "fx:<uid>"). It counts as shown
  * in a window while it is open there, docked or floating, so a window never has a copy of a
  * detached one. Attached again, it opens in the main window as Settings › General › Open Effect
  * Panels says (docked, or floating). Each type of effect remembers its own window's place and
  * size, and a first window takes the size the panel last had floating.
  */
-function plugPanel(kind: "fx" | "eq", title: (arg: string, s: State) => string, size: PanelKind["size"]): PanelKind {
+function plugPanel(kind: "fx", title: (arg: string, s: State) => string, size: PanelKind["size"]): PanelKind {
   const key = (arg: string) => panelKey(kind, arg);
-  const type = (arg: string, s: State) => (kind === "eq" ? CHANNEL_EQ : (findFxSlot(s.snap?.project, Number(arg))?.plugin.plugin_id ?? null));
+  const type = (arg: string, s: State) => findFxSlot(s.snap?.project, Number(arg))?.plugin.plugin_id ?? null;
   return {
     memoryKey: (arg, s) => `${kind}:${type(arg, s) ?? ""}`,
     sizeOf: (arg, s) => {
@@ -136,12 +136,7 @@ registerPanelKind(
   ),
 );
 
-registerPanelKind(
-  "eq",
-  plugPanel("eq", (arg, s) => `Channel EQ — ${stripName(s.snap?.project, Number(arg))}`, { w: 820, h: 520 }),
-);
-
-/** An effect panel or Channel EQ filling its own window, under the same header as anywhere else. */
+/** An effect panel filling its own window, under the same header as anywhere else. */
 function OwnPlugPanel({ panelKey }: { panelKey: string }) {
   const title = usePanelTitle(panelKey);
 

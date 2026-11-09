@@ -211,6 +211,13 @@ pub fn steps() -> Vec<(&'static str, StepFn)> {
         ("Overdrive", |s, w| set_fx(s, w.a2, 1, "builtin:overdrive", 0.3)),
         ("Distortion", |s, w| set_fx(s, w.inst, 0, "builtin:distortion", 0.2)),
         ("Gain", |s, w| set_fx(s, w.inst, 1, "builtin:gain", 0.45)),
+        ("Channel EQ", |s, w| {
+            use daw_engine::fx::channel_eq::{freq, gain, on, slope, ID};
+            s.set_plugin(w.inst, 2, ID).unwrap();
+            for (id, v) in [(on(0), 1.0), (freq(0), 90.0), (slope(0), 2.0), (gain(3), -6.0), (gain(6), 4.0)] {
+                s.set_builtin_param(w.inst, 2, id, v).unwrap();
+            }
+        }),
         ("Linear Phase EQ", |s, w| {
             use daw_engine::fx::linear_phase_eq::{gain, on, QUALITY};
             s.set_plugin(w.drums, 0, "builtin:linear-phase-eq").unwrap();

@@ -1,22 +1,24 @@
-//! Presets for the Channel EQ, the built-in effects and the built-in instruments, shared by every
-//! project.
+//! Presets for the built-in effects (the Channel EQ among them) and the built-in instruments,
+//! shared by every project.
 //!
-//! - Factory presets ship with the code: `fx::factory_presets` for the effects,
-//!   `InstrumentInfo::presets` for the instruments and [`eq_factory`] for the Channel EQ.
+//! - Factory presets ship with the code: `fx::factory_presets` for the effects and
+//!   `InstrumentInfo::presets` for the instruments.
 //! - User presets are files, `<config dir>/presets/<effect>/<name>.json` (the effect id with
 //!   anything unsafe in a file name replaced, so "builtin:deesser" becomes "builtin_deesser").
 //!   Each holds its name, effect id and format version alongside the settings, and is written
 //!   to a temporary file first and renamed into place, so a crash never leaves half a preset.
+//! - The Channel EQ's user presets from before it was an insert hold its settings as bands
+//!   (`ChannelEq`); reading one turns them into the effect's values.
 
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
 
-use crate::model::{BandKind, ChannelEq, EqBand};
+use crate::model::ChannelEq;
 
-/// The preset id of the Channel EQ (it isn't in the effect registry).
-pub const CHANNEL_EQ: &str = "builtin:channel-eq";
+/// The Channel EQ's plug-in id, which its presets are filed under.
+pub const CHANNEL_EQ: &str = crate::fx::channel_eq::ID;
 const VERSION: u32 = 1;
 const MAX_NAME: usize = 64;
 
@@ -30,9 +32,10 @@ pub struct Preset {
     /// A built-in effect's values: (parameter id, plain value). Unlisted ones are defaults.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub values: Vec<(u32, f32)>,
-    /// The Channel EQ's settings.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub eq: Option<ChannelEq>,
+    /// The settings of a Channel EQ preset saved before the Channel EQ was an insert. Only read:
+    /// [`read_user`] turns it into `values`.
+    #[serde(rename = "eq", default, skip_serializing)]
+    pub legacy_eq: Option<ChannelEq>,
     /// An instrument's settings that aren't numbers, as its `PluginSlot::state` holds them. None
     /// leaves what's there alone (a factory preset that shapes a sampler's sound keeps its zones).
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -130,6 +133,9 @@ pub fn read_user(root: &Path, effect: &str, name: &str) -> Result<Preset> {
     let path = file(root, effect, &name);
     let text = std::fs::read_to_string(&path).with_context(|| format!("No preset named \"{name}\""))?;
     let mut p: Preset = serde_json::from_str(&text).with_context(|| format!("The preset \"{name}\" can't be read"))?;
+    if let Some(eq) = p.legacy_eq.take() {
+        p.values = crate::fx::channel_eq::values_of(&eq);
+    }
     // The file name is what the list shows, whatever the file says.
     p.base = is_bundle(effect).then(|| bundle_dir(&name));
     p.name = name;
@@ -192,20 +198,14 @@ pub fn rename_user(root: &Path, effect: &str, old: &str, new: &str) -> Result<St
     Ok(saved)
 }
 
-/// The factory presets of an effect (or the Channel EQ), complete.
+/// The factory presets of an effect, complete.
 pub fn factory(effect: &str) -> Vec<Preset> {
-    if effect == CHANNEL_EQ {
-        return eq_factory()
-            .into_iter()
-            .map(|(name, eq)| Preset { name: name.into(), effect: effect.into(), version: VERSION, values: Vec::new(), eq: Some(eq), state: None, base: None })
-            .collect();
-    }
     let preset = |name: &str, values: &[(u32, f32)]| Preset {
         name: name.into(),
         effect: effect.into(),
         version: VERSION,
         values: values.to_vec(),
-        eq: None,
+        legacy_eq: None,
         state: None,
         base: None,
     };
@@ -214,11 +214,12 @@ pub fn factory(effect: &str) -> Vec<Preset> {
         let own = info.presets.iter().map(|f| preset(f.name, f.values));
         return std::iter::once(preset(DEFAULT, &[])).chain(own).collect();
     }
-    let default = crate::fx::find(effect).map(|_| preset(DEFAULT, &[]));
+    // The Channel EQ's own first preset, "Flat", is its defaults (as it was before it was an insert).
+    let default = crate::fx::find(effect).filter(|_| effect != CHANNEL_EQ).map(|_| preset(DEFAULT, &[]));
     default.into_iter().chain(crate::fx::factory_presets(effect).iter().map(|f| preset(f.name, f.values))).collect()
 }
 
-/// The factory preset that puts a built-in effect back to its defaults ("Flat" for the EQ).
+/// The factory preset that puts a built-in effect back to its defaults ("Flat" for the Channel EQ).
 pub const DEFAULT: &str = "Default";
 
 /// Lists an effect's factory and user presets.
@@ -233,104 +234,6 @@ pub fn get(root: &Path, effect: &str, name: &str, factory_preset: bool) -> Resul
     } else {
         read_user(root, effect, name)
     }
-}
-
-/// The Channel EQ's factory presets: the default bands moved into place.
-pub fn eq_factory() -> Vec<(&'static str, ChannelEq)> {
-    // Band order: low cut, low shelf, four bells, high shelf, high cut.
-    let with = |f: &dyn Fn(&mut [EqBand])| {
-        let mut eq = ChannelEq::default();
-        f(&mut eq.bands);
-        eq
-    };
-    let set = |b: &mut EqBand, on: bool, freq: f32, gain: f32, q: f32| {
-        b.on = on;
-        b.freq = freq;
-        b.gain = gain;
-        b.q = q;
-    };
-    debug_assert!(matches!(ChannelEq::default().bands[0].kind, BandKind::LowCut));
-    vec![
-        ("Flat", ChannelEq::default()),
-        (
-            "Low Cut 80 Hz",
-            with(&|b| {
-                set(&mut b[0], true, 80.0, 0.0, 0.71);
-                b[0].slope = 24;
-            }),
-        ),
-        (
-            "Vocal Presence",
-            with(&|b| {
-                set(&mut b[0], true, 90.0, 0.0, 0.71);
-                set(&mut b[3], true, 350.0, -2.0, 1.2);
-                set(&mut b[5], true, 3500.0, 3.0, 0.9);
-            }),
-        ),
-        (
-            "Vocal Air",
-            with(&|b| {
-                set(&mut b[0], true, 100.0, 0.0, 0.71);
-                set(&mut b[5], true, 5000.0, 1.5, 1.0);
-                set(&mut b[6], true, 12000.0, 4.0, 0.71);
-            }),
-        ),
-        (
-            "Kick Punch",
-            with(&|b| {
-                set(&mut b[0], true, 30.0, 0.0, 0.71);
-                set(&mut b[2], true, 60.0, 4.0, 1.2);
-                set(&mut b[3], true, 380.0, -5.0, 1.4);
-                set(&mut b[5], true, 4000.0, 4.0, 1.1);
-            }),
-        ),
-        (
-            "Snare Crack",
-            with(&|b| {
-                set(&mut b[0], true, 80.0, 0.0, 0.71);
-                set(&mut b[2], true, 200.0, 3.0, 1.2);
-                set(&mut b[3], true, 800.0, -3.0, 1.5);
-                set(&mut b[5], true, 5000.0, 4.0, 1.0);
-            }),
-        ),
-        (
-            "Bass Clarity",
-            with(&|b| {
-                set(&mut b[0], true, 35.0, 0.0, 0.71);
-                set(&mut b[3], true, 250.0, -3.0, 1.2);
-                set(&mut b[4], true, 800.0, 2.5, 1.2);
-                set(&mut b[7], true, 8000.0, 0.0, 0.71);
-            }),
-        ),
-        (
-            "Acoustic Guitar",
-            with(&|b| {
-                set(&mut b[0], true, 80.0, 0.0, 0.71);
-                set(&mut b[3], true, 220.0, -3.0, 1.0);
-                set(&mut b[5], true, 3000.0, 2.0, 1.0);
-                set(&mut b[6], true, 10000.0, 2.5, 0.71);
-            }),
-        ),
-        (
-            "Telephone",
-            with(&|b| {
-                set(&mut b[0], true, 400.0, 0.0, 0.71);
-                b[0].slope = 48;
-                set(&mut b[4], true, 1500.0, 4.0, 1.0);
-                set(&mut b[7], true, 3200.0, 0.0, 0.71);
-                b[7].slope = 48;
-            }),
-        ),
-        (
-            "Master Polish",
-            with(&|b| {
-                set(&mut b[0], true, 25.0, 0.0, 0.71);
-                set(&mut b[1], true, 80.0, 1.0, 0.71);
-                set(&mut b[3], true, 300.0, -1.0, 0.8);
-                set(&mut b[6], true, 12000.0, 1.5, 0.71);
-            }),
-        ),
-    ]
 }
 
 #[cfg(test)]
@@ -351,7 +254,7 @@ mod tests {
             effect: "builtin:noise-gate".into(),
             version: 0,
             values: vec![(0, -31.5), (4, 120.0)],
-            eq: None,
+            legacy_eq: None,
             state: None,
             base: None,
         };
@@ -367,24 +270,23 @@ mod tests {
         assert_eq!(list_user(&root, "builtin:noise-gate"), vec!["Kick".to_string()]);
         delete_user(&root, "builtin:noise-gate", "Kick").unwrap();
         assert!(list_user(&root, "builtin:noise-gate").is_empty());
-        let eq = Preset {
-            name: "Bright".into(),
-            effect: CHANNEL_EQ.into(),
-            version: 0,
-            values: Vec::new(),
-            eq: Some(eq_factory()[3].1.clone()),
-            state: None,
-            base: None,
-        };
-        write_user(&root, &eq, false).unwrap();
-        assert_eq!(get(&root, CHANNEL_EQ, "Bright", false).unwrap().eq.unwrap().bands[6].gain, 4.0);
+        // A Channel EQ preset from before it was an insert reads as the effect's values.
+        let dir = root.join("builtin_channel-eq");
+        std::fs::create_dir_all(&dir).unwrap();
+        let mut eq = ChannelEq::default();
+        eq.bands[6].gain = 4.0;
+        let old = serde_json::json!({ "name": "Bright", "effect": CHANNEL_EQ, "version": 1, "eq": eq });
+        std::fs::write(dir.join("Bright.json"), old.to_string()).unwrap();
+        let back = get(&root, CHANNEL_EQ, "Bright", false).unwrap();
+        assert!(back.legacy_eq.is_none() && back.values.contains(&(crate::fx::channel_eq::gain(6), 4.0)));
+        assert!(!serde_json::to_string(&back).unwrap().contains("bands"), "written back without the old form");
         assert!(clean_name(" ..  ").is_err());
         let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]
     fn factory_presets_are_valid() {
-        assert!(factory(CHANNEL_EQ).len() >= 8);
+        assert!(factory(CHANNEL_EQ).len() >= 8 && factory(CHANNEL_EQ)[0].name == "Flat");
         assert!(factory("builtin:noise-gate").len() >= 6 && factory("builtin:deesser").len() >= 6);
         assert_eq!(factory("builtin:deesser")[0].name, DEFAULT);
         for e in crate::fx::registry() {

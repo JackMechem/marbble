@@ -2,7 +2,7 @@
 // from the engine (`pushTick`, `onTick`, the meter maps, `liveTakes`). Selectors must return the same value
 // while nothing changed; see docs/ARCHITECTURE.md § The frontend.
 import { useSyncExternalStore } from "react";
-import type { AutoParam, ChannelEq, Id, PluginDesc, PluginSlot, Region, Snapshot, Tick } from "./api";
+import type { AutoParam, Id, PluginDesc, PluginSlot, Region, Snapshot, Tick } from "./api";
 import type { StripSetting } from "./stripSettings";
 import type { FxInfo, InstInfo } from "./fx";
 import type { DropTarget } from "./dnd";
@@ -61,8 +61,6 @@ export interface State {
   /** Group whose settings sheet is open. */
   groupSheet: Id | null;
   paneSizes: PaneSizes;
-  /** Strip whose Channel EQ editor is open (MASTER_ID = Stereo Out). */
-  eqEditor: Id | null;
   settingsTab: SettingsTab;
   themeId: string;
   /** Interface zoom (1 = 100%). */
@@ -100,9 +98,9 @@ export interface State {
   fxPanels: Id[];
   /** The overview strip under the tracks, in place of the horizontal scroll bar (View menu). */
   showOverview: boolean;
-  /** Open plug-in panels and where they show (fxDock.ts). `fxPanels` and `eqEditor` follow it. */
+  /** Open plug-in panels and where they show (fxDock.ts). `fxPanels` follows it. */
   fxDock: DockPanels;
-  /** Panels shown in their own windows, by panel key ("mixer", "eq:12"; see detach.ts). */
+  /** Panels shown in their own windows, by panel key ("mixer", "fx:12"; see detach.ts). */
   detached: string[];
   /** Selected notes and controller events, as "region:index" keys into each MIDI region's
    *  content: the Piano Roll and the Event List share it (midiEdit.ts `selectionKeys`). */
@@ -122,12 +120,11 @@ export interface State {
   selectedMarker: Id | null;
   /** The Arrangement track's selected section. */
   selectedSection: Id | null;
-  /** The channel strip, plug-in and Channel EQ clipboards (stripSettings.ts, fxHost.ts). Here,
+  /** The channel strip and plug-in clipboards (stripSettings.ts, fxHost.ts). Here,
    *  so every window shares them (detachModel.ts SYNCED_FIELDS), and not in the project, so
    *  they survive opening another. */
   stripClip: StripSetting | null;
   pluginClip: PluginSlot | null;
-  eqClip: ChannelEq | null;
   /** The Mixer's strip size and the strips sized by hand (mixerLayout.ts), remembered per
    *  project like track heights. */
   mixerView: MixerView;
@@ -153,7 +150,6 @@ let state: State = {
   selectedRegions: [],
   dialog: null,
   chooserTab: "new",
-  eqEditor: null,
   dropTarget: null,
   showTyping: false,
   selectedTracks: [],
@@ -193,7 +189,6 @@ let state: State = {
   selectedSection: null,
   stripClip: null,
   pluginClip: null,
-  eqClip: null,
   mixerView: DEFAULT_MIXER_VIEW,
 };
 

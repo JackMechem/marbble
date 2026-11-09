@@ -64,10 +64,9 @@ mod builtin;
 mod new_track_drag;
 mod tempo;
 pub use builtin::{builtin_effects, builtin_instruments, BuiltinInfo, BuiltinInstrument, FxTick};
-mod presets;
-pub use presets::EQ_SLOT;
 mod crossfades;
 mod insert_order;
+mod presets;
 mod region_params;
 pub use region_params::{PlayedNotes, RegionParamsPatch};
 mod drag_modes;
@@ -116,6 +115,8 @@ mod vst_key;
 mod zero_crossings;
 pub use sampler::{prepare_files, PreparedFile, SamplerAdded, SamplerRecording, SamplerView, SamplerWave, SfzReport, ZoneView, SAMPLES_DIR};
 #[cfg(test)]
+mod channel_eq_tests;
+#[cfg(test)]
 mod comp_tests;
 #[cfg(test)]
 mod held_notes;
@@ -159,7 +160,8 @@ pub struct Tick {
     pub midi_activity: u32,
     pub overruns: u32,
     pub latency: Latency,
-    /// Post-EQ spectrum (dBFS per log band) of the strip shown in the EQ editor.
+    /// The spectrum (dBFS per log band) after the Channel EQ insert whose editor is open, by
+    /// its instance id.
     pub spectrum: Option<(Id, Vec<f32>)>,
     /// Something went wrong out of sight (a recording couldn't be written); shown once.
     pub warning: Option<String>,
@@ -227,7 +229,8 @@ pub struct Session {
     rec_punch: Option<i64>,
     analyzer_rx: rtrb::Consumer<f32>,
     analyzer_buf: Vec<f32>,
-    analyzer_target: Option<Id>,
+    /// The analyzer's insert: (strip, instance id).
+    analyzer_target: Option<(Id, Id)>,
     rec_midi_track: Option<Id>,
     last_play_from: i64,
     undo_stack: Vec<UndoEntry>,

@@ -1,13 +1,14 @@
-// Hosting built-in effects in the UI: the registry, their panel windows, the plug-in and Channel
-// EQ clipboard, and the slot right-click menu.
-import { act, BUILTIN_SYNTH, call, EQ_SLOT, INSTRUMENT_SLOT, MASTER_ID, type ChannelEq, type Id, type PluginSlot, type Project, type Track } from "./api";
+// Hosting built-in effects in the UI: the registry, their panel windows, the plug-in clipboard,
+// the slot right-click menu, and the EQ thumbnail's Channel EQ.
+import { act, BUILTIN_SYNTH, call, INSTRUMENT_SLOT, MASTER_ID, type Id, type PluginSlot, type Project, type Track } from "./api";
 import type { FxInfo, InstInfo } from "./fx";
 import type { MenuItem } from "./components/Menu";
 import { getState, setState } from "./store";
 import { closePanel, fxKey, openPanel, togglePanel } from "./fxDockState";
 import { sideChainMenu } from "./sideChain";
+import { refuseFrozen } from "./freeze";
 
-/** The preset id of the Channel EQ. */
+/** The Channel EQ's plug-in id (crates/engine/src/fx/channel_eq.rs). */
 export const CHANNEL_EQ = "builtin:channel-eq";
 
 export async function loadFxList() {
@@ -65,12 +66,32 @@ export async function loadPlugin(track: Id, slot: number, pluginId: string, open
   if (uid !== undefined) openFxPanel(uid);
 }
 
+// ---- the EQ thumbnail -------------------------------------------------------------------------
+
+/** A strip's first Channel EQ insert and its slot (MASTER_ID for Stereo Out): what the strip's EQ
+ *  thumbnail shows and opens, as in Logic. */
+export function firstChannelEq(project: Project | undefined, track: Id): { slot: number; plugin: PluginSlot } | null {
+  const inserts = track === MASTER_ID ? project?.master.inserts : project?.tracks.find((t) => t.id === track)?.inserts;
+  const slot = inserts?.findIndex((s) => s?.plugin_id === CHANNEL_EQ) ?? -1;
+  return slot >= 0 ? { slot, plugin: inserts![slot]! } : null;
+}
+
+/** The EQ thumbnail's click: shows or hides the strip's first Channel EQ, or, when it has none,
+ *  puts one at the top of its Audio FX (the plug-ins there move down a slot) and opens it. */
+export async function channelEqClick(track: Id) {
+  const eq = firstChannelEq(getState().snap?.project, track);
+  if (eq) return toggleFxPanel(eq.plugin.uid);
+  if (refuseFrozen([track])) return;
+  const snap = await act("insert_channel_eq", { track });
+  const made = snap && firstChannelEq(snap.project, track);
+  if (made) openFxPanel(made.plugin.uid);
+}
+
 // ---- clipboard --------------------------------------------------------------------------------
 // In the store, shared by every window, and outside the project, so it survives opening
 // another.
 
 export const pluginClipboard = () => getState().pluginClip;
-export const eqClipboard = () => getState().eqClip;
 
 export async function copyPlugin(track: Id, slot: number) {
   const s = await call<PluginSlot>("copy_plugin", { track, slot });
@@ -80,15 +101,6 @@ export async function copyPlugin(track: Id, slot: number) {
 export function pastePlugin(tracks: Id[], slot: number) {
   const plugin = pluginClipboard();
   if (plugin) return act("paste_plugin", { tracks, slot, plugin });
-}
-
-export function copyEq(eq: ChannelEq) {
-  setState({ eqClip: structuredClone(eq) });
-}
-
-export function pasteEq(tracks: Id[]) {
-  const eq = eqClipboard();
-  if (eq) return act("paste_eq", { tracks, eq });
 }
 
 /** The tracks a paste goes to: every selected track when `track` is among several selected. */
@@ -132,17 +144,3 @@ export function slotMenu(track: Id, slot: number, plugin: PluginSlot | null): Me
   if (targets.length > 1) items.push({ label: "Paste to Selected Tracks", disabled: !fits, onClick: () => pastePlugin(targets, slot) });
   return items;
 }
-
-/** The Channel EQ thumbnail's right-click menu. */
-export function eqMenu(track: Id, eq: ChannelEq | undefined): MenuItem[] {
-  const targets = pasteTargets(track);
-  const eqClip = eqClipboard();
-  const items: MenuItem[] = [
-    { label: "Copy Channel EQ", disabled: !eq, onClick: () => eq && copyEq(eq) },
-    { label: "Paste Channel EQ", disabled: !eqClip, onClick: () => pasteEq([track]) },
-  ];
-  if (targets.length > 1) items.push({ label: "Paste Channel EQ to Selected Tracks", disabled: !eqClip, onClick: () => pasteEq(targets) });
-  return items;
-}
-
-export { EQ_SLOT };

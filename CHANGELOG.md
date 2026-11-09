@@ -33,6 +33,16 @@ All notable changes to Marbble are recorded here. The format follows
   header goes to one line, a region no longer squeezes its waveform or notes into a few pixels:
   it's drawn as a bar of its colour with its name centred in it, and shows no fades (its edges
   still trim it). An open take folder's take rows still show their takes.
+- **The Channel EQ is an Audio FX plug-in.** As in Logic, it goes in any Audio FX slot (Stereo
+  Out and auxes too, more than one per strip if you like), so it can come after a compressor:
+  drag it, bypass it, copy and paste it, remove it, automate it and learn controllers for it as
+  any built-in effect. The EQ slot above Audio FX still shows the curve: it opens the strip's
+  first Channel EQ, and on a strip without one a click puts one at the top of Audio FX and opens
+  it. New tracks start without one, so a flat EQ costs nothing. Projects, channel strip
+  settings and Channel EQ presets saved before open as they were and sound the same: a shaped
+  EQ (or one a controller drives) becomes a Channel EQ at the top of Audio FX with its preset,
+  and controller assignments made for it drive that Channel EQ; a flat one goes. A strip with
+  all eight Audio FX slots taken can't take it, and opening the project says which.
 - **Text drawn in the editors is on the interface's type scale.** The ruler, region and marker
   names, notes, the Piano Roll's keys, the tempo and signature tracks and the effect panels'
   graphs drew their text at their own sizes from 8 to 12 px, some in a different font. They now

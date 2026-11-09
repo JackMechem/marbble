@@ -2,6 +2,7 @@
 // crates/engine/src/fx/mod.rs) and the custom panels that replace the generic one.
 import type { ComponentType } from "react";
 import type { Id } from "./api";
+import { ChannelEqPanel } from "./components/fx/ChannelEq";
 import { CompressorPanel } from "./components/fx/Compressor";
 import { DeEsserPanel } from "./components/fx/DeEsser";
 import { DelayPanel } from "./components/fx/Delay";
@@ -90,6 +91,7 @@ export const FX_PANELS: Record<string, ComponentType<FxPanelProps>> = {
   "builtin:overdrive": OverdrivePanel,
   "builtin:distortion": DistortionPanel,
   "builtin:gain": GainPanel,
+  "builtin:channel-eq": ChannelEqPanel,
   "builtin:linear-phase-eq": LinearPhaseEqPanel,
   "builtin:sampler": SamplerPanel,
 };

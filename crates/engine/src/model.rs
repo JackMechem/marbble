@@ -2,7 +2,8 @@
 //!
 //! The types are in `project.rs`, `track.rs`, `region.rs`, `take_folder.rs` and `automation.rs`, all
 //! re-exported from here. `src/api.ts` mirrors them. Only `crate::session` edits a document; the engine
-//! never sees one, only what the session makes from it.
+//! never sees one, only what the session makes from it. `channel_eq_upgrade.rs` converts the fixed
+//! Channel EQ of older projects.
 
 use std::collections::{HashMap, HashSet};
 
@@ -16,6 +17,8 @@ use crate::tempo::{SigEvent, TempoEvent};
 
 mod automation;
 pub use automation::*;
+mod channel_eq_upgrade;
+pub use channel_eq_upgrade::{channel_eq_slot, insert_first};
 mod project;
 pub use project::*;
 mod region;

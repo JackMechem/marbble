@@ -27,6 +27,8 @@ export type CtlTarget =
   | { type: "send"; track: Id; slot: number }
   /** `plugin` may be left empty: the engine fills in the slot's plug-in id. */
   | { type: "plugin"; track: Id; uid: Id; plugin: string; param: number }
+  /** Learnt before the Channel EQ was an insert: the engine drives that setting of the strip's
+   *  first Channel EQ insert. New assignments to a Channel EQ are "plugin" ones. */
   | { type: "eq"; track: Id; band: number; field: EqField }
   | { type: "eq_output"; track: Id }
   | { type: "master_volume" }

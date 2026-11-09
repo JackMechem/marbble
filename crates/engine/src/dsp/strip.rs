@@ -49,7 +49,7 @@ pub(super) fn run_strip<R: Routes>(cx: &BlockCtx<'_>, ti: usize, t: &mut TrackDs
     if t.left_out {
         t.sum_l[..n].fill(0.0);
         t.sum_r[..n].fill(0.0);
-        if cx.analyzer_target == Some(t.id) {
+        if cx.analyzer_target.is_some_and(|a| a.0 == t.id) {
             routes.analyze(&mut t.outs, None, n);
         }
         return;
@@ -66,7 +66,7 @@ pub(super) fn run_strip<R: Routes>(cx: &BlockCtx<'_>, ti: usize, t: &mut TrackDs
         if !routes.leave() {
             return;
         }
-        if cx.analyzer_target == Some(t.id) {
+        if cx.analyzer_target.is_some_and(|a| a.0 == t.id) {
             routes.analyze(&mut t.outs, None, n);
         }
         return;
@@ -345,13 +345,6 @@ pub(super) fn run_strip<R: Routes>(cx: &BlockCtx<'_>, ti: usize, t: &mut TrackDs
 
     track_off::fade_in(&mut t.resume_left, track_off::resume_frames(sr), l, r);
 
-    if fx {
-        t.eq_state.process(&t.eq, l, r);
-    }
-    if cx.analyzer_target == Some(t.id) {
-        routes.analyze(&mut t.outs, Some((&*l, &*r)), n);
-    }
-
     for (k, slot) in t.inserts.iter_mut().enumerate().filter(|_| fx) {
         let Some(ins) = slot else { continue };
         let ran = !ins.bypass && ll_skip & (1 << k) == 0;
@@ -381,6 +374,9 @@ pub(super) fn run_strip<R: Routes>(cx: &BlockCtx<'_>, ti: usize, t: &mut TrackDs
         }
         if ran {
             check_output(cx.status, ins, l, r);
+        }
+        if cx.analyzer_target == Some((t.id, ins.uid)) {
+            routes.analyze(&mut t.outs, Some((&*l, &*r)), n);
         }
     }
     // The delay line keeps the post-plug-in signal; the output and the sends read it

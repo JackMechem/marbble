@@ -364,15 +364,6 @@ impl Engine {
 
         // Isolated renders are captured before the Stereo Out strip.
         let master_fx = self.isolate.is_none();
-        let (bl, br) = (&mut self.bus_l[..n], &mut self.bus_r[..n]);
-        if master_fx {
-            self.master_eq_state.process(&self.master_eq, bl, br);
-        }
-        if self.analyzer_target == Some(MASTER_ID) {
-            for i in 0..n {
-                let _ = self.analyzer_tx.push(0.5 * (bl[i] + br[i]));
-            }
-        }
         if master_fx {
             self.automate_master(n);
         }
@@ -388,6 +379,11 @@ impl Engine {
                 check_output(&self.status, ins, bl, br);
             } else {
                 ins.plugin.pass_edits_aside(&transport);
+            }
+            if self.analyzer_target == Some((MASTER_ID, ins.uid)) {
+                for i in 0..n {
+                    let _ = self.analyzer_tx.push(0.5 * (bl[i] + br[i]));
+                }
             }
         }
         let master_target = if master_fx { self.master_auto.volume.unwrap_or(self.master_volume) } else { 1.0 };

@@ -1,4 +1,4 @@
-//! A track and what hangs off it: its kind and input, plug-in slots, Channel EQ, sends, freeze and
+//! A track and what hangs off it: its kind and input, plug-in slots, sends, freeze and
 //! alternatives, plus the groups and VCAs tracks belong to.
 //!
 //! All of this is saved. New fields go at the end of the struct with `#[serde(default)]`.
@@ -124,7 +124,10 @@ fn default_slope() -> u8 {
     24
 }
 
-/// The built-in eight-band channel EQ every strip has, modelled on Logic's Channel EQ.
+/// The eight-band Channel EQ's settings, modelled on Logic's Channel EQ. The Channel EQ itself
+/// is a built-in effect (`fx/channel_eq.rs`) whose parameters these are; this form is what
+/// strips, channel strip settings and presets saved before that held (see `channel_eq_upgrade.rs`),
+/// and what the Linear Phase EQ designs its filter from.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChannelEq {
     pub on: bool,
@@ -156,9 +159,13 @@ impl Default for ChannelEq {
 impl ChannelEq {
     /// True when the EQ would leave the signal untouched, so it can be skipped entirely.
     pub fn is_flat(&self) -> bool {
-        !self.on
-            || (self.output_db.abs() < 0.01
-                && self.bands.iter().all(|b| !b.on || (matches!(b.kind, BandKind::Bell | BandKind::LowShelf | BandKind::HighShelf) && b.gain.abs() < 0.01)))
+        Self::flat(self.on, &self.bands, self.output_db)
+    }
+
+    /// [`is_flat`](Self::is_flat) for a Channel EQ given by its parts.
+    pub fn flat(on: bool, bands: &[EqBand], output_db: f32) -> bool {
+        !on || (output_db.abs() < 0.01
+            && bands.iter().all(|b| !b.on || (matches!(b.kind, BandKind::Bell | BandKind::LowShelf | BandKind::HighShelf) && b.gain.abs() < 0.01)))
     }
 }
 
@@ -184,8 +191,11 @@ pub struct Track {
     pub inserts: Vec<Option<PluginSlot>>,
     #[serde(default)]
     pub regions: Vec<Region>,
-    #[serde(default)]
-    pub eq: ChannelEq,
+    /// The fixed Channel EQ every strip had before the Channel EQ became an Audio FX insert.
+    /// Only read, from older projects: opening one turns it into an insert, or drops it when it
+    /// was flat and unused (`Project::upgrade_channel_eq`), so it is None everywhere else.
+    #[serde(rename = "eq", default, skip_serializing)]
+    pub legacy_eq: Option<ChannelEq>,
     /// The track stack this track belongs to.
     #[serde(default)]
     pub parent: Option<Id>,
@@ -239,9 +249,10 @@ pub struct Track {
     /// bus (see `session/multi_out.rs`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub instrument_output: Option<InstrumentOutput>,
-    /// The preset last loaded into the Channel EQ or saved from it (see `PluginSlot::preset`).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub eq_preset: Option<PresetRef>,
+    /// The preset last loaded into the fixed Channel EQ or saved from it, read from older
+    /// projects only: it becomes the Channel EQ insert's `PluginSlot::preset` (see `legacy_eq`).
+    #[serde(rename = "eq_preset", default, skip_serializing)]
+    pub legacy_eq_preset: Option<PresetRef>,
     /// The icon the user chose for the track, by the UI's id for it ("kick", "mic"). None shows
     /// the icon its name suggests, else its kind's (see `src/trackIcons.ts`). Not part of channel
     /// strip settings: the icon belongs to the track.

@@ -202,8 +202,6 @@ pub struct TrackDsp {
     pub(super) rec: Option<rtrb::Producer<f32>>,
     pub(super) sounding: [bool; 128],
     pub(super) flush_notes: bool,
-    pub(super) eq: EqCoeffs,
-    pub(super) eq_state: EqState,
     /// Index in the engine's list of each send's aux, kept up to date by `resolve_routes()`.
     pub(super) send_idx: [Option<usize>; SEND_SLOTS],
     /// Smoothed send gains, like `gains` for the fader.
@@ -281,8 +279,6 @@ impl TrackDsp {
             rec: None,
             sounding: [false; 128],
             flush_notes: false,
-            eq: EqCoeffs::default(),
-            eq_state: EqState::default(),
             send_idx: [None; SEND_SLOTS],
             send_gains: [0.0; SEND_SLOTS],
             automation: Arc::new(Vec::new()),
@@ -351,13 +347,6 @@ impl TrackDsp {
             _ => {}
         }
         self.auto_sent = [f32::NAN; MAX_AUTO_SENT];
-    }
-
-    pub fn set_eq(&mut self, c: EqCoeffs) {
-        if !c.active {
-            self.eq_state.reset();
-        }
-        self.eq = c;
     }
 
     pub fn set_regions(&mut self, r: Arc<Vec<RegionDsp>>) {

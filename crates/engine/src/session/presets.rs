@@ -1,15 +1,12 @@
-//! Copying and pasting plug-ins and Channel EQ settings, and loading and saving presets (see
-//! `crate::presets` for where they are stored).
+//! Copying and pasting plug-ins, and loading and saving presets (see `crate::presets` for where
+//! they are stored).
 //!
 //! The clipboard lives in the UI, so it survives opening another project: copying hands the UI
 //! the slot with its complete settings (a VST3's state captured from its controller), and
 //! pasting makes a new instance from that.
 
 use super::*;
-use crate::presets::{self, Preset, CHANNEL_EQ};
-
-/// The slot index that addresses a strip's Channel EQ in the preset commands.
-pub const EQ_SLOT: usize = usize::MAX - 1;
+use crate::presets::{self, Preset};
 
 impl Session {
     /// A slot with everything needed to paste it elsewhere: its settings, and a VST3's state
@@ -91,30 +88,8 @@ impl Session {
         Ok(())
     }
 
-    /// A strip's Channel EQ (MASTER_ID for Stereo Out).
-    pub fn eq_of(&self, track: Id) -> Option<ChannelEq> {
-        if track == MASTER_ID {
-            Some(self.project.master.eq.clone())
-        } else {
-            self.project.track(track).map(|t| t.eq.clone())
-        }
-    }
-
-    /// Pastes Channel EQ settings onto each strip.
-    pub fn paste_eq(&mut self, tracks: &[Id], eq: &ChannelEq) -> Result<()> {
-        self.check_unfrozen(tracks)?;
-        for &t in tracks {
-            if t != MASTER_ID && self.project.track(t).is_none() {
-                return Err(anyhow!("no such track"));
-            }
-            self.set_eq(t, eq.clone());
-        }
-        Ok(())
-    }
-
-    /// Applies a preset to a built-in effect's slot, or to the strip's Channel EQ when `slot`
-    /// is [`EQ_SLOT`]. A built-in effect's parameters the preset doesn't list go to their
-    /// defaults. The slot remembers the preset's name for its preset box.
+    /// Applies a preset to a built-in effect's slot. A built-in effect's parameters the preset
+    /// doesn't list go to their defaults. The slot remembers the preset's name for its preset box.
     pub fn load_preset(&mut self, track: Id, slot: usize, effect: &str, name: &str, factory: bool) -> Result<()> {
         let p = presets::get(&presets::user_root(), effect, name, factory)?;
         self.apply_preset(track, slot, &p)?;
@@ -122,24 +97,13 @@ impl Session {
         Ok(())
     }
 
-    /// The preset a slot (or, with [`EQ_SLOT`], a strip's Channel EQ) last loaded or saved.
+    /// The preset a slot last loaded or saved.
     pub fn preset_ref(&self, track: Id, slot: usize) -> Option<&PresetRef> {
-        if slot == EQ_SLOT {
-            return if track == MASTER_ID { self.project.master.eq_preset.as_ref() } else { self.project.track(track)?.eq_preset.as_ref() };
-        }
         self.slot_get(track, slot)?.preset.as_ref()
     }
 
     fn set_preset_ref(&mut self, track: Id, slot: usize, preset: Option<PresetRef>) {
-        let at = if slot == EQ_SLOT {
-            if track == MASTER_ID {
-                Some(&mut self.project.master.eq_preset)
-            } else {
-                self.project.track_mut(track).map(|t| &mut t.eq_preset)
-            }
-        } else {
-            self.slot_ref(track, slot).and_then(|s| s.as_mut()).map(|s| &mut s.preset)
-        };
+        let at = self.slot_ref(track, slot).and_then(|s| s.as_mut()).map(|s| &mut s.preset);
         if let Some(at) = at.filter(|at| **at != preset) {
             *at = preset;
             self.dirty = true;
@@ -166,14 +130,6 @@ impl Session {
 
     pub fn apply_preset(&mut self, track: Id, slot: usize, p: &Preset) -> Result<()> {
         self.check_unfrozen(&[track])?;
-        if slot == EQ_SLOT {
-            let eq = p.eq.clone().filter(|_| p.effect == CHANNEL_EQ).ok_or_else(|| anyhow!("\"{}\" isn't a Channel EQ preset", p.name))?;
-            if track != MASTER_ID && self.project.track(track).is_none() {
-                return Err(anyhow!("no such track"));
-            }
-            self.set_eq(track, eq);
-            return Ok(());
-        }
         let s = self.slot_ref(track, slot).and_then(|s| s.as_mut()).ok_or_else(|| anyhow!("no plug-in in that slot"))?;
         if s.plugin_id != p.effect {
             return Err(anyhow!("\"{}\" is a preset for another plug-in", p.name));
@@ -198,9 +154,8 @@ impl Session {
         Ok(())
     }
 
-    /// Saves the settings of a built-in effect's or instrument's slot (or the strip's Channel EQ, with
-    /// [`EQ_SLOT`]) as a user preset, which the slot then shows as loaded. Returns the name it
-    /// was saved under.
+    /// Saves the settings of a built-in effect's or instrument's slot as a user preset, which the
+    /// slot then shows as loaded. Returns the name it was saved under.
     pub fn save_preset(&mut self, track: Id, slot: usize, name: &str, overwrite: bool) -> Result<String> {
         let saved = self.write_preset(track, slot, name, overwrite)?;
         self.set_preset_ref(track, slot, Some(PresetRef { name: saved.clone(), factory: false }));
@@ -208,19 +163,15 @@ impl Session {
     }
 
     fn write_preset(&self, track: Id, slot: usize, name: &str, overwrite: bool) -> Result<String> {
-        let p = if slot == EQ_SLOT {
-            let eq = self.eq_of(track).ok_or_else(|| anyhow!("no such track"))?;
-            Preset { name: name.into(), effect: CHANNEL_EQ.into(), version: 0, values: Vec::new(), eq: Some(eq), state: None, base: None }
-        } else {
-            let s = self.slot_get(track, slot).ok_or_else(|| anyhow!("no plug-in in that slot"))?;
-            if !builtin::is_builtin(&s.plugin_id) {
-                return Err(anyhow!("Presets are saved in {}'s own window", s.name));
-            }
-            if s.plugin_id == crate::instrument::sampler::ID {
-                return self.sampler_save_instrument(track, name, overwrite);
-            }
-            Preset { name: name.into(), effect: s.plugin_id.clone(), version: 0, values: self.builtin_params(s.uid), eq: None, state: None, base: None }
-        };
+        let s = self.slot_get(track, slot).ok_or_else(|| anyhow!("no plug-in in that slot"))?;
+        if !builtin::is_builtin(&s.plugin_id) {
+            return Err(anyhow!("Presets are saved in {}'s own window", s.name));
+        }
+        if s.plugin_id == crate::instrument::sampler::ID {
+            return self.sampler_save_instrument(track, name, overwrite);
+        }
+        let p =
+            Preset { name: name.into(), effect: s.plugin_id.clone(), version: 0, values: self.builtin_params(s.uid), legacy_eq: None, state: None, base: None };
         presets::write_user(&presets::user_root(), &p, overwrite)
     }
 }

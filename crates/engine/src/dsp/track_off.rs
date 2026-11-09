@@ -101,7 +101,6 @@ impl TrackDsp {
         self.resume_left = 0;
         self.gains = (0.0, 0.0);
         self.send_gains = [0.0; SEND_SLOTS];
-        self.eq_state.reset();
         for ins in self.inserts.iter_mut().flatten().chain(self.instrument.iter_mut()) {
             ins.plugin.sleep();
         }

@@ -53,7 +53,7 @@ pub(crate) struct BlockCtx<'a> {
     pub(super) midi_target: Option<Id>,
     pub(super) midi_thru: bool,
     pub(super) chase: (bool, bool),
-    pub(super) analyzer_target: Option<Id>,
+    pub(super) analyzer_target: Option<(Id, Id)>,
     /// Wait for every strip however long it takes, as an offline render can.
     pub(super) wait: bool,
 }

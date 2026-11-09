@@ -59,8 +59,9 @@ pub struct Master {
     pub volume_db: f32,
     #[serde(default)]
     pub inserts: Vec<Option<PluginSlot>>,
-    #[serde(default)]
-    pub eq: ChannelEq,
+    /// Stereo Out's fixed Channel EQ in older projects (see `Track::legacy_eq`).
+    #[serde(rename = "eq", default, skip_serializing)]
+    pub legacy_eq: Option<ChannelEq>,
     /// Stereo Out's automation: volume and its plug-ins' parameters, as on a track.
     #[serde(default)]
     pub automation: Vec<AutoLane>,
@@ -69,9 +70,9 @@ pub struct Master {
     /// Extra lanes shown below the Output track's main lane.
     #[serde(default)]
     pub auto_lanes: Vec<AutoParam>,
-    /// The preset last loaded into the Channel EQ or saved from it (see `PluginSlot::preset`).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub eq_preset: Option<PresetRef>,
+    /// The preset of Stereo Out's fixed Channel EQ in older projects (see `Track::legacy_eq_preset`).
+    #[serde(rename = "eq_preset", default, skip_serializing)]
+    pub legacy_eq_preset: Option<PresetRef>,
 }
 
 /// The cycle range between the locators, in frames.
@@ -166,11 +167,11 @@ impl Project {
             master: Master {
                 volume_db: 0.0,
                 inserts: vec![None; INSERT_SLOTS],
-                eq: ChannelEq::default(),
+                legacy_eq: None,
                 automation: Vec::new(),
                 auto_mode: AutoMode::Read,
                 auto_lanes: Vec::new(),
-                eq_preset: None,
+                legacy_eq_preset: None,
             },
             cycle: Cycle { enabled: false, start: 0, end: 0 },
             metronome: false,
@@ -524,9 +525,9 @@ impl Project {
         p
     }
 
-    /// Points what refers to the user preset `old` of `effect` (a built-in plug-in's id, or
-    /// `presets::CHANNEL_EQ`) at `new`, or forgets it with `None` when the preset was deleted.
-    /// Returns whether anything changed.
+    /// Points what refers to the user preset `old` of `effect` (a built-in plug-in's id) at
+    /// `new`, or forgets it with `None` when the preset was deleted. Returns whether anything
+    /// changed.
     pub fn retarget_user_preset(&mut self, effect: &str, old: &str, new: Option<&str>) -> bool {
         let mut changed = false;
         let mut fix = |of: &str, r: &mut Option<PresetRef>| {
@@ -535,14 +536,11 @@ impl Project {
                 changed = true;
             }
         };
-        let eq = crate::presets::CHANNEL_EQ;
         for t in &mut self.tracks {
-            fix(eq, &mut t.eq_preset);
             for s in t.instrument.iter_mut().chain(t.inserts.iter_mut().flatten()) {
                 fix(&s.plugin_id, &mut s.preset);
             }
         }
-        fix(eq, &mut self.master.eq_preset);
         for s in self.master.inserts.iter_mut().flatten() {
             fix(&s.plugin_id, &mut s.preset);
         }

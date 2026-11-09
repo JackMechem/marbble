@@ -78,7 +78,7 @@ impl Session {
             }
         }
         let spectrum = match (self.analyzer_target, got) {
-            (Some(id), true) => Some((id, crate::eq::spectrum(&self.analyzer_buf, self.sample_rate()))),
+            (Some((_, uid)), true) => Some((uid, crate::eq::spectrum(&self.analyzer_buf, self.sample_rate()))),
             _ => None,
         };
         let meters: Vec<(Id, f32, f32)> = self

@@ -40,10 +40,9 @@ pub enum Cmd {
     MidiTarget(Option<Id>),
     /// Whether record-enabled tracks play their input without the I button.
     AutoMonitor(bool),
-    /// New channel EQ coefficients for a track (or MASTER_ID).
-    Eq(Id, EqCoeffs),
-    /// Which strip feeds the EQ editor's spectrum analyzer.
-    Analyzer(Option<Id>),
+    /// Which insert (strip or MASTER_ID, instance id) feeds the Channel EQ editor's spectrum
+    /// analyzer, from its output.
+    Analyzer(Option<(Id, Id)>),
     /// A track's automation lanes.
     Automation(Id, Arc<Vec<LaneDsp>>),
     AutoMode(Id, AutoMode),

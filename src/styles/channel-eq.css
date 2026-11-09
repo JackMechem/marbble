@@ -126,12 +126,6 @@
   display: block;
 }
 
-/* Switched off with the header's power button: dimmed, as a bypassed effect's panel is. */
-.eq-panel.bypassed > .eq-graph,
-.eq-panel.bypassed > .eq-bands {
-  opacity: 0.55;
-}
-
 .eq-bands {
   display: grid;
   grid-template-columns: repeat(8, 1fr);

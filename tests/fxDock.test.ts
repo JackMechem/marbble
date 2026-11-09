@@ -1,6 +1,6 @@
 // Unit tests for the plug-in panels' model (src/fxDock.ts): opening docked or floating, the
-// slot toggle, closing back to the previous bottom pane, floating and docking, one Channel EQ at
-// a time, what Esc closes, pruning, and the floating windows' resize maths and saved sizes.
+// slot toggle, closing back to the previous bottom pane, floating and docking, several Channel
+// EQs at once, what Esc closes, pruning, and the floating windows' resize maths and saved sizes.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -13,7 +13,6 @@ import {
   closePanel,
   dockPanel,
   dockedPanels,
-  eqKey,
   escTarget,
   floatPanel,
   focusPanel,
@@ -36,7 +35,8 @@ const start = (bottom: DockState["bottom"] = "mixer"): DockState => ({ ...NO_PAN
 
 test("keys round-trip and bad ones are refused", () => {
   assert.deepEqual(parseKey(fxKey(12)), { kind: "fx", uid: 12 });
-  assert.deepEqual(parseKey(eqKey(-1)), { kind: "eq", track: -1 });
+  // The fixed Channel EQ's panels, from before it was an insert, are no panels now.
+  assert.equal(parseKey("eq:-1"), null);
   assert.equal(parseKey("fx:"), null);
   assert.equal(parseKey("vst:3"), null);
 });
@@ -171,13 +171,13 @@ test("focus brings a floating panel to the front", () => {
   assert.equal(focusPanel(s, fxKey(9)), s, "not floating");
 });
 
-test("only one Channel EQ is open at a time", () => {
-  let s = openPanel(start(), eqKey(1), "docked");
-  s = openPanel(s, A, "docked");
-  s = openPanel(s, eqKey(2), "floating");
-  assert.deepEqual(s.open, [A, eqKey(2)]);
-  assert.deepEqual(s.floating, [eqKey(2)]);
-  assert.equal(s.active, A);
+test("Channel EQs are panels like any effect's, several at a time", () => {
+  let s = openPanel(start(), A, "docked");
+  s = openPanel(s, B, "docked");
+  s = openPanel(s, C, "floating");
+  assert.deepEqual(s.open, [A, B, C]);
+  assert.deepEqual(s.floating, [C]);
+  assert.equal(s.active, B);
 });
 
 test("Esc closes the frontmost floating panel first, then the docked one on screen", () => {

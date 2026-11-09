@@ -9,7 +9,6 @@ import { parseKey, type PanelKey } from "../../fxDock";
 import { valuesOf } from "../../fxFormat";
 import { CHANNEL_EQ, findFxSlot, fxInfo } from "../../fxHost";
 import { onTick, useStore } from "../../store";
-import { EqPanel, EqPower, EqPresets } from "../Eq";
 import { FxControl, FxMeter, FxSideChain, isReductionMeter } from "./common";
 import { InstrumentPanel } from "./Instrument";
 import { PresetButton, type Preset } from "./Presets";
@@ -21,8 +20,8 @@ const LOCAL_MS = 500;
 const stripName = (project: Project | undefined, track: Id) => (track === MASTER_ID ? "Stereo Out" : project?.tracks.find((t) => t.id === track)?.name ?? "");
 
 /**
- * What a panel is called: the effect (or "Channel EQ") and its strip, and the type its size is
- * remembered under. Null once the instance or strip is gone.
+ * What a panel is called: the effect and its strip, and the type its size is remembered under.
+ * Null once the instance or strip is gone.
  */
 export function usePanelTitle(key: PanelKey): { name: string; track: string; type: string } | null {
   const project = useStore((s) => s.snap?.project);
@@ -30,10 +29,6 @@ export function usePanelTitle(key: PanelKey): { name: string; track: string; typ
   useStore((s) => s.instList);
   const ref = parseKey(key);
   if (!ref || !project) return null;
-  if (ref.kind === "eq") {
-    if (ref.track !== MASTER_ID && !project.tracks.some((t) => t.id === ref.track)) return null;
-    return { name: "Channel EQ", track: stripName(project, ref.track), type: CHANNEL_EQ };
-  }
   const at = findFxSlot(project, ref.uid);
   const info = fxInfo(at?.plugin.plugin_id);
   if (!at || !info) return null;
@@ -43,33 +38,25 @@ export function usePanelTitle(key: PanelKey): { name: string; track: string; typ
 /** Whether a panel's instance or strip still exists in `project`. */
 export function panelExists(project: Project, key: PanelKey): boolean {
   const ref = parseKey(key);
-  if (!ref) return false;
-  if (ref.kind === "eq") return ref.track === MASTER_ID || project.tracks.some((t) => t.id === ref.track);
-  return !!findFxSlot(project, ref.uid);
+  return !!ref && !!findFxSlot(project, ref.uid);
 }
 
-/** The panel itself: an effect's controls and meters, or the Channel EQ editor. */
+/** The panel itself: an effect's controls and meters. */
 export function PanelContent({ panelKey }: { panelKey: PanelKey }) {
   const ref = parseKey(panelKey);
-  if (ref?.kind === "fx") return <FxPanelContent uid={ref.uid} />;
-  if (ref?.kind === "eq") return <EqPanel track={ref.track} />;
-  return null;
+  return ref ? <FxPanelContent uid={ref.uid} /> : null;
 }
 
 /** The header control before the name (PanelHeader.tsx): the power button. */
 export function PanelLead({ panelKey }: { panelKey: PanelKey }) {
   const ref = parseKey(panelKey);
-  if (ref?.kind === "fx") return <FxPower uid={ref.uid} />;
-  if (ref?.kind === "eq") return <EqPower track={ref.track} />;
-  return null;
+  return ref ? <FxPower uid={ref.uid} /> : null;
 }
 
 /** The header controls after the name (PanelHeader.tsx): presets, and the side chain for effects with one. */
 export function PanelTools({ panelKey }: { panelKey: PanelKey }) {
   const ref = parseKey(panelKey);
-  if (ref?.kind === "fx") return <FxTools uid={ref.uid} />;
-  if (ref?.kind === "eq") return <EqPresets track={ref.track} />;
-  return null;
+  return ref ? <FxTools uid={ref.uid} /> : null;
 }
 
 function useFx(uid: Id): { at: NonNullable<ReturnType<typeof findFxSlot>>; info: FxInfo } | null {
@@ -109,6 +96,7 @@ export function FxTools({ uid }: { uid: Id }) {
         loaded={at.plugin.preset}
         current={norm(valuesOf(info.params, at.plugin.params))}
         normalize={(p: Preset) => norm(valuesOf(info.params, p.values))}
+        defaultName={info.id === CHANNEL_EQ ? "Flat" : undefined}
       />
       {info.sidechain && <FxSideChain uid={uid} />}
     </>

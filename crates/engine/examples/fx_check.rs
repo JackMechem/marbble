@@ -330,9 +330,8 @@ fn check_effect(s: &mut Session, info: &EffectInfo, tone: &str, scratch: &Path) 
 
 /// Copy and paste of built-in effects, VST3 plug-ins and the Channel EQ, and saving presets.
 fn clipboard_and_presets(s: &mut Session, tone: &str) {
-    use daw_engine::model::{ChannelEq, PluginSlot, MASTER_ID};
+    use daw_engine::model::{PluginSlot, MASTER_ID};
     use daw_engine::presets::CHANNEL_EQ;
-    use daw_engine::session::EQ_SLOT;
     println!("== copy, paste and presets");
     let len = 48000;
     let tracks: Vec<Id> = (0..3).map(|_| s.add_track(TrackKind::Audio, InputSel::None, None, None).unwrap()).collect();
@@ -375,18 +374,24 @@ fn clipboard_and_presets(s: &mut Session, tone: &str) {
         None => println!("SKIP the VST3 paste checks: ZaMaximX2 isn't in the plug-in cache (scan plug-ins first)"),
     }
 
-    // Channel EQ: copy from one strip, paste onto another and Stereo Out in one step.
-    s.checkpoint("Load Preset", None, false);
-    s.load_preset(a, EQ_SLOT, CHANNEL_EQ, "Telephone", true).unwrap();
-    let eq = s.eq_of(a).unwrap();
-    let json = |e: &ChannelEq| serde_json::to_string(e).unwrap();
-    check("a Channel EQ factory preset loads", json(&eq) == json(&daw_engine::presets::eq_factory().into_iter().find(|p| p.0 == "Telephone").unwrap().1));
-    let before = s.eq_of(b).unwrap();
-    s.checkpoint("Paste Channel EQ", None, false);
-    s.paste_eq(&[b, MASTER_ID], &eq).unwrap();
-    check("the Channel EQ pastes onto a track and Stereo Out", json(&s.eq_of(b).unwrap()) == json(&eq) && json(&s.eq_of(MASTER_ID).unwrap()) == json(&eq));
+    // The Channel EQ is an insert like the others: a preset, then copied from one strip and
+    // pasted onto another and Stereo Out in one step.
+    const EQ_AT: usize = 4;
+    let eq = s.set_plugin(a, EQ_AT, CHANNEL_EQ).unwrap();
+    s.load_preset(a, EQ_AT, CHANNEL_EQ, "Telephone", true).unwrap();
+    let phone = fx::channel_eq::PRESETS.iter().find(|p| p.name == "Telephone").unwrap();
+    check("a Channel EQ factory preset loads", phone.values.iter().all(|(id, v)| (value(s, eq, *id) - v).abs() < 1e-4));
+    let copied = s.copy_plugin(a, EQ_AT).unwrap();
+    s.checkpoint("Paste Plug-in", None, true);
+    s.paste_plugin(&[b, MASTER_ID], EQ_AT, &copied).unwrap();
+    let on_master = s.project.master.inserts[EQ_AT].as_ref().map(|x| x.uid);
+    let pasted = [uid_in(s, b, EQ_AT), on_master];
+    check(
+        "the Channel EQ pastes onto a track and Stereo Out",
+        pasted.iter().all(|u| u.is_some_and(|u| u != eq && s.builtin_params(u) == s.builtin_params(eq))),
+    );
     s.undo();
-    check("pasting the EQ is one undo step", json(&s.eq_of(b).unwrap()) == json(&before) && json(&s.eq_of(MASTER_ID).unwrap()) == json(&ChannelEq::default()));
+    check("pasting the EQ is one undo step", uid_in(s, b, EQ_AT).is_none() && s.project.master.inserts[EQ_AT].is_none());
 
     // Factory presets of every effect load; user presets save, refusing silent overwrites.
     for info in fx::registry() {
@@ -403,7 +408,7 @@ fn clipboard_and_presets(s: &mut Session, tone: &str) {
     let saved = s.save_preset(a, 0, " Fx Check Kick ", false);
     let twice = s.save_preset(a, 0, "Fx Check Kick", false);
     let replaced = s.save_preset(a, 0, "Fx Check Kick", true);
-    let eq_saved = s.save_preset(a, EQ_SLOT, "Fx Check Phone", false);
+    let eq_saved = s.save_preset(a, EQ_AT, "Fx Check Phone", false);
     check(
         "user presets save (and refuse to overwrite unasked)",
         saved.as_deref().ok() == Some("Fx Check Kick") && twice.is_err() && replaced.is_ok() && eq_saved.is_ok(),

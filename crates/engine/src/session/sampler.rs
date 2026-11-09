@@ -729,7 +729,7 @@ impl Session {
             effect: SAMPLER.into(),
             version: 1,
             values: self.builtin_params(slot.uid),
-            eq: None,
+            legacy_eq: None,
             state: Some(state.to_json()),
             base: None,
         };

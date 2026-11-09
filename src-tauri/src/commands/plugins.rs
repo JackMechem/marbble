@@ -102,15 +102,6 @@ pub fn watch_builtin(state: State<AppState>, uid: Id, on: bool) {
     with(&state, |s| s.watch_builtin(uid, on))
 }
 
-/// Preset and paste commands address a strip's Channel EQ as slot -2, the instrument as -1.
-fn preset_slot(slot: i64) -> usize {
-    if slot == -2 {
-        daw_engine::session::EQ_SLOT
-    } else {
-        slot_index(slot)
-    }
-}
-
 /// A slot's complete settings (a VST3's state included), for the UI's clipboard.
 #[tauri::command]
 pub fn copy_plugin(state: State<AppState>, track: Id, slot: i64) -> R<daw_engine::model::PluginSlot> {
@@ -123,13 +114,13 @@ pub fn paste_plugin(state: State<AppState>, tracks: Vec<Id>, slot: i64, plugin: 
     try_edit(&state, "Paste Plug-in", None, true, |s| s.paste_plugin(&tracks, slot_index(slot), &plugin))
 }
 
-/// Pastes Channel EQ settings onto each strip, as one undo step.
+/// The EQ thumbnail's click on a strip without a Channel EQ: one at the top of its Audio FX.
 #[tauri::command]
-pub fn paste_eq(state: State<AppState>, tracks: Vec<Id>, eq: ChannelEq) -> R<Snapshot> {
-    try_edit(&state, "Paste Channel EQ", None, false, |s| s.paste_eq(&tracks, &eq))
+pub fn insert_channel_eq(state: State<AppState>, track: Id) -> R<Snapshot> {
+    try_edit(&state, "Insert Channel EQ", None, true, |s| s.insert_channel_eq(track).map(|_| ()))
 }
 
-/// An effect's factory and user presets (`builtin:channel-eq` for the Channel EQ).
+/// An effect's factory and user presets.
 #[tauri::command]
 pub fn list_presets(effect: String) -> daw_engine::presets::PresetList {
     daw_engine::presets::list(&daw_engine::presets::user_root(), &effect)
@@ -141,10 +132,10 @@ pub fn get_preset(effect: String, name: String, factory: bool) -> R<daw_engine::
     daw_engine::presets::get(&daw_engine::presets::user_root(), &effect, &name, factory).map_err(|e| e.to_string())
 }
 
-/// Applies a preset to a built-in effect's slot or (slot -2) the strip's Channel EQ.
+/// Applies a preset to a built-in effect's slot.
 #[tauri::command]
 pub fn load_preset(state: State<AppState>, track: Id, slot: i64, effect: String, name: String, factory: bool) -> R<Snapshot> {
-    try_edit(&state, "Load Preset", None, false, |s| s.load_preset(track, preset_slot(slot), &effect, &name, factory))
+    try_edit(&state, "Load Preset", None, false, |s| s.load_preset(track, slot_index(slot), &effect, &name, factory))
 }
 
 /// A preset's name as saved or renamed, and the snapshot showing it in the slots that refer to it.
@@ -154,13 +145,12 @@ pub struct NamedPreset {
     name: String,
 }
 
-/// Saves a slot's (or, slot -2, the Channel EQ's) settings as a user preset, which the slot then
-/// shows as loaded. Refuses to replace an existing one unless `overwrite`. Returns the name it
+/// Saves a slot's settings as a user preset, which the slot then shows as loaded. Refuses to replace an existing one unless `overwrite`. Returns the name it
 /// was saved under.
 #[tauri::command]
 pub fn save_preset(state: State<AppState>, track: Id, slot: i64, name: String, overwrite: Option<bool>) -> R<NamedPreset> {
     with(&state, |s| {
-        let name = s.save_preset(track, preset_slot(slot), &name, overwrite.unwrap_or(false)).map_err(|e| e.to_string())?;
+        let name = s.save_preset(track, slot_index(slot), &name, overwrite.unwrap_or(false)).map_err(|e| e.to_string())?;
         Ok(NamedPreset { snapshot: snapshot(s), name })
     })
 }

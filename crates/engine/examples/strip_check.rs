@@ -97,10 +97,8 @@ fn main() {
     s.set_builtin_param(src, 0, param::THRESHOLD, -45.0).unwrap();
     s.set_builtin_param(src, 0, param::RATIO, 8.0).unwrap();
     s.set_plugin(src, 2, "builtin:limiter").unwrap();
-    let mut eq = s.eq_of(src).unwrap();
-    eq.bands[4].on = true;
-    eq.bands[4].gain = -6.0;
-    s.set_eq(src, eq);
+    s.set_plugin(src, 1, daw_engine::fx::channel_eq::ID).unwrap();
+    s.set_builtin_param(src, 1, daw_engine::fx::channel_eq::gain(4), -6.0).unwrap();
     s.set_plugin(b, 1, "builtin:reverb").unwrap();
     let name = s.save_strip_setting(&root, src, "Squashed", false).unwrap();
     check("the setting is saved as a file", root.join("Squashed.json").exists() && daw_engine::strip_settings::list(&root) == vec![name.clone()]);
@@ -111,7 +109,8 @@ fn main() {
     check(&format!("both tracks get the inserts ({:?})", inserts(&s, a)), inserts(&s, a) == want && inserts(&s, b) == want);
     let uids: Vec<Id> = [src, a, b].iter().map(|t| s.project.track(*t).unwrap().inserts[0].as_ref().unwrap().uid).collect();
     check("as new instances with the compressor's values", uids[0] != uids[1] && uids[1] != uids[2] && s.builtin_params(uids[1]) == s.builtin_params(uids[0]));
-    check("and the Channel EQ", [a, b].iter().all(|t| s.project.track(*t).unwrap().eq.bands[4].gain == -6.0));
+    let eq_gain = |t: Id| s.project.track(t).unwrap().inserts[1].as_ref().map(|x| s.builtin_params(x.uid)).unwrap_or_default();
+    check("and the Channel EQ", [a, b].iter().all(|t| eq_gain(*t).contains(&(daw_engine::fx::channel_eq::gain(4), -6.0))));
 
     // The gain-reduction meter: the tone at -21.5 dBFS is well over a -45 dB threshold.
     let t = play(&mut s, sounding(&[src, a, b]));

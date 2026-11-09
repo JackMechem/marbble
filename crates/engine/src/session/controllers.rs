@@ -10,6 +10,10 @@
 //!
 //! The input threads take assigned controllers off the live MIDI path (`midi_io.rs`); `idle`
 //! applies them here, on the main thread, where plug-in controllers may be called.
+//!
+//! Assignments learnt when every strip had a fixed Channel EQ (`CtlTarget::Eq`, `EqOutput`)
+//! drive the same setting of the strip's first Channel EQ insert, which is what opening an
+//! older project turns that EQ into (`model/channel_eq_upgrade.rs`).
 
 use std::path::PathBuf;
 
@@ -223,36 +227,6 @@ impl Session {
         }
     }
 
-    /// The Channel EQ editor changed `old` to `new`: the one setting that changed, if it was
-    /// one (a reset or a paste isn't a touch).
-    pub fn touched_eq(&mut self, track: Id, old: &ChannelEq, new: &ChannelEq) {
-        let mut changed = Vec::new();
-        if old.output_db != new.output_db {
-            changed.push(CtlTarget::EqOutput { track });
-        }
-        for (i, (a, b)) in old.bands.iter().zip(&new.bands).enumerate() {
-            let band = i as u8;
-            for (field, differs) in
-                [(EqField::On, a.on != b.on), (EqField::Freq, a.freq != b.freq), (EqField::Gain, a.gain != b.gain), (EqField::Q, a.q != b.q)]
-            {
-                if differs {
-                    changed.push(CtlTarget::Eq { track, band, field });
-                }
-            }
-        }
-        // Setting a gain also switches its band on; dragging a band's point moves its
-        // frequency and gain together, which counts as the frequency.
-        if changed.len() > 1 {
-            changed.retain(|t| !matches!(t, CtlTarget::Eq { field: EqField::On, .. }));
-        }
-        let t = match changed.as_slice() {
-            [one] => one.clone(),
-            [f @ CtlTarget::Eq { band: a, field: EqField::Freq, .. }, CtlTarget::Eq { band: b, field: EqField::Gain, .. }] if a == b => f.clone(),
-            _ => return,
-        };
-        self.touched(t);
-    }
-
     /// An automation parameter was grabbed (the controls that report touches).
     pub fn touched_auto(&mut self, track: Id, param: &AutoParam) {
         let t = match param {
@@ -292,6 +266,50 @@ impl Session {
         instrument.filter(|s| s.uid == uid).map(|s| (None, s))
     }
 
+    /// Whether an assignment drives the old fixed Channel EQ of `strip` (in any project, as
+    /// assignments are global), so opening an older project keeps that EQ even when it is flat.
+    pub(super) fn ctl_drives_legacy_eq(&self, strip: Id) -> bool {
+        self.controls.list.iter().any(|a| matches!(a.target, CtlTarget::Eq { track, .. } | CtlTarget::EqOutput { track } if track == strip))
+    }
+
+    /// Opens what an older project (or template) holds in an older form: each strip's fixed
+    /// Channel EQ becomes an insert (`Project::upgrade_channel_eq`). Returns a warning naming
+    /// the strips that had no Audio FX slot free for it.
+    pub(super) fn upgrade_document(&self, p: &mut Project) -> Option<String> {
+        let full = p.upgrade_channel_eq(|strip| self.ctl_drives_legacy_eq(strip));
+        (!full.is_empty()).then(|| format!("No free Audio FX slot for the Channel EQ of {}, so it was left out.", full.join(", ")))
+    }
+
+    /// A strip's first Channel EQ insert (`track` MASTER_ID for Stereo Out): the one its EQ
+    /// thumbnail shows, and the one assignments to the old fixed Channel EQ drive.
+    pub fn first_channel_eq(&self, track: Id) -> Option<&PluginSlot> {
+        let inserts = if track == MASTER_ID { &self.project.master.inserts } else { &self.project.track(track)?.inserts };
+        inserts.iter().flatten().find(|s| s.plugin_id == crate::fx::channel_eq::ID)
+    }
+
+    /// What an assignment to the old fixed Channel EQ drives now: that parameter of the strip's
+    /// first Channel EQ insert. None for other targets, and when the strip has none.
+    fn ctl_legacy_eq(&self, t: &CtlTarget) -> Option<CtlTarget> {
+        use crate::fx::channel_eq as ceq;
+        let (track, param) = match *t {
+            CtlTarget::Eq { track, band, field } => {
+                let b = band as usize;
+                let param = match field {
+                    EqField::On => ceq::on(b),
+                    EqField::Freq => ceq::freq(b),
+                    EqField::Gain if !ceq::is_cut(b) => ceq::gain(b),
+                    EqField::Gain => return None,
+                    EqField::Q => ceq::q(b),
+                };
+                (b < ceq::BANDS).then_some((track, param))?
+            }
+            CtlTarget::EqOutput { track } => (track, ceq::OUTPUT),
+            _ => return None,
+        };
+        let s = self.first_channel_eq(track)?;
+        Some(CtlTarget::Plugin { track, uid: s.uid, plugin: s.plugin_id.clone(), param })
+    }
+
     /// The plug-in slot a target names, if it is there and still holds the same plug-in.
     fn ctl_plugin(&self, track: Id, uid: Id, plugin: &str) -> Option<(Option<usize>, &PluginSlot)> {
         self.ctl_slot(track, uid).filter(|(_, s)| s.plugin_id == plugin)
@@ -324,17 +342,7 @@ impl Session {
                 let p = self.plugin_params(*uid).into_iter().find(|p| p.id == *param)?;
                 format!("{} › {} › {}", self.ctl_strip(*id)?, slot.name, p.name)
             }
-            CtlTarget::Eq { track: id, band, field } => {
-                self.eq_of(*id)?.bands.get(*band as usize)?;
-                let what = match field {
-                    EqField::On => "On",
-                    EqField::Freq => "Frequency",
-                    EqField::Gain => "Gain",
-                    EqField::Q => "Q",
-                };
-                format!("{} › Channel EQ › {} {what}", self.ctl_strip(*id)?, BAND_NAMES.get(*band as usize).copied().unwrap_or("Band"))
-            }
-            CtlTarget::EqOutput { track: id } => format!("{} › Channel EQ › Output", self.ctl_strip(*id)?),
+            CtlTarget::Eq { .. } | CtlTarget::EqOutput { .. } => return self.ctl_target_name(&self.ctl_legacy_eq(t)?),
             CtlTarget::MasterVolume => "Stereo Out › Volume".into(),
             CtlTarget::Transport { action } => match action {
                 TransportAction::Play => "Transport › Play / Stop".into(),
@@ -362,18 +370,7 @@ impl Session {
                     None => self.builtin_normalized(*uid, *param)?,
                 }
             }
-            CtlTarget::Eq { track, band, field } => {
-                let eq = self.eq_of(*track)?;
-                let b = eq.bands.get(*band as usize)?;
-                let v = match field {
-                    EqField::On => b.on as u8 as f32,
-                    EqField::Freq => b.freq,
-                    EqField::Gain => b.gain,
-                    EqField::Q => b.q,
-                };
-                ctl::eq_to_norm(*field, v)
-            }
-            CtlTarget::EqOutput { track } => ctl::eq_to_norm(EqField::Gain, self.eq_of(*track)?.output_db),
+            CtlTarget::Eq { .. } | CtlTarget::EqOutput { .. } => return self.ctl_value(&self.ctl_legacy_eq(t)?),
             CtlTarget::MasterVolume => ctl::db_to_fader(self.project.master.volume_db),
             CtlTarget::Transport { action } => match action {
                 TransportAction::Play => self.is_playing() as u8 as f32,
@@ -427,28 +424,10 @@ impl Session {
                 self.set_send_level_linked(*track, *slot as usize, round_to(ctl::fader_to_db(n), 0.1));
             }
             CtlTarget::Plugin { track, uid, plugin, param } => self.ctl_set_plugin(*track, *uid, plugin, *param, n),
-            CtlTarget::Eq { track, band, field } => {
-                let (Some(mut eq), false) = (self.eq_of(*track), self.is_frozen(*track)) else { return };
-                let Some(b) = eq.bands.get_mut(*band as usize) else { return };
-                let v = ctl::eq_to_plain(*field, n);
-                match field {
-                    EqField::On => b.on = v >= 0.5,
-                    EqField::Freq => b.freq = round_to(v, 0.1),
-                    EqField::Gain => {
-                        b.gain = round_to(v, 0.1);
-                        // As in the editor, setting a gain switches the band on.
-                        b.on = true;
-                    }
-                    EqField::Q => b.q = round_to(v, 0.01),
+            CtlTarget::Eq { .. } | CtlTarget::EqOutput { .. } => {
+                if let Some(p) = self.ctl_legacy_eq(t) {
+                    self.ctl_set(&p, n);
                 }
-                self.checkpoint("Channel EQ", Some(format!("eq:{track}")), false);
-                self.set_eq(*track, eq);
-            }
-            CtlTarget::EqOutput { track } => {
-                let (Some(mut eq), false) = (self.eq_of(*track), self.is_frozen(*track)) else { return };
-                eq.output_db = round_to(ctl::eq_to_plain(EqField::Gain, n), 0.1);
-                self.checkpoint("Channel EQ", Some(format!("eq:{track}")), false);
-                self.set_eq(*track, eq);
             }
             CtlTarget::MasterVolume => {
                 self.ctl_checkpoint(MASTER_ID, "Stereo Out Volume", "master-volume".into());
@@ -514,12 +493,12 @@ impl Session {
                 let on = self.project.track(*track).map(|t| !t.armed);
                 self.update_track_linked(*track, TrackPatch { armed: on, ..Default::default() });
             }
-            CtlTarget::Eq { track, band, field: EqField::On } => {
-                let (Some(mut eq), false) = (self.eq_of(*track), self.is_frozen(*track)) else { return };
-                let Some(b) = eq.bands.get_mut(*band as usize) else { return };
-                b.on = !b.on;
-                self.checkpoint("Channel EQ", Some(format!("eq:{track}")), false);
-                self.set_eq(*track, eq);
+            CtlTarget::Eq { field: EqField::On, .. } => {
+                // A band's on switch: the insert's toggle, flipped.
+                if let Some(p) = self.ctl_legacy_eq(t) {
+                    let on = self.ctl_value(&p).unwrap_or(0.0) >= 0.5;
+                    self.ctl_set(&p, if on { 0.0 } else { 1.0 });
+                }
             }
             CtlTarget::Transport { action: TransportAction::Play } => self.toggle_play(),
             CtlTarget::Transport { action: TransportAction::Record } => {

@@ -49,7 +49,7 @@ pub enum TransportAction {
     Cycle,
 }
 
-/// A Channel EQ band setting.
+/// A band setting of the fixed Channel EQ (see `CtlTarget::Eq`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum EqField {
@@ -93,13 +93,16 @@ pub enum CtlTarget {
         plugin: String,
         param: u32,
     },
-    /// A Channel EQ band setting (`track` is MASTER_ID for Stereo Out).
+    /// A band setting of the fixed Channel EQ strips had before it became an insert (`track` is
+    /// MASTER_ID for Stereo Out). Kept so assignments learnt then still work: it drives that
+    /// setting of the strip's first Channel EQ insert. New assignments name the insert's
+    /// parameter (`Plugin`).
     Eq {
         track: Id,
         band: u8,
         field: EqField,
     },
-    /// The Channel EQ's output gain.
+    /// The fixed Channel EQ's output gain (see `Eq`).
     EqOutput {
         track: Id,
     },
@@ -259,29 +262,6 @@ pub fn fader_to_db(f: f32) -> f32 {
     }
 }
 
-/// The Channel EQ editor's ranges: frequency 20 Hz..20 kHz and Q 0.1..18 on log scales, gain
-/// ±24 dB.
-pub fn eq_to_plain(field: EqField, norm: f32) -> f32 {
-    let n = norm.clamp(0.0, 1.0);
-    match field {
-        EqField::On => (n >= 0.5) as u8 as f32,
-        EqField::Freq => 20.0 * 1000f32.powf(n),
-        EqField::Gain => -24.0 + 48.0 * n,
-        EqField::Q => 0.1 * 180f32.powf(n),
-    }
-}
-
-/// The inverse of [`eq_to_plain`].
-pub fn eq_to_norm(field: EqField, plain: f32) -> f32 {
-    let n = match field {
-        EqField::On => (plain >= 0.5) as u8 as f32,
-        EqField::Freq => (plain.max(20.0) / 20.0).ln() / 1000f32.ln(),
-        EqField::Gain => (plain + 24.0) / 48.0,
-        EqField::Q => (plain.max(0.1) / 0.1).ln() / 180f32.ln(),
-    };
-    n.clamp(0.0, 1.0)
-}
-
 /// How close (on the 0..1 travel) a Pickup controller must come to catch the parameter, and
 /// how far the parameter may drift from where the controller left it before it has to be
 /// caught again: a little over one 7-bit step.
@@ -382,12 +362,19 @@ mod tests {
     }
 
     #[test]
-    fn eq_ranges_round_trip() {
-        for (f, v) in [(EqField::Freq, 1000.0), (EqField::Freq, 20.0), (EqField::Gain, -6.0), (EqField::Q, 0.71), (EqField::On, 1.0)] {
-            assert!((eq_to_plain(f, eq_to_norm(f, v)) - v).abs() < v.abs() * 1e-3 + 1e-3, "{f:?} {v}");
+    fn old_eq_assignments_keep_their_travel() {
+        // The fixed Channel EQ's assignments mapped 0..1 to 20 Hz..20 kHz and Q 0.1..18 on log
+        // scales and gain to ±24 dB; the Channel EQ insert's parameters they now drive do too.
+        use crate::fx::channel_eq as ceq;
+        let info = ceq::info();
+        let plain = |id: u32, n: f32| crate::dsp::to_plain(info.param(id).unwrap(), n);
+        for n in [0.0f32, 0.3, 0.5, 1.0] {
+            assert!((plain(ceq::freq(2), n) - 20.0 * 1000f32.powf(n)).abs() < 0.01 * 20.0 * 1000f32.powf(n));
+            assert!((plain(ceq::gain(2), n) - (-24.0 + 48.0 * n)).abs() < 1e-4);
+            assert!((plain(ceq::q(2), n) - 0.1 * 180f32.powf(n)).abs() < 1e-3 * 180f32.powf(n));
+            assert!((plain(ceq::OUTPUT, n) - (-24.0 + 48.0 * n)).abs() < 1e-4);
         }
-        assert_eq!(eq_to_plain(EqField::Freq, 1.0).round(), 20000.0);
-        assert_eq!(eq_to_plain(EqField::Gain, 0.5), 0.0);
+        assert_eq!(plain(ceq::on(3), 0.7), 1.0);
     }
 
     #[test]

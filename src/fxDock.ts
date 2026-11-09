@@ -1,4 +1,4 @@
-// Plug-in panels: which built-in effect panels (and the Channel EQ) are open, whether each is
+// Plug-in panels: which built-in effect panels are open, whether each is
 // docked in the main window's bottom section or floating in a window of its own, which docked
 // panel the bottom section shows, and the floating windows' sizes. Pure, so it can be unit
 // tested; fxDockState.ts applies it to the store and the components draw it.
@@ -8,19 +8,18 @@
 // so opening one of them again brings the dock back with every tab.
 import type { BottomPane } from "./store";
 
-/** A panel: a built-in effect instance ("fx:<uid>") or a strip's Channel EQ ("eq:<track>"). */
+/** A panel: a built-in effect or instrument instance ("fx:<uid>"), the Channel EQ among them. */
 export type PanelKey = string;
 
 export const fxKey = (uid: number): PanelKey => `fx:${uid}`;
-export const eqKey = (track: number): PanelKey => `eq:${track}`;
 
-export type PanelRef = { kind: "fx"; uid: number } | { kind: "eq"; track: number };
+export type PanelRef = { kind: "fx"; uid: number };
 
+/** The panel a key names. Keys of the strips' fixed Channel EQ ("eq:<track>"), from before it was
+ *  an insert, name none, so pruning closes them. */
 export function parseKey(key: PanelKey): PanelRef | null {
-  const m = /^(fx|eq):(-?\d+)$/.exec(key);
-  if (!m) return null;
-  const n = Number(m[2]);
-  return m[1] === "fx" ? { kind: "fx", uid: n } : { kind: "eq", track: n };
+  const m = /^fx:(-?\d+)$/.exec(key);
+  return m ? { kind: "fx", uid: Number(m[1]) } : null;
 }
 
 /** Where a panel opens: Settings › General › Open Effect Panels. */
@@ -94,14 +93,10 @@ function reactivate(s: DockState): DockState {
 
 /**
  * Opens a panel (or brings it forward if it is open): a new one opens as `mode` says, an open
- * one where it already is. Only one Channel EQ is open at a time, since the analyzer follows
- * one strip.
+ * one where it already is.
  */
 export function openPanel(s: DockState, key: PanelKey, mode: PanelMode): DockState {
   let st = s;
-  if (parseKey(key)?.kind === "eq") {
-    for (const k of st.open) if (k !== key && parseKey(k)?.kind === "eq") st = closePanel(st, k);
-  }
   if (st.open.includes(key)) {
     if (st.floating.includes(key)) return focusPanel(st, key);
     return showDock(st, key);

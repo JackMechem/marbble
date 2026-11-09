@@ -4,7 +4,7 @@
 use std::time::{Duration, Instant};
 
 use daw_engine::audio_io::AudioConfig;
-use daw_engine::model::{ChannelEq, Id, InputSel, Region, RegionContent, TakeRating, TrackKind};
+use daw_engine::model::{Id, InputSel, Region, RegionContent, TakeRating, TrackKind};
 
 const BALLAST: usize = 40;
 use daw_engine::session::{BitDepth, RenderOptions, TrackPatch};
@@ -237,11 +237,13 @@ fn main() {
     // ---- cycle recording: three passes make a take folder ----------------------------------
     // The null device runs flat out, far faster than the recorder drains its rings, so give
     // the engine work to do (busy Channel EQs) until it runs nearer real time.
-    let mut eq = ChannelEq::default();
-    eq.bands.iter_mut().for_each(|b| b.gain = 3.0);
     let ballast: Vec<Id> = (0..BALLAST).map(|_| s.add_track(TrackKind::Audio, InputSel::None, None, None).unwrap()).collect();
     for &t in &ballast {
-        s.set_eq(t, eq.clone());
+        use daw_engine::fx::channel_eq::{gain, ID};
+        s.set_plugin(t, 0, ID).unwrap();
+        for band in 1..7 {
+            s.set_builtin_param(t, 0, gain(band), 3.0).unwrap();
+        }
     }
     s.set_punch(false, 2 * bar, 3 * bar);
     s.update_track(a, TrackPatch { armed: Some(false), ..Default::default() });

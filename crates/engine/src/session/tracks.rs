@@ -32,7 +32,7 @@ impl Session {
             instrument: None,
             inserts: vec![None; INSERT_SLOTS],
             regions: Vec::new(),
-            eq: ChannelEq::default(),
+            legacy_eq: None,
             parent: None,
             collapsed: false,
             group: None,
@@ -48,7 +48,7 @@ impl Session {
             alternative: String::new(),
             auto_lanes: Vec::new(),
             instrument_output: None,
-            eq_preset: None,
+            legacy_eq_preset: None,
             off: false,
             icon: None,
         };

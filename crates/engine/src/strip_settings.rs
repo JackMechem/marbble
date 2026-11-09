@@ -1,19 +1,21 @@
-//! Channel strip settings, as in Logic's channel strip Setting menu: a strip's instrument, its
-//! Audio FX inserts (with their settings, a VST3's state included) and its Channel EQ, which
-//! can be copied onto other strips or saved and loaded again in any project.
+//! Channel strip settings, as in Logic's channel strip Setting menu: a strip's instrument and its
+//! Audio FX inserts (with their settings, a VST3's state included; a Channel EQ is one of them),
+//! which can be copied onto other strips or saved and loaded again in any project.
 //!
 //! - Copying and applying them is in `session/strip_settings.rs`; the clipboard lives in the UI
 //!   (`src/stripSettings.ts`), like the plug-in clipboard.
 //! - Saved settings are files, `<config dir>/channel-strips/<name>.json`, written like presets
 //!   (`crate::presets`): to a temporary file first and renamed into place. They leave out
 //!   side-chain sources, which name tracks of the project they were saved in.
+//! - Settings from when strips had a fixed Channel EQ hold it apart from the inserts; reading or
+//!   pasting one puts it at the top of the inserts as a Channel EQ (see [`StripSetting::upgrade`]).
 
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
 
-use crate::model::{ChannelEq, PluginSlot};
+use crate::model::{channel_eq_slot, insert_first, ChannelEq, PluginSlot};
 
 const VERSION: u32 = 1;
 
@@ -32,12 +34,23 @@ pub struct StripSetting {
     /// The Audio FX slots, in order; empty slots are None.
     #[serde(default)]
     pub inserts: Vec<Option<PluginSlot>>,
-    /// The Channel EQ (None leaves the target's alone).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub eq: Option<ChannelEq>,
+    /// The fixed Channel EQ of a setting saved before the Channel EQ was an insert. Only read:
+    /// [`upgrade`](Self::upgrade) moves it into `inserts`.
+    #[serde(rename = "eq", default, skip_serializing)]
+    pub legacy_eq: Option<ChannelEq>,
 }
 
 impl StripSetting {
+    /// Puts a fixed Channel EQ from an older setting at the top of the inserts, as opening an
+    /// older project does (`Project::upgrade_channel_eq`); a flat one goes. With all the Audio
+    /// FX slots taken, the EQ is left out.
+    pub fn upgrade(&mut self) {
+        let Some(eq) = self.legacy_eq.take().filter(|eq| !eq.is_flat()) else { return };
+        if !insert_first(&mut self.inserts, channel_eq_slot(0, &eq, None)) {
+            log::warn!("channel strip setting \"{}\": no free Audio FX slot for its Channel EQ", self.name);
+        }
+    }
+
     /// The setting without what only makes sense in the project it came from.
     pub fn portable(&self) -> StripSetting {
         let mut s = self.clone();
@@ -86,6 +99,7 @@ pub fn read(root: &Path, name: &str) -> Result<StripSetting> {
     let mut s: StripSetting = serde_json::from_str(&text).with_context(|| format!("The channel strip setting \"{name}\" can't be read"))?;
     // The file name is what the menu shows, whatever the file says.
     s.name = name;
+    s.upgrade();
     Ok(s)
 }
 
@@ -132,14 +146,12 @@ mod tests {
     fn saved_settings_round_trip() {
         let root = std::env::temp_dir().join(format!("marbble-strips-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
-        let mut eq = ChannelEq::default();
-        eq.bands[3].gain = -4.0;
         let s = StripSetting {
             name: "Lead".into(),
             version: 0,
             instrument: Some(slot(3, "builtin:synth")),
             inserts: vec![Some(slot(4, "builtin:compressor")), None, Some(slot(5, "/x.vst3|ABC")), None, None],
-            eq: Some(eq),
+            legacy_eq: None,
         };
         let name = write(&root, &s, " Lead / Vocal? ", false).unwrap();
         assert_eq!(name, "Lead Vocal");
@@ -154,12 +166,27 @@ mod tests {
         let vst = back.inserts[2].as_ref().unwrap();
         assert_eq!((vst.plugin_id.as_str(), vst.state.as_deref(), vst.sidechain), ("/x.vst3|ABC", Some("AAAA:BBBB"), None), "state kept, side-chain left out");
         assert_eq!(back.instrument.as_ref().unwrap().params, vec![(1, 2.5)]);
-        assert_eq!(back.eq.unwrap().bands[3].gain, -4.0);
 
         // A file written by hand with only some of the parts reads.
         std::fs::write(root.join("Bare.json"), r#"{"inserts":[null,{"uid":1,"plugin_id":"builtin:limiter","name":"Limiter"}]}"#).unwrap();
         let bare = read(&root, "Bare").unwrap();
-        assert!(bare.instrument.is_none() && bare.eq.is_none() && bare.inserts[1].is_some());
+        assert!(bare.instrument.is_none() && bare.inserts[1].is_some());
+
+        // One saved when strips had a fixed Channel EQ: a shaped EQ goes to the top of the
+        // inserts, a flat one goes.
+        let mut eq = ChannelEq::default();
+        eq.bands[3].gain = -4.0;
+        let old =
+            |eq: &ChannelEq| serde_json::json!({ "inserts": [null, { "uid": 1, "plugin_id": "builtin:limiter", "name": "Limiter" }], "eq": eq }).to_string();
+        std::fs::write(root.join("Old.json"), old(&eq)).unwrap();
+        let back = read(&root, "Old").unwrap();
+        let first = back.inserts[0].as_ref().unwrap();
+        assert_eq!(first.plugin_id, crate::fx::channel_eq::ID);
+        assert!(first.params.contains(&(crate::fx::channel_eq::gain(3), -4.0)));
+        assert_eq!(back.inserts[1].as_ref().unwrap().plugin_id, "builtin:limiter", "the slot below moved down into the free one");
+        std::fs::write(root.join("Old.json"), old(&ChannelEq::default())).unwrap();
+        assert!(read(&root, "Old").unwrap().inserts[0].is_none());
+        delete(&root, "Old").unwrap();
 
         delete(&root, "Lead Vocal").unwrap();
         assert_eq!(list(&root), vec!["Bare".to_string()]);

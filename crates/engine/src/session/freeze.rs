@@ -44,16 +44,6 @@ impl Session {
         self.controllers.len()
     }
 
-    /// The Channel EQ the engine runs for a track: none while frozen, since the freeze file
-    /// already has it.
-    pub(super) fn eq_coeffs(&self, t: &Track) -> crate::eq::EqCoeffs {
-        if t.frozen.is_some() {
-            crate::eq::EqCoeffs::default()
-        } else {
-            crate::eq::coefficients(&t.eq, self.sample_rate())
-        }
-    }
-
     /// A frozen track's playback list: just its freeze file.
     pub(super) fn freeze_dsp(&self, t: &Track) -> Option<Arc<Vec<RegionDsp>>> {
         let f = t.frozen?;
@@ -146,7 +136,6 @@ impl Session {
             tm.armed = false;
             self.unload_plugins(&t);
             self.push_regions(r.track);
-            self.send(Cmd::Eq(r.track, crate::eq::EqCoeffs::default()));
         }
         // Arming changed, and the frozen tracks' latency went with their plug-ins.
         self.push_all_params();
@@ -176,8 +165,6 @@ impl Session {
         let t = self.project.track(id).unwrap().clone();
         self.load_plugins(&t);
         self.push_regions(id);
-        let eq = self.eq_coeffs(&t);
-        self.send(Cmd::Eq(id, eq));
         self.update_pdc();
         self.dirty = true;
         Ok(())
@@ -241,8 +228,6 @@ impl Session {
         }
         if cur.frozen != t.frozen {
             self.push_regions(t.id);
-            let eq = self.eq_coeffs(t);
-            self.send(Cmd::Eq(t.id, eq));
         }
         true
     }
@@ -261,7 +246,7 @@ impl Session {
         }
     }
 
-    /// Refuses an edit that changed a frozen track's regions, plug-ins or Channel EQ: puts
+    /// Refuses an edit that changed a frozen track's regions or plug-ins: puts
     /// them back and returns why. Call straight after an edit recorded with `checkpoint`
     /// (the command wrappers do). If nothing else changed, the edit's undo step goes too.
     pub fn frozen_guard(&mut self) -> Result<()> {
@@ -269,7 +254,7 @@ impl Session {
         let mut hit: Vec<(Track, String)> = Vec::new();
         for t in self.project.tracks.iter().filter(|t| t.frozen.is_some()) {
             let Some(b) = before.track(t.id).filter(|b| b.frozen == t.frozen) else { continue };
-            if !same(&t.regions, &b.regions) || !same(&t.instrument, &b.instrument) || !same(&t.inserts, &b.inserts) || !same(&t.eq, &b.eq) {
+            if !same(&t.regions, &b.regions) || !same(&t.instrument, &b.instrument) || !same(&t.inserts, &b.inserts) {
                 hit.push((b.clone(), t.name.clone()));
             }
         }
@@ -294,7 +279,6 @@ impl Session {
                 t.regions = b.regions;
                 t.instrument = b.instrument;
                 t.inserts = b.inserts;
-                t.eq = b.eq;
             }
         }
         let nothing_else = same(&target.tracks, &before.tracks) && same(&target.groups, &before.groups);

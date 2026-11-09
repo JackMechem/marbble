@@ -155,22 +155,10 @@ pub fn reorder_tracks(state: State<AppState>, ids: Vec<Id>) -> Snapshot {
     edit(&state, "Reorder Tracks", None, false, |s| s.reorder_tracks(ids))
 }
 
-/// Updates a strip's channel EQ. Returns nothing: the UI updates optimistically while dragging.
+/// Feeds the Channel EQ editor's analyzer from the output of the insert `uid` (None: off).
 #[tauri::command]
-pub fn set_eq(state: State<AppState>, track: Id, eq: ChannelEq) -> R<()> {
-    with(&state, |s| {
-        if let Some(old) = s.eq_of(track) {
-            s.touched_eq(track, &old, &eq);
-        }
-        s.checkpoint("Channel EQ", Some(format!("eq:{track}")), false);
-        s.set_eq(track, eq);
-        s.frozen_guard().map_err(|e| e.to_string())
-    })
-}
-
-#[tauri::command]
-pub fn set_analyzer(state: State<AppState>, track: Option<Id>) {
-    with(&state, |s| s.set_analyzer(track))
+pub fn set_analyzer(state: State<AppState>, uid: Option<Id>) {
+    with(&state, |s| s.set_analyzer(uid))
 }
 
 #[tauri::command]

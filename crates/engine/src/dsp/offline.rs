@@ -67,7 +67,7 @@ struct Saved {
     metronome: bool,
     count_in: bool,
     midi_target: Option<Id>,
-    analyzer_target: Option<Id>,
+    analyzer_target: Option<(Id, Id)>,
     load: f32,
     low_latency: bool,
 }

@@ -190,7 +190,6 @@ impl Session {
             Cmd::Metronome { on: p.metronome, count_in: p.count_in },
             Cmd::MasterVolume(volume_gain(p.master.volume_db)),
             Cmd::AutoMonitor(self.audio_config.auto_monitor),
-            Cmd::Eq(MASTER_ID, crate::eq::coefficients(&p.master.eq, self.engine_rate)),
             Cmd::Analyzer(self.analyzer_target),
             Cmd::Click(ClickParams::from_settings(&p.click)),
             Cmd::MidiThru(self.prefs.midi.thru),
@@ -542,7 +541,6 @@ impl Session {
     pub(super) fn build_track(&mut self, t: &Track) -> Box<TrackDsp> {
         let meter = self.meters.entry(t.id).or_default().clone();
         let mut dsp = TrackDsp::new(t.id, t.kind, Self::track_params(&self.project, t), meter);
-        dsp.set_eq(self.eq_coeffs(t));
         self.load_clips(t.clips());
         dsp.set_regions(self.regions_dsp(t));
         dsp.set_automation(lanes_dsp(&t.automation), t.auto_mode);
