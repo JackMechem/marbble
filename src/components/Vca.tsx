@@ -120,6 +120,7 @@ export function VcaStrip({ vca, rows }: { vca: Vca; rows: SlotRows }) {
       </div>
       <div className="strip-pan strip-blank" aria-hidden>
         <div className="auto-mode-spacer" />
+        <div className="strip-icon-row" />
         <div className="strip-pan-knob" />
       </div>
       <div className="strip-readouts">

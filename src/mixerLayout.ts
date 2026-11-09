@@ -115,7 +115,7 @@ export const STRIP_W_MAX = 280;
 /** A folder stack's strip has only a fader, its buttons and a name, so it stays narrow at every
  *  size (until it is dragged wider). */
 export const FOLDER_W = STRIP_W.narrow;
-/** Below this the strip's name plate leaves out the icon, so the name keeps the room. */
+/** Below this a strip's Audio FX label leaves out "Audio FX" when its latency is there. */
 export const SLIM_W = 90;
 
 /** A channel strip's level meter beside the fader: two lanes of 7 px (a VCA strip keeps the room,
@@ -125,6 +125,8 @@ export const METER_W = 15;
 /** A channel strip's pan knob, in CSS pixels; its value goes under it (strip.css,
  *  .strip-pan-knob, is as tall as the two, on every strip). */
 export const PAN_KNOB = 34;
+/** A channel strip's track icon, in its row above the pan knob (strip.css, .strip-icon-row). */
+export const STRIP_ICON = 20;
 
 /** The Mixer's size, and the strips given a width of their own (by `stripKey`). */
 export interface MixerView {

@@ -2079,12 +2079,13 @@ From top to bottom:
 | **Output** | Stereo Out, the summing stack ("→ Σ Drums"), or an aux. |
 | **VCA** | The VCA fader that controls the strip (see [VCA faders](#vca-faders)). |
 | **Automation mode** | Off, Read, Touch, Latch, Write (see [Automation](#13-automation)). |
+| **Icon** | The track's icon, as in Logic's Mixer; click it to choose another. Stereo Out shows the output's. |
 | **Pan** | Drag vertically (Shift for fine); double-click to centre. The value shows under the knob: **C** at the centre, **L 1** to **L 64** or **R 1** to **R 64** either side. |
 | **Readouts** | Volume in dB and the clip indicator: the highest peak since you last reset it, in dBFS, red once a peak went over 0 dBFS. Click it to reset it, Alt-click to reset every strip's (or use the key command **Reset All Clip Indicators**, unassigned at first). |
 | **Fader and meter** | Drag the fader (Shift for fine), double-click for 0 dB. -96 to +6 dB. On a strip assigned to a VCA, an outlined cap marks where the strip really plays (its fader plus the VCA). The meter holds peaks for 2 s, and its top lights red while the clip indicator is on. With a Compressor, Limiter, Noise Gate or De-Esser on the strip, a thin **gain-reduction meter** beside it grows down from the top as the first one that isn't bypassed reduces the gain (up to 30 dB). |
 | **Power** | Turns the track off: silent, and it runs nothing (see [Turning tracks off](#turning-tracks-off)). Not on Stereo Out. |
 | **M S R I** | Mute, Solo, Record Enable, Input Monitoring. |
-| **Name** | Filled with the track colour, with the track's icon (click it to choose another; narrow strips leave it out) and up to two lines of name, broken between words. Right-click it for the channel strip settings menu. Any name or slot cut short shows in full in its tooltip. |
+| **Name** | Filled with the track colour, with up to two lines of name, broken between words. Right-click it for the channel strip settings menu. Any name or slot cut short shows in full in its tooltip. |
 
 The clip indicators keep their peak until you reset them, as in Logic: playing again doesn't
 reset them, and they are the same in the Mixer, the Inspector and a Mixer in its own window.

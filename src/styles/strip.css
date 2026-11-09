@@ -276,6 +276,29 @@
   margin-top: auto;
 }
 
+/* The track's icon (STRIP_ICON, 20 px), between the automation mode and the pan knob as in
+   Logic. Its row is there on every strip, a blank one too, so the rows below stay level. */
+.strip-icon-row {
+  height: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.strip-icon {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  color: var(--dim);
+}
+
+button.strip-icon:hover {
+  color: var(--text);
+  background: var(--icon-bg);
+}
+
 /* The pan knob (PAN_KNOB, 34 px) with its value under it: "C", "L 23", "R 40" (panText.ts). As
    tall on every strip, a blank one too, so the readouts and faders below stay level. */
 .strip-pan-knob {
@@ -375,14 +398,6 @@
 
 .strip-name.ink-light {
   color: var(--swatch-ink-light);
-}
-
-/* A track's icon before the name, in the plate's ink. */
-.strip-icon {
-  flex: none;
-  display: flex;
-  height: 14px;
-  color: inherit;
 }
 
 .strip-name-text {

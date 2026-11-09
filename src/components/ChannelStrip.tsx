@@ -32,7 +32,7 @@ import { BlankButtons, BlankEq, BlankRow, BlankSlots, MoreSlot, PlateName, SlotB
 import { TrackIcon, TrackIconArt } from "../trackIconArt";
 import { openTrackIconPicker } from "./TrackIconPicker";
 import { slotLayout, stripRows, stripWants, type SlotRows } from "../stripRows";
-import { METER_W, PAN_KNOB, plateInk } from "../mixerLayout";
+import { METER_W, PAN_KNOB, plateInk, STRIP_ICON } from "../mixerLayout";
 import { panLabel } from "../panText";
 import { onPress } from "../keyNav";
 
@@ -418,6 +418,27 @@ export function ChannelStrip({ track, selected, rows }: { track: Track | null; s
       <div className="strip-pan">
         {/* Logic puts the automation mode right above the pan knob. */}
         {strip && automatable(strip) ? <AutoModeButton track={strip} /> : <div className="auto-mode-spacer" />}
+        {/* Then the track's icon, as in Logic (click it to choose another); Stereo Out's is the
+            output's. */}
+        <div className="strip-icon-row">
+          {isMaster ? (
+            <span className="strip-icon">
+              <TrackIconArt id="speaker" size={STRIP_ICON} />
+            </span>
+          ) : (
+            <button
+              type="button"
+              className="strip-icon"
+              aria-label="Track Icon"
+              aria-haspopup="menu"
+              title="Choose an icon"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={(e) => openTrackIconPicker(e.currentTarget, track)}
+            >
+              <TrackIcon track={track} size={STRIP_ICON} />
+            </button>
+          )}
+        </div>
         {isMaster || folder ? (
           <div className="strip-pan-knob" />
         ) : (
@@ -503,7 +524,7 @@ export function ChannelStrip({ track, selected, rows }: { track: Track | null; s
       )}
 
       <div
-        className={"strip-name with-icon ink-" + plateInk(plate)}
+        className={"strip-name ink-" + plateInk(plate)}
         style={{ "--plate": plate } as React.CSSProperties}
         title={summing ? `${name} (summing stack)` : folder ? `${name} (folder stack)` : name}
         onContextMenu={(e) => {
@@ -512,24 +533,6 @@ export function ChannelStrip({ track, selected, rows }: { track: Track | null; s
           settingMenu(e.clientX, e.clientY);
         }}
       >
-        {/* The track's icon by its name, as on its header; Stereo Out's is the output's. */}
-        {isMaster ? (
-          <span className="strip-icon">
-            <TrackIconArt id="speaker" size={14} />
-          </span>
-        ) : (
-          <button
-            type="button"
-            className="strip-icon"
-            aria-label="Track Icon"
-            aria-haspopup="menu"
-            title="Choose an icon"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={(e) => openTrackIconPicker(e.currentTarget, track)}
-          >
-            <TrackIcon track={track} size={14} />
-          </button>
-        )}
         {summing && (
           <span className="strip-sum" title="Summing stack">
             Σ

@@ -12,6 +12,10 @@ All notable changes to Marbble are recorded here. The format follows
   Inspector's channel strips are larger, and show the pan below: **C** at the centre, **L 23** or
   **R 40** either side (64 steps each way), updating as you drag. The tooltip and screen readers
   give the same value.
+- **The Mixer's track icons sit above the pan knobs, as in Logic.** On the Mixer's and the
+  Inspector's channel strips the icon has its own row between the automation mode and the pan
+  knob, larger than before and level across the strips, and narrow strips show it too. The name
+  plate is all name. Click the icon to choose another, as before.
 - **Text drawn in the editors is on the interface's type scale.** The ruler, region and marker
   names, notes, the Piano Roll's keys, the tempo and signature tracks and the effect panels'
   graphs drew their text at their own sizes from 8 to 12 px, some in a different font. They now

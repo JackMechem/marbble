@@ -21,12 +21,7 @@
   min-width: 0;
 }
 
-/* Narrow strips leave the icon off the name plate, so the name has the room, and "Audio FX" off
-   its label when the strip's latency is there. */
-.mixer-cell.slim .strip-icon {
-  display: none;
-}
-
+/* Narrow strips leave "Audio FX" off its label when the strip's latency is there. */
 .mixer-cell.slim .strip-latency + .strip-label-text {
   display: none;
 }
