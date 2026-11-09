@@ -136,7 +136,7 @@ export function Segmented({ labels, value, onChange, title, vertical }: { labels
   return (
     <div className={"dyn-seg" + (vertical ? " vertical" : "")} title={title}>
       {labels.map((l, i) => (
-        <button key={l + i} className={i === Math.round(value) ? "on" : ""} onClick={() => onChange(i)}>
+        <button key={l + i} className={i === Math.round(value) ? "on" : ""} aria-pressed={i === Math.round(value)} onClick={() => onChange(i)}>
           {l}
         </button>
       ))}
@@ -169,6 +169,7 @@ export function ParamToggle({ props, id, label, title }: { props: FxPanelProps; 
   return (
     <button
       className={"dyn-toggle" + (on ? " on" : "")}
+      aria-pressed={on}
       title={title ?? spec.name}
       onClick={() => {
         props.touch(id, true);

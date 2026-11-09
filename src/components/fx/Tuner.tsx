@@ -388,10 +388,10 @@ export function TunerPanel({ info, values, set, touch, meters }: FxPanelProps) {
         <div className="tuner-field">
           <label>Display</label>
           <div className="segmented">
-            <button className={strobe ? "" : "on"} onClick={() => set(DISPLAY, 0)}>
+            <button className={strobe ? "" : "on"} aria-pressed={!strobe} onClick={() => set(DISPLAY, 0)}>
               Needle
             </button>
-            <button className={strobe ? "on" : ""} onClick={() => set(DISPLAY, 1)}>
+            <button className={strobe ? "on" : ""} aria-pressed={strobe} onClick={() => set(DISPLAY, 1)}>
               Strobe
             </button>
           </div>
@@ -399,10 +399,10 @@ export function TunerPanel({ info, values, set, touch, meters }: FxPanelProps) {
         <div className="tuner-field">
           <label>Notation</label>
           <div className="segmented tuner-notation">
-            <button className={flats ? "" : "on"} onClick={() => set(NOTATION, 0)} title="Sharps" aria-label="Sharps">
+            <button className={flats ? "" : "on"} aria-pressed={!flats} onClick={() => set(NOTATION, 0)} title="Sharps" aria-label="Sharps">
               ♯
             </button>
-            <button className={flats ? "on" : ""} onClick={() => set(NOTATION, 1)} title="Flats" aria-label="Flats">
+            <button className={flats ? "on" : ""} aria-pressed={flats} onClick={() => set(NOTATION, 1)} title="Flats" aria-label="Flats">
               ♭
             </button>
           </div>
@@ -439,7 +439,7 @@ export function TunerPanel({ info, values, set, touch, meters }: FxPanelProps) {
             title="Input below this level reads as no note"
           />
         </div>
-        <button className={`tuner-mute${muted ? " on" : ""}`} onClick={() => set(MUTE, muted ? 0 : 1)} title="Silence the output while tuning">
+        <button className={`tuner-mute${muted ? " on" : ""}`} aria-pressed={muted} onClick={() => set(MUTE, muted ? 0 : 1)} title="Silence the output while tuning">
           Mute
         </button>
       </div>

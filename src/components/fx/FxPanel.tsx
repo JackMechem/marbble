@@ -88,7 +88,7 @@ export function FxPower({ uid }: { uid: Id }) {
   const { at } = fx;
   const label = at.plugin.bypass ? "Turn On" : "Bypass";
   return (
-    <button className={"fx-power" + (at.plugin.bypass ? "" : " on")} title={label} aria-label={label} onClick={() => api.setBypass(at.track, at.slot, !at.plugin.bypass)}>
+    <button className={"fx-power" + (at.plugin.bypass ? "" : " on")} title={label} aria-label="Plug-in On" aria-pressed={!at.plugin.bypass} onClick={() => api.setBypass(at.track, at.slot, !at.plugin.bypass)}>
       ⏻
     </button>
   );

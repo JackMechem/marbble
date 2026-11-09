@@ -182,7 +182,7 @@ export function ProjectSettingsSheet() {
     <SheetFrame title={`Project Settings — ${name}`} onClose={close} width={620} className="settings-sheet project-settings-sheet">
       <div className="settings-tabs">
         {tabs.map((t) => (
-          <button key={t.id} className={"settings-tab" + (tab === t.id ? " on" : "")} onClick={() => setTab(t.id)}>
+          <button key={t.id} className={"settings-tab" + (tab === t.id ? " on" : "")} aria-pressed={tab === t.id} onClick={() => setTab(t.id)}>
             {t.icon}
             <span>{t.label}</span>
           </button>

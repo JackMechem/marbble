@@ -117,7 +117,7 @@ export function EditorTabs({ current, short = false }: { current: "editor" | "li
   return (
     <div className="editor-tabs">
       {EDITOR_TABS.map((t) => (
-        <button key={t.id} className={"filter" + (current === t.id ? " on" : "")} title={short ? t.name : undefined} aria-label={short ? t.name : undefined} onClick={() => setState({ bottom: t.id })}>
+        <button key={t.id} className={"filter" + (current === t.id ? " on" : "")} aria-pressed={current === t.id} title={short ? t.name : undefined} aria-label={short ? t.name : undefined} onClick={() => setState({ bottom: t.id })}>
           {short ? t.short : t.name}
         </button>
       ))}
@@ -666,14 +666,14 @@ export function EventList() {
         </div>
         <div className="local-right">
           {!fit.has("midi-out") && (
-            <button className={"lb-btn" + (p.midiOut ? " on" : "")} title="MIDI Out (hear edited notes)" aria-label="MIDI Out (hear edited notes)" onClick={() => setPrefs({ midiOut: !p.midiOut })}>
+            <button className={"lb-btn" + (p.midiOut ? " on" : "")} aria-pressed={p.midiOut} title="MIDI Out (hear edited notes)" aria-label="MIDI Out (hear edited notes)" onClick={() => setPrefs({ midiOut: !p.midiOut })}>
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round">
                 <path d="M2 5.2h2.4L7.6 2.5v9L4.4 8.8H2zM9.8 4.6a3.4 3.4 0 0 1 0 4.8M11.4 3a5.6 5.6 0 0 1 0 8" />
               </svg>
             </button>
           )}
           {!fit.has("catch") && (
-            <button className={"lb-btn catch" + (p.catchPlayhead ? " on" : "")} title="Catch Playhead" aria-label="Catch Playhead" onClick={() => setPrefs({ catchPlayhead: !p.catchPlayhead })}>
+            <button className={"lb-btn catch" + (p.catchPlayhead ? " on" : "")} aria-pressed={p.catchPlayhead} title="Catch Playhead" aria-label="Catch Playhead" onClick={() => setPrefs({ catchPlayhead: !p.catchPlayhead })}>
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3">
                 <path d="M3 2v10M3 7h8M8 4l3 3-3 3" />
               </svg>
@@ -692,7 +692,7 @@ export function EventList() {
         {!toolsFit.has("filters") && (
           <div className="el-filters">
             {el.EVENT_TYPES.map((t) => (
-              <button key={t.id} className={"filter" + (p.show[t.id] ? " on" : "")} title={`Show ${t.label}`} onClick={() => setPrefs({ show: { ...p.show, [t.id]: !p.show[t.id] } })}>
+              <button key={t.id} className={"filter" + (p.show[t.id] ? " on" : "")} aria-pressed={!!(p.show[t.id])} title={`Show ${t.label}`} onClick={() => setPrefs({ show: { ...p.show, [t.id]: !p.show[t.id] } })}>
                 {t.label}
               </button>
             ))}

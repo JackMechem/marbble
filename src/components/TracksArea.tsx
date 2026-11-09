@@ -207,6 +207,7 @@ export function TracksArea() {
           {!gone("catch") && (
             <button
               className={"lb-btn catch" + (s.catchPlayhead ? " on" : "")}
+              aria-pressed={s.catchPlayhead}
               title={tip("Catch Playhead", "catch-playhead")}
               aria-label={tip("Catch Playhead", "catch-playhead")}
               onClick={() => setState({ catchPlayhead: !s.catchPlayhead })}
@@ -289,7 +290,7 @@ export function TracksArea() {
           <button className="add-track" title={`New Tracks (${fmt("Mod+Alt+N")})`} aria-label={`New Tracks (${fmt("Mod+Alt+N")})`} onClick={() => setState({ dialog: "new-tracks" })}>
             <Icon.plus />
           </button>
-          <button className={"hide-mode" + (showHidden ? " on" : "")} title={tip("Show Hidden Tracks", "show-hidden")} aria-label={tip("Show Hidden Tracks", "show-hidden")} onClick={ops.toggleShowHidden}>
+          <button className={"hide-mode" + (showHidden ? " on" : "")} aria-pressed={showHidden} title={tip("Show Hidden Tracks", "show-hidden")} aria-label={tip("Show Hidden Tracks", "show-hidden")} onClick={ops.toggleShowHidden}>
             H
           </button>
           <span className="global-label" onContextMenu={globalHeaderMenu}>

@@ -307,7 +307,7 @@ export function BounceInPlaceDialog() {
           <label>Source:</label>
           <div className="segmented">
             {SOURCES.map(([v, label]) => (
-              <button key={v} className={opts.source === v ? "on" : ""} onClick={() => set({ source: v })}>
+              <button key={v} className={opts.source === v ? "on" : ""} aria-pressed={opts.source === v} onClick={() => set({ source: v })}>
                 {label}
               </button>
             ))}

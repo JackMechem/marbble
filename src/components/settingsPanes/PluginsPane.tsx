@@ -130,7 +130,7 @@ export function PluginsPane({ close }: { close: () => void }) {
                 {r.failed.length > 0 && (
                   <>
                     ,{" "}
-                    <button className="link-btn warn-text" onClick={() => setShowFailed(!showFailed)}>
+                    <button className="link-btn warn-text" aria-expanded={showFailed} onClick={() => setShowFailed(!showFailed)}>
                       {r.failed.length} failed {showFailed ? "▾" : "▸"}
                     </button>
                   </>

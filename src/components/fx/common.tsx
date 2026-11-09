@@ -136,7 +136,7 @@ export function FxToggle({ spec, value, onChange, label }: { spec: FxParamSpec; 
   const on = value >= 0.5;
   const learn = useFxLearn(spec.id);
   return (
-    <button className={"fx-toggle" + (on ? " on" : "")} onClick={() => onChange(on ? 0 : 1)} onContextMenu={learn} title={spec.name}>
+    <button className={"fx-toggle" + (on ? " on" : "")} aria-pressed={on} onClick={() => onChange(on ? 0 : 1)} onContextMenu={learn} title={spec.name}>
       {label ?? spec.name}
     </button>
   );
@@ -162,7 +162,7 @@ export function FxChoice({ spec, value, onChange, label }: { spec: FxParamSpec; 
       <div className="fx-label">{label ?? spec.name}</div>
       <div className="fx-segments">
         {labels.map((l, i) => (
-          <button key={l} className={i === cur ? "on" : ""} onClick={() => onChange(i)}>
+          <button key={l} className={i === cur ? "on" : ""} aria-pressed={i === cur} onClick={() => onChange(i)}>
             {l}
           </button>
         ))}
@@ -240,10 +240,10 @@ export function FxSideChain({ uid }: { uid: Id }) {
       </button>
       {source !== null && (
         <span className="segmented fx-key-tap">
-          <button className={pre ? "on" : ""} onMouseDown={() => setPre(true)} title="Key from the source before its fader (its mute still silences it)">
+          <button className={pre ? "on" : ""} aria-pressed={pre} onMouseDown={() => setPre(true)} title="Key from the source before its fader (its mute still silences it)">
             Pre
           </button>
-          <button className={pre ? "" : "on"} onMouseDown={() => setPre(false)} title="Key from the source after its fader">
+          <button className={pre ? "" : "on"} aria-pressed={!pre} onMouseDown={() => setPre(false)} title="Key from the source after its fader">
             Post
           </button>
         </span>

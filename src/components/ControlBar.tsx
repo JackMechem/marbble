@@ -210,10 +210,10 @@ function TransportButtons() {
       <button className="tp-btn" title={tip("Stop", "play")} aria-label={tip("Stop", "play")} onClick={() => transport.stop()}>
         <Icon.stop />
       </button>
-      <button className={"tp-btn play" + (t.playing && !t.recording ? " on" : "")} title={tip("Play", "play")} aria-label={tip("Play", "play")} onClick={() => act("play")}>
+      <button className={"tp-btn play" + (t.playing && !t.recording ? " on" : "")} aria-pressed={t.playing && !t.recording} title={tip("Play", "play")} aria-label={tip("Play", "play")} onClick={() => act("play")}>
         <Icon.play />
       </button>
-      <button className={"tp-btn rec" + (t.recording ? " on" : "")} title={tip("Record", "record")} aria-label={tip("Record", "record")} onClick={() => act("record")}>
+      <button className={"tp-btn rec" + (t.recording ? " on" : "")} aria-pressed={t.recording} title={tip("Record", "record")} aria-label={tip("Record", "record")} onClick={() => act("record")}>
         <Icon.record />
       </button>
     </div>

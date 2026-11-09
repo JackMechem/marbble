@@ -202,7 +202,8 @@ function Header({
         <button
           className={"tbtn hide" + (track.hidden ? " on" : "")}
           title={track.hidden ? "Hidden: click to show this track" : "Hide this track"}
-          aria-label={track.hidden ? "Hidden: click to show this track" : "Hide this track"}
+          aria-label="Hide Track"
+          aria-pressed={track.hidden}
           onMouseDown={(e) => {
             e.stopPropagation();
             setHidden([track.id], !track.hidden);

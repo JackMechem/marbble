@@ -374,6 +374,7 @@ instead and enforce rules that would otherwise only fail in the running app.
 | `dynScale.test.ts` | The dynamics panels' value formatting and knob maths. |
 | `styles.test.ts` | Guard: `src/styles/index.css` imports every stylesheet exactly once with the tokens first, no other file imports CSS, and each file's braces balance; no raw hex, `rgb()` or `hsl()` colour outside `tokens.css`; every font size from the type scale; `tokens.css` matches Studio in `themes.ts`; the focus ring. |
 | `canvasText.test.ts` | Guard: `canvasText.ts`'s defaults and font match `tokens.css` and `base.css`, and every canvas `font` in `src/` comes from `canvasFont`. |
+| `ariaPressed.test.ts` | Guard: every `<button>` whose class turns "on" says so with `aria-pressed` (or is a tab, a menu item or a pop-up button, which say it their own way). |
 | `browserDialogs.test.ts` | Guard: no `window.prompt`, `confirm` or `alert` in `src/` (macOS's web view doesn't implement them; use `askName` or the dialog plug-in). |
 | `contrast.test.ts` | Guard: in every theme of `themes.ts`, `--text`, `--dim` and `--faint` are at least 4.5:1 (WCAG) on each surface text sits on, `--lcd-label` on the LCD, and the three stay in that order. |
 

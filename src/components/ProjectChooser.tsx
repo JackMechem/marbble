@@ -264,10 +264,10 @@ export function ProjectChooser() {
             <img src="/logo.svg" width="22" height="22" alt="" />
             <span>Marbble</span>
           </div>
-          <button className={"chooser-nav" + (tab === "new" ? " on" : "")} onClick={() => setState({ chooserTab: "new" })}>
+          <button className={"chooser-nav" + (tab === "new" ? " on" : "")} aria-pressed={tab === "new"} onClick={() => setState({ chooserTab: "new" })}>
             New Project
           </button>
-          <button className={"chooser-nav" + (tab === "recent" ? " on" : "")} onClick={() => setState({ chooserTab: "recent" })}>
+          <button className={"chooser-nav" + (tab === "recent" ? " on" : "")} aria-pressed={tab === "recent"} onClick={() => setState({ chooserTab: "recent" })}>
             Recent
             {recent && recent.length > 0 && <span className="chooser-count">{recent.length}</span>}
           </button>
@@ -298,6 +298,7 @@ export function ProjectChooser() {
                   <button
                     key={t.id}
                     className={"tpl" + (template === t.id ? " on" : "")}
+                    aria-pressed={template === t.id}
                     onClick={() => setTemplate(t.id)}
                     onDoubleClick={() => {
                       setTemplate(t.id);
@@ -314,6 +315,7 @@ export function ProjectChooser() {
                   <button
                     key={`user:${t.name}`}
                     className={"tpl" + (template === `user:${t.name}` ? " on" : "")}
+                    aria-pressed={template === `user:${t.name}`}
                     title="Right-click to rename or delete"
                     onClick={() => setTemplate(`user:${t.name}`)}
                     onDoubleClick={() => {

@@ -41,7 +41,7 @@ export function SettingsWindow({ audio: AudioPane, appearance: AppearancePane }:
     <SheetFrame title={`Settings — ${current.label}`} onClose={close} width={760} className="settings-sheet">
       <div className="settings-tabs wide">
         {tabs.map((t) => (
-          <button key={t.id} className={"settings-tab" + (current.id === t.id ? " on" : "")} onClick={() => setState({ settingsTab: t.id })}>
+          <button key={t.id} className={"settings-tab" + (current.id === t.id ? " on" : "")} aria-pressed={current.id === t.id} onClick={() => setState({ settingsTab: t.id })}>
             {t.icon}
             <span>{t.label}</span>
           </button>

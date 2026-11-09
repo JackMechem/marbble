@@ -352,7 +352,7 @@ export function StepSequencer() {
         ) : (
           <div className="editor-tabs ss-modes">
             {ss.EDIT_MODES.map((m) => (
-              <button key={m.id} className={"filter" + (mode === m.id ? " on" : "")} title={m.title} onClick={() => setMode(m.id)}>
+              <button key={m.id} className={"filter" + (mode === m.id ? " on" : "")} aria-pressed={mode === m.id} title={m.title} onClick={() => setMode(m.id)}>
                 {m.label}
               </button>
             ))}
@@ -369,7 +369,7 @@ export function StepSequencer() {
         <span className="lb-label">Swing</span>
         <NumberField value={pattern.swing} min={0} max={100} width={toolsFit.has("tight") ? 52 : 70} title="Swing (%)" onChange={(swing) => edit("Swing", (p) => ({ ...p, swing }), `swing:${region.id}`)} />
         {!toolsFit.has("loop") && (
-          <button className={"filter" + (pattern.looped !== false ? " on" : "")} title="Loop: the pattern repeats to the end of the region" onClick={() => edit("Pattern Loop", (p) => ({ ...p, looped: p.looped === false }))}>
+          <button className={"filter" + (pattern.looped !== false ? " on" : "")} aria-pressed={pattern.looped !== false} title="Loop: the pattern repeats to the end of the region" onClick={() => edit("Pattern Loop", (p) => ({ ...p, looped: p.looped === false }))}>
             Loop
           </button>
         )}
@@ -397,10 +397,10 @@ export function StepSequencer() {
                     openMenu(e.clientX, e.clientY, rowMenu(r));
                   }}
                 >
-                  <button className={"tbtn mute" + (row.muted ? " on" : "")} title="Mute Row" aria-label="Mute Row" onClick={() => edit("Mute Row", (p) => ss.setRow(p, r, { muted: !row.muted }))}>
+                  <button className={"tbtn mute" + (row.muted ? " on" : "")} aria-pressed={!!row.muted} title="Mute Row" aria-label="Mute Row" onClick={() => edit("Mute Row", (p) => ss.setRow(p, r, { muted: !row.muted }))}>
                     M
                   </button>
-                  <button className={"tbtn solo" + (row.solo ? " on" : "")} title="Solo Row" aria-label="Solo Row" onClick={() => edit("Solo Row", (p) => ss.setRow(p, r, { solo: !row.solo }))}>
+                  <button className={"tbtn solo" + (row.solo ? " on" : "")} aria-pressed={!!row.solo} title="Solo Row" aria-label="Solo Row" onClick={() => edit("Solo Row", (p) => ss.setRow(p, r, { solo: !row.solo }))}>
                     S
                   </button>
                   <button className="ss-name" title="Row pitch: choose a drum or note, or Learn one from a MIDI keyboard" onMouseDown={(e) => openMenuAt(e.currentTarget, pitchItems(r))}>

@@ -109,7 +109,7 @@ export function CompressorPanel(props: FxPanelProps) {
     <div className={`dyn-panel dyn-comp circuit-${meta.key}`}>
       <div className="dyn-circuits" role="tablist">
         {CIRCUITS.map((c, i) => (
-          <button key={c.key} className={i === circuit ? "on" : ""} title={c.about} onClick={() => setNow(P.circuit, i)}>
+          <button key={c.key} className={i === circuit ? "on" : ""} aria-pressed={i === circuit} title={c.about} onClick={() => setNow(P.circuit, i)}>
             {c.short}
           </button>
         ))}

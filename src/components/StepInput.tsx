@@ -264,16 +264,16 @@ export function StepInput() {
         <div className="si-row">
           <div className="si-seg">
             {si.NOTE_VALUES.map((v) => (
-              <button key={v} className={toggle(opts.value === v)} title={hint(`step-${v}`, `1/${v} note`)} onClick={() => setOpts({ value: v })}>
+              <button key={v} className={toggle(opts.value === v)} aria-pressed={opts.value === v} title={hint(`step-${v}`, `1/${v} note`)} onClick={() => setOpts({ value: v })}>
                 1/{v}
               </button>
             ))}
           </div>
           <div className="si-seg">
-            <button className={toggle(opts.dotted)} title={hint("step-dotted", "Dotted: half as long again")} onClick={() => commands["step-dotted"]()}>
+            <button className={toggle(opts.dotted)} aria-pressed={opts.dotted} title={hint("step-dotted", "Dotted: half as long again")} onClick={() => commands["step-dotted"]()}>
               Dotted
             </button>
-            <button className={toggle(opts.triplet)} title={hint("step-triplet", "Triplet: two thirds as long")} onClick={() => commands["step-triplet"]()}>
+            <button className={toggle(opts.triplet)} aria-pressed={opts.triplet} title={hint("step-triplet", "Triplet: two thirds as long")} onClick={() => commands["step-triplet"]()}>
               Triplet
             </button>
           </div>
@@ -281,12 +281,12 @@ export function StepInput() {
         <div className="si-row">
           <div className="si-seg">
             {si.DYNAMICS.map((d, i) => (
-              <button key={d.name} className={toggle(dynamic === i) + " si-dyn"} title={`Velocity ${d.velocity}`} onClick={() => setDynamic(i)}>
+              <button key={d.name} className={toggle(dynamic === i) + " si-dyn"} aria-pressed={dynamic === i} title={`Velocity ${d.velocity}`} onClick={() => setDynamic(i)}>
                 {d.name}
               </button>
             ))}
           </div>
-          <button className={toggle(asPlayed)} title="Notes from a MIDI keyboard or Musical Typing keep the velocity they were played with; off, they all get the velocity chosen here" onClick={() => setAsPlayed(!asPlayed)}>
+          <button className={toggle(asPlayed)} aria-pressed={asPlayed} title="Notes from a MIDI keyboard or Musical Typing keep the velocity they were played with; off, they all get the velocity chosen here" onClick={() => setAsPlayed(!asPlayed)}>
             As Played
           </button>
         </div>
@@ -300,13 +300,13 @@ export function StepInput() {
             </button>
           </div>
           <div className="si-seg">
-            <button className={toggle(opts.chord)} title={hint("step-chord", "Chord: notes go in at the same position until this is turned off (or Rest)")} onClick={toggleChord}>
+            <button className={toggle(opts.chord)} aria-pressed={opts.chord} title={hint("step-chord", "Chord: notes go in at the same position until this is turned off (or Rest)")} onClick={toggleChord}>
               Chord
             </button>
             <button className="si-btn" title={hint("step-sustain", "Sustain inserted notes: lengthen the last notes by a step")} onClick={() => commands["step-sustain"]()}>
               Sustain
             </button>
-            <button className={toggle(opts.quantize)} title={hint("step-quantize", "Quantize: snap the playhead to the step grid first")} onClick={() => commands["step-quantize"]()}>
+            <button className={toggle(opts.quantize)} aria-pressed={opts.quantize} title={hint("step-quantize", "Quantize: snap the playhead to the step grid first")} onClick={() => commands["step-quantize"]()}>
               Quantize
             </button>
           </div>

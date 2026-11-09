@@ -259,7 +259,7 @@ export function EqPower({ track }: { track: Id }) {
   if (!eq) return null;
   const label = eq.on ? "Bypass" : "Turn On";
   return (
-    <button className={"fx-power" + (eq.on ? " on" : "")} title={label} aria-label={label} onClick={() => updateEq(track, { ...eq, on: !eq.on })}>
+    <button className={"fx-power" + (eq.on ? " on" : "")} title={label} aria-label="Channel EQ On" aria-pressed={eq.on} onClick={() => updateEq(track, { ...eq, on: !eq.on })}>
       ⏻
     </button>
   );
@@ -521,7 +521,7 @@ export function EqEditor({ eq, sr, onChange, extra, bypassed, analyzerTrack, lea
     <div className={"eq-panel" + (bypassed ? " bypassed" : "")}>
       <div className="eq-toolbar">
         {analyzerTrack !== undefined && (
-          <button className={"eq-toggle" + (analyzer ? " on" : "")} onClick={() => setAnalyzer(!analyzer)} title="Show the post-EQ spectrum">
+          <button className={"eq-toggle" + (analyzer ? " on" : "")} aria-pressed={analyzer} onClick={() => setAnalyzer(!analyzer)} title="Show the post-EQ spectrum">
             Analyzer
           </button>
         )}
@@ -548,6 +548,7 @@ export function EqEditor({ eq, sr, onChange, extra, bypassed, analyzerTrack, lea
             <div key={i} className={"eq-band" + (i === sel ? " sel" : "")} onMouseDown={() => setSel(i)}>
               <button
                 className={"eq-band-toggle" + (b.on ? " on" : "")}
+                aria-pressed={b.on}
                 style={{ ["--band" as string]: BAND_COLORS[i] }}
                 onClick={() => setBand(i, { on: !b.on })}
                 onContextMenu={learn?.({ band: i, field: "on" })}

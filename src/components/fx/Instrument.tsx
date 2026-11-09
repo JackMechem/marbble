@@ -44,10 +44,10 @@ export function InstrumentPanel(props: FxPanelProps) {
       </div>
       <div className="inst-footer">
         <div className="fx-segments inst-layout" title="How the sections are laid out">
-          <button className={layout === "row" ? "on" : ""} onClick={() => choose("row")}>
+          <button className={layout === "row" ? "on" : ""} aria-pressed={layout === "row"} onClick={() => choose("row")}>
             Row
           </button>
-          <button className={layout === "grid" ? "on" : ""} onClick={() => choose("grid")}>
+          <button className={layout === "grid" ? "on" : ""} aria-pressed={layout === "grid"} onClick={() => choose("grid")}>
             Grid
           </button>
         </div>

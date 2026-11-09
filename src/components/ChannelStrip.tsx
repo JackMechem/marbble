@@ -137,7 +137,8 @@ export function PluginSlotView({
       <button
         className="slot-power"
         title={plugin.bypass ? "Turn on" : "Bypass"}
-        aria-label={plugin.bypass ? "Turn on" : "Bypass"}
+        aria-label="Plug-in On"
+        aria-pressed={!plugin.bypass}
         onMouseDown={(e) => {
           e.stopPropagation();
           if (refuseFrozen([trackId])) return;
@@ -413,7 +414,7 @@ export function ChannelStrip({ track, selected, rows }: { track: Track | null; s
 
       {!isMaster ? (
         <div className="strip-buttons">
-          <button className={"tbtn power" + (track.off ? " on" : "")} title={powerTitle(tracks ?? [], track)} aria-label={powerTitle(tracks ?? [], track)} onMouseDown={(e) => { e.stopPropagation(); api.updateTrack(id, { off: !track.off }); }}>
+          <button className={"tbtn power" + (track.off ? " on" : "")} title={powerTitle(tracks ?? [], track)} aria-label="Track On" aria-pressed={!track.off} onMouseDown={(e) => { e.stopPropagation(); api.updateTrack(id, { off: !track.off }); }}>
             <Icon.power />
           </button>
           <div className="btn-row">

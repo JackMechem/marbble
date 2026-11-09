@@ -30,7 +30,7 @@ export function MetronomeFields() {
         <Row label="Sound:" note={SOUNDS.find((s) => s.id === click.sound)?.description}>
           <div className="segmented">
             {SOUNDS.map((s) => (
-              <button key={s.id} className={s.id === click.sound ? "on" : ""} onClick={() => set({ sound: s.id })}>
+              <button key={s.id} className={s.id === click.sound ? "on" : ""} aria-pressed={s.id === click.sound} onClick={() => set({ sound: s.id })}>
                 {s.name}
               </button>
             ))}

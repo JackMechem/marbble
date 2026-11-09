@@ -57,6 +57,13 @@ All notable changes to Marbble are recorded here. The format follows
   sheet or the Project Chooser, the recessed meter edges and the colour swatches' outlines are
   lighter. On High Contrast, the dim text and icon tint on a selected row (a menu item's shortcut,
   a recent project's path, an alternative's "current") are dark, to read on its light blue.
+- **Screen readers hear whether every toggle is on.** Like the control bar's mode buttons, Play,
+  Record, Catch Playhead, Snap, MIDI Out, Step Input, the power buttons (the Mixer strip's, a
+  plug-in slot's, the plug-in and Channel EQ panels'), Hide, the Step Sequencer's row switches,
+  the effects' switches and every row of choices (the Tuner's display, a compressor's circuit,
+  Settings' tabs and theme cards, the Quantize values) now say pressed or not pressed; before,
+  they only lit up. Power buttons are named for what they switch (Track On, Plug-in On) instead
+  of for what a click would do.
 - **Move MIDI Regions with Tempo moves every track alternative.** A tempo edit with it on moved
   only the active alternative's MIDI regions, so switching to another afterwards found its MIDI
   off its bars and beats. The inactive alternatives' MIDI regions now move with the tempo too.

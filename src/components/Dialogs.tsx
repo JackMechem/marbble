@@ -73,12 +73,12 @@ export function NewTrackDialog() {
   return (
     <Sheet title="Choose a track type" onClose={close} width={600}>
       <div className="track-types">
-        <button className={"track-type" + (kind === "instrument" ? " on" : "")} onClick={() => setKind("instrument")} onDoubleClick={create}>
+        <button className={"track-type" + (kind === "instrument" ? " on" : "")} aria-pressed={kind === "instrument"} onClick={() => setKind("instrument")} onDoubleClick={create}>
           <Icon.piano />
           <span className="tt-title">Software Instrument</span>
           <span className="tt-sub">Play and record using a VST3 instrument or the built-in synth.</span>
         </button>
-        <button className={"track-type" + (kind === "audio" ? " on" : "")} onClick={() => setKind("audio")} onDoubleClick={create}>
+        <button className={"track-type" + (kind === "audio" ? " on" : "")} aria-pressed={kind === "audio"} onClick={() => setKind("audio")} onDoubleClick={create}>
           <Icon.mic />
           <span className="tt-title">Audio</span>
           <span className="tt-sub">Record using a microphone or a line input — vocals, guitar, bass.</span>
@@ -427,7 +427,7 @@ function AppearancePane({ close }: { close: () => void }) {
         <div className="pref-title">Interface Size</div>
         <div className="segmented">
           {UI_SCALES.map((s) => (
-            <button key={s} className={Math.abs(s - scale) < 0.001 ? "on" : ""} onClick={() => applyUiScale(s)}>
+            <button key={s} className={Math.abs(s - scale) < 0.001 ? "on" : ""} aria-pressed={Math.abs(s - scale) < 0.001} onClick={() => applyUiScale(s)}>
               {Math.round(s * 100)}%
             </button>
           ))}
@@ -438,7 +438,7 @@ function AppearancePane({ close }: { close: () => void }) {
         <div className="pref-title">Waveforms</div>
         <div className="segmented">
           {WAVE_STYLES.map((s) => (
-            <button key={s.id} className={s.id === waveStyle ? "on" : ""} title={s.description} onClick={() => applyWaveStyle(s.id)}>
+            <button key={s.id} className={s.id === waveStyle ? "on" : ""} aria-pressed={s.id === waveStyle} title={s.description} onClick={() => applyWaveStyle(s.id)}>
               {s.name}
             </button>
           ))}
@@ -448,7 +448,7 @@ function AppearancePane({ close }: { close: () => void }) {
       <div className="pref-title">Theme</div>
       <div className="theme-grid">
         {THEMES.map((t) => (
-          <button key={t.id} className={"theme-card" + (t.id === current ? " on" : "")} onClick={() => applyTheme(t.id)}>
+          <button key={t.id} className={"theme-card" + (t.id === current ? " on" : "")} aria-pressed={t.id === current} onClick={() => applyTheme(t.id)}>
             <ThemePreview t={t} />
             <span className="theme-name">{t.name}</span>
             <span className="theme-desc">{t.description}</span>
@@ -518,7 +518,7 @@ export function GroupSheet() {
         </div>
         <div className="group-colors">
           {TRACK_COLORS.map((c) => (
-            <button key={c} className={"group-swatch" + (c === group.color ? " on" : "")} style={{ background: c }} onClick={() => set({ color: c })} />
+            <button key={c} className={"group-swatch" + (c === group.color ? " on" : "")} aria-pressed={c === group.color} style={{ background: c }} onClick={() => set({ color: c })} />
           ))}
         </div>
         <div className="pref-title">Shared by the group's tracks</div>

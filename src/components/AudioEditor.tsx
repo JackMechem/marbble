@@ -233,7 +233,7 @@ export function AudioEditor({ track, region }: { track: Track; region: Region | 
         </div>
         <div className="local-right">
           {!fit.has("transients") && (
-            <button className={"lb-btn" + (showTransients ? " on" : "")} title="Show Transients" aria-label="Show Transients" onClick={() => ed.setEd({ showTransients: !showTransients })}>
+            <button className={"lb-btn" + (showTransients ? " on" : "")} aria-pressed={showTransients} title="Show Transients" aria-label="Show Transients" onClick={() => ed.setEd({ showTransients: !showTransients })}>
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3">
                 <path d="M1 7h2l1.2-4 1.6 8L7 5l1 3.5L9 7h4" />
                 <path d="M4.2 1.5v1M9 1.5v1" strokeLinecap="round" />

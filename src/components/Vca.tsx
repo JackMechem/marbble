@@ -131,6 +131,7 @@ export function VcaStrip({ vca, rows }: { vca: Vca; rows: SlotRows }) {
         <div className="btn-row">
           <button
             className={"tbtn mute" + (vca.mute ? " on" : "")}
+            aria-pressed={vca.mute}
             title="Mute every strip on this VCA"
             aria-label="Mute every strip on this VCA"
             onMouseDown={(e) => {

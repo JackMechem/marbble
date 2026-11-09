@@ -148,7 +148,7 @@ export function SpKnob({
 export function SpToggle({ p, id, label, title }: { p: FxPanelProps; id: number; label?: string; title?: string }) {
   const on = val(p, id) >= 0.5;
   return (
-    <button type="button" className={"sp-toggle" + (on ? " on" : "")} title={title} onClick={() => p.set(id, on ? 0 : 1)}>
+    <button type="button" className={"sp-toggle" + (on ? " on" : "")} aria-pressed={on} title={title} onClick={() => p.set(id, on ? 0 : 1)}>
       {label ?? specOf(p, id).name}
     </button>
   );
@@ -162,7 +162,7 @@ export function SpSegments({ p, id }: { p: FxPanelProps; id: number }) {
   return (
     <div className="segmented sp-segments">
       {labels.map((label, i) => (
-        <button type="button" key={label} className={i === v ? "on" : ""} onClick={() => p.set(id, i)}>
+        <button type="button" key={label} className={i === v ? "on" : ""} aria-pressed={i === v} onClick={() => p.set(id, i)}>
           {label}
         </button>
       ))}

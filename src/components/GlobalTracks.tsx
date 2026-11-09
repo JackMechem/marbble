@@ -518,7 +518,7 @@ function SignaturePopover({ pop, onCancel, onCommit }: { pop: SigPop; onCancel: 
         <NumberField value={num} min={1} max={32} step={1} width={72} onChange={(v) => setNum(Math.round(v))} />
         <span className="sig-pop-slash">/</span>
         {SIG_DENOMINATORS.map((d) => (
-          <button key={d} className={"pr-qval" + (d === den ? " on" : "")} onClick={() => setDen(d)}>
+          <button key={d} className={"pr-qval" + (d === den ? " on" : "")} aria-pressed={d === den} onClick={() => setDen(d)}>
             {d}
           </button>
         ))}

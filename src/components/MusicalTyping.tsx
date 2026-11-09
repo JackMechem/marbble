@@ -217,6 +217,7 @@ export function MusicalTyping() {
         </div>
         <button
           className={"mt-sustain" + (sustain ? " on" : "")}
+          aria-pressed={sustain}
           title="Sustain pedal (hold Tab)"
           onPointerDown={() => {
             const on = !sustain;

@@ -33,7 +33,7 @@ export function QuantizePanel({ anchor, prefs: p, onClose, onQuantize }: { ancho
       <div className="pr-qtitle">Time Quantize</div>
       <div className="pr-qgrid">
         {me.GRID_VALUES.map((g) => (
-          <button key={g} className={"pr-qval" + (g === p.qValue ? " on" : "")} onClick={() => setPrefs({ qValue: g })}>
+          <button key={g} className={"pr-qval" + (g === p.qValue ? " on" : "")} aria-pressed={g === p.qValue} onClick={() => setPrefs({ qValue: g })}>
             {g}
           </button>
         ))}

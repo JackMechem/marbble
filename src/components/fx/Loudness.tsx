@@ -345,7 +345,7 @@ export function LoudnessPanel({ info, values, set, touch, meters }: FxPanelProps
         )}
         <div className="segmented">
           {["EBU +9", "EBU +18"].map((l, i) => (
-            <button key={l} className={scale === SCALES[i] ? "on" : ""} onClick={() => set(SCALE, i)}>
+            <button key={l} className={scale === SCALES[i] ? "on" : ""} aria-pressed={scale === SCALES[i]} onClick={() => set(SCALE, i)}>
               {l}
             </button>
           ))}
