@@ -2542,7 +2542,8 @@ tempo and signature tracks never move. With a marquee, the section edits map onl
 (`session/arrange_cmds.rs` `section_edit` takes a `scope`). Every apply refuses, changing
 nothing, when a frozen track's regions (or its alternatives') would change. Cut Section keeps
 each track alternative's part of the section by name, and Insert Cut Section puts it back into
-the alternative of that name.
+the alternative of that name. The cut (`Session::section_clip`) names tracks and clips by id, so
+opening a project or starting a new one forgets it.
 
 ### Sheets and key commands
 

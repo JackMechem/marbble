@@ -63,6 +63,10 @@ All notable changes to Marbble are recorded here. The format follows
   column.
 ### Fixed
 
+- **Insert Cut Section doesn't bring a cut from another project.** After Cut Section Between
+  Locators in one project, opening or starting another and choosing Insert Cut Section put the
+  cut's regions onto whichever tracks there had the same internal numbers, playing other audio
+  files. A project that opens now has nothing cut to insert, and the command says so.
 - **Bounces with the Linear Phase EQ come out the same every time.** During a bounce, export,
   Freeze or Bounce in Place, an automated or edited Linear Phase EQ could carry on with its old
   filter if the computer was so busy that the new one took more than 10 seconds to arrive, so two

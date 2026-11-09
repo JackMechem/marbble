@@ -24,6 +24,8 @@ impl Session {
         self.undo_stack.clear();
         self.redo_stack.clear();
         self.auto = Default::default();
+        // What Cut Section took out names the old project's tracks and clips by id.
+        self.section_clip = None;
         self.project = Project::new("Untitled", self.sample_rate() as u32);
         self.project.click = self.prefs.click;
         self.dir = untitled_dir(&self.projects_root());
@@ -136,6 +138,9 @@ impl Session {
         self.undo_stack.clear();
         self.redo_stack.clear();
         self.auto = Default::default();
+        // As in `new_project`: ids name other tracks and clips in the project opened, even in
+        // another version of the same one (a backup, the saved state).
+        self.section_clip = None;
         self.forget_unsaved();
         let project_rate = project.sample_rate;
         self.project = project;

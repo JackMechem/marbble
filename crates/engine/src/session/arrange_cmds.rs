@@ -268,7 +268,8 @@ impl Session {
         self.apply_time_map(&section_pieces(SectionEdit::InsertSilence, at, at + len), scope.as_deref())?;
         let mut made = Vec::new();
         for (track, regions, lanes) in &clip.tracks {
-            // The clip outlives the project it was cut from: only what still fits goes in.
+            // Tracks and clips may have gone since the cut (the project is the same: opening
+            // another forgets the clip): only what still fits goes in.
             let kind = self.project.track(*track).map(|t| t.kind);
             let fits = |r: &&Region| match (kind, &r.content) {
                 (Some(TrackKind::Audio), RegionContent::Audio { clip, .. }) => self.clips.contains_key(clip),
@@ -697,6 +698,33 @@ mod tests {
         assert_eq!(s.project.markers.iter().map(|m| (m.pos, m.name.as_str())).collect::<Vec<_>>(), vec![(2200, "In")]);
         let vol = &s.project.track(t[0]).unwrap().automation[0].points;
         assert!((value_at(vol, 2000).unwrap() - -20.0).abs() < 0.05 && (value_at(vol, 2250).unwrap() - -15.0).abs() < 0.05, "{vol:?}");
+    }
+
+    /// What Cut Section took out belongs to its project. Another one (here a new one, whose ids
+    /// start over, so that its first track and clip take the old ones' ids) has nothing to insert;
+    /// nor has a project opened, even the same one again.
+    #[test]
+    fn another_project_has_no_cut_section_to_insert() {
+        let (mut s, t, clip) = session();
+        region(&mut s, t[0], clip, 1000, 2000, 0);
+        s.section_edit(SectionEdit::Cut, 1000, 1500, None).unwrap();
+        s.new_project();
+        s.dir = std::env::temp_dir().join(format!("marbble-arrange-cmds-other-{}", std::process::id()));
+        let path = s.dir.join("Audio Files").join("other.wav");
+        let other = s.add_clip(&path, Clip::from_channels(path.clone(), 48_000, vec![vec![0.25; 10_000]]));
+        let track = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
+        assert_eq!((other, track), (clip, t[0]), "the new project's ids are the old one's");
+        assert!(s.insert_cut_section(0).is_err(), "nothing to insert");
+        assert!(spans(&s, track).is_empty());
+
+        region(&mut s, track, other, 0, 4000, 0);
+        s.section_edit(SectionEdit::Cut, 1000, 1500, None).unwrap();
+        s.save(None).unwrap();
+        let dir = s.dir.clone();
+        s.open(&dir).unwrap();
+        assert!(s.insert_cut_section(0).is_err(), "nothing to insert after opening");
+        assert_eq!(spans(&s, track), vec![(0, 1000, 0), (1000, 3500, 1500)], "as saved");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     /// Every note the project plays: (timeline start, pitch), sorted.

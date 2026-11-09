@@ -304,7 +304,8 @@ pub struct Session {
     feedback: feedback::Feedback,
     /// The sequence number of the next MIDI input message the ticks haven't reported.
     midi_seen: u64,
-    /// What Cut Section Between Locators took out last, for Insert Cut Section.
+    /// What Cut Section Between Locators took out last, for Insert Cut Section. Forgotten when
+    /// another project opens, as its ids are this project's.
     section_clip: Option<SectionClip>,
     /// Plug-ins whose editor is open, watched for undo steps (see `session/vst_undo.rs`).
     vst_watches: HashMap<Id, vst_undo::Watch>,

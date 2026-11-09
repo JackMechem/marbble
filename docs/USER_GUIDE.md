@@ -1231,7 +1231,8 @@ and signature tracks stay as they are.
   goes straight after it, and what followed moves right. The copies are selected.
 - **Insert Cut Section at Left Locator** (Ctrl+Alt+V, Control+⌘V on macOS): puts the section
   cut last back in at the left locator (or the marquee's start), with its automation and
-  markers, moving what follows along (Logic's Splice).
+  markers, moving what follows along (Logic's Splice). Only within the project it was cut
+  from: once another project is open (or the same one is opened again), there's nothing to insert.
 
 **Edit › Trim** (on the selected regions):
 
