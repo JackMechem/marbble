@@ -135,7 +135,9 @@
   color: var(--text);
 }
 
-/* The header volume slider: the track's meter is its groove, the thumb sits on top. */
+/* The header volume slider, as in Logic's headers: a slim line, brighter up to a small round thumb,
+   with the track's meter drawn in the line. The slider is taller than both, so presses anywhere
+   near the line take it. */
 .level-slider {
   position: relative;
   flex: none;
@@ -146,41 +148,31 @@
 .level-groove {
   position: relative;
   width: 100%;
-  border-radius: 3px;
+  border-radius: 2px;
   overflow: hidden;
+  background: var(--level-track);
 }
 
-/* A recessed edge, drawn over the meter canvas. */
-.level-groove::after {
-  content: "";
+.level-fill {
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  box-shadow: inset 0 1px 1.5px var(--recess);
-  pointer-events: none;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: var(--level-fill);
 }
 
+/* Over the fill: the meter leaves its ground clear (Meter's `clear`). */
 .level-meter {
+  position: absolute;
+  left: 0;
+  top: 0;
   display: block;
 }
 
 .level-thumb {
   position: absolute;
-  top: 0;
-  border-radius: 3px;
+  border-radius: 50%;
   background: var(--slider-thumb);
   box-shadow: var(--slider-thumb-shadow);
   pointer-events: none;
 }
-
-/* A grip line down the middle, like a fader cap. */
-.level-thumb::after {
-  content: "";
-  position: absolute;
-  left: calc(50% - 0.5px);
-  top: 25%;
-  bottom: 25%;
-  width: 1px;
-  background: var(--recess);
-}
-

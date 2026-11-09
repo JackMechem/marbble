@@ -16,6 +16,10 @@ All notable changes to Marbble are recorded here. The format follows
   Inspector's channel strips the icon has its own row between the automation mode and the pan
   knob, larger than before and level across the strips, and narrow strips show it too. The name
   plate is all name. Click the icon to choose another, as before.
+- **A slimmer volume slider on the track headers.** The header volume slider (and Stereo Out's)
+  is a slim light line, brighter up to a small round thumb, as in Logic, instead of a thick dark
+  groove with a tall thumb. The level meter still shows in the line, and the slider still takes
+  presses over its full height.
 - **Move a track by dragging anywhere on its header.** As in Logic, a drag that starts on the
   name, the number or empty space in a track header moves the track, not only one that starts on
   its icon or number. The buttons, the volume slider and a name being edited keep their own

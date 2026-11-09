@@ -40,10 +40,11 @@ export function nameLines(height: number, autoRow: boolean): 1 | 2 {
   return height >= TWO_LINE_H + (autoRow ? AUTO_LINE_H : 0) ? 2 : 1;
 }
 
-/** The header volume slider's size at a tier: the groove (which holds the meter) and the
- *  thumb that sits over it, in px. */
-export function levelSliderSize(tier: HeaderTier): { groove: number; thumbW: number; thumbH: number } {
-  return tier === "tiny" ? { groove: 8, thumbW: 7, thumbH: 14 } : { groove: 10, thumbW: 8, thumbH: 18 };
+/** The header volume slider's size at a tier, in px: the slim line it runs on (which holds the
+ *  meter), the round thumb's diameter, and the height that takes presses, taller than either so
+ *  the slim slider stays easy to grab. Logic's header slider is a line with a small round thumb. */
+export function levelSliderSize(tier: HeaderTier): { groove: number; thumb: number; height: number } {
+  return tier === "tiny" ? { groove: 3, thumb: 10, height: 14 } : { groove: 4, thumb: 12, height: 18 };
 }
 
 /** Where the slider's thumb is centred, in px from the groove's left edge, for fader position

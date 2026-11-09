@@ -257,8 +257,8 @@ From left to right:
 - **Track headers:** colour, number, icon, name with the power button
   ([On/Off](#turning-tracks-off), grey while the track plays) at its end, the M (Mute), S (Solo), R (Record Enable,
   audio and instrument tracks), I (Input Monitoring, audio tracks) buttons, the Freeze
-  (snowflake) button, a group badge, and a volume slider whose groove is the track's level
-  meter. Short tracks put it all on one line (see below). The **+** button above the headers
+  (snowflake) button, a group badge, and a volume slider (a slim line with a round thumb, as in
+  Logic) whose line shows the track's level meter. Short tracks put it all on one line (see below). The **+** button above the headers
   opens New Tracks; the **H** button turns on hide mode. Under them, level with the ruler's
   marker lane, is the **Marker** row. A muted track's regions are drawn grey, as a muted
   region is; a track that is off is dimmed.
@@ -329,8 +329,8 @@ Track headers:
   with another's. Regions on short tracks get a slimmer name bar over a
   thin strip of waveform or notes.
 - **Volume:** drag the slider (Shift for fine), double-click or Alt-click it for 0 dB; its
-  tooltip shows the level. In a group with volume linked, the other members follow. The meter
-  inside the groove is post-fader and uses the slider's own scale, so a full-scale signal
+  tooltip shows the level. In a group with volume linked, the other members follow. The line is
+  brighter up to the thumb. The meter in the line is post-fader and uses the slider's own scale, so a full-scale signal
   reaches the thumb, and only a hotter one passes it; peaks are held for 2 s, in red above
   0 dBFS. Its right end lights red while the track's clip indicator is on (see
   [The channel strip](#the-channel-strip)). A folder stack's slider has no meter (it moves

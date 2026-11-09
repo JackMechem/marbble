@@ -2825,7 +2825,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `TracksArea.tsx` | Tracks area frame: local menu bar (Edit, Functions, View), snap, zoom, height slider; `editMenu`, `functionsMenu`, `viewMenu`. |
 | `Ruler.tsx` | Ruler: cycle strip, bar numbers, Autopunch strip, marker lane. |
 | `TrackHeaders.tsx` | Track headers: buttons, names, volume, reordering, resizing. |
-| `LevelSlider.tsx` | A track header's volume slider with the level meter as its groove. |
+| `LevelSlider.tsx` | A track header's volume slider: a slim line with a round thumb and the level meter drawn in the line. |
 | `TrackAlternatives.tsx` | The Track Alternatives pop-up in a track header. |
 | `AutoLaneHeaders.tsx` | The headers of a track's extra automation lanes. |
 | `Arrange.tsx` | The tracks-area canvas: refs, viewport, playhead and recording previews. |

@@ -197,6 +197,7 @@ export function Meter({
   horizontal = false,
   scale = level,
   className = "meter",
+  clear = false,
 }: {
   source: MeterSource;
   height: number;
@@ -206,6 +207,9 @@ export function Meter({
    *  Pass a stable function: a new one restarts the meter. */
   scale?: (db: number) => number;
   className?: string;
+  /** Leave the ground clear instead of filling it, for a meter laid over a groove of its own
+   *  (the header volume slider's line). */
+  clear?: boolean;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const src = JSON.stringify(source);
@@ -258,8 +262,10 @@ export function Meter({
     const lw = ((horizontal ? H : W) - gap) / lanes;
     const paint = (levels: number[], holds: number[]) => {
       ctx.clearRect(0, 0, W, H);
-      ctx.fillStyle = theme.meterBg;
-      ctx.fillRect(0, 0, W, H);
+      if (!clear) {
+        ctx.fillStyle = theme.meterBg;
+        ctx.fillRect(0, 0, W, H);
+      }
       for (let i = 0; i < lanes; i++) {
         const l = levels[i];
         const hp = holds[i];
@@ -313,7 +319,7 @@ export function Meter({
       painted[4] = +clip;
       if (changed) paint(levels, holds);
     });
-  }, [src, height, width, horizontal, themeId, uiScale, scale]);
+  }, [src, height, width, horizontal, themeId, uiScale, scale, clear]);
   const style = horizontal ? { width: height, height: width } : { width, height };
   return <canvas ref={ref} className={className} style={style} />;
 }

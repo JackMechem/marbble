@@ -1,8 +1,6 @@
-// A track header's volume slider, with the track's level meter as its groove.
+// A track header's volume slider, with the track's level meter in its line.
 import { useMemo, useRef } from "react";
 import type { Id } from "../api";
-import { useStore } from "../store";
-import { theme } from "../theme";
 import { dbToFader, faderToDb, formatDb } from "../time";
 import { fmt } from "../keymap";
 import { levelSliderSize, meterScale, thumbCenter, type HeaderTier } from "../trackHeader";
@@ -10,9 +8,10 @@ import { Meter, sliderKeyDown, useDrag, type TouchProps } from "./Controls";
 import { sliderAria } from "../sliderKeys";
 
 /**
- * A track header's volume slider with the track's level meter as its groove, as in Logic's
- * track headers. The meter is drawn on the slider's scale (see `meterScale`), so the thumb marks
- * where a full-scale signal lands. Drag to move (Shift for fine), double-click or Alt-click for
+ * A track header's volume slider, as in Logic's track headers: a slim line, brighter up to a
+ * small round thumb, with the track's level meter drawn in the line. The meter is on the slider's
+ * scale (see `meterScale`), so the thumb marks where a full-scale signal lands. The slider takes
+ * presses over its whole height, not just on the line. Drag to move (Shift for fine), double-click or Alt-click for
  * 0 dB. `track` is null for a folder stack, which has no meter of its own.
  */
 export function LevelSlider({
@@ -33,23 +32,21 @@ export function LevelSlider({
   /** Starts the tooltip, which goes on with the level. */
   label?: string;
 } & TouchProps) {
-  // The groove takes the meter's colours from the canvas theme.
-  useStore((s) => s.themeId);
-  const { groove, thumbW, thumbH } = levelSliderSize(tier);
+  const { groove, thumb, height } = levelSliderSize(tier);
   const pos = useRef(dbToFader(db));
   pos.current = dbToFader(db);
-  const travel = Math.max(1, width - thumbW);
+  const travel = Math.max(1, width - thumb);
   const start = useDrag((d, fine) => {
     pos.current = Math.min(1, Math.max(0, pos.current + d / travel / (fine ? 6 : 1)));
     onChange(Math.round(faderToDb(pos.current) * 10) / 10);
   }, onTouchEnd);
   // Stable per size, so the meter isn't restarted on every render.
-  const scale = useMemo(() => meterScale(width, thumbW, dbToFader), [width, thumbW]);
-  const left = thumbCenter(dbToFader(db), width, thumbW) - thumbW / 2;
+  const scale = useMemo(() => meterScale(width, thumb, dbToFader), [width, thumb]);
+  const center = thumbCenter(dbToFader(db), width, thumb);
   return (
     <div
       className="level-slider"
-      style={{ width, height: thumbH }}
+      style={{ width, height }}
       title={`${label}: ${formatDb(db)} dB · double-click or ${fmt("Alt")}-click for 0 dB`}
       {...sliderAria({ label, text: db <= -96 ? "minus infinity dB" : `${formatDb(db)} dB`, min: -96, max: 6, now: db })}
       onKeyDown={sliderKeyDown(dbToFader(db), db, (p) => Math.round(faderToDb(p) * 10) / 10, onChange, { onTouchStart, onTouchEnd })}
@@ -69,10 +66,11 @@ export function LevelSlider({
         onChange(0);
       }}
     >
-      <div className="level-groove" style={{ height: groove, background: theme.meterBg }}>
-        {track !== null && <Meter source={{ kind: "track", id: track }} height={width} width={groove} horizontal scale={scale} className="level-meter" />}
+      <div className="level-groove" style={{ height: groove }}>
+        <div className="level-fill" style={{ width: center }} />
+        {track !== null && <Meter source={{ kind: "track", id: track }} height={width} width={groove} horizontal scale={scale} className="level-meter" clear />}
       </div>
-      <div className="level-thumb" style={{ left, width: thumbW, height: thumbH }} />
+      <div className="level-thumb" style={{ left: center - thumb / 2, top: (height - thumb) / 2, width: thumb, height: thumb }} />
     </div>
   );
 }

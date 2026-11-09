@@ -69,15 +69,16 @@ test("a dragged track goes before the first track whose middle is below the poin
   assert.ok(REORDER_SLOP > 0 && REORDER_SLOP < 8, "a click with a little hand movement stays a click");
 });
 
-test("the slider fits the smallest row, and is taller than the old slider and meter", () => {
+test("the slider is a slim line with a round thumb, easy to grab, and fits the smallest row", () => {
   for (const tier of ["full", "compact", "tiny"] as const) {
-    const { groove, thumbH, thumbW } = levelSliderSize(tier);
-    assert.ok(groove > 4, "the old groove and meter were 4 px each");
-    assert.ok(thumbH > groove && thumbW > 0);
+    const { groove, thumb, height } = levelSliderSize(tier);
+    assert.ok(groove >= 3 && groove <= 4, "a slim line, still wide enough to show the meter");
+    assert.ok(thumb > 2 * groove, "the thumb stands out from the line");
+    assert.ok(height >= thumb && height >= 14, "presses land on more than the line");
   }
   // A row's content is its height less the 1 px bottom border; leave a pixel above and below.
-  assert.ok(levelSliderSize("tiny").thumbH <= MIN_TRACK_H - 1 - 2);
-  assert.ok(levelSliderSize("compact").thumbH <= COMPACT_TIER_H - 1 - 2);
+  assert.ok(levelSliderSize("tiny").height <= MIN_TRACK_H - 1 - 2);
+  assert.ok(levelSliderSize("compact").height <= COMPACT_TIER_H - 1 - 2);
 });
 
 test("the thumb stays inside the groove", () => {

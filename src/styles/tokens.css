@@ -80,6 +80,8 @@
   --slider-fill: #7d7d82;
   --slider-thumb: linear-gradient(#e9e9ec, #bdbdc2);
   --slider-thumb-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  --level-track: #68686d;
+  --level-fill: #9a9aa0;
   --menu-bg: rgba(44, 44, 47, 0.98);
   --menu-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.8), inset 0 0 0 0.5px rgba(255, 255, 255, 0.1), 0 10px 30px rgba(0, 0, 0, 0.5);
   --menu-sep: #47474b;
