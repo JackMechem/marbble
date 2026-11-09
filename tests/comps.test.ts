@@ -1,7 +1,22 @@
 // Unit tests for src/comps.ts: take folder comp names and the folder's name bar label.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { compNames, currentComp, edgeNear, folderLabel, isMidiFolder, movedEdge, neighbourTake, sectionAt } from "../src/comps.ts";
+import {
+  compNames,
+  currentComp,
+  edgeNear,
+  FOLDER_BADGE_BOX_W,
+  FOLDER_BADGE_W,
+  FOLDER_BADGE_X,
+  FOLDER_TRIANGLE_W,
+  FOLDER_TRIANGLE_X,
+  folderBarHit,
+  folderLabel,
+  isMidiFolder,
+  movedEdge,
+  neighbourTake,
+  sectionAt,
+} from "../src/comps.ts";
 import type { Region, TakeFolder } from "../src/api.ts";
 
 const take = (id: number, name: string) => ({ id, name, clip: id, offset: 0, start: 0, end: 1000, gain_db: 0 });
@@ -88,4 +103,24 @@ test("moving a section between takes skips takes with no audio there", () => {
   assert.equal(neighbourTake(f, { ...late, take: 2 }, 1), null, "take 3 has nothing after 800");
   assert.equal(neighbourTake(f, { start: 300, end: 500, take: 1 }, 1), 2);
   assert.equal(neighbourTake(f, { start: 300, end: 500, take: 2 }, 1), 3);
+});
+
+test("a folder's triangle is pressed over the name bar's full height and well beyond its glyph", () => {
+  for (const bar of [12, 14]) {
+    // The glyph is 8 px across around FOLDER_TRIANGLE_X; the press area is the whole start of the bar.
+    for (const dx of [0, FOLDER_TRIANGLE_X - 4, FOLDER_TRIANGLE_X + 4, FOLDER_TRIANGLE_W - 1]) {
+      for (const y of [0, 1, bar / 2, bar, bar + 1]) assert.equal(folderBarHit(dx, y, bar), "triangle", `dx ${dx}, y ${y}, bar ${bar}`);
+    }
+    assert.equal(folderBarHit(5, bar + 2, bar), null, "below the bar is the region's body");
+  }
+  assert.ok(FOLDER_TRIANGLE_W >= 18);
+});
+
+test("the take badge follows the triangle and the name follows the badge", () => {
+  assert.ok(FOLDER_BADGE_X >= FOLDER_TRIANGLE_W);
+  assert.ok(FOLDER_BADGE_X + FOLDER_BADGE_BOX_W <= FOLDER_BADGE_W);
+  assert.equal(folderBarHit(FOLDER_TRIANGLE_W, 7, 14), "badge");
+  assert.equal(folderBarHit(FOLDER_BADGE_W - 1, 7, 14), "badge");
+  assert.equal(folderBarHit(FOLDER_BADGE_W, 7, 14), null, "the name: a press there grabs the region");
+  assert.equal(folderBarHit(-1, 7, 14), null);
 });

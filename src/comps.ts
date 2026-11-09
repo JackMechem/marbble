@@ -35,6 +35,32 @@ export function folderLabel(r: Region): string | null {
   return wholeTakeName(f) ?? compNames(f)[currentComp(f)];
 }
 
+// ---- the folder's name bar: its disclosure triangle and take badge -----------------------------
+
+/** Width of the triangle's part of the name bar, from the folder's visible start: a press
+ *  anywhere in it, over the bar's full height, opens or closes the folder. Much wider than the
+ *  glyph, which sits at FOLDER_TRIANGLE_X. */
+export const FOLDER_TRIANGLE_W = 20;
+/** Centre of the triangle glyph, from the folder's visible start. */
+export const FOLDER_TRIANGLE_X = 10;
+/** The take badge's box, after the triangle's part. */
+export const FOLDER_BADGE_X = 21;
+export const FOLDER_BADGE_BOX_W = 16;
+/** Width of the triangle and take badge together; the folder's name starts after it. A press
+ *  between the triangle's part and here opens the take folder menu. */
+export const FOLDER_BADGE_W = 37;
+
+/**
+ * What a press `dx` px right of a folder's visible start and `y` px below the top of its lane
+ * hits in a name bar `bar` px tall (the region is drawn 1 px into the lane): the triangle, the
+ * badge or neither.
+ */
+export function folderBarHit(dx: number, y: number, bar: number): "triangle" | "badge" | null {
+  if (dx < 0 || y < 0 || y > bar + 1) return null;
+  if (dx < FOLDER_TRIANGLE_W) return "triangle";
+  return dx < FOLDER_BADGE_W ? "badge" : null;
+}
+
 // ---- comp sections: what the engine's comp section edits will do, for drawing a drag ----------
 
 /** The comp section heard at take time `at`. */

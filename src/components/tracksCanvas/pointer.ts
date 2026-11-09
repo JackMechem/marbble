@@ -15,8 +15,8 @@ import { automationHover, automationMenu, automationMouseDown } from "../../auto
 import { refuseFrozen } from "../../freeze";
 import { getSettings } from "../../prefs";
 import { draggedFadeOut } from "../../fades";
-import { edgeNear, isMidiFolder, sectionAt } from "../../comps";
-import { FOLDER_BADGE_W, isFolder, isOpen, moveCompEdge, swipeComp, takeAtRow, takeFolderMenu, takeShift, toggleFolder } from "../../takes";
+import { edgeNear, folderBarHit, isMidiFolder, sectionAt } from "../../comps";
+import { isFolder, isOpen, moveCompEdge, swipeComp, takeAtRow, takeFolderMenu, takeShift, toggleFolder } from "../../takes";
 import { toggleOverview } from "../Overview";
 import { regionBar } from "../../regionBar";
 import { moveAutomationAnswer } from "../../moveAutomation";
@@ -93,6 +93,14 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
   /** What a press at `h` on a region grabs (see regionGrab.ts). */
   const grabKind = (h: NonNullable<ReturnType<typeof hit>>) => regionGrabKind(h, live.current.pps, regionCrossfades);
 
+  /** On a take folder's name bar, whether `h` is on its triangle or its badge (see comps.ts). */
+  const folderHit = (h: NonNullable<ReturnType<typeof hit>>) => {
+    const r = h.region;
+    if (!r || !isFolder(r) || h.inLoop) return null;
+    const bx = Math.max(r.start * live.current.pps, scrollRef.current!.scrollLeft);
+    return folderBarHit(h.x - bx, h.localY, regionBar(h.laneH - 3).bar);
+  };
+
   /** What the tools (trackTools.ts) need to handle the pointer. */
   const toolView = (): ToolView => ({
     ...live.current,
@@ -129,17 +137,12 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
     if (!h.region) return startMarquee(e, h);
     const r = h.region;
     // A take folder's triangle opens it; its badge opens the take folder menu.
-    if (isFolder(r) && h.localY <= regionBar(h.laneH - 3).bar && !h.inLoop) {
-      const bx = Math.max(r.start * pps, scrollRef.current!.scrollLeft);
-      if (h.x < bx + 17) {
-        toggleFolder(r.id);
-        return;
-      }
-      if (h.x < bx + FOLDER_BADGE_W) {
-        setState({ selectedRegions: [r.id], focus: "regions" });
-        openMenu(e.clientX, e.clientY, takeFolderMenu(r));
-        return;
-      }
+    const onBar = folderHit(h);
+    if (onBar === "triangle") return toggleFolder(r.id);
+    if (onBar === "badge" && isFolder(r)) {
+      setState({ selectedRegions: [r.id], focus: "regions" });
+      openMenu(e.clientX, e.clientY, takeFolderMenu(r));
+      return;
     }
     let sel = getState().selectedRegions;
     // Shift-clicking a selected region only takes it out of the selection; nothing is dragged.
@@ -448,6 +451,10 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
       requestDraw();
     }
     const { pps } = live.current;
+    if (folderHit(h)) {
+      el.style.cursor = "pointer";
+      return;
+    }
     if (!h.inLoop && onGainHandle(h.region, h.x, h.localY, h.laneH, pps, el.scrollLeft, viewport().width)) {
       el.style.cursor = "ns-resize";
       return;

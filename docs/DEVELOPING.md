@@ -330,7 +330,7 @@ instead and enforce rules that would otherwise only fail in the running app.
 | `fades.test.ts` | Fade curves and crossfades for drawing, mirroring `fades.rs`. |
 | `dragModes.test.ts` | The drag preview's copy of `drag_modes.rs`, with the Rust module's cases. |
 | `newTrackDrag.test.ts` | Which source lanes a drag past the last track makes new tracks for (`src/newTrackDrag.ts`). |
-| `comps.test.ts` | Take folder comp names and the folder's name bar label. |
+| `comps.test.ts` | Take folder comp names, the folder's name bar label, and where a press on the bar hits its triangle or badge. |
 | `arrangement.test.ts` | The Arrangement track's drawing and drag helpers. |
 | `globalTracks.test.ts` | Which global tracks show (`src/globalTracks.ts`): the ones a project uses, the menu toggle, their height, the saved choice. |
 | `tools.test.ts` | The Tracks area's tools (`src/tools.ts`) and the marquee (`src/marquee.ts`). |

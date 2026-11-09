@@ -1483,7 +1483,8 @@ Take folders follow Logic's Quick Swipe Comping.
   comp stays). Comps are named Comp 1, Comp 2 and so on. Swipes change the comp heard; Flatten,
   Flatten and Merge and Unpack use it. The folder's name bar shows the comp's name (or the
   take's, when one take plays throughout).
-- **Opening a folder.** Click the disclosure triangle at the start of the folder's name bar.
+- **Opening a folder.** Click the disclosure triangle at the start of the folder's name bar
+  (anywhere in the bar before the badge).
   The track grows by one row per take below its lane. The badge next to the triangle shows the
   take heard (or **C** for a comp).
 - **Comping.**

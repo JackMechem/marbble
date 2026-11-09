@@ -6,8 +6,8 @@ import { drawWave, waveCache } from "./waveform";
 import { mix, theme } from "./theme";
 import { loopPasses } from "./loops";
 import { crossfadeLaws, crossfadesByRegion, fadeCurve, fadeHandles, resized, shapeOf, type Crossfade, type RegionCrossfades } from "./fades";
-import { folderLabel } from "./comps";
-import { drawCompWave, drawFolderBadge, FOLDER_BADGE_W, isFolder } from "./takes";
+import { FOLDER_BADGE_W, folderLabel } from "./comps";
+import { drawCompWave, drawFolderBadge, isFolder } from "./takes";
 import { MIN_BODY_H, regionBar } from "./regionBar";
 import { playedNotes } from "./regionParams";
 import { drawPatternMini } from "./stepSeq";
@@ -87,7 +87,7 @@ export function drawRegion(
   const visX1 = Math.min(W, x + w);
   // A take folder's name bar starts with its disclosure triangle and take badge.
   const badge = isFolder(r) && !ghost && w > FOLDER_BADGE_W ? FOLDER_BADGE_W : 0;
-  if (badge) drawFolderBadge(ctx, r as Region & { takes: NonNullable<Region["takes"]> }, x, y, style === "light" ? "#ffffff" : theme.ink);
+  if (badge) drawFolderBadge(ctx, r as Region & { takes: NonNullable<Region["takes"]> }, x, y, headerH, style === "light" ? "#ffffff" : theme.ink);
   if (w > 24 + badge && !ghost) {
     ctx.fillStyle = style === "light" ? "#ffffff" : theme.ink;
     ctx.font = canvasFont(geom.font, 600);

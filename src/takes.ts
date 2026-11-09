@@ -4,7 +4,7 @@
 // the engine (crates/engine/src/takes.rs); this file draws folders and sends the edits.
 import { ask } from "@tauri-apps/plugin-dialog";
 import { act, actMade, type CompSegment, type Id, type Region, type Take, type TakeFolder, type TakeRating, type Track } from "./api";
-import { compNames, currentComp, isMidiFolder, movedEdge, neighbourTake, sectionAt } from "./comps";
+import { compNames, currentComp, FOLDER_BADGE_BOX_W, FOLDER_BADGE_X, FOLDER_TRIANGLE_X, isMidiFolder, movedEdge, neighbourTake, sectionAt } from "./comps";
 import type { MenuItem } from "./components/Menu";
 import { askName, notEmpty } from "./components/NameSheet";
 import { colorMenu } from "./ops";
@@ -18,8 +18,6 @@ import { drawWave, ensureWave, waveCache } from "./waveform";
 
 /** Height of one take row in an open folder. */
 export const TAKE_ROW_H = 26;
-/** Width of the triangle and take badge at the start of a folder's name bar. */
-export const FOLDER_BADGE_W = 34;
 
 /** A comp edit being dragged in an open folder's take rows, in take time: a swipe of `take` over
  *  `start..end`, or the comp section edge at `edge` moved to `to`. */
@@ -71,33 +69,38 @@ export function ensureTakeWaves(tracks: Track[], done: () => void) {
 
 // ---- drawing ----------------------------------------------------------------------------------
 
-/** The disclosure triangle and the take badge, at the start of the folder's name bar. */
-export function drawFolderBadge(ctx: CanvasRenderingContext2D, r: Region & { takes: TakeFolder }, x: number, y: number, ink: string) {
+/** The disclosure triangle and the take badge, at the start of the folder's name bar (`bar` px
+ *  tall), both centred on it. */
+export function drawFolderBadge(ctx: CanvasRenderingContext2D, r: Region & { takes: TakeFolder }, x: number, y: number, bar: number, ink: string) {
   const open = isOpen(r.id);
-  const tx = Math.max(x, 0) + 5;
+  const left = Math.max(x, 0);
+  const cx = left + FOLDER_TRIANGLE_X;
+  const cy = y + bar / 2;
   ctx.fillStyle = ink;
   ctx.beginPath();
   if (open) {
-    ctx.moveTo(tx, y + 5);
-    ctx.lineTo(tx + 8, y + 5);
-    ctx.lineTo(tx + 4, y + 10);
+    ctx.moveTo(cx - 4, cy - 2.5);
+    ctx.lineTo(cx + 4, cy - 2.5);
+    ctx.lineTo(cx, cy + 2.5);
   } else {
-    ctx.moveTo(tx + 1, y + 3);
-    ctx.lineTo(tx + 6, y + 7);
-    ctx.lineTo(tx + 1, y + 11);
+    ctx.moveTo(cx - 2.5, cy - 4);
+    ctx.lineTo(cx + 2.5, cy);
+    ctx.lineTo(cx - 2.5, cy + 4);
   }
   ctx.closePath();
   ctx.fill();
-  const bx = tx + 12;
+  const bx = left + FOLDER_BADGE_X;
+  const bh = 10;
   ctx.beginPath();
-  ctx.roundRect(bx, y + 2, 16, 10, 2);
+  ctx.roundRect(bx, cy - bh / 2, FOLDER_BADGE_BOX_W, bh, 2);
   ctx.globalAlpha *= 0.85;
   ctx.fill();
   ctx.globalAlpha /= 0.85;
   ctx.fillStyle = theme.region === "light" ? "#ffffff" : mix(ink, "#ffffff", 0.9);
   ctx.font = canvasFont("xs", 700);
   ctx.textAlign = "center";
-  ctx.fillText(badgeText(r.takes), bx + 8, y + 7.5);
+  ctx.textBaseline = "middle";
+  ctx.fillText(badgeText(r.takes), bx + FOLDER_BADGE_BOX_W / 2, cy + 0.5);
   ctx.textAlign = "left";
 }
 
