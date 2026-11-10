@@ -8,6 +8,9 @@ mod linux;
 #[cfg(target_os = "macos")]
 #[path = "editor/macos.rs"]
 mod macos;
+#[cfg(target_os = "linux")]
+#[path = "editor/poll_loop.rs"]
+mod poll_loop;
 
 #[cfg(target_os = "linux")]
 fn main() {

@@ -201,7 +201,7 @@ CI, releases and the website's deploy.
 | Thread | Started by | What it does | What it may not do |
 |---|---|---|---|
 | **Main** | Tauri | Synchronous Tauri commands (most edits), the native menu, the GTK main loop, and the 30 ms idle timer (`Session::idle`: plug-in controller idle, latency changes, dropping `Garbage`, taking recorded MIDI off its ring, automation, controller assignments and feedback, control surfaces, taking autosaves). Every VST3 controller and editor lives here. | Block for long. Renders are async commands for that reason. |
-| **Audio callback** | cpal | Calls `Engine::process` once per device buffer, inside `catch_unwind`. Real-time priority (rtkit on Linux). The input stream's callback only fills the input ring. | Allocate, lock, block, do I/O ([Real-time rules](#4-real-time-rules)). |
+| **Audio callback** | cpal | Calls `Engine::process` once per device buffer, inside `catch_unwind`. Real-time priority (rtkit on Linux), on the performance cores where a CPU has two kinds (`audio_io::threads::keep_to`). The input stream's callback only fills the input ring. | Allocate, lock, block, do I/O ([Real-time rules](#4-real-time-rules)). |
 | **`marbble-dsp-N`** | `Session::sync_parallel` | Plays strips beside the callback when Processing Threads allows and the project is heavy enough ([Multi-core](#multi-core-processing)). | The same as the callback. |
 | **`audio-io`** | `audio_io::start` | Builds and owns the cpal streams until the device closes. | |
 | **`recorder`** | `audio_io/recorder.rs` | Every 10 ms, drains each armed track's ring into its WAV file, an in-memory copy and the preview peaks. | Touch the engine or the project. |
@@ -464,7 +464,7 @@ inaudible.
   thread.
 - **When it engages:** two strips with plug-ins can overlap and the load has reached 15 % of the
   buffer. Automatic is the performance cores less one, at most 6; workers keep to performance
-  cores. Away from Linux, workers can't get real-time priority yet, so Automatic is 1.
+  cores, as the callback does. Away from Linux, workers can't get real-time priority yet, so Automatic is 1.
 - **Offline renders stay serial.** `parallel_check` and `soak_check` drive them through the pool
   to prove the identity.
 

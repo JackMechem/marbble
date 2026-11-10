@@ -1,5 +1,5 @@
-//! Settings › Audio › Processing Threads: how many threads play tracks, and what Automatic means on
-//! this machine.
+//! Settings › Audio › Processing Threads: how many threads play tracks, what Automatic means on
+//! this machine, and keeping the audio threads to its fast cores (`keep_to`).
 //!
 //! Measured on an i7-13700KF (8 performance and 8 efficiency cores), `Engine::process` at real-time
 //! pace with real-time workers (`parallel_bench` measures the same way): wide projects (24
@@ -11,6 +11,12 @@
 //! 99th percentile from 1510 µs to about 900 µs; the scheduler places real-time threads without
 //! regard to a core's speed. A light project stays on the callback (`ENGAGE_LOAD` in
 //! `dsp/parallel/`), so it pays nothing for the pool.
+//!
+//! The callback keeps to the performance cores too (issue #36). A real-time thread stays on the core
+//! it first ran on, and a SCHED_FIFO thread playing eight TONE3000s sat on an efficiency core for
+//! a whole run in one of three tries: there a block took 4.3 ms on average against 2.7 ms, and the
+//! plug-in's own heavy block every 8192 frames 14.5 ms against 9.4, past a 512-frame buffer's
+//! 10.7 ms (vst3-host's `editor_load`).
 
 /// The setting's value for Automatic.
 pub const AUTOMATIC: u32 = 0;
@@ -53,6 +59,29 @@ impl Topology {
         #[cfg(not(target_os = "linux"))]
         Topology { logical, fast_cores: 1, fast: Vec::new() }
     }
+}
+
+/// Keeps the calling thread to `cpus` (empty: leaves it where it is). Real-time threads aren't
+/// placed by a core's speed: one stays on whichever core it first ran on, an efficiency core as
+/// likely as not, where a heavy plug-in takes about twice as long. The audio callback and the
+/// processing threads keep to [`Topology::fast`]. One system call, which allocates nothing.
+pub(crate) fn keep_to(cpus: &[usize]) -> std::io::Result<()> {
+    #[cfg(target_os = "linux")]
+    if !cpus.is_empty() {
+        // SAFETY: a plain value struct, and a call about this thread only.
+        unsafe {
+            let mut set: libc::cpu_set_t = std::mem::zeroed();
+            for &c in cpus {
+                libc::CPU_SET(c, &mut set);
+            }
+            if libc::sched_setaffinity(0, std::mem::size_of::<libc::cpu_set_t>(), &set) != 0 {
+                return Err(std::io::Error::last_os_error());
+            }
+        }
+    }
+    #[cfg(not(target_os = "linux"))]
+    let _ = cpus;
+    Ok(())
 }
 
 /// Parses a kernel CPU list such as "0-15,18".

@@ -6,6 +6,15 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **Fewer dropouts on processors with performance and efficiency cores.** The audio callback now
+  keeps to the performance cores, as the processing threads already did. Left where the system
+  first put it, it could stay on an efficiency core, where a heavy project takes about 1.6 times
+  as long per buffer. That left little room for plug-ins that do extra work at times: TONE3000,
+  for one, does extra work in every instance for about a second the first time one of its windows
+  opens.
+
 ## [0.1.0-alpha.13] - 2026-11-10
 
 ### Changed

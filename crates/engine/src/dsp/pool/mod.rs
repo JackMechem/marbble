@@ -1,7 +1,7 @@
 //! A small pool of real-time threads that run a [`TaskGraph`]'s tasks, with the thread that asked
 //! (the audio callback) working too. Knows nothing about audio: see `parallel/` for what the
 //! tasks do. A task's plug-in calls are tracked in `call.rs`; what a worker asks of the system
-//! (priority, placement) is in `thread_setup.rs`.
+//! (stack, priority) is in `thread_setup.rs`, and the cores it keeps to in `audio_io::threads`.
 //!
 //! The rules of the audio path hold here. A block allocates nothing, takes no lock and uses no
 //! channel. Tasks are bits in a few words of atomics: finishing a task's last dependency sets its
@@ -35,7 +35,7 @@ mod call;
 use call::{phase, GONE, LEFT};
 pub use call::{Call, Job};
 mod thread_setup;
-use thread_setup::{demote, keep_to, promote, touch_stack};
+use thread_setup::{demote, promote, touch_stack};
 
 use std::cell::{Cell, UnsafeCell};
 use std::panic::{catch_unwind, AssertUnwindSafe};
@@ -641,7 +641,9 @@ fn worker(sh: Arc<Shared>, index: usize, opts: PoolOptions) {
         sh.health.started.fetch_add(1, Ordering::Release);
         return;
     }
-    keep_to(&opts.cpus);
+    if let Err(e) = crate::audio_io::threads::keep_to(&opts.cpus) {
+        log::warn!("a processing thread can't keep to the fast cores: {e}");
+    }
     // Freed now rather than when the worker ends, which for one left in a plug-in is whenever the
     // plug-in returns, maybe in the middle of a block.
     drop(opts);
