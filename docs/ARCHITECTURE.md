@@ -2485,7 +2485,8 @@ strip and Stereo Out, as many per strip as wanted. New tracks have none.
   (`src/linearPhaseEq.ts`, the layout the Linear Phase EQ shares). Its analyzer shows what comes
   out of that insert: `set_analyzer(uid)` sends `Cmd::Analyzer(Some((strip, uid)))`, the strip
   taps after that insert (`dsp/strip.rs`, Stereo Out's loop in `dsp/process.rs`), and the tick's
-  `spectrum` carries the uid.
+  `spectrum` carries the uid. Opening a project or starting a new one turns it off, as those ids
+  are the old project's.
 - **Older projects** had a fixed Channel EQ on every strip, ahead of the inserts. Its fields
   (`Track::legacy_eq`, `Master::legacy_eq` and their `eq_preset`s) are read, never written.
   `open_from` and `new_from_template` run `Project::upgrade_channel_eq` (`model/channel_eq_upgrade.rs`)

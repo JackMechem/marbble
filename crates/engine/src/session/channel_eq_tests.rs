@@ -175,6 +175,30 @@ fn the_eq_thumbnail_inserts_one_at_the_top_and_the_analyzer_follows_it() {
     assert_eq!(plugin_ids(&s, t)[..2], [Some("builtin:compressor".to_string()), Some("builtin:gain".to_string())]);
 }
 
+/// The analyzer's insert belongs to its project. Another one (here a new one, whose ids start
+/// over, so that its first track and Channel EQ take the old ones' ids) feeds nothing until an
+/// editor asks; nor does a project opened, even the same one again.
+#[test]
+fn another_project_starts_with_the_analyzer_off() {
+    let mut s = session("analyzer-new");
+    let t = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
+    let uid = s.insert_channel_eq(t).unwrap();
+    s.set_analyzer(Some(uid));
+    s.new_project();
+    s.dir = std::env::temp_dir().join(format!("marbble-channel-eq-analyzer-other-{}.marbble", std::process::id()));
+    let track = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
+    let other = s.insert_channel_eq(track).unwrap();
+    assert_eq!((track, other), (t, uid), "the new project's ids are the old one's");
+    assert_eq!(s.analyzer_target, None);
+
+    s.set_analyzer(Some(other));
+    s.save(None).unwrap();
+    let dir = s.dir.clone();
+    s.open(&dir).unwrap();
+    assert_eq!(s.analyzer_target, None, "after opening");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 #[test]
 fn assignments_to_the_fixed_eq_drive_the_first_channel_eq_insert() {
     let mut s = session("ctl");

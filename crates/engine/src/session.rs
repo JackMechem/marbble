@@ -237,7 +237,8 @@ pub struct Session {
     rec_punch: Option<i64>,
     analyzer_rx: rtrb::Consumer<f32>,
     analyzer_buf: Vec<f32>,
-    /// The analyzer's insert: (strip, instance id).
+    /// The analyzer's insert: (strip, instance id). Off when another project opens, as its ids
+    /// are this project's.
     analyzer_target: Option<(Id, Id)>,
     rec_midi_track: Option<Id>,
     last_play_from: i64,
