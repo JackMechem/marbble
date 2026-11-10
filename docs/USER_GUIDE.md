@@ -31,7 +31,9 @@ Contents:
    [Autopunch](#autopunch) · [Recording MIDI](#recording-midi) ·
    [Latency compensation](#latency-compensation)
 4. [Software instruments and Musical Typing](#4-software-instruments-and-musical-typing):
-   [Marbble Tre](#marbble-tre) · [The other synth models](#the-other-synth-models) · [Marbble Sampler](#marbble-sampler) · [Musical Typing](#musical-typing) · [Step Input](#step-input)
+   [Marbble Sampler](#marbble-sampler) · [Marbble Tre](#marbble-tre) ·
+   [The other synth models](#the-other-synth-models) · [Musical Typing](#musical-typing) ·
+   [Step Input](#step-input)
 5. [Editing in the tracks area](#5-editing-in-the-tracks-area):
    [Selecting regions](#selecting-regions) ·
    [Moving, trimming and snapping](#moving-trimming-and-snapping) · [Drag modes](#drag-modes) ·
@@ -135,10 +137,10 @@ Contents:
 
 ### Choosing a driver and devices
 
-Settings › Audio holds the device settings. The driver, devices, sample rate, buffer size,
-Processing Threads, Monitoring and Recording Delay take effect when you click **Apply Changes** or **Done**. Changes
-you haven't applied stay while you switch tabs; closing the window any other way (Esc, a click outside) drops them. The delay compensation options on
-the same tab apply at once.
+In Settings › Audio, the driver, devices, sample rate, buffer size, Processing Threads,
+Monitoring, Recording Delay and Memory (Linux) take effect when you click **Apply Changes** or
+**Done**. Unapplied changes survive switching tabs; closing the window any other way (Esc, a
+click outside) drops them. The delay compensation options on the same tab apply at once.
 
 - **Driver.** On Linux the choices are **PipeWire** (recommended), PulseAudio, JACK (listed as
   "JACK (no server running)" when there is no JACK server) and **ALSA (direct hardware)**. On
@@ -150,15 +152,13 @@ the same tab apply at once.
 - **I/O Buffer Size.** 32 to 2048 samples; the time per buffer is shown next to it. Smaller is
   more responsive, larger is safer against crackles.
 - **Processing Threads.** How many threads play tracks at once, the audio thread included.
-  **Automatic** (the default) brings in more threads when a project needs them and leaves a light
-  project on the audio thread alone. **1** keeps everything on the audio thread, the way to rule
-  threads out if you suspect them. The output is the same sample for sample whatever you choose.
-  Apply Changes takes effect at once, without restarting audio. Bounces and other renders always
-  play on one thread. On macOS and Windows, Automatic stays on one thread for now, as the extra
-  threads can only get real-time priority on Linux so far. On Linux, a thread the system refuses
-  real-time priority (rtkit not running, or its limits reached) plays nothing, as it could be late
-  whenever the computer is busy: tracks play on the threads that got it, or on the audio thread
-  alone, and a note under the setting says so.
+  **Automatic** (the default) adds threads only when a project needs them. **1** keeps everything
+  on the audio thread, to rule threads out if you suspect them. The output is identical whatever
+  you choose, and a change applies without restarting audio. Bounces and other renders always
+  use one thread. On macOS and Windows, Automatic stays on one thread for now (only Linux gives
+  the extra threads real-time priority so far). On Linux, a thread the system refuses real-time
+  priority (rtkit not running, or its limits reached) is left out, and a note under the setting
+  says so.
 - **Reset Audio Engine** closes and reopens the devices, for example after replugging an
   interface.
 
@@ -203,9 +203,8 @@ The window is laid out like Logic Pro 11:
 
 Drag the dividers between panes to resize them; double-click a divider to reset it. Pane
 sizes are remembered. The bottom section never takes the whole window: the Tracks area keeps
-its menu bar, ruler, global tracks, overview and a little of the track list, so the divider
-above the section stays in reach. A section remembered taller than the window allows (after
-the window was made smaller, say) shows at the height there is room for.
+its bar, ruler, global tracks, overview and a little of the track list, so the divider stays in
+reach.
 
 ### Control bar
 
@@ -241,8 +240,8 @@ From left to right:
   (\`, on by default: the view follows the playhead), **Scroll to Playhead** (shows the
   playhead without moving it), the **Left-click Tool** and **Ctrl-click Tool** pop-ups (see
   [Tools and the marquee](#tools-and-the-marquee)), the **Snap** pop-up (Smart, Bar, Beat,
-  Division, Ticks, Off; Smart follows the zoom), the **Drag** pop-up (see [Drag modes](#drag-modes)), the
-  **Height** slider (track height) and the **Zoom** slider (horizontal zoom).
+  Division, Ticks, Off; Smart follows the zoom), the **Drag** pop-up (see
+  [Drag modes](#drag-modes)), the **Height** slider (track height) and the **Zoom** slider.
 - **Ruler**, from the top:
   - the **cycle strip** (yellow): drag to make a cycle range, drag it or its edges to move or
     resize it, click it to switch Cycle on and off;
@@ -254,17 +253,15 @@ From left to right:
 
   Right-click the cycle strip, the bar numbers or the Autopunch strip for **Move Playhead
   Here** and **Create Marker Here** (at the click, snapped to beats at least), **Cycle** (C),
-  **Autopunch**, **Set Locators by Regions** (U) and **Snap** (Smart, Bar, Beat, Division,
-  Ticks, Off). The
-  marker lane has its own menu.
+  **Autopunch**, **Set Locators by Regions** (U) and **Snap**. The marker lane has its own menu.
 - **Track headers:** colour, number, icon, name with the power button
-  ([On/Off](#turning-tracks-off), grey while the track plays) at its end, the M (Mute), S (Solo), R (Record Enable,
-  audio and instrument tracks), I (Input Monitoring, audio tracks) buttons, the Freeze
-  (snowflake) button, a group badge, and a volume slider (a slim line with a round thumb, as in
-  Logic) whose line shows the track's level meter. Short tracks put it all on one line (see below). The **+** button above the headers
-  opens New Tracks; the **H** button turns on hide mode. Under them, level with the ruler's
-  marker lane, is the **Marker** row. A muted track's regions are drawn grey, as a muted
-  region is; a track that is off is dimmed.
+  ([On/Off](#turning-tracks-off), grey while the track plays) at its end, the M (Mute), S (Solo), R
+  (Record Enable, audio and instrument tracks), I (Input Monitoring, audio tracks) buttons, the
+  Freeze (snowflake) button, a group badge, and a volume slider with the track's level meter in its
+  line. Short tracks put it all on one line (see below). The **+** button above the headers opens
+  New Tracks; the **H** button turns on hide mode. Under them, level with the ruler's marker lane,
+  is the **Marker** row. A muted track's regions are drawn grey, as a muted region is; a track that
+  is off is dimmed.
 - **Tracks:** regions on lanes. Scroll with the wheel (Shift+wheel or a sideways trackpad swipe
   scrolls through time); Ctrl+wheel zooms horizontally around the pointer, Alt+wheel changes
   track heights. With a mouse that has only a vertical wheel, set Settings › Editing › Mouse
@@ -273,13 +270,12 @@ From left to right:
   ruler and global tracks it always scrolls through time. A click without a drag on empty space
   in a lane also moves the playhead there (snapped to the grid); clicking a region only selects
   it. Settings › Editing › Click Moves Playhead sets this: **Anywhere in the tracks** (regions
-  too), **Empty space only** (the default) or **Never**. Before 0.1.0-alpha.7 the default was
-  Anywhere; an install that has settings from then keeps that unless you change it.
+  too), **Empty space only** (the default) or **Never**.
 - **Overview:** the strip along the bottom, in place of a horizontal scroll bar, shows the
   whole project in miniature: a row per track (a closed stack is one row), each region as a
   bar in its colour, the cycle range and markers along the top edge, the playhead, and the end
   of the last region, with the timeline after it shaded darker. The lit box is the part shown
-  in the Tracks area, both the time and the tracks scrolled into view.
+  in the Tracks area.
   - Drag the box to scroll, across and up or down.
   - Click outside the box to centre the view there; keep the button down to go on dragging.
   - Drag the box's left or right edge to zoom: the view shows the time between the edges
@@ -309,9 +305,8 @@ Track headers:
   settings leave it alone.
 - **Reorder** by dragging the header anywhere that isn't a control: the name, the number, the
   icon or empty space (the buttons, the volume slider and a name being edited keep their own
-  presses). A click without moving still selects the track, and double-clicking the name still
-  renames it. A track dropped among a stack's subtracks
-  (or right under an open stack's header) goes into that stack.
+  presses). A track dropped among a stack's subtracks (or right under an open stack's header)
+  goes into that stack.
 - **Resize** by dragging the header's bottom edge. Alt-drag resizes every track, and
   double-clicking the edge resets the track. Ctrl+Down and Ctrl+Up (or Alt+wheel, or View ›
   Taller / Shorter Tracks, or View › Track Height: Mini, Compact, Small, Medium, Large, Extra
@@ -326,29 +321,25 @@ Track headers:
   the lane's parameter and a **+** for another lane. On shorter headers these take the volume
   slider's place (the mode and + above the parameter), so M, S, R and I stay where they are;
   the lane itself, the Inspector's strip and the Mixer still set the volume.
-- **Button columns:** each button has its column, the same on every header, with a gap where a
-  track has no such button (an instrument track has no I, an aux no R, I or Freeze). On one-line
-  headers the columns are those of the switches that are on somewhere, so one track's M lines up
-  with another's. Regions on short tracks get a slimmer name bar, and on tracks below 32 px
-  (where the header goes to one line) a region is a bar of its colour with just its name,
-  centred: no waveform, notes or fades. Its edges still trim it. An open take folder's take
-  rows keep showing their takes.
-- **Volume:** drag the slider (Shift for fine), double-click or Alt-click it for 0 dB; its
-  tooltip shows the level. In a group with volume linked, the other members follow. The line is
-  brighter up to the thumb. The meter in the line is post-fader and uses the slider's own scale, so a full-scale signal
-  reaches the thumb, and only a hotter one passes it; peaks are held for 2 s, in red above
-  0 dBFS. Its right end lights red while the track's clip indicator is on (see
-  [The channel strip](#the-channel-strip)). A folder stack's slider has no meter (it moves
-  every subtrack).
+- **Button columns:** each button has its column, the same on every header, with a gap where a track
+  has no such button (an instrument track has no I, an aux no R, I or Freeze). On one-line headers
+  the columns are those of the switches that are on somewhere, so one track's M lines up with
+  another's. Regions on short tracks get a slimmer name bar, and on tracks below 32 px a region is a
+  bar of its colour with just its name, centred: no waveform, notes or fades. Its edges still trim
+  it. An open take folder's take rows keep showing their takes.
+- **Volume:** drag the slider (Shift for fine), double-click or Alt-click it for 0 dB; its tooltip
+  shows the level. In a group with volume linked, the other members follow. The meter in the line is
+  post-fader and on the slider's own scale, so a full-scale signal reaches the thumb and only a
+  hotter one passes it; peaks are held for 2 s, in red above 0 dBFS. Its right end lights red while
+  the track's clip indicator is on (see [The channel strip](#the-channel-strip)). A folder stack's
+  slider has no meter (it moves every subtrack).
 
 ### Inspector
 
-The Inspector shows a **Region** section (mute, position, length, loop, the playback
-parameters described under [Region playback parameters](#region-playback-parameters), and for
-audio regions gain and the fade rows described under
-[Fades and crossfades](#fades-and-crossfades)) and a
-**Track** section, both collapsed by default, followed by the selected track's channel strip and
-the Stereo Out strip.
+The Inspector shows a **Region** section (mute, position, length, loop, the
+[playback parameters](#region-playback-parameters), and for audio regions gain and the
+[fade rows](#fades-and-crossfades)) and a **Track** section, both collapsed by default, followed
+by the selected track's channel strip and the Stereo Out strip.
 
 - **Length** is in bars, beats, divisions and ticks counted from zero, like the Event List, the
   Audio Track editor and the help tags while dragging (4 0 0 0 is four bars), with the time in
@@ -358,9 +349,9 @@ the Stereo Out strip.
   the icon grid; see [Track headers](#tracks-area)), type, **Input** (audio
   tracks: a pop-up, as on the channel strip) or instrument, **Output** (a pop-up: Stereo Out,
   the stack, or an aux), **Freeze** (as the snowflake button), the region or subtrack count
-  and the group. Choosing a track (clicking its header or its strip in the Mixer,
-right-clicking its empty lane, or Up and Down) deselects the regions on other tracks, so the
-Region section never describes a region on a different track from the Track section.
+  and the group. Choosing a track (its header, its Mixer strip, a right-click on its empty
+  lane, or Up and Down) deselects the regions on other tracks, so both sections describe the
+  same track.
 
 ### Library and Browser
 
@@ -384,24 +375,20 @@ status, the audio devices, and the number of MIDI inputs.
 | Marbble | About Marbble (shows the version), Settings…, Appearance…, Key Commands…, Control Surfaces › (Learn Assignment for Last Touched Parameter, Controller Assignments…), Quit Marbble (Ctrl+Q) |
 | File | New…, Open Recent…, Open…, Save, Save As…, Save as Template…, Revert to Saved, Revert to ›, Project Alternatives ›, Project Settings…, Import Audio File…, Bounce Project or Section…, Export Selected Tracks as Audio Files…, Export All Tracks as Audio Files…, Import MIDI File…, Export Selection as MIDI File… |
 | Edit | Undo, Redo, Cut, Copy, Paste, Paste at Original Position, Paste Replace, Duplicate, Repeat › (Once to 16 Times), Split Regions at Playhead, Join Regions, Join Regions per Track, Loop Regions, Convert Loops to Real Copies, Pack Take Folder, Set Locators by Regions, Strip Silence…, Section Between Locators ›, Trim ›, Move ›, Name and Color ›, Snap Edits to Zero Crossings, Select All, Select ›, Delete (see [Arranging commands](#arranging-commands)) |
-| Track | New Tracks…, New Aux, Duplicate Track, New Track with Same Settings, New Pattern Region, Bounce in Place…, Freeze Track, Unfreeze Track, Track On, Create Folder Stack, Create Summing Stack, Group Selected Tracks, Show Output Track, Hide Track, Unhide All Tracks, Delete Track, Delete Unused Tracks, Track Alternatives › |
-| Record | Play / Stop, Record, Cycle, Autopunch, Metronome, Count-in, Low Latency Mode |
+| Track | New Tracks…, New Aux, Duplicate Track, New Track with Same Settings, New Pattern Region, Bounce in Place…, Freeze Track, Unfreeze Track, Track On, Drum Replacement/Doubling…, Create Folder Stack, Create Summing Stack, Group Selected Tracks, Show Output Track, Hide Track, Unhide All Tracks, Delete Track, Delete Unused Tracks, Track Alternatives › |
+| Record | Play / Stop, Record, Discard Last Recording, Cycle, Autopunch, Metronome, Count-in, Low Latency Mode |
 | Navigate | Create Marker, Delete Marker, Go to Previous Marker, Go to Next Marker, Open Marker List |
 | View | Library, Inspector, Mixer, Editors, List Editors, Browsers, Show Automation, Show Used Automation, Show Global Tracks, Show Overview, Musical Typing, Step Input Keyboard, Show Hidden Tracks, Zoom In, Zoom Out, Larger Interface, Smaller Interface, Actual Size, Theme › |
 | Window | Minimize, Mixer in Separate Window, Editor in Separate Window, Event List in Separate Window, then the open windows (the main window and each [separate window](#separate-windows)): choose one to bring it to the front |
 | Help | Marbble User Guide, Key Commands…, What's New in Marbble, Check for Updates…, Report an Issue…, Marbble Website. Key Commands opens Settings › Key Commands; Check for Updates… asks GitHub whether a newer version is out on your [update channel](#general) and says what it found; the others open this guide, the changelog, a new issue on GitHub and the website in your browser |
 
-Each item shows its key beside it: the fixed keys below, and the key commands' keys as set in
-Settings › Key Commands (R for Record, X for the Mixer…), which change in the menu when you
-reassign them. Settings and modes that are on are ticked (View's panes, Record's Cycle,
-Autopunch, Metronome, Count-in and Low Latency Mode, Snap Edits to Zero Crossings, Track On,
-the theme), and items that don't apply are greyed out, as in the Tracks area's menus: Cut,
-Copy, Join or Delete with no regions selected, Paste with nothing copied, Unfreeze Track with no
-frozen track selected. A submenu whose items all don't apply is greyed out too (Repeat, Move,
-Name and Color with no regions selected). One-of-several choices (View › Theme, File › Project
-Alternatives) show a round radio mark on Linux. The Edit menu is the Tracks area's Edit menu, item for item, and both use
-the same names; a region's right-click menu drops "Regions" from them (Split at Playhead, Join,
-Loop, Set Locators). **Quit Marbble** (Ctrl+Q) closes the main window as its close button does,
+Each item shows its key beside it, as set in Settings › Key Commands. Settings and modes that
+are on are ticked, and items that don't apply are greyed out, as in the Tracks area's menus (Cut
+or Delete with no regions selected, Paste with nothing copied), as is a submenu whose items all
+don't apply. One-of-several choices (View › Theme, File › Project Alternatives) show a round
+radio mark on Linux. The Edit menu is the Tracks area's Edit menu, item for item, with the same
+names; a region's right-click menu drops "Regions" from them (Split at Playhead, Join, Loop,
+Set Locators). **Quit Marbble** (Ctrl+Q) closes the main window as its close button does,
 so it asks first when the project has unsaved changes.
 
 The Edit menu acts on what has focus. In the Piano Roll, Cut, Copy, Paste, Duplicate, Delete
@@ -421,8 +408,8 @@ still work while it is open, while editing keys (Delete, Cut, Paste…) don't.
 ### Using the keyboard
 
 **Tab** moves the keyboard focus through the window's buttons and controls (Shift+Tab goes
-back), and a blue ring shows where it is. The ring appears only once you press Tab: a click
-never shows one, and pressing a key command after a click doesn't either.
+back), and a blue ring shows where it is. The ring appears only once you press Tab, never
+after a click.
 
 **Knobs, faders and sliders** take the keyboard once they have the focus: the channel strip's
 fader, pan knob and send knobs, the track headers' volume sliders, the master volume, VCA
@@ -445,7 +432,8 @@ to the next one; a click, the scroll wheel or a key press puts them away. With T
 control shows its tooltip too.
 
 Once Tab has moved the focus, **Return** and **Space** press the focused button instead of
-going to the beginning and playing. After a click they are key commands again.
+going to the beginning and playing, and the slots and lists below take their keys. After a
+click they are key commands again.
 
 **Channel strip slots** (Setting, Input, the Channel EQ, Audio FX, Sends, Output and VCA, in the
 Mixer and the Inspector) are Tab stops too:
@@ -476,8 +464,7 @@ gives the focus back to what had it. Controller Assignments, which leaves the tr
 the window, doesn't.
 
 **Lists** are one Tab stop each, landing on the selected row: the Library's plug-ins, the Project
-Chooser's recent projects, Project Alternatives and the Marker List. As with the slots, a row
-takes these keys once Tab has moved the focus; after a click they do what they did before.
+Chooser's recent projects, Project Alternatives and the Marker List.
 
 | Key | Does |
 |---|---|
@@ -493,39 +480,38 @@ list.
 
 ### Separate windows
 
-The Mixer, the Editors, the Event List, the Channel EQ and the built-in effect panels can each
-be opened in a window of their own, for example to put the Mixer on a second monitor.
+The Mixer, the Editors, the Event List, the Step Sequencer and the built-in effect panels (the
+Channel EQ's included) can each have a window of their own, for example on a second monitor.
 
 - **Open in Separate Window:** click the pop-out button at the right end of the panel's bar
-  (the Mixer's, the Piano Roll's or the Audio Track Editor's), or in an effect panel's or
-  Channel EQ's title bar, docked or floating. Window › Mixer in Separate Window and Window ›
-  Editor in Separate Window do the same, and the Piano Roll's and Audio Track Editor's View menus have
-  the item too.
+  (the Mixer's, the Piano Roll's, the Audio Track Editor's, the Event List's or the Step
+  Sequencer's), or in an effect panel's title bar, docked or floating. Window ›
+  Mixer in Separate Window, Editor in Separate Window and Event List in Separate Window do the
+  same, and the Piano Roll's, Audio Track Editor's and Event List's View menus have the item too.
 - **Attach to Main Window:** the same button in the separate window (pop-in), the same menu
-  items, or the window's close button. The Mixer and the Editors go back to the bottom
-  section; an effect panel or Channel EQ opens in the main window as Settings › General › Open
-  Effect Panels says (docked or floating).
+  items, or the window's close button. The Mixer, the Editors, the Event List and the
+  Step Sequencer go back to the bottom section; an effect panel opens in the main window as
+  Settings › General › Open Effect Panels says (docked or floating).
 - **One place at a time:** while a panel has its own window, it isn't shown in the main window.
   X (Mixer), E (Editors), an insert slot or a Channel EQ thumbnail bring its window to the
   front instead (with Open Effect Panels set to Separate windows, the slot or thumbnail closes
   it).
 - **Effect panels in separate windows by default:** Settings › General › Open Effect Panels ›
-  Separate windows opens every built-in effect panel and Channel EQ in its own window.
+  Separate windows opens every built-in effect panel in its own window.
 - **Everything stays live.** Meters, the playhead, the selection (the editor follows it), the
-  theme, the interface size, the settings and the clipboards (regions, channel strip settings,
-  plug-ins and Channel EQ: copy in a separate Mixer, paste in the main window) are the same in
-  every window. Key commands and the
-  menu bar work in a separate window as in the main one; the Edit menu acts on the separate
-  window's editor while it is in front.
+  theme, the interface size, the settings and the clipboards (regions, channel strip settings
+  and plug-ins: copy in a separate Mixer, paste in the main window) are the same in every
+  window. Key commands and the menu bar work there as in the main window; the Edit menu acts on
+  the separate window's editor while it is in front.
 - **Effect panels opened from a separate Mixer** (clicking an insert slot there) float inside
   the Mixer's window.
-- An effect panel's or Channel EQ's own × (or Esc) closes it altogether, and its window goes
-  with it. So does removing the effect or deleting the track.
-- **Remembered:** each kind of window (the Mixer, the Editors, the Channel EQ, each type of
-  effect) reopens where it was last, with its size, on the same monitor if it is still
-  connected (otherwise on the nearest one, moved and shrunk to fit). The Mixer and the Editors
-  reopen in their own windows at the next launch if they were detached when Marbble quit.
-  Separate windows close with the main window.
+- An effect panel's own × (or Esc) closes it altogether, window and all. So does removing the
+  effect or deleting the track.
+- **Remembered:** each kind of window (the Mixer, the Editors, each type of effect) reopens
+  where it was last, with its size, on the same monitor if it is still connected (otherwise on
+  the nearest one, moved and shrunk to fit). The Mixer, the Editors, the Event List and the Step
+  Sequencer reopen in their own windows at the next launch if they were detached when Marbble
+  quit. Separate windows close with the main window.
 
 ---
 
@@ -556,9 +542,8 @@ new take over existing regions does:
 - **Create take folders** (the default, as in Logic): the regions it overlaps are packed with the
   new take into a take folder, and a recording over a take folder adds a take to it. The new take
   is heard wherever it has audio; the older takes keep playing where it has none (a punch-in
-  part-way over a region, say). Every armed track does this on its own, so recording an overhead
-  and a kick mic again gives each mic's folder the new take. Muted and looping regions are left as
-  they are. One Undo takes the whole recording back. See
+  part-way over a region, say). Each armed track gets its own folder. Muted and looping regions
+  are left as they are. One Undo takes the whole recording back. See
   [Take folders and comping](#7-take-folders-and-comping).
 - **Put the new take on top:** the older audio stays underneath and is hidden where the new one
   plays.
@@ -570,7 +555,7 @@ choose otherwise. MIDI has its own setting (see [Recording MIDI](#recording-midi
 
 The **Replace** button in the control bar (beside Autopunch) works like Logic's: while it is on,
 every recording replaces what it overlaps, audio and MIDI alike, whatever the two Overlapping
-Recordings settings say. Turn it off and they apply again.
+Recordings settings say.
 
 A newer region always hides the older audio it overlaps during playback, as in Logic. The
 older regions are not deleted; move or trim the newer one to hear them again. Regions that
@@ -578,15 +563,14 @@ crossfade are the exception: both play across the crossfade.
 
 ### Discarding and marking takes
 
-- **Discard Last Recording** (Ctrl+. on Linux and Windows, ⌘. on macOS; also in the Record
-  menu) throws the last recording away: it stops first if you are still recording, takes the
-  recording off every track it went to (an overhead and a kick mic alike), and returns the
-  playhead to where playback started. Each track goes back to how it was before, regions packed
-  into a take folder included. On a track you have edited since, only the recorded take goes.
-  It is one Undo step. The audio files are deleted once nothing can bring them back: when you
-  save with no undo step left that needs them, or when you close the project (unless the saved
-  project still uses them).
-- **Mark Take as Good** (Alt+G, ⌥G on macOS) and **Mark Take as Bad** (Alt+B, ⌥B): pressed
+- **Discard Last Recording** (Ctrl+., also in the Record menu) throws the last recording away: it
+  stops first if you are still recording, takes the recording off every track it went to, and
+  returns the playhead to where playback started. Each track goes back to how it was before, regions
+  packed into a take folder included. On a track you have edited since, only the recorded take goes.
+  It is one Undo step. The audio files are deleted once nothing can bring them back: when you save
+  with no undo step left that needs them, or when you close the project (unless the saved project
+  still uses them).
+- **Mark Take as Good** (Alt+G) and **Mark Take as Bad** (Alt+B): pressed
   while recording, they mark the take being recorded, which lands marked. After recording they
   mark the newest take of the last recording on each track it went to; with that gone, the take
   heard in the selected take folders. A recording over nothing becomes a take folder of one take
@@ -594,8 +578,8 @@ crossfade are the exception: both play across the crossfade.
 
 ### Count-in and pre-roll
 
-- **Count-in** (the Count-in button in the control bar, or Shift+K) plays the click for 1 to 4 bars before recording
-  (Settings › Recording › Count-in). The count-in always clicks, even with the metronome off.
+- **Count-in** (the control bar's Count-in button, or Shift+K) plays the click for 1 to 4 bars
+  before recording (Settings › Recording › Count-in), even with the metronome off.
 - With Count-in off, **Pre-roll** (Settings › Recording, in seconds, 0 by default) starts
   playback that far before the playhead so you hear a lead-in; recording still starts at the
   playhead.
@@ -607,9 +591,8 @@ playing inside the cycle) and loops. When you stop, the passes become **takes in
 folder** ("Take 1", "Take 2"...). A last pass stopped part-way is kept if it got at least a
 beat in. Recording the same cycle range again adds its passes to the same folder. A single pass
 becomes a normal region (or, with Create take folders, a take in the folder of what it
-overlaps). Cycle passes over other audio join it the same way: the regions underneath are
-packed into the folder with them, or the folder there takes them as new takes. See
-[Take folders and comping](#7-take-folders-and-comping).
+overlaps). Passes over other audio join it the same way, as
+[Overlapping recordings](#recording-audio) describes.
 
 MIDI recorded in cycle mode goes into one region over the passes, unless Settings › Recording
 › Overlapping Recordings › MIDI is set to Create take folders (see
@@ -620,9 +603,8 @@ MIDI recorded in cycle mode goes into one region over the passes, unless Setting
 Autopunch records only between the punch-in and punch-out points, so you can start playback
 early and replace just a phrase.
 
-- Turn it on with the Autopunch button next to Cycle (Ctrl+P on Linux and Windows,
-  Control+⌘P on macOS). With no range yet, it takes the cycle range, or the two bars from the
-  playhead.
+- Turn it on with the Autopunch button next to Cycle (Ctrl+P, Control+⌘P on macOS). With no range
+  yet, it takes the cycle range, or the two bars from the playhead.
 - The range is the red strip in the ruler: drag in the strip to set it, drag it or its edges to
   move or resize it, click it to turn Autopunch off and on.
 - While recording, armed tracks keep playing their regions before and after the range, and
@@ -677,8 +659,9 @@ adjust Recording Delay.
 - Create an instrument track (New Tracks › **Software Instrument**). Its **Instrument** slot
   holds Marbble Synth by default, a built-in polyphonic synthesizer that responds to pitch bend,
   sustain, modulation (vibrato) and expression. Choose another built-in instrument (see
-  [Marbble Tre](#marbble-tre) and [the other synth models](#the-other-synth-models)) or a VST3 instrument in the New Tracks dialog, the Library, or the
-  strip's Instrument slot.
+  [Marbble Sampler](#marbble-sampler), [Marbble Tre](#marbble-tre) and
+  [the other synth models](#the-other-synth-models)) or a VST3 instrument in the New Tracks
+  dialog, the Library, or the strip's Instrument slot.
 - **MIDI input:** every connected MIDI input is routed to the selected instrument track (if
   the selected track isn't an instrument track, to the first armed one). Devices plugged in
   later are picked up within a few seconds. Settings › MIDI switches individual inputs off,
@@ -690,150 +673,204 @@ adjust Recording Delay.
 
 ![Marbble Sampler's panel: zones across the keyboard in two velocity layers, the selected zone's waveform, and the Main section](../site/public/screenshots/sampler.png)
 
-Your own instrument from your own sounds. Put **Marbble Sampler** on a software instrument track, from the
-instrument slot, the New Tracks dialog or the Library (under Samplers). Its panel docks at the bottom: zones on the
-left, the selected zone's waveform and settings next, then the instrument's sections in a row, scrolling sideways if the
-dock is narrow. It has been tested by measurement only: nobody has listened to it yet.
+Your own instrument from your own sounds. Put **Marbble Sampler** on a software instrument
+track from the instrument slot, the New Tracks dialog or the Library (under Samplers). Its panel
+docks at the bottom: zones on the left, the selected zone's waveform and settings next, then the
+instrument's sections in a row, scrolling sideways if the dock is narrow. It has been tested by
+measurement only: nobody has listened to it yet.
 
 **Getting a sound in**
 
-- **Drop a file on the panel,** or choose **Add…**. One file takes the whole keyboard, with its pitch on C3 unless its
-  name or file says otherwise, and plays right away. Dropped on the zone map, it sits on that one key.
-- **Several files at once** map themselves when every one has a note in its name (`Piano_C3`, `Bass F#2`, using C3 for
-  middle C), splitting the keyboard between them. Files on the same note become velocity layers, ordered by a layer in
-  the name (`v1`, `v2`, or `pp`, `mf`, `ff`), and `rr1`, `rr2` become round-robin turns. Otherwise they go up one key each.
-- **Record:** choose an input, press **Record**, play or sing, and press **Stop**. It's playable at once. **Trim** moves
-  the zone's start and end in past the silence; the file keeps everything. The transport doesn't start. You don't hear the input through
-  Marbble while this runs. A take with nothing on it is refused, and says so.
-- **From the arrangement:** an audio region's menu has **Convert to Sampler Track**. **Whole Region** puts one key in
-  charge of it, with a MIDI note playing it where it was, and mutes the original. **Slice at Transients** gives each
-  hit its own key from C1 up, with MIDI playing them in time, so you can rearrange them. The region's gain comes along; its fades and playback parameters don't.
-- **An SFZ file:** drop or choose it, and it replaces the zones. Marbble reads regions, groups, key and velocity ranges,
-  loops, tune, volume, pan, envelopes and sequence positions. Whatever else the file asks for is ignored and listed under the
-  zone map, for instance filters, key switches and release samples. SoundFonts (.sf2) aren't read.
+- **Drop a file on the panel,** or choose **Add…**. One file takes the whole keyboard, with its
+  pitch on C3 unless its name or file says otherwise, and plays right away. Dropped on the zone
+  map, it sits on that one key.
+- **Several files at once** map themselves when every one has a note in its name (`Piano_C3`,
+  `Bass F#2`, with C3 as middle C), splitting the keyboard between them. Files on the same note
+  become velocity layers, ordered by a layer in the name (`v1`, `v2`, or `pp`, `mf`, `ff`), and
+  `rr1`, `rr2` become round-robin turns. Otherwise they go up one key each.
+- **Record:** choose an input, press **Record**, play or sing, and press **Stop**; the zone is
+  playable at once. The transport doesn't start, and you don't hear the input through Marbble
+  meanwhile. **Trim** moves the zone's start and end in past the silence (the file keeps
+  everything). A silent take is refused, with a message.
+- **From the arrangement:** an audio region's menu has **Convert to Sampler Track**. **Whole
+  Region** puts the region on one key, with a MIDI note playing it where it was, and mutes the
+  original. **Slice at Transients** gives each hit its own key from C1 up, with MIDI playing
+  them in time, so you can rearrange them. The region's gain comes along; its fades and playback
+  parameters don't.
+- **An SFZ file:** drop or choose it, and it replaces the zones. Marbble reads regions, groups,
+  key and velocity ranges, loops, tune, volume, pan, envelopes and sequence positions; anything
+  else (filters, key switches, release samples…) is ignored and listed under the zone map.
+  SoundFonts (.sf2) aren't read.
 
 **Building an instrument**
 
-- **The zone map** has keys across and velocity up. A zone is a box: drag it to move it, with its root, or its edges to change
-  its keys and velocities. Play the keys under the map to try it. Red zones can't play.
-- **The waveform:** drag **S** and **E** for where the zone starts and ends, **L** and **R** for its loop. Scroll to zoom,
-  double-click to see all of it. The loop is shaded, with its crossfade as a wedge.
-- **The zone's settings** are next to its waveform: key and velocity ranges, **Root**, **Fine** (cents), **Gain**, **Pan**, **Group**
-  (zones with the same round-robin number on the same key and velocity take turns), **Loop**, **Fade** (the loop's crossfade, in
-  ms, which blends in the audio before the loop's start, so it needs some there), **Equal Power** (for a loop whose two sides don't line up; leave it off for anything
-  with a pitch), **One-Shot** (plays to its end whatever the key does, until the song stops), and **Reverse**.
-- **Slice** cuts the selected zone at its transients, one per key from C1. The slider is how easily it finds a hit.
-- **The sections** apply to the whole instrument: **Main** (volume, tune, Poly, Mono or Legato, polyphony up to 64, glide, bend range,
-  velocity), **Amp Envelope**, **Filter** with **Filter Envelope**, and **LFO** to pitch and filter, free or synced, with the mod wheel adding vibrato. They
-  automate and learn MIDI as any plug-in's do. An SFZ's zones keep their own amp envelopes.
+- **The zone map** has keys across and velocity up. Drag a zone to move it (with its root), or
+  its edges to change its keys and velocities. Play the keys under the map to try it. Red zones
+  can't play.
+- **The waveform:** drag **S** and **E** for where the zone starts and ends, **L** and **R** for
+  its loop. Scroll to zoom, double-click to see all of it. The loop is shaded, its crossfade
+  drawn as a wedge.
+- **The zone's settings,** next to its waveform: key and velocity ranges, **Root**, **Fine**
+  (cents), **Gain**, **Pan**, **Group** (zones with the same round-robin number on the same key
+  and velocity take turns), **Loop**, **Fade** (the loop's crossfade in ms, blending in audio
+  from before the loop's start, so it needs some there), **Equal Power** (for a loop whose two
+  sides don't line up; leave it off for anything with a pitch), **One-Shot** (plays to its end
+  whatever the key does, until the song stops) and **Reverse**.
+- **Slice** cuts the selected zone at its transients, one per key from C1. The slider sets how
+  easily it finds a hit.
+- **The sections** apply to the whole instrument: **Main** (volume, tune, Poly, Mono or Legato,
+  polyphony up to 64, glide, bend range, velocity), **Amp Envelope**, **Filter** with **Filter
+  Envelope**, and **LFO** to pitch and filter, free or synced, with the mod wheel adding
+  vibrato. They automate and learn MIDI as any plug-in's do. An SFZ's zones keep their own amp
+  envelopes.
 
 **Keeping it**
 
-- **Save Preset…** in the panel's preset menu saves the instrument with a copy of all its samples, in a folder of its own at
-  `~/Music/Marbble Instruments`, made the first time. It's then listed under User in every project, and loading it copies the samples into that project.
-  Share the folder to share the instrument.
-- **In a project,** samples are copied into its `Samples` folder when they arrive, so moving the project or deleting the
-  original changes nothing. A library takes its size on disk again.
-- **A missing sample** is named when the project opens and shows red in the panel, while everything else plays. **Replace…** points its zone at another file. This also resets the zone's start, end and loop.
-- **Factory presets** shape the sound (a slow pad, a pluck, a filter) and leave your zones alone.
-- **Channel strip settings and templates** keep a copy of the sampler's samples too, and loading one copies them into the project. So does
-  copying the strip or the sampler and pasting it into another project.
+- **Save Preset…** in the panel's preset menu saves the instrument with a copy of all its
+  samples, in a folder of its own in `~/Music/Marbble Instruments`. It's then listed under User
+  in every project, and loading it copies the samples into that project. Share the folder to
+  share the instrument.
+- **In a project,** samples are copied into its `Samples` folder when they arrive, so moving the
+  project or deleting the original changes nothing (a library takes its size on disk again).
+- **A missing sample** is named when the project opens and shows red in the panel; everything
+  else plays. **Replace…** points its zone at another file, resetting the zone's start, end and
+  loop.
+- **Factory presets** shape the sound (a slow pad, a pluck, a filter) and leave your zones
+  alone.
+- **Channel strip settings and templates** keep a copy of the sampler's samples too, and loading
+  one copies them into the project. So does copying the strip or the sampler and pasting it into
+  another project.
 
 **Limits**
 
-Samples play from memory, with no disk streaming, up to 4 GB for the session (about 6 hours of 48 kHz stereo, with the panel showing how much is used). Past that a
-sample refuses to load and says why, and the rest play. Files at any sample rate and bit depth play in tune. Full polyphony, 64 stereo voices, took about 10 % of one core in a test, 27 % through the ladder filter. Playing far above a sample's pitch costs more: 8 voices at 4 octaves up took about 5.5 %.
+Samples play from memory (no disk streaming), up to 4 GB for the session, about 6 hours of
+48 kHz stereo; the panel shows how much is used. Past that a sample refuses to load and says
+why, and the rest play. Files at any sample rate and bit depth play in tune. Full polyphony, 64
+stereo voices, took about 10 % of one core in a test (27 % through the ladder filter); playing
+far above a sample's pitch costs more.
 
 ### Marbble Tre
 
 ![Marbble Tre's panel docked in the bottom section, in Grid layout](../site/public/screenshots/instrument-panel.png)
 
-A three-oscillator monophonic synth, modelled on the behaviour of a classic 1970s synth (the
-Minimoog Model D; Marbble isn't affiliated with its maker, and this hasn't been compared with one). Choose it
-under **Vintage Synths** in the instrument slot, the Library or New Tracks. Clicking the slot's name
-opens its panel in the bottom section, whatever Open Effect Panels says, with the presets in its header and
-a small keyboard along the bottom (− and + move it by octaves). The button in the header floats the panel.
-**Row** and **Grid**, beside the keyboard, choose how the sections are laid out: in a row, the short ones
-stacked to the panel's height, which the mouse wheel moves along, or in lines that fill the panel, each
-section one line of controls. The bottom section starts with Row and a floating panel with Grid, and each
-remembers its own choice. The sections scroll in their own area above the keyboard bar; a fade along the
-bottom edge (or the right edge, in a row) shows there is more to scroll to. Controls are named within their
-section (Range under Oscillator 1); the tooltip and automation lanes have the full name (Osc 1 Range). A
-light before a knob's name switches that part on and off (Osc 1 in the Mixer, Glide), and a light before a
-section's title the whole section (Onda's oscillators and filter, Sedici's operators). Right-click a
-control for Learn MIDI Assignment.
-Everything on it is saved in the project, can be automated in a lane, and undoes.
+A three-oscillator monophonic synth modelled on a classic 1970s synth, the Minimoog Model D
+(Marbble isn't affiliated with its maker, and this hasn't been compared with one). Choose it
+under **Vintage Synths** in the instrument slot, the Library or New Tracks. Clicking the slot's
+name opens its panel in the bottom section, whatever Open Effect Panels says, with the presets
+in its header and a small keyboard along the bottom (− and + move it by octaves); the header's
+button floats the panel. **Row** and **Grid**, beside the keyboard, lay the sections out in a
+row (the short ones stacked; the mouse wheel moves along it) or in lines that fill the panel.
+The bottom section starts with Row and a floating panel with Grid, and each remembers its
+choice. A fade along the edge shows there is more to scroll to. Controls are named within their
+section (Range under Oscillator 1); tooltips and automation lanes use the full name (Osc 1
+Range). A light before a knob's name switches that part on and off (Osc 1 in the Mixer, Glide),
+and one before a section's title the whole section (Onda's oscillators and filter, Sedici's
+operators). Right-click a control for Learn MIDI Assignment. Everything on the panel is saved in
+the project, can be automated in a lane, and undoes.
 
-- **Oscillators:** a range (Lo, 32' to 2'), a wave, and for 2 and 3 a Frequency knob of ±7 semitones.
-  Turn Oscillator 3's **Keyboard** off and put it in **Lo** to make it an LFO.
-- **Mixer:** a level for each oscillator and noise, with its switch in the light by its name. With two or three oscillators past
-  about half way the sum overdrives the filter, which is how this kind of synth gets fat. **Feedback** sends the
-  output back into the mixer for more.
+- **Oscillators:** a range (Lo, 32' to 2'), a wave, and for 2 and 3 a Frequency knob of ±7
+  semitones. Turn Oscillator 3's **Keyboard** off and put it in **Lo** to make it an LFO.
+- **Mixer:** a level for each oscillator and noise, with its switch in the light by its name. With
+  two or three oscillators past about half way the sum overdrives the filter, which is how this kind
+  of synth gets fat. **Feedback** sends the output back into the mixer for more.
 - **Filter:** a 24 dB low-pass. **Emphasis** past 8 makes it whistle by itself, in tune when both
   **Keyboard** switches are on. **Contour Amount** is how far the Filter Contour opens it.
-- **Contours:** Attack, Decay and Sustain, one for the filter and one for loudness. With the Loudness Contour's
-  **Release** switch (the original's Decay switch) on, a released key fades at the Decay time; off, the note ends at once.
-- **Controllers:** Glide, the pitch bend's range, and the modulation: **Mod Mix** blends osc 3 with noise,
-  the mod wheel (and **Mod Amount**, which is where it rests) sets how much, and **Osc Mod** and the Filter's **Mod** say where it goes.
-- **Voices** (not on the original): Mono is one note, the lowest key down, without restarting the contours when
-  playing legato, as the instrument does. **Priority** and **Trigger** change those. **Unison** stacks voices on one note, with
-  **Unison Detune** and **Stereo Spread**. **Poly** plays chords. **Touch** sets what velocity and aftertouch do; off to start with.
-- **Drift** is how much each voice wanders and differs from the next. A render repeats exactly, and a duplicated track has
-  its own differences.
+- **Contours:** Attack, Decay and Sustain, one for the filter and one for loudness. With the
+  Loudness Contour's **Release** switch (the original's Decay switch) on, a released key fades at
+  the Decay time; off, the note ends at once.
+- **Controllers:** Glide, the pitch bend's range, and the modulation: **Mod Mix** blends osc 3 with
+  noise, the mod wheel (and **Mod Amount**, which is where it rests) sets how much, and **Osc Mod**
+  and the Filter's **Mod** say where it goes.
+- **Voices** (not on the original): Mono is one note, the lowest key down, without restarting the
+  contours when playing legato, as the instrument does. **Priority** and **Trigger** change those.
+  **Unison** stacks voices on one note, with **Unison Detune** and **Stereo Spread**. **Poly** plays
+  chords. **Touch** sets what velocity and aftertouch do; off to start with.
+- **Drift** is how much each voice wanders and differs from the next. A render repeats exactly, and
+  a duplicated track has its own differences.
 
-**Presets:** the pop-up in the panel's header lists factory presets and yours. **Save As** keeps the current sound as your
-own preset, in every project.
+**Presets:** the pop-up in the panel's header lists factory presets and yours. **Save As** keeps the
+current sound as your own preset, in every project.
 
 ### The other synth models
 
-Four more models of old instruments are under **Vintage Synths**, and a wavetable synth is under **Modern Synths**. Each works
-like Tre: a panel, presets, automation, MIDI learn, undo and saving. None of them has been compared with what it's modelled on (and Marbble isn't
-affiliated with any of those makers); each has factory presets to start from.
+Four more models of old instruments are under **Vintage Synths**, and a wavetable synth is under
+**Modern Synths**. Each works like Tre: a panel, factory and user presets, automation, MIDI
+learn, undo and saving. None has been compared with what it's modelled on, and Marbble isn't
+affiliated with any of those makers.
 
 ![Marbble Sei's panel](../site/public/screenshots/synth-sei.png)
 
-**Marbble Sei** (modelled on the Roland Juno-106 family): six voices of one oscillator each, with a saw, a pulse and a sub an octave down.
+**Marbble Sei** (modelled on the Roland Juno-106 family): six voices of one oscillator each, with a
+saw, a pulse and a sub an octave down.
 
-- One envelope drives the filter and the **VCA** (set the VCA to **Gate** for an organ-like note). One **LFO** moves everything together, with a **Delay** from the first key down.
+- One envelope drives the filter and the **VCA** (set the VCA to **Gate** for an organ-like note).
+  One **LFO** moves everything together, with a **Delay** from the first key down.
 - **HPF:** position 0 lifts the bass, 1 is flat, 2 and 3 thin it.
-- **Chorus:** the stereo chorus is half of its sound. **I** and **II** are slow and deep, **I+II** fast and shallow. **Chorus Noise** is its hiss, which comes with the notes.
-- **Assign:** **Poly 1** moves on to the next voice, so released notes ring on, **Poly 2** takes the lowest free one, and **Unison** plays all six on one note (they don't beat unless you add **Unison Detune**).
+- **Chorus:** the stereo chorus is half of its sound. **I** and **II** are slow and deep, **I+II**
+  fast and shallow. **Chorus Noise** is its hiss, which comes with the notes.
+- **Assign:** **Poly 1** moves on to the next voice, so released notes ring on, **Poly 2** takes the
+  lowest free one, and **Unison** plays all six on one note (they don't beat unless you add **Unison
+  Detune**).
 
 ![Marbble Cinque's panel](../site/public/screenshots/synth-cinque.png)
 
 **Marbble Cinque** (modelled on the Sequential Prophet-5): five voices of two oscillators each.
 
-- **Poly Mod** is what to try first: **Filter Env** and **Osc B** are its sources, and **Freq A**, **PW A** and **Filter** say where they go, separately in each voice. Osc B still runs with its mixer knob down, so it can be only a modulator. With **Sync** on Osc A and Filter Env into Freq A you get the sweeping sync lead this kind of synth is known for.
-- **Wheel Mod:** the mod wheel (or **Mod Amount**, where it rests) brings in the LFO, or noise, by **LFO / Noise**, at whichever of the five switches are on.
-- **Filter Chip** chooses between two filter characters. **Slop** is how much each voice wanders and differs.
+- **Poly Mod** is what to try first: **Filter Env** and **Osc B** are its sources, and **Freq A**,
+  **PW A** and **Filter** say where they go, separately in each voice. Osc B still runs with its
+  mixer knob down, so it can be only a modulator. With **Sync** on Osc A and Filter Env into Freq A
+  you get the sweeping sync lead this kind of synth is known for.
+- **Wheel Mod:** the mod wheel (or **Mod Amount**, where it rests) brings in the LFO, or noise, by
+  **LFO / Noise**, at whichever of the five switches are on.
+- **Filter Chip** chooses between two filter characters. **Slop** is how much each voice wanders and
+  differs.
 
 ![Marbble Uno's panel](../site/public/screenshots/synth-uno.png)
 
-**Marbble Uno** (modelled on the Roland TB-303): one voice, one oscillator, and few knobs, made for a bass line played from a MIDI region.
+**Marbble Uno** (modelled on the Roland TB-303): one voice, one oscillator, and few knobs, made for
+a bass line played from a MIDI region.
 
-- **Overlapping notes slide:** make a note end just after the next begins. Neither the filter nor the volume restarts. With any gap between them, the next is a fresh note.
-- **High velocity accents:** a note at or above **Accent at Velocity** (110) is louder and snappier, whatever Decay says. How far is **Accent**. With **Resonance** up, accents close together climb: that's the instrument's trick.
-- The filter doesn't follow the keyboard, and a held note fades away by itself after a few seconds, as on the original.
+- **Overlapping notes slide:** make a note end just after the next begins. Neither the filter nor
+  the volume restarts. With any gap between them, the next is a fresh note.
+- **High velocity accents:** a note at or above **Accent at Velocity** (110) is louder and snappier,
+  whatever Decay says. How far is **Accent**. With **Resonance** up, accents close together climb:
+  that's the instrument's trick.
+- The filter doesn't follow the keyboard, and a held note fades away by itself after a few seconds,
+  as on the original.
 
 ![Marbble Sedici's panel](../site/public/screenshots/synth-sedici.png)
 
 **Marbble Sedici** (modelled on the Yamaha DX7): sixteen voices of six-operator FM.
 
-- **Algorithm** chooses which of the 32 ways the operators connect, numbered as on the original's panel. An operator that goes to the output is heard; others change its tone, more as their **Level** goes up.
-- Each operator has its own envelope of four **Rates** and **Levels**: it runs to Level 1, then 2, then 3 and holds, and to Level 4 on key up. **Scaling** makes it louder, softer or faster across the keyboard.
-- **Coarse** and **Fine** give a ratio to the note's pitch. **Feedback** makes an operator gritter or buzzier.
-- **Converter Grit** turns the original's low-resolution sine and converter on or off. It runs at the original's own sample rate whatever your project's is, so high FM sounds fold just as they do there.
-- **Level 4** above zero keeps a note sounding after key up, as on the original, until the transport stops.
+- **Algorithm** chooses which of the 32 ways the operators connect, numbered as on the original's
+  panel. An operator that goes to the output is heard; others change its tone, more as their
+  **Level** goes up.
+- Each operator has its own envelope of four **Rates** and **Levels**: it runs to Level 1, then 2,
+  then 3 and holds, and to Level 4 on key up. **Scaling** makes it louder, softer or faster across
+  the keyboard.
+- **Coarse** and **Fine** give a ratio to the note's pitch. **Feedback** makes an operator gritter
+  or buzzier.
+- **Converter Grit** turns the original's low-resolution sine and converter on or off. It runs at
+  the original's own sample rate whatever your project's is, so high FM sounds fold just as they do
+  there.
+- **Level 4** above zero keeps a note sounding after key up, as on the original, until the transport
+  stops.
 
 ![Marbble Onda's panel](../site/public/screenshots/synth-onda.png)
 
-**Marbble Onda** (a modern wavetable synth): two oscillators reading tables made into it, with position, unison, and modulation you route yourself.
+**Marbble Onda** (a modern wavetable synth): two oscillators reading tables made into it, with
+position, unison, and modulation you route yourself.
 
-- **Table** chooses the sound, and **Position** moves through it. Each oscillator has up to 7 detuned **Unison** copies, spread in stereo by **Width**.
+- **Table** chooses the sound, and **Position** moves through it. Each oscillator has up to 7
+  detuned **Unison** copies, spread in stereo by **Width**.
 - **Type** chooses the filter. **Env 1** is the volume.
-- **Env 2, Env 3, LFO 1** and **LFO 2** do nothing until a **Slot** routes them: choose a source, a destination and an amount. Slots can also take velocity, the key, the wheel and aftertouch. Positions and cutoff are the usual places to start.
-- An LFO's **Sync** locks it to the tempo. **Key Retrigger** gives each voice its own, starting at the key.
-- High settings are heavy: sixteen voices with seven copies in each oscillator is about a third of a core.
+- **Env 2, Env 3, LFO 1** and **LFO 2** do nothing until a **Slot** routes them: choose a source, a
+  destination and an amount. Slots can also take velocity, the key, the wheel and aftertouch.
+  Positions and cutoff are the usual places to start.
+- An LFO's **Sync** locks it to the tempo. **Key Retrigger** gives each voice its own, starting at
+  the key.
+- High settings are heavy: sixteen voices with seven copies in each oscillator is about a third of a
+  core.
 
 ### Musical Typing
 
@@ -851,23 +888,23 @@ position, so it works on any keyboard layout:
 
 - The four-octave on-screen piano can be clicked or swept; clicking lower on a key plays
   louder. The **Sustain** button latches the pedal.
-- While the window is open these keys play notes instead of running their usual commands.
-  Combinations with Shift, Ctrl, Alt (and ⌘ on macOS) still work, so Shift+S still selects
-  similar regions, and typing in text fields is not affected. Nor is typing a name's first
-  letters in an open menu, or in a list the keyboard moved to (the Library, recent projects,
-  Project Alternatives, the Marker List): the letters go to the item, not to the notes.
+- While the window is open these keys play notes instead of running their usual commands;
+  combinations with Shift, Ctrl or Alt still work (Shift+S still selects similar regions).
+  Typing in a text field, and type-ahead in an open menu or in a list the keyboard moved to
+  (the Library, recent projects, Project Alternatives, the Marker List), are not affected.
 - Notes played this way are recorded like notes from a MIDI keyboard. The MIDI velocity curve
   doesn't apply to them.
 - With the Step Input Keyboard open, they are entered as steps too (see below).
 
 ### Step Input
 
-The **Step Input Keyboard** (View › Step Input Keyboard, Shift+Ctrl+Alt+K, or the button with
-the note and arrow in the Piano Roll's bar) enters notes one step at a time, as in Logic: each
-note goes in at the playhead, as long as the chosen note value, and the playhead moves on by
-that value. Notes go into the track the Piano Roll shows (the selected region's track, or the
-selected instrument track): into the region under the playhead, or one that ends less than a
-bar before it (which grows), or else a new one-bar region. The transport must be stopped.
+The **Step Input Keyboard** (View › Step Input Keyboard, Shift+Ctrl+Alt+K, or the button with the
+note and arrow in the Piano Roll's bar; Logic's ⌥⌘K opens the Marker List here) enters notes one
+step at a time, as in Logic: each note goes in at the playhead, as long as the chosen note value,
+and the playhead moves on by that value. Notes go into the track the Piano Roll shows (the selected
+region's track, or the selected instrument track): into the region under the playhead, or one that
+ends less than a bar before it (which grows), or else a new one-bar region. The transport must be
+stopped.
 
 - **Note value:** 1/1 to 1/128, with **Dotted** (half as long again) and **Triplet** (two thirds
   as long). Lengths follow the tempo map, so a quarter is a quarter whatever the tempo does.
@@ -892,9 +929,6 @@ While the window is open, **1** to **8** choose the note value (1/1 to 1/128), *
 commands without keys. All of them are in Settings › Key Commands › Step Input (see the
 [key reference](#step-input-keyboard)).
 
-Logic uses ⌥⌘K for the Step Input Keyboard; in Marbble that opens the Marker List, so the
-window has Shift+Ctrl+Alt+K (⌥⇧⌘K on macOS).
-
 ---
 
 ## 5. Editing in the tracks area
@@ -913,10 +947,10 @@ window has Shift+Ctrl+Alt+K (⌥⇧⌘K on macOS).
 - Right-click a region › Select › All on Track, All Following on Track, or All.
 - Edit › **Select** picks regions by criteria (All Following, Inside Locators, Muted, Same
   Colored…); see [Arranging commands](#arranging-commands).
-- Ctrl-drag (⌘-drag on macOS) draws a marquee, a time range across tracks, instead of
+- Ctrl-drag draws a marquee, a time range across tracks, instead of
   selecting whole regions, while the Ctrl-click Tool is the Marquee (the default); see
   [Tools and the marquee](#tools-and-the-marquee).
-- Alt+drag (Option-drag on macOS) a selection to copy it: the originals stay put, the copies
+- Alt-drag a selection to copy it: the originals stay put, the copies
   are drawn where they'll land and become the selection, and the copy is one undo step. Some
   Linux window managers use Alt+drag to move windows; if that happens, use Copy and Paste,
   Duplicate or Repeat, or change the window manager's modifier.
@@ -1021,9 +1055,9 @@ project and isn't an undo step.
 ### Tools and the marquee
 
 As in Logic, the Tracks area has two tools: the **Left-click Tool**, used for plain clicks, and
-the **Ctrl-click Tool** (⌘-click on macOS), used while Ctrl is held. Choose them from the two
-pop-ups in the Tracks area's bar; the defaults are the Pointer and the Marquee. The pointer
-takes the shape of the tool under it.
+the **Ctrl-click Tool**, used while Ctrl is held. Choose them from the two pop-ups in the
+Tracks area's bar; the defaults are the Pointer and the Marquee. The pointer takes the shape of
+the tool under it.
 
 Press **T** to open the Tool menu at the pointer, then the tool's letter to make it the
 Left-click Tool. T again (T T) or Esc picks the Pointer. The letters only pick tools while
@@ -1031,7 +1065,7 @@ the menu is open, so they keep their usual key commands otherwise.
 
 | Tool | Letter | Click (or drag) on the tracks |
 |---|---|---|
-| Pointer | T | Select, move, trim, loop and fade, as described above. A click inside a marquee splits the regions at its edges and selects the parts inside. |
+| Pointer | T | Select, move, trim, loop and fade, as described above. |
 | Pencil | P | Click empty space on a software instrument track to make an empty MIDI region one bar long, at the clicked position (snapped). On a region it moves and trims like the Pointer. |
 | Eraser | E | Deletes the region clicked, or the whole selection if the region is selected. |
 | Scissors | I | Splits the region at the pointer (snapped), or every selected region if it is selected; a line shows where. Alt+click cuts the region into equal pieces as long as the part before the click. The pieces are selected. |
@@ -1088,8 +1122,8 @@ As in Logic, a looping region repeats its own content from its end up to its **l
   | **Curve** | The fade-out's curve, -100 to 100 (also shapes an X crossfade). |
 
 - **Curves:** 0 is a straight line. Positive values bow outwards (a fade-in rises quickly,
-  a fade-out holds its level longer), negative values inwards. The default, 50, is the
-  quarter sine every fade used before curves could be set, so older projects sound the same.
+  a fade-out holds its level longer), negative values inwards. The default, 50, is a quarter
+  sine.
 - **Speed Up and Slow Down** change the playback speed over the fade, like a tape starting or
   stopping, following the curve; the level fades with it. The audio after a Speed Up and before
   a Slow Down plays where it always did. They are drawn with a dashed curve.
@@ -1132,7 +1166,7 @@ As in Logic, a looping region repeats its own content from its end up to its **l
   centre of its name bar (on regions wide enough to hold it). Drag the handle up or down to
   change the gain, 0.25 dB a pixel, or 0.05 dB with Shift; the waveform grows and shrinks as
   you drag, and you hear the change while playing. Every selected audio region changes by the
-  same number of dB from where it was (within -96, shown as −∞, to +30 dB). Double-click the
+  same number of dB from where it was, within that range (-96 shows as −∞). Double-click the
   handle to set them to 0 dB. A drag is one undo step.
 - Waveforms in the tracks area are drawn at their region's gain.
 - **Reverse** writes a reversed copy of the audio to a new file, so the original stays intact.
@@ -1195,15 +1229,14 @@ From the region menu:
   [Bounce and export](#15-bounce-and-export)).
 - **Delete** (Backspace or Delete).
 
-Right-click **empty lane space** for Paste Here, Create MIDI Region (one bar, on instrument
-tracks), Import MIDI File Here… / Import Audio File Here…, Select All on Track, Select All and
-New Tracks….
+Right-click **empty lane space** for Paste Here, Create MIDI Region (one bar) and Create Pattern
+Region (on instrument tracks), Import MIDI File Here… / Import Audio File Here…, Select All on
+Track, Select All and New Tracks….
 
 ### Arranging commands
 
 Logic's arranging commands are in the menu bar's Edit menu and in the Tracks area's own Edit
-menu, which are the same. Each is one undo step. All
-key commands can be changed in Settings › Key Commands.
+menu, which are the same. Each is one undo step.
 
 **Edit › Select** (on the tracks in view):
 
@@ -1302,9 +1335,9 @@ Track** (Shift+Alt+C: the regions drop their own colour) and **Color Tracks by R
 - The silence an encoder adds at the start and end of MP3 and AAC files is trimmed, so the
   audio starts exactly on time. For M4A/MP4 files Marbble reads it from the file's iTunes
   gapless tag (`iTunSMPB`) or, without one, from its edit list.
-- **File › Import Audio File…** (Shift+Ctrl+I) imports one WAV file at the playhead onto the
+- **File › Import Audio File…** (Shift+Ctrl+I) imports one audio file at the playhead onto the
   selected audio track (or the first audio track). The lane menu's Import Audio File Here…
-  accepts every supported format and several files.
+  accepts several files.
 - MIDI files (`.mid`, `.midi`, `.smf`, `.kar`) can be dropped the same way; see
   [MIDI files](#midi-files).
 
@@ -1320,8 +1353,9 @@ From the Track menu, the track header's right-click menu, or keys:
 - **Duplicate Track** copies settings, plug-ins with their current settings, automation and
   regions. **New Track with Same Settings** copies everything except the regions and
   automation.
-- **Rename Track**, **Track Color** (a grid of 20 colours, named in their tooltips), **Track Icon**, Track On, Mute, Solo, Record Enable, Select All Regions on Track,
-  Export Track as MIDI File…, Reset Track Height.
+- **Rename Track**, **Track Color** (a grid of 20 colours, named in their tooltips), **Track Icon**,
+  Track On, Mute, Solo, Record Enable, Select All Regions on Track, Export Track as MIDI File…,
+  Reset Track Height.
 - **Track Alternatives** (Track › Track Alternatives, or the right-click menu): other sets of
   regions for an audio or instrument track, as in Logic. **New Alternative** starts an empty
   one, **Duplicate Alternative** a copy of the current regions; they are named A, B, C….
@@ -1372,14 +1406,13 @@ pan, EQ, plug-in slots and settings, sends, automation, recordings, imports, mar
 folders and Project Settings. The Edit menus show what will be undone, and a toast confirms it. A
 run of drags on one control counts as one step.
 
-That includes a parameter moved in a VST3's own window, with its name in the step
-("TONE3000: Gain"). Each drag there is one step, and Undo and Redo put the plug-in and its window
-back. Moves of a parameter while automation is being written belong to that pass's **Write
-Automation** step instead; a controller assignment moving a VST3's parameter, and automation
-playing it, make no step. A plug-in that doesn't announce its drags gets a step for each burst of
-edits (a pause of a quarter of a second ends one), and one that keeps moving a parameter by itself
-gets none for it. A preset loaded inside a plug-in is one step if the plug-in tells the host that
-its parameters changed; if it doesn't, the load makes no step.
+That includes a parameter moved in a VST3's own window, with its name in the step ("TONE3000:
+Gain"). Each drag there is one step, and Undo and Redo put the plug-in and its window back. Moves of
+a parameter while automation is being written belong to that pass's **Write Automation** step
+instead; a controller assignment moving a VST3's parameter, and automation playing it, make no step.
+A plug-in that doesn't announce its drags gets a step for each burst of edits, and one that keeps
+moving a parameter by itself gets none for it. A preset loaded inside a plug-in is one step if the
+plug-in tells the host that its parameters changed; if it doesn't, the load makes no step.
 
 Not undoable, as in Logic: mute, solo, record enable, input monitoring, the transport, the
 cycle and Autopunch ranges, and the metronome and count-in switches.
@@ -1400,9 +1433,9 @@ Select tracks and choose **Create Folder Stack** (Shift+Ctrl+D) or **Create Summ
   subtrack by the same amount, and its mute and solo apply to all of them. It has no audio of
   its own, so no plug-ins, sends or meter. Its volume and mute can be automated (see
   [Automation](#13-automation)).
-- A **Summing Stack** is also a bus: its subtracks play through its own Channel EQ, plug-ins,
-  pan and fader. Soloing a subtrack keeps its stack audible. A subtrack's output can still be
-  set to Stereo Out or an aux, to skip the stack.
+- A **Summing Stack** is also a bus: its subtracks play through its own plug-ins (a Channel EQ
+  among them, if you add one), pan and fader. Soloing a subtrack keeps its stack audible. A
+  subtrack's output can still be set to Stereo Out or an aux, to skip the stack.
 - The disclosure triangle shows or hides the subtracks. A collapsed stack's lane shows where
   its subtracks have regions. Stacks can be nested.
 - Drag a track under a stack's header, or between its subtracks, to put it in. **Remove from
@@ -1434,16 +1467,16 @@ Settings**, which you can reopen by clicking a member's group badge:
 
 ### Freezing tracks
 
-Freeze renders a track's instrument, Channel EQ and plug-ins to a file and plays that instead,
-with the plug-ins unloaded, so a heavy track stops using CPU.
+Freeze renders a track's instrument and plug-ins to a file and plays that instead, with the
+plug-ins unloaded, so a heavy track stops using CPU.
 
 - Click the **snowflake** on an audio or instrument track header, or use Track › Freeze Track
   or the track menu. With several tracks selected it freezes them all. A progress toast shows
   the render.
 - The render is pre-fader, so volume, pan, mute, sends and their automation stay live.
   Plug-in automation is baked in. It covers the track's first region to its last plus up to 4 s
-  of tail.
-- While frozen, the regions, plug-ins and Channel EQ can't be changed, and the track can't be
+  of tail (longer for a built-in reverb or delay).
+- While frozen, the regions and plug-ins can't be changed, and the track can't be
   record-enabled. Its regions are veiled, and edits are refused with a message.
 - **Unfreeze** (the snowflake again, Track › Unfreeze Track, or the track menu) loads the
   plug-ins back with exactly their settings and deletes the freeze file.
@@ -1454,21 +1487,21 @@ with the plug-ins unloaded, so a heavy track stops using CPU.
 ### Turning tracks off
 
 The **power button** at the end of a track's name, or on its Mixer strip, turns the track off,
-as in Logic. It's grey while the track plays, and lit (inverted) while the track is off. Where Mute only silences a track, whose plug-ins go on using the CPU, an Off track
-runs nothing at all, so you can keep takes around without paying for their plug-ins. Use it for
-heavy tracks you aren't listening to.
+as in Logic. It's grey while the track plays and lit while it's off. Mute only silences a
+track, whose plug-ins go on using the CPU; an Off track runs nothing at all, so heavy tracks you
+aren't listening to (spare takes, say) cost nothing.
 
-- An Off track plays no regions and runs no instrument, Channel EQ, plug-ins or sends. Its
+- An Off track plays no regions and runs no instrument, plug-ins or sends. Its
   header and strip are dimmed, its regions faded, and its meters fall to nothing. Its plug-in
   latency leaves the delay compensation (the other tracks glide to their new delays, also while
   playing).
 - The plug-ins stay loaded: you can open their editors and change them while the track is off.
   When it's back on they carry on with those settings, their tails cleared, and the track fades
   in without a click. A VST3 that ignores the host's request to clear itself may still ring out.
-- Switch several at once with the track menu (**Track On**) or Track › **Track On** (ticked while
-  every selected track is on), which act on the selected tracks. The key command Toggle Track On/Off has no key at first; give it one in
-  Settings › Key Commands. In short tracks the button is in the **⋯** menu, and shows in the
-  header while the track is off.
+- Switch the selected tracks at once with **Track On** in the track's right-click menu or the Track
+  menu (ticked while every selected track is on). The key command Toggle Track On/Off has no key at
+  first; give it one in Settings › Key Commands. In short tracks the button is in the **⋯** menu,
+  and shows in the header while the track is off.
 - **Stacks:** turning a folder or summing stack off turns everything in it off too. Each subtrack
   keeps its own switch, which counts again when the stack is back on.
 - **Auxes:** an Off aux passes nothing. Tracks sending to it play on and just lose that send.
@@ -1653,13 +1686,13 @@ File › Project Settings › General. Changes along the timeline live in the **
 Show them with View › Show Global Tracks (G); they sit between the ruler and the tracks: the
 [Arrangement track](#the-arrangement-track) at the top, then the Signature and Tempo tracks.
 
-Each of the three shows or hides on its own, as in Logic's Global Tracks configuration:
-right-click the global tracks' headers (or the Marker label beside the ruler, which works while
-they're hidden), or use the Tracks area's View › Global Tracks, and tick the ones to show. Picking one there while the global tracks are hidden shows them with it.
-Until you choose, a project shows the ones it uses (arrangement sections, a tempo change, a
-signature change after bar 1), or all three when it uses none, so a project that uses only the
-Arrangement track gives the rest of the room to its tracks. The choice and the Tempo track's
-height are remembered for each project. (The marker lane is part of the ruler and always shows.)
+Each of the three shows or hides on its own, as in Logic's Global Tracks configuration: right-click
+the global tracks' headers (or the Marker label beside the ruler, which works while they're hidden),
+or use the Tracks area's View › Global Tracks, and tick the ones to show. Picking one there while
+the global tracks are hidden shows them with it. Until you choose, a project shows the ones it uses
+(arrangement sections, a tempo change, a signature change after bar 1), or all three when it uses
+none. The choice and the Tempo track's height are remembered for each project. (The marker lane
+is part of the ruler and always shows.)
 
 ### Tempo track
 
@@ -1720,9 +1753,9 @@ modelled on Logic's, with ideas from Ableton's MIDI editor, Cubase's Key Editor 
 Studio's piano roll.
 
 The editors' bars fit their pane at any width and interface size. When the pane is narrow the
-captions (Quantize, Grid, Vel, Height, Zoom; Gain, Wave and Zoom in the Audio Track Editor;
-Length, Rate and Swing in the Step Sequencer) give way first, and each control keeps its
-tooltip; then the sliders get shorter; what still doesn't fit moves to a second row of the bar.
+captions (Quantize, Grid, Vel, Height, Zoom; Gain, Wave and Zoom in the Audio Track Editor; Length,
+Rate and Swing in the Step Sequencer) give way first; then the sliders get shorter; what still
+doesn't fit moves to a second row of the bar.
 
 ### View
 
@@ -1833,12 +1866,12 @@ on regions.
 
 ### Velocity and controller lane
 
-The lane below the notes shows velocity or a controller. It takes a third of the height under
-the ruler at first and keeps its share as the editor is resized; drag the bar above it to change
-the share (from a tenth to four fifths, and never under 40 px). Choose what it shows with the lane button: **Velocity**, **Modulation (CC 1)**,
-**Expression (CC 11)**, **Sustain (CC 64)**, **Pitch Bend**, **Aftertouch**, **Volume (CC 7)**,
-**Pan (CC 10)**, any other controller already used, or **Other Controller…** (any number 0 to
-127). Lanes that hold data are marked with a dot.
+The lane below the notes shows velocity or a controller. It takes a third of the height under the
+ruler at first and keeps its share as the editor is resized; drag the bar above it to change the
+share (from a tenth to four fifths, and never under 40 px). Choose what it shows with the lane
+button: **Velocity**, **Modulation (CC 1)**, **Expression (CC 11)**, **Sustain (CC 64)**, **Pitch
+Bend**, **Aftertouch**, **Volume (CC 7)**, **Pan (CC 10)**, any other controller already used, or
+**Other Controller…** (any number 0 to 127). Lanes that hold data are marked with a dot.
 
 **Velocity:**
 
@@ -1923,8 +1956,6 @@ note selection is shared with the Piano Roll: notes selected in one are selected
 - **Separate window:** the pop-out button at the right of the bar, the View menu, or Window ›
   Event List in Separate Window; it can then sit beside the Piano Roll on another screen.
 
-Only the lines in view are drawn, so regions with thousands of events stay quick.
-
 ### Step Sequencer
 
 Logic's Step Sequencer: drum patterns and riffs as rows of steps. It edits **pattern
@@ -1971,8 +2002,8 @@ regions**, MIDI regions that play the notes their pattern makes.
   Each row counts its steps from the region's start, and a looped region (the region's Loop)
   starts the pattern over on every repetition.
 - **While playing**, the step each row is on is outlined.
-- **Delete** and Backspace do nothing while the Step Sequencer has focus (it has no step
-  selection), so they can't remove the pattern region being edited.
+- **Delete** and Backspace do nothing while the Step Sequencer has focus, so they can't remove
+  the pattern region being edited.
 - **Functions** menu: Add Row, Clear Pattern, and **Convert to MIDI Region**, which writes the
   notes the pattern plays into the region (also in the region's right-click menu). A MIDI
   region's right-click menu has **Convert to Pattern Region**: a row for each pitch, each
@@ -2051,9 +2082,8 @@ the selection, as one undo step:
 The transient button (or View › Show Transients) marks the onsets found in the audio. View ›
 **Transient Sensitivity** sets how readily they are found: Low, Medium (default), High or Very
 High. **Split at Transients** chops the selection (or the selected regions) at every marker in
-one step, for slicing drums. Onsets are found from the audio itself: the level, or its brightest
-part (a beater's click), jumping well above the loudest of the moment before, so a ringing kick
-never marks itself twice. Each marker is moved back to the start of the attack.
+one step, for slicing drums. A ringing kick isn't marked twice, and each marker sits at the
+start of the attack.
 
 ### Info
 
@@ -2069,19 +2099,18 @@ The editor's own keys apply after you click in it; elsewhere the usual ones do. 
 
 ![The Mixer during playback: inserts, sends, two aux returns, a VCA and the Stereo Out](../site/public/screenshots/mixer.png)
 
-Open the Mixer with X. It shows a channel strip for every track (stacks included), then the
-auxes, then the [VCA strips](#vca-faders), then Stereo Out. The **Audio**, **Inst** and **Aux**
-buttons show or hide those strips; each has a light that is lit while its strips are shown.
-The **Options** menu has Create New VCA, New Aux, the same three filters, Show Hidden Tracks
-(hidden tracks appear only in hide mode), the strip widths and Reset All Clip Indicators. The
-Inspector shows the selected track's strip and Stereo Out.
+Open the Mixer with X. It shows a channel strip for every track (stacks included), then the auxes,
+then the [VCA strips](#vca-faders), then Stereo Out. The **Audio**, **Inst** and **Aux** buttons
+show or hide those strips (lit while shown). The **Options** menu has Create New VCA, New Aux, the
+same three filters, Show Hidden Tracks (hidden tracks appear only in hide mode), the strip widths
+and Reset All Clip Indicators. The Inspector shows the selected track's strip and Stereo Out.
 
 **Stacks** show as a bracket in the stack's colour over its strips, with its name, its kind
 (Folder, or Σ for a summing stack) and how many tracks it holds; a stack inside another sits
 under a bracket of its own, under its parent's. The stack's own strip comes first, and every
 strip in it is tinted with its colour. Click the bracket (its ▾) to collapse the stack to its own
-strip and a slim **N tracks** marker; click the marker or the bracket to open it again. This is
-the stack's own open state, so it collapses in the Tracks area too, and the project keeps it.
+strip and a slim **N tracks** marker; click the marker or the bracket to open it again. It is
+the stack's own open state: it collapses in the Tracks area too and is saved with the project.
 A summing stack's strip has Σ before its name, and its subtracks' Output slots say **→ Σ** and
 the stack's name, dashed, while they play through it.
 
@@ -2096,15 +2125,14 @@ needs the most (its plug-ins or sends plus an empty slot), up to 6 Audio FX rows
 rows, so faders, meters, pan knobs and automation buttons sit on one line. A strip with more
 than that shows **+2 more** (for example) in its last row: click it for a menu of the plug-ins
 or sends that don't fit, each with what its own slot offers (Open, Bypass and Remove for a
-plug-in), and to add another. The Inspector's two strips line up with each
-other the same way. When the strips don't fit, the Mixer scrolls sideways; the rest of the window
-stays as it is.
+plug-in), and to add another. The Inspector's two strips line up the same way. When the strips
+don't fit, the Mixer scrolls sideways.
 
 The Mixer opens tall enough for a whole strip with its fader. Made shorter, it keeps the faders
-first: the Audio FX and Sends sections show fewer rows (down to one each, sends first; the rest
-go behind **+N more** in the last row), and when even that doesn't fit, the strips
-scroll up and down from the bottom, so the faders, meters and names stay in view and Setting and
-Input are scrolled up. The selected track's strip is lit, with an accent line under its name.
+first: the Audio FX and Sends sections show fewer rows (down to one each, sends first; the rest go
+behind **+N more** in the last row); below that the strips scroll from the bottom, keeping the
+faders, meters and names in view. The selected track's strip is lit, with an accent line under its
+name.
 
 ### The channel strip
 
@@ -2114,7 +2142,7 @@ From top to bottom:
 |---|---|
 | **Setting** | The channel strip settings menu (see [Channel strip settings](#channel-strip-settings)). |
 | **Input** | Audio tracks: the mono/stereo button and the input ("No Input", "Input 1"..., "Input 1–2"...). Instrument tracks: the **instrument slot** (No Plug-in, Marbble Synth, other built-in instruments by group, or a VST3 instrument by category or vendor). A built-in instrument shows its model ("Tre", "Sampler"); the tooltip has the full name. Auxes show their bus ("Bus 1"), or the instrument output they're on ("Drums: Direct out 0", see [Multi-output instruments](#multi-output-instruments)); summing stacks show "Σ Subtracks". |
-| **EQ thumbnail** | The Channel EQ curve; click to open the editor. |
+| **EQ thumbnail** | The curve of the strip's first [Channel EQ](#channel-eq); click to open it (or to insert one). |
 | **Audio FX** | Insert slots (8 in all), in the rows the strips share (see above). An empty slot shows a faint **+**; click it to choose a plug-in. A filled slot's power and pop-up buttons show when you point at it. The label shows the strip's plug-in latency. |
 | **Sends** | Send slots (8 in all), in the rows the strips share. Click an empty slot (**+**) to add a send. |
 | **Output** | Stereo Out, the summing stack ("→ Σ Drums"), or an aux. |
@@ -2128,59 +2156,56 @@ From top to bottom:
 | **M S R I** | Mute, Solo, Record Enable, Input Monitoring. |
 | **Name** | Filled with the track colour, with up to two lines of name, broken between words. Right-click it for the channel strip settings menu. Any name or slot cut short shows in full in its tooltip. |
 
-The clip indicators keep their peak until you reset them, as in Logic: playing again doesn't
-reset them, and they are the same in the Mixer, the Inspector and a Mixer in its own window.
-Opening another project starts them afresh; bounces and exports don't touch them.
+As in Logic, playing again doesn't reset the clip indicators. They are shared by the Mixer, the
+Inspector and a detached Mixer, start afresh when another project opens, and bounces and exports
+don't touch them.
 
-A folder stack's strip is narrow and darker, and shows only its fader, buttons, automation mode
-and name, with the other sections left blank so its fader lines up with the others.
-Stereo Out has Channel EQ, Audio FX, its fader and meter, and an automation mode pop-up for the
-Output track's lanes; its Input and Sends rows are left blank. A VCA strip shows its count in the
-Input row and the VCA it is on in the VCA row.
+A folder stack's strip is narrow and darker, and shows only its fader, buttons, automation mode and
+name, with the other sections left blank so its fader lines up with the others. Stereo Out has the
+EQ thumbnail, Audio FX, its fader and meter, and an automation mode pop-up for the Output track's
+lanes; its Input and Sends rows are left blank. A VCA strip shows its count in the Input row and the
+VCA it is on in the VCA row.
 
 Mono audio tracks pan with a -3 dB compensated pan law (unity in the centre); stereo tracks
 and buses use balance.
 
 ### Channel EQ
 
-Every strip, Stereo Out included, has a built-in eight-band EQ modelled on Logic's Channel EQ.
-It processes before the Audio FX inserts and costs nothing while flat.
+The Channel EQ is an eight-band EQ modelled on Logic's, a built-in effect (in **EQ**) that goes
+in any Audio FX slot of any strip, Stereo Out included, and more than once if you like, so it
+can come after a compressor. New tracks have none; a flat one costs nothing.
 
-- Click the thumbnail above the Audio FX slots to open the editor. It opens like a built-in
-  effect's panel, with the same header (see [Built-in effects](#built-in-effects)): floating
-  by default, or docked in the bottom section, and it can be moved between the two and resized.
-  Click the thumbnail again, press Esc or click × to close it. One strip's Channel EQ is open
-  at a time.
+- The **EQ thumbnail** above the Audio FX slots shows the strip's first Channel EQ. Click it to
+  open that Channel EQ, or, on a strip without one, to put one at the top of Audio FX (the
+  plug-ins there move down a slot) and open it. Its panel is a built-in effect's (see [Built-in
+  effects](#built-in-effects)); click the thumbnail again to close it.
 - Bands: **Low Cut** (off by default, 30 Hz), **Low Shelf** (80 Hz), **Bell 1–4** (160, 500,
   1500, 5000 Hz), **High Shelf** (10 kHz) and **High Cut** (off by default, 18 kHz). The cuts
   have 12, 24 (default) or 48 dB/oct slopes; click the slope to change it.
 - **On the graph:** drag a point to set frequency and gain (Shift for fine; the cuts move only in
   frequency), scroll to change Q, double-click a point to switch its band off or on, Alt-click
   to reset its gain.
-- **Below the graph:** each band's on/off switch, frequency, gain and Q can be dragged (Shift
-  for fine) and double-clicked to reset.
-- **Header:** the power button switches the EQ on or off (off, the graph and bands dim), and the
-  **preset** pop-up (see [Presets](#presets)) has **Reset to “Flat”**, **Copy Channel EQ** and
-  **Paste Channel EQ** at the end of its menu.
-- **Toolbar:** **Analyzer** (a live post-EQ spectrum, on by default) and **Output** gain
-  (±24 dB).
-- **Copy and paste:** in the preset menu, or right-click the thumbnail for **Copy Channel EQ**
-  and **Paste Channel EQ** (with several tracks selected, also **Paste Channel EQ to Selected
-  Tracks**). Pasting replaces the strip's EQ settings, Stereo Out included, as one undo step.
-  The copy survives opening another project.
+- **Below the graph:** each band's on/off button, and its frequency, gain and Q, which can be
+  dragged (Shift for fine) and double-clicked to reset.
+- **Toolbar:** **Analyzer** (a live spectrum of what comes out of this Channel EQ, on by
+  default) and **Output** gain (±24 dB).
+- **Bypass, presets, moving, copy and paste, automation and controllers** work as for any
+  plug-in (see [Plug-ins](#plug-ins) and [Presets](#presets)).
+- A project saved when every strip had a fixed Channel EQ ahead of its inserts opens sounding
+  the same: a shaped EQ becomes a Channel EQ at the top of Audio FX, and a flat one goes.
 
 ### Channel strip settings
 
 Click **Setting** at the top of a strip (or right-click the strip's name) for Logic's channel
 strip settings menu. A channel strip setting is the strip's instrument, its Audio FX plug-ins
-with all their settings (a VST3's whole state, a built-in effect's values, bypass) and its
-Channel EQ. Sends, routing, volume and pan aren't part of it.
+with all their settings (a VST3's whole state, a built-in effect's values, bypass), Channel
+EQs among them. Sends, routing, volume and pan aren't part of it.
 
 | Item | What it does |
 |---|---|
 | **Copy Channel Strip Settings** | Copies the strip's setting. The copy survives opening another project. |
-| **Paste Channel Strip Settings** | Replaces the strip's Audio FX and Channel EQ with the copied ones, as new instances. On an instrument track it also replaces the instrument, when the copy has one; an audio track or aux ignores the instrument. The menu shows where the copy came from. |
-| **Reset Channel Strip** | Removes the instrument and every Audio FX plug-in, sets the Channel EQ flat, the fader to 0 dB and pan to the centre. |
+| **Paste Channel Strip Settings** | Replaces the strip's Audio FX with the copied ones, as new instances. On an instrument track it also replaces the instrument, when the copy has one; an audio track or aux ignores the instrument. The menu shows where the copy came from. |
+| **Reset Channel Strip** | Removes the instrument and every Audio FX plug-in (Channel EQs too), sets the fader to 0 dB and pan to the centre. |
 | **Save Channel Strip Setting As…** | Saves the setting under a name, for any project. Side-chain sources aren't saved, since they name tracks of this project. |
 | **Delete Channel Strip Setting** | Deletes a saved setting. |
 | *saved settings* | Load one onto the strip, as Paste does. |
@@ -2218,14 +2243,12 @@ that holds a sampler's samples.
   effects only into Audio FX slots.
 - **Side chain:** a VST3 with a side-chain input (LSP's Sidechain Compressor and Gate, say) has
   a **Side Chain** item at the top of its slot's menus, the arrow and the right-click, since its
-  editor is a window of its own. Pick a track and it keys the plug-in, as with a [built-in
-  effect](#built-in-effects): the same list, **Pre Fader** / **Post Fader**, refused loops,
-  bounces and freezes that play the source along. The slot shows **SC**, and its tooltip the
-  source. **None** turns the input off again. Choosing a source or None makes the plug-in stop
-  for a moment: it fades to its dry signal and back, and its tail is lost. Changing from one
-  source to another doesn't. Many such plug-ins have their own setting for where the key comes
-  from (LSP's is "Sidechain type": External); it has to be set to external to hear this input,
-  and what it does with no source is up to the plug-in. Instruments can't be keyed.
+  editor is a window of its own. Pick a track and it keys the plug-in as a [built-in
+  effect's](#built-in-effects) Side Chain does, Pre / Post Fader included; **None** turns it off.
+  The slot shows **SC**, and its tooltip the source. Choosing a source or None makes the plug-in
+  fade to its dry signal and back, losing its tail; changing from one source to another doesn't.
+  Set the plug-in's own key setting to external (LSP's "Sidechain type": External) to hear this
+  input. Instruments can't be keyed.
 - Plug-in settings are saved in the project and restored on undo, including what you change in
   a VST3's own window (see [Undo](#undo)).
 - Settings › Plug-ins (the Plug-in Manager) lists every scanned plug-in and lets you switch
@@ -2242,9 +2265,10 @@ above Marbble's windows like Logic's and hide while another app is in front.
 ![The Compressor's panel, showing gain reduction during playback](../site/public/screenshots/effect-panel.png)
 
 Marbble's own effects load in any Audio FX slot like a plug-in: **Compressor**, **Limiter**,
-**Noise Gate** and **De-Esser** (Dynamics), **Reverb**, **Delay**, **Chorus**, **Flanger**,
-**Phaser** and **Tremolo** (Modulation), **Overdrive** and **Distortion** (Distortion), **Linear
-Phase EQ** (EQ), **Gain** (Utility), and **Tuner** and **Loudness Meter** (Metering). They are listed first, by category,
+**Noise Gate** and **De-Esser** (Dynamics), **Reverb** (Reverb), **Delay** (Delay), **Chorus**,
+**Flanger**, **Phaser** and **Tremolo** (Modulation), **Overdrive** and **Distortion**
+(Distortion), **[Channel EQ](#channel-eq)** and **Linear Phase EQ** (EQ), **Gain** (Utility), and
+**Tuner** and **Loudness Meter** (Metering). They are listed first, by category,
 in the slot menu and the Library.
 
 - **The panel:** click the effect's name in its slot to open its panel; click again, press Esc
@@ -2254,7 +2278,7 @@ in the slot menu and the Library.
   preset pop-up, the **Side Chain** pop-up for effects with a side-chain, and at the right end
   the window buttons and ×. The window buttons keep their order: **Float in Main Window** (in
   the dock) or **Dock in Bottom Section** (floating), then **Open in Separate Window** (or
-  **Attach to Main Window** in that window), then **Close**. A panel's own switches, such as
+  **Attach to Main Window** in that window). A panel's own switches, such as
   the Channel EQ's Analyzer, are in its toolbar under the header.
   - **Docked** (see [General](#general) settings): panels open in the bottom
     section, where the Mixer and the Editors show, with a tab for each open panel in place of
@@ -2269,9 +2293,8 @@ in the slot menu and the Library.
     wheel scrolls them), with a fade on the side that has more.
   - **Floating** (the default): Float in Main Window takes a docked panel out into a window
     over the main window (and Dock in Bottom Section puts it back). Drag a window by its title;
-    drag its sides or bottom corners to resize it. A window can't be made smaller than its
-    controls; Marbble remembers the last size for each kind of effect. Until you resize one, a
-    window opens wide enough for its controls.
+    drag its sides or bottom corners to resize it, down to the size of its controls. Each kind of
+    effect opens at the size you last gave it.
   - **Separate windows:** each panel opens in an OS window of its own, which you can move to
     another monitor (see [Separate windows](#separate-windows)). Clicking the slot again closes
     it; Attach to Main Window in its header puts it in the main window, floating.
@@ -2296,11 +2319,10 @@ in the slot menu and the Library.
   (the default) after its fader and pan, so muting the source or pulling its fader down
   silences the key, as in Logic; **Pre** before them, so a trigger track with its fader all
   the way down still keys the effect. A pre-fader key still goes silent when the source is
-  muted (or soloed out), like a pre-fader send. Delay compensation is the same either way.
-  Bounces and freezes of the effect's track play the source along, unheard, so the key is
-  right. The key is taken as the source leaves its plug-ins; if the source's own plug-ins add
-  latency, the key arrives that much late. The Compressor, Noise Gate and De-Esser have a
-  side-chain.
+  muted (or soloed out), like a pre-fader send. Bounces and freezes of the effect's track play the
+  source along, unheard, so the key is right. The key is taken as the source leaves its plug-ins; if
+  the source's own plug-ins add latency, the key arrives that much late. The Compressor, Noise Gate
+  and De-Esser have a side-chain.
 - **Copy and paste** and **dragging between slots** work as for any plug-in (see
   [Plug-ins](#plug-ins)).
 
@@ -2495,17 +2517,15 @@ category of the slot menu and the Library). Every frequency is delayed by the sa
 boosts and cuts change the tone without smearing transients or shifting the phase between
 tracks: useful on Stereo Out for mastering, or on parallel and multi-miked sources.
 
-- The panel is the Channel EQ's: drag a point for frequency and gain, scroll for Q, double-click
-  a point to switch its band off, and the band controls below. A drag that moves frequency and
-  gain together is one undo step. Every band parameter can be automated and learned.
+- The panel is the [Channel EQ's](#channel-eq). A drag that moves frequency and gain together
+  is one undo step.
 - **Quality** sets the filter's length: **Low**, **Medium** (the default) or **High**. Longer
   filters follow narrow and low-frequency bands more precisely (a low cut at 30 Hz needs High)
   and add more latency: about 21, 43 or 85 ms at 44.1 or 48 kHz, shown beside the pop-up.
   Delay compensation makes it up, so the track stays in time, but it isn't suited to tracks you
   play live through (Low Latency Mode switches it off there).
-- Changes are worked out in the background and crossfaded in over 20 ms, so moving a control
-  never clicks. While automation sweeps a band, the filter follows in steps of about 25 ms;
-  bounces follow it at the same points every time.
+- Changes crossfade in over 20 ms, so moving a control never clicks; automation moves the
+  filter in steps of about 25 ms.
 - With every band flat it is an exact delay: switching it in changes nothing but the timing,
   which compensation takes out.
 - Factory presets: Flat, Gentle Mastering Lift, Low End Cleanup, Mid Scoop, Vocal Presence and
@@ -2535,8 +2555,6 @@ A chromatic tuner for guitar, bass and voice. The audio passes through untouched
   (±24 semitones, for transposing instruments) and **Threshold** (the level below which it
   stops detecting).
 - **Mute** silences the track's output while you tune.
-- The level it gates on is measured after a DC blocker, so an interface's DC offset alone
-  doesn't make it detect anything.
 - Factory presets: Guitar (A440), Bass, Baroque A415, Orchestra A442, B♭ Instrument,
   E♭ Instrument, Mute While Tuning and Strobe.
 
@@ -2555,11 +2573,10 @@ untouched; put it last on Stereo Out to measure the mix.
 
 #### Presets
 
-Every built-in effect and instrument, and the Channel EQ, has a preset pop-up in its panel's
-header. It shows the preset loaded or saved last, with "(edited)" once something changed
-("Default" or "Manual" before any preset). Which preset that was is saved with the project, so
-it shows again when the project reopens, and undoing a preset load takes it back. The arrows
-step to the previous and next preset.
+Every built-in effect (the Channel EQ among them) and instrument has a preset pop-up in its
+panel's header. It shows the preset loaded or saved last, with "(edited)" once something changed
+("Default" or "Manual" before any preset); which one is saved with the project. The arrows step
+to the previous and next preset. Loading a preset is one undo step.
 
 - **Factory** presets come with Marbble (the Channel EQ has Flat, Low Cut 80 Hz, Vocal
   Presence, Vocal Air, Kick Punch, Snare Crack, Bass Clarity, Acoustic Guitar, Telephone and
@@ -2572,13 +2589,12 @@ step to the previous and next preset.
   first. **Rename Preset…** and **Delete Preset** work on the user preset that is loaded.
 - **Revert** goes back to the loaded preset; **Reset to “Default”** (“Flat” for the EQ) resets
   everything.
-- Loading a preset is one undo step.
 - VST3 plug-ins use their own preset browsers; Marbble saves their state with the project and
   copies it with Copy Plug-in, but has no preset files for them.
 
 ### Sends and aux buses
 
-An **aux** is a channel strip with no regions of its own: EQ, Audio FX, sends, pan, fader,
+An **aux** is a channel strip with no regions of its own: Audio FX, sends, pan, fader,
 mute/solo and an output. It plays whatever its bus receives.
 
 - Create one with Track › New Aux, the track menu, or **New Aux** in any send or output menu.
@@ -2605,9 +2621,8 @@ own. As in Logic, each can get a strip of its own:
 - An instrument strip whose plug-in has extra outputs shows a **+** next to its R button. Each
   click makes a new aux for the next output with no aux on it, named after the track and the
   output ("Drums Direct out 0"), with its own fader, pan, plug-ins and sends. One undo removes it.
-  The + greys out when every output has an aux. The output starts working when its aux appears,
-  so an unused output costs nothing; while it switches, the instrument fades out and back in for
-  a few milliseconds, and the other strips play on.
+  The + greys out when every output has an aux. An output runs only while it has an aux; adding
+  or removing one fades the instrument out and back in for a few milliseconds.
 - The aux's **Input** slot shows where its audio comes from ("Drums: Direct out 0"). Sends and
   outputs set to its bus still reach it too.
 - The main output plays through the instrument's strip as before. Whether a sound also leaves
@@ -2651,8 +2666,9 @@ strips keep their own fader positions (and their balance), and the VCA moves the
   automated level too.
 - **Nested VCAs:** a VCA strip has a VCA slot of its own. Assign it to another VCA and that
   VCA's level and mute reach its strips as well. Loops are refused.
-- **Right-click a VCA strip** for Rename VCA, VCA Color, Create New VCA and **Delete VCA** (its
-  strips keep their faders and leave the VCA; VCAs nested in it move up to its parent).
+- **Right-click a VCA strip** for Rename VCA, VCA Color, Create New VCA, **Delete VCA** (its
+  strips keep their faders and leave the VCA; VCAs nested in it move up to its parent) and
+  **Learn MIDI Assignment** for its fader.
 - Level, name, colour, assignments and deleting are undoable; the VCA's Mute, like a track's,
   is a switch and not an undo step.
 - Bounces, exports with the fader on and Bounce in Place play the VCA's level. A frozen track
@@ -2672,7 +2688,7 @@ and sends line up at Stereo Out.
 - Changes while playing don't click: when a latent plug-in is inserted or removed, a plug-in's
   latency changes (the Linear Phase EQ's Quality, a Compressor's Lookahead), or Low Latency
   Mode switches, each delayed path glides to its new delay with a 15 ms crossfade instead of
-  jumping. You hear a brief blend of the two timings rather than a click. Bounces always start
+  jumping. Bounces always start
   with the delays settled.
 - Automation, the metronome and recordings follow the compensation.
 - The Audio FX label of a strip shows its plug-in latency (each slot's tooltip has its own),
@@ -2758,23 +2774,20 @@ orange in Touch and Latch, red in Write.
 | **Latch** | Like Touch, but once you have touched a control it keeps writing, holding the last value, until playback stops. |
 | **Write** | From where playback started, overwrites volume, pan and every existing lane (except send lanes) with the current values. After you stop, the track switches to Latch, as Logic does by default. |
 
-- Moves in a plug-in's own editor are written too (through the plug-in's begin/perform/end edit
-  calls). While they are, they undo with the pass, not as steps of their own.
+- Moves in a plug-in's own editor are written too, and undo with the pass, not as steps of
+  their own.
 - Group members that share volume, pan or mute write together.
 - Each pass is one undo step, **Write Automation**. Undoing it takes the lane back and returns the
   control to where it was before the pass. Written passes are thinned to the points the curve
   needs.
-- Lanes are evaluated every audio block. Volume keeps the fader's smoothing, and plug-in
-  parameters are ramped across each block. With plug-in delay compensation, automation follows the
-  delayed audio.
+- With plug-in delay compensation, automation follows the delayed audio.
 - Lanes stay put when regions move, unless Settings › Editing › Move Automation with Regions
   says otherwise (see [Moving, trimming and snapping](#moving-trimming-and-snapping)).
 - **Lanes follow their plug-in.** Moving a plug-in within its strip keeps its lanes; dragging it
   to another track's strip moves its lanes to that track, with their points, so they keep
-  driving the same parameters there (the track showing one of them shows it on the new track).
-  They play in the new track's automation mode. A copy (Alt-drag, or Copy and Paste Plug-in)
-  starts without automation, and the original keeps its lanes. A plug-in moved to or from
-  Stereo Out takes its lanes along too.
+  driving the same parameters there. They play in the new track's automation mode. A copy
+  (Alt-drag, or Copy and Paste Plug-in) starts without automation, and the original keeps its
+  lanes. A plug-in moved to or from Stereo Out takes its lanes along too.
 - **Stacks:** a folder stack's volume and mute lanes scale and mute its subtracks on top of
   their own faders and lanes (nested folders multiply). A summing stack's lanes act on its bus.
   Bounces, exports and Bounce in Place include stack and Stereo Out automation; exported
@@ -2786,9 +2799,8 @@ orange in Touch and Latch, red in Write.
 
 A knob, fader, button or pad on a MIDI controller can drive a mixer control, a plug-in parameter,
 a transport button or any key command, as with Logic's Control Surfaces › Learn Assignment and
-Key Commands › Learn New Assignment. Controllers with lights
-or motor faders are sent the values back, so they show what Marbble does (see
-[Feedback to the controller](#feedback-to-the-controller)).
+Key Commands › Learn New Assignment. Controllers with lights or motor faders are sent the values
+back (see [Feedback to the controller](#feedback-to-the-controller)).
 
 ### Learning an assignment
 
@@ -2796,26 +2808,24 @@ or motor faders are sent the values back, so they show what Marbble does (see
    Monitoring button, a plug-in slot's bypass button, a VCA fader or its mute, a Channel EQ
    setting, a built-in effect's knob, or a parameter in a plug-in's own window.
 2. Press **Ctrl+L** (Marbble › Control Surfaces › Learn Assignment for Last Touched
-   Parameter). A banner says "Move a controller to assign it to …".
+   Parameter). A banner says "Move a controller or press a pad to assign it to …".
 3. Move a knob or fader (or press a button or pad) on your controller. The banner closes and a
-   message names the assignment. **Cancel** or Esc stops learning without assigning anything; Ctrl+L
-   again does too.
+   message names the assignment. **Cancel**, Esc or Ctrl+L again stops learning.
 
-Or right-click the control and choose **Learn MIDI Assignment**. That works on the channel
-strip's fader, pan knob and send knobs (for Mute, Solo and Record, click the button and press
-Ctrl+L), on the Channel EQ editor's band buttons, frequency, gain, Q and Output fields, and on
-every control of a built-in effect, and on a VCA strip in the Mixer (its fader). For a VST3
+Or right-click the control and choose **Learn MIDI Assignment**: the channel strip's fader, pan
+and send knobs, every control of a built-in effect (the Channel EQ's band buttons and fields
+too) and a VCA strip (its fader). For Mute, Solo and Record, click the button and press Ctrl+L.
+For a VST3
 plug-in, show the parameter on an automation lane and right-click the lane's parameter pop-up in
 the track header, or move it in the plug-in's window and press Ctrl+L.
 
-Control changes (CC 0–119), pitch bend, notes and program changes can be learned, on any MIDI
-input and channel. Pads and button matrices usually send notes: a note is learnt by its key
-(note on is the press, note off the release), and a key held down when the learn started isn't
-learnt by its release. A program change is learnt by its number. High-resolution controllers
-are learnt as one controller: a **14-bit** knob or fader, which sends CC 0–31 with its fine part
-on CC 32–63 (the window shows **CC 1/33**), and an **NRPN** (CC 99 and 98 choose the number, data
-entry CC 6 and 38 the value; the window shows **NRPN 130**). A control change from 0 to 31 that
-sends no fine part straight after is learnt as an ordinary controller a moment later. A
+Control changes (CC 0–119), pitch bend, notes and program changes can be learned, on any MIDI input
+and channel. Pads and button matrices usually send notes: a note is learnt by its key (note on is
+the press, note off the release). A program change is learnt by its number. High-resolution
+controllers are learnt as one controller: a **14-bit** knob or fader, which sends CC 0–31 with its
+fine part on CC 32–63 (the window shows **CC 1/33**), and an **NRPN** (CC 99 and 98 choose the
+number, data entry CC 6 and 38 the value; the window shows **NRPN 130**). A control change from 0 to
+31 that sends no fine part straight after is learnt as an ordinary controller a moment later. A
 controller drives one parameter: learning it again moves it to the new one.
 
 ### Selected Track controls
@@ -2843,17 +2853,13 @@ else its first Audio FX plug-in.
   down. What they do depends on the assignment's button mode:
   - **Toggle** (the default): each press switches it on or off; the release does nothing, so
     momentary buttons work.
-  - **Momentary**: on while held, off on release (Play plays while you hold the pad; Solo solos
-    while held). A controller button that latches itself (127 on one press, 0 on the next) works
-    this way too.
+  - **Momentary**: on while held, off on release (Play plays while you hold the pad).
   - **Trigger**: each press switches it on; it never switches off.
 
-  Some controller buttons latch by themselves: they send on (127, or a note on) at one press and
-  off (0, or a note off) at the next, with nothing on release. Marbble notices this when you learn
-  one (no release comes within a second of the press) and ticks **Latching** for it in
-  Controller Assignments; you can tick or untick it there too. With Latching, every message is a
-  press: Toggle flips at each one, so the button works every time rather than every other time,
-  and Momentary follows the button's own state.
+  Some controller buttons latch by themselves: on at one press, off at the next, with nothing on
+  release. Marbble notices this when you learn one (no release within a second) and ticks
+  **Latching** for it in Controller Assignments, where you can change it. With Latching every
+  message is a press, so Toggle flips every time, and Momentary follows the button's own state.
 - A note or program change on a fader, knob or plug-in parameter sets it on a press: the note's
   velocity picks the value within the assignment's range (or, with Velocity off, the top of the
   range; a program change always goes to the top). In Toggle each press goes to that value and
@@ -2862,13 +2868,9 @@ else its first Audio FX plug-in.
 - Messages from an assigned controller are taken: they don't also play the selected instrument
   or get recorded, as in Logic. That includes an assigned note's note off and its polyphonic
   aftertouch, both halves of a 14-bit controller, and on a channel with an NRPN assigned, every
-  NRPN and RPN message (CC 6, 38, 96–101).
+  NRPN and RPN message (CC 6, 38, 96–101). They still show in Settings › MIDI › Monitor.
 - An NRPN's **data increment** and **decrement** (CC 96 and 97) step its parameter up or down by
   1/127 of the range per message, as an encoder does.
-- A VCA fader moves as when you drag it (one undo step for a run of moves, not automated); a VCA
-  mute and the switches act as their buttons do. A plug-in slot's bypass is an undo step, as a
-  click on its button is. They still show in
-  Settings › MIDI › Monitor.
 - Assignments are global settings, kept when you quit and used in every project. They refer to
   tracks and plug-ins by their position in the project's numbering, so an assignment learned
   in one project acts on the same-numbered track in another.
@@ -2877,8 +2879,7 @@ else its first Audio FX plug-in.
 
 Any key command, and any menu bar item with a key (Undo, Redo, Split, Duplicate, Save…; Quit
 aside), can be fired from a pad, a button or a program change, so a controller can do anything
-the keyboard does: undo and redo, markers, navigation, zoom, selecting the next track, showing and
-hiding windows, every transport command.
+the keyboard does.
 
 - In **Settings › Key Commands**, point at a command and click **MIDI**, then press the pad or
   button (Esc cancels). Its MIDI triggers are listed beside its keys (**Note C1 · Ch 10**); ×
@@ -2888,12 +2889,10 @@ hiding windows, every transport command.
 A trigger fires on a press: a note on, a program change, or a control change going above 63 (a
 button that keeps sending 127 while held fires once). In the **Trigger** mode (the default) it
 fires once per press; in **Momentary** it fires again on release, so Show/Hide Mixer shows the
-Mixer while you hold the pad. The command runs in the main window as its key would there, and is
-held back where its key would be: while a dialog or a sheet that holds keys back is open (only the
-transport and Control Surfaces commands get through Controller Assignments), and while you type in
-a text field, in the main window or a detached panel's window, where Undo, Redo and Select All
-edit the field and the menu bar's other items with a key are dropped. Commands that act on a detached window (the Mixer, the Editors) work as
-their keys do. A command has no state, so its pad gets no feedback.
+Mixer while you hold the pad. The command runs as its key would, and is held back where its key
+would be: while a dialog is open (Controller Assignments lets the transport and Control Surfaces
+commands through) and while you type in a text field, where Undo, Redo and Select All edit the
+field.
 
 ### The Controller Assignments window
 
@@ -2914,13 +2913,12 @@ channel and input port) and the parameter. For each one:
   knobs (encoders), which send how far they turned rather than where they are:
   **Rel. 2's Compl.** (two's complement: 1 to 63 up, 127 down to 65 down), **Rel. Signed Bit**
   (sign-magnitude: 1 to 63 up, 65 to 127 down) and **Rel. Offset 64** (binary offset: 65 and up
-  up, 63 and down down). The
-  encoder moves the parameter from wherever it is, so there's no jump and no pickup. Pick the one
+  up, 63 and down down). The encoder moves the parameter from wherever it is, so there's no jump
+  and no pickup. Pick the one
   your controller's manual names; a knob that only ever moves one way or jumps to the ends is
   the wrong one.
 - **Sensitivity**, for a relative encoder: how far one step moves the parameter; at 1 a step is
-  1/127 of the range, at 4 four times that. A relative encoder gets no feedback: its value isn't a
-  position.
+  1/127 of the range, at 4 four times that.
 - **Min %** and **Max %**: the stretch of the parameter's travel the controller sweeps. Min
   above Max turns the controller round. For a note, the stretch its velocity covers; for an
   encoder, the stretch it moves within.
@@ -2928,8 +2926,8 @@ channel and input port) and the parameter. For each one:
   the velocity (a fixed value; set Min % for where Toggle and Momentary go back to).
 - **Feedback**: send the parameter's value back to the controller (on by default). Greyed when
   the controller's input has no output paired with it in Settings › MIDI; the setting is kept for
-  when it has. Off and disabled for a program change, a key command and a relative encoder, which
-  have nothing to send back (its tooltip says why).
+  when it has. Disabled for a program change, a key command and a relative encoder, which have
+  nothing to send back.
 - **Delete** removes it; that controller plays the instrument again.
 
 An assignment whose track or plug-in isn't in the open project is greyed and does nothing.
@@ -2953,8 +2951,8 @@ whether the track is muted and a motor fader stands where the fader on screen do
   on/off and the transport buttons) are sent full on or off. A Selected Track control shows the
   selected track's. Program changes, key commands and relative encoders get nothing: they have
   no position to show.
-- It follows every change, whatever made it: the mouse, a plug-in's own window, automation
-  playing in Read, Touch or Latch, undo and redo, opening a project, editing the assignment.
+- It follows every change, whatever made it: the mouse, a plug-in's window, automation, undo,
+  opening a project, editing the assignment.
   When an output is connected (a controller plugged in, or switched on in Settings › MIDI), all
   its assignments are sent at once.
 - At most about 30 messages a second go to one controller, always ending on the latest value.
@@ -2975,7 +2973,7 @@ A control surface with motor faders, scribble strips and a transport section usu
 of two protocols: **Mackie Control** (the Mackie Control Universal and its Extender, Logic
 Control, and the "Mackie Control" or "MC" mode of surfaces such as the Behringer X-Touch, iCON
 and Qcon ones) or **HUI**. Marbble drives either without any learning: its strips show your
-tracks, its buttons and displays work as Logic's do.
+tracks, and its buttons and displays work as Logic's do.
 
 **Setting one up.** Switch the surface to its Mackie Control (or HUI) mode and connect it. In
 Settings › MIDI › Control Surfaces, click **Add Surface**: Marbble picks the surface's ports when
@@ -2990,28 +2988,26 @@ their names give them away (Mackie, MCU, X-Touch, HUI…); otherwise choose them
   Extender on the left, give it 1 and the Mackie Control 9.
 - **Function keys F1–F8** (Mackie Control and HUI): the key command each runs, from the same list
   as Learn MIDI in Settings › Key Commands.
-- The line under the ports says how it is doing: **Online** with the tracks it shows once it
-  answered, **Waiting for the surface to answer** while its ports are there but it hasn't (a
-  Mackie Control is asked who it is every 2 seconds, and its challenge answered as Logic does; a
-  HUI is pinged every second and counts as offline after 3.5 seconds without an answer), or which
-  port isn't connected. Whenever a surface comes online (switched on, plugged in, restarted),
-  everything is sent to it again.
+- The line under the ports says how it is doing: **Online** with the tracks it shows, **Waiting
+  for the surface** (or **HUI**) **to answer** while its ports are there but it hasn't answered
+  (a HUI that stops answering for 3.5 seconds goes back to this), or which port isn't connected.
+  Whenever a surface comes online (switched on, plugged in, restarted), everything is sent to it
+  again.
 
 **The strips.** The strips show the tracks you can see in the Tracks area, in order: hidden
 tracks and tracks inside a closed track stack are skipped. With an Extender, the units show one
 row of strips together, banked as one.
 
-- **Fader**: the track's volume, on the same taper as the screen's fader, in 14 bits. It follows
-  the screen whatever moved it: the mouse, automation playing in Read, Touch or Latch, undo, a
-  group. While your hand is on a touch-sensitive fader nothing moves it; with the track in Touch,
-  Latch or Write while playing, touching it holds the volume as holding the mouse on the fader
-  does, until you let go. Let go, it goes to where the track's level is. A fader move is an undo
-  step, as a drag of the fader is.
+- **Fader**: the track's volume, on the same taper as the screen's fader, in 14 bits, and it
+  follows the screen's fader whatever moves it. While your hand is on a touch-sensitive fader
+  nothing moves it; in Touch, Latch or Write while playing, touching it holds the volume as
+  holding the mouse on the fader does. Let go, it goes to the track's level. A move is an undo
+  step, as a drag is.
 - **V-Pot**: the pan, unless Send or Plug-in is chosen (see below). Its ring of lights shows the
   value; pushing it puts the pan back in the centre, a send at 0 dB, a plug-in parameter at its
   default.
 - **LCD** (Mackie Control): the top line names each strip's track (shortened to six characters:
-  spaces first, then vowels from the end, "Bass Guitar" is "BssGtr"). The bottom line shows the
+  "Bass Guitar" is "BssGtr"). The bottom line shows the
   V-Pot's value (C, L32, R64; a send's level; a plug-in parameter in percent), or for a second and
   a half after you move or let go of a fader, its level in dB (as long as you touch it).
   **Name/Value** shows what the V-Pots drive instead of their values (Pan, Send1, a parameter's
@@ -3030,7 +3026,7 @@ so the strips stay full when there are enough tracks.
 |---|---|---|
 | Pan | Each track's pan | PN |
 | Send | Each track's send 1; press Send again for send 2, 3 … 8. A track without that send shows nothing | S1–S8 |
-| Plug-in | The selected track's plug-in (the one whose window you last opened or touched, else its instrument, else its first Audio FX): its parameters, eight at a time. Bank and Channel move through the parameters, and the top line names them | PI |
+| Plug-in | The selected track's [focused plug-in](#selected-track-controls): its parameters, eight at a time. Bank and Channel move through the parameters, and the top line names them | PI |
 
 #### Mackie Control
 
@@ -3064,8 +3060,7 @@ so the strips stay full when there are enough tracks.
 | Master fader | Stereo Out's volume, touch-sensitive like the others |
 | Not used yet | Track, EQ and Instrument assignment, Flip, Global View and its track type buttons, Trim, Group, Cancel, Enter, Option, Control, Alt, the footswitches |
 
-The **time display** shows the playhead as the control bar does, and the two-digit
-**assignment display** what the V-Pots drive.
+The **time display** shows the playhead as the control bar does.
 
 #### Mackie Control Extender
 
@@ -3091,11 +3086,11 @@ with the Mackie Control. It has no master section.
 | Scribble strips | Each track's name in four characters, its level or V-Pot value while it moves; above the strips, what the V-Pots drive (Pan, Snd1…, Plug) |
 | Time display | Bars, beats and ticks (960 a beat) |
 | Meters | Each strip's level, on both sides |
-| Not used yet | Auto and Insert on the strips, Send B–E, the main display, the keypad, the edit and window buttons, the control room section |
+| Not used yet | Auto and Insert on the strips, Trim, Send B–E, the main display, the keypad, the edit and window buttons, the control room section |
 
 Marbble's support was built from the protocols' documentation and tested with simulated
-surfaces; if a button on your surface does something else than this, please report it with the
-surface's name.
+surfaces; if a button on your surface behaves differently, please report it with the surface's
+name.
 
 ---
 
@@ -3124,9 +3119,8 @@ The file name defaults to the project's, next to the project folder, with the fo
 (`.wav`, `.aif` or `.flac`). The options, format included, are remembered. MP3 and AAC are not
 offered yet.
 
-Every format holds exactly the same samples: a 16-bit FLAC decodes to the same numbers as a
-16-bit WAV of the same bounce, dither included. AIFF and FLAC files import back into Marbble
-like any other audio file.
+Every format holds exactly the same samples, dither included. AIFF and FLAC files import back
+into Marbble like any other audio file.
 
 ### Export All Tracks as Audio Files
 
@@ -3171,7 +3165,7 @@ the track and region menus:
 ### Export Region as Audio File
 
 **Export as Audio File…** in the region menu renders one region alone, muted or not, through its
-track's Channel EQ and plug-ins, before the fader. It uses the same format options as Bounce.
+track's Audio FX plug-ins, before the fader. It uses the same format options as Bounce.
 
 ### MIDI files
 
@@ -3214,13 +3208,14 @@ Opens at launch (by default) and from **File › New…** (Ctrl+N) and **File �
     track, all record-enabled.
 
   Set the name, location (default `~/Music/Marbble`, or Settings › General › Project Folder),
-  tempo (20 to 400 BPM), time signature and key. Double-click a template to create it at once.
+  tempo (5 to 990 BPM), time signature and key. Double-click a template to create it at once.
 - **My Templates:** the templates you saved, below the built-in ones (see
-  [Project templates](#project-templates)). Right-click one to **Rename…** or **Delete** it.
+  [Project templates](#project-templates)).
 - **Recent:** the last 20 projects you saved or opened, with track count, tempo and how long
   ago each was saved. Missing projects are marked and can be removed from the list (×).
 - **Open…:** choose any `.marbble` folder.
-- **Show at launch:** untick it to start straight into an empty project.
+- **Show at launch:** untick it to start straight into an empty project (or the most recent
+  one, when Settings › General › At Launch says so).
 
 ### Open, save and close
 
@@ -3297,10 +3292,10 @@ undoes the revert.
 - At launch, Marbble looks in the recent projects and the projects folder for autosaves newer
   than their `project.json`, and for interrupted recordings, and offers to **Recover** them (or
   **Discard**, **Open Last Saved**, or **Decide Later**, which changes nothing: projects you
-  don't recover are offered again next time). A line under the list says what each button does. The sheet
-  says which takes on which tracks were being recorded. Opening such a project asks the same.
-  Recovering puts the takes back as one undo step (Undo: Recover Recording). Discarding keeps the
-  recorded files in Audio Files, repaired, so you can still import them by hand.
+  don't recover are offered again next time). The sheet says which takes on which tracks were
+  being recorded. Opening such a project asks the same. Recovering puts the takes back as one
+  undo step (Undo: Recover Recording). Discarding keeps the recorded files in Audio Files,
+  repaired, so you can still import them by hand.
 - A recovered project counts as edited; save it to keep the changes.
 - **Damaged files:** saves are written to a temporary file and then renamed into place, so a
   crash during a save leaves the previous version intact, and each save keeps the previous
@@ -3325,8 +3320,7 @@ rate change is applied to the audio device and is not an undo step.
 
 ### Metronome
 
-Project Settings › Metronome holds the project's metronome; it is saved with the project, and
-changes can be undone.
+Project Settings › Metronome holds the project's metronome, saved with the project.
 
 | Setting | Choices | Default |
 |---|---|---|
@@ -3349,12 +3343,10 @@ brings back Marbble's own.
 ## 17. Settings reference
 
 Open Settings with **Marbble › Settings…** (Ctrl+,), which opens on the Audio tab;
-Marbble › Appearance… and Marbble › Key Commands… (Alt+K) open those tabs. Most changes apply
-at once and are kept in `settings.json` (`~/.config/marbble` on Linux and macOS,
-`%APPDATA%\marbble` on Windows). The exception is the Audio devices (Apply Changes). The
-metronome is set per project, in [Project Settings › Metronome](#metronome). The window keeps one size whichever
-tab is showing: a long tab scrolls, and the footer stays at the bottom with a note on how that
-tab's changes apply and **Done** on the right.
+Marbble › Appearance… and Marbble › Key Commands… (Alt+K) open those tabs. Changes apply at
+once, except the Audio devices (**Apply Changes**), and are kept in `settings.json`
+(`~/.config/marbble` on Linux and macOS, `%APPDATA%\marbble` on Windows). The metronome is set
+per project, in [Project Settings › Metronome](#metronome).
 
 ### General
 
@@ -3372,19 +3364,15 @@ tab's changes apply and **Done** on the right.
 | Update Channel | Stable (final releases); Unstable (alphas, betas and release candidates too) | Follows the version you run: Unstable for a prerelease, Stable for a final release |
 | Automatic Check | Check for updates at launch | On |
 
-**Updates.** With Check for updates at launch on, Marbble asks GitHub once at each launch for
-its list of releases (`api.github.com/repos/JackMechem/marbble/releases`). The request says
-nothing about your projects or settings; GitHub sees your IP address, as with any web page. When a newer version is out on your channel, a notice at the bottom right
-says so, for example "Marbble 0.1.0-alpha.13 is out": **View Release** opens its release page in
-your browser, where you download it yourself, and **Later** hides the notice until the next
-launch. The notice never takes the keyboard and waits while you record. Marbble never downloads
-or installs anything itself. Offline, or when GitHub can't be reached, the check gives up
-silently. **Help › Check for Updates…** checks whenever you like, whether or not the launch check
-is on, and says when you already have the newest version or why it couldn't check. Stable is the
-final releases; Unstable adds the prereleases, so it is always at least as new as Stable. Until
-you choose a channel it follows the version you're running, so a prerelease such as
-0.1.0-alpha.7 is on Unstable. To stop Marbble contacting GitHub, turn Check for updates at launch
-off: it then asks only when you choose Check for Updates….
+**Updates.** With Check for updates at launch on, Marbble asks GitHub once per launch for its
+list of releases (`api.github.com/repos/JackMechem/marbble/releases`). The request says nothing
+about your projects or settings; GitHub sees your IP address, as with any web page. When a newer
+version is out on your channel, a notice at the bottom right says so ("Marbble 0.1.0-alpha.13 is
+out"): **View Release** opens its release page in your browser, where you download it yourself,
+and **Later** hides the notice until the next launch. The notice never takes the keyboard and
+waits while you record. Marbble never downloads or installs anything, and when GitHub can't be
+reached the check gives up silently. **Help › Check for Updates…** checks at any time and says
+what it found; with the launch check off, that is the only time Marbble contacts GitHub.
 
 ### Audio
 
@@ -3403,8 +3391,9 @@ off: it then asks only when you choose Check for Updates….
 | Low Latency Mode | On, with a limit of 0 to 100 ms (applies at once) | Off, 5 ms |
 
 Below them: the measured input and output latency and how far recordings are shifted, the
-input level check (Linux), and **Reset Audio Engine**. Everything except the two delay
-compensation rows needs **Apply Changes**, or **Done**, which applies them and closes the window.
+[input level check](#the-input-level-check-linux) (Linux), and **Reset Audio Engine**. Everything
+except the two delay compensation rows needs **Apply Changes**, or **Done**, which applies them
+and closes the window (see [Choosing a driver and devices](#choosing-a-driver-and-devices)).
 
 ### Recording
 
@@ -3412,15 +3401,15 @@ compensation rows needs **Apply Changes**, or **Done**, which applies them and c
 |---|---|---|
 | Bit Depth | 24-bit integer, 32-bit float | 32-bit float |
 | Recording Folder | A folder (recordings go into a subfolder named after the project), or the project's Audio Files | Project › Audio Files |
-| Take Names | Vocals#03 (track and take number); Vocals (track name); Song - Vocals#03 (project, track and number) | Track and take number |
+| Take Names | Track name and take number (Vocals#03); Track name (Vocals); Project, track and take number (Song - Vocals#03) | Track name and take number |
 | Count-in | On (this project's switch, the same as Shift+K) and 1 to 4 bars | Off, 1 bar |
 | Pre-roll | 0 to 30 seconds, used when Count-in is off | 0 |
 | Overlapping Recordings › Audio | Create take folders; Put the new take on top; Create a new track; Replace what's underneath (see [Recording audio](#recording-audio)) | Create take folders (on top for settings saved before it existed) |
 | Overlapping Recordings › MIDI | Create a new region; Merge into the existing region; Replace in the recorded range; Create take folders (see [Recording MIDI](#recording-midi)) | New region |
 | Take Colors | Color takes automatically: each take in a take folder gets a colour of its own as it's recorded | Off |
 
-With a Recording Folder outside the project, Save As does not copy those recordings into the
-new project folder; the project refers to them where they are.
+With a Recording Folder outside the project, Save As copies those recordings into the new
+project's Audio Files, so the new project holds everything it uses.
 
 ### MIDI
 
@@ -3482,15 +3471,13 @@ Tracks, Editing, Windows, Control Surfaces and Step Input.
 | Waveforms | Smooth (the true shape; individual cycles when zoomed in), Mirrored (loudness mirrored around the centre), Rectified (loudness rising from the bottom), Blocks (bar per bucket) | Smooth |
 | Theme | Studio, Flat, Midnight, Light, High Contrast (also View › Theme) | Studio |
 
-The whole window scales, and the canvas views render at the matching resolution so they stay
-sharp. The window's own theme follows the one you choose: with Light, Marbble asks the system for
-the light look of the menu bar and title bar (GTK's light variant on Linux), and with the others
-for the dark one. On Linux the menu bar takes the theme's background colour too. In every theme the secondary text (captions, section labels, empty-slot marks)
-has a contrast of at least 4.5:1 against what it sits on.
+The whole window scales and stays sharp. With Light the system's menu bar and title bar take
+their light look, with the other themes their dark one; on Linux the menu bar also takes the
+theme's background colour. In every theme, secondary text (captions, section labels) has a
+contrast of at least 4.5:1.
 
 Long folder paths (the Project Chooser's Location, Settings › General › Project Folder) are
-shortened from the start at a folder boundary, as in **…/Music/Marbble**; hover for the whole
-path. Pop-up menus in Settings and the dialogs look like the ones in the toolbars.
+shortened from the start, as in **…/Music/Marbble**; hover for the whole path.
 
 ---
 
@@ -3556,7 +3543,7 @@ shown.
 | Ctrl+R (Control+R on macOS) | Record-enable the selected track |
 | Up / Down | Select previous / next track |
 | Ctrl+H (Control+H on macOS) | Hide the current track and select the next |
-| (none) | Reset All Clip Indicators |
+| (none) | Toggle Track On/Off, Reset All Clip Indicators |
 
 ### Editing
 
@@ -3571,6 +3558,7 @@ shown.
 | Alt+Left / Alt+Right | Nudge regions left / right |
 | Alt+Shift+Left / Alt+Shift+Right | Nudge regions left / right by one sample |
 | Ctrl+F (Control+⌘F on macOS) | Pack Take Folder |
+| Alt+Shift+Up / Alt+Shift+Down | Select Previous / Next Take (in the selected take folders) |
 | T | Show Tool Menu (then a tool's letter: T Pointer, P Pencil, E Eraser, I Scissors, G Glue, M Mute, A Fade, R Marquee; Esc Pointer) |
 | Shift+F | Select All Following |
 | Shift+L | Select Inside Locators |
@@ -3756,12 +3744,12 @@ octave, C / V the velocity, Tab is the sustain pedal.
 
 ### Recordings are very quiet (or silent)
 
-On Linux, the sound server (PipeWire or PulseAudio) has its own volume for each recording
-device, and it often isn't at 100%. Marbble receives the signal after that volume, so a source
-at 40% lowers everything you record by about 24 dB, and a muted source records silence.
+On Linux, PipeWire and PulseAudio have their own volume for each recording device, often
+below 100%, and Marbble records after it: a source at 40% records about 24 dB quieter, and a
+muted one records silence (see [The input level check](#the-input-level-check-linux)).
 
-- Settings › Audio shows a warning with **Set to 100%** when the level is low; Marbble also
-  shows a notice at launch.
+- Settings › Audio warns with **Set to 100%** when the level is low, and Marbble shows a
+  notice at launch.
 - Or set it yourself: `wpctl get-volume @DEFAULT_AUDIO_SOURCE@` shows it, and
   `wpctl set-volume @DEFAULT_AUDIO_SOURCE@ 1.0` sets it to 100% (use the node id from
   `wpctl status` for another device). pavucontrol's Input Devices tab does the same.
@@ -3788,9 +3776,9 @@ and has to read it back from disk when the program needs it again. If that's par
 plug-in that is playing, the audio waits for the disk and drops out, with the
 [CPU meter](#the-cpu-meter)'s label red while its bar reads only a few percent.
 
-On Linux Marbble locks its memory in RAM at startup, as Ardour does, so nothing it has loaded is
-swapped out. Settings › Audio › **Memory: Lock audio memory** turns it off and on (at once, with
-Apply Changes) and says whether it worked:
+On Linux Marbble locks its memory in RAM at startup, so nothing it has loaded is swapped out.
+Settings › Audio › **Memory: Lock audio memory** turns it off and on (at once, with Apply
+Changes) and says whether it worked:
 
 - **Locked**: nothing to do.
 - **Not locked: the system's memory lock limit (RLIMIT_MEMLOCK) is …**: the system only lets a
@@ -3801,9 +3789,8 @@ Apply Changes) and says whether it worked:
   `@audio - memlock unlimited` in `/etc/security/limits.conf` elsewhere), then log out and in
   again. `ulimit -l` in a terminal says `unlimited` when it's set.
 
-Locked memory can't be swapped, so the whole project stays in RAM: every audio file in it, about
-11 MB per minute of each mono recording at 48 kHz (decoded clips are held in memory whole). That
-includes takes whose regions were deleted, which stay in the project. A project bigger than the
+The whole project then stays in RAM: every audio file in it, about 11 MB per minute of each
+mono recording at 48 kHz, including takes whose regions were deleted. A project bigger than the
 memory you can spare plays better with the lock off, or with the unused takes removed. Marbble
 doesn't lock memory on macOS and Windows yet, and the setting isn't shown there.
 
@@ -3813,22 +3800,18 @@ Plug-in editors on Linux are X11 windows, which a Wayland desktop shows through 
 default Marbble runs its own interface through XWayland too (it sets `GDK_BACKEND=x11` unless
 you set it). To run the interface natively on Wayland, start it with `MARBBLE_WAYLAND=1`
 (`MARBBLE_WAYLAND=1 marbble`); without a Wayland session it falls back to X11. Plug-in editors
-still open as XWayland windows, and Marbble keeps their OpenGL drawing apart from its own, which
-OpenGL editors such as Zam's and Dragonfly's need. It's new and less tried than the default:
-the desktop decides where windows open, so a detached Mixer or Editor doesn't reopen where you
-left it. If something looks wrong, start Marbble without the variable. Setting
-`GDK_BACKEND=wayland` yourself has the same effect.
-
-On Windows plug-in editor windows are not implemented yet; plug-ins still load and play, and
-their parameters can be automated.
+still open as XWayland windows. It's newer and less tried than the default: the desktop decides
+where windows open, so a detached Mixer or Editor doesn't reopen where you left it. If something
+looks wrong, start Marbble without the variable. Setting `GDK_BACKEND=wayland` yourself has the
+same effect.
 
 ### Plug-in windows are small or blurry on a HiDPI screen
 
 On Linux, Marbble tells each plug-in editor the display's scale as it opens, and plug-ins that
-support it draw at that size (all those tried do: LSP, Dragonfly, Zam, CHOW Tape, TONE3000). The
-scale is the one your desktop gives X11 programs: `GDK_SCALE`, then the desktop's GTK scale
-setting, then `Xft.dpi` divided by 96 (so `Xft.dpi: 192` in `~/.Xresources` is 2x). A plug-in
-window opened before you changed it keeps its size until you close and reopen it.
+support it draw at that size. The scale is the one your desktop gives X11 programs:
+`GDK_SCALE`, then the desktop's GTK scale setting, then `Xft.dpi` divided by 96 (so
+`Xft.dpi: 192` in `~/.Xresources` is 2x). A plug-in window opened before you changed it keeps
+its size until you close and reopen it.
 
 - **Small:** your desktop runs X11 programs at their own resolution without telling them a
   scale (Hyprland with `xwayland:force_zero_scaling`, for example). Set `Xft.dpi` (and
@@ -3862,14 +3845,13 @@ Set **Recording Delay** in Settings › Audio. See [Latency compensation](#laten
 
 ### The CPU meter
 
-The **CPU** meter in the control bar shows the audio load: how much of each buffer's time it
-takes to finish the buffer, from when it starts until every track is done, however many
-[threads](#choosing-a-driver-and-devices) work on it. It is not your system monitor's CPU figure, which is shared
-across all cores: one audio thread at 80% on a 24-thread machine reads about 3% there. The audio
-load is what decides whether audio drops out, because a block that takes longer than the buffer
-plays arrives too late. Spreading tracks over more threads lowers it, down to what the slowest
-single track (with whatever feeds it) takes on its own, so one very heavy plug-in still sets the
-limit. Hover over the meter for the numbers and how many threads are playing just now.
+The **CPU** meter in the control bar shows the audio load: how much of each buffer's time
+Marbble takes to finish it, however many [threads](#choosing-a-driver-and-devices) work on it.
+It is not your system monitor's CPU figure, which is shared across all cores (one audio thread
+at 80% on a 24-thread machine reads about 3% there). A block that takes longer than the buffer
+arrives too late and drops out. More threads lower the load, down to what the slowest single
+track (with whatever feeds it) takes, so one very heavy plug-in still sets the limit. Hover over
+the meter for the numbers and how many threads are playing.
 
 - **The bar** and the **figure** beside "CPU" are the average: the bar turns amber above 50% and
   red above 80%.
@@ -3879,9 +3861,8 @@ limit. Hover over the meter for the numbers and how many threads are playing jus
 - **The red CPU label** means at least one block went over 100% since you last clicked the
   meter, so you probably heard a dropout. The tooltip counts them; click the meter to clear it.
 
-A red label on its own is a dropout, and playback carries on. ["System overload"](#system-overload-and-playback-stops)
-is something else: blocks ran late back to back for more than about 60 ms, so Marbble also stops
-playback. Every overload shows on the meter too, but most late blocks never become an overload.
+A red label alone means a dropout, and playback carries on; a
+["System overload"](#system-overload-and-playback-stops) stops playback too.
 
 ### "System overload" and playback stops
 
@@ -3894,30 +3875,31 @@ Buffer Size, bypass or freeze heavy plug-ins, and see
 are not affected.
 
 When the message says a processing thread "stayed in" a track, a plug-in on that track didn't
-finish its work for a tenth of a second. That thread is left out from then on, so the plug-in
-can't take Marbble down with it even if it never finishes, and the other threads play on. **Reset
-Audio Engine** in Settings › Audio brings it back. Until then Settings › Audio says how many threads
-play.
+finish its work for a tenth of a second. That thread is left out, so the plug-in can't take
+Marbble down even if it never finishes, and the other threads play on until **Reset Audio
+Engine** in Settings › Audio brings it back.
 
 ### "… stopped responding" and a track goes quiet
 
 When a plug-in on one of the extra processing threads (Settings › Audio › Processing Threads)
-doesn't return from its work for a tenth of a second, Marbble leaves it there and plays on
-without it. After a moment of silence, the rest of the mix carries on. The plug-in's track, and
-anything that track feeds (an aux it sends to, the summing stack it plays through, a track it
-keys a side-chain for), are silent from then on, and a message names the plug-in and the track.
-Playback doesn't stop, but a recording does, as the take now has a gap.
+doesn't return from its work for a tenth of a second, Marbble leaves it there and, after a moment
+of silence, plays on without it. The plug-in's track and anything it feeds (an aux it sends to,
+the summing stack it plays through, a track it keys a side-chain for) stay silent, and a message
+names the plug-in and the track. Playback carries on, but a recording stops, as the take would
+have a gap.
 
-If the plug-in responds again later, the track comes back by itself, with the plug-in loaded
-afresh, and a message says so. Otherwise **Reset Audio Engine** in Settings › Audio loads the
-plug-ins again and brings the tracks back, along with the thread. Meanwhile bounces, exports,
-Freeze and Bounce in Place are refused, as those tracks would be missing from them. Saving, and
-anything that loads the stuck plug-in again (Reset Audio Engine, undoing its track's deletion,
-duplicating the track), uses the settings it had a moment before it stopped responding, which
-Marbble keeps a copy of, rather than asking it, as it may never answer. For the same reason Marbble leaves the plug-in alone in the meantime: its window stops
-updating and won't open, its controls and automation don't reach it, and closing its window (or
-deleting its track) only hides the window until the plug-in responds or is unloaded. A plug-in
-that stops responding on the audio thread itself can't be left like this.
+If the plug-in responds again, the track comes back by itself with the plug-in loaded afresh,
+and a message says so. Otherwise **Reset Audio Engine** in Settings › Audio reloads the plug-ins
+and brings the tracks and the thread back. Until then:
+
+- Bounces, exports, Freeze and Bounce in Place are refused, as those tracks would be missing.
+- Saving, and anything that loads the plug-in again (Reset Audio Engine, undoing its track's
+  deletion, duplicating the track), uses the settings it had just before it stopped responding.
+- Its window stops updating and won't open, its controls and automation don't reach it, and
+  closing its window (or deleting its track) only hides the window until the plug-in responds
+  or is unloaded.
+
+A plug-in that stops responding on the audio thread itself can't be left like this.
 
 ### "… put out invalid audio" and a plug-in goes quiet
 
@@ -3969,12 +3951,12 @@ its package rather than a copied binary.
 
 - **LSP's Multi-Sampler:** now and then one of its samples doesn't load, and that instrument stays
   silent. Load the plug-in again, or close and reopen the project.
-- **Platforms:** plug-in editor windows open on Linux (X11, or XWayland with the interface
-  natively on Wayland as an option) and macOS; Windows (HWND) embedding is planned. On macOS, keys a plug-in's window doesn't use itself (Space, R, other
-  key commands, Musical Typing) go to Marbble, while typing into the plug-in's own fields stays
-  there; Esc doesn't close the window. On Linux only menu shortcuts work while a plug-in's
-  window is in front. The input level check is Linux only. On Windows and macOS only the
-  system's default audio driver is available (no ASIO).
+- **Platforms:** plug-in editor windows open on Linux and macOS, not yet on Windows, where
+  plug-ins still load, play and can be automated. On macOS, keys a plug-in's window doesn't use
+  (Space, R, other key commands, Musical Typing) go to Marbble, while typing into the plug-in's
+  own fields stays there; Esc doesn't close the window. On Linux only menu shortcuts work while
+  a plug-in's window is in front. The input level check is Linux only. On Windows and macOS only
+  the system's default audio driver is available (no ASIO).
 - **Plug-in formats:** VST3 only; no CLAP, AU or VST2.
 - **Tempo:** a region's length stays in samples when it is moved across a tempo change (only
   its start follows the bars and beats). Move MIDI Regions with Tempo doesn't move automation
@@ -3991,8 +3973,9 @@ its package rather than a copied binary.
 - **Crossfades:** muted regions don't crossfade (they fade out as Out). A crossfade's handle
   can't be grabbed where the incoming region is drawn over it (an overlap with the newer region
   on top); use the Inspector. The Inspector's fade rows edit the one selected region.
-- **Take folders:** an audio recording without Cycle over a folder doesn't add a take to it,
-  and recording a cycle adds to a folder only when it covers exactly the same range. A
+- **Take folders:** unless Overlapping Recordings › Audio is Create take folders, an audio
+  recording without Cycle over a folder doesn't add a take to it, and recording a cycle adds
+  to a folder only when it covers exactly the same range. A
   folder's own fades shape only its first and last comp stretch. With Autopunch inside the
   cycle, a punch-out closer to the cycle end than the recording latency makes each take that
   much shorter. MIDI take folders play one whole take, as in Logic (no swipe comping).
@@ -4004,17 +3987,16 @@ its package rather than a copied binary.
 - **Mixer:** VCA levels can't be automated. A side-chain key is taken as the source leaves its
   plug-ins, so latency on the source's own plug-ins makes the key arrive that much late.
 - **Built-in effects:** bounces keep the tail length set in the Bounce dialog whatever an
-  effect's own tail; Freeze stretches its tail to the longest one. VST3 user presets aren't
-  saved by Marbble (use the plug-in's own). The Linear Phase EQ follows automation in steps of
-  about 25 ms.
+  effect's own tail. VST3 user presets aren't saved by Marbble (use the plug-in's own). The
+  Linear Phase EQ follows automation in steps of about 25 ms.
 - **Separate windows:** the analyzer follows one strip, so a Channel EQ in a separate window
-  and another strip's Channel EQ in the main window take turns showing it. On Linux under
-  native Wayland (not the default), the compositor decides where windows open.
-- **Freeze** renders from the track's first region to its last plus up to 4 s of tail. A frozen
-  track's plug-in automation lanes stay editable but do nothing until it is unfrozen.
+  and another strip's Channel EQ in the main window take turns showing it.
+- **Freeze** keeps at most 4 s of tail after the last region (a built-in effect's longer tail,
+  up to 60 s). A frozen track's plug-in automation lanes stay editable but do nothing until it is
+  unfrozen.
 - **Imports:** a raw AAC stream (`.aac`, not in an M4A/MP4 file) and CAF files aren't trimmed
   of their encoder delay; M4A/MP4 and MP3 are.
-- **Bounce:** WAV, AIFF and FLAC only; MP3 and AAC aren't offered.
+- **Bounce:** WAV, AIFF and FLAC only (no MP3 or AAC).
 - **Automation:** Move Automation with Regions works along a track, not for regions moved onto
   another track or copied; where it cuts a curved segment, the cut part is approximated.
   Automation curves are power curves only (no S-curves). A folder's automation follows the
@@ -4023,7 +4005,8 @@ its package rather than a copied binary.
   early.
 - **Control surfaces:** Mackie Control and HUI only, and not every button of either (see
   [Control surfaces](#control-surfaces-mackie-control-and-hui)); no OSC or other protocols.
-- **Controller assignments:** global; they refer to tracks and plug-ins by number, not per project.
+- **Controller assignments:** global; they refer to tracks and plug-ins by number, not per project
+  (selected-track, transport and key command assignments work in any project).
 - **Piano Roll:** no Score. Controller curves are drawn as ramps of points; a curve between
   two points isn't kept as a shape that can be bent later.
 - **Event List:** lists MIDI regions only (not the regions of the project, or audio), on one

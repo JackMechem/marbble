@@ -45,7 +45,8 @@ real-time rules before touching the engine.
 - Keep a pull request to one issue, and say `Fixes #123` in its description.
 - Run what [DEVELOPING.md › What to run before sending a change](docs/DEVELOPING.md#what-to-run-before-sending-a-change)
   lists for the parts you changed. CI builds and runs the tests on Linux, Windows and macOS,
-  and runs rustfmt, clippy and the headless checks on Linux.
+  runs rustfmt and clippy on Linux and the headless checks on Linux and macOS, and builds the
+  Nix flake.
 - Add a line to `CHANGELOG.md` under `[Unreleased]` for anything a user would notice, and
   update the docs that describe the behaviour you changed.
 - Say in the description what you tested and how, and what you couldn't try (a platform, a

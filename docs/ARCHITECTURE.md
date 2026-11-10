@@ -60,14 +60,14 @@ flowchart LR
 
 | Thread or process | Created in | What it does | What it may not do |
 |---|---|---|---|
-| **Main / UI thread** | Tauri | Runs synchronous Tauri commands (most edits, including audio import with its decoding and resampling), the native menu, the GTK main loop on Linux, the 30 ms idle timer (`Session::idle`: plug-in controller idle, latency changes, draining `Garbage`, automation follow and writes, controller assignments and their feedback), and taking autosaves. All VST3 *controllers* and editor windows live here. | Block for long. Renders are async commands for that reason. |
+| **Main / UI thread** | Tauri | Runs synchronous Tauri commands (most edits, including audio import with its decoding and resampling), the native menu, the GTK main loop on Linux, the 30 ms idle timer (`Session::idle`: plug-in controller idle, latency changes, draining `Garbage`, automation follow and writes, controller assignments and their feedback, control surfaces), and taking autosaves. All VST3 *controllers* and editor windows live here. | Block for long. Renders are async commands for that reason. |
 | **`audio-io`** | `audio_io::start` | Builds and owns the cpal streams, then waits until the device is closed. | |
 | **Audio callback** | cpal (output stream) | Calls `Engine::process` once per device buffer, inside `catch_unwind`; the input stream's callback only fills the input ring. Runs with real-time priority (rtkit on Linux). | Allocate, lock, block, do I/O. See [Real-time rules](#3-real-time-rules). |
 | **`marbble-dsp-N`** | `dsp/pool.rs`, started by `Session::sync_parallel` | Plays strips alongside the audio callback when Settings › Audio › Processing Threads allows it and a project is heavy enough, then blocks until the next block. Real-time like the callback; one refused that plays nothing. See [Multi-core processing](#multi-core-processing). | The same as the audio callback. |
 | **`recorder`** | `recorder.rs` | Every 10 ms, drains the ring buffer of each armed track into its WAV file and an in-memory copy, and keeps a peak preview for the UI. | Touch the engine or the project. |
-| **`ui-tick`** | `src-tauri/src/main.rs` | Every 33 ms: locks the session, builds a `Tick` (playhead, meters, input levels, recording previews, CPU, latency, analyzer spectrum, warnings, meters of open built-in effect panels, the clip indicators' held peaks, each strip's gain reduction) and emits it as the `tick` event. | Edit anything. |
+| **`ui-tick`** | `src-tauri/src/main.rs` | Every 33 ms: locks the session, builds a `Tick` (playhead, meters, input levels, recording previews, CPU, latency, analyzer spectrum, warnings, meters of open built-in effect panels, the clip indicators' held peaks, each strip's gain reduction, the controller assignment being learned, key commands fired from MIDI, hardware MIDI for Step Input) and emits it as the `tick` event. | Edit anything. |
 | **MIDI refresh** | `main.rs` | Every 3 s: `Session::refresh_midi`, so input and output devices plugged in later get connected. | |
-| **MIDI input callbacks** | midir, in `midi_io.rs` (one per port) | Drop system messages, take assigned controllers (CCs, pitch bend, notes with their note offs, program changes, both CCs of a 14-bit pair, the NRPN and RPN CCs on a channel with an NRPN assigned; all of them while learning; `CtlKind::takes`; an assigned note's polyphonic aftertouch is dropped with it) into a queue for `Session::idle` (controller assignments), apply the velocity curve, push the rest into the `live_midi` ring the engine reads, and log the message for Settings › MIDI. | |
+| **MIDI input callbacks** | midir, in `midi_io.rs` (one per port) | Hand a control surface's input port to the session whole (system exclusive included), drop other system messages, take assigned controllers (CCs, pitch bend, notes with their note offs, program changes, both CCs of a 14-bit pair, the NRPN and RPN CCs on a channel with an NRPN assigned; all of them while learning; `CtlKind::takes`; an assigned note's polyphonic aftertouch is dropped with it) into a queue for `Session::idle` (controller assignments), apply the velocity curve, push the rest into the `live_midi` ring the engine reads, and log the message for Settings › MIDI. | |
 | **`midi-out`** | `midi_out.rs` | Sends the controller feedback and control surface messages `Session::idle` hands it (batches through a channel) to the output ports. | Touch the session. |
 | **Async command workers** | Tauri's async runtime (`#[tauri::command(async)]`) | Offline renders (bounce, export, Bounce in Place, Freeze), plug-in rescans, waveform and transient requests, device lists, recent projects, the input level check, folder listings. Renders hold the session lock and the engine lock for their whole length; the parts that edit tracks or plug-ins are handed back to the main thread with `run_on_main_thread`. | Touch plug-in controllers. |
 | **Autosave writer** | `main.rs::autosave` | Writes an `AutosaveJob` (already serialized on the main thread) to disk, atomically. | |
@@ -189,7 +189,7 @@ sequenceDiagram
   UI->>API: act("move_region", { id, start, track })
   API->>C: invoke (args camelCase in JS, snake_case in Rust)
   C->>S: edit(): checkpoint("Move Region")
-  C->>S: move_region(id, start, track)
+  C->>S: drag_move_regions(moves)
   S->>S: update Project, regions_dsp(track)
   S->>E: Cmd::Regions(track, new RegionDsp list)
   C->>S: frozen_guard()
@@ -226,7 +226,8 @@ The pieces:
   (`Project::for_ui`), the selected track, project path, saved/dirty flags, audio status, MIDI
   inputs, open plug-in editors, the MIDI target name, undo/redo labels and the PDC report.
   `Session::idle` also emits a fresh snapshot as the `project` event when editors open or
-  close, automation was written, or a plug-in's latency changed.
+  close, automation was written, a plug-in's latency changed, a MIDI controller or control
+  surface changed the project, or a VST3 editor edit became an undo step.
 - **Ticks** are separate and much lighter (see [The frontend](#11-the-frontend)).
 
 ## 5. The project model
@@ -512,7 +513,7 @@ allocated, and their clips stay in `Project::clips`.
 ### Other project fields
 
 `name`, `sample_rate`, `tempo` (5..990 BPM), `sig_num`/`sig_den`, `key` (a string such as
-"C major"), `master` (Stereo Out: volume, inserts, EQ), `cycle`, `metronome`, `count_in`,
+"C major"), `master` (Stereo Out: volume, inserts, automation), `cycle`, `metronome`, `count_in`,
 `clips` (id to path, relative to the project folder unless outside it), `groups`, `click`
 (metronome settings), `bit_depth` (per-project recording format override), `notes` and
 `alternative` (the project alternative's name, see [Persistence](#8-persistence); `restore`
@@ -631,8 +632,8 @@ Details of each stage:
 - **Summing stacks and auxes**: a feeder writes into its destination's `sum_l`/`sum_r`
   through `out_idx` (output) and `send_idx` (sends), indices that `resolve_routes` keeps
   current. Because receivers come later in the list, the split borrow
-  `tracks.split_at_mut(ti + 1)` gives the current track mutable access to every track after
-  it.
+  `tracks.split_at_mut(ti)`, then `split_first_mut`, gives the current track mutable access to
+  every track after it.
 - **Instrument outputs**: an aux with `TrackParams::instrument_output` also pulls that output
   bus from its instrument (`dsp/multi_out.rs`), which played earlier in the block because
   `Project::feeds` counts the edge in `process_order`. It reads the plug-in's own buffers, through
@@ -971,10 +972,11 @@ lock held, faster than real time:
   latency, and restores everything.
 - `render_with_edit` (`Session::render_with_edit`) runs an edit partway through a render, for
   checks of changes made while playing (`pdc_glide_check`).
-- `Isolate { tracks, tap, fader, effects }` renders one track (with the subtracks feeding it)
-  captured before Stereo Out instead of the full mix. `tracks` lists who plays and whether
-  each is heard, overriding live mute and solo. Used by Export All Tracks, Export Region,
-  Bounce in Place and Freeze (`Session::isolate_track`).
+- `Isolate { tracks, tap, fader, effects, keys }` renders one track (with the subtracks feeding
+  it) captured before Stereo Out instead of the full mix. `tracks` lists who plays and whether
+  each is heard, overriding live mute and solo; `keys` are tracks outside it that key a
+  side-chain inside it, played but kept out of the capture. Used by Export All Tracks, Export
+  Region, Bounce in Place and Freeze (`Session::isolate_track`).
 - The bounce, export and freeze code is in `session/bounce.rs` and `session/freeze.rs`.
   `audio_file::write` writes the files: WAV, AIFF (AIFF-C for float) or FLAC, at 16-bit (TPDF
   dither), 24-bit or 32-bit float. One `Quantizer` serves every format, so they all hold the
@@ -996,8 +998,9 @@ stack.
   other stack and call `restore(target)`.
 - **`restore()` diffs** the target against the current project and touches only what
   differs: removed tracks are sent `RemoveTrack`; returning tracks are rebuilt with their
-  plug-ins from the snapshot's state; changed regions, EQ, automation and modes are resent;
-  plug-in slots whose instance id changed are reinstantiated, bypass changes are sent; then the
+  plug-ins from the snapshot's state; changed regions, automation and modes are resent;
+  reordered inserts are moved back, plug-in slots whose instance id changed are
+  reinstantiated, bypass and built-in effect changes are sent; then the
   order, all parameters, Stereo Out's inserts and the globals. Plug-ins that didn't change keep
   running with their state. Freeze transitions go through `restore_freeze`.
 - **Clips are never unloaded by undo**: recordings and imports made after a snapshot stay in
@@ -1009,7 +1012,7 @@ stack.
   (`UndoEntry::plugin`), and `step_to` swaps that with the plug-in's present one, as it does the
   project. See [Undo of editor edits](#undo-of-editor-edits).
 - **`frozen_guard()`**, called after every checkpointed edit, compares frozen tracks with the
-  checkpoint; if their regions, plug-ins or EQ changed it restores them and, when nothing else
+  checkpoint; if their regions or plug-ins changed it restores them and, when nothing else
   changed, drops the now-empty undo step.
 - Opening or creating a project clears both stacks.
 
@@ -1025,6 +1028,7 @@ Song.marbble/
   project.json             the Project (the active alternative), pretty-printed, with plug-in states (base64)
   project.autosave.json    only while there are unsaved changes (see below)
   project.json.bak         the previous save, only with Settings › General › Backups at 0
+  recording-<ms>.journal.json  while recording, until the takes are saved (crash recovery)
   Audio Files/             recordings, conversions, joins, reverses, bounce-in-place results
   Freeze Files/            freeze renders ("<track> Freeze.wav")
   Alternatives/<name>/project.json   the inactive project alternatives
@@ -1097,7 +1101,8 @@ the alternative change). Their ids are `alternative:<name>` and `revert:<file>`.
 ### Autosave and recovery
 
 - `Session::autosave_job` is polled from the idle timer. When the interval in
-  Settings › General has passed, the project is dirty and nothing is recording, it serializes
+  Settings › General has passed (or right after a recording, bounce or freeze:
+  `request_autosave`), the project is dirty and nothing is recording, it serializes
   the project (with plug-in states, so on the main thread) and returns a job; `main.rs`
   writes it on a new thread to `project.autosave.json` via a temporary file and rename. A hash
   skips writing an unchanged document.
@@ -1130,7 +1135,7 @@ at its new place (`old_name::relocated`).
 
 | File | Written by | Contents |
 |---|---|---|
-| `settings.json` | `src-tauri/src/settings.rs` | Sections `audio` (`AudioConfig`), `prefs` (`daw_engine::prefs::Prefs`: general, recording, midi, editing, latency, click defaults), `ui` (`UiPrefs`: startup, confirm_unsaved, snap, nudge, keymap overrides, theme, ui_scale, wave_style, click_locates) and `plugins` (`disabled` ids, extra `folders`). Every field defaults, and a malformed section is replaced by defaults without losing the others. A default that changed keeps its old value for files written before: `click_locates` is `"empty"` with no settings file, `"anywhere"` (the earlier default) when an existing file lacks it (`earlier_click_locates`, `UiPrefs::earlier`). Written atomically. |
+| `settings.json` | `src-tauri/src/settings.rs` | Sections `audio` (`AudioConfig`), `prefs` (`daw_engine::prefs::Prefs`: general, recording, midi, editing, latency, click defaults), `ui` (`UiPrefs`: startup, confirm_unsaved, snap, nudge, keymap overrides, theme, ui_scale, wave_style, click_locates, wheel_scrolls, fx_panels, update_channel, check_updates) and `plugins` (`disabled` ids, extra `folders`). Every field defaults, and a malformed section is replaced by defaults without losing the others. A default that changed keeps its old value for files written before: `click_locates` is `"empty"` with no settings file, `"anywhere"` (the earlier default) when an existing file lacks it (`earlier_click_locates`, `UiPrefs::earlier`). Written atomically. |
 | `recent.json` | `src-tauri/src/recent.rs` | Up to 20 canonical project paths, newest first (not written atomically). |
 | `plugins.json` | `plugin_db.rs` | The plug-in scan cache. |
 | `plugin-scan.json` | `plugin_db.rs` | The last scan's report (bundles, plug-ins, failures with reasons), for Settings › Plug-ins. |
@@ -1159,6 +1164,7 @@ Interface-only state lives in the webview's `localStorage`:
 | `marbble.showOverview` | `components/Overview.tsx` | Whether the overview strip replaces the scroll bar. |
 | `marbble.fxPanelSizes` | `fxDockState.ts` | The last size of each effect type's floating panel. |
 | `marbble.detachedPanels` | `detach.ts` | Which panels were detached at quit, and each kind's window geometry. |
+| `marbble.instSectionLayout` | `instLayout.ts` | Whether instrument panels lay their sections out in a row or a grid, docked and floating apart. |
 
 Appearance settings (theme, size, waveforms) are saved in `settings.json` by `appearance.ts`;
 the `localStorage` copies only let the window open in the right theme and size before the
@@ -1256,8 +1262,8 @@ session and processors come back as `Garbage`). `PluginProcessor` moves into the
 `IAttributeList` objects), `IPlugInterfaceSupport`, and `IComponentHandler`
 (`beginEdit`/`performEdit`/`endEdit`/`restartComponent`). `stream.rs` is an in-memory
 `IBStream` for state. On Linux the editor's `IPlugFrame` also implements `IRunLoop`; on macOS it is a plain frame.
-Not implemented: `IComponentHandler2/3`, `IUnitHandler`, `IPlugViewContentScaleSupport` (no
-HiDPI scaling), `IProcessContextRequirements`, context menus.
+Not implemented: `IComponentHandler2/3`, `IUnitHandler`, `IProcessContextRequirements`, context
+menus.
 
 ### Processing
 
@@ -1635,11 +1641,11 @@ Audio Track Editor and meters are canvas drawings. The common pattern:
 ### Themes
 
 - `src/themes.ts` defines each theme as a map of CSS custom properties (applied to `:root`)
-  plus a `CanvasTheme` for canvas drawing. Flat, Midnight, Light and High Contrast spread the
-  previous theme's maps and override what differs, so a new variable only needs a value in
-  Studio to exist everywhere. `applyTheme` also sets the window's own theme (`setTheme`, light
-  for Light and dark otherwise; capability `core:window:allow-set-theme`), which on Linux tao
-  turns into GTK's `gtk-application-prefer-dark-theme`, so the native menu bar matches.
+  plus a `CanvasTheme` for canvas drawing. Flat spreads Studio's maps and Midnight, Light and
+  High Contrast spread Flat's, each overriding what differs, so a new variable only needs a
+  value in Studio to exist everywhere. `applyTheme` also sets the window's own theme
+  (`setTheme`, light for Light and dark otherwise; capability `core:window:allow-set-theme`),
+  which on Linux tao turns into GTK's `gtk-application-prefer-dark-theme`, so the native menu bar matches.
 - `src/styles/` uses only the variables, never literal theme colours. `src/styles/index.css`
   imports one stylesheet per area, and its order is the cascade: `tokens.css` first, the rest in
   the order they were written, so an area can come in more than one file (see the comment there).
@@ -1892,8 +1898,8 @@ effect panel, the Channel EQ's among them) can be shown in an OS window of its o
   each kind's window geometry (localStorage `marbble.detachedPanels`), and opens, focuses and
   closes the windows (`windows.rs`: `open_panel_window`, `focus_panel_window`,
   `close_panel_window`). Panel windows ask it with `panel-msg` events (`hello`, `attach`,
-  `detach`, `close`, `key`, `geometry`), and key commands pressed in them run in the main
-  window's `KEY_ACTIONS`.
+  `detach`, `close`, `key`, `typing`, `geometry`), and key commands pressed in them run in the
+  main window's `KEY_ACTIONS`.
 - **Kinds.** `src/panelKinds.tsx` registers each kind with `src/detach.ts`: its title, what its
   window renders, whether a window's state shows it, and the state changes that hide and show
   it (`bottom` for the Mixer, Editors, Event List and Step Sequencer, `fxDock` for effect
@@ -1902,10 +1908,11 @@ effect panel, the Channel EQ's among them) can be shown in an OS window of its o
   to the front instead, so a panel is never shown twice. The main window closes the windows of
   panels whose track or effect has gone.
 - **Sync.** Each window keeps its own store. The fields in `detachModel.ts` `SYNCED_FIELDS`
-  (the region, track and note selection, focus, the region, channel strip, plug-in and Channel
-  EQ clipboards, snap, Catch, hide mode, open take folders, the automation lane shown, theme,
-  interface size, waveform style, the plug-in lists, `detached`) go to the other windows as
-  `ui-sync` patches (`syncPatch` compares by identity), settings as `ui-settings`. Snapshots don't travel through
+  (the region, track and note selection, focus, the region, channel strip and plug-in
+  clipboards, snap, Catch, hide mode, open take folders, the automation lane shown, theme,
+  interface size, waveform style, the Mixer's view, the plug-in lists, `detached`) go to the
+  other windows as `ui-sync` patches (`syncPatch` compares by identity), settings as
+  `ui-settings`. Snapshots don't travel through
   the frontend: after a window's `act()` changes its `snap`, it calls `broadcast_snapshot`
   (throttled to one every 30 ms), and Rust sends the session's snapshot to every other window as
   `project-sync`. The engine's `tick` and `project` events reach every window anyway. Applying
