@@ -10,6 +10,7 @@ import { regionBar } from "./regionBar";
 import { dragDelta, gainLabel, handleRect, inRect, shiftedGains, type Rect } from "./regionGain";
 import { theme } from "../../theme/canvasTheme";
 import { canvasFont } from "../../ui/canvasText";
+import { dragWith } from "../../ui/pointerDrag";
 
 /** The gains a drag in progress shows, ahead of the engine's. */
 let live: Map<Id, number> | null = null;
@@ -90,8 +91,6 @@ export function startGainDrag(e: { clientY: number; detail: number }, project: P
     send();
   };
   const up = () => {
-    window.removeEventListener("mousemove", move);
-    window.removeEventListener("mouseup", up);
     // Keep showing the dragged gains until the engine's snapshot has them.
     requestAnimationFrame(() =>
       chain.then(() => {
@@ -100,6 +99,5 @@ export function startGainDrag(e: { clientY: number; detail: number }, project: P
       }),
     );
   };
-  window.addEventListener("mousemove", move);
-  window.addEventListener("mouseup", up);
+  dragWith(move, up);
 }

@@ -7,6 +7,7 @@ import { onFrame } from "../../state/frameLoop";
 import { useStore } from "../../state/store";
 import { pixelRatio } from "../../ui/uiScale";
 import { canvasFont } from "../../ui/canvasText";
+import { dragWith } from "../../ui/pointerDrag";
 
 // Parameter ids and meter indexes (crates/engine/src/fx/tuner.rs).
 const REFERENCE = 0;
@@ -83,12 +84,9 @@ function DragValue({
           onChange(snap(v));
         };
         const up = () => {
-          window.removeEventListener("mousemove", move);
-          window.removeEventListener("mouseup", up);
           onTouch(false);
         };
-        window.addEventListener("mousemove", move);
-        window.addEventListener("mouseup", up);
+        dragWith(move, up);
       }}
       onDoubleClick={() => onChange(def)}
     >

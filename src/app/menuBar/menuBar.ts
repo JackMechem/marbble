@@ -15,7 +15,7 @@ import { canFreeze } from "../../tracks/freeze";
 import { canHaveAlternatives } from "../../tracks/alternatives/trackAlternatives";
 import { THEMES } from "../../theme/themes";
 import { pianoRollHasFocus } from "../../editors/pianoRoll/keys";
-import { eventListHasFocus } from "../../editors/eventList/EventList";
+import { eventListHasFocus } from "../../editors/eventList/keys";
 import { editorTakesEdit } from "../../editors/audioEditor/state";
 
 /** The Edit menu's item ids. */

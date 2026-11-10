@@ -33,22 +33,22 @@ const isField = (t: EventTarget | null) => {
  *  that runs on every render, so the handler sees that render's commands. */
 export function installMenuHandler(rootRef: Core["rootRef"], c: Commands) {
   const { selectCommand, selectAll, copy, cut, paste, duplicate, deleteSelected } = c;
-    const h = (id: string) => {
-      if (!rootRef.current?.contains(document.activeElement)) return false;
-      if (selectCommand(id)) return true;
-      const f: Record<string, () => void> = { "select-all": selectAll, copy, cut, paste, duplicate, delete: deleteSelected };
-      if (!f[id]) return false;
-      f[id]();
-      return true;
-    };
-    menuHandler = h;
-    menuRoot = rootRef;
-    return () => {
-      if (menuHandler === h) {
-        menuHandler = null;
-        menuRoot = null;
-      }
-    };
+  const h = (id: string) => {
+    if (!rootRef.current?.contains(document.activeElement)) return false;
+    if (selectCommand(id)) return true;
+    const f: Record<string, () => void> = { "select-all": selectAll, copy, cut, paste, duplicate, delete: deleteSelected };
+    if (!f[id]) return false;
+    f[id]();
+    return true;
+  };
+  menuHandler = h;
+  menuRoot = rootRef;
+  return () => {
+    if (menuHandler === h) {
+      menuHandler = null;
+      menuRoot = null;
+    }
+  };
 }
 
 /** The editor's own keys, while it has focus. */

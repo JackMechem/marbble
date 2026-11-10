@@ -29,6 +29,7 @@ import { saveGlobalView } from "../trackLayout";
 import { clampTempoH, GLOBAL_TRACK_LABELS, GLOBAL_TRACKS, globalRowsHeight, SIGNATURE_H, toggleGlobalTrack, type GlobalTrackId } from "./globalTracksModel";
 import { keyHint } from "../../keyboard/keymap";
 import { canvasFont } from "../../ui/canvasText";
+import { dragWith, pastDragThreshold } from "../../ui/pointerDrag";
 
 /** Inset of the tempo graph from the lane's top and bottom. */
 const PAD = 7;
@@ -315,12 +316,9 @@ export function GlobalTracks() {
     const startH = live.current.laneH;
     const move = (ev: MouseEvent) => setState({ tempoLaneH: clampTempoH(startH + ev.clientY - startY) });
     const up = () => {
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseup", up);
       if (getState().tempoLaneH !== startH) saveGlobalView({ tempoH: getState().tempoLaneH });
     };
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", up);
+    dragWith(move, up);
   };
 
   const sigDown = (e: React.MouseEvent, p: Project, x: number) => {
@@ -390,7 +388,7 @@ export function GlobalTracks() {
       const dx = ev.clientX - startX;
       const dy = ev.clientY - startY;
       if (!axis) {
-        if (Math.abs(dx) < 3 && Math.abs(dy) < 3) return;
+        if (!pastDragThreshold(dx, dy)) return;
         // The first change stays at the start of the project.
         axis = idx > 0 && Math.abs(dx) > Math.abs(dy) ? "x" : "y";
       }
@@ -409,8 +407,6 @@ export function GlobalTracks() {
       draw();
     };
     const up = () => {
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseup", up);
       const pv = preview.current;
       preview.current = null;
       if (pv && (axis || isNew)) {
@@ -418,8 +414,7 @@ export function GlobalTracks() {
         if (isNew && !axis) addedByClick = pv.events[idx].pos;
       } else draw();
     };
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", up);
+    dragWith(move, up);
   };
 
   const onContextMenu = (e: React.MouseEvent) => {

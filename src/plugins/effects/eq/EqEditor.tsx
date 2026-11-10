@@ -9,6 +9,7 @@ import { onTick, useStore } from "../../../state/store";
 import { pixelRatio } from "../../../ui/uiScale";
 import { fmt } from "../../../keyboard/keymap";
 import { canvasFont } from "../../../ui/canvasText";
+import { dragWith } from "../../../ui/pointerDrag";
 
 export function cssVar(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || "#4c9eff";
@@ -81,12 +82,9 @@ function Scrub({
           onScrub(start, px);
         };
         const up = () => {
-          window.removeEventListener("mousemove", move);
-          window.removeEventListener("mouseup", up);
           onGrab?.(false);
         };
-        window.addEventListener("mousemove", move);
-        window.addEventListener("mouseup", up);
+        dragWith(move, up);
       }}
       onDoubleClick={onReset}
     >
@@ -334,12 +332,9 @@ export function EqEditor({ eq, sr, onChange, extra, analyzerUid, learn, onGrab }
       setBand(best, { freq: Math.round(freq * 10) / 10, gain: Math.round(gain * 10) / 10, on: true });
     };
     const up = () => {
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseup", up);
       held(false);
     };
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", up);
+    dragWith(move, up);
   };
 
   const onWheel = (e: React.WheelEvent) => {

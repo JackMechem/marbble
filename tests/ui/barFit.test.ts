@@ -72,7 +72,7 @@ test("a row needs up to its rightmost box, its margin and the bar's end padding"
 });
 
 test("every bar that keeps to one row lists its steps and has the fit class", () => {
-  for (const f of ["tracks/TracksArea.tsx", "editors/pianoRoll/PianoRollBar.tsx", "editors/eventList/EventList.tsx", "editors/stepSequencer/StepSequencer.tsx", "editors/audioEditor/AudioEditor.tsx", "mixer/Mixer.tsx"]) {
+  for (const f of ["tracks/TracksArea.tsx", "editors/pianoRoll/PianoRollBar.tsx", "editors/eventList/EventListBar.tsx", "editors/stepSequencer/StepSequencer.tsx", "editors/audioEditor/AudioEditor.tsx", "mixer/Mixer.tsx"]) {
     const src = readFileSync(new URL(`../../src/${f}`, import.meta.url), "utf8");
     assert.match(src, /useBarFit\(/, `${f} measures its bar`);
     assert.match(src, /fit-bar/, `${f} marks its bar`);

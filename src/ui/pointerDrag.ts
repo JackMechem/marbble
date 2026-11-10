@@ -8,12 +8,12 @@ export const DRAG_THRESHOLD_PX = 3;
 export const pastDragThreshold = (dx: number, dy = 0) => Math.abs(dx) >= DRAG_THRESHOLD_PX || Math.abs(dy) >= DRAG_THRESHOLD_PX;
 
 /** Calls `move` on every mouse move until the button is released, then stops listening and
- *  calls `up`. */
-export function dragWith(move: (e: MouseEvent) => void, up: (e: MouseEvent) => void) {
+ *  calls `up` if given. */
+export function dragWith(move: (e: MouseEvent) => void, up?: (e: MouseEvent) => void) {
   const release = (e: MouseEvent) => {
     window.removeEventListener("mousemove", move);
     window.removeEventListener("mouseup", release);
-    up(e);
+    up?.(e);
   };
   window.addEventListener("mousemove", move);
   window.addEventListener("mouseup", release);

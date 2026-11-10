@@ -13,6 +13,7 @@ import { fmt } from "../../keyboard/keymap";
 import { REORDER_SLOP, reorderIndex } from "./headerGeometry";
 import { headerColumns } from "./headerColumns";
 import { Header, INDENT } from "./TrackHeader";
+import { dragWith } from "../../ui/pointerDrag";
 
 
 export function TrackHeaders() {
@@ -54,8 +55,6 @@ export function TrackHeaders() {
       setDrop(target);
     };
     const up = () => {
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseup", up);
       setDrop(null);
       if (!moved) return click?.();
       const tracks = project.tracks;
@@ -78,8 +77,7 @@ export function TrackHeaders() {
       ids.splice(at, 0, ...tracks.filter((t) => block.has(t.id)).map((t) => t.id));
       act("move_tracks", { ids, parents: [[id, parent]] });
     };
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", up);
+    dragWith(move, up);
   };
 
   if (!project) return null;

@@ -7,7 +7,7 @@ import { CYCLE_H, KEY_W, noteName, pitchAt, timeAt, xOf } from "./draw";
 import { openMenu } from "../../ui/Menu";
 import { ccClipboard, noteClipboard, type Commands } from "./commands";
 import { local, type Core } from "./core";
-import { dragWith } from "../../ui/pointerDrag";
+import { DRAG_THRESHOLD_PX, dragWith, pastDragThreshold } from "../../ui/pointerDrag";
 import type { Menus } from "./menus";
 import { setPrefs } from "./prefs";
 import { cycleGrab, keyAtPoint, laneShareOf, noteAt } from "./model";
@@ -57,25 +57,30 @@ export function noteGestures(ed: Core, c: Commands, m: Menus) {
       return commit(me.glue(base), work.current.cc, "Glue Notes");
     }
 
-    if (hit) {
-      selectRegionOf(hit.n);
-      const wasSelected = hit.n.sel;
-      let base: PNote[];
-      if (e.shiftKey) base = notes.map((n) => (n === hit.n ? { ...n, sel: !n.sel } : n));
-      else if (!hit.n.sel) base = notes.map((n) => (n === hit.n ? (n.sel ? n : { ...n, sel: true }) : n.sel ? { ...n, sel: false } : n));
-      else base = notes;
-      const grabbed = base[notes.indexOf(hit.n)];
-      setSelection(base);
-      if (!grabbed.sel) return;
-      lastVelocity.current = grabbed.velocity;
-      if (tool === "velocity") return velocityDrag(e, base, grabbed);
-      play(grabbed.pitch, grabbed.velocity);
-      return noteDrag(e, hit.zone === "body" ? "move" : hit.zone, base, grabbed, wasSelected && !e.shiftKey);
-    }
+    if (hit) return pressNote(e, hit, tool === "velocity");
 
     // Empty space.
     if (tool === "pencil" || (tool === "pointer" && e.detail === 2)) return pencil(e, x, y, tool === "pencil");
     if (tool === "pointer" || tool === "velocity" || tool === "scissors" || tool === "glue") return rubberBand(e, x, y);
+  };
+
+  /** A press on a note with the Pointer, Pencil or Velocity tool: selects it (Shift toggles it),
+   *  then drags the selection's notes, or with `velocity` their velocities. */
+  const pressNote = (e: React.MouseEvent, hit: NonNullable<ReturnType<typeof hitNote>>, velocity: boolean) => {
+    const notes = work.current.notes;
+    selectRegionOf(hit.n);
+    const wasSelected = hit.n.sel;
+    let base: PNote[];
+    if (e.shiftKey) base = notes.map((n) => (n === hit.n ? { ...n, sel: !n.sel } : n));
+    else if (!hit.n.sel) base = notes.map((n) => (n === hit.n ? (n.sel ? n : { ...n, sel: true }) : n.sel ? { ...n, sel: false } : n));
+    else base = notes;
+    const grabbed = base[notes.indexOf(hit.n)];
+    setSelection(base);
+    if (!grabbed.sel) return;
+    lastVelocity.current = grabbed.velocity;
+    if (velocity) return velocityDrag(e, base, grabbed);
+    play(grabbed.pitch, grabbed.velocity);
+    noteDrag(e, hit.zone === "body" ? "move" : hit.zone, base, grabbed, wasSelected && !e.shiftKey);
   };
 
   /** Moving, copying (Alt) or resizing the selected notes. */
@@ -88,47 +93,57 @@ export function noteGestures(ed: Core, c: Commands, m: Menus) {
     let copying = false;
     let lastPitch = grabbed.pitch;
     const el = scrollRef.current!;
+
+    /** The notes moved (or with Alt copied) by `dxT` samples and the pointer's pitch rows,
+     *  sounding the grabbed note's new pitch. */
+    const moveBy = (ev: MouseEvent, dxT: number, x: number, y: number): PNote[] => {
+      const free = ev.ctrlKey || ev.metaKey;
+      const target = snapT(grabbed.start + dxT, free);
+      const dp = -Math.round((ev.clientY - sy) / v.noteH);
+      // Across tempo changes the selection moves in musical time, keeping its rhythm.
+      const w = warp();
+      const shifted = w ? musical(base, (n) => me.nudge(n, w.toV(target) - w.toV(grabbed.start), dp)) : me.nudge(base, Math.round(target - grabbed.start), dp);
+      copying = ev.altKey;
+      const g2 = shifted[base.indexOf(grabbed)];
+      if (g2.pitch !== lastPitch) {
+        lastPitch = g2.pitch;
+        play(g2.pitch, g2.velocity);
+      }
+      showTag(`${noteName(g2.pitch)}   ${posLabel(g2.start)}${copying ? "   copy" : ""}`, x, y);
+      return copying ? [...base.map((n) => (n.sel ? { ...n, sel: false } : n)), ...shifted.filter((n) => n.sel)] : shifted;
+    };
+
+    /** The notes with the edge `kind` grabbed moved by `dxT` samples, each kept at least a grid
+     *  step long (or as long as it was, if shorter; a tick with a modifier). */
+    const resizeBy = (ev: MouseEvent, dxT: number, x: number, y: number): PNote[] => {
+      const free = ev.ctrlKey || ev.metaKey || ev.altKey;
+      const min = free ? 1 : Math.max(1, Math.min(g.grid, grabbed.length));
+      let notes: PNote[];
+      if (kind === "right") {
+        const end = snapT(grabbed.start + grabbed.length + dxT, free);
+        const dl = end - (grabbed.start + grabbed.length);
+        notes = base.map((n) => (n.sel ? { ...n, length: Math.max(Math.min(min, n.length), Math.round(n.length + dl)) } : n));
+      } else {
+        const ds = snapT(grabbed.start + dxT, free) - grabbed.start;
+        notes = base.map((n) => {
+          if (!n.sel) return n;
+          const end = n.start + n.length;
+          const s = Math.round(Math.max(0, Math.min(end - Math.min(min, n.length), n.start + ds)));
+          return { ...n, start: s, length: end - s };
+        });
+      }
+      const g2 = notes[base.indexOf(grabbed)];
+      showTag(`${kind === "right" ? "Length" : "Start"}   ${kind === "right" ? lenLabel(g2.length, g2.start) : posLabel(g2.start)}`, x, y);
+      return notes;
+    };
+
     dragWith(
       (ev) => {
-        if (!moved && Math.abs(ev.clientX - sx) < 3 && Math.abs(ev.clientY - sy) < 3) return;
+        if (!moved && !pastDragThreshold(ev.clientX - sx, ev.clientY - sy)) return;
         moved = true;
         const dxT = (ev.clientX - sx) / v.pps;
         const { x, y } = local(ev, el);
-        let notes: PNote[];
-        if (kind === "move") {
-          const free = ev.ctrlKey || ev.metaKey;
-          const target = snapT(grabbed.start + dxT, free);
-          const dp = -Math.round((ev.clientY - sy) / v.noteH);
-          // Across tempo changes the selection moves in musical time, keeping its rhythm.
-          const w = warp();
-          const shifted = w ? musical(base, (n) => me.nudge(n, w.toV(target) - w.toV(grabbed.start), dp)) : me.nudge(base, Math.round(target - grabbed.start), dp);
-          copying = ev.altKey;
-          notes = copying ? [...base.map((n) => (n.sel ? { ...n, sel: false } : n)), ...shifted.filter((n) => n.sel)] : shifted;
-          const g2 = shifted[base.indexOf(grabbed)];
-          if (g2.pitch !== lastPitch) {
-            lastPitch = g2.pitch;
-            play(g2.pitch, g2.velocity);
-          }
-          showTag(`${noteName(g2.pitch)}   ${posLabel(g2.start)}${copying ? "   copy" : ""}`, x, y);
-        } else {
-          const free = ev.ctrlKey || ev.metaKey || ev.altKey;
-          const min = free ? 1 : Math.max(1, Math.min(g.grid, grabbed.length));
-          if (kind === "right") {
-            const end = snapT(grabbed.start + grabbed.length + dxT, free);
-            const dl = end - (grabbed.start + grabbed.length);
-            notes = base.map((n) => (n.sel ? { ...n, length: Math.max(Math.min(min, n.length), Math.round(n.length + dl)) } : n));
-          } else {
-            const ds = snapT(grabbed.start + dxT, free) - grabbed.start;
-            notes = base.map((n) => {
-              if (!n.sel) return n;
-              const end = n.start + n.length;
-              const s = Math.round(Math.max(0, Math.min(end - Math.min(min, n.length), n.start + ds)));
-              return { ...n, start: s, length: end - s };
-            });
-          }
-          const g2 = notes[base.indexOf(grabbed)];
-          showTag(`${kind === "right" ? "Length" : "Start"}   ${kind === "right" ? lenLabel(g2.length, g2.start) : posLabel(g2.start)}`, x, y);
-        }
+        const notes = kind === "move" ? moveBy(ev, dxT, x, y) : resizeBy(ev, dxT, x, y);
         preview.current = { notes, cc: work.current.cc };
         requestDraw();
       },
@@ -260,7 +275,7 @@ export function noteGestures(ed: Core, c: Commands, m: Menus) {
       (ev) => {
         const { x, y } = local(ev, el);
         const v = view();
-        if (!moved && Math.hypot(x + v.left - ax, y + v.top - ay) < 3) return;
+        if (!moved && Math.hypot(x + v.left - ax, y + v.top - ay) < DRAG_THRESHOLD_PX) return;
         moved = true;
         rubber.current = { x0: ax - v.left, y0: ay - v.top, x1: x, y1: y };
         const notes = me.selectRect(base, timeAt(v, ax - v.left), timeAt(v, x), pitchAt(v, ay - v.top), pitchAt(v, y), add);
@@ -356,22 +371,26 @@ export function noteGestures(ed: Core, c: Commands, m: Menus) {
     if (e.button !== 0) return;
     e.preventDefault();
     rootRef.current?.focus({ preventScroll: true });
+    const { x, y } = local(e, rulerCv.current!);
+    if (y > CYCLE_H) scrubRuler(x);
+    else cycleDrag(x);
+  };
+
+  /** Under the cycle strip: a press at `x` locates there and a drag scrubs. */
+  const scrubRuler = (x: number) => {
     const cv = rulerCv.current!;
-    const { x, y } = local(e, cv);
+    const locate = (t: number) => act("locate", { pos: Math.max(0, Math.round(snapT(t))) });
+    locate(timeAt(view(), x));
+    dragWith((ev) => locate(timeAt(view(), local(ev, cv).x)));
+  };
+
+  /** The cycle strip, pressed at `x`: drag to set the locators, drag the range or its ends,
+   *  click to toggle. */
+  const cycleDrag = (x: number) => {
+    const cv = rulerCv.current!;
     const v = view();
-    const project = live.current.project;
     const at = timeAt(v, x);
-    if (y > CYCLE_H) {
-      const locate = (t: number) => act("locate", { pos: Math.max(0, Math.round(snapT(t))) });
-      locate(at);
-      dragWith(
-        (ev) => locate(timeAt(view(), local(ev, cv).x)),
-        () => {},
-      );
-      return;
-    }
-    // The cycle strip: drag to set the locators, drag the range or its ends, click to toggle.
-    const c = project.cycle;
+    const c = live.current.project.cycle;
     const has = c.end > c.start;
     const sx = xOf(v, c.start);
     const ex = xOf(v, c.end);
@@ -381,7 +400,7 @@ export function noteGestures(ed: Core, c: Commands, m: Menus) {
     dragWith(
       (ev) => {
         const cx = local(ev, cv).x;
-        if (!moved && Math.abs(cx - x) < 3) return;
+        if (!moved && !pastDragThreshold(cx - x)) return;
         moved = true;
         const cur = timeAt(view(), cx);
         let s = c.start;
@@ -417,10 +436,7 @@ export function noteGestures(ed: Core, c: Commands, m: Menus) {
     // The lane keeps its share of the height under the ruler, so it scales with the editor.
     const lane = ed.laneWrap.current?.getBoundingClientRect().height ?? 0;
     const area = lane + (scrollRef.current?.getBoundingClientRect().height ?? 0);
-    dragWith(
-      (ev) => setPrefs({ laneShare: laneShareOf(lane + sy - ev.clientY, area) }),
-      () => {},
-    );
+    dragWith((ev) => setPrefs({ laneShare: laneShareOf(lane + sy - ev.clientY, area) }));
   };
 
   return { onNotesDown, onNotesHover, onNotesContext, onKeysDown, onRulerDown, onSplitDown };

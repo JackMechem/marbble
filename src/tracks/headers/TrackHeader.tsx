@@ -27,6 +27,7 @@ import { showsTrackAlts } from "../../project/alternativesModel";
 import { TrackIcon } from "../icons/trackIconArt";
 import { openTrackIconPicker } from "../icons/TrackIconPicker";
 import { onPress } from "../../keyboard/keyNav";
+import { dragWith } from "../../ui/pointerDrag";
 
 export const INDENT = 12;
 /** Smallest full header with room for the automation controls on a line of their own. */
@@ -181,13 +182,10 @@ export function Header({
       else setTrackHeight(track.id, h);
     };
     const up = () => {
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseup", up);
       document.body.style.cursor = "";
     };
     document.body.style.cursor = "ns-resize";
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", up);
+    dragWith(move, up);
   };
   const menu = (e: React.MouseEvent) => {
     e.preventDefault();

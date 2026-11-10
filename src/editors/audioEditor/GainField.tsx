@@ -5,6 +5,7 @@ import { type Region } from "../../engine/regions";
 import { act } from "../../engine/commands";
 import { coalesced } from "../../state/frameLoop";
 import { formatDb } from "../../lib/decibels";
+import { dragWith } from "../../ui/pointerDrag";
 
 /** Region gain in the local bar: drag up or down (Shift for fine steps), scroll, or
  *  double-click for 0 dB. A drag is one undo step. */
@@ -59,12 +60,7 @@ export function GainField({ region }: { region: Region | null }) {
           last = ev.clientY;
           set(v);
         };
-        const up = () => {
-          window.removeEventListener("mousemove", move);
-          window.removeEventListener("mouseup", up);
-        };
-        window.addEventListener("mousemove", move);
-        window.addEventListener("mouseup", up);
+        dragWith(move);
       }}
       onDoubleClick={() => set(0)}
     >

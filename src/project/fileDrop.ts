@@ -13,6 +13,7 @@ import { importMidiFiles, isMidiPath } from "./midiFiles";
 import { getState, setState, showToast } from "../state/store";
 import { samplesPerBeat, snapPos } from "../lib/time";
 import { dropOnSampler, hoverSampler, samplerAt } from "../plugins/instruments/sampler/samplerDrop";
+import { dragWith } from "../ui/pointerDrag";
 
 export type DropTarget =
   | { kind: "lane"; track: Id; index: number; sample: number }
@@ -172,8 +173,6 @@ export function startFileDrag(e: React.MouseEvent, path: string, label: string) 
     hoverDrop(resolveDrop(ev.clientX, ev.clientY, midiOnly([path])));
   };
   const up = (ev: MouseEvent) => {
-    window.removeEventListener("mousemove", move);
-    window.removeEventListener("mouseup", up);
     document.body.style.cursor = "";
     if (ghost) {
       ghost.remove();
@@ -187,6 +186,5 @@ export function startFileDrag(e: React.MouseEvent, path: string, label: string) 
       }
     }
   };
-  window.addEventListener("mousemove", move);
-  window.addEventListener("mouseup", up);
+  dragWith(move, up);
 }

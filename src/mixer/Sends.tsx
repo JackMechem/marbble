@@ -13,6 +13,7 @@ import { sliderKeyDown } from "../ui/Controls";
 import { slotLayout } from "./stripRows";
 import { MoreSlot, SlotBox } from "./StripSlots";
 import { slotProps } from "./slotKeys";
+import { dragWith } from "../ui/pointerDrag";
 
 /** A small unipolar level knob, on the fader's taper. Shift-drag adjusts finely; double-click
  *  is 0 dB. */
@@ -34,12 +35,9 @@ function SendKnob({ db, pre, onChange, onDrag }: { db: number; pre: boolean; onC
       onChange(Math.round(faderToDb(pos.current) * 10) / 10);
     };
     const up = () => {
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseup", up);
       onDrag(false);
     };
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", up);
+    dragWith(move, up);
   };
   // -135° (off) .. +135° (+6 dB), clockwise from the top.
   const angle = -135 + dbToFader(db) * 270;

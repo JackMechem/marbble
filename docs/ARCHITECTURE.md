@@ -786,9 +786,14 @@ flowchart LR
 - A canvas editor is a component and its parts: the component (`TracksCanvas.tsx`,
   `PianoRoll.tsx`, `AudioEditor.tsx`) owns refs and effects; drawing and pointer handling are plain
   functions beside it that take those refs. Hooks stay in the component. Imperative code reads
-  current values through refs, never from a closure over a render. A drag listens on `window`
-  from press to release (`dragWith` in `src/ui/pointerDrag.ts`, with the distance a press must
-  move to count as a drag).
+  current values through refs, never from a closure over a render. The Event List, a list rather
+  than a canvas, is built the same way (`core.ts`, `commands.ts`, `gestures.ts`, `keys.ts`).
+- A mouse drag listens on `window` from press to release through `dragWith`
+  (`src/ui/pointerDrag.ts`), with `pastDragThreshold` for the distance a press must move to count
+  as a drag. The exceptions keep their own listeners: drags that also take a key (the Mixer's
+  plug-in slot drag, which Esc cancels) and pointer-event drags (pane splitters, a strip's width
+  in the Mixer and a floating panel's edges, which capture the pointer, and painting steps in the
+  Step Sequencer).
 - The tracks' vertical layout is `src/tracks/trackLayout.ts`; the horizontal scroll is shared
   without React state through `src/tracks/viewport.ts`. Waveforms are fetched once per clip as
   raw min/max bytes and cached (`src/tracks/regions/waveform.ts`).

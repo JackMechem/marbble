@@ -21,6 +21,7 @@ import { onViewport, viewport } from "../viewport";
 import { openMenu, type MenuItem } from "../../ui/Menu";
 import { askName, notEmpty } from "../../ui/NameSheet";
 import { canvasFont } from "../../ui/canvasText";
+import { dragWith } from "../../ui/pointerDrag";
 
 /** Height of the Arrangement lane. */
 const ARR_H = ARRANGEMENT_H;
@@ -223,16 +224,13 @@ export function ArrangementLane() {
       draw();
     };
     const up = () => {
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseup", up);
       const pv = preview.current;
       preview.current = null;
       const len = pv?.kind === "resize" ? pv.list.find((x) => x.id === s.id)?.length : undefined;
       if (len !== undefined && len !== s.length) act("resize_arrangement_marker", { id: s.id, length: len });
       else draw();
     };
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", up);
+    dragWith(move, up);
   };
 
   const moveDown = (e: React.MouseEvent, list: ArrangementMarker[], s: ArrangementMarker, at: number) => {
@@ -248,8 +246,6 @@ export function ArrangementLane() {
       draw();
     };
     const up = async (ev: MouseEvent) => {
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseup", up);
       const pv = preview.current;
       preview.current = null;
       if (!moved) {
@@ -265,8 +261,7 @@ export function ArrangementLane() {
       const ids = await actMade("move_arrangement_marker", { id: s.id, before: pv.drop.before, copy });
       if (ids) setState({ selectedRegions: ids, focus: "regions", selectedSection: copy ? null : s.id });
     };
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", up);
+    dragWith(move, up);
   };
 
   const onContextMenu = (e: React.MouseEvent) => {

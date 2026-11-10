@@ -9,6 +9,7 @@ import { closePanel, escTarget, focusPanel, prunePanels, savedPanelSize, savePan
 import { getState, useStore } from "../../state/store";
 import { PanelContent, panelExists, usePanelTitle } from "./FxPanel";
 import { PanelHeader } from "./PanelHeader";
+import { dragWith } from "../../ui/pointerDrag";
 
 /** Where each floating panel was, so floating it again puts it back there. */
 const positions = new Map<PanelKey, { x: number; y: number }>();
@@ -125,12 +126,7 @@ function FloatingPanel({ panelKey, z }: { panelKey: PanelKey; z: number }) {
     const sx = e.clientX - pos.x;
     const sy = e.clientY - pos.y;
     const move = (ev: MouseEvent) => setPos({ x: Math.max(0, ev.clientX - sx), y: Math.max(0, ev.clientY - sy) });
-    const up = () => {
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseup", up);
-    };
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", up);
+    dragWith(move);
   };
 
   const startResize = (edge: Edge) => (e: React.PointerEvent) => {

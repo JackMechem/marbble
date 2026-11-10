@@ -18,6 +18,7 @@ import { refuseFrozen } from "../freeze";
 import { indexAt, type Layout } from "../trackLayout";
 import { theme } from "../../theme/canvasTheme";
 import { deleteRegions, joinRegions, linkedRegions, pasteRegions, toggleRegionMute } from "../regionCommands";
+import { dragWith, pastDragThreshold } from "../../ui/pointerDrag";
 
 // ---- choosing tools -------------------------------------------------------------------------
 
@@ -108,25 +109,16 @@ const snapped = (p: Project, v: number) => Math.max(0, Math.round(snapToTracksGr
 const contentX = (ev: MouseEvent, el: HTMLElement) => ev.clientX - el.getBoundingClientRect().left + el.scrollLeft;
 const contentY = (ev: MouseEvent, el: HTMLElement) => ev.clientY - el.getBoundingClientRect().top + el.scrollTop;
 
-/** A drag starts once the pointer has moved this far, as region drags do. */
-const DRAG_PX = 3;
-
-/** Runs `move` for every mouse move once the pointer has gone far enough, then `up` (told
- *  whether it moved) on release. */
+/** Runs `move` for every mouse move once the pointer has gone far enough for a drag, as region
+ *  drags do, then `up` (told whether it moved) on release. */
 function track(e: React.MouseEvent, move: (ev: MouseEvent) => void, up: (moved: boolean, ev: MouseEvent) => void) {
   let moved = false;
   const onMove = (ev: MouseEvent) => {
-    if (!moved && Math.abs(ev.clientX - e.clientX) < DRAG_PX && Math.abs(ev.clientY - e.clientY) < DRAG_PX) return;
+    if (!moved && !pastDragThreshold(ev.clientX - e.clientX, ev.clientY - e.clientY)) return;
     moved = true;
     move(ev);
   };
-  const onUp = (ev: MouseEvent) => {
-    window.removeEventListener("mousemove", onMove);
-    window.removeEventListener("mouseup", onUp);
-    up(moved, ev);
-  };
-  window.addEventListener("mousemove", onMove);
-  window.addEventListener("mouseup", onUp);
+  dragWith(onMove, (ev) => up(moved, ev));
 }
 
 /** The region and the selection a click on it acts on: the whole selection when the region is

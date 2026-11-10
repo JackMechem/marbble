@@ -12,6 +12,7 @@ import { useStore } from "../../state/store";
 import { sliderAria } from "../../keyboard/sliderKeys";
 import { sliderKeyDown } from "../../ui/Controls";
 import { onPress } from "../../keyboard/keyNav";
+import { dragWith } from "../../ui/pointerDrag";
 
 /** Tempo-sync note values, mirroring NOTE_LABELS in crates/engine/src/fx/delay/. */
 const NOTE_LABELS = [
@@ -115,12 +116,9 @@ export function SpKnob({
       p.set(id, fromNorm(s, pos));
     };
     const up = () => {
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseup", up);
       p.touch(id, false);
     };
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", up);
+    dragWith(move, up);
   };
   const c = size / 2;
   const r = c - 3;

@@ -12,6 +12,7 @@ import { sheetOpen } from "../../keyboard/sheetKeys";
 import * as si from "./stepInputModel";
 import { currentTick, getState, onTick, setState, showToast, useStore } from "../../state/store";
 import { tempoMap } from "../../lib/tempo";
+import { dragWith } from "../../ui/pointerDrag";
 
 const BLACK = new Set([1, 3, 6, 8, 10]);
 const NAMES = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
@@ -214,12 +215,7 @@ export function StepInput() {
     const sx = e.clientX - pos.x;
     const sy = e.clientY - pos.y;
     const move = (ev: MouseEvent) => setPos({ x: Math.max(0, ev.clientX - sx), y: Math.max(0, ev.clientY - sy) });
-    const up = () => {
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseup", up);
-    };
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", up);
+    dragWith(move);
   };
 
   const hint = (id: string, label: string) => {

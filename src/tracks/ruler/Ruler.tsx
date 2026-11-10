@@ -19,6 +19,7 @@ import { transport } from "../../app/controlBar/transport";
 import { rulerMenu } from "./rulerMenu";
 import { canvasFont } from "../../ui/canvasText";
 import { BARS_H, CYCLE_H, HEAD_W, onPlayheadHead, playheadStyle } from "./rulerHead";
+import { dragWith, pastDragThreshold } from "../../ui/pointerDrag";
 
 const PUNCH_H = 6;
 const MARKERS_Y = BARS_H + PUNCH_H;
@@ -180,12 +181,7 @@ export function Ruler() {
       const locate = (s: number) => act("locate", { pos: Math.round(Math.max(0, snap(s))) });
       locate(at);
       const move = (ev: MouseEvent) => locate(toSample(ev.clientX));
-      const up = () => {
-        window.removeEventListener("mousemove", move);
-        window.removeEventListener("mouseup", up);
-      };
-      window.addEventListener("mousemove", move);
-      window.addEventListener("mouseup", up);
+      dragWith(move);
       return;
     }
 
@@ -208,11 +204,8 @@ export function Ruler() {
     };
     const up = () => {
       cv.style.cursor = "grab";
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseup", up);
     };
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", up);
+    dragWith(move, up);
   };
 
   // Over the head, the pointer says it can be grabbed.
@@ -248,7 +241,7 @@ export function Ruler() {
     const map = tempoMap(project);
 
     const move = (ev: MouseEvent) => {
-      if (!moved && Math.abs(ev.clientX - startX) < 3) return;
+      if (!moved && !pastDragThreshold(ev.clientX - startX)) return;
       moved = true;
       const cur = toSample(ev.clientX);
       let s = c.start;
@@ -270,8 +263,6 @@ export function Ruler() {
       draw();
     };
     const up = () => {
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseup", up);
       const p = preview.current;
       preview.current = null;
       if (moved && p) {
@@ -283,8 +274,7 @@ export function Ruler() {
         draw();
       }
     };
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", up);
+    dragWith(move, up);
   };
 
   /** The marker lane: click a marker to select it and go to it (with Cycle on, the cycle takes
@@ -313,7 +303,7 @@ export function Ruler() {
     let moved = false;
     let toCycle = false;
     const move = (ev: MouseEvent) => {
-      if (!moved && Math.abs(ev.clientX - startX) < 3 && Math.abs(ev.clientY - e.clientY) < 3) return;
+      if (!moved && !pastDragThreshold(ev.clientX - startX, ev.clientY - e.clientY)) return;
       moved = true;
       // Over the cycle strip, the marker sets the locators instead of moving.
       toCycle = ev.clientY - top < CYCLE_H;
@@ -328,8 +318,6 @@ export function Ruler() {
       draw();
     };
     const up = () => {
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseup", up);
       const mv = movingMarker.current;
       movingMarker.current = null;
       preview.current = null;
@@ -338,8 +326,7 @@ export function Ruler() {
       else if (!moved) clickMarker(m);
       else draw();
     };
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", up);
+    dragWith(move, up);
   };
 
   /** Dragging the end of a marker's bar: its own length, snapped, at least a beat. */
@@ -357,16 +344,13 @@ export function Ruler() {
       draw();
     };
     const up = () => {
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseup", up);
       const mv = movingMarker.current;
       movingMarker.current = null;
       const marker = project.markers.find((x) => x.id === m.id);
       if (mv?.length && marker && mv.length !== m.length) setMarkerLength(marker, mv.length);
       else draw();
     };
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", up);
+    dragWith(move, up);
   };
 
   const onContextMenu = (e: React.MouseEvent) => {

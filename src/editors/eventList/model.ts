@@ -170,6 +170,9 @@ export const EVENT_TYPES: { id: EventType; label: string; status: string; name: 
   { id: "pressure", label: "Chnl Pressure", status: "C-Press", name: "Channel Pressure" },
 ];
 
+/** The entry of EVENT_TYPES for `id`. */
+export const eventType = (id: EventType) => EVENT_TYPES.find((t) => t.id === id)!;
+
 const ccType = (k: CcKind): EventType => (k.type === "pitch_bend" ? "bend" : k.type === "aftertouch" ? "pressure" : "control");
 
 /** One line of the list: an event of the working list, by kind and index. */

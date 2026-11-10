@@ -8,6 +8,7 @@ import { fmt } from "../../keyboard/keymap";
 import { emitLocalMidi } from "./stepInputModel";
 import { typingLeavesKey } from "../../keyboard/keyNav";
 import { keyboardFocus } from "../../keyboard/focusRing";
+import { dragWith } from "../../ui/pointerDrag";
 
 // Physical key -> semitone above the current octave's C.
 const NOTE_KEYS: Record<string, number> = {
@@ -143,12 +144,7 @@ export function MusicalTyping() {
     const sx = e.clientX - pos.x;
     const sy = e.clientY - pos.y;
     const move = (ev: MouseEvent) => setPos({ x: Math.max(0, ev.clientX - sx), y: Math.max(0, ev.clientY - sy) });
-    const up = () => {
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseup", up);
-    };
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", up);
+    dragWith(move);
   };
 
   // Four octaves from one below the typing octave.

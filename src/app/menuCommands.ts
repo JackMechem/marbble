@@ -6,7 +6,7 @@ import { isBouncing, openBounce } from "../project/bounce/bounce";
 import { bounceInPlace, createStack, deleteTracks, deleteUnusedTracks, duplicateTracks, groupTracks, hideTracks, selectedTracks, switchAll, toggleShowHidden, unhideAllTracks } from "../tracks/trackCommands";
 import { convertLoops, copyRegions, cutRegions, duplicate, joinRegions, newPatternRegion, pasteRegions, repeatRegions, selectAllRegions, setLocatorsByRegions, toggleLoop } from "../tracks/regionCommands";
 import { toggleZeroCrossings } from "../tracks/regions/zeroCrossings";
-import { eventListMenu } from "../editors/eventList/EventList";
+import { eventListMenu } from "../editors/eventList/keys";
 import { toggleOverview } from "../tracks/overview/Overview";
 import { importAudioDialog, openProjectDialog, saveProject, undoRedo } from "../project/files";
 import { currentTick, getState, setState, showToast } from "../state/store";

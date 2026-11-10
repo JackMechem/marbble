@@ -8,6 +8,7 @@ import { theme } from "../../../theme/canvasTheme";
 import { arc, formatDyn, fromNorm, KNOB_SWEEP, polar, toNorm } from "./dynScale";
 import { sliderAria } from "../../../keyboard/sliderKeys";
 import { sliderKeyDown } from "../../../ui/Controls";
+import { dragWith } from "../../../ui/pointerDrag";
 
 export function cssVar(name: string, fallback = "#888"): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
@@ -63,12 +64,9 @@ export function DynKnob({ label, value, min, max, log = false, def, format, onCh
       if (v !== value) onChange(v);
     };
     const up = () => {
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseup", up);
       onGrab?.(false);
     };
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", up);
+    dragWith(move, up);
   };
   return (
     <div

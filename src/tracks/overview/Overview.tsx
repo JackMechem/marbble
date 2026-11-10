@@ -16,6 +16,7 @@ import { type Geometry, drawStatic, drawOverlay } from "./draw";
 import type { Project } from "../../engine/project";
 import { regionEnd } from "../regions/loops";
 import { wheelZoom } from "../zoom";
+import { dragWith } from "../../ui/pointerDrag";
 
 // ---- showing and hiding (View › Show Overview), remembered per machine -----------------------
 
@@ -253,11 +254,8 @@ export function Overview() {
     const up = () => {
       dragRef.current = null;
       wrap.style.cursor = "";
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseup", up);
     };
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", up);
+    dragWith(move, up);
   };
 
   // The pointer shows what a press would do.

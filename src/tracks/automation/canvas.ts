@@ -16,6 +16,7 @@ import { addLane, closeLane, showUsedAutomation } from "./menus";
 import { fromUnit, fromUnitExact, isOutput, laneOf, outputTrack, paramLabel, stripOf, toUnit } from "./params";
 import { formatValue, liveValue, shownParam } from "./values";
 import { canvasFont } from "../../ui/canvasText";
+import { dragWith, pastDragThreshold } from "../../ui/pointerDrag";
 
 const POINT_R = 3;
 const HIT_R = 6;
@@ -288,19 +289,18 @@ function bendSegment(e: React.MouseEvent, h: Hit, v: AutoInput): boolean {
     v.redraw();
   };
   const up = () => {
-    window.removeEventListener("mousemove", move);
-    window.removeEventListener("mouseup", up);
     hover = null;
     if (moved) sendLane(h.track.id, h.param, result);
     endPreview(v);
   };
   e.preventDefault();
-  window.addEventListener("mousemove", move);
-  window.addEventListener("mouseup", up);
+  dragWith(move, up);
   return true;
 }
 
-/** A press on a lane while the automation view is on. */
+/** A press on a lane while the automation view is on: on a point, Option-click or a double-click
+ *  deletes it and otherwise it's selected and dragged; on empty space, a click adds a point and
+ *  a drag rubber-bands; Control- or Option-Shift-drag on a segment bends it. */
 export function automationMouseDown(e: React.MouseEvent, v: AutoInput) {
   const h = hitTest(e, v);
   if (!h) {
@@ -309,84 +309,97 @@ export function automationMouseDown(e: React.MouseEvent, v: AutoInput) {
     return;
   }
   if (!isOutput(h.track) && h.track.id !== getState().snap?.selected) act("select_track", { id: h.track.id });
-  const snap = (pos: number) => Math.max(0, Math.round(snapToTracksGrid(v.project, pos)));
-  const sameLane = selection && selection.track === h.track.id && sameParam(selection.param, h.param);
-
   if (h.point < 0 && e.shiftKey && (e.ctrlKey || e.altKey) && bendSegment(e, h, v)) return;
-
   if (h.point >= 0) {
-    const grabbed = h.points[h.point];
-    // Double-click or Alt-click deletes a point. The second click of a double-click on a
-    // curved segment lands on the point its first click added: that straightens the segment.
-    if (e.altKey || e.detail >= 2) {
-      selection = null;
-      const add = lastAdd;
-      lastAdd = null;
-      if (e.detail >= 2 && add && add.track === h.track.id && sameParam(add.param, h.param) && add.pos === grabbed.pos && add.onCurve) {
-        sendLane(h.track.id, h.param, withCurve(add.before, segmentAt(add.before, add.pos), 0));
-        return;
-      }
-      sendLane(h.track.id, h.param, h.points.filter((_, k) => k !== h.point));
-      return;
-    }
-    let pos = sameLane ? new Set(selection!.pos) : new Set<number>();
-    if (e.shiftKey) {
-      if (pos.has(grabbed.pos)) pos.delete(grabbed.pos);
-      else pos.add(grabbed.pos);
-    } else if (!pos.has(grabbed.pos)) {
-      pos = new Set([grabbed.pos]);
-    }
-    selection = { track: h.track.id, param: h.param, pos };
-    v.redraw();
-    if (!pos.has(grabbed.pos)) return;
-    // Drag the selected points; Shift keeps them in time and moves only the value.
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const picked = h.points.map((p) => pos.has(p.pos));
-    let moved = false;
-    let result = h.points;
-    const move = (ev: MouseEvent) => {
-      if (!moved && Math.abs(ev.clientX - startX) < 3 && Math.abs(ev.clientY - startY) < 3) return;
-      moved = true;
-      const dPos = ev.shiftKey ? 0 : snap(grabbed.pos + (ev.clientX - startX) / v.pps) - grabbed.pos;
-      const dU = (startY - ev.clientY) / Math.max(1, h.bottom - h.top);
-      result = h.points.map((p, k) => (picked[k] ? { ...p, pos: Math.max(0, p.pos + dPos), value: fromUnit(h.param, toUnit(h.param, p.value) + dU) } : p));
-      result.sort((a, b) => a.pos - b.pos);
-      preview = { track: h.track.id, param: h.param, points: result };
-      selection = { track: h.track.id, param: h.param, pos: new Set(h.points.filter((_, k) => picked[k]).map((p) => Math.max(0, p.pos + dPos))) };
-      const g = { pos: grabbed.pos + dPos, value: fromUnit(h.param, toUnit(h.param, grabbed.value) + dU) };
-      hover = { track: h.track.id, x: g.pos * v.pps, y: h.bottom - toUnit(h.param, g.value) * (h.bottom - h.top), text: formatValue(h.param, g.value) };
-      sendLane(h.track.id, h.param, result);
-      v.redraw();
-    };
-    const up = () => {
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseup", up);
-      if (moved) sendLane(h.track.id, h.param, result);
-      endPreview(v);
-    };
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", up);
+    if (e.altKey || e.detail >= 2) deletePoint(e, h);
+    else dragPoints(e, h, v);
     return;
   }
+  if (e.detail >= 2 && undoClickedPoint(h)) return;
+  bandOrAddPoint(e, h, v);
+}
 
-  // The second click of a double-click whose first one added a point that hasn't arrived yet.
+/** A position on the Tracks area's grid, not before the start. */
+const snapped = (v: AutoInput, pos: number) => Math.max(0, Math.round(snapToTracksGrid(v.project, pos)));
+
+/** The selected points' positions, if the selection is on the hit's lane. */
+const selectedOn = (h: Hit) => (selection && selection.track === h.track.id && sameParam(selection.param, h.param) ? selection.pos : null);
+
+/** Deletes the point under the press. The second click of a double-click on a curved segment
+ *  lands on the point its first click added: that straightens the segment instead. */
+function deletePoint(e: React.MouseEvent, h: Hit) {
+  const grabbed = h.points[h.point];
+  selection = null;
   const add = lastAdd;
-  if (e.detail >= 2 && add && add.track === h.track.id && sameParam(add.param, h.param)) {
-    lastAdd = null;
-    selection = null;
-    sendLane(h.track.id, h.param, add.onCurve ? withCurve(add.before, segmentAt(add.before, add.pos), 0) : add.before);
+  lastAdd = null;
+  if (e.detail >= 2 && add && add.track === h.track.id && sameParam(add.param, h.param) && add.pos === grabbed.pos && add.onCurve) {
+    sendLane(h.track.id, h.param, withCurve(add.before, segmentAt(add.before, add.pos), 0));
     return;
   }
+  sendLane(h.track.id, h.param, h.points.filter((_, k) => k !== h.point));
+}
 
-  // Empty lane space: a click adds a point, a drag selects points with a rubber band.
+/** Selects the point under the press (Shift toggles it), then drags the selected points; Shift
+ *  keeps them in time and moves only the value. */
+function dragPoints(e: React.MouseEvent, h: Hit, v: AutoInput) {
+  const grabbed = h.points[h.point];
+  let pos = new Set(selectedOn(h) ?? []);
+  if (e.shiftKey) {
+    if (pos.has(grabbed.pos)) pos.delete(grabbed.pos);
+    else pos.add(grabbed.pos);
+  } else if (!pos.has(grabbed.pos)) {
+    pos = new Set([grabbed.pos]);
+  }
+  selection = { track: h.track.id, param: h.param, pos };
+  v.redraw();
+  if (!pos.has(grabbed.pos)) return;
+  const startX = e.clientX;
+  const startY = e.clientY;
+  const picked = h.points.map((p) => pos.has(p.pos));
+  let moved = false;
+  let result = h.points;
+  const move = (ev: MouseEvent) => {
+    if (!moved && !pastDragThreshold(ev.clientX - startX, ev.clientY - startY)) return;
+    moved = true;
+    const dPos = ev.shiftKey ? 0 : snapped(v, grabbed.pos + (ev.clientX - startX) / v.pps) - grabbed.pos;
+    const dU = (startY - ev.clientY) / Math.max(1, h.bottom - h.top);
+    result = h.points.map((p, k) => (picked[k] ? { ...p, pos: Math.max(0, p.pos + dPos), value: fromUnit(h.param, toUnit(h.param, p.value) + dU) } : p));
+    result.sort((a, b) => a.pos - b.pos);
+    preview = { track: h.track.id, param: h.param, points: result };
+    selection = { track: h.track.id, param: h.param, pos: new Set(h.points.filter((_, k) => picked[k]).map((p) => Math.max(0, p.pos + dPos))) };
+    const g = { pos: grabbed.pos + dPos, value: fromUnit(h.param, toUnit(h.param, grabbed.value) + dU) };
+    hover = { track: h.track.id, x: g.pos * v.pps, y: h.bottom - toUnit(h.param, g.value) * (h.bottom - h.top), text: formatValue(h.param, g.value) };
+    sendLane(h.track.id, h.param, result);
+    v.redraw();
+  };
+  const up = () => {
+    if (moved) sendLane(h.track.id, h.param, result);
+    endPreview(v);
+  };
+  dragWith(move, up);
+}
+
+/** The second click of a double-click whose first one added a point that hasn't arrived yet:
+ *  puts the lane back as it was (with the segment straight, if the click was on a curve). */
+function undoClickedPoint(h: Hit): boolean {
+  const add = lastAdd;
+  if (!add || add.track !== h.track.id || !sameParam(add.param, h.param)) return false;
+  lastAdd = null;
+  selection = null;
+  sendLane(h.track.id, h.param, add.onCurve ? withCurve(add.before, segmentAt(add.before, add.pos), 0) : add.before);
+  return true;
+}
+
+/** Empty lane space: a click adds a point, a drag selects points with a rubber band (Shift adds
+ *  to the selection). */
+function bandOrAddPoint(e: React.MouseEvent, h: Hit, v: AutoInput) {
   const x0 = h.x;
   const y0 = h.y;
-  const extend = e.shiftKey && sameLane ? new Set(selection!.pos) : new Set<number>();
+  const extend = new Set(e.shiftKey ? (selectedOn(h) ?? []) : []);
   let banding = false;
   const move = (ev: MouseEvent) => {
     const c = hitPoint(ev, v);
-    if (!banding && Math.abs(c.x - x0) < 3 && Math.abs(c.y - y0) < 3) return;
+    if (!banding && !pastDragThreshold(c.x - x0, c.y - y0)) return;
     banding = true;
     band = { x0, y0, x1: c.x, y1: c.y };
     // The band selects on the lane it started in.
@@ -401,25 +414,27 @@ export function automationMouseDown(e: React.MouseEvent, v: AutoInput) {
     v.redraw();
   };
   const up = () => {
-    window.removeEventListener("mousemove", move);
-    window.removeEventListener("mouseup", up);
     if (banding) {
       band = null;
       v.redraw();
       return;
     }
-    const pos = snap(h.x / v.pps);
-    // A point added inside a curved segment keeps both halves bent the same way.
-    const seg = segmentAt(h.points, pos);
-    const curve = seg >= 0 ? h.points[seg].curve : undefined;
-    const p: AutoPoint = { pos, value: fromUnit(h.param, unitAt(h, h.y)), ...(curve ? { curve } : {}) };
-    const cy = curveY(h, h.points, h.x, v.pps);
-    lastAdd = { track: h.track.id, param: h.param, pos, before: h.points, onCurve: !!curve && cy !== null && Math.abs(cy - h.y) <= HIT_R + 2 };
-    selection = { track: h.track.id, param: h.param, pos: new Set([p.pos]) };
-    sendLane(h.track.id, h.param, [...h.points.filter((q) => q.pos !== p.pos), p]);
+    addPoint(h, v);
   };
-  window.addEventListener("mousemove", move);
-  window.addEventListener("mouseup", up);
+  dragWith(move, up);
+}
+
+/** Adds a point at the press (snapped in time), and remembers it for a double-click. */
+function addPoint(h: Hit, v: AutoInput) {
+  const pos = snapped(v, h.x / v.pps);
+  // A point added inside a curved segment keeps both halves bent the same way.
+  const seg = segmentAt(h.points, pos);
+  const curve = seg >= 0 ? h.points[seg].curve : undefined;
+  const p: AutoPoint = { pos, value: fromUnit(h.param, unitAt(h, h.y)), ...(curve ? { curve } : {}) };
+  const cy = curveY(h, h.points, h.x, v.pps);
+  lastAdd = { track: h.track.id, param: h.param, pos, before: h.points, onCurve: !!curve && cy !== null && Math.abs(cy - h.y) <= HIT_R + 2 };
+  selection = { track: h.track.id, param: h.param, pos: new Set([p.pos]) };
+  sendLane(h.track.id, h.param, [...h.points.filter((q) => q.pos !== p.pos), p]);
 }
 
 function hitPoint(e: MouseEvent, v: AutoInput) {

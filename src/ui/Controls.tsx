@@ -10,6 +10,7 @@ import { effectiveDb } from "../mixer/vcaModel";
 import { grFraction, isClip, nextGr } from "../mixer/stripMeters";
 import { keyValue, SLIDER_KEYS, sliderAria } from "../keyboard/sliderKeys";
 import { PAN_STEPS, panSteps, panText } from "../mixer/panText";
+import { dragWith } from "./pointerDrag";
 
 /** Shared vertical/horizontal drag helper. Shift gives fine control, like Logic. */
 export function useDrag(onDelta: (d: number, fine: boolean) => void, onEnd?: () => void) {
@@ -23,12 +24,9 @@ export function useDrag(onDelta: (d: number, fine: boolean) => void, onEnd?: () 
       onDelta(d, ev.shiftKey);
     };
     const up = () => {
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseup", up);
       onEnd?.();
     };
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", up);
+    dragWith(move, up);
   };
 }
 

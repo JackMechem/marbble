@@ -15,6 +15,7 @@ import { fmt, keyHint, tip } from "../../keyboard/keymap";
 import { withKey } from "../../keyboard/keyFormat";
 import { toggleReplace, useSettings } from "../../settings/appSettings";
 import { onPress } from "../../keyboard/keyNav";
+import { dragWith } from "../../ui/pointerDrag";
 
 const KEYS = ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
 
@@ -46,12 +47,7 @@ function useScrub(onStep: (steps: number, total: number) => void, px = 6) {
         onStep(steps, total);
       }
     };
-    const up = () => {
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseup", up);
-    };
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", up);
+    dragWith(move);
   };
 }
 

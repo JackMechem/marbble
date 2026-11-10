@@ -14,6 +14,7 @@ import { useFxLearn } from "../../controllers/learn";
 import { sliderAria } from "../../keyboard/sliderKeys";
 import { sliderKeyDown } from "../../ui/Controls";
 import { onPress } from "../../keyboard/keyNav";
+import { dragWith } from "../../ui/pointerDrag";
 
 export { formatValue, toNorm, fromNorm, tidy, parseValue, clampValue };
 
@@ -79,12 +80,9 @@ export function FxKnob({
       onChange(tidy(spec, fromNorm(spec, pos.current)));
     };
     const up = () => {
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseup", up);
       onTouch?.(false);
     };
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", up);
+    dragWith(move, up);
   };
   const a0 = angle(origin);
   const a1 = angle(n);

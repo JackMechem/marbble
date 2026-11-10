@@ -16,6 +16,7 @@ import { fmt } from "../../keyboard/keymap";
 import { moveAutomationAnswer } from "../../tracks/regions/moveAutomation";
 import { geometry, grabKind as grabOf, RULER, type Drag, type GrabKind } from "./model";
 import type { AudioLive } from "./draw";
+import { dragWith, pastDragThreshold } from "../../ui/pointerDrag";
 
 export type PointerRefs = {
   scrollRef: React.RefObject<HTMLDivElement | null>;
@@ -72,16 +73,6 @@ export function editorPointer({ scrollRef, dragRef, hoverRef, live, requestDraw 
   /** What a press grabs (see editors/audioEditor/model.ts). */
   const grabKind = (h: ReturnType<typeof hit>): GrabKind => grabOf(h, live.current.pps, regionCrossfades);
 
-  const drag = (onMove: (ev: MouseEvent) => void, onUp: (ev: MouseEvent) => void) => {
-    const up = (ev: MouseEvent) => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", up);
-      onUp(ev);
-    };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", up);
-  };
-
   const autoScroll = (clientX: number) => {
     const el = scrollRef.current!;
     const r = el.getBoundingClientRect();
@@ -95,6 +86,8 @@ export function editorPointer({ scrollRef, dragRef, hoverRef, live, requestDraw 
     setState({ selectedRegions: next, focus: "regions" });
   };
 
+  /** A press: on the ruler it locates, a double-click on a region selects all of it, and
+   *  otherwise it drags what it grabbed (a region's body, edge or fade, or a range). */
   const onMouseDown = (e: React.MouseEvent) => {
     ed.setEditorFocus(true);
     if (e.button !== 0 || onScrollbar(e)) return;
@@ -102,31 +95,28 @@ export function editorPointer({ scrollRef, dragRef, hoverRef, live, requestDraw 
     if (!project) return;
     if (track.id !== getState().snap?.selected) act("select_track", { id: track.id });
     const h = hit(e);
-
-    if (h.inRuler) {
-      // Click or scrub the ruler to locate.
-      const locate = (cx: number, free: boolean) => act("locate", { pos: snapEd(frameAt(cx), free) });
-      locate(e.clientX, e.altKey);
-      drag(
-        (ev) => locate(ev.clientX, ev.altKey),
-        () => {},
-      );
-      return;
-    }
-
-    if (h.region && e.detail === 2) {
-      // Double-click: select the whole region.
-      ed.setEd({ sel: { track: track.id, start: h.region.start, end: h.region.start + h.region.length } });
-      setState({ selectedRegions: [h.region.id], focus: "regions" });
-      return;
-    }
-
+    if (h.inRuler) return scrubRuler(e);
+    if (h.region && e.detail === 2) return selectWholeRegion(h.region);
     const kind = grabKind(h);
-    if (kind === "select") {
-      beginSelect(e, h.region);
-      return;
-    }
-    const r = h.region!;
+    if (kind === "select") beginSelect(e, h.region);
+    else dragRegion(e, h.region!, kind);
+  };
+
+  /** Click or scrub the ruler to locate (Option for no snap). */
+  const scrubRuler = (e: React.MouseEvent) => {
+    const locate = (cx: number, free: boolean) => act("locate", { pos: snapEd(frameAt(cx), free) });
+    locate(e.clientX, e.altKey);
+    dragWith((ev) => locate(ev.clientX, ev.altKey));
+  };
+
+  const selectWholeRegion = (r: Region) => {
+    ed.setEd({ sel: { track: live.current.track.id, start: r.start, end: r.start + r.length } });
+    setState({ selectedRegions: [r.id], focus: "regions" });
+  };
+
+  /** Moves, trims or fades region `r` (`kind`, what the press grabbed) as the pointer goes
+   *  sideways, shown through `dragRef`; the result is sent on release. */
+  const dragRegion = (e: React.MouseEvent, r: Region, kind: Drag["kind"]) => {
     if (!getState().selectedRegions.includes(r.id) || e.shiftKey) selectRegion(r, e.shiftKey);
     const startX = e.clientX;
     const { pps } = live.current;
@@ -138,43 +128,46 @@ export function editorPointer({ scrollRef, dragRef, hoverRef, live, requestDraw 
     const minStart = audio ? r.start - audio.offset : 0;
     const maxLength = audio && wave ? wave.frames - audio.offset : Infinity;
     const fadeFrom = audio ? (kind === "fadeIn" ? audio.fade_in : audio.fade_out) : 0;
+    const otherFade = audio ? (kind === "fadeIn" ? audio.fade_out : audio.fade_in) : 0;
     const crossfading = kind === "fadeOut" && !!regionCrossfades(r.id)?.out;
-    drag(
-      (ev) => {
-        if (!moved && Math.abs(ev.clientX - startX) < 3) return;
-        moved = true;
-        const d = dragRef.current!;
-        const dx = (ev.clientX - startX) / pps;
-        if (kind === "move") d.start = snapEd(r.start + dx, ev.altKey);
-        else if (kind === "fadeIn" || kind === "fadeOut") {
-          const other = audio ? (kind === "fadeIn" ? audio.fade_out : audio.fade_in) : 0;
-          d.fade = crossfading ? draggedFadeOut(fadeFrom, dx, true, r.length - other) : Math.round(Math.max(0, Math.min(r.length - other, fadeFrom + (kind === "fadeIn" ? dx : -dx))));
-          if (crossfading) setCrossfadeDrag({ region: r.id, length: d.fade });
-        } else if (kind === "right") {
-          d.start = r.start;
-          d.length = Math.min(maxLength, Math.max(PEAK_BUCKET, snapEd(r.start + r.length + dx, ev.altKey) - r.start));
-        } else {
-          const ns = Math.min(r.start + r.length - PEAK_BUCKET, Math.max(0, minStart, snapEd(r.start + dx, ev.altKey)));
-          d.start = ns;
-          d.length = r.length - (ns - r.start);
-        }
-        requestDraw();
-      },
-      () => {
-        const d = dragRef.current!;
-        dragRef.current = null;
-        setCrossfadeDrag(null);
-        requestDraw();
-        if (!moved) return;
-        if (kind === "move" && d.start !== undefined && d.start !== r.start) {
-          const start = d.start;
-          const project = getState().snap?.project;
-          if (project) moveAutomationAnswer(project, [{ id: r.id, start }]).then((automation) => act("move_region", { id: r.id, start, track: null, automation }));
-        }
-        else if (d.fade !== undefined) act("set_region_fades", { ids: [r.id], fadeIn: kind === "fadeIn" ? d.fade : null, fadeOut: kind === "fadeOut" ? d.fade : null });
-        else if (d.start !== undefined && d.length !== undefined) act("resize_region", { id: r.id, start: Math.round(d.start), length: Math.round(d.length) });
-      },
-    );
+
+    const move = (ev: MouseEvent) => {
+      if (!moved && !pastDragThreshold(ev.clientX - startX)) return;
+      moved = true;
+      const d = dragRef.current!;
+      const dx = (ev.clientX - startX) / pps;
+      if (kind === "move") d.start = snapEd(r.start + dx, ev.altKey);
+      else if (kind === "fadeIn" || kind === "fadeOut") {
+        d.fade = crossfading ? draggedFadeOut(fadeFrom, dx, true, r.length - otherFade) : Math.round(Math.max(0, Math.min(r.length - otherFade, fadeFrom + (kind === "fadeIn" ? dx : -dx))));
+        if (crossfading) setCrossfadeDrag({ region: r.id, length: d.fade });
+      } else if (kind === "right") {
+        d.start = r.start;
+        d.length = Math.min(maxLength, Math.max(PEAK_BUCKET, snapEd(r.start + r.length + dx, ev.altKey) - r.start));
+      } else {
+        const ns = Math.min(r.start + r.length - PEAK_BUCKET, Math.max(0, minStart, snapEd(r.start + dx, ev.altKey)));
+        d.start = ns;
+        d.length = r.length - (ns - r.start);
+      }
+      requestDraw();
+    };
+    const up = () => {
+      const d = dragRef.current!;
+      dragRef.current = null;
+      setCrossfadeDrag(null);
+      requestDraw();
+      if (moved) dropRegionDrag(r, d);
+    };
+    dragWith(move, up);
+  };
+
+  /** Sends what a region drag did: the move (with its automation, if asked), the fade or the trim. */
+  const dropRegionDrag = (r: Region, d: Drag) => {
+    if (d.kind === "move" && d.start !== undefined && d.start !== r.start) {
+      const start = d.start;
+      const project = getState().snap?.project;
+      if (project) moveAutomationAnswer(project, [{ id: r.id, start }]).then((automation) => act("move_region", { id: r.id, start, track: null, automation }));
+    } else if (d.fade !== undefined) act("set_region_fades", { ids: [r.id], fadeIn: d.kind === "fadeIn" ? d.fade : null, fadeOut: d.kind === "fadeOut" ? d.fade : null });
+    else if (d.start !== undefined && d.length !== undefined) act("resize_region", { id: r.id, start: Math.round(d.start), length: Math.round(d.length) });
   };
 
   /** Drag across the waveform to select a range; Shift extends the current one. A click
@@ -192,21 +185,20 @@ export function editorPointer({ scrollRef, dragRef, hoverRef, live, requestDraw 
     }
     const startX = e.clientX;
     let moved = extending;
-    drag(
-      (ev) => {
-        if (!moved && Math.abs(ev.clientX - startX) < 3) return;
-        moved = true;
-        autoScroll(ev.clientX);
-        const s = snapEd(frameAt(ev.clientX), ev.altKey);
-        ed.setEd({ sel: s === anchor ? null : { track: track.id, start: Math.min(anchor, s), end: Math.max(anchor, s) } });
-      },
-      () => {
-        if (moved) return;
-        ed.clearSel();
-        if (under) selectRegion(under, e.shiftKey);
-        else setState({ selectedRegions: [] });
-      },
-    );
+    const move = (ev: MouseEvent) => {
+      if (!moved && !pastDragThreshold(ev.clientX - startX)) return;
+      moved = true;
+      autoScroll(ev.clientX);
+      const s = snapEd(frameAt(ev.clientX), ev.altKey);
+      ed.setEd({ sel: s === anchor ? null : { track: track.id, start: Math.min(anchor, s), end: Math.max(anchor, s) } });
+    };
+    const up = () => {
+      if (moved) return;
+      ed.clearSel();
+      if (under) selectRegion(under, e.shiftKey);
+      else setState({ selectedRegions: [] });
+    };
+    dragWith(move, up);
   };
 
   const onHover = (e: React.MouseEvent) => {

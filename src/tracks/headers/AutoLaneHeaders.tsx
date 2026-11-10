@@ -13,6 +13,7 @@ import { LevelSlider } from "./LevelSlider";
 import { openMenuAt } from "../../ui/Menu";
 import { LinesText } from "../../ui/PathText";
 import { onPress } from "../../keyboard/keyNav";
+import { dragWith } from "../../ui/pointerDrag";
 
 /** The header of one of a track's extra automation lanes: its parameter pop-up, and buttons to
  *  add a lane below or close this one. */
@@ -83,13 +84,10 @@ export function OutputTrackHeader({ row }: { row: OutputRow }) {
     const startH = row.height;
     const move = (ev: MouseEvent) => setTrackHeight(MASTER_ID, clampHeight(startH + ev.clientY - startY));
     const up = () => {
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseup", up);
       document.body.style.cursor = "";
     };
     document.body.style.cursor = "ns-resize";
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", up);
+    dragWith(move, up);
   };
   return (
     <div className="output-track" style={{ top: row.top }}>

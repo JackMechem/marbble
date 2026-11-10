@@ -15,7 +15,7 @@ import { SettingsDialog } from "../../settings/Settings";
 import { MenuHost } from "../../ui/Menu";
 import { NameSheetHost } from "../../ui/NameSheet";
 import { pianoRollMenu } from "../../editors/pianoRoll/keys";
-import { eventListMenu } from "../../editors/eventList/EventList";
+import { eventListMenu } from "../../editors/eventList/keys";
 import { ProjectSettingsSheet } from "../../settings/panes/ProjectSettings";
 
 export function DetachedWindow() {

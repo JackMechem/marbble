@@ -8,6 +8,7 @@ import { useStore } from "../../state/store";
 import { pixelRatio } from "../../ui/uiScale";
 import { canvasFont } from "../../ui/canvasText";
 import { Check, Select } from "../../ui/Form";
+import { dragWith } from "../../ui/pointerDrag";
 
 // Parameter ids and meter indexes (crates/engine/src/fx/loudness.rs).
 const TARGET = 0;
@@ -266,12 +267,9 @@ export function LoudnessPanel({ info, values, set, touch, meters }: FxPanelProps
       set(CUSTOM_TARGET, Math.round(v * 10) / 10);
     };
     const up = () => {
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseup", up);
       touch(CUSTOM_TARGET, false);
     };
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", up);
+    dragWith(move, up);
   };
 
   const offTarget = integrated > SILENT ? integrated - target : null;
