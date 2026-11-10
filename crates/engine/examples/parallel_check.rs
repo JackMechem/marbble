@@ -348,8 +348,9 @@ fn main() {
         for attempt in 0.. {
             let mut s = session(&scratch);
             let e = build(&mut s, &scratch.join(name));
-            // LSP's Multi-Sampler now and then loses its sample for good while loading (issue #37),
-            // which would read as a difference between two runs: a fresh instance brings it back.
+            // LSP's Multi-Sampler now and then loses its sample for good while loading, a bug of
+            // LSP's (issue #37, docs/DEVELOPING.md › Headless checks), which would read as a
+            // difference between two runs: a fresh instance brings it back.
             if let Some(id) = e.sampler {
                 let solo = daw_engine::dsp::Isolate { tracks: vec![(id, true)], tap: id, fader: true, effects: true, keys: Vec::new() };
                 let heard = s.render(0, BAR / 4, 0, Some(solo), &mut |_| {}).unwrap();

@@ -165,6 +165,22 @@ fn wait_for_samples(s: &mut Session, id: Id, window: (i64, i64)) -> bool {
     false
 }
 
+/// Undoes an edit that took the sampler away, and waits for its sample in `window` on `id`, as
+/// `wait_for_samples` does. Undo makes a new instance, which may lose a sample as any new one may
+/// (issue #37): the edit is then redone and undone again, for another.
+fn undo_until_heard(s: &mut Session, id: Id, window: (i64, i64)) -> bool {
+    s.undo();
+    for _ in 0..4 {
+        if wait_for_samples(s, id, window) {
+            return true;
+        }
+        println!("     the plug-in lost a sample while loading; undoing again");
+        s.redo();
+        s.undo();
+    }
+    wait_for_samples(s, id, window)
+}
+
 fn active(s: &Session, inst: Id) -> Vec<u32> {
     s.instrument_outputs().iter().filter(|o| o.track == inst).flat_map(|o| o.outputs.iter()).filter(|b| b.active && b.index > 0).map(|b| b.index).collect()
 }
@@ -201,7 +217,8 @@ fn main() {
     let r = s.create_midi_region(inst, 0, LEN).unwrap();
     let note = |start: i64, pitch: u8| Note { start, length: 6000, pitch, velocity: 127, muted: false };
     s.set_midi_content(vec![MidiContent { region: r, notes: vec![note(A.0, NOTE_ONE), note(B.0, NOTE_ONE + 2)], cc: vec![], start: None, length: None }]);
-    // The plug-in now and then loses one of its samples for good (issue #37), with no engine involved.
+    // The plug-in now and then loses one of its samples for good while loading, a bug of LSP's
+    // (issue #37, docs/DEVELOPING.md › Headless checks): a fresh instance brings it back.
     let mut loaded = wait_for_samples(&mut s, inst, A) && wait_for_samples(&mut s, inst, B);
     for _ in 0..4 {
         if loaded {
@@ -392,12 +409,12 @@ fn main() {
     s.delete_track(inst);
     check("deleting the instrument leaves the aux, without that input", s.project.track(a1).is_some_and(|t| t.instrument_output.is_none()));
     check("the aux is silent, nothing breaks", peak(&mix(&mut s), (0, LEN)) == 0.0);
-    s.undo();
+    let heard = undo_until_heard(&mut s, a1, A);
     check(
         "undo rewires it and activates its buses on the new instance",
         s.project.track(a1).is_some_and(|t| t.instrument_output.is_some()) && active(&s, inst) == [1, 2],
     );
-    check("and it plays again", wait_for_samples(&mut s, a1, A) && (db(peak(&strip(&mut s, a1), A)) - db(ma)).abs() < 0.1);
+    check("and it plays again", heard && (db(peak(&strip(&mut s, a1), A)) - db(ma)).abs() < 0.1);
 
     // Another instrument in its slot, with one output.
     s.checkpoint("Instrument", None, true);
@@ -408,8 +425,7 @@ fn main() {
     );
     let d = strip(&mut s, inst);
     check("the new instrument plays on the main output", peak(&d, A) > 0.01);
-    s.undo();
-    check("undo brings the sampler back", wait_for_samples(&mut s, a1, A) && active(&s, inst) == [1, 2]);
+    check("undo brings the sampler back", undo_until_heard(&mut s, a1, A) && active(&s, inst) == [1, 2]);
 
     // Channel strip settings: the input isn't part of a strip's setting.
     let setting = s.copy_strip(a2).unwrap();
