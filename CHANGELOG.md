@@ -6,6 +6,8 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0-alpha.13] - 2026-11-10
+
 ### Changed
 
 - **A new look for marbble.dev.** The website and its docs take after the developer's own site:
@@ -1251,7 +1253,8 @@ The first prerelease. Everything below is new.
 - The `takes_check` headless check "autopunch trims the take" fails about one run in five,
   from the null audio device's timing.
 
-[Unreleased]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.12...HEAD
+[Unreleased]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.13...HEAD
+[0.1.0-alpha.13]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.12...v0.1.0-alpha.13
 [0.1.0-alpha.12]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.11...v0.1.0-alpha.12
 [0.1.0-alpha.11]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.10...v0.1.0-alpha.11
 [0.1.0-alpha.10]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.9...v0.1.0-alpha.10
