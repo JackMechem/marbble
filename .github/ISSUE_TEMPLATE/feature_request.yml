@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Marbble follows Logic Pro's workflow. [LOGIC_FEATURES.md](https://github.com/JackMechem/marbble/blob/main/LOGIC_FEATURES.md) lists the feature scope and the [milestones](https://github.com/JackMechem/marbble/milestones) the order things are planned in.
+        Marbble follows Logic Pro's workflow. The [feature scope board](https://github.com/users/JackMechem/projects/1) lists the Logic Pro features it doesn't have yet, and the [milestones](https://github.com/JackMechem/marbble/milestones) the order things are planned in.
   - type: textarea
     id: what
     attributes:

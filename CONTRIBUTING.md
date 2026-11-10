@@ -21,6 +21,9 @@ comment saying what you tried and what you heard or saw is a contribution in its
 - **Issues** hold everything that's open: bugs, features, and checks that still need a person.
 - **Milestones** are the roadmap's stages, in the order they matter for a usable release.
   [TODO.md](TODO.md) describes each stage's goal.
+- **The [feature scope board](https://github.com/users/JackMechem/projects/1)** has a card for
+  every Logic Pro feature Marbble doesn't have yet, or has only in part. A card is a draft until
+  someone takes it on: convert it to an issue then.
 - **Labels** say what an issue is (`bug`, `enhancement`, `documentation`), which part of
   Marbble it touches (`area: engine`, `area: ui`, `area: plug-ins` and so on), and which
   platform, if only one (`platform: macos`). `flaky test` marks checks that fail now and then.

@@ -82,8 +82,8 @@ machine yet (see [Platform support](#platform-support)).
   falls back to its autosave or a backup.
 
 The [User Guide](docs/USER_GUIDE.md) describes all of it in detail.
-[LOGIC_FEATURES.md](LOGIC_FEATURES.md) lists every Logic Pro feature by stage and marks what
-Marbble already has.
+The [feature scope board](https://github.com/users/JackMechem/projects/1) has a card for every Logic Pro feature Marbble doesn't have
+yet, or has only in part.
 
 ## Install
 
@@ -180,7 +180,7 @@ for Windows and macOS, tests and packaging.
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the code is organised and works: the source tree, threads and real-time rules, the life of an edit and of a block of audio, the project model and its files, plug-ins, MIDI, and the frontend. |
 | [docs/DEVELOPING.md](docs/DEVELOPING.md) | Setting up, building, testing, debugging, the code conventions, common changes, CI and releases. |
 | [docs/logic-reference.md](docs/logic-reference.md) | The Logic Pro research behind the layout and behaviour. |
-| [LOGIC_FEATURES.md](LOGIC_FEATURES.md) | The feature scope: every Logic Pro feature by stage, with Marbble's status. |
+| [Feature scope board](https://github.com/users/JackMechem/projects/1) | The Logic Pro features Marbble doesn't have yet, or has in part, one card each. |
 | [TODO.md](TODO.md) | The roadmap in stages; what's open is in the [issues](https://github.com/JackMechem/marbble/issues). |
 | [CHANGELOG.md](CHANGELOG.md) | What changed in each release. |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Reporting bugs, testing, how issues and milestones are used, and sending a pull request. |

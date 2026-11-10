@@ -2,8 +2,8 @@
 
 The stages below are the order things matter in for a usable release; each builds on the one before.
 Each stage is a [milestone][milestones] on GitHub, and every open item is an [issue][issues], so
-this file only gives the shape of the plan. The full Logic Pro feature scope is in
-[LOGIC_FEATURES.md](LOGIC_FEATURES.md); known limitations of what exists are in the [User
+this file only gives the shape of the plan. The Logic Pro features Marbble doesn't have yet are
+on the [feature scope board](https://github.com/users/JackMechem/projects/1); known limitations of what exists are in the [User
 Guide](docs/USER_GUIDE.md#20-known-limitations). [CONTRIBUTING.md](CONTRIBUTING.md) says how issues,
 labels and milestones are used.
 
