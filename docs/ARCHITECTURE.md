@@ -68,7 +68,7 @@ flowchart LR
 | **`ui-tick`** | `src-tauri/src/main.rs` | Every 33 ms: locks the session, builds a `Tick` (playhead, meters, input levels, recording previews, CPU, latency, analyzer spectrum, warnings, meters of open built-in effect panels, the clip indicators' held peaks, each strip's gain reduction) and emits it as the `tick` event. | Edit anything. |
 | **MIDI refresh** | `main.rs` | Every 3 s: `Session::refresh_midi`, so input and output devices plugged in later get connected. | |
 | **MIDI input callbacks** | midir, in `midi_io.rs` (one per port) | Drop system messages, take assigned controllers (CCs, pitch bend, notes with their note offs, program changes, both CCs of a 14-bit pair, the NRPN and RPN CCs on a channel with an NRPN assigned; all of them while learning; `CtlKind::takes`; an assigned note's polyphonic aftertouch is dropped with it) into a queue for `Session::idle` (controller assignments), apply the velocity curve, push the rest into the `live_midi` ring the engine reads, and log the message for Settings › MIDI. | |
-| **`midi-out`** | `midi_out.rs` | Sends the controller feedback `Session::idle` hands it (batches through a channel) to the output ports. | Touch the session. |
+| **`midi-out`** | `midi_out.rs` | Sends the controller feedback and control surface messages `Session::idle` hands it (batches through a channel) to the output ports. | Touch the session. |
 | **Async command workers** | Tauri's async runtime (`#[tauri::command(async)]`) | Offline renders (bounce, export, Bounce in Place, Freeze), plug-in rescans, waveform and transient requests, device lists, recent projects, the input level check, folder listings. Renders hold the session lock and the engine lock for their whole length; the parts that edit tracks or plug-ins are handed back to the main thread with `run_on_main_thread`. | Touch plug-in controllers. |
 | **Autosave writer** | `main.rs::autosave` | Writes an `AutosaveJob` (already serialized on the main thread) to disk, atomically. | |
 | **Plug-in scan subprocess** | `plugin_db.rs` | `marbble --scan-vst3 <bundle>` loads one bundle in a child process and prints its descriptors, so a crashing plug-in can't take the app down. Four scan worker threads start the children and wait for them (at first launch before the window opens, otherwise from Rescan). | Load plug-ins in the app's own process. |
@@ -2629,6 +2629,53 @@ New kinds of controller message and new targets need an arm in `feedback::encode
 for a value) and, for a target with an automation lane, in `Session::ctl_auto_param`; a target
 with a value at all already gets one through `ctl_value`.
 
+### Control surfaces
+
+A Mackie Control (with its Extenders) or a HUI is set up in Settings › MIDI › Control Surfaces
+(`MidiPrefs::surfaces`, a `surface::SurfaceConfig` per unit: type, input and output port keys,
+first strip, F1–F8's key commands). It reuses the controllers' ports, threads and edit paths
+rather than having its own:
+
+- **In.** `midi_io` hands everything from a unit's input port to the session (`take_surface`),
+  system exclusive included: those ports are taken off the live path, the assignments and the
+  activity log (whose notes Step Input would read). `Session::surface_idle`, from `idle` after
+  the controllers and feedback, decodes them per protocol (`surface::mcu::decode`,
+  `surface::hui::Decoder`, which keeps the zone a switch is in and a fader's coarse part) into
+  `surface::Input`s, the same for both: a fader, a touch, a V-Pot's steps, the jog wheel, a
+  `Button`, the handshake. A batch keeps only each fader's latest position.
+- **Through the assignments' edit paths.** A strip shows the visible track (not hidden, not in a
+  closed stack) at the bank plus the unit's first strip plus its own number. Its fader is a
+  `CtlTarget::Volume` (the master fader `MasterVolume`), its V-Pot `Pan`, `Send` or, in Plug-in
+  mode, `Selected { PluginParam }`, its buttons `Mute`, `Solo` and `Arm` switches, all through
+  `ctl_set` and `ctl_switch`: undo steps, groups and automation writing come with them. A
+  touched fader holds its automation parameter until it is let go: `ctl_hold` asks
+  `surface_holds`, which begins the touch when automation is being written, instead of letting
+  go half a second after the last move. Buttons with no session edit behind them (Save, Undo,
+  markers, nudge, zoom, cursor keys, F1–F8) fire key commands through `ctl_command`, which the
+  main window runs as it does a controller's (#221).
+- **Out.** Each idle tick builds what every unit should show (`surface_frame`: faders, lights,
+  rings, the LCD or scribble strips, the time display's digits, meters), reading the values with
+  `ctl_shown`, so motor faders and rings follow the mouse, automation, undo and opening a project
+  through the same path as controller feedback. Only what differs from what the unit shows is
+  sent: a fader through its `feedback::Throttle` (rate-limited, quiet while it moves, and not
+  sent at all while touched; let go, it is sent its track's level), a light or ring whose value
+  changed, the stretch of each LCD line that changed, each digit that changed. Meters are the
+  peaks `tick` reads for the interface (`surface_meters`), sent again every 100 ms while there is
+  signal, as the surface lets them fall. The messages go out in one batch to the `midi-out`
+  thread (`MidiOut::send_raw`, as they may be system exclusive).
+- **Online.** A Mackie Control is sent the device query every 2 s until it answers; its answer's
+  challenge is answered (`mcu::challenge_response`) and it is online. A HUI is pinged every second
+  and is offline after 3.5 s without an answer. Any message counts as an answer. A unit that comes
+  online, says hello again (it restarted) or whose output is connected anew forgets what it shows
+  (`Unit::forget`), so everything is sent again.
+
+The protocols are the pure modules `surface/mcu.rs` and `surface/hui.rs` (every message both
+ways, unit-tested), and what both share is in `surface/mod.rs`: buttons, banking
+(`clamp_bank`: the last bank is full), names fitted to a strip, values as text, ring values,
+meter segments and the time display's digits. A new button needs its note (`mcu::NOTES`) or zone
+and port (`hui::SWITCHES`) and an arm in `Session::surface_button`; a light, an entry in
+`surface_frame` or `surface_main`.
+
 ### Guard tests
 
 Some rules are enforced by tests that read the sources rather than import them:
@@ -2718,6 +2765,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `session/auto_write.rs` | Automation writing (Touch, Latch, Write), plug-in editors following automation, lane edit commands. |
 | `session/controllers.rs` | Controller assignments: the last touched parameter, learning, the saved list, applying controller moves and button presses and releases through the normal edit paths (undo steps, automation touches that let go 0.5 s after the controller stops). Run from `idle`. A key command target can't run in the engine: its id goes out in the next tick (`Tick::commands`), and the main window runs it as its key (`runMidiCommand` in App.tsx: the same dialog, sheet and text-field rules, Step Input first, menu items through `handleMenu`). |
 | `session/feedback.rs` | Controller feedback: each assignment's target value as the screen shows it, sent to the paired output where it changed (see [MIDI controllers in and out](#midi-controllers-in-and-out)). Run from `idle`. |
+| `session/surface.rs` | Control surfaces: the units in Settings, banking, what their faders, V-Pots, buttons and jog wheel do (through the assignments' edit paths), the handshake and pings, and what each unit shows, sent where it changed (see [Control surfaces](#control-surfaces)). Run from `idle`. |
 | `session/builtin.rs` | Built-in effects in slots: instantiation, parameters, side-chains, meters for open panels. |
 | `session/vst_key.rs` | VST3 side-chain inputs: keeping each plug-in's aux bus in line with its slot's key source. |
 | `session/vst_undo.rs` | Undo steps for edits in a VST3's own editor: the last known states, which edits make a step and when, and putting a plug-in back. |
@@ -2755,8 +2803,10 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `denormals.rs` | `NoDenormals`: flush-to-zero on the audio thread (x86_64 and aarch64). |
 | `memlock.rs` | Settings › Audio › Lock audio memory: `mlockall` on Linux when `RLIMIT_MEMLOCK` allows, `/proc/self/status` figures. See [Memory locking](#memory-locking). |
 | `recorder.rs` | The recording disk-writer thread and live previews. |
-| `midi_io.rs` | MIDI inputs (midir), velocity curves, the MIDI activity log, assigned controllers taken off the live path (`inject_from` feeds a message in as a port would, for tests). |
-| `midi_out.rs` | MIDI outputs (midir), connected like the inputs, and the `midi-out` thread that sends controller feedback. |
+| `midi_io.rs` | MIDI inputs (midir), velocity curves, the MIDI activity log, assigned controllers and control surfaces' ports taken off the live path (`inject_from` feeds a message in as a port would, for tests). |
+| `midi_out.rs` | MIDI outputs (midir), connected like the inputs, and the `midi-out` thread that sends controller feedback and control surface messages. |
+| `surface/mod.rs` | Control surfaces, the pure part both protocols share: `SurfaceConfig`, `Input`, `Button`, banking, names fitted to a strip, values as text, V-Pot ring values, meter segments, the time display's digits. |
+| `surface/mcu.rs`, `surface/hui.rs` | The Mackie Control and HUI protocols, both ways: decoding a surface's messages, and the messages for faders, lights, rings, meters, the LCD or scribble strips, the time display, the handshake and pings. |
 | `feedback.rs` | Controller feedback, the pure part: the message showing a value (the inverse of an assignment's range), input/output pairing, the per-controller rate limit and quiet time. |
 | `plugin_db.rs` | Out-of-process plug-in scanning, the cache, the scan report, the config folder. |
 | `prefs.rs` | `Prefs` (Settings) and the metronome and bit-depth types saved in projects. |
@@ -2830,6 +2880,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `pluginKeys.ts` | Keys a plug-in's editor window passes on (macOS), dispatched as if pressed in the main window; pure, tested. |
 | `wheel.ts` | What the mouse wheel scrolls in the time views (Settings › Editing › Mouse Wheel Scrolls). |
 | `controllers.ts` | Controller assignment types and labels, strip and lane targets, the Feedback tooltip and the inputs' feedback pop-ups; pure, tested. |
+| `surfaces.ts` | Settings › MIDI › Control Surfaces: the units' types, where a new one goes and its guessed ports, the port pop-ups, the status line; pure, tested. |
 | `learn.ts` | MIDI Learn: Learn Assignment, the right-click Learn menus, Learn MIDI for key commands, `FxLearnContext` for effect panels. |
 | `keyFormat.ts` | Shortcuts written the way each platform's menu bar does ("Shift+Ctrl+Z" on Linux, "Ctrl+Shift+Z" on Windows, "⇧⌘Z"); pure, tested. |
 | `menuBar.ts` | Keeps the native menu bar in step with the app (`installMenuBar`, main window). |
@@ -2984,7 +3035,7 @@ command and menu id is handled, no two default keys clash), `tests/tauriCommands
 | `StepSequencer.tsx` | The Step Sequencer (bottom pane "steps"): the step grid, row headers, edit modes, Learn; edits ahead of the snapshot while they are on their way. |
 | `Dialogs.tsx` | New Tracks, the Settings window frame, Group Settings, the input level warning. |
 | `Settings.tsx` | The Settings window. |
-| `settingsPanes/` | One file per pane (`GeneralPane.tsx`, `RecordingPane.tsx`, `MetronomePane.tsx` (shown in Project Settings, not Settings), `MidiPane.tsx`, `EditingPane.tsx`, `PluginsPane.tsx`, `KeysPane.tsx`), `ProjectSettings.tsx`, `RecoverySheet.tsx`, and `parts.tsx` with what they share. |
+| `settingsPanes/` | One file per pane (`GeneralPane.tsx`, `RecordingPane.tsx`, `MetronomePane.tsx` (shown in Project Settings, not Settings), `MidiPane.tsx` with its `ControlSurfaces.tsx` section, `EditingPane.tsx`, `PluginsPane.tsx`, `KeysPane.tsx`), `ProjectSettings.tsx`, `RecoverySheet.tsx`, and `parts.tsx` with what they share. |
 | `ProjectChooser.tsx` | Project Chooser. |
 | `Bounce.tsx` | Bounce, Export and Bounce in Place dialogs. |
 | `MarkerList.tsx` | Marker List. |

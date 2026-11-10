@@ -253,6 +253,11 @@ impl Session {
         std::mem::take(&mut self.controls.commands)
     }
 
+    /// Fires a key command, as a controller assigned to it does: the main window runs it.
+    pub(super) fn ctl_command(&mut self, id: &str) {
+        self.controls.commands.push(id.to_string());
+    }
+
     pub fn cancel_learn(&mut self) {
         self.controls.learn = None;
         self.midi.set_learning(false);
@@ -391,7 +396,7 @@ impl Session {
 
     /// The track's focused plug-in: the one last opened or touched, if it's on the track, else
     /// its instrument, else its first Audio FX.
-    fn ctl_focused_plugin(&self, track: Id) -> Option<&PluginSlot> {
+    pub(super) fn ctl_focused_plugin(&self, track: Id) -> Option<&PluginSlot> {
         let t = self.project.track(track)?;
         let mut all = t.instrument.iter().chain(t.inserts.iter().flatten());
         let focused = self.controls.focused.and_then(|uid| all.find(|s| s.uid == uid));
@@ -558,6 +563,10 @@ impl Session {
         if !self.automation_writing(track) {
             return;
         }
+        // A control surface's touch-sensitive fader holds it while touched instead.
+        if self.surface_holds(track, &param) {
+            return;
+        }
         let now = Instant::now();
         if let Some(h) = self.controls.holding.iter_mut().find(|h| h.0 == track && h.1.same(&param)) {
             h.2 = now;
@@ -568,7 +577,7 @@ impl Session {
     }
 
     /// Moves a continuous target to `n` on its 0..1 travel, as the user would.
-    fn ctl_set(&mut self, t: &CtlTarget, n: f32) {
+    pub(super) fn ctl_set(&mut self, t: &CtlTarget, n: f32) {
         match t {
             CtlTarget::Volume { track } => {
                 self.ctl_checkpoint(*track, "Volume", format!("track:{track}:volume"));
@@ -657,7 +666,7 @@ impl Session {
 
     /// Switches a switch or transport button: to the other state, or on or off (doing nothing
     /// when it already is).
-    fn ctl_switch(&mut self, t: &CtlTarget, act: ButtonAct) {
+    pub(super) fn ctl_switch(&mut self, t: &CtlTarget, act: ButtonAct) {
         let Some(now) = self.ctl_value(t).map(|v| v >= 0.5) else { return };
         let on = match act {
             ButtonAct::Flip => !now,

@@ -8,6 +8,14 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Changed
 
+- **Control surfaces: Mackie Control and HUI.** Settings › MIDI › Control Surfaces sets up a
+  Mackie Control (with any number of Extenders) or a HUI on its ports. Its strips show your tracks
+  eight at a time, banked with Bank and Channel: motor faders follow the volume (and stay still
+  while you touch them), V-Pots turn pan, sends or the selected track's plug-in parameters with
+  their rings lit, Rec, Solo, Mute and Select light up, and the LCD names the tracks and shows
+  values as you move them. The transport, Cycle, Click, markers, nudge, zoom, the jog wheel, the
+  automation mode buttons, the time display (bars or time) and the master fader work as in Logic,
+  and F1–F8 run any key command you choose.
 - **Controllers show what Marbble does: MIDI outputs and feedback.** Settings › MIDI lists the
   MIDI outputs, and each assigned controller is sent its parameter's value back on the output
   paired with its input (the same device's, automatically, or one you choose), as the same kind of

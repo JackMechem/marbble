@@ -1,6 +1,7 @@
-//! MIDI outputs, for controller feedback (`feedback.rs`, `session/feedback.rs`). Like the inputs,
-//! every output port is connected unless switched off in Settings › MIDI, and ports plugged in
-//! later are picked up by the same 3-second refresh.
+//! MIDI outputs, for controller feedback (`feedback.rs`, `session/feedback.rs`) and control
+//! surfaces (`session/surface.rs`). Like the inputs, every output port is connected unless
+//! switched off in Settings › MIDI, and ports plugged in later are picked up by the same
+//! 3-second refresh.
 //!
 //! Messages are sent from a thread of their own (`midi-out`), so a slow driver never holds up
 //! the main thread, and never from the audio thread. The session hands it batches through a
@@ -25,7 +26,7 @@ pub struct MidiOut {
     disabled: Vec<String>,
     /// Keys of ports connected since [`MidiOut::take_connected`] was last called.
     fresh: Vec<String>,
-    tx: mpsc::Sender<Vec<(String, [u8; 3])>>,
+    tx: mpsc::Sender<Vec<(String, Vec<u8>)>>,
 }
 
 impl Default for MidiOut {
@@ -37,7 +38,7 @@ impl Default for MidiOut {
 impl MidiOut {
     pub fn new() -> MidiOut {
         let connections: Connections = Arc::default();
-        let (tx, rx) = mpsc::channel::<Vec<(String, [u8; 3])>>();
+        let (tx, rx) = mpsc::channel::<Vec<(String, Vec<u8>)>>();
         let conns = connections.clone();
         // Ends when the sender goes, with the session.
         let spawned = std::thread::Builder::new().name("midi-out".into()).spawn(move || {
@@ -109,6 +110,11 @@ impl MidiOut {
 
     /// Hands messages to the output thread: (output key, message), in order.
     pub fn send(&self, batch: Vec<(String, [u8; 3])>) {
+        self.send_raw(batch.into_iter().map(|(k, m)| (k, m.to_vec())).collect());
+    }
+
+    /// [`MidiOut::send`] for messages of any length (a control surface's system exclusive).
+    pub fn send_raw(&self, batch: Vec<(String, Vec<u8>)>) {
         if !batch.is_empty() {
             let _ = self.tx.send(batch);
         }

@@ -264,6 +264,7 @@ fn main() {
             commands::midi_ports,
             commands::midi_outputs,
             commands::midi_monitor,
+            commands::control_surfaces,
             commands::set_click,
             commands::set_record_bit_depth,
             commands::set_project_notes,

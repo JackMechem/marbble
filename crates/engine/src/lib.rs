@@ -24,6 +24,7 @@ pub mod pattern;
 pub mod region_params;
 pub mod strip_settings;
 pub mod strip_silence;
+pub mod surface;
 pub mod takes;
 pub mod tempo;
 pub mod transients;

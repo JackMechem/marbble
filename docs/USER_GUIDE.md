@@ -73,7 +73,8 @@ Contents:
 14. [Controller assignments (MIDI Learn)](#14-controller-assignments-midi-learn):
     [Learning an assignment](#learning-an-assignment) ·
     [How assignments behave](#how-assignments-behave) ·
-    [The Controller Assignments window](#the-controller-assignments-window)
+    [The Controller Assignments window](#the-controller-assignments-window) ·
+    [Control surfaces: Mackie Control and HUI](#control-surfaces-mackie-control-and-hui)
 15. [Bounce and export](#15-bounce-and-export):
     [Bounce Project or Section](#bounce-project-or-section) ·
     [Export All Tracks as Audio Files](#export-all-tracks-as-audio-files) ·
@@ -2963,6 +2964,134 @@ To watch what Marbble sends, on Linux: start `aseqdump` (from alsa-utils) in a t
 a port named "aseqdump", which Settings › MIDI lists as an output within a few seconds; choose it
 under Feedback for your controller's input, and every message Marbble sends is printed.
 
+### Control surfaces: Mackie Control and HUI
+
+A control surface with motor faders, scribble strips and a transport section usually speaks one
+of two protocols: **Mackie Control** (the Mackie Control Universal and its Extender, Logic
+Control, and the "Mackie Control" or "MC" mode of surfaces such as the Behringer X-Touch, iCON
+and Qcon ones) or **HUI**. Marbble drives either without any learning: its strips show your
+tracks, its buttons and displays work as Logic's do.
+
+**Setting one up.** Switch the surface to its Mackie Control (or HUI) mode and connect it. In
+Settings › MIDI › Control Surfaces, click **Add Surface**: Marbble picks the surface's ports when
+their names give them away (Mackie, MCU, X-Touch, HUI…); otherwise choose them yourself.
+
+- **Type**: Mackie Control, Mackie Control Extender or HUI.
+- **Input** and **Output**: the surface's MIDI ports. Everything on them goes to the surface
+  setup: they don't play the selected instrument, can't be learned in Controller Assignments,
+  and don't show in the MIDI monitor.
+- **First strip**: which track its first strip shows, counted from the bank's first track. A
+  Mackie Control starts at 1; each Extender you add goes to its right (9, 17, …). For an
+  Extender on the left, give it 1 and the Mackie Control 9.
+- **Function keys F1–F8** (Mackie Control and HUI): the key command each runs, from the same list
+  as Learn MIDI in Settings › Key Commands.
+- The line under the ports says how it is doing: **Online** with the tracks it shows once it
+  answered, **Waiting for the surface to answer** while its ports are there but it hasn't (a
+  Mackie Control is asked who it is every 2 seconds, and its challenge answered as Logic does; a
+  HUI is pinged every second and counts as offline after 3.5 seconds without an answer), or which
+  port isn't connected. Whenever a surface comes online (switched on, plugged in, restarted),
+  everything is sent to it again.
+
+**The strips.** The strips show the tracks you can see in the Tracks area, in order: hidden
+tracks and tracks inside a closed track stack are skipped. With an Extender, the units show one
+row of strips together, banked as one.
+
+- **Fader**: the track's volume, on the same taper as the screen's fader, in 14 bits. It follows
+  the screen whatever moved it: the mouse, automation playing in Read, Touch or Latch, undo, a
+  group. While your hand is on a touch-sensitive fader nothing moves it; with the track in Touch,
+  Latch or Write while playing, touching it holds the volume as holding the mouse on the fader
+  does, until you let go. Let go, it goes to where the track's level is. A fader move is an undo
+  step, as a drag of the fader is.
+- **V-Pot**: the pan, unless Send or Plug-in is chosen (see below). Its ring of lights shows the
+  value; pushing it puts the pan back in the centre, a send at 0 dB, a plug-in parameter at its
+  default.
+- **LCD** (Mackie Control): the top line names each strip's track (shortened to six characters:
+  spaces first, then vowels from the end, "Bass Guitar" is "BssGtr"). The bottom line shows the
+  V-Pot's value (C, L32, R64; a send's level; a plug-in parameter in percent), or for a second and
+  a half after you move or let go of a fader, its level in dB (as long as you touch it).
+  **Name/Value** shows what the V-Pots drive instead of their values (Pan, Send1, a parameter's
+  name). A HUI's four-character strips show the names, or the value while it moves.
+- **Rec, Solo, Mute** switch the track's record enable, solo and mute; **Select** selects the
+  track. Each is lit while on (Select: on the selected track).
+- **Meters**: each strip's level, as the Mixer's meter shows it.
+
+**Bank and Channel.** Bank ◀ ▶ moves every strip along by the number of strips (8 for one unit,
+16 with an Extender), Channel ◀ ▶ by one. Banking stops when the last track reaches the last strip,
+so the strips stay full when there are enough tracks.
+
+**What the V-Pots drive** (the assignment display shows it):
+
+| Button | V-Pots | Display |
+|---|---|---|
+| Pan | Each track's pan | PN |
+| Send | Each track's send 1; press Send again for send 2, 3 … 8. A track without that send shows nothing | S1–S8 |
+| Plug-in | The selected track's plug-in (the one whose window you last opened or touched, else its instrument, else its first Audio FX): its parameters, eight at a time. Bank and Channel move through the parameters, and the top line names them | PI |
+
+#### Mackie Control
+
+| Button | What it does |
+|---|---|
+| Rec / Solo / Mute / Select | As above |
+| V-Pot (push) | Back to the default |
+| Pan / Send / Plug-in | What the V-Pots drive; lit while chosen |
+| Bank ◀ ▶ / Channel ◀ ▶ | Move the strips (in Plug-in mode, the parameters) |
+| Name/Value | The bottom line names what the V-Pots drive |
+| SMPTE/Beats | The time display shows bars, beats, divisions and ticks (Beats light) or hours, minutes, seconds and milliseconds (SMPTE light) |
+| F1–F8 | The key commands chosen in Settings |
+| Read/Off | The selected track's automation mode: Read, or Off if it was in Read |
+| Write / Touch / Latch | The selected track's automation mode. The current mode's button is lit |
+| Save | File › Save |
+| Undo | Undo; with Shift held, Redo |
+| Marker | Pressed on its own, Create Marker. Held with ◀◀ or ▶▶: Go to Previous or Next Marker |
+| Nudge | Nudge mode (lit): ◀◀ ▶▶ and the cursor keys ◀ ▶ nudge the selected regions |
+| Cycle | Cycle on or off (lit while on) |
+| Drop | Autopunch Mode (lit while on) |
+| Replace | Replace Mode (lit while on) |
+| Click | The metronome (lit while on) |
+| Solo (master section) | Clears every solo; lit, with the rude solo light, while any track is soloed |
+| ◀◀ / ▶▶ | Back or forward a bar |
+| Stop / Play / Record | The transport; Play and Record are lit while playing and recording, Stop while stopped |
+| Cursor ▲ ▼ | Select the previous or next track; in Zoom mode, zoom out or in vertically |
+| Cursor ◀ ▶ | Back or forward a bar; in Zoom mode, zoom out or in horizontally; in Nudge mode, nudge |
+| Zoom | Zoom mode for the cursor keys (lit) |
+| Scrub | The jog wheel moves a sixteenth note a step instead of a beat (lit). No audio plays while you turn it |
+| Jog wheel | Moves the playhead a beat a step, clockwise forward |
+| Master fader | Stereo Out's volume, touch-sensitive like the others |
+| Not used yet | Track, EQ and Instrument assignment, Flip, Global View and its track type buttons, Trim, Group, Cancel, Enter, Option, Control, Alt, the footswitches |
+
+The **time display** shows the playhead as the control bar does, and the two-digit
+**assignment display** what the V-Pots drive.
+
+#### Mackie Control Extender
+
+Eight more strips: faders, V-Pots, Rec, Solo, Mute and Select, its own LCD and meters, banked
+with the Mackie Control. It has no master section.
+
+#### HUI
+
+| Control | What it does |
+|---|---|
+| Fader (touch-sensitive), Select, Mute, Solo, Rec/Rdy | As on a Mackie Control |
+| V-Pot | Pan, or with Send A chosen, a send's level (press Send A again for the next send) |
+| V-Sel | Back to the default |
+| Pan / Send A | What the V-Pots drive |
+| Bank ◀ ▶ / Channel ◀ ▶ | Move the strips |
+| Rewind, Fast Fwd, Stop, Play, Record | As on a Mackie Control; lit as there |
+| RTZ | Go to Beginning |
+| Loop | Cycle |
+| Undo, Save, Shift | As on a Mackie Control |
+| Auto mode: Read, Touch, Latch, Write | The selected track's automation mode |
+| Cursor keys, Scrub | As on a Mackie Control (the HUI has no Zoom) |
+| F1–F8 | The key commands chosen in Settings |
+| Scribble strips | Each track's name in four characters, its level or V-Pot value while it moves; above the strips, what the V-Pots drive (Pan, Snd1…, Plug) |
+| Time display | Bars, beats and ticks (960 a beat) |
+| Meters | Each strip's level, on both sides |
+| Not used yet | Auto and Insert on the strips, Send B–E, the main display, the keypad, the edit and window buttons, the control room section |
+
+Marbble's support was built from the protocols' documentation and tested with simulated
+surfaces; if a button on your surface does something else than this, please report it with the
+surface's name.
+
 ---
 
 ## 15. Bounce and export
@@ -3296,6 +3425,7 @@ new project folder; the project refers to them where they are.
 | MIDI Thru | Play the selected instrument track live | On |
 | Velocity | As played; Soft (light touch plays louder); Hard (needs a firmer touch); Fixed velocity (1 to 127) | As played (fixed: 100) |
 | Chase | Notes; Controllers: when playback starts, jumps or cycles back inside a region, start the notes held there and send the controller values in effect | Both on |
+| Control Surfaces | Add Surface; per unit: its type (Mackie Control, Mackie Control Extender, HUI), input, output, first strip and F1–F8's key commands, with its status (see [Control surfaces](#control-surfaces-mackie-control-and-hui)) | None |
 | Monitor | The last incoming messages (C3 = middle C) | |
 
 The velocity curve applies to MIDI inputs, not to Musical Typing.
@@ -3884,8 +4014,9 @@ its package rather than a copied binary.
   folder's own timing, not each subtrack's delay compensation. Stereo Out's lanes play at the
   output's delay; with latency on Stereo Out's own plug-ins, their parameters change slightly
   early.
-- **Controller assignments:** no control surface protocols such as Mackie Control or HUI yet.
-  Assignments are global and refer to tracks and plug-ins by number, not per project.
+- **Control surfaces:** Mackie Control and HUI only, and not every button of either (see
+  [Control surfaces](#control-surfaces-mackie-control-and-hui)); no OSC or other protocols.
+- **Controller assignments:** global; they refer to tracks and plug-ins by number, not per project.
 - **Piano Roll:** no Score. Controller curves are drawn as ramps of points; a curve between
   two points isn't kept as a shape that can be bent later.
 - **Event List:** lists MIDI regions only (not the regions of the project, or audio), on one

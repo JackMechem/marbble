@@ -35,9 +35,11 @@ impl Session {
         let stepped = self.vst_undo_idle();
         self.state_copies_idle();
         let controlled = self.controller_idle();
-        self.feedback_idle();
+        let fresh = self.midi_out.take_connected();
+        self.feedback_idle(&fresh);
+        let surfaced = self.surface_idle(&fresh);
         self.bring_back();
-        before != self.open_editors().len() || written || latency_changed || controlled || stepped
+        before != self.open_editors().len() || written || latency_changed || controlled || stepped || surfaced
     }
 
     /// Plays a MIDI message on the current MIDI target track (the selected instrument track).
@@ -92,6 +94,7 @@ impl Session {
             })
             .collect();
         let master = self.status.master.take();
+        self.surface_meters(&meters);
         let peak_holds = self.hold_peaks(&meters, master);
         let n_in = self.audio_status.input_channels as usize;
         Tick {

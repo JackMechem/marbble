@@ -62,8 +62,8 @@ impl Session {
     }
 
     /// Sends each assignment's target value to its controller where it changed (`idle`).
-    pub(super) fn feedback_idle(&mut self) {
-        let fresh = self.midi_out.take_connected();
+    /// `fresh`: the outputs connected since the last call.
+    pub(super) fn feedback_idle(&mut self, fresh: &[String]) {
         if !self.midi_out.any() {
             self.feedback.states.clear();
             return;
@@ -101,7 +101,7 @@ impl Session {
     /// What a target's controller should show: a switch's state, or the position on the target's
     /// travel as the screen shows it (automation playing over the control included). None when
     /// the target isn't in the open project.
-    fn ctl_shown(&self, t: &CtlTarget) -> Option<Shown> {
+    pub(super) fn ctl_shown(&self, t: &CtlTarget) -> Option<Shown> {
         // A Selected Track target shows the selected track's control.
         let t = &self.ctl_resolve(t)?;
         let own = self.ctl_value(t)?;

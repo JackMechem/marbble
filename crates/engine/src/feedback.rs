@@ -110,7 +110,13 @@ impl Throttle {
     /// The controller (a fader or knob) sent `data` at `now`: it shows that, and is being moved
     /// for [`QUIET`]. Buttons on switches go through [`Throttle::button`] instead.
     pub fn heard(&mut self, data: [u8; 3], now: Instant) {
-        self.shown = Some(vec![canonical(data)]);
+        self.moved(vec![canonical(data)], now);
+    }
+
+    /// The controller moved to where `shown` puts it (a control surface's fader, whose position
+    /// may take two messages), at `now`: [`Throttle::heard`].
+    pub fn moved(&mut self, shown: Msgs, now: Instant) {
+        self.shown = Some(shown);
         self.quiet_until = Some(now + QUIET);
     }
 

@@ -4,7 +4,8 @@
 //!
 //! Controllers with an assignment (see `controllers.rs`) are taken off that path here, on the
 //! input threads, and handed to the session instead of the instrument, as Logic does; while
-//! an assignment is being learned, every controller message is.
+//! an assignment is being learned, every controller message is. A control surface's input port
+//! (`surface/`) goes to the session whole, system exclusive included.
 
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicU8, Ordering};
@@ -80,6 +81,9 @@ struct Controls {
     /// Assigned controllers: port key, channel, controller.
     assigned: Mutex<Vec<(String, u8, CtlKind)>>,
     taken: Mutex<VecDeque<ControlIn>>,
+    /// Control surfaces' input ports (keys), and what came in on them.
+    surfaces: Mutex<Vec<String>>,
+    surface_in: Mutex<VecDeque<(Arc<str>, Vec<u8>)>>,
 }
 
 impl Controls {
@@ -107,6 +111,19 @@ impl Controls {
             q.push_back(ControlIn { port: port.clone(), data });
         }
         ours
+    }
+
+    /// Takes every message from a control surface's port. Returns whether it was one.
+    fn surface(&self, port: &Arc<str>, msg: &[u8]) -> bool {
+        if !self.surfaces.lock().iter().any(|p| **p == **port) {
+            return false;
+        }
+        let mut q = self.surface_in.lock();
+        if q.len() >= TAKEN_LEN {
+            q.pop_front();
+        }
+        q.push_back((port.clone(), msg.to_vec()));
+        true
     }
 }
 
@@ -164,6 +181,16 @@ impl MidiIo {
     /// The controller messages taken since the last call, oldest first.
     pub fn take_controls(&self) -> Vec<ControlIn> {
         self.controls.taken.lock().drain(..).collect()
+    }
+
+    /// The input ports (keys) of control surfaces: everything on them goes to the session.
+    pub fn set_surface_ports(&self, keys: Vec<String>) {
+        *self.controls.surfaces.lock() = keys;
+    }
+
+    /// What control surfaces sent since the last call, oldest first: (port key, message).
+    pub fn take_surface(&self) -> Vec<(Arc<str>, Vec<u8>)> {
+        self.controls.surface_in.lock().drain(..).collect()
     }
 
     pub fn port_names() -> Vec<String> {
@@ -225,7 +252,8 @@ impl MidiIo {
                 continue;
             }
             let Ok(mut input) = MidiInput::new("Marbble") else { continue };
-            input.ignore(midir::Ignore::All);
+            // System exclusive comes in for control surfaces; other ports drop it (`receive`).
+            input.ignore(midir::Ignore::TimeAndActiveSense);
             let sink = self.sink.clone();
             let filter = self.filter.clone();
             let log = self.log.clone();
@@ -244,9 +272,10 @@ impl MidiIo {
     }
 }
 
-/// One message from an input port: system messages are dropped, assigned controllers go to the
-/// session, the rest (with the velocity curve applied) to the engine's live MIDI ring; every
-/// message is logged for the activity monitor.
+/// One message from an input port: a control surface's go to the session, system messages are
+/// dropped, assigned controllers go to the session, the rest (with the velocity curve applied)
+/// to the engine's live MIDI ring; every message but a surface's is logged for the activity
+/// monitor (a surface's buttons are notes, which Step Input would take for playing).
 #[allow(clippy::too_many_arguments)]
 fn receive(
     sink: &Mutex<rtrb::Producer<[u8; 3]>>,
@@ -258,7 +287,7 @@ fn receive(
     key: &Arc<str>,
     msg: &[u8],
 ) {
-    if msg.is_empty() || msg[0] >= 0xF0 {
+    if msg.is_empty() || controls.surface(key, msg) || msg[0] >= 0xF0 {
         return;
     }
     let mut d = [0u8; 3];

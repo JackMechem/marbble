@@ -279,6 +279,9 @@ pub struct MidiPrefs {
     /// Chase: Controllers. The latest value of each controller (sustain, modulation, pitch
     /// bend...) before the playhead is sent first.
     pub chase_controllers: bool,
+    /// Control surfaces (Settings › MIDI › Control Surfaces): a Mackie Control and its
+    /// extenders, or a HUI (`surface/`).
+    pub surfaces: Vec<crate::surface::SurfaceConfig>,
 }
 
 impl Default for MidiPrefs {
@@ -292,6 +295,7 @@ impl Default for MidiPrefs {
             fixed_velocity: 100,
             chase_notes: true,
             chase_controllers: true,
+            surfaces: Vec::new(),
         }
     }
 }

@@ -1,5 +1,5 @@
-// Settings › MIDI: inputs, outputs and controller feedback, the velocity curve and the input
-// monitor.
+// Settings › MIDI: inputs, outputs and controller feedback, control surfaces, the velocity curve
+// and the input monitor.
 import { useEffect, useState } from "react";
 import { call } from "../../api";
 import { feedbackChoice, feedbackOptions, feedbackSetting, switchPort, type MidiPort } from "../../controllers";
@@ -7,6 +7,7 @@ import { useSettings, type VelocityCurve } from "../../prefs";
 import { useStore } from "../../store";
 import { Check, NumberField, Select } from "../Form";
 import { Foot, Row, Section, setPrefs } from "./parts";
+import { ControlSurfaces } from "./ControlSurfaces";
 import { describeMidi } from "../../settingsText";
 
 interface MidiLogEntry {
@@ -162,6 +163,7 @@ export function MidiPane({ close }: { close: () => void }) {
           </div>
         </Row>
       </Section>
+      <ControlSurfaces inputs={inputs} outputs={outputs ?? []} />
       <Section title="Activity">
         <Row label="Monitor:">
           <div className="midi-monitor">

@@ -74,6 +74,8 @@ mod strip_meters;
 pub use strip_meters::PeakHolds;
 mod controllers;
 mod feedback;
+mod surface;
+pub use surface::SurfaceStatus;
 mod marquee;
 mod strip_settings;
 pub use controllers::{controller_label, AssignmentPatch, AssignmentRow};
@@ -302,6 +304,8 @@ pub struct Session {
     controls: controllers::Controls,
     /// What controllers show, for feedback (see `session/feedback.rs`).
     feedback: feedback::Feedback,
+    /// Control surfaces: their units, banking and what each shows (`session/surface.rs`).
+    surfaces: surface::Surfaces,
     /// The sequence number of the next MIDI input message the ticks haven't reported.
     midi_seen: u64,
     /// What Cut Section Between Locators took out last, for Insert Cut Section. Forgotten when
@@ -465,6 +469,7 @@ impl Session {
             regions_tempo: None,
             controls: Default::default(),
             feedback: Default::default(),
+            surfaces: Default::default(),
             midi_seen: 0,
             section_clip: None,
             vst_watches: HashMap::new(),

@@ -85,3 +85,68 @@
   white-space: pre;
 }
 
+
+/* Control surfaces: one block per unit. */
+.surfaces {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.surface-unit {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 5px;
+  background: var(--field);
+  box-shadow: var(--field-shadow);
+}
+
+.surface-head,
+.surface-strips,
+.surface-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.surface-head .small-btn {
+  margin-left: auto;
+}
+
+.surface-ports {
+  display: grid;
+  grid-template-columns: auto minmax(0, max-content);
+  align-items: center;
+  gap: 6px 8px;
+}
+
+.surface-status .status-dot {
+  margin: 0;
+}
+
+.surface-functions summary {
+  cursor: pointer;
+  color: var(--dim);
+}
+
+.surface-function-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 6px 12px;
+  margin-top: 6px;
+}
+
+.surface-function {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.surface-function .dim {
+  width: 20px;
+}

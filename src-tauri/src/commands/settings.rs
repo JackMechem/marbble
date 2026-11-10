@@ -140,6 +140,12 @@ pub fn midi_monitor(state: State<AppState>) -> Vec<daw_engine::midi_io::MidiLogE
     with(&state, |s| s.midi_monitor())
 }
 
+/// Settings › MIDI › Control Surfaces: whether each unit's ports are connected and it answered.
+#[tauri::command]
+pub fn control_surfaces(state: State<AppState>) -> Vec<daw_engine::session::SurfaceStatus> {
+    with(&state, |s| s.control_surfaces())
+}
+
 /// The running version, for the update check (src/updates.ts). A debug build takes
 /// `MARBBLE_FAKE_VERSION` in its place, so the check can be tried against the real releases.
 #[tauri::command]

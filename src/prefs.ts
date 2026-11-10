@@ -5,6 +5,7 @@ import { act, call, type BitDepth, type ClickSettings, type PluginDesc, type Pro
 import { getState, setState, type Snap } from "./store";
 import { sampleStep } from "./musicalMove";
 import { tempoMap } from "./tempo";
+import type { SurfaceConfig } from "./surfaces";
 import type { UpdateChannel } from "./updateCheck";
 import type { WheelScrolls } from "./wheel";
 
@@ -48,6 +49,8 @@ export interface Prefs {
     /** Chase: Notes and Controllers when playback starts or jumps mid-region. */
     chase_notes?: boolean;
     chase_controllers?: boolean;
+    /** Settings › MIDI › Control Surfaces (surfaces.ts). */
+    surfaces?: SurfaceConfig[];
   };
   /** Crossfade Time (ms) and Curve (-1..1) for comp boundaries, X-Fade and Crossfade. */
   editing: { fade_ms: number; move_automation?: MoveAutomation; crossfade_ms?: number; crossfade_curve?: number };
@@ -119,7 +122,7 @@ const DEFAULTS: AppSettings = {
       replace: false,
       color_takes: false,
     },
-    midi: { disabled_inputs: [], disabled_outputs: [], feedback_outputs: {}, thru: true, velocity: "linear", fixed_velocity: 100, chase_notes: true, chase_controllers: true },
+    midi: { disabled_inputs: [], disabled_outputs: [], feedback_outputs: {}, thru: true, velocity: "linear", fixed_velocity: 100, chase_notes: true, chase_controllers: true, surfaces: [] },
     editing: { fade_ms: 0, move_automation: "never", crossfade_ms: 20, crossfade_curve: 0.5 },
     click: DEFAULT_CLICK,
     latency: { compensation: "all", low_latency: false, low_latency_limit_ms: 5 },
