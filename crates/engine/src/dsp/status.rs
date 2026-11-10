@@ -45,6 +45,9 @@ pub struct EngineStatus {
     pub cmds_dropped: AtomicU64,
     pub midi_activity: AtomicU32,
     pub overruns: AtomicU32,
+    /// Recorded MIDI messages (and cycle-pass ends) the engine found no room for in the ring to the
+    /// session (see `session/takes/midi_capture.rs`). The session sets it to 0 as recording starts.
+    pub midi_rec_lost: AtomicU32,
     /// Blocks in which `Engine::process` panicked; the audio callback silenced them (see
     /// `audio_io::build_output`).
     pub engine_errors: AtomicU32,
@@ -103,6 +106,7 @@ impl Default for EngineStatus {
             cmds_dropped: AtomicU64::new(0),
             midi_activity: AtomicU32::new(0),
             overruns: AtomicU32::new(0),
+            midi_rec_lost: AtomicU32::new(0),
             engine_errors: AtomicU32::new(0),
             input_latency_us: AtomicU64::new(0),
             output_latency_us: AtomicU64::new(0),

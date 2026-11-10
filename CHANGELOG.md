@@ -62,6 +62,12 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Fixed
 
+- **Long MIDI recordings keep every message.** A take that collected more than 8,192 MIDI
+  messages lost everything after them, so a few minutes of playing with the mod wheel, pitch bend
+  or aftertouch ended the recording's controllers (and notes) part-way through. Recorded MIDI now
+  reaches the take however long it is, cycle passes included. In the unlikely case that Marbble
+  can't keep up and loses some, a message says how many when recording stops.
+
 - **Plug-in panel meters fall when the audio device stops.** If the device stopped (or failed)
   during playback, a built-in effect's or instrument's panel meters froze at their last values,
   and so did the Channel EQ's analyzer. A quarter of a second after the last buffer they now read

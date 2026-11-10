@@ -118,7 +118,7 @@ impl Session {
             let sink = self.recorder.begin(t.id, path, t.input.channels(), sr, capture.0, depth)?;
             self.send(Cmd::RecordSink { track: t.id, sink: Some(sink) });
         }
-        while self.midi_rec_rx.pop().is_ok() {}
+        self.rec_midi.start(&self.status);
         let target = self.midi_target_id();
         let armed_inst: Vec<Id> = armed.iter().filter(|t| t.kind == TrackKind::Instrument).map(|t| t.id).collect();
         self.rec_midi_track = match target {
@@ -248,9 +248,13 @@ impl Session {
         }
 
         // MIDI: pair note-ons with note-offs; notes still held end where recording stopped.
-        let mut events = Vec::new();
-        while let Ok((pos, d)) = self.midi_rec_rx.pop() {
-            events.push(((pos - midi_comp).max(0), d));
+        let (mut events, lost) = self.rec_midi.take(&self.status);
+        for (pos, _) in &mut events {
+            *pos = (*pos - midi_comp).max(0);
+        }
+        if lost > 0 && self.rec_midi_track.is_some() {
+            log::warn!("recorded MIDI: {lost} messages found the ring full");
+            self.warning.get_or_insert_with(|| takes::midi_capture::lost_warning(lost));
         }
         if let (Some(track), false) = (self.rec_midi_track.take(), events.is_empty()) {
             let map = self.tempo_map();

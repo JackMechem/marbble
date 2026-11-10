@@ -78,7 +78,8 @@ session/            the non-real-time half: Session, one `impl Session` per feat
     sampler/            Marbble Sampler's zones, files, recording and saved instruments
   regions/            region edits, import, moves and drag modes, gain, fades, range edits, arranging
   midi/               Piano Roll content, MIDI file import and export, Step Sequencer patterns
-  takes/              recording into take folders, comping, folder commands, the last recording
+  takes/              recording into take folders, comping, folder commands, the last recording,
+                      the MIDI a recording captures
   global_tracks/      the Arrangement, Marker, Tempo and Signature tracks
   automation/         writing lanes while playing, editing them, extra lanes
   control/            controller assignments, feedback, control surfaces
@@ -198,7 +199,7 @@ CI, releases and the website's deploy.
 
 | Thread | Started by | What it does | What it may not do |
 |---|---|---|---|
-| **Main** | Tauri | Synchronous Tauri commands (most edits), the native menu, the GTK main loop, and the 30 ms idle timer (`Session::idle`: plug-in controller idle, latency changes, dropping `Garbage`, automation, controller assignments and feedback, control surfaces, taking autosaves). Every VST3 controller and editor lives here. | Block for long. Renders are async commands for that reason. |
+| **Main** | Tauri | Synchronous Tauri commands (most edits), the native menu, the GTK main loop, and the 30 ms idle timer (`Session::idle`: plug-in controller idle, latency changes, dropping `Garbage`, taking recorded MIDI off its ring, automation, controller assignments and feedback, control surfaces, taking autosaves). Every VST3 controller and editor lives here. | Block for long. Renders are async commands for that reason. |
 | **Audio callback** | cpal | Calls `Engine::process` once per device buffer, inside `catch_unwind`. Real-time priority (rtkit on Linux). The input stream's callback only fills the input ring. | Allocate, lock, block, do I/O ([Real-time rules](#4-real-time-rules)). |
 | **`marbble-dsp-N`** | `Session::sync_parallel` | Plays strips beside the callback when Processing Threads allows and the project is heavy enough ([Multi-core](#multi-core-processing)). | The same as the callback. |
 | **`audio-io`** | `audio_io::start` | Builds and owns the cpal streams until the device closes. | |
@@ -727,7 +728,11 @@ flowchart LR
 
 - **Live MIDI** goes through the velocity curve into the `live_midi` ring and plays at offset 0 of
   the next callback, so timing is accurate to one buffer. Recorded MIDI is stamped with the
-  block's position.
+  block's position and pushed, with a mark at the end of each cycle pass, into a ring to the
+  session (`session/takes/midi_capture.rs`). While recording, `idle` moves it into a list, so the
+  ring (65,536 entries, seconds of the densest playing) only holds what arrives between two
+  idles; what a full ring loses is counted in `EngineStatus::midi_rec_lost` and reported when the
+  take is placed. `midi_record_check` records 100,000 messages through it.
 - **Controller assignments** (`control/controllers/`, session side `session/control/controllers/`):
   a message an assignment wants (a CC, a 14-bit pair, an NRPN, a note, a program change) is taken
   off the live path and applied in `idle` through the same edit paths as the mouse, so undo,

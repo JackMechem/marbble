@@ -44,6 +44,7 @@ CHECKS=(
   "vca_check tone dir"
   "chase_check dir"
   "midi_replace_check dir"
+  "midi_record_check dir"
   "projects_check tone dir"
   "arrangement_check dir"
   "autolanes_check tone dir"

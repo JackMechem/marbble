@@ -121,8 +121,8 @@ impl Engine {
                 self.pos = cycle_start;
                 self.flush_all_notes();
                 // MIDI cycle recording: where one pass ends (a take each, if so set).
-                if self.recording {
-                    let _ = self.midi_rec.push((cycle_start, crate::edit::takes::recording::PASS_MARK));
+                if self.recording && self.midi_rec.push((cycle_start, crate::edit::takes::recording::PASS_MARK)).is_err() {
+                    self.status.midi_rec_lost.fetch_add(1, Ordering::Relaxed);
                 }
             }
         }
@@ -417,13 +417,16 @@ impl Engine {
 
     /// Live MIDI into the recording, while the instrument track it plays is armed and the
     /// playhead is inside the capture range. Recorded MIDI comes from one track, but the ring has
-    /// one producer, which `process` also pushes to: this thread, before the strips start.
+    /// one producer, which `process` also pushes to: this thread, before the strips start. What
+    /// a full ring has no room for is counted, for the session to report.
     fn record_live_midi(&mut self, capture_from: i64, capture_end: i64) {
         let pos = self.pos;
         if let Some(t) = self.midi_target.and_then(|id| self.tracks.iter().find(|t| t.id == id)).filter(|t| t.kind == TrackKind::Instrument) {
             if self.recording && t.params.armed && pos >= capture_from && pos < capture_end {
                 for m in &self.live {
-                    let _ = self.midi_rec.push((pos, m.data));
+                    if self.midi_rec.push((pos, m.data)).is_err() {
+                        self.status.midi_rec_lost.fetch_add(1, Ordering::Relaxed);
+                    }
                 }
             }
         }

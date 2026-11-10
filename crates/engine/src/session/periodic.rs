@@ -1,13 +1,14 @@
 //! What runs on a timer: `idle` on the main thread every 30 ms (plug-in controllers, latency changes,
-//! `Garbage`, automation) and `tick`, which builds the [`Tick`] the UI draws from, with the warnings
-//! for engine errors, overloads and misbehaving plug-ins.
+//! `Garbage`, recorded MIDI, automation) and `tick`, which builds the [`Tick`] the UI draws from,
+//! with the warnings for engine errors, overloads and misbehaving plug-ins.
 
 use super::*;
 
 impl Session {
-    /// Main-thread housekeeping: plugin controller idle, freeing replaced DSP objects, keeping
-    /// MIDI inputs connected, automation (plug-in editors following it, writes from them) and
-    /// bringing the engine up to date after commands for it were dropped (`resync_engine`).
+    /// Main-thread housekeeping: plugin controller idle, freeing replaced DSP objects, taking
+    /// the MIDI a recording captured off its ring, keeping MIDI inputs connected, automation
+    /// (plug-in editors following it, writes from them) and bringing the engine up to date after
+    /// commands for it were dropped (`resync_engine`).
     /// Returns true if the set of open editors changed or automation was written, when the UI
     /// needs a new snapshot.
     pub fn idle(&mut self) -> bool {
@@ -31,6 +32,9 @@ impl Session {
         // Editors hidden while their plug-in wasn't responding, whose instance is gone now.
         vst3_host::close_stranded_editors();
         self.sampler_idle();
+        if self.rec_punch.is_some() {
+            self.rec_midi.drain();
+        }
         let written = self.auto_idle();
         let stepped = self.vst_undo_idle();
         self.state_copies_idle();
