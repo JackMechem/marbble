@@ -662,7 +662,8 @@ Bypass, Low Latency Mode, containment, reordering, copying and Freeze treat all 
 - **Two halves** (`plugin/instantiate.rs`): the component and controller are created, connected
   and synced. `PluginProcessor` moves into the engine; `PluginController` stays in the session,
   keyed by the slot's instance id, and is used only on the main thread. They share an `Arc` whose
-  drop deactivates and terminates the plug-in.
+  drop deactivates and terminates the plug-in; a load that fails part-way terminates it the same
+  way (`Unwind`).
 - **Processing** (`plugin/processor.rs`, `process.rs`): everything preallocated; on overflow data
   is dropped, never allocated. Each block passes the editor's edits, automation (two points per
   block) and MIDI (CCs through the plug-in's MIDI mapping), with a `ProcessContext` from the tempo

@@ -40,6 +40,8 @@ pub fn instantiate_keyed(desc: &PluginDescriptor, sample_rate: f64, max_block: u
         }
         let (controller, separate_controller) = create_controller(&module, &component, &host);
         let connections = if separate_controller { connect(&component, controller.as_ref()) } else { None };
+        // Until the plug-in is activated, an early return terminates it.
+        let unwind = Unwind { component: &component, controller, separate_controller, connections };
 
         let (edits_tx, edits_rx) = rtrb::RingBuffer::new(RING);
         let (out_tx, out_rx) = rtrb::RingBuffer::new(RING);
@@ -51,7 +53,7 @@ pub fn instantiate_keyed(desc: &PluginDescriptor, sample_rate: f64, max_block: u
             gestures: parking_lot::Mutex::new(gestures_tx),
         });
 
-        if let Some(c) = &controller {
+        if let Some(c) = &unwind.controller {
             // Sync the controller with the component's initial state.
             let s = MemoryStream::new(Vec::new());
             if component.getState(as_stream(&s).as_ptr()) == kResultOk {
@@ -74,6 +76,8 @@ pub fn instantiate_keyed(desc: &PluginDescriptor, sample_rate: f64, max_block: u
         if n_ev_in > 0 {
             component.activateBus(MediaTypes_::kEvent as i32, BusDirections_::kInput as i32, 0, 1);
         }
+        // Once active, the plug-in is `Shared`'s to tear down: nothing from here may return early.
+        let (controller, connections) = unwind.disarm();
         start_processing(desc, &component, &processor, sample_rate, max_block);
         let midi_map = midi_mapping(controller.as_ref());
 
@@ -136,6 +140,30 @@ pub fn instantiate_keyed(desc: &PluginDescriptor, sample_rate: f64, max_block: u
     }
 }
 
+/// Terminates a half-made plug-in when `instantiate` returns early, the way `Shared`'s Drop
+/// would after deactivating it. It holds the controller and the connections, so that they are
+/// released in the same order; `disarm` hands them back before the plug-in is activated.
+struct Unwind<'a> {
+    component: &'a ComPtr<IComponent>,
+    controller: Option<ComPtr<IEditController>>,
+    separate_controller: bool,
+    connections: Option<Connections>,
+}
+
+impl Unwind<'_> {
+    fn disarm(mut self) -> (Option<ComPtr<IEditController>>, Option<Connections>) {
+        let parts = (self.controller.take(), self.connections.take());
+        std::mem::forget(self);
+        parts
+    }
+}
+
+impl Drop for Unwind<'_> {
+    fn drop(&mut self) {
+        unsafe { terminate(self.component, self.controller.take(), self.separate_controller, self.connections.take()) }
+    }
+}
+
 /// The plug-in's edit controller, and whether it is an object of its own (created and
 /// initialized here) rather than the component itself.
 unsafe fn create_controller(module: &Module, component: &ComPtr<IComponent>, host: &ComPtr<FUnknown>) -> (Option<ComPtr<IEditController>>, bool) {
@@ -155,10 +183,7 @@ unsafe fn create_controller(module: &Module, component: &ComPtr<IComponent>, hos
 }
 
 /// Connects a separate controller and its component to each other, so they can exchange messages.
-unsafe fn connect(
-    component: &ComPtr<IComponent>,
-    controller: Option<&ComPtr<IEditController>>,
-) -> Option<(ComPtr<IConnectionPoint>, ComPtr<IConnectionPoint>)> {
+unsafe fn connect(component: &ComPtr<IComponent>, controller: Option<&ComPtr<IEditController>>) -> Option<Connections> {
     let (Some(a), Some(b)) = (component.cast::<IConnectionPoint>(), controller.and_then(|c| c.cast::<IConnectionPoint>())) else { return None };
     a.connect(b.as_ptr());
     b.connect(a.as_ptr());
@@ -274,4 +299,174 @@ unsafe fn midi_mapping(controller: Option<&ComPtr<IEditController>>) -> [Option<
         }
     }
     midi_map
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Mutex;
+    use vst3::Class;
+
+    type Log = Arc<Mutex<Vec<String>>>;
+
+    /// A component or a separate controller that logs the teardown calls it gets, and when the
+    /// last reference to it goes.
+    struct Fake {
+        name: &'static str,
+        log: Log,
+    }
+
+    impl Drop for Fake {
+        fn drop(&mut self) {
+            self.note("released");
+        }
+    }
+
+    impl Fake {
+        fn note(&self, call: &str) -> tresult {
+            self.log.lock().unwrap().push(format!("{}.{call}", self.name));
+            kResultOk
+        }
+    }
+
+    impl Class for Fake {
+        type Interfaces = (IComponent, IEditController, IConnectionPoint);
+    }
+
+    impl IPluginBaseTrait for Fake {
+        unsafe fn initialize(&self, _context: *mut FUnknown) -> tresult {
+            kResultOk
+        }
+        unsafe fn terminate(&self) -> tresult {
+            self.note("terminate")
+        }
+    }
+
+    impl IComponentTrait for Fake {
+        unsafe fn getControllerClassId(&self, _class_id: *mut TUID) -> tresult {
+            kNotImplemented
+        }
+        unsafe fn setIoMode(&self, _mode: IoMode) -> tresult {
+            kResultOk
+        }
+        unsafe fn getBusCount(&self, _type: MediaType, _dir: BusDirection) -> int32 {
+            0
+        }
+        unsafe fn getBusInfo(&self, _type: MediaType, _dir: BusDirection, _index: int32, _bus: *mut BusInfo) -> tresult {
+            kInvalidArgument
+        }
+        unsafe fn getRoutingInfo(&self, _in_info: *mut RoutingInfo, _out_info: *mut RoutingInfo) -> tresult {
+            kNotImplemented
+        }
+        unsafe fn activateBus(&self, _type: MediaType, _dir: BusDirection, _index: int32, _state: TBool) -> tresult {
+            kResultOk
+        }
+        unsafe fn setActive(&self, state: TBool) -> tresult {
+            self.note(&format!("setActive({state})"))
+        }
+        unsafe fn setState(&self, _state: *mut IBStream) -> tresult {
+            kResultOk
+        }
+        unsafe fn getState(&self, _state: *mut IBStream) -> tresult {
+            kResultOk
+        }
+    }
+
+    impl IEditControllerTrait for Fake {
+        unsafe fn setComponentState(&self, _state: *mut IBStream) -> tresult {
+            kResultOk
+        }
+        unsafe fn setState(&self, _state: *mut IBStream) -> tresult {
+            kResultOk
+        }
+        unsafe fn getState(&self, _state: *mut IBStream) -> tresult {
+            kResultOk
+        }
+        unsafe fn getParameterCount(&self) -> int32 {
+            0
+        }
+        unsafe fn getParameterInfo(&self, _index: int32, _info: *mut ParameterInfo) -> tresult {
+            kInvalidArgument
+        }
+        unsafe fn getParamStringByValue(&self, _id: ParamID, _value: ParamValue, _string: *mut String128) -> tresult {
+            kInvalidArgument
+        }
+        unsafe fn getParamValueByString(&self, _id: ParamID, _string: *mut TChar, _value: *mut ParamValue) -> tresult {
+            kInvalidArgument
+        }
+        unsafe fn normalizedParamToPlain(&self, _id: ParamID, value: ParamValue) -> ParamValue {
+            value
+        }
+        unsafe fn plainParamToNormalized(&self, _id: ParamID, value: ParamValue) -> ParamValue {
+            value
+        }
+        unsafe fn getParamNormalized(&self, _id: ParamID) -> ParamValue {
+            0.0
+        }
+        unsafe fn setParamNormalized(&self, _id: ParamID, _value: ParamValue) -> tresult {
+            kResultOk
+        }
+        unsafe fn setComponentHandler(&self, handler: *mut IComponentHandler) -> tresult {
+            self.note(if handler.is_null() { "setComponentHandler(null)" } else { "setComponentHandler" })
+        }
+        unsafe fn createView(&self, _name: FIDString) -> *mut IPlugView {
+            std::ptr::null_mut()
+        }
+    }
+
+    impl IConnectionPointTrait for Fake {
+        unsafe fn connect(&self, _other: *mut IConnectionPoint) -> tresult {
+            self.note("connect")
+        }
+        unsafe fn disconnect(&self, _other: *mut IConnectionPoint) -> tresult {
+            self.note("disconnect")
+        }
+        unsafe fn notify(&self, _message: *mut IMessage) -> tresult {
+            kResultOk
+        }
+    }
+
+    /// A component and a separate controller, connected as `instantiate` connects them.
+    fn pair(log: &Log) -> (ComPtr<IComponent>, ComPtr<IEditController>, Option<Connections>) {
+        let component = ComWrapper::new(Fake { name: "component", log: log.clone() }).to_com_ptr::<IComponent>().unwrap();
+        let controller = ComWrapper::new(Fake { name: "controller", log: log.clone() }).to_com_ptr::<IEditController>().unwrap();
+        let connections = unsafe { connect(&component, Some(&controller)) };
+        log.lock().unwrap().clear();
+        (component, controller, connections)
+    }
+
+    #[test]
+    fn an_early_return_terminates_the_half_made_plugin_in_shared_order() {
+        let log = Log::default();
+        let (component, controller, connections) = pair(&log);
+        drop(Unwind { component: &component, controller: Some(controller), separate_controller: true, connections });
+        let expected = [
+            "component.disconnect",
+            "controller.disconnect",
+            "controller.setComponentHandler(null)",
+            "controller.terminate",
+            // Nothing holds the controller or the connection points when the component goes.
+            "controller.released",
+            "component.terminate",
+        ];
+        assert_eq!(*log.lock().unwrap(), expected);
+    }
+
+    #[test]
+    fn a_disarmed_unwind_hands_the_plugin_back_untouched() {
+        let log = Log::default();
+        let (component, controller, connections) = pair(&log);
+        let (controller, connections) = Unwind { component: &component, controller: Some(controller), separate_controller: true, connections }.disarm();
+        assert!(log.lock().unwrap().is_empty());
+        assert!(controller.is_some() && connections.is_some());
+    }
+
+    #[test]
+    fn a_controller_on_the_component_is_not_terminated_twice() {
+        let log = Log::default();
+        let component = ComWrapper::new(Fake { name: "component", log: log.clone() }).to_com_ptr::<IComponent>().unwrap();
+        let controller = component.cast::<IEditController>();
+        drop(Unwind { component: &component, controller, separate_controller: false, connections: None });
+        assert_eq!(*log.lock().unwrap(), ["component.setComponentHandler(null)", "component.terminate"]);
+    }
 }

@@ -106,6 +106,9 @@ pub fn instances_made() -> u64 {
     INSTANCES.load(Ordering::Acquire)
 }
 
+/// The component's and a separate controller's connection points, connected to each other.
+type Connections = (ComPtr<IConnectionPoint>, ComPtr<IConnectionPoint>);
+
 /// COM objects shared by both halves. Torn down when both halves are gone.
 struct Shared {
     /// The instance's number, from 1 up, in the order instances were made.
@@ -114,7 +117,7 @@ struct Shared {
     processor: Option<ComPtr<IAudioProcessor>>,
     controller: Option<ComPtr<IEditController>>,
     separate_controller: bool,
-    connections: Option<(ComPtr<IConnectionPoint>, ComPtr<IConnectionPoint>)>,
+    connections: Option<Connections>,
     _handler: ComWrapper<ComponentHandler>,
     /// The audio thread has stopped calling the processor (see `Gate`).
     parked: AtomicBool,
@@ -132,19 +135,28 @@ impl Drop for Shared {
                 p.setProcessing(0);
             }
             self.component.setActive(0);
-            if let Some((a, b)) = self.connections.take() {
-                a.disconnect(b.as_ptr());
-                b.disconnect(a.as_ptr());
-            }
-            if let Some(c) = self.controller.take() {
-                c.setComponentHandler(std::ptr::null_mut());
-                if self.separate_controller {
-                    c.terminate();
-                }
-            }
-            self.component.terminate();
+            terminate(&self.component, self.controller.take(), self.separate_controller, self.connections.take());
         }
     }
+}
+
+/// Undoes `initialize` and `connect`: disconnects the component and a separate controller,
+/// takes the host's handler back from the controller and terminates both. The plug-in must be
+/// inactive by then. The connections and the controller are released before the component is
+/// terminated: some plug-ins (DPF's) check that nothing holds them any more. Used by `Shared`'s
+/// Drop, and by `instantiate` when it fails before a `Shared` exists.
+unsafe fn terminate(component: &ComPtr<IComponent>, controller: Option<ComPtr<IEditController>>, separate_controller: bool, connections: Option<Connections>) {
+    if let Some((a, b)) = connections {
+        a.disconnect(b.as_ptr());
+        b.disconnect(a.as_ptr());
+    }
+    if let Some(c) = controller {
+        c.setComponentHandler(std::ptr::null_mut());
+        if separate_controller {
+            c.terminate();
+        }
+    }
+    component.terminate();
 }
 
 struct Bus {

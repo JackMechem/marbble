@@ -216,6 +216,8 @@ impl Editor {
             let from = if OPEN.get() == 0 { NSPoint::new(0.0, 0.0) } else { CASCADE.get() };
             CASCADE.set(window.cascadeTopLeftFromPoint(from));
 
+            // Before the view has a frame or the window a delegate, which this return would leave.
+            let content = window.contentView().ok_or("editor window has no content view")?;
             let delegate = WindowDelegate::new(
                 mtm,
                 DelegateIvars { view: view.clone(), resizable, size: Cell::new((w, h)), closed: Cell::new(false), detached: Cell::new(false) },
@@ -223,7 +225,6 @@ impl Editor {
             window.setDelegate(Some(ProtocolObject::from_ref(&*delegate)));
             let frame = ComWrapper::new(PlugFrame { window: window.clone(), delegate: delegate.clone() });
             view.setFrame(frame.to_com_ptr::<IPlugFrame>().unwrap().as_ptr());
-            let content = window.contentView().ok_or("editor window has no content view")?;
             if view.attached(Retained::as_ptr(&content) as *mut c_void, kPlatformTypeNSView) != kResultOk {
                 view.setFrame(std::ptr::null_mut());
                 delegate.ivars().detached.set(true);
