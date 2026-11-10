@@ -14,11 +14,13 @@ export const onRequest = defineRouteMiddleware((context) => {
   // One document is its own sidebar; two keep their names as headings.
   route.sidebar = groups.length === 1 && groups[0].type === "group" ? groups[0].entries : groups;
 
-  // Prev and next stay inside the zone.
+  // Prev and next stay inside the zone. Links carry the site's base path ("/" at marbble.dev).
+  const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
   const inZone = (link?: { href: string }) => {
     if (!link) return false;
-    const path = link.href.replace(/^.*?\/marbble\//, "");
-    return zone.areas.some((a) => path.startsWith(`${a}/`));
+    const path = new URL(link.href, "https://x").pathname;
+    const page = path.startsWith(base) ? path.slice(base.length) : path;
+    return zone.areas.some((a) => page.startsWith(`${a}/`));
   };
   const { prev, next } = route.pagination;
   route.pagination = { prev: inZone(prev) ? prev : undefined, next: inZone(next) ? next : undefined };
