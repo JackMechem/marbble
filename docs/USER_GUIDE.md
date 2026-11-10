@@ -3951,7 +3951,8 @@ its package rather than a copied binary.
 ## 20. Known limitations
 
 - **LSP's Multi-Sampler:** now and then one of its samples doesn't load, and that instrument stays
-  silent. Load the plug-in again, or close and reopen the project.
+  silent. Load the plug-in again, or close and reopen the project. It's a bug in LSP's plug-ins,
+  likelier when several of their instances load at once.
 - **Platforms:** plug-in editor windows open on Linux and macOS, not yet on Windows, where
   plug-ins still load, play and can be automated. On macOS, keys a plug-in's window doesn't use
   (Space, R, other key commands, Musical Typing) go to Marbble, while typing into the plug-in's
