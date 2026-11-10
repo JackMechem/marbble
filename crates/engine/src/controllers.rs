@@ -644,6 +644,19 @@ pub fn port_key(name: &str) -> &str {
     trimmed
 }
 
+/// Port names as keys ([`port_key`]), each once: Settings › MIDI's switched-off ports. Entries
+/// saved before ports were switched off by key are full names, so they are read by their key too.
+pub fn port_keys(names: &[String]) -> Vec<String> {
+    let mut keys: Vec<String> = Vec::new();
+    for n in names {
+        let k = port_key(n);
+        if !keys.iter().any(|x| x == k) {
+            keys.push(k.to_string());
+        }
+    }
+    keys
+}
+
 /// The fader's travel (0..1) for a level in dB, roughly Logic's taper: +6 dB at the top, -∞ at
 /// the bottom. The same curve as `dbToFader` in src/time.ts, so a controller moves the fader
 /// evenly along its length.
@@ -902,6 +915,16 @@ mod tests {
         assert_eq!(port_key("Launch Control XL"), "Launch Control XL");
         assert_eq!(port_key("Device 3:a"), "Device 3:a");
         assert_eq!(port_key("12:0"), "12:0");
+    }
+
+    #[test]
+    fn switched_off_ports_are_kept_by_key() {
+        // An entry from before keys, with the numbers the port had then, and the same device's key.
+        let saved = vec!["nanoKONTROL2:nanoKONTROL2 MIDI 1 20:0".to_string(), "nanoKONTROL2:nanoKONTROL2 MIDI 1".to_string(), "Launch Control XL".to_string()];
+        let keys = port_keys(&saved);
+        assert_eq!(keys, ["nanoKONTROL2:nanoKONTROL2 MIDI 1", "Launch Control XL"]);
+        // Replugged, the device comes back under new numbers and is still off.
+        assert!(keys.iter().any(|k| k == port_key("nanoKONTROL2:nanoKONTROL2 MIDI 1 24:0")));
     }
 
     #[test]

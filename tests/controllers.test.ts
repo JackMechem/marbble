@@ -17,9 +17,11 @@ import {
   fromPercent,
   isButtonKind,
   offersLatching,
+  portKey,
   rowEditor,
   selectedTargets,
   stripTarget,
+  switchPort,
   toPercent,
   type Controller,
   type CtlKind,
@@ -156,4 +158,21 @@ test("the pop-up names the automatic output and lists the others once", () => {
   assert.equal(feedbackOptions({ auto_output: null }, [], "auto")[0][1], "Automatic (none found)");
   // A chosen output that is unplugged stays listed.
   assert.deepEqual(feedbackOptions({ auto_output: null }, outputs, "out:Gone").at(-1), ["out:Gone", "Gone"]);
+});
+
+test("a port's key drops ALSA's client:port numbers, as the engine's port_key does", () => {
+  assert.equal(portKey("nanoKONTROL2:nanoKONTROL2 MIDI 1 20:0"), "nanoKONTROL2:nanoKONTROL2 MIDI 1");
+  assert.equal(portKey("nanoKONTROL2:nanoKONTROL2 MIDI 1 24:0 "), "nanoKONTROL2:nanoKONTROL2 MIDI 1");
+  assert.equal(portKey("Launch Control XL"), "Launch Control XL");
+  assert.equal(portKey("Device 3:a"), "Device 3:a");
+  assert.equal(portKey("12:0"), "12:0");
+});
+
+test("ports are switched off by key, and an older full-name entry switches on with its key", () => {
+  const key = "nanoKONTROL2:nanoKONTROL2 MIDI 1";
+  assert.deepEqual(switchPort([], key, false), [key]);
+  assert.deepEqual(switchPort([key, "Other"], key, true), ["Other"]);
+  // Saved before keys, under the numbers the port had before it was replugged.
+  assert.deepEqual(switchPort([`${key} 20:0`, "Other"], key, true), ["Other"]);
+  assert.deepEqual(switchPort([`${key} 20:0`], key, false), [key]);
 });

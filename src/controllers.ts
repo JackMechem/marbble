@@ -230,6 +230,22 @@ export interface MidiPort {
   auto_output: string | null;
 }
 
+/** A port's name without the client:port numbers ALSA appends ("nanoKONTROL2 MIDI 1 20:0"),
+ *  which change when the device is replugged: the engine's `controllers::port_key`. */
+export function portKey(name: string): string {
+  const t = name.trimEnd();
+  const i = t.lastIndexOf(" ");
+  return i >= 0 && /^\d+:\d+$/.test(t.slice(i + 1)) ? t.slice(0, i).trimEnd() : t;
+}
+
+/** Settings › MIDI's switched-off ports (`disabled_inputs`, `disabled_outputs`) with the port
+ *  `key` switched on or off. Ports are kept by key; an entry saved before that (a full name)
+ *  goes by its key too, so switching a replugged port on clears it. */
+export function switchPort(off: readonly string[], key: string, on: boolean): string[] {
+  const rest = off.filter((n) => portKey(n) !== key);
+  return on ? rest : [...rest, key];
+}
+
 /** What an input's Feedback pop-up shows: "auto", "none" or "out:" and an output's key. */
 export function feedbackChoice(chosen: Record<string, string> | undefined, input: string): string {
   const c = chosen?.[input];

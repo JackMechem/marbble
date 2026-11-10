@@ -2,7 +2,7 @@
 // monitor.
 import { useEffect, useState } from "react";
 import { call } from "../../api";
-import { feedbackChoice, feedbackOptions, feedbackSetting, type MidiPort } from "../../controllers";
+import { feedbackChoice, feedbackOptions, feedbackSetting, switchPort, type MidiPort } from "../../controllers";
 import { useSettings, type VelocityCurve } from "../../prefs";
 import { useStore } from "../../store";
 import { Check, NumberField, Select } from "../Form";
@@ -58,10 +58,9 @@ export function MidiPane({ close }: { close: () => void }) {
     }, 120);
     return () => window.clearInterval(t);
   }, []);
-  const toggle = (name: string, on: boolean) =>
-    setPrefs("midi", { disabled_inputs: on ? m.disabled_inputs.filter((n) => n !== name) : [...m.disabled_inputs, name] });
-  const offOutputs = m.disabled_outputs ?? [];
-  const toggleOutput = (name: string, on: boolean) => setPrefs("midi", { disabled_outputs: on ? offOutputs.filter((n) => n !== name) : [...offOutputs, name] });
+  // Ports are switched off by key, so they stay off when replugged under new ALSA numbers.
+  const toggle = (key: string, on: boolean) => setPrefs("midi", { disabled_inputs: switchPort(m.disabled_inputs, key, on) });
+  const toggleOutput = (key: string, on: boolean) => setPrefs("midi", { disabled_outputs: switchPort(m.disabled_outputs ?? [], key, on) });
   const connectedOutputs = (outputs ?? []).filter((o) => o.connected);
   // One row per input device (ALSA lists a port again under a new number when replugged).
   const inputs = (ports ?? []).filter((p, i, all) => all.findIndex((q) => q.key === p.key) === i);
@@ -82,7 +81,7 @@ export function MidiPane({ close }: { close: () => void }) {
             ) : (
               ports.map((p) => (
                 <div key={p.name} className="midi-port">
-                  <Check checked={p.enabled} onChange={(v) => toggle(p.name, v)}>
+                  <Check checked={p.enabled} onChange={(v) => toggle(p.key, v)}>
                     {p.name}
                   </Check>
                   <span className={"status-dot " + (p.connected ? "ok" : "off")} title={p.connected ? "Connected" : "Not connected"} />
@@ -131,7 +130,7 @@ export function MidiPane({ close }: { close: () => void }) {
             ) : (
               outputs.map((p) => (
                 <div key={p.name} className="midi-port">
-                  <Check checked={p.enabled} onChange={(v) => toggleOutput(p.name, v)}>
+                  <Check checked={p.enabled} onChange={(v) => toggleOutput(p.key, v)}>
                     {p.name}
                   </Check>
                   <span className={"status-dot " + (p.connected ? "ok" : "off")} title={p.connected ? "Connected" : "Not connected"} />

@@ -361,7 +361,7 @@ instead and enforce rules that would otherwise only fail in the running app.
 | `panText.test.ts` | The pan knob's value as text (`src/panText.ts`): steps, rounding, ends, the label and the spoken value. |
 | `mixerLayout.test.ts` | The Mixer's stacks (nesting, counts, collapse, filtered strips), strip widths and their saved form, and name plate ink. |
 | `trackOff.test.ts` | Whether a track is off through its stacks (`src/trackOff.ts`), and the power button's tooltip. |
-| `controllers.test.ts` | Controller assignment types and labels (MIDI Learn), the Feedback tooltip and the feedback pairing pop-up. |
+| `controllers.test.ts` | Controller assignment types and labels (MIDI Learn), the Feedback tooltip and the feedback pairing pop-up, and switching MIDI ports off by their key (`portKey`, `switchPort`). |
 | `keyFormat.test.ts` | Shortcuts written as each platform's menu bar writes them; on Linux against `gtkKeyLabels.json`, the pairs `menu.rs`'s tests check against GTK. |
 | `menuLabels.test.ts` | Guard: the menu bar (`menu.rs`) uses the names in `src/menuLabels.ts`, both Edit menus have the same layout, right-click short names only drop "Regions", and no key is both an accelerator and a key command (or missing from `MENU_SHORTCUTS`). |
 | `menuBar.test.ts` | The menu bar's item states from the in-app menus and key commands, and sending only what changed (`src/menuBarModel.ts`). |

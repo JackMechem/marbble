@@ -2609,6 +2609,11 @@ through the same edit paths as the mouse (`session/controllers.rs`). The way bac
   the same key (on Linux a device's input and output are one ALSA port), else the only output of
   the same device. An output connected anew (a replugged device, a switched-on port) makes its
   controllers forget what they show, so everything is sent again.
+- **Ports by key.** Whatever outlives a replug names a port by its key (`controllers::port_key`,
+  the name without ALSA's client:port numbers, which change): assignments, pairings and the ports
+  switched off in Settings › MIDI (`MidiPrefs::disabled_inputs`, `disabled_outputs`). Older
+  settings hold full names there; `controllers::port_keys` reads them by their key, and the pane
+  (`switchPort` in `src/controllers.ts`) clears one by its key when the port is switched on.
 - **Threads.** The main thread decides what to send and hands it to the `midi-out` thread
   (`midi_out.rs`) through a channel; the audio thread never sees any of it. Marbble's own ALSA
   ports (`Marbble:…`) are never listed or connected (`midi_io::listed_port`), or feedback would

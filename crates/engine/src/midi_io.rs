@@ -104,6 +104,8 @@ impl Controls {
 pub struct MidiIo {
     sink: Arc<Mutex<rtrb::Producer<[u8; 3]>>>,
     connections: Vec<(String, MidiInputConnection<()>)>,
+    /// Keys (`controllers::port_key`) of the ports switched off, so a port stays off when it
+    /// comes back under new ALSA numbers.
     disabled: Vec<String>,
     filter: Arc<Filter>,
     log: Arc<Mutex<VecDeque<MidiLogEntry>>>,
@@ -169,7 +171,7 @@ impl MidiIo {
             .filter(|n| listed_port(n))
             .map(|name| MidiPort {
                 key: controllers::port_key(&name).to_string(),
-                enabled: !self.disabled.contains(&name),
+                enabled: !self.is_off(&name),
                 connected: self.connections.iter().any(|(n, _)| *n == name),
                 auto_output: None,
                 name,
@@ -177,10 +179,16 @@ impl MidiIo {
             .collect()
     }
 
-    /// Ports to leave unconnected; takes effect at once.
+    /// Ports to leave unconnected, by name or key; takes effect at once.
     pub fn set_disabled(&mut self, names: Vec<String>) {
-        self.disabled = names;
+        self.disabled = controllers::port_keys(&names);
         self.refresh();
+    }
+
+    /// Whether the port is switched off in Settings › MIDI.
+    fn is_off(&self, name: &str) -> bool {
+        let key = controllers::port_key(name);
+        self.disabled.iter().any(|k| k == key)
     }
 
     pub fn set_velocity(&self, curve: VelocityCurve, fixed: u8) {
@@ -198,11 +206,11 @@ impl MidiIo {
     pub fn refresh(&mut self) {
         let names = Self::port_names();
         let disabled = &self.disabled;
-        self.connections.retain(|(n, _)| names.contains(n) && !disabled.contains(n));
+        self.connections.retain(|(n, _)| names.contains(n) && !disabled.iter().any(|k| k == controllers::port_key(n)));
         let Ok(probe) = MidiInput::new("Marbble") else { return };
         for port in probe.ports() {
             let Ok(name) = probe.port_name(&port) else { continue };
-            if self.connections.iter().any(|(n, _)| *n == name) || !listed_port(&name) || self.disabled.contains(&name) {
+            if self.connections.iter().any(|(n, _)| *n == name) || !listed_port(&name) || self.is_off(&name) {
                 continue;
             }
             let Ok(mut input) = MidiInput::new("Marbble") else { continue };

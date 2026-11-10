@@ -396,11 +396,13 @@ fn main() {
         take(&r.rx).is_empty() && r.s.controller_assignments().iter().all(|row| row.output.is_none()),
     );
     prefs.midi.feedback_outputs.clear();
-    prefs.midi.disabled_outputs = vec![out.name.clone()];
+    // Saved as a full name with other ALSA numbers (a settings file from before ports were
+    // kept by key, and the device replugged since): the port is still off.
+    prefs.midi.disabled_outputs = vec![format!("{} 199:0", out.key)];
     r.s.set_prefs(prefs.clone());
     r.s.idle();
     check(
-        "a switched-off output isn't connected",
+        "a switched-off output isn't connected, under new ALSA numbers too",
         r.s.midi_outputs().iter().any(|p| p.name == out.name && !p.connected && !p.enabled) && take(&r.rx).is_empty(),
     );
     prefs.midi.disabled_outputs.clear();

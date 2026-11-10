@@ -3285,8 +3285,8 @@ new project folder; the project refers to them where they are.
 
 | Setting | Choices | Default |
 |---|---|---|
-| MIDI Inputs | A checkbox per input, with its connection status | All on |
-| MIDI Outputs | A checkbox per output, with its connection status: where controller feedback goes | All on |
+| MIDI Inputs | A checkbox per input, with its connection status; a port switched off stays off when the device is replugged | All on |
+| MIDI Outputs | A checkbox per output, with its connection status: where controller feedback goes; switched off as the inputs are | All on |
 | Feedback | Per input: the output its controller assignments send their values back to: Automatic (the output of the same device, named in brackets), No feedback, or any output | Automatic |
 | MIDI Thru | Play the selected instrument track live | On |
 | Velocity | As played; Soft (light touch plays louder); Hard (needs a firmer touch); Fixed velocity (1 to 127) | As played (fixed: 100) |

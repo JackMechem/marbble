@@ -82,6 +82,10 @@ All notable changes to Marbble are recorded here. The format follows
   If the audio device hadn't yet taken the last change (a new track, say) when the engine was
   rebuilt, the change could land on top of the rebuilt engine: the track then played twice, or
   the previous project's track played in the new one.
+- **Switched-off MIDI inputs and outputs stay off when the device is replugged.** Settings › MIDI
+  remembered a port with the numbers Linux gives it, which change when the device is plugged in
+  again, so it came back on. Ports are now remembered by name alone; ones switched off before
+  stay off too.
 
 ## [0.1.0-alpha.12] - 2026-11-09
 

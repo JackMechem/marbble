@@ -13,7 +13,7 @@ use std::sync::Arc;
 use midir::{MidiOutput, MidiOutputConnection};
 use parking_lot::Mutex;
 
-use crate::controllers::port_key;
+use crate::controllers::{port_key, port_keys};
 use crate::midi_io::{listed_port, MidiPort};
 
 type Connections = Arc<Mutex<Vec<(String, MidiOutputConnection)>>>;
@@ -21,6 +21,7 @@ type Connections = Arc<Mutex<Vec<(String, MidiOutputConnection)>>>;
 /// The connected MIDI outputs and the thread that sends to them.
 pub struct MidiOut {
     connections: Connections,
+    /// Keys of the ports switched off (as `MidiIo`'s).
     disabled: Vec<String>,
     /// Keys of ports connected since [`MidiOut::take_connected`] was last called.
     fresh: Vec<String>,
@@ -70,7 +71,7 @@ impl MidiOut {
             .into_iter()
             .map(|name| MidiPort {
                 key: port_key(&name).to_string(),
-                enabled: !self.disabled.contains(&name),
+                enabled: !self.is_off(&name),
                 connected: connected.iter().any(|(n, _)| *n == name),
                 auto_output: None,
                 name,
@@ -88,10 +89,16 @@ impl MidiOut {
         !self.connections.lock().is_empty()
     }
 
-    /// Ports to leave unconnected; takes effect at once.
+    /// Ports to leave unconnected, by name or key; takes effect at once.
     pub fn set_disabled(&mut self, names: Vec<String>) {
-        self.disabled = names;
+        self.disabled = port_keys(&names);
         self.refresh();
+    }
+
+    /// Whether the port is switched off in Settings › MIDI.
+    fn is_off(&self, name: &str) -> bool {
+        let key = port_key(name);
+        self.disabled.iter().any(|k| k == key)
     }
 
     /// The keys of outputs connected since the last call: their controllers need everything
@@ -115,7 +122,8 @@ impl MidiOut {
         // Dropped outside the lock: closing a connection talks to the driver.
         let gone: Vec<_> = {
             let mut c = self.connections.lock();
-            let (keep, gone): (Vec<_>, Vec<_>) = std::mem::take(&mut *c).into_iter().partition(|(n, _)| names.contains(n) && !disabled.contains(n));
+            let (keep, gone): (Vec<_>, Vec<_>) =
+                std::mem::take(&mut *c).into_iter().partition(|(n, _)| names.contains(n) && !disabled.iter().any(|k| k == port_key(n)));
             *c = keep;
             gone
         };
@@ -123,7 +131,7 @@ impl MidiOut {
         let Ok(probe) = MidiOutput::new("Marbble") else { return };
         for port in probe.ports() {
             let Ok(name) = probe.port_name(&port) else { continue };
-            if !listed_port(&name) || self.disabled.contains(&name) || self.connections.lock().iter().any(|(n, _)| *n == name) {
+            if !listed_port(&name) || self.is_off(&name) || self.connections.lock().iter().any(|(n, _)| *n == name) {
                 continue;
             }
             let Ok(out) = MidiOutput::new("Marbble") else { continue };

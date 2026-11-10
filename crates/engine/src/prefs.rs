@@ -259,9 +259,11 @@ impl Default for RecordingPrefs {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct MidiPrefs {
-    /// Names of MIDI input ports that are not connected.
+    /// MIDI input ports that are not connected, by port key (`controllers::port_key`), so a
+    /// port stays off when it is replugged and ALSA numbers it anew. Settings files from before
+    /// hold full names; those are read by their key.
     pub disabled_inputs: Vec<String>,
-    /// Names of MIDI output ports that are not connected.
+    /// MIDI output ports that are not connected, by port key, as `disabled_inputs`.
     pub disabled_outputs: Vec<String>,
     /// The output each input's controller feedback goes to, chosen in Settings › MIDI: input
     /// port key to output port key (`controllers::port_key`), an empty one for no feedback.

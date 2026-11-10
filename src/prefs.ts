@@ -35,8 +35,9 @@ export interface Prefs {
     color_takes?: boolean;
   };
   midi: {
+    /** Input ports left unconnected, by port key (`portKey`; older settings: full names). */
     disabled_inputs: string[];
-    /** Output ports left unconnected (controller feedback). */
+    /** Output ports left unconnected (controller feedback), by port key. */
     disabled_outputs?: string[];
     /** Input port key → the output key its controllers' feedback goes to ("" for none); inputs
      *  left out pair automatically. */
