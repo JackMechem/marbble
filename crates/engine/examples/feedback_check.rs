@@ -246,15 +246,18 @@ fn main() {
     check(&format!("the last value always goes ({:?} for {last} dB)", got.last().map(|m| m.1)), got.last().map(|m| m.1) == Some([0xB0, 7, cc_of(last)]));
 
     // Automation playback in Read: the controller follows the lane. The null device plays
-    // faster than real time (the macOS stand-in doesn't), so the ramp is as long as about 1.5 s
-    // of what this machine plays.
+    // faster than real time (the macOS stand-in doesn't), so the ramp is as long as about 4 s of
+    // what this machine plays (measured once playback is under way: the device's start would
+    // make it look slower).
     r.s.locate(0);
     r.s.play();
+    std::thread::sleep(Duration::from_millis(100));
+    let p0 = r.s.position();
     std::thread::sleep(Duration::from_millis(200));
-    let rate = r.s.position() as f64 / 0.2;
+    let rate = (r.s.position() - p0) as f64 / 0.2;
     r.s.stop();
     std::thread::sleep(Duration::from_millis(60));
-    let len = ((rate * 1.5) as i64).max(48000);
+    let len = ((rate * 4.0) as i64).max(48000);
     let lane = |pos: i64| -60.0 + 66.0 * (pos.clamp(0, len) as f32 / len as f32);
     r.s.set_automation_lane(a, AutoParam::Volume, vec![AutoPoint { pos: 0, value: -60.0, curve: 0.0 }, AutoPoint { pos: len, value: 6.0, curve: 0.0 }]);
     r.s.set_auto_mode(a, AutoMode::Read);
@@ -264,9 +267,13 @@ fn main() {
     r.s.locate(0);
     r.s.play();
     // Each idle sends what the lane plays at the playhead then (between the positions before
-    // and after it).
+    // and after it). It idles until the playhead is past the ramp (at least 12 times, at most
+    // 200): on a loaded machine an idle can take far longer than 30 ms, and the ramp is long
+    // enough that even then it is sampled many times.
     let (mut played, mut off) = (Vec::new(), Vec::new());
-    for _ in 0..12 {
+    let mut idles = 0;
+    while idles < 12 || (r.s.position() < len && idles < 200) {
+        idles += 1;
         std::thread::sleep(Duration::from_millis(30));
         let p0 = r.s.position();
         r.s.idle();
