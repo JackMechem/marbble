@@ -57,119 +57,119 @@ export function editorKeys(ed: Core, c: Commands, m: Menus) {
   const { zoomX, zoomY, zoomToFit, notesNow, anySelected, copy, cut, paste, deleteSelected, selectCommand, apply, quantizeNow, nudgeKey } = c;
   const { toolItems } = m;
 
+  /** Plays `n` for a moment, so a key that selects or transposes notes is heard. */
+  const audition = (n: me.PNote) => {
+    play(n.pitch, n.velocity);
+    window.setTimeout(() => play(null), 200);
+  };
+
+  /** After T, a letter picks a tool, as in Logic's tool menu. True when it did. */
+  const pickArmedTool = (k: string, mod: boolean): boolean => {
+    if (toolArmed.current <= performance.now() || mod) return false;
+    const t = TOOLS.find((x) => x.key.toLowerCase() === k.toLowerCase());
+    toolArmed.current = 0;
+    if (!t) return false;
+    setPrefs({ tool: t.id });
+    closeMenu();
+    return true;
+  };
+
+  /** ⌥← / ⌥→: selects the previous / next note in time, and plays it. */
+  const selectNeighbour = (forward: boolean) => {
+    const notes = notesNow();
+    const sorted = notes.map((n, i) => [n, i] as const).sort((a, b) => a[0].start - b[0].start || a[0].pitch - b[0].pitch);
+    const cur = sorted.findIndex(([n]) => n.sel);
+    const next = sorted[Math.max(0, Math.min(sorted.length - 1, cur < 0 ? 0 : cur + (forward ? 1 : -1)))];
+    if (!next) return;
+    setSelection(notes.map((n, i) => (i === next[1] ? { ...n, sel: true } : n.sel ? { ...n, sel: false } : n)));
+    audition(next[0]);
+  };
+
+  /** ← / →: moves the selected notes by the grid, or by a bar with ⇧. */
+  const nudgeSelected = (forward: boolean, byBar: boolean) => {
+    if (!anySelected()) return;
+    const g = grid();
+    const step = byBar ? g.bar : g.grid;
+    apply((n) => musical(n, (v) => me.nudge(v, forward ? step : -step, 0)), "Nudge Notes", nudgeKey());
+  };
+
+  /** ↑ / ↓: transposes the selected notes a semitone, or an octave with ⇧, and plays the first. */
+  const transposeSelected = (up: boolean, octave: boolean) => {
+    if (!anySelected()) return;
+    const d = (up ? 1 : -1) * (octave ? 12 : 1);
+    apply((n) => me.nudge(n, 0, d), "Transpose Notes", nudgeKey());
+    const first = notesNow().find((n) => n.sel);
+    if (first) audition(first);
+  };
+
+  /** A key without ⌘ or Ctrl. True when it is one of the editor's. */
+  const plainKey = (e: React.KeyboardEvent): boolean => {
+    const k = e.key;
+    switch (k) {
+      case "Delete":
+      case "Backspace":
+        deleteSelected();
+        return true;
+      case "ArrowLeft":
+      case "ArrowRight":
+        if (e.altKey) selectNeighbour(k === "ArrowRight");
+        else nudgeSelected(k === "ArrowRight", e.shiftKey);
+        return true;
+      case "ArrowUp":
+      case "ArrowDown":
+        transposeSelected(k === "ArrowUp", e.shiftKey);
+        return true;
+      case "q":
+      case "Q":
+        quantizeNow();
+        return true;
+      case "t":
+      case "T":
+        toolArmed.current = performance.now() + 2000;
+        if (toolBtn.current) openMenuAt(toolBtn.current, toolItems());
+        return true;
+      case "z":
+      case "Z":
+        zoomToFit();
+        return true;
+      case "Escape":
+        setSelection(me.selectNone(notesNow()), work.current.cc.map((c) => (c.sel ? { ...c, sel: false } : c)));
+        return true;
+      default:
+        return false;
+    }
+  };
+
+  // ⌘A and ⌘D are native menu accelerators; they arrive through pianoRollMenu().
+  const commandKeys = new Map<string, () => void>([
+    ["c", copy],
+    ["x", cut],
+    ["v", paste],
+    ["m", () => apply(me.toggleMute, "Mute Notes")],
+    ["arrowright", () => zoomX(1.4)],
+    ["arrowleft", () => zoomX(1 / 1.4)],
+    ["arrowdown", () => zoomY(1.2)],
+    ["arrowup", () => zoomY(1 / 1.2)],
+  ]);
+
+  /** A key with ⌘ or Ctrl (and not ⌥). True when it is one of the editor's. */
+  const commandKey = (k: string): boolean => {
+    const run = commandKeys.get(k.toLowerCase());
+    run?.();
+    return !!run;
+  };
+
+  /** A key command of the keymap's that selects notes (Select All Following…). True when it was. */
+  const selectionKey = (e: React.KeyboardEvent): boolean => {
+    const cmd = commandForEvent(e.nativeEvent);
+    return !!cmd && selectCommand(cmd);
+  };
+
   const onKeyDown = (e: React.KeyboardEvent) => {
     // An open menu (the tool menu after T aside) has the keys.
     if (isField(e.target) || (menuOpen() && toolArmed.current <= performance.now())) return;
     const mod = e.ctrlKey || e.metaKey;
-    const k = e.key;
-    const g = grid();
-    let handled = true;
-    // After T, a letter picks a tool, as in Logic's tool menu.
-    if (toolArmed.current > performance.now() && !mod) {
-      const t = TOOLS.find((x) => x.key.toLowerCase() === k.toLowerCase());
-      toolArmed.current = 0;
-      if (t) {
-        setPrefs({ tool: t.id });
-        closeMenu();
-        e.preventDefault();
-        e.stopPropagation();
-        return;
-      }
-    }
-    const cmd = commandForEvent(e.nativeEvent);
-    if (cmd && selectCommand(cmd)) {
-      e.preventDefault();
-      e.stopPropagation();
-      return;
-    }
-    if (mod && !e.altKey) {
-      // ⌘A and ⌘D are native menu accelerators; they arrive through pianoRollMenu().
-      switch (k.toLowerCase()) {
-        case "c":
-          copy();
-          break;
-        case "x":
-          cut();
-          break;
-        case "v":
-          paste();
-          break;
-        case "m":
-          apply(me.toggleMute, "Mute Notes");
-          break;
-        case "arrowright":
-          zoomX(1.4);
-          break;
-        case "arrowleft":
-          zoomX(1 / 1.4);
-          break;
-        case "arrowdown":
-          zoomY(1.2);
-          break;
-        case "arrowup":
-          zoomY(1 / 1.2);
-          break;
-        default:
-          handled = false;
-      }
-    } else if (!mod) {
-      switch (k) {
-        case "Delete":
-        case "Backspace":
-          deleteSelected();
-          break;
-        case "ArrowLeft":
-        case "ArrowRight": {
-          const notes = notesNow();
-          if (e.altKey) {
-            // Select the previous / next note in time.
-            const sorted = notes.map((n, i) => [n, i] as const).sort((a, b) => a[0].start - b[0].start || a[0].pitch - b[0].pitch);
-            const cur = sorted.findIndex(([n]) => n.sel);
-            const next = sorted[Math.max(0, Math.min(sorted.length - 1, cur < 0 ? 0 : cur + (k === "ArrowRight" ? 1 : -1)))];
-            if (next) {
-              setSelection(notes.map((n, i) => (i === next[1] ? { ...n, sel: true } : n.sel ? { ...n, sel: false } : n)));
-              play(next[0].pitch, next[0].velocity);
-              window.setTimeout(() => play(null), 200);
-            }
-            break;
-          }
-          if (!anySelected()) break;
-          const step = e.shiftKey ? g.bar : g.grid;
-          apply((n) => musical(n, (v) => me.nudge(v, k === "ArrowRight" ? step : -step, 0)), "Nudge Notes", nudgeKey());
-          break;
-        }
-        case "ArrowUp":
-        case "ArrowDown": {
-          if (!anySelected()) break;
-          const d = (k === "ArrowUp" ? 1 : -1) * (e.shiftKey ? 12 : 1);
-          apply((n) => me.nudge(n, 0, d), "Transpose Notes", nudgeKey());
-          const first = notesNow().find((n) => n.sel);
-          if (first) {
-            play(first.pitch, first.velocity);
-            window.setTimeout(() => play(null), 200);
-          }
-          break;
-        }
-        case "q":
-        case "Q":
-          quantizeNow();
-          break;
-        case "t":
-        case "T":
-          toolArmed.current = performance.now() + 2000;
-          if (toolBtn.current) openMenuAt(toolBtn.current, toolItems());
-          break;
-        case "z":
-        case "Z":
-          zoomToFit();
-          break;
-        case "Escape":
-          setSelection(me.selectNone(notesNow()), work.current.cc.map((c) => (c.sel ? { ...c, sel: false } : c)));
-          break;
-        default:
-          handled = false;
-      }
-    } else handled = false;
+    const handled = pickArmedTool(e.key, mod) || selectionKey(e) || (mod ? !e.altKey && commandKey(e.key) : plainKey(e));
     if (handled) {
       e.preventDefault();
       e.stopPropagation();

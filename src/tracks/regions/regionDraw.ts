@@ -1,7 +1,7 @@
 // Drawing a region on a canvas: its body, name bar, waveform or notes, fades, loop repetitions and
 // selection outline. The Tracks area and the Audio Track Editor both draw through this.
 import { type Id, type Track } from "../../engine/project";
-import { type Region } from "../../engine/regions";
+import { type Note, type Pattern, type Region } from "../../engine/regions";
 import { getState } from "../../state/store";
 import { drawWave, waveCache } from "./waveform";
 import { mix, theme } from "../../theme/canvasTheme";
@@ -10,7 +10,7 @@ import { crossfadeLaws, crossfadesByRegion, fadeCurve, fadeHandles, resized, sha
 import { FOLDER_BADGE_W, folderLabel } from "../takes/comps";
 import { isFolder } from "../takes/takes";
 import { drawCompWave, drawFolderBadge } from "../takes/takeDraw";
-import { drawnBar, regionBar } from "./regionBar";
+import { drawnBar, regionBar, type RegionBar } from "./regionBar";
 import { playedNotes } from "./regionParams";
 import { drawPatternMini } from "../../editors/stepSequencer/model";
 import { gainScale } from "./regionGain";
@@ -29,6 +29,51 @@ export function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w
 
 /** A muted region's colour, and every region's on a muted track (the Tracks area). */
 export const MUTED_COLOR = "#6c6c70";
+
+type RegionStyle = typeof theme.region;
+type AudioContent = Extract<Region["content"], { type: "audio" }>;
+
+/** A region body's box: its left edge and width at `pps` pixels per frame, the strip under the
+ *  name bar (`top`, `h`), the visible part of the canvas (`visX0`..`visX1`), and the frames
+ *  trimmed off the front while dragging the left edge (`shift`). */
+interface BodyBox {
+  x: number;
+  w: number;
+  top: number;
+  h: number;
+  pps: number;
+  visX0: number;
+  visX1: number;
+  shift: number;
+}
+
+/**
+ * Body, name bar and content (waveform / notes) colours for each region style:
+ *   glass — translucent tint over the lane (Studio)
+ *   flat  — solid dark body under a solid name bar
+ *   light — solid pale body for light themes
+ */
+function regionColors(style: RegionStyle, color: string, selected: boolean): { body: string; bar: string; content: string } {
+  if (style === "glass") {
+    return {
+      body: selected ? mix(color, "#ffffff", 0.22, 0.9) : mix(color, theme.regionBase, 0.18, 0.72),
+      bar: selected ? mix(color, "#ffffff", 0.45) : mix(color, "#ffffff", 0.12),
+      content: selected ? "rgba(20,20,24,0.85)" : mix(color, "#ffffff", 0.62, 0.95),
+    };
+  }
+  if (style === "flat") {
+    return {
+      body: selected ? mix(color, theme.regionBase, 0.12) : mix(color, theme.regionBase, 0.6),
+      bar: selected ? mix(color, "#ffffff", 0.3) : color,
+      content: selected ? mix(color, theme.regionBase, 0.72) : mix(color, "#ffffff", 0.28),
+    };
+  }
+  return {
+    body: selected ? mix(color, "#ffffff", 0.35) : mix(color, "#ffffff", 0.68),
+    bar: selected ? mix(color, "#000000", 0.12) : color,
+    content: mix(color, "#000000", selected ? 0.55 : 0.35),
+  };
+}
 
 export function drawRegion(
   ctx: CanvasRenderingContext2D,
@@ -55,87 +100,20 @@ export function drawRegion(
   // Short tracks get a slimmer name bar, so the body keeps a strip of its own; the shortest
   // regions are the bar alone.
   const geom = regionBar(h);
-  const headerH = drawnBar(geom, h);
   const style = theme.region;
-  // Body, name bar and content (waveform / notes) colours for each region style:
-  //   glass — translucent tint over the lane (Studio)
-  //   flat  — solid dark body under a solid name bar
-  //   light — solid pale body for light themes
-  let body: string, bar: string, content: string;
-  if (style === "glass") {
-    body = selected ? mix(color, "#ffffff", 0.22, 0.9) : mix(color, theme.regionBase, 0.18, 0.72);
-    bar = selected ? mix(color, "#ffffff", 0.45) : mix(color, "#ffffff", 0.12);
-    content = selected ? "rgba(20,20,24,0.85)" : mix(color, "#ffffff", 0.62, 0.95);
-  } else if (style === "flat") {
-    body = selected ? mix(color, theme.regionBase, 0.12) : mix(color, theme.regionBase, 0.6);
-    bar = selected ? mix(color, "#ffffff", 0.3) : color;
-    content = selected ? mix(color, theme.regionBase, 0.72) : mix(color, "#ffffff", 0.28);
-  } else {
-    body = selected ? mix(color, "#ffffff", 0.35) : mix(color, "#ffffff", 0.68);
-    bar = selected ? mix(color, "#000000", 0.12) : color;
-    content = mix(color, "#000000", selected ? 0.55 : 0.35);
-  }
+  const { body, bar, content } = regionColors(style, color, selected);
   ctx.save();
   roundRect(ctx, x + 0.5, y + 0.5, w - 1, h - 1, style === "glass" ? 3 : 2);
   ctx.fillStyle = body;
   ctx.fill();
   ctx.clip();
-  ctx.fillStyle = bar;
-  ctx.fillRect(x, y, w, headerH);
-  if (style === "glass" && !geom.barOnly) {
-    ctx.fillStyle = "rgba(0,0,0,0.18)";
-    ctx.fillRect(x, y + headerH, w, 1);
-  }
-  const visX0 = Math.max(0, x);
-  const visX1 = Math.min(W, x + w);
-  // A take folder's name bar starts with its disclosure triangle and take badge.
-  const badge = isFolder(r) && !ghost && w > FOLDER_BADGE_W ? FOLDER_BADGE_W : 0;
-  if (badge) drawFolderBadge(ctx, r as Region & { takes: NonNullable<Region["takes"]> }, x, y, headerH, style === "light" ? "#ffffff" : theme.ink);
-  if (w > 24 + badge && !ghost) {
-    ctx.fillStyle = style === "light" ? "#ffffff" : theme.ink;
-    ctx.font = canvasFont(geom.font, 600);
-    ctx.textBaseline = "middle";
-    // A take folder names the comp (or whole take) it plays, as Logic's "Audio 1: Comp 2".
-    const label = folderLabel(r);
-    const name = label ? `${r.name}: ${label}` : r.name;
-    ctx.fillText(r.muted ? `${name} (muted)` : name, Math.max(x, 0) + 5 + badge, y + headerH / 2 + 0.5, Math.max(0, w - 8 - badge));
-  }
-  const bodyTop = y + geom.bodyTop;
-  const bodyH = geom.bodyH;
+  drawNameBar(ctx, r, x, y, w, h, geom, style, bar, ghost);
   // A region too short to read (the smallest track heights) shows no waveform, notes or fades.
-  const showBody = !geom.barOnly;
-  if (showBody && r.content.type === "audio") {
-    const wave = waveCache.get(r.content.clip);
-    if (isFolder(r)) drawCompWave(ctx, r, x, w, bodyTop, bodyH, pps, content, visX0, visX1, shift, waveScale * 10 ** (r.content.gain_db / 20));
-    else if (wave) drawWave(ctx, wave, r.content.offset + shift, x, w, bodyTop, bodyH, pps, content, visX0, visX1, undefined, waveScale * gainScale(r.content.gain_db));
-    const [fi, fo] = fades ?? [r.content.fade_in, r.content.fade_out];
-    drawFades(ctx, r, x - shift * pps, x, w, bodyTop, bodyH, fi, fo, pps, content, handles, ghost ? undefined : regionCrossfades(r.id));
-  } else if (showBody && r.pattern) {
-    // A pattern region: its rows, with a dot where each note it plays starts.
-    drawPatternMini(ctx, r.pattern, playedNotes(getState().snap?.played, r.id) ?? [], r.params?.transpose ?? 0, x - shift * pps, bodyTop, bodyH, pps, content, visX0, visX1);
-  } else if (showBody && r.content.type === "midi") {
-    // As they play: with the region's playback parameters (quantize, transpose, ...) applied.
-    const notes = playedNotes(getState().snap?.played, r.id) ?? r.content.notes;
-    if (notes.length) {
-      let lo = 127;
-      let hi = 0;
-      for (const n of notes) {
-        lo = Math.min(lo, n.pitch);
-        hi = Math.max(hi, n.pitch);
-      }
-      lo -= 2;
-      hi += 2;
-      const span = Math.max(12, hi - lo);
-      const nh = Math.max(1.5, Math.min(4, bodyH / span));
-      ctx.fillStyle = content;
-      for (const n of notes) {
-        const nx = x + (n.start - shift) * pps;
-        const nw = Math.max(2, n.length * pps);
-        if (nx > visX1 || nx + nw < visX0) continue;
-        const ny = bodyTop + bodyH - ((n.pitch - lo) / span) * bodyH - nh / 2;
-        ctx.fillRect(nx, ny, nw - 0.5, nh);
-      }
-    }
+  if (!geom.barOnly) {
+    const box = { x, w, top: y + geom.bodyTop, h: geom.bodyH, pps, visX0: Math.max(0, x), visX1: Math.min(W, x + w), shift };
+    if (r.content.type === "audio") drawAudioBody(ctx, r, r.content, box, content, waveScale, fades, handles, ghost);
+    else if (r.pattern) drawPatternBody(ctx, r, r.pattern, box, content);
+    else if (r.content.type === "midi") drawMidiBody(ctx, r, r.content.notes, box, content);
   }
   ctx.restore();
   if (selected && !ghost) {
@@ -143,6 +121,79 @@ export function drawRegion(
     ctx.strokeStyle = theme.selectOutline;
     ctx.lineWidth = style === "glass" ? 1 : 1.5;
     ctx.stroke();
+  }
+}
+
+/** The name bar across the region's top: a take folder's badge, then the name. */
+function drawNameBar(ctx: CanvasRenderingContext2D, r: Region, x: number, y: number, w: number, h: number, geom: RegionBar, style: RegionStyle, bar: string, ghost: boolean) {
+  const headerH = drawnBar(geom, h);
+  ctx.fillStyle = bar;
+  ctx.fillRect(x, y, w, headerH);
+  if (style === "glass" && !geom.barOnly) {
+    ctx.fillStyle = "rgba(0,0,0,0.18)";
+    ctx.fillRect(x, y + headerH, w, 1);
+  }
+  const ink = style === "light" ? "#ffffff" : theme.ink;
+  // A take folder's name bar starts with its disclosure triangle and take badge.
+  const badge = isFolder(r) && !ghost && w > FOLDER_BADGE_W ? FOLDER_BADGE_W : 0;
+  if (badge) drawFolderBadge(ctx, r as Region & { takes: NonNullable<Region["takes"]> }, x, y, headerH, ink);
+  if (w <= 24 + badge || ghost) return;
+  ctx.fillStyle = ink;
+  ctx.font = canvasFont(geom.font, 600);
+  ctx.textBaseline = "middle";
+  // A take folder names the comp (or whole take) it plays, as Logic's "Audio 1: Comp 2".
+  const label = folderLabel(r);
+  const name = label ? `${r.name}: ${label}` : r.name;
+  ctx.fillText(r.muted ? `${name} (muted)` : name, Math.max(x, 0) + 5 + badge, y + headerH / 2 + 0.5, Math.max(0, w - 8 - badge));
+}
+
+/** An audio region's body: its waveform (a take folder's comp), then its fades. */
+function drawAudioBody(
+  ctx: CanvasRenderingContext2D,
+  r: Region,
+  audio: AudioContent,
+  b: BodyBox,
+  color: string,
+  waveScale: number,
+  fades: [number, number] | undefined,
+  handles: boolean,
+  ghost: boolean,
+) {
+  const wave = waveCache.get(audio.clip);
+  if (isFolder(r)) drawCompWave(ctx, r, b.x, b.w, b.top, b.h, b.pps, color, b.visX0, b.visX1, b.shift, waveScale * 10 ** (audio.gain_db / 20));
+  else if (wave) drawWave(ctx, wave, audio.offset + b.shift, b.x, b.w, b.top, b.h, b.pps, color, b.visX0, b.visX1, undefined, waveScale * gainScale(audio.gain_db));
+  const [fi, fo] = fades ?? [audio.fade_in, audio.fade_out];
+  drawFades(ctx, r, b.x - b.shift * b.pps, b.x, b.w, b.top, b.h, fi, fo, b.pps, color, handles, ghost ? undefined : regionCrossfades(r.id));
+}
+
+/** A pattern region's body: its rows, with a dot where each note it plays starts. */
+function drawPatternBody(ctx: CanvasRenderingContext2D, r: Region, pattern: Pattern, b: BodyBox, color: string) {
+  const played = playedNotes(getState().snap?.played, r.id) ?? [];
+  drawPatternMini(ctx, pattern, played, r.params?.transpose ?? 0, b.x - b.shift * b.pps, b.top, b.h, b.pps, color, b.visX0, b.visX1);
+}
+
+/** A MIDI region's notes as they play: with its playback parameters (quantize, transpose, ...)
+ *  applied, over the pitch range they span. */
+function drawMidiBody(ctx: CanvasRenderingContext2D, r: Region, own: Note[], b: BodyBox, color: string) {
+  const notes = playedNotes(getState().snap?.played, r.id) ?? own;
+  if (!notes.length) return;
+  let lo = 127;
+  let hi = 0;
+  for (const n of notes) {
+    lo = Math.min(lo, n.pitch);
+    hi = Math.max(hi, n.pitch);
+  }
+  lo -= 2;
+  hi += 2;
+  const span = Math.max(12, hi - lo);
+  const nh = Math.max(1.5, Math.min(4, b.h / span));
+  ctx.fillStyle = color;
+  for (const n of notes) {
+    const nx = b.x + (n.start - b.shift) * b.pps;
+    const nw = Math.max(2, n.length * b.pps);
+    if (nx > b.visX1 || nx + nw < b.visX0) continue;
+    const ny = b.top + b.h - ((n.pitch - lo) / span) * b.h - nh / 2;
+    ctx.fillRect(nx, ny, nw - 0.5, nh);
   }
 }
 

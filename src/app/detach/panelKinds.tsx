@@ -1,10 +1,10 @@
-// The panels that can be detached into windows of their own (detach.ts): the Mixer and the
+// The panels that can be detached into windows of their own (panelRegistry.ts): the Mixer and the
 // Editors from the bottom section, and the built-in effect and instrument panels (fxDockModel.ts),
 // docked or floating. main.tsx imports this before anything renders.
 import { useEffect } from "react";
 import { MASTER_ID, type Id, type Project, type Track } from "../../engine/project";
 import { type Region } from "../../engine/regions";
-import { bottomPanel, registerPanelKind, type PanelKind } from "./detach";
+import { bottomPanel, registerPanelKind, type PanelKind } from "./panelRegistry";
 import { panelKey } from "./detachModel";
 import * as dock from "../../plugins/panels/fxDockModel";
 import { closePanel, dockPatch, panelMode, savedPanelSize } from "../../plugins/panels/fxDockState";

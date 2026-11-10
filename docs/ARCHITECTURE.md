@@ -141,7 +141,8 @@ crash.rs            a last autosave when the app panics
 main.tsx            every window's entry point: renders App, or a detached panel's window
 app/                the main window's shell: layout and launch, key and menu commands, status line
   controlBar/         the control bar, its CPU meter and transport commands
-  detach/             detached panel windows: runtime, pure model, panel kinds, the window's root
+  detach/             detached panel windows: runtime, pure model, panel kinds and their registry,
+                      remembered geometry, the window's root
   menuBar/            keeping the native menu bar in step, one name per command
   updates/            the update check and its notice
 engine/             the UI's side of the engine: the document's types, Snapshot and Tick, commands
@@ -615,9 +616,9 @@ Marbble Sampler's saved instruments are folders in `~/Music/Marbble Instruments/
 
 Interface-only state lives in the webview's `localStorage` under `marbble.*` keys: pane sizes, per
 project track heights, Mixer widths and global tracks (`src/tracks/trackLayout.ts`), dialog
-options, detached panels (`src/app/detach/detach.ts`). The theme, size and waveform style are kept
-in `settings.json`; their `localStorage` copies only let the window open right before the settings
-load.
+options, detached panels (`src/app/detach/panelMemory.ts`). The theme, size and waveform style are
+kept in `settings.json`; their `localStorage` copies only let the window open right before the
+settings load.
 
 ## 9. Plug-ins
 
@@ -862,7 +863,8 @@ renders `DetachedWindow` instead of `App` for a panel's label.
   an event to every plain `listen()`, whatever window it was sent to.
 - **The menu bar** sends an item to the focused panel window, else the main window
   (`route_menu`); on macOS the bar is the app's, so this decides which window it acts on.
-- A panel kind is registered in `src/app/detach/panelKinds.tsx`.
+- A panel kind is registered in `src/app/detach/panelKinds.tsx` (the `PanelKind` interface is in
+  `panelRegistry.ts`); where each kind's window was is kept by `panelMemory.ts`.
 
 ## 13. Invariants and gotchas
 

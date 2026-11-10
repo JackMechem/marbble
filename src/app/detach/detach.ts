@@ -8,37 +8,22 @@
 // .listen`): a plain `listen()` also hears events sent to other windows. Only the engine's
 // `tick` and `project`, which every window wants, use plain `listen`.
 //
-// The pure part (keys, the shared fields, geometry) is detachModel.ts. Panel kinds register
-// from panelKinds.tsx, so this file imports no components.
-import type { ReactNode } from "react";
+// The pure part (keys, the shared fields, geometry) is detachModel.ts; the panel kinds are in
+// panelRegistry.ts (registered from panelKinds.tsx, so this file imports no components); what is
+// remembered between launches, and where windows go, is panelMemory.ts.
 import { invoke } from "@tauri-apps/api/core";
 import { emit, emitTo, listen } from "@tauri-apps/api/event";
-import { availableMonitors, getCurrentWindow } from "@tauri-apps/api/window";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { type Snapshot, type Tick } from "../../engine/snapshot";
 import { call } from "../../engine/commands";
 import type { MenuItem } from "../../ui/Menu";
-import {
-  bottomAfterHide,
-  cascade,
-  cleanPatch,
-  fitToMonitors,
-  keyOfLabel,
-  panelLabel,
-  parseMemory,
-  parsePanelKey,
-  syncedState,
-  syncPatch,
-  withDetached,
-  withoutDetached,
-  type PanelMemory,
-  type Rect,
-} from "./detachModel";
-import { dockedPanels } from "../../plugins/panels/fxDockModel";
-import { IS_MAC } from "../../keyboard/keyFormat";
+import { cleanPatch, keyOfLabel, panelLabel, syncedState, syncPatch, withDetached, withoutDetached, type Rect } from "./detachModel";
+import { followBottom, kindOf } from "./panelRegistry";
+import { currentGeometry, onMonitors, panelsToReopen, rememberedRect, rememberGeometry, saveMemory } from "./panelMemory";
 import { commandForEvent } from "../../keyboard/keymap";
 import { getSettings, onSettingsChange, receiveSettings, type AppSettings } from "../../settings/appSettings";
-import { getState, pushTick, setState, subscribeState, type BottomPane, type State } from "../../state/store";
+import { getState, pushTick, setState, subscribeState, type State } from "../../state/store";
 import { applyTheme } from "../../theme/themes";
 import { applyUiScale } from "../../ui/uiScale";
 import { keyboardFocus } from "../../keyboard/focusRing";
@@ -51,95 +36,24 @@ const LABEL = getCurrentWindow().label;
 export const ownPanel: string | null = keyOfLabel(LABEL);
 export const isMain = ownPanel === null;
 
-/**
- * Window positions and sizes are kept in physical pixels, except on macOS: there the screens
- * share one coordinate space in points, while a physical position is converted with the scale
- * of whichever screen the window is on now, so a Retina screen next to a standard one would put
- * a window on the wrong screen.
- */
-const LOGICAL = IS_MAC;
-
-// ---- panel kinds --------------------------------------------------------------------------------
-
-/** One kind of detachable panel; `arg` is the part of the key after the kind ("12" in "eq:12"). */
-export interface PanelKind {
-  /** The window title. */
-  title(arg: string, s: State): string;
-  /** What the panel's window shows. */
-  render(arg: string): ReactNode;
-  /** Whether this window's state shows the panel (in the bottom section, a floating panel…). */
-  shown(arg: string, s: State): boolean;
-  /** The state change that takes the panel out of this window. */
-  hide(arg: string, s: State): Partial<State>;
-  /** The state change that shows it in this window (attached again, or in its own window). */
-  show(arg: string, s: State): Partial<State>;
-  /** False once what the panel shows is gone (its track, its effect): the main window closes it. */
-  alive?(arg: string, s: State): boolean;
-  /** In the panel's own window: a change that keeps its state fit to show it, or null. */
-  own?(arg: string, s: State): Partial<State> | null;
-  /** Reopened at launch if it was detached when Marbble quit. */
-  restore?: boolean;
-  /** A first window's size, in logical pixels. */
-  size: { w: number; h: number };
-  /** Where its window's geometry is remembered, if not per kind (one per type of effect). */
-  memoryKey?(arg: string, s: State): string;
-  /** A first window's size when it depends on the panel (an effect's natural size). */
-  sizeOf?(arg: string, s: State): { w: number; h: number };
-}
-
-const kinds = new Map<string, PanelKind>();
-/** Kinds that are bottom-section panes ("mixer", "editor"). */
-const bottomKinds = new Set<string>();
-
-export function registerPanelKind(kind: string, k: PanelKind) {
-  kinds.set(kind, k);
-}
-
-export function panelKind(kind: string): PanelKind | undefined {
-  return kinds.get(kind);
-}
-
-/**
- * A bottom-section pane as a panel kind: shown while the section shows it, and when it leaves,
- * the section goes back to what it showed before. Its own window keeps `bottom` on it.
- */
-export function bottomPanel(pane: BottomPane, k: Pick<PanelKind, "title" | "render" | "size"> & Pick<PanelKind, "own">): PanelKind {
-  bottomKinds.add(pane);
-  return {
-    ...k,
-    restore: true,
-    shown: (_, s) => s.bottom === pane,
-    hide: (_, s) => {
-      const detached = s.detached.filter((d) => bottomKinds.has(parsePanelKey(d).kind));
-      let bottom = bottomAfterHide(pane, bottomBefore, detached) as BottomPane;
-      // The docked effect panels' pane is only worth going back to while it has panels.
-      if (bottom === "fx" && !dockedPanels(s.fxDock).length) bottom = "none";
-      // Nor should closing the last docked panel bring this one back (fxDockModel.ts `ret`).
-      return s.fxDock.ret === pane ? { bottom, fxDock: { ...s.fxDock, ret: "none" } } : { bottom };
-    },
-    show: () => ({ bottom: pane }),
-    own: k.own ?? ((_, s) => (s.bottom === pane ? null : { bottom: pane })),
-  };
-}
-
-const kindOf = (key: string) => {
-  const { kind, arg } = parsePanelKey(key);
-  return { k: kinds.get(kind), kind, arg };
-};
-
-// ---- shared state ---------------------------------------------------------------------------
+// ---- this window's state ----------------------------------------------------------------------
 
 /** Above zero while applying another window's change, which must not be sent back. */
 let remote = 0;
+/** The state as of the last change seen, to compare the next one with. */
 let prev: State = getState();
-/** What the bottom section showed before its latest change (where a leaving pane goes back to). */
-let bottomBefore: BottomPane = getState().bottom;
-let lastBottom: BottomPane = getState().bottom;
 /** The panel window shows its panel; from now on, its panel going away closes the window. */
 let booted = false;
 let broadcastTimer = 0;
 let lastBroadcast = 0;
+/** In the main window: runs a key command a panel window passed on (App's). */
 let keyAction: (id: string, repeat: boolean) => void = () => {};
+/** In the main window: the panel window (its label) whose text field is being typed in. */
+let typingIn: string | null = null;
+/** In the main window: the panels detached when Marbble quit have been reopened. */
+let restored = false;
+
+// ---- shared state ---------------------------------------------------------------------------
 
 /** Whether there are other windows to tell. */
 const hasPeers = (s: State) => !isMain || s.detached.length > 0;
@@ -170,10 +84,7 @@ function onStateChange() {
   const s = getState();
   const was = prev;
   prev = s;
-  if (s.bottom !== lastBottom) {
-    bottomBefore = lastBottom;
-    lastBottom = s.bottom;
-  }
+  followBottom(s.bottom);
   if (remote === 0 && hasPeers(s)) {
     const patch = syncPatch(was, s);
     // Only the main window decides what is detached.
@@ -262,9 +173,6 @@ function send(m: PanelMsg): Promise<void> {
   return emitTo("main", "panel-msg", { from: LABEL, ...m }).catch(() => {});
 }
 
-/** In the main window: the panel window (its label) whose text field is being typed in. */
-let typingIn: string | null = null;
-
 /**
  * The window of a detached panel with a text field being typed in, or null. A key command a MIDI
  * controller fires is held back then, as it is for a field in the main window (App's
@@ -298,67 +206,20 @@ function onPanelMsg(m: PanelMsg & { from: string }) {
       keyAction(m.id, !!m.repeat);
       break;
     case "geometry":
-      memory.geometry[memoryKey(m.key)] = m.rect;
-      saveMemory();
+      rememberGeometry(m.key, m.rect);
       break;
   }
 }
 
 // ---- detaching and attaching ----------------------------------------------------------------
 
-const MEMORY = "marbble.detachedPanels";
-
-function loadMemory(): PanelMemory {
-  try {
-    return parseMemory(localStorage.getItem(MEMORY));
-  } catch {
-    return parseMemory(null);
-  }
-}
-
-/** Only the main window writes it; panels send it their geometry. */
-let memory = loadMemory();
-
-function saveMemory() {
-  if (!isMain) return;
-  memory.open = getState().detached.filter((k) => kindOf(k).k?.restore);
-  try {
-    localStorage.setItem(MEMORY, JSON.stringify(memory));
-  } catch {
-    // Not critical: the panels open in the main window next time.
-  }
-}
-
-/** The monitors' work areas, in the units geometry is kept in. */
-async function monitorRects(): Promise<Rect[]> {
-  try {
-    return (await availableMonitors()).map((m) => {
-      const f = LOGICAL ? m.scaleFactor : 1;
-      const a = m.workArea;
-      return { x: a.position.x / f, y: a.position.y / f, w: a.size.width / f, h: a.size.height / f };
-    });
-  } catch {
-    return [];
-  }
-}
-
-/** The `memory.geometry` entry a panel's window uses. */
-function memoryKey(key: string): string {
-  const { k, kind, arg } = kindOf(key);
-  return k?.memoryKey?.(arg, getState()) ?? kind;
-}
-
+/** Opens panel `key`'s window where it was last (the first time, at its kind's size where the
+ *  system puts it); if it can't, the panel goes back in the main window. */
 async function openWindow(key: string) {
   const { k, arg } = kindOf(key);
   if (!k) return;
-  const mem = memoryKey(key);
-  const saved = memory.geometry[mem];
-  let geometry: (Rect & { logical: boolean }) | null = null;
-  if (saved) {
-    // Another window remembered in the same place opens a little lower and to the right.
-    const others = getState().detached.filter((d) => d !== key && memoryKey(d) === mem).length;
-    geometry = { ...fitToMonitors(cascade(saved, others), await monitorRects()), logical: LOGICAL };
-  }
+  const remembered = rememberedRect(key);
+  const geometry = remembered ? await onMonitors(remembered) : null;
   const size = k.sizeOf?.(arg, getState()) ?? k.size;
   try {
     await invoke("open_panel_window", { label: panelLabel(key), title: k.title(arg, getState()), width: size.w, height: size.h, geometry });
@@ -444,8 +305,6 @@ export function detachMenuItems(key: string): MenuItem[] {
 
 // ---- installing ---------------------------------------------------------------------------------
 
-let restored = false;
-
 /**
  * The main window's part (App, once): it hears the panels, and reopens the panels that were
  * detached when Marbble quit. `key` runs a key command a panel window passed on.
@@ -467,7 +326,7 @@ export function installDetach(opts: { key: (id: string, repeat: boolean) => void
     if (!live) return;
     if (!restored) {
       restored = true;
-      for (const key of memory.open) if (kindOf(key).k?.restore) detachPanel(key);
+      for (const key of panelsToReopen()) if (kindOf(key).k?.restore) detachPanel(key);
     }
     // Panels that outlived a reload of this window catch up.
     const s = getState();
@@ -482,16 +341,8 @@ export function installDetach(opts: { key: (id: string, repeat: boolean) => void
 
 /** Sends where a panel window is to the main window, which remembers it per kind. */
 async function reportGeometry() {
-  const w = getCurrentWindow();
-  try {
-    // A minimized, zoomed or full-screen window isn't where it should open next time.
-    if ((await w.isMinimized()) || (await w.isMaximized()) || (await w.isFullscreen())) return;
-    const [pos, size, f] = await Promise.all([w.outerPosition(), w.innerSize(), LOGICAL ? w.scaleFactor() : Promise.resolve(1)]);
-    const rect = { x: Math.round(pos.x / f), y: Math.round(pos.y / f), w: Math.round(size.width / f), h: Math.round(size.height / f) };
-    send({ type: "geometry", key: ownPanel!, rect });
-  } catch {
-    // The window is closing.
-  }
+  const rect = await currentGeometry();
+  if (rect) send({ type: "geometry", key: ownPanel!, rect });
 }
 
 /**
@@ -531,33 +382,8 @@ export function installPanelWindow(opts: { menu: (id: string) => boolean }): () 
     win.onMoved(geometrySoon),
     win.onResized(geometrySoon),
   ];
-  // Key commands run in the main window, as if pressed there; the panel's own keys (the Piano
-  // Roll's) are handled first, in the capture phase, and prevent the default.
-  const onKey = (e: KeyboardEvent) => {
-    if (e.defaultPrevented || getState().dialog) return;
-    const t = e.target as HTMLElement | null;
-    if (keepsKeys(t)) return;
-    if (leavesKeyToFocus(e, t, keyboardFocus())) return;
-    const id = commandForEvent(e);
-    if (!id) return;
-    e.preventDefault();
-    send({ type: "key", id, repeat: e.repeat });
-  };
-  window.addEventListener("keydown", onKey);
-  // Tells the main window when a text field here starts or stops being typed in (the window
-  // gains or loses the focus, or a field does), so a MIDI controller's key commands wait.
-  let typing = false;
-  const reportTyping = () => {
-    const now = typingInField();
-    if (now !== typing) {
-      typing = now;
-      send({ type: "typing", on: now });
-    }
-  };
-  // After the event: while focus moves, neither the old element nor the new one has it.
-  const typingSoon = () => window.setTimeout(reportTyping, 0);
-  const focusEvents = ["focusin", "focusout", "focus", "blur"] as const;
-  focusEvents.forEach((ev) => window.addEventListener(ev, typingSoon));
+  const stopKeys = forwardKeys();
+  const stopTyping = reportTypingChanges();
   if (k) remotely(() => setState(k.show(arg, getState())));
   booted = !!k;
   let live = true;
@@ -571,9 +397,46 @@ export function installPanelWindow(opts: { menu: (id: string) => boolean }): () 
     live = false;
     booted = false;
     window.clearTimeout(geomTimer);
-    window.removeEventListener("keydown", onKey);
-    focusEvents.forEach((ev) => window.removeEventListener(ev, typingSoon));
+    stopKeys();
+    stopTyping();
     offs.forEach((off) => off());
     pending.forEach((p) => p.then((off) => off()));
   };
+}
+
+/** In a panel window: key commands run in the main window, as if pressed there; the panel's own
+ *  keys (the Piano Roll's) are handled first, in the capture phase, and prevent the default.
+ *  Returns the function that stops it. */
+function forwardKeys(): () => void {
+  const onKey = (e: KeyboardEvent) => {
+    if (e.defaultPrevented || getState().dialog) return;
+    const t = e.target as HTMLElement | null;
+    if (keepsKeys(t)) return;
+    if (leavesKeyToFocus(e, t, keyboardFocus())) return;
+    const id = commandForEvent(e);
+    if (!id) return;
+    e.preventDefault();
+    send({ type: "key", id, repeat: e.repeat });
+  };
+  window.addEventListener("keydown", onKey);
+  return () => window.removeEventListener("keydown", onKey);
+}
+
+/** In a panel window: tells the main window when a text field here starts or stops being typed
+ *  in (the window gains or loses the focus, or a field does), so a MIDI controller's key commands
+ *  wait. Returns the function that stops it. */
+function reportTypingChanges(): () => void {
+  let typing = false;
+  const reportTyping = () => {
+    const now = typingInField();
+    if (now !== typing) {
+      typing = now;
+      send({ type: "typing", on: now });
+    }
+  };
+  // After the event: while focus moves, neither the old element nor the new one has it.
+  const typingSoon = () => window.setTimeout(reportTyping, 0);
+  const focusEvents = ["focusin", "focusout", "focus", "blur"] as const;
+  focusEvents.forEach((ev) => window.addEventListener(ev, typingSoon));
+  return () => focusEvents.forEach((ev) => window.removeEventListener(ev, typingSoon));
 }

@@ -344,7 +344,11 @@ export interface LaneScene {
   ends: Map<Id, number>;
 }
 
-
+/** The time range a lane draws: what lies a few pixels past either edge, so dots there show. */
+interface LaneRange {
+  t0: number;
+  t1: number;
+}
 
 export function drawLane(ctx: CanvasRenderingContext2D, v: PrView, g: Grid, H: number, s: LaneScene) {
   const W = v.W;
@@ -354,117 +358,152 @@ export function drawLane(ctx: CanvasRenderingContext2D, v: PrView, g: Grid, H: n
   const accent = cssVar("--accent", s.themeId, "#4c9eff");
   ctx.fillStyle = theme.gridBeat;
   for (const f of [0, 0.5, 1]) ctx.fillRect(0, Math.round(LANE_PAD + f * (H - 2 * LANE_PAD)), W, 1);
-  const t0 = timeAt(v, -6);
-  const t1 = timeAt(v, W + 6);
-  if (!s.kind) {
-    const anySel = s.notes.some((n) => n.sel);
-    const draw = (n: PNote) => {
-      if (n.start < t0 || n.start > t1) return;
-      const x = Math.round(xOf(v, n.start)) + 0.5;
-      const y = laneY(H, n.velocity, 127);
-      const dim = (s.focus !== null && n.region !== s.focus) || (anySel && !n.sel);
-      const col = n.muted ? "#8e8e93" : n.sel ? mix(s.color(n), "#ffffff", 0.45) : s.color(n);
-      ctx.globalAlpha = dim ? 0.38 : 1;
-      ctx.fillStyle = col;
-      ctx.fillRect(x - 0.5, y, 2, H - LANE_PAD - y);
-      ctx.beginPath();
-      ctx.arc(x + 0.5, y, n.sel ? 3.5 : 3, 0, Math.PI * 2);
-      ctx.fill();
-      if (n.sel) {
-        ctx.strokeStyle = theme.selectOutline;
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
-    };
-    for (const n of s.notes) if (!n.sel) draw(n);
-    for (const n of s.notes) if (n.sel) draw(n);
-    ctx.globalAlpha = 1;
-  } else {
-    const kind = s.kind;
-    const max = ccMax(kind);
-    if (kind.type === "pitch_bend") {
-      ctx.fillStyle = theme.gridBar;
-      ctx.fillRect(0, Math.round(laneY(H, 8192, max)), W, 1);
-    }
-    const col = s.trackColor;
-    // Per region: a step line (values hold until the next event) and a dot per event.
-    const byRegion = new Map<Id, PCc[]>();
-    for (const c of s.cc) {
-      if (!sameKind(c.kind, kind)) continue;
-      const l = byRegion.get(c.region);
-      if (l) l.push(c);
-      else byRegion.set(c.region, [c]);
-    }
-    for (const [rid, list] of byRegion) {
-      const dim = s.focus !== null && rid !== s.focus;
-      const endX = (c: PCc) => Math.max(xOf(v, c.start), xOf(v, s.ends.get(rid) ?? c.start));
-      ctx.globalAlpha = dim ? 0.4 : 1;
-      ctx.strokeStyle = col;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      let started = false;
-      for (let i = 0; i < list.length; i++) {
-        const c = list[i];
-        const next = list[i + 1];
-        if (next && next.start < t0) continue;
-        if (c.start > t1) break;
-        const x = xOf(v, c.start);
-        const y = laneY(H, c.value, max);
-        if (!started) {
-          ctx.moveTo(x, y);
-          started = true;
-        } else ctx.lineTo(x, y);
-        ctx.lineTo(next ? xOf(v, next.start) : endX(c), y);
-        if (next) ctx.lineTo(xOf(v, next.start), laneY(H, next.value, max));
-      }
-      ctx.stroke();
-      ctx.fillStyle = mix(col, "#ffffff", 0.2);
-      ctx.globalAlpha = dim ? 0.4 : 0.22;
-      // Area under the line, for legibility.
-      for (let i = 0; i < list.length; i++) {
-        const c = list[i];
-        const next = list[i + 1];
-        if ((next && next.start < t0) || c.start > t1) continue;
-        const x = xOf(v, c.start);
-        const xe = next ? xOf(v, next.start) : endX(c);
-        const y = laneY(H, c.value, max);
-        ctx.fillRect(x, y, xe - x, H - LANE_PAD - y);
-      }
-      ctx.globalAlpha = dim ? 0.4 : 1;
-      for (const c of list) {
-        if (c.start < t0 || c.start > t1) continue;
-        const x = xOf(v, c.start);
-        const y = laneY(H, c.value, max);
-        ctx.fillStyle = c.sel ? "#ffffff" : col;
-        ctx.beginPath();
-        ctx.arc(x, y, c.sel ? 3.5 : 2.5, 0, Math.PI * 2);
-        ctx.fill();
-        if (c.sel) {
-          ctx.strokeStyle = accent;
-          ctx.lineWidth = 1.5;
-          ctx.stroke();
-        }
-      }
-    }
-    ctx.globalAlpha = 1;
-  }
-  if (s.line) {
-    ctx.strokeStyle = accent;
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([4, 3]);
-    ctx.beginPath();
-    // A controller line follows its curve shape, from the left end as the ramp is drawn.
-    const { x0, y0, x1, y1, shape } = s.line;
-    const [xa, ya, xb, yb] = x0 <= x1 ? [x0, y0, x1, y1] : [x1, y1, x0, y0];
-    ctx.moveTo(xa, ya);
-    if (shape && shape !== "linear") for (let k = 1; k < 32; k++) ctx.lineTo(xa + ((xb - xa) * k) / 32, ya + (yb - ya) * curve(shape, k / 32));
-    ctx.lineTo(xb, yb);
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
+  const range = { t0: timeAt(v, -6), t1: timeAt(v, W + 6) };
+  if (!s.kind) drawVelocityStalks(ctx, v, H, s, range);
+  else drawCcEvents(ctx, v, H, s, s.kind, range, accent);
+  if (s.line) drawLaneLine(ctx, s.line, accent);
   if (s.rubber) drawRubber(ctx, s.rubber, s.themeId);
   ctx.fillStyle = theme.rulerEdge;
   ctx.fillRect(0, 0, W, 1);
+}
+
+/** The velocity lane: a stalk with a dot on top per note, the selected ones on top. */
+function drawVelocityStalks(ctx: CanvasRenderingContext2D, v: PrView, H: number, s: LaneScene, { t0, t1 }: LaneRange) {
+  const anySel = s.notes.some((n) => n.sel);
+  const draw = (n: PNote) => {
+    if (n.start < t0 || n.start > t1) return;
+    const x = Math.round(xOf(v, n.start)) + 0.5;
+    const y = laneY(H, n.velocity, 127);
+    const dim = (s.focus !== null && n.region !== s.focus) || (anySel && !n.sel);
+    const col = n.muted ? "#8e8e93" : n.sel ? mix(s.color(n), "#ffffff", 0.45) : s.color(n);
+    ctx.globalAlpha = dim ? 0.38 : 1;
+    ctx.fillStyle = col;
+    ctx.fillRect(x - 0.5, y, 2, H - LANE_PAD - y);
+    ctx.beginPath();
+    ctx.arc(x + 0.5, y, n.sel ? 3.5 : 3, 0, Math.PI * 2);
+    ctx.fill();
+    if (n.sel) {
+      ctx.strokeStyle = theme.selectOutline;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  };
+  for (const n of s.notes) if (!n.sel) draw(n);
+  for (const n of s.notes) if (n.sel) draw(n);
+  ctx.globalAlpha = 1;
+}
+
+/** A controller lane: per region, a step line (values hold until the next event) with the area
+ *  under it, and a dot per event; the pitch bend lane also marks its centre. */
+function drawCcEvents(ctx: CanvasRenderingContext2D, v: PrView, H: number, s: LaneScene, kind: CcKind, range: LaneRange, accent: string) {
+  const max = ccMax(kind);
+  if (kind.type === "pitch_bend") {
+    ctx.fillStyle = theme.gridBar;
+    ctx.fillRect(0, Math.round(laneY(H, 8192, max)), v.W, 1);
+  }
+  const byRegion = new Map<Id, PCc[]>();
+  for (const c of s.cc) {
+    if (!sameKind(c.kind, kind)) continue;
+    const l = byRegion.get(c.region);
+    if (l) l.push(c);
+    else byRegion.set(c.region, [c]);
+  }
+  for (const [rid, list] of byRegion) {
+    const dim = s.focus !== null && rid !== s.focus;
+    // The last event holds until its region ends.
+    const endX = (c: PCc) => Math.max(xOf(v, c.start), xOf(v, s.ends.get(rid) ?? c.start));
+    const lane = { v, H, max, color: s.trackColor, range, endX, dim };
+    ccStepLine(ctx, lane, list);
+    ccArea(ctx, lane, list);
+    ccDots(ctx, lane, list, accent);
+  }
+  ctx.globalAlpha = 1;
+}
+
+/** What drawing one region's controller events needs. */
+interface CcLane {
+  v: PrView;
+  H: number;
+  /** The kind's highest value. */
+  max: number;
+  color: string;
+  range: LaneRange;
+  /** Where an event's value stops holding when no event follows it. */
+  endX: (c: PCc) => number;
+  /** Another region than the one being edited: drawn faint. */
+  dim: boolean;
+}
+
+function ccStepLine(ctx: CanvasRenderingContext2D, { v, H, max, color, range, endX, dim }: CcLane, list: PCc[]) {
+  ctx.globalAlpha = dim ? 0.4 : 1;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  let started = false;
+  for (let i = 0; i < list.length; i++) {
+    const c = list[i];
+    const next = list[i + 1];
+    if (next && next.start < range.t0) continue;
+    if (c.start > range.t1) break;
+    const x = xOf(v, c.start);
+    const y = laneY(H, c.value, max);
+    if (!started) {
+      ctx.moveTo(x, y);
+      started = true;
+    } else ctx.lineTo(x, y);
+    ctx.lineTo(next ? xOf(v, next.start) : endX(c), y);
+    if (next) ctx.lineTo(xOf(v, next.start), laneY(H, next.value, max));
+  }
+  ctx.stroke();
+}
+
+/** The area under the step line, for legibility. */
+function ccArea(ctx: CanvasRenderingContext2D, { v, H, max, color, range, endX, dim }: CcLane, list: PCc[]) {
+  ctx.fillStyle = mix(color, "#ffffff", 0.2);
+  ctx.globalAlpha = dim ? 0.4 : 0.22;
+  for (let i = 0; i < list.length; i++) {
+    const c = list[i];
+    const next = list[i + 1];
+    if ((next && next.start < range.t0) || c.start > range.t1) continue;
+    const x = xOf(v, c.start);
+    const xe = next ? xOf(v, next.start) : endX(c);
+    const y = laneY(H, c.value, max);
+    ctx.fillRect(x, y, xe - x, H - LANE_PAD - y);
+  }
+}
+
+function ccDots(ctx: CanvasRenderingContext2D, { v, H, max, color, range, dim }: CcLane, list: PCc[], accent: string) {
+  ctx.globalAlpha = dim ? 0.4 : 1;
+  for (const c of list) {
+    if (c.start < range.t0 || c.start > range.t1) continue;
+    const x = xOf(v, c.start);
+    const y = laneY(H, c.value, max);
+    ctx.fillStyle = c.sel ? "#ffffff" : color;
+    ctx.beginPath();
+    ctx.arc(x, y, c.sel ? 3.5 : 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    if (c.sel) {
+      ctx.strokeStyle = accent;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+  }
+}
+
+/** A line being drawn in the lane, dashed; a controller line follows its curve shape, from the
+ *  left end as the ramp is drawn. */
+function drawLaneLine(ctx: CanvasRenderingContext2D, line: NonNullable<LaneScene["line"]>, accent: string) {
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 3]);
+  ctx.beginPath();
+  const { x0, y0, x1, y1, shape } = line;
+  const [xa, ya, xb, yb] = x0 <= x1 ? [x0, y0, x1, y1] : [x1, y1, x0, y0];
+  ctx.moveTo(xa, ya);
+  if (shape && shape !== "linear") for (let k = 1; k < 32; k++) ctx.lineTo(xa + ((xb - xa) * k) / 32, ya + (yb - ya) * curve(shape, k / 32));
+  ctx.lineTo(xb, yb);
+  ctx.stroke();
+  ctx.setLineDash([]);
 }
 
 export function drawRubber(ctx: CanvasRenderingContext2D, r: { x0: number; y0: number; x1: number; y1: number }, themeId: string) {

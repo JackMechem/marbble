@@ -1,6 +1,7 @@
 // Painting the Audio Track Editor: the lane's regions drawn large with clip marks and transients, the
 // selected range, its ruler and its dB scale.
 import { type Id, type Project, type Track } from "../../engine/project";
+import { type Region } from "../../engine/regions";
 import * as ed from "./state";
 import { getState } from "../../state/store";
 import { theme } from "../../theme/canvasTheme";
@@ -67,6 +68,79 @@ function sizeCanvas(cv: HTMLCanvasElement, w: number, h: number, dpr: number) {
   return ctx;
 }
 
+/** The lane's layout (model.ts `geometry`). */
+type Geometry = ReturnType<typeof geometry>;
+
+/** The canvas's size and how the timeline maps onto it: `X` takes a frame to a canvas x. */
+interface View {
+  W: number;
+  H: number;
+  left: number;
+  pps: number;
+  X: (frame: number) => number;
+}
+
+/** The background: bars, beats and (zoomed in) sixteenths through the tempo map, and the cycle. */
+function drawBackground(ctx: CanvasRenderingContext2D, { W, H, left, pps, X }: View, project: Project) {
+  ctx.fillStyle = theme.editorBg;
+  ctx.fillRect(0, 0, W, H);
+  forEachGridLine(tempoMap(project), Math.max(0, left / pps), (left + W) / pps, pps, { beatsMinPx: 9.01, subdiv: 4, subMinPx: 30.01 }, (pos, kind) => {
+    ctx.fillStyle = kind === "bar" ? theme.gridBar : theme.gridBeat;
+    ctx.fillRect(Math.round(X(pos)), RULER, 1, H - RULER);
+  });
+  if (project.cycle.enabled) {
+    ctx.fillStyle = theme.cycleTint;
+    ctx.fillRect(X(project.cycle.start), RULER, (project.cycle.end - project.cycle.start) * pps, H - RULER);
+  }
+}
+
+/** Where region `r` is drawn while `drag` moves, trims or fades it: its start and length, the
+ *  frames trimmed off its front, and the fades to show instead of its own. */
+function draggedRegion(r: Region, drag: Drag | null): { start: number; length: number; shift: number; fades?: [number, number] } {
+  const own = { start: r.start, length: r.length, shift: 0 };
+  if (!drag || drag.id !== r.id) return own;
+  if (drag.kind === "move" && drag.start !== undefined) return { ...own, start: drag.start };
+  if (drag.fade !== undefined && r.content.type === "audio") {
+    return { ...own, fades: drag.kind === "fadeIn" ? [drag.fade, r.content.fade_out] : [r.content.fade_in, drag.fade] };
+  }
+  if (drag.start !== undefined && drag.length !== undefined) return { start: drag.start, length: drag.length, shift: drag.start - r.start };
+  return own;
+}
+
+/** Transient marks over a region's body drawn at `x` (width `w`) from clip frame `offset`: a
+ *  faint line and a small wedge at the bottom for each. */
+function drawTransients(ctx: CanvasRenderingContext2D, list: number[], offset: number, x: number, w: number, { W, pps }: View, g: Geometry) {
+  const from = offset + (Math.max(0, x) - x) / pps;
+  const to = offset + (Math.min(W, x + w) - x) / pps;
+  const bottom = g.bodyTop + g.bodyH;
+  ctx.fillStyle = theme.selectOutline;
+  for (let i = lowerBound(list, from); i < list.length && list[i] <= to; i++) {
+    const tx = Math.round(x + (list[i] - offset) * pps);
+    ctx.globalAlpha = 0.35;
+    ctx.fillRect(tx, g.bodyTop, 1, g.bodyH);
+    ctx.globalAlpha = 0.9;
+    ctx.beginPath();
+    ctx.moveTo(tx - 3.5, bottom);
+    ctx.lineTo(tx + 4.5, bottom);
+    ctx.lineTo(tx + 0.5, bottom - 5);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+/** The selected range over the lane: a tint with a line at each end. */
+function drawRangeSel(ctx: CanvasRenderingContext2D, { H, pps, X }: View, s: ed.RangeSel, accent: string) {
+  const sx = X(s.start);
+  const sw = Math.max(1, (s.end - s.start) * pps);
+  ctx.fillStyle = accent;
+  ctx.globalAlpha = 0.2;
+  ctx.fillRect(sx, RULER, sw, H - RULER);
+  ctx.globalAlpha = 0.9;
+  ctx.fillRect(Math.round(sx), RULER, 1, H - RULER);
+  ctx.fillRect(Math.round(sx + sw), RULER, 1, H - RULER);
+  ctx.globalAlpha = 1;
+}
+
 export type DrawRefs = {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   scaleRef: React.RefObject<HTMLCanvasElement | null>;
@@ -84,7 +158,7 @@ export function editorDrawer({ canvasRef, scaleRef, scrollRef, playheadRef, drag
     const cv = canvasRef.current;
     const sc = scaleRef.current;
     const el = scrollRef.current;
-    const { project, track, selectedRegions, pps, amp, showTransients, accent } = live.current;
+    const { project, track, accent, pps } = live.current;
     if (!cv || !sc || !el || !project || pps <= 0) return;
     const dpr = pixelRatio();
     const W = el.clientWidth;
@@ -92,41 +166,43 @@ export function editorDrawer({ canvasRef, scaleRef, scrollRef, playheadRef, drag
     const left = el.scrollLeft;
     const ctx = sizeCanvas(cv, W, H, dpr);
     const g = geometry(H);
-    const X = (f: number) => f * pps - left;
-    ctx.fillStyle = theme.editorBg;
-    ctx.fillRect(0, 0, W, H);
-
-    // Grid: bars, beats and (zoomed in) sixteenths, through the tempo map.
-    forEachGridLine(tempoMap(project), Math.max(0, left / pps), (left + W) / pps, pps, { beatsMinPx: 9.01, subdiv: 4, subMinPx: 30.01 }, (pos, kind) => {
-      ctx.fillStyle = kind === "bar" ? theme.gridBar : theme.gridBeat;
-      ctx.fillRect(Math.round(X(pos)), RULER, 1, H - RULER);
-    });
-    if (project.cycle.enabled) {
-      ctx.fillStyle = theme.cycleTint;
-      ctx.fillRect(X(project.cycle.start), RULER, (project.cycle.end - project.cycle.start) * pps, H - RULER);
+    const v: View = { W, H, left, pps, X: (f) => f * pps - left };
+    drawBackground(ctx, v, project);
+    drawRegions(ctx, v, g);
+    if (!track.regions.length) {
+      ctx.fillStyle = theme.rulerTick;
+      ctx.font = canvasFont("md");
+      ctx.textAlign = "center";
+      ctx.fillText("This track has no regions yet. Record or drop an audio file on it.", W / 2, g.top + g.h / 2);
+      ctx.textAlign = "left";
     }
+    // The selected range: over the lane, and as a bar along the foot of the ruler.
+    const s = ed.rangeSel();
+    const sel = s && s.track === track.id ? s : null;
+    if (sel) drawRangeSel(ctx, v, sel, accent);
+    drawRuler(ctx, W, left);
+    if (sel) {
+      ctx.fillStyle = accent;
+      ctx.fillRect(v.X(sel.start), RULER - 4, Math.max(1, (sel.end - sel.start) * pps), 3);
+    }
+    drawScale(sc, H, dpr);
+    const ph = playheadRef.current;
+    if (ph) ph.style.height = `${H}px`;
+    positionPlayhead();
+  };
 
-    // Regions, as in the arrange but tall, with gain and waveform zoom applied.
+  /** The track's regions, as in the arrange but tall, with gain and waveform zoom applied, and
+   *  over each audio one where it clips and (when shown) its transients. */
+  const drawRegions = (ctx: CanvasRenderingContext2D, v: View, g: Geometry) => {
+    const { track, selectedRegions, pps, amp, showTransients } = live.current;
+    const { W } = v;
     const drag = dragRef.current;
     for (const r of track.regions) {
-      let start = r.start;
-      let length = r.length;
-      let shift = 0;
-      let fades: [number, number] | undefined;
-      if (drag && drag.id === r.id) {
-        if (drag.kind === "move" && drag.start !== undefined) start = drag.start;
-        else if (drag.fade !== undefined && r.content.type === "audio") fades = drag.kind === "fadeIn" ? [drag.fade, r.content.fade_out] : [r.content.fade_in, drag.fade];
-        else if (drag.start !== undefined && drag.length !== undefined) {
-          shift = drag.start - r.start;
-          start = drag.start;
-          length = drag.length;
-        }
-      }
-      const x = X(start);
+      const { start, length, shift, fades } = draggedRegion(r, drag);
+      const x = v.X(start);
       const w = Math.max(2, length * pps);
       if (x > W || x + w < 0) continue;
       const audio = r.content.type === "audio" ? r.content : null;
-      const gain = audio ? dbGain(audio.gain_db) : 1;
       const isSel = selectedRegions.includes(r.id);
       if (audio && !waveCache.has(audio.clip)) ensureWave(audio.clip, requestDraw);
       // drawRegion scales the waveform by the region's gain itself.
@@ -138,60 +214,11 @@ export function editorDrawer({ canvasRef, scaleRef, scrollRef, playheadRef, drag
       ctx.beginPath();
       ctx.rect(Math.max(0, x), g.bodyTop, Math.min(W, x + w) - Math.max(0, x), g.bodyH);
       ctx.clip();
-      if (wave && !r.muted) drawClipMarks(ctx, wave, offset, x, w, pps, gain, g.bodyTop, g.bodyH, W);
-      if (showTransients) {
-        const list = ed.transientsFor(audio.clip, requestDraw);
-        if (list) {
-          const from = offset + (Math.max(0, x) - x) / pps;
-          const to = offset + (Math.min(W, x + w) - x) / pps;
-          ctx.fillStyle = theme.selectOutline;
-          for (let i = lowerBound(list, from); i < list.length && list[i] <= to; i++) {
-            const tx = Math.round(x + (list[i] - offset) * pps);
-            ctx.globalAlpha = 0.35;
-            ctx.fillRect(tx, g.bodyTop, 1, g.bodyH);
-            ctx.globalAlpha = 0.9;
-            ctx.beginPath();
-            ctx.moveTo(tx - 3.5, g.bodyTop + g.bodyH);
-            ctx.lineTo(tx + 4.5, g.bodyTop + g.bodyH);
-            ctx.lineTo(tx + 0.5, g.bodyTop + g.bodyH - 5);
-            ctx.fill();
-          }
-          ctx.globalAlpha = 1;
-        }
-      }
+      if (wave && !r.muted) drawClipMarks(ctx, wave, offset, x, w, pps, dbGain(audio.gain_db), g.bodyTop, g.bodyH, W);
+      const transients = showTransients ? ed.transientsFor(audio.clip, requestDraw) : null;
+      if (transients) drawTransients(ctx, transients, offset, x, w, v, g);
       ctx.restore();
     }
-    if (!track.regions.length) {
-      ctx.fillStyle = theme.rulerTick;
-      ctx.font = canvasFont("md");
-      ctx.textAlign = "center";
-      ctx.fillText("This track has no regions yet. Record or drop an audio file on it.", W / 2, g.top + g.h / 2);
-      ctx.textAlign = "left";
-    }
-
-    // The selected range.
-    const s = ed.rangeSel();
-    if (s && s.track === track.id) {
-      const sx = X(s.start);
-      const sw = Math.max(1, (s.end - s.start) * pps);
-      ctx.fillStyle = accent;
-      ctx.globalAlpha = 0.2;
-      ctx.fillRect(sx, RULER, sw, H - RULER);
-      ctx.globalAlpha = 0.9;
-      ctx.fillRect(Math.round(sx), RULER, 1, H - RULER);
-      ctx.fillRect(Math.round(sx + sw), RULER, 1, H - RULER);
-      ctx.globalAlpha = 1;
-    }
-
-    drawRuler(ctx, W, left);
-    if (s && s.track === track.id) {
-      ctx.fillStyle = accent;
-      ctx.fillRect(X(s.start), RULER - 4, Math.max(1, (s.end - s.start) * pps), 3);
-    }
-    drawScale(sc, H, dpr);
-    const ph = playheadRef.current;
-    if (ph) ph.style.height = `${H}px`;
-    positionPlayhead();
   };
 
   const drawRuler = (ctx: CanvasRenderingContext2D, W: number, left: number) => {
