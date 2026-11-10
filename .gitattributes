@@ -1,0 +1,13 @@
+# Text files are checked out with LF everywhere, so tests that read source files see the same
+# text on Windows as on Linux and macOS.
+* text=auto eol=lf
+
+# Binary assets.
+*.png binary
+*.ico binary
+*.icns binary
+*.wav binary
+*.flac binary
+*.mp3 binary
+*.ttf binary
+*.woff2 binary
