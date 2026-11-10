@@ -91,7 +91,7 @@ impl Session {
         self.update_pdc();
     }
 
-    /// Opens a VST3's own editor, and starts watching it for edits to undo (see `editor_undo.rs`).
+    /// Opens a VST3's own editor, and starts watching it for edits to undo (see `editor_undo/`).
     pub fn open_editor(&mut self, uid: Id, title: &str) -> Result<()> {
         let c = self.controllers.get_mut(&uid).ok_or_else(|| anyhow!("this plug-in has no editor"))?;
         c.open_editor(title).map_err(|e| anyhow!(e))?;

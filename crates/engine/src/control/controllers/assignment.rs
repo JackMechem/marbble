@@ -106,7 +106,7 @@ pub struct Assignment {
     /// A relative encoder's speed: at 1 a step moves the parameter 1/127 of the range.
     #[serde(default = "one")]
     pub sensitivity: f32,
-    /// Send the target's value back to the controller (`feedback.rs`) when its input is paired
+    /// Send the target's value back to the controller (`control/feedback/`) when its input is paired
     /// with an output. On by default, and for assignments saved before there was feedback.
     #[serde(default = "yes")]
     pub feedback: bool,

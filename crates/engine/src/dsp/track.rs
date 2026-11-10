@@ -133,7 +133,7 @@ pub enum RegionDsp {
         /// Timeline (start, length) of the region's fade-in and fade-out; length 0 = none.
         fade_in: (i64, i64),
         fade_out: (i64, i64),
-        /// The gain laws of the fade-in and fade-out (see `fades.rs`).
+        /// The gain laws of the fade-in and fade-out (see `edit/fades/`).
         laws: [FadeLaw; 2],
     },
     Midi {

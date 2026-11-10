@@ -2,9 +2,10 @@
 //! signature, metronome, count-in, master volume.
 //!
 //! Recording ends here too: `place_recording` turns what `crate::audio_io::recorder` wrote into regions or,
-//! with a cycle or punch, take folders (see `takes/`). The tempo map's edits are in `tempo.rs`.
+//! with a cycle or punch, take folders (see `takes/`). The tempo map's edits are in `global_tracks/tempo.rs`.
 
 use super::*;
+use crate::edit::takes::recording::RecPlan;
 
 impl Session {
     /// The playhead. Until the engine has applied the last locate (or record start), that's
@@ -177,21 +178,36 @@ impl Session {
 
     /// Turns what the recording in progress (`rec_punch`, `rec_plan`) captured into regions:
     /// the audio `takes`, moved `comp` frames earlier, and the MIDI. Crash recovery replays an
-    /// interrupted recording through here too (`session/project/recovery.rs`).
+    /// interrupted recording through here too (`session/project/recovery/`).
     pub(super) fn place_recording(&mut self, takes: Vec<(Id, FinishedTake)>, comp: i64) {
         let Some(punch) = self.rec_punch.take() else { return };
         let plan = self.rec_plan.take();
         let stop_pos = self.position();
         // MIDI only travels one way: the performer reacts to audio that left late.
         let midi_comp = plan.map(|p| p.midi_latency).unwrap_or_else(|| self.midi_latency_frames());
-        let mut touched = Vec::new();
         // What the tracks held before, and what the recording adds, for Discard Last Recording.
         let before: Vec<(Id, Vec<Region>)> =
             takes.iter().map(|(t, _)| *t).chain(self.rec_midi_track).filter_map(|t| Some((t, self.project.track(t)?.regions.clone()))).collect();
-        let mut clips = Vec::new();
-        let mut midi = Vec::new();
         // Shared by the takes every track gets from this recording (`Take::pass`).
         let recording = self.project.alloc_id();
+        let mut touched = Vec::new();
+        let clips = self.place_audio_recording(takes, comp, plan, recording, &mut touched);
+        let midi = self.place_midi_recording(plan, punch, stop_pos, midi_comp, &mut touched);
+        touched.sort_unstable();
+        touched.dedup();
+        self.note_recording(recording, before, &touched, clips, midi);
+        for t in touched {
+            self.push_regions(t);
+        }
+        self.update_midi_target();
+        self.dirty = true;
+    }
+
+    /// The audio half of `place_recording`: each track's take becomes a clip and a region (or
+    /// takes in a folder), lined up with what was heard. Returns the clips added; the tracks
+    /// changed go in `touched`.
+    fn place_audio_recording(&mut self, takes: Vec<(Id, FinishedTake)>, comp: i64, plan: Option<RecPlan>, recording: Id, touched: &mut Vec<Id>) -> Vec<Id> {
+        let mut clips = Vec::new();
         let mut passes = takes::recording::RecordingPasses::new(recording);
         for (track, take) in takes {
             if let Some(e) = &take.error {
@@ -246,8 +262,15 @@ impl Session {
                 touched.push(dest);
             }
         }
+        clips
+    }
 
-        // MIDI: pair note-ons with note-offs; notes still held end where recording stopped.
+    /// The MIDI half of `place_recording`: the messages recorded, moved `midi_comp` frames
+    /// earlier, become notes and controllers over whole bars, placed as Settings › Recording ›
+    /// MIDI says. Returns the regions or takes made; the track goes in `touched`.
+    fn place_midi_recording(&mut self, plan: Option<RecPlan>, punch: i64, stop_pos: i64, midi_comp: i64, touched: &mut Vec<Id>) -> Vec<Id> {
+        let mut midi = Vec::new();
+        // Note-ons are paired with note-offs; notes still held end where recording stopped.
         let (mut events, lost) = self.rec_midi.take(&self.status);
         for (pos, _) in &mut events {
             *pos = (*pos - midi_comp).max(0);
@@ -256,68 +279,53 @@ impl Session {
             log::warn!("recorded MIDI: {lost} messages found the ring full");
             self.warning.get_or_insert_with(|| takes::midi_capture::lost_warning(lost));
         }
-        if let (Some(track), false) = (self.rec_midi_track.take(), events.is_empty()) {
-            let map = self.tempo_map();
-            let w = takes::recording::midi_window(plan, punch, stop_pos);
-            // From the bar line at or before the first event to the one at or after the last.
-            let start = map.bar_start(map.bar_at(w.lo as f64)) as i64;
-            let hi = w.hi.max(w.lo + 1) as f64;
-            let last = map.bar_at(hi);
-            let end = if map.bar_start(last) >= hi { map.bar_start(last) } else { map.bar_start(last + 1) } as i64;
-            if self.prefs.recording.midi_mode() == MidiOverlap::TakeFolders {
-                // Each cycle pass is a take; a held note ends at the cycle end, or where
-                // recording stopped in the last pass.
-                let passes = crate::edit::takes::recording::midi_passes(&events);
-                let n = passes.len();
-                let takes: Vec<(Vec<Note>, Vec<CcEvent>)> = passes
-                    .iter()
-                    .enumerate()
-                    .map(|(k, p)| takes::recording::midi_take(p, &w, start, if k + 1 == n { stop_pos } else { w.hi }))
-                    .filter(|(n, c)| !n.is_empty() || !c.is_empty())
-                    .collect();
-                if !takes.is_empty() {
-                    midi.extend(self.place_midi_takes(track, start, end, takes));
-                    touched.push(track);
-                }
-                events.clear();
-            }
-            let (notes, cc) = takes::recording::midi_take(&events, &w, start, stop_pos);
-            if !notes.is_empty() || !cc.is_empty() {
-                let merged = match self.prefs.recording.midi_mode() {
-                    MidiOverlap::NewRegion | MidiOverlap::TakeFolders => false,
-                    MidiOverlap::Merge => self.merge_midi_take(track, start, end, &notes, &cc),
-                    // From the punch-in (or where recording started) to where it stopped.
-                    MidiOverlap::Replace => self.replace_midi_take(track, (w.lo, w.hi), start, end, &notes, &cc),
-                };
-                let id = self.project.alloc_id();
-                if let (false, Some(t)) = (merged, self.project.track_mut(track)) {
-                    midi.push(id);
-                    let name = t.name.clone();
-                    t.regions.push(Region {
-                        id,
-                        name,
-                        start,
-                        length: end - start,
-                        muted: false,
-                        color: None,
-                        content: RegionContent::Midi { notes, cc },
-                        loop_end: None,
-                        takes: None,
-                        params: Default::default(),
-                        pattern: None,
-                    });
-                }
+        let (Some(track), false) = (self.rec_midi_track.take(), events.is_empty()) else { return midi };
+        let w = takes::recording::midi_window(plan, punch, stop_pos);
+        let (start, end) = self.whole_bars(w.lo, w.hi);
+        if self.prefs.recording.midi_mode() == MidiOverlap::TakeFolders {
+            // Each cycle pass is a take; a held note ends at the cycle end, or where
+            // recording stopped in the last pass.
+            let passes = crate::edit::takes::recording::midi_passes(&events);
+            let n = passes.len();
+            let takes: Vec<(Vec<Note>, Vec<CcEvent>)> = passes
+                .iter()
+                .enumerate()
+                .map(|(k, p)| takes::recording::midi_take(p, &w, start, if k + 1 == n { stop_pos } else { w.hi }))
+                .filter(|(n, c)| !n.is_empty() || !c.is_empty())
+                .collect();
+            if !takes.is_empty() {
+                midi.extend(self.place_midi_takes(track, start, end, takes));
                 touched.push(track);
             }
+            events.clear();
         }
-        touched.sort_unstable();
-        touched.dedup();
-        self.note_recording(recording, before, &touched, clips, midi);
-        for t in touched {
-            self.push_regions(t);
+        let (notes, cc) = takes::recording::midi_take(&events, &w, start, stop_pos);
+        if !notes.is_empty() || !cc.is_empty() {
+            let merged = match self.prefs.recording.midi_mode() {
+                MidiOverlap::NewRegion | MidiOverlap::TakeFolders => false,
+                MidiOverlap::Merge => self.merge_midi_take(track, start, end, &notes, &cc),
+                // From the punch-in (or where recording started) to where it stopped.
+                MidiOverlap::Replace => self.replace_midi_take(track, (w.lo, w.hi), start, end, &notes, &cc),
+            };
+            let id = self.project.alloc_id();
+            if let (false, Some(t)) = (merged, self.project.track_mut(track)) {
+                midi.push(id);
+                let name = t.name.clone();
+                t.regions.push(Region::midi(id, name, start, end - start, notes, cc));
+            }
+            touched.push(track);
         }
-        self.update_midi_target();
-        self.dirty = true;
+        midi
+    }
+
+    /// From the bar line at or before `lo` to the one at or after `hi` (a bar at least).
+    fn whole_bars(&self, lo: i64, hi: i64) -> (i64, i64) {
+        let map = self.tempo_map();
+        let start = map.bar_start(map.bar_at(lo as f64)) as i64;
+        let hi = hi.max(lo + 1) as f64;
+        let last = map.bar_at(hi);
+        let end = if map.bar_start(last) >= hi { map.bar_start(last) } else { map.bar_start(last + 1) } as i64;
+        (start, end)
     }
 
     /// Sets the locators in either order. A cycle of no length is off.

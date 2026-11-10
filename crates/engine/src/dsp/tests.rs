@@ -54,13 +54,8 @@ fn blocks_over_their_own_length_are_counted() {
 /// At this sample rate every block is late, but a render runs flat out on purpose.
 #[test]
 fn a_render_does_not_count_as_late_blocks() {
-    let (_tx, rx) = rtrb::RingBuffer::new(64);
-    let (gtx, _grx) = rtrb::RingBuffer::new(64);
-    let (_live_tx, live_rx) = rtrb::RingBuffer::new(16);
-    let (rec_tx, _rec_rx) = rtrb::RingBuffer::new(16);
-    let (an_tx, _an_rx) = rtrb::RingBuffer::new(16);
-    let status = Arc::new(EngineStatus::default());
-    let mut e = Engine::new(1e12, rx, gtx, status.clone(), live_rx, rec_tx, an_tx);
+    let mut rig = rig_at(1e12);
+    let (e, status) = (&mut rig.engine, &rig.status);
     let mut out = vec![0.0f32; 512 * 2];
     e.offline = true;
     e.process(&[], 0, &mut out, 2);
@@ -76,13 +71,8 @@ fn a_render_does_not_count_as_late_blocks() {
 /// the engine must notice, report it and go quiet instead of grinding on.
 #[test]
 fn a_sustained_overload_sheds_load() {
-    let (_tx, rx) = rtrb::RingBuffer::new(64);
-    let (gtx, _grx) = rtrb::RingBuffer::new(64);
-    let (_live_tx, live_rx) = rtrb::RingBuffer::new(16);
-    let (rec_tx, _rec_rx) = rtrb::RingBuffer::new(16);
-    let (an_tx, _an_rx) = rtrb::RingBuffer::new(16);
-    let status = Arc::new(EngineStatus::default());
-    let mut e = Engine::new(1e12, rx, gtx, status.clone(), live_rx, rec_tx, an_tx);
+    let mut rig = rig_at(1e12);
+    let (e, status) = (&mut rig.engine, &rig.status);
     let mut out = vec![1.0f32; 512 * 2];
     let started = Instant::now();
     while status.overloads.load(Ordering::Relaxed) == 0 && started.elapsed().as_secs() < 5 {
@@ -105,22 +95,34 @@ fn contain_silences_nans_and_clamps_runaways() {
     assert_eq!(r, [-0.25; 4]);
 }
 
-struct Rig {
-    engine: Engine,
-    tx: rtrb::Producer<Cmd>,
-    // Holds the rings' far ends open for the rig's life; nothing reads this tuple.
-    #[allow(clippy::type_complexity)]
-    _keep: (rtrb::Consumer<Garbage>, rtrb::Producer<[u8; 3]>, rtrb::Consumer<(i64, [u8; 3])>, rtrb::Consumer<f32>),
+/// An engine to send commands to and play blocks on, with the far ends of its rings. The tests
+/// in `parallel/` and `track_off/` use it too.
+pub(super) struct Rig {
+    pub(super) engine: Engine,
+    pub(super) tx: rtrb::Producer<Cmd>,
+    pub(super) status: Arc<EngineStatus>,
+    /// What the engine hands back to be dropped.
+    pub(super) garbage: rtrb::Consumer<Garbage>,
+    // The other rings' far ends, held open for the rig's life.
+    _live_midi: rtrb::Producer<[u8; 3]>,
+    _recorded_midi: rtrb::Consumer<(i64, [u8; 3])>,
+    _analyzer: rtrb::Consumer<f32>,
 }
 
-fn rig() -> Rig {
-    let (tx, rx) = rtrb::RingBuffer::new(64);
-    let (gtx, grx) = rtrb::RingBuffer::new(64);
-    let (live_tx, live_rx) = rtrb::RingBuffer::new(16);
-    let (rec_tx, rec_rx) = rtrb::RingBuffer::new(16);
-    let (an_tx, an_rx) = rtrb::RingBuffer::new(16);
-    let engine = Engine::new(48000.0, rx, gtx, Arc::new(EngineStatus::default()), live_rx, rec_tx, an_tx);
-    Rig { engine, tx, _keep: (grx, live_tx, rec_rx, an_rx) }
+/// A rig at 48 kHz.
+pub(super) fn rig() -> Rig {
+    rig_at(48000.0)
+}
+
+pub(super) fn rig_at(sample_rate: f64) -> Rig {
+    let (tx, rx) = rtrb::RingBuffer::new(256);
+    let (gtx, garbage) = rtrb::RingBuffer::new(256);
+    let (_live_midi, live_rx) = rtrb::RingBuffer::new(16);
+    let (rec_tx, _recorded_midi) = rtrb::RingBuffer::new(16);
+    let (an_tx, _analyzer) = rtrb::RingBuffer::new(1 << 16);
+    let status = Arc::new(EngineStatus::default());
+    let engine = Engine::new(sample_rate, rx, gtx, status.clone(), live_rx, rec_tx, an_tx);
+    Rig { engine, tx, status, garbage, _live_midi, _recorded_midi, _analyzer }
 }
 
 /// Plays one second (two bars at 480 BPM) with the metronome on and returns the peak level

@@ -1,6 +1,6 @@
 // The Limiter's panel, after Logic's Limiter: input, reduction and output meters on the left,
 // Gain and Out Ceiling as the two big controls, then Release, Lookahead, the mode and True
-// Peak. Parameter ids mirror crates/engine/src/fx/limiter.rs.
+// Peak. Parameter ids mirror crates/engine/src/fx/limiter/.
 import type { FxPanelProps } from "../../builtinEffects";
 import { GrBar, LevelBar, ParamChoice, ParamKnob, ParamToggle } from "./dynControls";
 

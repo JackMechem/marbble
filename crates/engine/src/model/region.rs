@@ -100,7 +100,7 @@ pub enum RegionContent {
         fade_in: i64,
         #[serde(default)]
         fade_out: i64,
-        /// Fade curves and types (see `fades.rs`).
+        /// Fade curves and types (see `edit/fades/`).
         #[serde(default, skip_serializing_if = "FadeShape::is_default")]
         fade_shape: FadeShape,
     },
@@ -149,6 +149,24 @@ pub struct Region {
 pub const MAX_LOOP_PASSES: i64 = 4096;
 
 impl Region {
+    /// A plain MIDI region of these notes and controllers (relative to `start`): not muted,
+    /// looped, a take folder or a pattern.
+    pub fn midi(id: Id, name: String, start: i64, length: i64, notes: Vec<Note>, cc: Vec<CcEvent>) -> Region {
+        Region {
+            id,
+            name,
+            start,
+            length,
+            muted: false,
+            color: None,
+            content: RegionContent::Midi { notes, cc },
+            loop_end: None,
+            takes: None,
+            params: Default::default(),
+            pattern: None,
+        }
+    }
+
     /// The clips the region can play: an audio region's clip and every take in its folder,
     /// whether the comp plays it or not.
     pub fn clips(&self) -> Vec<Id> {

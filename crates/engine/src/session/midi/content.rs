@@ -2,7 +2,7 @@
 //! Standard MIDI File import and export.
 
 use crate::midi::smf::{self, SmfCc, SmfFile, SmfNote, SmfTrack};
-use crate::model::tempo::{events_from_quarters, sigs_from_quarters, TempoEvent, TempoMap};
+use crate::model::tempo::{events_from_quarters, sigs_from_quarters, SigEvent, TempoEvent, TempoMap};
 use crate::session::*;
 
 /// One region's new content, as the Piano Roll sends it after an edit.
@@ -33,6 +33,69 @@ fn file_tempo_map(file: &SmfFile, sr: f64) -> Option<TempoMap> {
         changes.insert(0, (0.0, 120.0));
     }
     Some(TempoMap::new(sr, &events_from_quarters(sr, &changes), &[], 120.0, (4, 4)))
+}
+
+/// Where an imported file's ticks land in the project, its tick 0 at `start`.
+struct FileTime {
+    /// The project's tempo map, as it is once the file's timing has been adopted.
+    map: TempoMap,
+    /// The file's own (see `file_tempo_map`).
+    file_map: Option<TempoMap>,
+    ppq: f64,
+    start: i64,
+    /// `start` in project quarter notes.
+    start_q: f64,
+}
+
+impl FileTime {
+    fn new(map: TempoMap, file_map: Option<TempoMap>, ppq: u16, start: i64) -> FileTime {
+        let start_q = map.beats_at(start as f64);
+        FileTime { map, file_map, ppq: ppq.max(1) as f64, start, start_q }
+    }
+
+    /// Without a tempo of its own, the file follows the project's bars and beats.
+    fn to_samples(&self, ticks: u64) -> i64 {
+        let q = ticks as f64 / self.ppq;
+        match &self.file_map {
+            Some(fm) => self.start + fm.sample_at(q).round() as i64,
+            None => self.map.sample_at(self.start_q + q).round() as i64,
+        }
+    }
+
+    /// The first project bar line at or after sample `s`.
+    fn bar_line_after(&self, s: i64) -> i64 {
+        let map = &self.map;
+        let b = map.bar_at(s as f64);
+        let at = map.bar_start(b);
+        (if at >= s as f64 { at } else { map.bar_start(b + 1) }).round() as i64
+    }
+
+    /// One part of the file as a region that starts at the bar holding its first event and
+    /// ends on a bar line.
+    fn region(&self, part: &SmfTrack, id: Id, name: String) -> Region {
+        let map = &self.map;
+        let first = part.notes.iter().map(|n| n.start).chain(part.cc.iter().map(|c| c.start)).min().unwrap_or(0);
+        let last = part.notes.iter().map(|n| n.start + n.length).chain(part.cc.iter().map(|c| c.start + 1)).max().unwrap_or(0);
+        let rstart = (map.bar_start(map.bar_at(self.to_samples(first) as f64)).round() as i64).max(0);
+        let end = self.to_samples(last);
+        let length = self.bar_line_after(end.max(rstart + 1)) - rstart;
+        let notes = part
+            .notes
+            .iter()
+            .map(|n| {
+                let on = self.to_samples(n.start);
+                Note {
+                    start: on - rstart,
+                    length: (self.to_samples(n.start + n.length) - on).max(1),
+                    pitch: n.pitch,
+                    velocity: n.velocity.max(1),
+                    muted: false,
+                }
+            })
+            .collect();
+        let cc = part.cc.iter().map(|c| CcEvent { start: self.to_samples(c.start) - rstart, kind: c.kind, value: c.value }).collect();
+        Region::midi(id, name, rstart, length, notes, cc)
+    }
 }
 
 impl Session {
@@ -79,50 +142,10 @@ impl Session {
         let sr = self.project.sample_rate as f64;
         let file_map = file_tempo_map(&file, sr);
         if self.project.tracks.iter().all(|t| t.regions.is_empty()) {
-            if let Some(fm) = &file_map {
-                // Keep the tempo tidy: files often store 119.99999 for 120. (Other values stay
-                // exact, so a ramp written as steps keeps its length.)
-                let tidy = |bpm: f64| {
-                    let r = (bpm * 100.0).round() / 100.0;
-                    if (bpm - r).abs() < 1e-3 {
-                        r
-                    } else {
-                        bpm
-                    }
-                };
-                let mut ev: Vec<TempoEvent> = fm.events().iter().map(|e| TempoEvent { pos: e.pos + start, bpm: tidy(e.bpm), ramp: false }).collect();
-                ev.insert(0, TempoEvent { pos: 0, bpm: ev[0].bpm, ramp: false });
-                self.set_tempo_map(ev, false);
-            }
-            if let Some(&(_, num, den)) = file.signatures.first() {
-                self.set_signatures(vec![crate::model::tempo::SigEvent { bar: 1, num, den }]);
-                // The file's bar 1 is the project bar at `start`.
-                let ppq = file.ppq.max(1) as f64;
-                let q: Vec<(f64, u32, u32)> = file.signatures.iter().map(|&(t, n, d)| (t as f64 / ppq, n, d)).collect();
-                let first = (self.tempo_map().bar_at(start as f64) - 1).max(0) as u32;
-                let sigs = sigs_from_quarters(&q, (4, 4)).into_iter().map(|s| crate::model::tempo::SigEvent { bar: s.bar + first, ..s });
-                let mut all = vec![crate::model::tempo::SigEvent { bar: 1, num, den }];
-                all.extend(sigs);
-                self.set_signatures(all);
-            }
+            self.adopt_file_timing(&file, file_map.as_ref(), start);
         }
         let stem = path.file_stem().map(|s| s.to_string_lossy().to_string()).unwrap_or_else(|| "MIDI".into());
-        let map = self.tempo_map();
-        let ppq = file.ppq.max(1) as f64;
-        let start_q = map.beats_at(start as f64);
-        // Without a tempo of its own, the file follows the project's bars and beats.
-        let to_samples = |ticks: u64| -> i64 {
-            let q = ticks as f64 / ppq;
-            match &file_map {
-                Some(fm) => start + fm.sample_at(q).round() as i64,
-                None => map.sample_at(start_q + q).round() as i64,
-            }
-        };
-        let bar_line_after = |s: i64| -> i64 {
-            let b = map.bar_at(s as f64);
-            let at = map.bar_start(b);
-            (if at >= s as f64 { at } else { map.bar_start(b + 1) }).round() as i64
-        };
+        let time = FileTime::new(self.tempo_map(), file_map, file.ppq, start);
 
         let target = track.filter(|id| self.project.track(*id).map(|t| t.kind == TrackKind::Instrument).unwrap_or(false));
         let mut next_index = match (target, index) {
@@ -144,36 +167,9 @@ impl Session {
                 }
             };
             first_track.get_or_insert(tid);
-
-            // The region starts at the bar holding the first event and ends on a bar line.
-            let first = part.notes.iter().map(|n| n.start).chain(part.cc.iter().map(|c| c.start)).min().unwrap_or(0);
-            let last = part.notes.iter().map(|n| n.start + n.length).chain(part.cc.iter().map(|c| c.start + 1)).max().unwrap_or(0);
-            let rstart = (map.bar_start(map.bar_at(to_samples(first) as f64)).round() as i64).max(0);
-            let end = to_samples(last);
-            let length = bar_line_after(end.max(rstart + 1)) - rstart;
-            let notes = part
-                .notes
-                .iter()
-                .map(|n| {
-                    let on = to_samples(n.start);
-                    Note { start: on - rstart, length: (to_samples(n.start + n.length) - on).max(1), pitch: n.pitch, velocity: n.velocity.max(1), muted: false }
-                })
-                .collect();
-            let cc = part.cc.iter().map(|c| CcEvent { start: to_samples(c.start) - rstart, kind: c.kind, value: c.value }).collect();
             let rid = self.project.alloc_id();
-            self.project.track_mut(tid).unwrap().regions.push(Region {
-                id: rid,
-                name,
-                start: rstart,
-                length,
-                muted: false,
-                color: None,
-                content: RegionContent::Midi { notes, cc },
-                loop_end: None,
-                takes: None,
-                params: Default::default(),
-                pattern: None,
-            });
+            let region = time.region(part, rid, name);
+            self.project.track_mut(tid).unwrap().regions.push(region);
             self.push_regions(tid);
             made.push(rid);
         }
@@ -182,6 +178,37 @@ impl Session {
         }
         self.dirty = true;
         Ok(made)
+    }
+
+    /// An empty project takes on an imported file's tempo map (`file_map`) and time signatures,
+    /// the file's tick 0 and bar 1 at `start`.
+    fn adopt_file_timing(&mut self, file: &SmfFile, file_map: Option<&TempoMap>, start: i64) {
+        if let Some(fm) = file_map {
+            // Keep the tempo tidy: files often store 119.99999 for 120. (Other values stay
+            // exact, so a ramp written as steps keeps its length.)
+            let tidy = |bpm: f64| {
+                let r = (bpm * 100.0).round() / 100.0;
+                if (bpm - r).abs() < 1e-3 {
+                    r
+                } else {
+                    bpm
+                }
+            };
+            let mut ev: Vec<TempoEvent> = fm.events().iter().map(|e| TempoEvent { pos: e.pos + start, bpm: tidy(e.bpm), ramp: false }).collect();
+            ev.insert(0, TempoEvent { pos: 0, bpm: ev[0].bpm, ramp: false });
+            self.set_tempo_map(ev, false);
+        }
+        if let Some(&(_, num, den)) = file.signatures.first() {
+            self.set_signatures(vec![SigEvent { bar: 1, num, den }]);
+            // The file's bar 1 is the project bar at `start`.
+            let ppq = file.ppq.max(1) as f64;
+            let q: Vec<(f64, u32, u32)> = file.signatures.iter().map(|&(t, n, d)| (t as f64 / ppq, n, d)).collect();
+            let first = (self.tempo_map().bar_at(start as f64) - 1).max(0) as u32;
+            let sigs = sigs_from_quarters(&q, (4, 4)).into_iter().map(|s| SigEvent { bar: s.bar + first, ..s });
+            let mut all = vec![SigEvent { bar: 1, num, den }];
+            all.extend(sigs);
+            self.set_signatures(all);
+        }
     }
 
     /// Writes the given MIDI regions to a Standard MIDI File, one file track per project track,

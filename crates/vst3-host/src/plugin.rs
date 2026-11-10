@@ -159,6 +159,23 @@ impl Bus {
         let ptrs = buffers.iter_mut().map(|b| b.as_mut_ptr()).collect();
         Bus { channels, buffers, ptrs }
     }
+
+    /// Puts `n` frames of a stereo pair on the first two channels: mixed to one on a mono bus,
+    /// nowhere on a bus without channels.
+    fn put_stereo(&mut self, l: &[f32], r: &[f32], n: usize) {
+        match self.channels {
+            0 => {}
+            1 => {
+                for i in 0..n {
+                    self.buffers[0][i] = 0.5 * (l[i] + r[i]);
+                }
+            }
+            _ => {
+                self.buffers[0][..n].copy_from_slice(&l[..n]);
+                self.buffers[1][..n].copy_from_slice(&r[..n]);
+            }
+        }
+    }
 }
 
 /// Whether the processor runs. Activating a bus means `setActive(false)` and back on the main

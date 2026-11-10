@@ -1,4 +1,4 @@
-//! MIDI outputs, for controller feedback (`feedback.rs`, `session/control/feedback.rs`) and control
+//! MIDI outputs, for controller feedback (`control/feedback/`, `session/control/feedback.rs`) and control
 //! surfaces (`session/control/surface/`). Like the inputs, every output port is connected unless
 //! switched off in Settings › MIDI, and ports plugged in later are picked up by the same
 //! 3-second refresh.

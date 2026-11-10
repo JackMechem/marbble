@@ -109,9 +109,10 @@ beside the module they guard (`tests/app/commands.test.ts`, `tests/engine/tauriC
 
 `cargo test -p daw-engine --lib` needs no audio device. Pure modules test themselves in a `tests`
 module or a `tests.rs` beside them; `session/tests/` holds the session tests that span areas, and
-`dsp/tests.rs` drives a small `Engine` through its `rig()`. The worker pool's tests include workers
-refused real-time priority and a worker stuck in a plug-in; where rtkit grants real-time priority,
-one makes a worker spin past `RLIMIT_RTTIME`, so a test binary killed by SIGKILL there is a failure.
+`dsp/tests.rs` drives a small `Engine` through its `rig()`, which the tests in `dsp/`'s folders
+use too. The worker pool's tests include workers refused real-time priority and a worker stuck in
+a plug-in; where rtkit grants real-time priority, one makes a worker spin past `RLIMIT_RTTIME`, so
+a test binary killed by SIGKILL there is a failure.
 
 `cargo test -p daw` covers settings files (old and malformed ones load), the menu bar's spec and,
 on Linux, that GTK draws each key in `tests/keyboard/gtkKeyLabels.json` as the app writes it. On
@@ -336,7 +337,7 @@ menus when they have the item (name it from `src/app/menuBar/menuLabels.ts`), el
 **A built-in effect.** `crates/engine/src/fx/<name>.rs` (or a folder): a struct implementing
 `Effect`, its `PARAMS`, `PRESETS` and `info()` with the id `builtin:<name>`; list it in
 `fx::registry()` and `fx::factory_presets()`. Test silence, latency, presets in range and stability
-at extremes (see `limiter.rs`). A panel is optional: `src/plugins/effects/<Name>.tsx` taking
+at extremes (see `fx/limiter/tests.rs`). A panel is optional: `src/plugins/effects/<Name>.tsx` taking
 `FxPanelProps` (start from `Gain.tsx`), registered in `FX_PANELS` (`src/plugins/builtinEffects.ts`);
 call `touch(id, on)` around drags so automation records them. Run `fx_check` and `fx_bench`.
 

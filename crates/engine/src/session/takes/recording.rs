@@ -324,20 +324,7 @@ impl Session {
         if folder_at.is_none() && packed.is_empty() && passes.len() < 2 {
             let Some((notes, cc)) = passes.into_iter().next() else { return Vec::new() };
             let id = self.project.alloc_id();
-            let region = Region {
-                id,
-                name,
-                start,
-                length: end - start,
-                muted: false,
-                color: None,
-                content: RegionContent::Midi { notes, cc },
-                loop_end: None,
-                takes: None,
-                params: Default::default(),
-                pattern: None,
-            };
-            self.project.track_mut(track).unwrap().regions.push(region);
+            self.project.track_mut(track).unwrap().regions.push(Region::midi(id, name, start, end - start, notes, cc));
             return vec![id];
         }
         // The folder: the one recorded over, or a new one where the old regions were.
@@ -349,20 +336,10 @@ impl Session {
             }
             None => {
                 let id = self.project.alloc_id();
-                let content = RegionContent::Midi { notes: Vec::new(), cc: Vec::new() };
-                let color = packed.first().and_then(|r| r.color.clone());
                 Region {
-                    id,
-                    name: name.clone(),
-                    start,
-                    length: end - start,
-                    muted: false,
-                    color,
-                    content,
-                    loop_end: None,
+                    color: packed.first().and_then(|r| r.color.clone()),
                     takes: Some(TakeFolder::new()),
-                    params: Default::default(),
-                    pattern: None,
+                    ..Region::midi(id, name.clone(), start, end - start, Vec::new(), Vec::new())
                 }
             }
         };

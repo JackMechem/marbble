@@ -2,7 +2,7 @@
 //!
 //! The types are in `project.rs`, `track.rs`, `region.rs`, `take_folder.rs` and `automation.rs`, all
 //! re-exported from here. Two modules of rules on the document keep their own paths: the tempo map
-//! (`tempo.rs`, positions in samples against bars and beats) and how VCA faders reach their strips
+//! (`tempo/`, positions in samples against bars and beats) and how VCA faders reach their strips
 //! (`vca.rs`). `src/engine/` mirrors them. Only `crate::session` edits a document; the engine
 //! never sees one, only what the session makes from it. `channel_eq_upgrade.rs` converts the fixed
 //! Channel EQ of older projects.

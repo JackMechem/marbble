@@ -2,7 +2,7 @@
 //! to one by sending the engine only what differs, so plug-ins that are still there keep running.
 //!
 //! Tauri commands take the checkpoint before an edit. Edits in a VST3's own editor come in through
-//! `plugins/editor_undo.rs`. Anything sent to the engine must also be handled in `restore`.
+//! `plugins/editor_undo/`. Anything sent to the engine must also be handled in `restore`.
 
 use super::*;
 
@@ -102,15 +102,39 @@ impl Session {
         self.auto_abort();
         let current = std::mem::replace(&mut self.project, target);
         // A plug-in that stays loaded keeps its copy of its state, newer than the step's
-        // (`session/plugins/states.rs`).
+        // (`session/plugins/states/`).
         self.adopt_states(&current, false);
         // The drag mode is a setting, not part of the edit history.
         self.project.drag_mode = current.drag_mode;
         // Neither is the project alternative's name, which is renamed on disk too.
         self.project.alternative = current.alternative.clone();
-        let uid = |s: &Option<PluginSlot>| s.as_ref().map(|s| s.uid);
 
-        // Tracks that no longer exist.
+        self.remove_gone_tracks(&current);
+        let tracks = self.project.tracks.clone();
+        for (idx, t) in tracks.iter().enumerate() {
+            match current.track(t.id) {
+                Some(cur) => self.restore_track(cur, t),
+                None => {
+                    // Came back: rebuild it, plug-ins restored from the snapshot's state.
+                    let dsp = self.build_track(t);
+                    self.send(Cmd::AddTrack(dsp, idx));
+                }
+            }
+        }
+        self.send(Cmd::Order(self.project.process_order()));
+        self.push_all_params();
+        self.restore_master(&current.master);
+
+        // Recordings and imports made after the snapshot stay loaded, so redo can bring them back.
+        if self.selected.map(|id| self.project.track(id).is_none()).unwrap_or(false) {
+            self.selected = self.project.tracks.first().map(|t| t.id);
+        }
+        self.sync_globals();
+        self.dirty = true;
+    }
+
+    /// Unloads the tracks in `current` that the restored project doesn't have.
+    fn remove_gone_tracks(&mut self, current: &Project) {
         let gone: Vec<&Track> = current.tracks.iter().filter(|t| self.project.track(t.id).is_none()).collect();
         for t in gone {
             for slot in t.inserts.iter().flatten().chain(t.instrument.iter()) {
@@ -119,92 +143,66 @@ impl Session {
             self.meters.remove(&t.id);
             self.send(Cmd::RemoveTrack(t.id));
         }
+    }
 
-        let tracks = self.project.tracks.clone();
-        for (idx, t) in tracks.iter().enumerate() {
-            let Some(cur) = current.track(t.id) else {
-                // Came back: rebuild it, plug-ins restored from the snapshot's state.
-                let dsp = self.build_track(t);
-                self.send(Cmd::AddTrack(dsp, idx));
-                continue;
-            };
-            if !same(&cur.regions, &t.regions) {
-                self.push_regions(t.id);
-            }
-            if !same(&cur.automation, &t.automation) {
-                self.send(Cmd::Automation(t.id, lanes_dsp(&t.automation)));
-                self.resync_builtins(t.id);
-            }
-            if cur.auto_mode != t.auto_mode {
-                self.send(Cmd::AutoMode(t.id, t.auto_mode));
-                self.resync_builtins(t.id);
-            }
-            // Freezing loads and unloads plug-ins itself.
-            if self.restore_freeze(cur, t) {
-                continue;
-            }
-            if uid(&cur.instrument) != uid(&t.instrument) {
-                if let Some(old) = &cur.instrument {
-                    self.controllers.remove(&old.uid);
-                }
-                let ins = t.instrument.as_ref().and_then(|s| self.instantiate_slot(s).map_err(|e| log::error!("{e}")).ok());
-                self.send(Cmd::Instrument { track: t.id, insert: ins });
-            } else if let (Some(a), Some(b)) = (&cur.instrument, &t.instrument) {
-                if a.bypass != b.bypass {
-                    self.send(Cmd::Bypass { track: t.id, uid: b.uid, bypass: b.bypass });
-                }
-                self.restore_builtin(t.id, a, b);
-            }
-            let reordered = self.restore_insert_order(t.id, &cur.inserts, &t.inserts);
-            let had_inserts = reordered.as_deref().unwrap_or(&cur.inserts);
-            for (slot, want) in t.inserts.iter().enumerate() {
-                let had = had_inserts.get(slot).cloned().flatten();
-                if uid(&had) != uid(want) {
-                    if let Some(old) = &had {
-                        self.controllers.remove(&old.uid);
-                    }
-                    let ins = want.as_ref().and_then(|s| self.instantiate_slot(s).map_err(|e| log::error!("{e}")).ok());
-                    self.send(Cmd::Insert { track: t.id, slot, insert: ins });
-                } else if let (Some(a), Some(b)) = (&had, want) {
-                    if a.bypass != b.bypass {
-                        self.send(Cmd::Bypass { track: t.id, uid: b.uid, bypass: b.bypass });
-                    }
-                    self.restore_builtin(t.id, a, b);
-                }
-            }
+    /// A track in both projects, from `cur` to `t`: regions, automation, then its plug-ins.
+    fn restore_track(&mut self, cur: &Track, t: &Track) {
+        if !same(&cur.regions, &t.regions) {
+            self.push_regions(t.id);
         }
-        self.send(Cmd::Order(self.project.process_order()));
-        self.push_all_params();
+        if !same(&cur.automation, &t.automation) {
+            self.send(Cmd::Automation(t.id, lanes_dsp(&t.automation)));
+            self.resync_builtins(t.id);
+        }
+        if cur.auto_mode != t.auto_mode {
+            self.send(Cmd::AutoMode(t.id, t.auto_mode));
+            self.resync_builtins(t.id);
+        }
+        // Freezing loads and unloads plug-ins itself.
+        if self.restore_freeze(cur, t) {
+            return;
+        }
+        let track = t.id;
+        self.restore_slot(track, &cur.instrument, &t.instrument, |insert| Cmd::Instrument { track, insert });
+        self.restore_inserts(track, &cur.inserts, &t.inserts);
+    }
 
-        // Stereo Out
+    /// Stereo Out, from `had`: its inserts and automation.
+    fn restore_master(&mut self, had: &Master) {
         let master = self.project.master.clone();
-        let reordered = self.restore_insert_order(MASTER_ID, &current.master.inserts, &master.inserts);
-        let had_inserts = reordered.as_deref().unwrap_or(&current.master.inserts);
-        for (slot, want) in master.inserts.iter().enumerate() {
-            let had = had_inserts.get(slot).cloned().flatten();
-            if uid(&had) != uid(want) {
-                if let Some(old) = &had {
-                    self.controllers.remove(&old.uid);
-                }
-                let ins = want.as_ref().and_then(|s| self.instantiate_slot(s).map_err(|e| log::error!("{e}")).ok());
-                self.send(Cmd::Insert { track: MASTER_ID, slot, insert: ins });
-            } else if let (Some(a), Some(b)) = (&had, want) {
-                if a.bypass != b.bypass {
-                    self.send(Cmd::Bypass { track: MASTER_ID, uid: b.uid, bypass: b.bypass });
-                }
-                self.restore_builtin(MASTER_ID, a, b);
-            }
-        }
-        if !same(&current.master.automation, &master.automation) || current.master.auto_mode != master.auto_mode {
+        self.restore_inserts(MASTER_ID, &had.inserts, &master.inserts);
+        if !same(&had.automation, &master.automation) || had.auto_mode != master.auto_mode {
             self.sync_master_automation();
             self.resync_builtins(MASTER_ID);
         }
+    }
 
-        // Recordings and imports made after the snapshot stay loaded, so redo can bring them back.
-        if self.selected.map(|id| self.project.track(id).is_none()).unwrap_or(false) {
-            self.selected = self.project.tracks.first().map(|t| t.id);
+    /// A strip's inserts: rearranged in place where only their order changed, then slot by slot.
+    fn restore_inserts(&mut self, track: Id, had: &[Option<PluginSlot>], want: &[Option<PluginSlot>]) {
+        let reordered = self.restore_insert_order(track, had, want);
+        let had = reordered.as_deref().unwrap_or(had);
+        for (slot, want) in want.iter().enumerate() {
+            let had = had.get(slot).cloned().flatten();
+            self.restore_slot(track, &had, want, |insert| Cmd::Insert { track, slot, insert });
         }
-        self.sync_globals();
-        self.dirty = true;
+    }
+
+    /// One plug-in slot (an insert or the instrument), from `had` to `want`. A different plug-in
+    /// is loaded and sent in the command `load` makes; the same one keeps running and only gets
+    /// its bypass and built-in parameters back.
+    fn restore_slot(&mut self, track: Id, had: &Option<PluginSlot>, want: &Option<PluginSlot>, load: impl FnOnce(Option<InsertDsp>) -> Cmd) {
+        let uid = |s: &Option<PluginSlot>| s.as_ref().map(|s| s.uid);
+        if uid(had) != uid(want) {
+            if let Some(old) = had {
+                self.controllers.remove(&old.uid);
+            }
+            let ins = want.as_ref().and_then(|s| self.instantiate_slot(s).map_err(|e| log::error!("{e}")).ok());
+            self.send(load(ins));
+        } else if let (Some(a), Some(b)) = (had, want) {
+            if a.bypass != b.bypass {
+                self.send(Cmd::Bypass { track, uid: b.uid, bypass: b.bypass });
+            }
+            self.restore_builtin(track, a, b);
+        }
     }
 }

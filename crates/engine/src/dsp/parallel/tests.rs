@@ -1,30 +1,11 @@
 //! Parallel strips against the serial loop: bit-identical output, routing, sends, PDC, plug-ins that stop responding.
 
 use super::*;
+use crate::dsp::tests::{rig, Rig};
 use crate::fx::{Effect, EffectInfo, FxContext, Key};
 
 const SR: f64 = 48000.0;
 const BLOCK: usize = 256;
-
-struct Rig {
-    engine: Engine,
-    tx: rtrb::Producer<Cmd>,
-    status: Arc<EngineStatus>,
-    // Holds the rings' far ends open for the rig's life; nothing reads this tuple.
-    #[allow(clippy::type_complexity)]
-    _keep: (rtrb::Consumer<Garbage>, rtrb::Producer<[u8; 3]>, rtrb::Consumer<(i64, [u8; 3])>, rtrb::Consumer<f32>),
-}
-
-fn rig() -> Rig {
-    let (tx, rx) = rtrb::RingBuffer::new(256);
-    let (gtx, grx) = rtrb::RingBuffer::new(256);
-    let (live_tx, live_rx) = rtrb::RingBuffer::new(16);
-    let (rec_tx, rec_rx) = rtrb::RingBuffer::new(16);
-    let (an_tx, an_rx) = rtrb::RingBuffer::new(1 << 16);
-    let status = Arc::new(EngineStatus::default());
-    let engine = Engine::new(SR, rx, gtx, status.clone(), live_rx, rec_tx, an_tx);
-    Rig { engine, tx, status, _keep: (grx, live_tx, rec_rx, an_rx) }
-}
 
 fn params(output: Option<Id>, sends: &[(Id, f32, bool)]) -> TrackParams {
     let mut s = [None; SEND_SLOTS];
@@ -407,7 +388,7 @@ fn a_plug_in_that_never_returns_costs_its_track_and_what_it_feeds_and_the_rest_p
     let held = loop {
         assert!(started.elapsed().as_secs() < 20, "the strip never came back");
         e.engine.process(&[], 0, &mut out, 2);
-        match e._keep.0.pop() {
+        match e.garbage.pop() {
             Ok(Garbage::Track(t)) => break t,
             Ok(_) => {}
             Err(_) => std::thread::sleep(Duration::from_millis(1)),
@@ -651,7 +632,7 @@ fn after_a_worker_is_left_in_a_plug_in_the_others_play_on() {
 /// The garbage that has come back so far: strips of which tracks, and how many workers.
 fn garbage(e: &mut Rig) -> (Vec<Id>, usize) {
     let (mut tracks, mut workers) = (Vec::new(), 0);
-    while let Ok(g) = e._keep.0.pop() {
+    while let Ok(g) = e.garbage.pop() {
         match g {
             Garbage::Track(t) => tracks.push(t.id),
             Garbage::Workers(_) => workers += 1,

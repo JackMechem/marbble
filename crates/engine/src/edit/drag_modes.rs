@@ -1,6 +1,6 @@
 //! Logic's No Overlap, Shuffle L and Shuffle R drag modes, as pure functions on one track's
 //! lane. The session applies them after a move, trim, delete or paste in the Tracks area
-//! (`session/regions/drag_modes.rs`); `src/tracks/regions/dragModes.ts` mirrors them to draw a drag's outcome.
+//! (`session/regions/drag_modes/`); `src/tracks/regions/dragModes.ts` mirrors them to draw a drag's outcome.
 //!
 //! The rules (Logic Pro's "Drag modes" with the cases its manual leaves open settled):
 //!

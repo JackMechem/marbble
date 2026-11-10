@@ -1,7 +1,7 @@
 //! The project on disk: new, save and open. A project is a `.marbble` folder holding `project.json`
 //! and its audio.
 //!
-//! Autosave and recovery are in `autosave.rs` and `recovery.rs`, backups in `backups.rs`, project
+//! Autosave and recovery are in `autosave.rs` and `recovery/`, backups in `backups.rs`, project
 //! alternatives in `alternatives.rs`.
 
 use crate::session::*;
@@ -109,7 +109,7 @@ impl Session {
     }
 
     /// Opens a project. A missing or damaged project.json falls back to the autosave, then to
-    /// the backup of the previous save, with a warning (see `session/project/recovery.rs`).
+    /// the backup of the previous save, with a warning (see `session/project/recovery/`).
     pub fn open(&mut self, dir: &Path) -> Result<()> {
         self.open_checked(dir)
     }

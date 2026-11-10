@@ -3,7 +3,7 @@
 //!
 //! Each method changes `self.project` and pushes the track's regions to the engine; the Tauri
 //! command around it takes the undo checkpoint. More specific edits have modules of their own, among
-//! them `moves.rs`, `range_edit.rs`, `crossfades.rs`, `arrange_cmds/` and `session/midi/content.rs`.
+//! them `moves.rs`, `range_edit/`, `crossfades/`, `arrange_cmds/` and `session/midi/content.rs`.
 
 use crate::session::*;
 

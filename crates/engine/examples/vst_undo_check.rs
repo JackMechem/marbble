@@ -506,7 +506,7 @@ fn stuck(r: &mut Rig, name: &str) {
     pump(s, 400);
 }
 
-/// The project's copy of a plug-in's state (`session/plugins/states.rs`), for one added this session
+/// The project's copy of a plug-in's state (`session/plugins/states/`), for one added this session
 /// that stops responding (marked as the session marks one a processing thread is stuck in) before
 /// any save. Read when it loads and once a change has gone quiet, and not otherwise, so redoing
 /// its insertion, undoing its track's deletion, duplicating the track and rebuilding all bring it

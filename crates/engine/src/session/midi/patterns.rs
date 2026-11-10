@@ -39,19 +39,7 @@ impl Session {
             pattern.rows = rows;
         }
         let id = self.project.alloc_id();
-        let region = Region {
-            id,
-            name: "Pattern".into(),
-            start: start.max(0),
-            length: length.max(1),
-            muted: false,
-            color: None,
-            content: RegionContent::Midi { notes: Vec::new(), cc: Vec::new() },
-            loop_end: None,
-            takes: None,
-            params: Default::default(),
-            pattern: Some(pattern),
-        };
+        let region = Region { pattern: Some(pattern), ..Region::midi(id, "Pattern".into(), start.max(0), length.max(1), Vec::new(), Vec::new()) };
         self.project.track_mut(track).unwrap().regions.push(region);
         self.push_regions(track);
         self.dirty = true;

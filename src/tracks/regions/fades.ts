@@ -1,4 +1,4 @@
-// Fade shapes and crossfades on audio regions, mirroring crates/engine/src/edit/fades.rs: the curve
+// Fade shapes and crossfades on audio regions, mirroring crates/engine/src/edit/fades/: the curve
 // maths (for drawing), the types the Region inspector offers, and where each region's fade
 // handles are once crossfades are taken into account. Pure, so tests can import it.
 import type { Id } from "../../engine/project";

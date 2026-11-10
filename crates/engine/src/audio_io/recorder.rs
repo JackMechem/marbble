@@ -2,7 +2,7 @@
 //! armed track; this thread drains them into WAV files and keeps a copy plus waveform peaks.
 //!
 //! So a crash mid-take leaves a usable file, the writer updates the WAV header and asks the OS
-//! to put the data on disk every [`CHECKPOINT`]; `session/project/recovery.rs` repairs whatever came
+//! to put the data on disk every [`CHECKPOINT`]; `session/project/recovery/` repairs whatever came
 //! after the last checkpoint from the file's length.
 
 use std::collections::HashMap;

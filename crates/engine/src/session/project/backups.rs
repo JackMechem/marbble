@@ -5,7 +5,7 @@
 //! The backups take the place of project.json.bak: with backups on, a save keeps no .bak, and
 //! opening a project whose project.json and autosave can't be read falls back on the newest
 //! backup ([`latest_backup`]). With backups off, a save keeps the single .bak as before (see
-//! `recovery.rs`).
+//! `recovery/`).
 //!
 //! A backup is named after when its version was saved (the replaced file's modification
 //! time), in UTC: `2026-10-29T143205.123Z.json` sorts by time and is a valid file name

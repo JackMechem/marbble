@@ -103,29 +103,7 @@ impl Engine {
         progress: &mut dyn FnMut(f64),
         edit: Option<(i64, &mut dyn FnMut())>,
     ) -> Vec<Vec<f32>> {
-        self.settle();
-        // Apply edits that are still queued, so the render hears the latest settings.
-        self.process(&[], 0, &mut [], 0);
-        // A Stop still draining live is over: the render's own drain comes at its end.
-        self.finish_stop();
-        // So is shedding after a live overload (a large project that the device's callbacks
-        // couldn't keep up with): a shed block outputs silence and holds the transport, so the
-        // render would start late by however many blocks were left. It runs flat out instead.
-        self.shedding = 0;
-        self.behind_secs = 0.0;
-        let saved = Saved {
-            pos: self.pos,
-            playing: self.playing,
-            recording: self.recording,
-            cycle: self.cycle,
-            metronome: self.metronome,
-            count_in: self.count_in,
-            midi_target: self.midi_target,
-            analyzer_target: self.analyzer_target,
-            load: self.load,
-            low_latency: self.pdc.low_latency,
-        };
-
+        let saved = self.prepare_render();
         let from = from.max(0);
         let to = to.max(from);
         // What's captured lags the timeline by the plug-in latency on its way (see `pdc.rs`):
@@ -134,39 +112,7 @@ impl Engine {
         let total = (to - from + tail.max(0) + latency) as usize;
         let mut out = vec![Vec::with_capacity(total), Vec::with_capacity(total)];
         let mut buf = vec![0.0f32; MAX_BLOCK * 2];
-
-        // Whatever was sounding live stops; the render starts clean at `from`.
-        self.flush_all_notes();
-        self.click.remaining = 0;
-        self.pos = from;
-        self.playing = true;
-        self.recording = false;
-        self.cycle.0 = false;
-        self.metronome = false;
-        self.count_in = false;
-        // Live MIDI and the analyzer stay out of the render.
-        self.midi_target = None;
-        self.analyzer_target = None;
-        self.isolate = isolate.map(Box::new);
-        self.offline = true;
-        self.snap_gains = true;
-        // Nothing is live in a render, and no audio from before it leaks in.
-        self.pdc.low_latency = false;
-        self.set_effects_offline(true);
-        self.reset_effects();
-        self.silence_instruments();
-        // As when playback starts: plug-in automation is sent afresh (a plug-in may have been
-        // moved by hand since), and controllers and notes held over `from` are chased.
-        self.resend_automation();
-        self.chase_all_cc();
-        for t in &mut self.tracks {
-            if let Some(d) = &mut t.delay {
-                d.clear();
-            }
-            t.feed.clear();
-            // No glide left over from playing live: every render starts the same.
-            t.pdc_taps = super::pdc::PdcTaps::at(&t.pdc);
-        }
+        self.start_render(from, isolate);
 
         let mut done = 0i64;
         let mut next_report = 0i64;
@@ -211,6 +157,76 @@ impl Engine {
             c.drain(..(latency as usize).min(c.len()));
         }
 
+        self.finish_render(saved);
+        out
+    }
+
+    /// Brings the engine up to date for a render and ends what was running live, returning
+    /// the state [`Engine::finish_render`] puts back.
+    fn prepare_render(&mut self) -> Saved {
+        self.settle();
+        // Apply edits that are still queued, so the render hears the latest settings.
+        self.process(&[], 0, &mut [], 0);
+        // A Stop still draining live is over: the render's own drain comes at its end.
+        self.finish_stop();
+        // So is shedding after a live overload (a large project that the device's callbacks
+        // couldn't keep up with): a shed block outputs silence and holds the transport, so the
+        // render would start late by however many blocks were left. It runs flat out instead.
+        self.shedding = 0;
+        self.behind_secs = 0.0;
+        Saved {
+            pos: self.pos,
+            playing: self.playing,
+            recording: self.recording,
+            cycle: self.cycle,
+            metronome: self.metronome,
+            count_in: self.count_in,
+            midi_target: self.midi_target,
+            analyzer_target: self.analyzer_target,
+            load: self.load,
+            low_latency: self.pdc.low_latency,
+        }
+    }
+
+    /// Starts the transport at `from` for a render, with nothing carried over from playing live.
+    fn start_render(&mut self, from: i64, isolate: Option<Isolate>) {
+        // Whatever was sounding live stops; the render starts clean at `from`.
+        self.flush_all_notes();
+        self.click.remaining = 0;
+        self.pos = from;
+        self.playing = true;
+        self.recording = false;
+        self.cycle.0 = false;
+        self.metronome = false;
+        self.count_in = false;
+        // Live MIDI and the analyzer stay out of the render.
+        self.midi_target = None;
+        self.analyzer_target = None;
+        self.isolate = isolate.map(Box::new);
+        self.offline = true;
+        self.snap_gains = true;
+        // Nothing is live in a render, and no audio from before it leaks in.
+        self.pdc.low_latency = false;
+        self.set_effects_offline(true);
+        self.reset_effects();
+        self.silence_instruments();
+        // As when playback starts: plug-in automation is sent afresh (a plug-in may have been
+        // moved by hand since), and controllers and notes held over `from` are chased.
+        self.resend_automation();
+        self.chase_all_cc();
+        for t in &mut self.tracks {
+            if let Some(d) = &mut t.delay {
+                d.clear();
+            }
+            t.feed.clear();
+            // No glide left over from playing live: every render starts the same.
+            t.pdc_taps = super::pdc::PdcTaps::at(&t.pdc);
+        }
+    }
+
+    /// Ends a render: everything stops clean, and the transport and monitoring go back to how
+    /// they were before it.
+    fn finish_render(&mut self, saved: Saved) {
         self.flush_all_notes();
         // Live playback starts clean too, not with the render's ringing tail.
         self.reset_effects();
@@ -238,7 +254,6 @@ impl Engine {
         self.status.playing.store(self.playing, Ordering::Relaxed);
         self.status.recording.store(self.recording, Ordering::Relaxed);
         self.status.cpu_load.store(self.load.to_bits(), Ordering::Relaxed);
-        out
     }
 
     /// Tells every built-in effect whether a render is running (see `Effect::set_offline`).

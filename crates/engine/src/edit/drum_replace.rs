@@ -1,6 +1,6 @@
 //! Drum Replacement and Doubling (Logic's Track › Drum Replacement/Doubling): finds the hits on a
 //! recorded drum track and turns them into MIDI notes for a sampler on a new track, to replace
-//! the drum or layer it. Pure; `session/regions/drum_replace.rs` reads the track and makes the new one.
+//! the drum or layer it. Pure; `session/regions/drum_replace/` reads the track and makes the new one.
 //!
 //! - **Hits** come from [`crate::edit::transients::hits`] at full sensitivity, on each part of the
 //!   track's audio that is heard (a region, a loop pass, a comp segment of a take folder), with

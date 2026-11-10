@@ -326,7 +326,7 @@ impl Session {
             }
         } else if let Some(before) = self.controllers.get(&uid).and_then(|c| c.param_value(param)) {
             // A VST3 parameter: as if moved in the plug-in's editor, but without an undo step:
-            // one comes only from the editor itself (`session/plugins/editor_undo.rs`), as a control surface's
+            // one comes only from the editor itself (`session/plugins/editor_undo/`), as a control surface's
             // moves aren't edits of the project a step should take back.
             if automated {
                 self.ctl_hold(track, auto);

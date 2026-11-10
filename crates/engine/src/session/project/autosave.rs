@@ -1,6 +1,6 @@
 //! Autosave and crash recovery of a project's unsaved work: the autosave written every few
 //! minutes beside project.json, finding a project folder with work to recover, and opening or
-//! discarding it. Recordings cut short by a crash are in `recovery.rs`.
+//! discarding it. Recordings cut short by a crash are in `recovery/`.
 
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};

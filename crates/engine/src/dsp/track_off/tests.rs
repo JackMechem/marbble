@@ -2,6 +2,7 @@
 //! keys and auxes, takes and held notes.
 
 use super::*;
+use crate::dsp::tests::{rig, Rig};
 use crate::fx::{Effect, EffectInfo, FxContext, Key};
 use std::sync::atomic::AtomicUsize;
 
@@ -81,24 +82,8 @@ fn params() -> TrackParams {
     }
 }
 
-struct Rig {
-    engine: Engine,
-    tx: rtrb::Producer<Cmd>,
-    // Holds the rings' far ends open for the rig's life; nothing reads this tuple.
-    #[allow(clippy::type_complexity)]
-    _keep: (rtrb::Consumer<Garbage>, rtrb::Producer<[u8; 3]>, rtrb::Consumer<(i64, [u8; 3])>, rtrb::Consumer<f32>),
-}
-
+// What these tests do with `dsp/tests.rs`'s rig.
 impl Rig {
-    fn new() -> Rig {
-        let (tx, rx) = rtrb::RingBuffer::new(256);
-        let (gtx, grx) = rtrb::RingBuffer::new(256);
-        let (live_tx, live_rx) = rtrb::RingBuffer::new(16);
-        let (rec_tx, rec_rx) = rtrb::RingBuffer::new(16);
-        let (an_tx, an_rx) = rtrb::RingBuffer::new(16);
-        Rig { engine: Engine::new(SR, rx, gtx, Arc::new(EngineStatus::default()), live_rx, rec_tx, an_tx), tx, _keep: (grx, live_tx, rec_rx, an_rx) }
-    }
-
     fn send(&mut self, c: Cmd) {
         self.tx.push(c).ok().unwrap();
     }
@@ -159,7 +144,7 @@ const SINE_STEP: f32 = 0.03;
 
 #[test]
 fn an_off_track_is_silent_and_runs_nothing() {
-    let mut r = Rig::new();
+    let mut r = rig();
     let meter = r.track(1, TrackKind::Audio, params(), true);
     r.send(Cmd::Insert { track: 1, slot: 0, insert: Some(probe(0, None)) });
     r.send(Cmd::Play { from: 0 });
@@ -182,7 +167,7 @@ fn an_off_track_is_silent_and_runs_nothing() {
 
 #[test]
 fn switching_off_and_on_doesnt_click() {
-    let mut r = Rig::new();
+    let mut r = rig();
     r.track(1, TrackKind::Audio, params(), true);
     r.send(Cmd::Play { from: 0 });
     r.run(4800);
@@ -199,7 +184,7 @@ fn switching_off_and_on_doesnt_click() {
 
 #[test]
 fn audio_coming_back_through_a_delay_line_fades_in_too() {
-    let mut r = Rig::new();
+    let mut r = rig();
     r.track(1, TrackKind::Audio, params(), true);
     let delay = 1000;
     let pdc = PdcParams { output: delay, output_time: delay, ..Default::default() };
@@ -216,7 +201,7 @@ fn audio_coming_back_through_a_delay_line_fades_in_too() {
 
 #[test]
 fn an_off_aux_passes_nothing_and_its_senders_keep_playing() {
-    let mut r = Rig::new();
+    let mut r = rig();
     let mut sends = [None; SEND_SLOTS];
     sends[0] = Some(SendParams { bus: 2, gain: 1.0, pre_fader: false });
     r.track(1, TrackKind::Audio, TrackParams { sends, volume: 0.0, ..params() }, true);
@@ -243,7 +228,7 @@ fn an_off_aux_passes_nothing_and_its_senders_keep_playing() {
 
 #[test]
 fn a_key_from_an_off_track_is_silence() {
-    let mut r = Rig::new();
+    let mut r = rig();
     r.track(1, TrackKind::Audio, params(), true);
     r.track(2, TrackKind::Audio, params(), false);
     r.send(Cmd::Insert { track: 2, slot: 0, insert: Some(probe(2, Some(1))) });
@@ -260,7 +245,7 @@ fn a_key_from_an_off_track_is_silence() {
 
 #[test]
 fn a_track_in_a_take_stays_on_until_the_take_ends() {
-    let mut r = Rig::new();
+    let mut r = rig();
     let armed = TrackParams { armed: true, input: InputSel::Mono(0), ..params() };
     r.track(1, TrackKind::Audio, armed, false);
     r.send(Cmd::Insert { track: 1, slot: 0, insert: Some(probe(3, None)) });
@@ -283,7 +268,7 @@ fn a_track_in_a_take_stays_on_until_the_take_ends() {
 
 #[test]
 fn a_new_off_track_never_runs_and_a_render_leaves_it_out() {
-    let mut r = Rig::new();
+    let mut r = rig();
     r.track(1, TrackKind::Audio, TrackParams { off: true, ..params() }, true);
     r.send(Cmd::Insert { track: 1, slot: 0, insert: Some(probe(4, None)) });
     let out = r.engine.render(0, 4800, 0, None, &mut |_| {});

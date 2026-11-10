@@ -147,130 +147,11 @@ impl PluginProcessor {
             if !self._shared.out_gate.processing.swap(true, Ordering::Relaxed) {
                 vst3::ComRef::from_raw(self.processor).unwrap().setProcessing(1);
             }
-
-            self.param_in.clear();
-            self.param_out.clear();
-            self.events_in.clear();
-            self.events_out.clear();
-            while let Ok((id, v)) = self.edits_rx.pop() {
-                self.param_in.push(id, 0, v);
-            }
-            for &(id, offset, v) in &self.queued {
-                self.param_in.push(id, offset.clamp(0, n as i32 - 1), v);
-            }
-            self.queued.clear();
-            for m in midi {
-                self.push_midi(m);
-            }
-
-            if let Some(bus) = self.inputs.first_mut() {
-                match bus.channels {
-                    0 => {}
-                    1 => {
-                        for i in 0..n {
-                            bus.buffers[0][i] = 0.5 * (left[i] + right[i]);
-                        }
-                    }
-                    _ => {
-                        bus.buffers[0][..n].copy_from_slice(&left[..n]);
-                        bus.buffers[1][..n].copy_from_slice(&right[..n]);
-                        for b in bus.buffers.iter_mut().skip(2) {
-                            b[..n].fill(0.0);
-                        }
-                    }
-                }
-            }
-            for bus in self.inputs.iter_mut().skip(1) {
-                for b in bus.buffers.iter_mut() {
-                    b[..n].fill(0.0);
-                }
-            }
-            let mut key_silence = true;
-            if let (Some(bus), Some((kl, kr))) = (self.key_bus.and_then(|k| self.inputs.get_mut(k)), key) {
-                key_silence = false;
-                match bus.channels {
-                    0 => {}
-                    1 => {
-                        for i in 0..n {
-                            bus.buffers[0][i] = 0.5 * (kl[i] + kr[i]);
-                        }
-                    }
-                    _ => {
-                        bus.buffers[0][..n].copy_from_slice(&kl[..n]);
-                        bus.buffers[1][..n].copy_from_slice(&kr[..n]);
-                    }
-                }
-            }
-            for bus in self.outputs.iter_mut() {
-                for b in bus.buffers.iter_mut() {
-                    b[..n].fill(0.0);
-                }
-            }
-            for (abb, bus) in self.in_abb.iter_mut().zip(self.inputs.iter_mut()) {
-                abb.numChannels = bus.channels as i32;
-                abb.silenceFlags = 0;
-                abb.__field0.channelBuffers32 = bus.ptrs.as_mut_ptr();
-            }
-            if let (Some(abb), true) = (self.key_bus.and_then(|k| self.in_abb.get_mut(k)), key_silence) {
-                abb.silenceFlags = (1u64 << abb.numChannels.clamp(0, 63)) - 1;
-            }
-            for (abb, bus) in self.out_abb.iter_mut().zip(self.outputs.iter_mut()) {
-                abb.numChannels = bus.channels as i32;
-                abb.silenceFlags = 0;
-                abb.__field0.channelBuffers32 = bus.ptrs.as_mut_ptr();
-            }
-
-            let mut ctx: ProcessContext = std::mem::zeroed();
-            use ProcessContext_::StatesAndFlags_::*;
-            // C enums are i32 in the MSVC bindings and u32 elsewhere; `as _` fits both.
-            let mut state = kTempoValid | kTimeSigValid | kProjectTimeMusicValid | kBarPositionValid;
-            if t.playing {
-                state |= kPlaying;
-            }
-            if t.recording {
-                state |= kRecording;
-            }
-            ctx.sampleRate = t.sample_rate;
-            ctx.projectTimeSamples = t.position_samples;
-            ctx.projectTimeMusic = t.position_quarters;
-            ctx.barPositionMusic = t.bar_start_quarters;
-            ctx.tempo = t.tempo;
-            ctx.timeSigNumerator = t.sig_num;
-            ctx.timeSigDenominator = t.sig_den;
-            if let Some((a, b)) = t.cycle {
-                state |= kCycleValid | kCycleActive;
-                ctx.cycleStartMusic = a;
-                ctx.cycleEndMusic = b;
-            }
-            ctx.state = state as _;
-
-            let mut data = ProcessData {
-                processMode: ProcessModes_::kRealtime as i32,
-                symbolicSampleSize: SymbolicSampleSizes_::kSample32 as i32,
-                numSamples: n as i32,
-                numInputs: self.in_abb.len() as i32,
-                numOutputs: self.out_abb.len() as i32,
-                inputs: if self.in_abb.is_empty() { std::ptr::null_mut() } else { self.in_abb.as_mut_ptr() },
-                outputs: if self.out_abb.is_empty() { std::ptr::null_mut() } else { self.out_abb.as_mut_ptr() },
-                inputParameterChanges: self.param_in.as_com_ref::<IParameterChanges>().unwrap().as_ptr(),
-                outputParameterChanges: self.param_out.as_com_ref::<IParameterChanges>().unwrap().as_ptr(),
-                inputEvents: self.events_in.as_com_ref::<IEventList>().unwrap().as_ptr(),
-                outputEvents: self.events_out.as_com_ref::<IEventList>().unwrap().as_ptr(),
-                processContext: &mut ctx,
-            };
-            vst3::ComRef::from_raw(self.processor).unwrap().process(&mut data);
-
-            match self.outputs.first() {
-                Some(bus) if bus.channels >= 2 => {
-                    left[..n].copy_from_slice(&bus.buffers[0][..n]);
-                    right[..n].copy_from_slice(&bus.buffers[1][..n]);
-                }
-                Some(bus) if bus.channels == 1 => {
-                    left[..n].copy_from_slice(&bus.buffers[0][..n]);
-                    right[..n].copy_from_slice(&bus.buffers[0][..n]);
-                }
-                _ => {}
-            }
+            self.gather_changes(n, midi);
+            self.fill_buses(left, right, key, n);
+            let mut ctx = process_context(t);
+            self.run_plugin(n, &mut ctx);
+            self.read_main_output(left, right, n);
             if fading {
                 self.fade_gate(&mut left[..n], &mut right[..n]);
             }
@@ -281,6 +162,100 @@ impl PluginProcessor {
             });
         }
         self.after_block(left, right, n);
+    }
+
+    /// This block's parameter changes and events: edits from the editor, the queued ones
+    /// (automation), and `midi`.
+    unsafe fn gather_changes(&mut self, n: usize, midi: &[MidiEvent]) {
+        self.param_in.clear();
+        self.param_out.clear();
+        self.events_in.clear();
+        self.events_out.clear();
+        while let Ok((id, v)) = self.edits_rx.pop() {
+            self.param_in.push(id, 0, v);
+        }
+        for &(id, offset, v) in &self.queued {
+            self.param_in.push(id, offset.clamp(0, n as i32 - 1), v);
+        }
+        self.queued.clear();
+        for m in midi {
+            self.push_midi(m);
+        }
+    }
+
+    /// Fills the input buses (the block on the main one, `key` on the side-chain, silence on the
+    /// rest), clears the outputs, and points the plug-in's bus descriptions at them all.
+    fn fill_buses(&mut self, left: &[f32], right: &[f32], key: KeyInput, n: usize) {
+        if let Some(bus) = self.inputs.first_mut() {
+            bus.put_stereo(left, right, n);
+            if bus.channels >= 2 {
+                for b in bus.buffers.iter_mut().skip(2) {
+                    b[..n].fill(0.0);
+                }
+            }
+        }
+        for bus in self.inputs.iter_mut().skip(1) {
+            for b in bus.buffers.iter_mut() {
+                b[..n].fill(0.0);
+            }
+        }
+        let mut key_silence = true;
+        if let (Some(bus), Some((kl, kr))) = (self.key_bus.and_then(|k| self.inputs.get_mut(k)), key) {
+            key_silence = false;
+            bus.put_stereo(kl, kr, n);
+        }
+        for bus in self.outputs.iter_mut() {
+            for b in bus.buffers.iter_mut() {
+                b[..n].fill(0.0);
+            }
+        }
+        for (abb, bus) in self.in_abb.iter_mut().zip(self.inputs.iter_mut()) {
+            abb.numChannels = bus.channels as i32;
+            abb.silenceFlags = 0;
+            abb.__field0.channelBuffers32 = bus.ptrs.as_mut_ptr();
+        }
+        if let (Some(abb), true) = (self.key_bus.and_then(|k| self.in_abb.get_mut(k)), key_silence) {
+            abb.silenceFlags = (1u64 << abb.numChannels.clamp(0, 63)) - 1;
+        }
+        for (abb, bus) in self.out_abb.iter_mut().zip(self.outputs.iter_mut()) {
+            abb.numChannels = bus.channels as i32;
+            abb.silenceFlags = 0;
+            abb.__field0.channelBuffers32 = bus.ptrs.as_mut_ptr();
+        }
+    }
+
+    /// Calls the plug-in's `process` on `n` frames of the buses `fill_buses` set up.
+    unsafe fn run_plugin(&mut self, n: usize, ctx: &mut ProcessContext) {
+        let mut data = ProcessData {
+            processMode: ProcessModes_::kRealtime as i32,
+            symbolicSampleSize: SymbolicSampleSizes_::kSample32 as i32,
+            numSamples: n as i32,
+            numInputs: self.in_abb.len() as i32,
+            numOutputs: self.out_abb.len() as i32,
+            inputs: if self.in_abb.is_empty() { std::ptr::null_mut() } else { self.in_abb.as_mut_ptr() },
+            outputs: if self.out_abb.is_empty() { std::ptr::null_mut() } else { self.out_abb.as_mut_ptr() },
+            inputParameterChanges: self.param_in.as_com_ref::<IParameterChanges>().unwrap().as_ptr(),
+            outputParameterChanges: self.param_out.as_com_ref::<IParameterChanges>().unwrap().as_ptr(),
+            inputEvents: self.events_in.as_com_ref::<IEventList>().unwrap().as_ptr(),
+            outputEvents: self.events_out.as_com_ref::<IEventList>().unwrap().as_ptr(),
+            processContext: ctx,
+        };
+        vst3::ComRef::from_raw(self.processor).unwrap().process(&mut data);
+    }
+
+    /// Copies the main output bus back into the block (a mono one to both sides).
+    fn read_main_output(&self, left: &mut [f32], right: &mut [f32], n: usize) {
+        match self.outputs.first() {
+            Some(bus) if bus.channels >= 2 => {
+                left[..n].copy_from_slice(&bus.buffers[0][..n]);
+                right[..n].copy_from_slice(&bus.buffers[1][..n]);
+            }
+            Some(bus) if bus.channels == 1 => {
+                left[..n].copy_from_slice(&bus.buffers[0][..n]);
+                right[..n].copy_from_slice(&bus.buffers[0][..n]);
+            }
+            _ => {}
+        }
     }
 
     unsafe fn push_midi(&mut self, m: &MidiEvent) {
@@ -321,4 +296,33 @@ impl PluginProcessor {
             _ => {}
         }
     }
+}
+
+/// The transport as VST3 describes it to a plug-in.
+fn process_context(t: &TransportInfo) -> ProcessContext {
+    // Every field the flags don't mark valid is zero.
+    let mut ctx: ProcessContext = unsafe { std::mem::zeroed() };
+    use ProcessContext_::StatesAndFlags_::*;
+    // C enums are i32 in the MSVC bindings and u32 elsewhere; `as _` fits both.
+    let mut state = kTempoValid | kTimeSigValid | kProjectTimeMusicValid | kBarPositionValid;
+    if t.playing {
+        state |= kPlaying;
+    }
+    if t.recording {
+        state |= kRecording;
+    }
+    ctx.sampleRate = t.sample_rate;
+    ctx.projectTimeSamples = t.position_samples;
+    ctx.projectTimeMusic = t.position_quarters;
+    ctx.barPositionMusic = t.bar_start_quarters;
+    ctx.tempo = t.tempo;
+    ctx.timeSigNumerator = t.sig_num;
+    ctx.timeSigDenominator = t.sig_den;
+    if let Some((a, b)) = t.cycle {
+        state |= kCycleValid | kCycleActive;
+        ctx.cycleStartMusic = a;
+        ctx.cycleEndMusic = b;
+    }
+    ctx.state = state as _;
+    ctx
 }

@@ -3,7 +3,7 @@
 //! back as `Garbage` to be dropped elsewhere.
 //!
 //! This file holds [`Engine`] and how it's made. A block runs through `process.rs`, which plays each
-//! strip with `strip.rs` (on the worker pool through `parallel/` and `pool/`, when `graph.rs` has a
+//! strip with `strip.rs` (on the worker pool through `parallel/` and `pool/`, when `graph/` has a
 //! graph); `apply.rs` handles commands; `track.rs` holds a strip's state and `block.rs` what a block
 //! shares. `offline.rs` renders without a device. `crate::session` is the other side of every message.
 

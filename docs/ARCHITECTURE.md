@@ -251,7 +251,7 @@ sequenceDiagram
   S->>S: idle(): drop it
 ```
 
-The queue's edges (`session/engine/sync.rs`):
+The queue's edges (`session/engine/sync/`):
 
 - `Session::send` counts commands and `EngineStatus::cmds_done` counts what was applied;
   `wait_for_engine` waits (up to 1 s) for the few places that need the engine caught up. With no
@@ -350,7 +350,7 @@ steps.
   parameters and globals. Plug-ins that didn't change keep running with their state.
 - Clips are never unloaded by undo, so redo can bring their regions back.
 - Edits in a VST3's own editor become steps of their own, carrying the plug-in state to load
-  (`session/plugins/editor_undo.rs`).
+  (`session/plugins/editor_undo/`).
 - `frozen_guard`, after every checkpointed edit, puts back anything that changed a frozen track's
   regions or plug-ins, and drops the step if nothing else changed.
 - Opening or creating a project clears the history.
@@ -450,7 +450,7 @@ inaudible.
   its `Routes` differ: serially a strip writes straight into later strips' sums; on the pool it
   leaves its output and sends in its own `Outlets`, and a bus adds its feeders' outlets in
   processing order. Float addition isn't associative, so that order is what keeps the bits equal.
-- **The graph.** The session builds a `TaskGraph` (`dsp/graph.rs`) from the project's routes and
+- **The graph.** The session builds a `TaskGraph` (`dsp/graph/`) from the project's routes and
   sends it in `Cmd::Graph` after each edit (`Session::sync_parallel`). The engine checks it against
   the routes it resolved itself and plays serially until it holds, so a route can't race.
 - **The pool** has no locks or queues: a task is a bit in an atomic word, and whoever clears it
@@ -538,13 +538,13 @@ the pass ends (`session/automation/write.rs`).
 **Global tracks.** Markers (sorted, project data only), the Arrangement track's sections (tiling
 the timeline), the Autopunch range, and the tempo and signature maps. Tempo events are in samples
 and signature events in bars; empty lists mean the constant `tempo` and `sig_num`/`sig_den`.
-`model/tempo.rs` converts between samples and beats and bars (closed forms for ramps), and
+`model/tempo/` converts between samples and beats and bars (closed forms for ramps), and
 `src/lib/tempo.ts` mirrors it. Regions stay in samples, so a tempo change never moves audio; Move
 MIDI Regions with Tempo rescales MIDI to keep its bars.
 
 **Section edits as time maps.** Moving, copying or deleting an Arrangement section, and the
 Section Between Locators commands, are described as a list of pieces saying where each stretch of
-the old timeline lands (`edit/arrangement.rs`, `edit/arrange_cmds.rs`). One apply step maps regions
+the old timeline lands (`edit/arrangement/`, `edit/arrange_cmds.rs`). One apply step maps regions
 (cutting those that straddle a piece edge), automation, markers and sections through it.
 
 **Freeze.** `Track::frozen` names the freeze file. While set, the playback list is that file alone,
@@ -582,7 +582,7 @@ Song.marbble/
   and on disk and are decoded when an edit makes them play (`session/project/clip_loading.rs`).
 - **Plug-in state** is base64 in `PluginSlot::state`, an `Arc<str>` so undo steps and snapshots
   share it. Saving reads it from every running plug-in; in between the session keeps a recent copy
-  of each VST3's (`session/plugins/states.rs`), for when it can't ask the plug-in.
+  of each VST3's (`session/plugins/states/`), for when it can't ask the plug-in.
 - A project at another sample rate switches the device to it, as Logic does.
 - **Alternatives** (`session/project/alternatives.rs`): the active one is always the top-level
   `project.json`, so autosave, recovery and backups need not know about them. Each step of a
@@ -590,7 +590,7 @@ Song.marbble/
 - **Backups** (`session/project/backups.rs`): saving moves the file it replaces into `Backups/`,
   named by its modification time, and keeps the newest N. Opening falls back from `project.json`
   to the autosave, the `.bak`, then the newest backup.
-- **Autosave and recovery** (`session/project/autosave.rs`, `recovery.rs`): when the interval
+- **Autosave and recovery** (`session/project/autosave.rs`, `recovery/`): when the interval
   has passed and the project is dirty and not recording, `idle` serializes it and a thread writes
   it via a temporary file and a rename. An autosave newer than `project.json` is offered on
   launch; an untitled project autosaves into its not-yet-saved folder in the projects folder. A
@@ -741,7 +741,7 @@ flowchart LR
   Whether a target is a switch (button modes, on/off feedback) is `Session::ctl_is_switch`: the
   fixed switches such as Mute, and a plug-in parameter that is a toggle (a built-in's `ParamKind`,
   a VST3 parameter with one step).
-- **Feedback** (`control/feedback.rs`, `session/control/feedback.rs`) sends values, not events:
+- **Feedback** (`control/feedback/`, `session/control/feedback.rs`) sends values, not events:
   every tick it reads each target's value (or what automation plays over it) and sends only what
   differs from what the controller shows. So every source of change is covered by one path. It
   stays quiet while the controller moves, and is rate-limited.

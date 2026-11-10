@@ -218,7 +218,7 @@ pub struct Session {
     /// How the recording in progress is cut into takes (see `session/takes/`).
     rec_plan: Option<crate::edit::takes::recording::RecPlan>,
     /// Where playback started for the recording in progress, the rating marked for its take,
-    /// and what the last recording made (see `session/takes/last_recording.rs`).
+    /// and what the last recording made (see `session/takes/last_recording/`).
     rec_play_from: i64,
     rec_rating: Option<TakeRating>,
     last_recording: Option<takes::last_recording::LastRecording>,
@@ -252,7 +252,7 @@ pub struct Session {
     /// that includes it and the position it moves to (see [`Session::position`]).
     pending_pos: Option<(u64, i64)>,
     /// Autosave at the next chance rather than after the interval: a recording, bounce or
-    /// freeze just finished (see `session/project/recovery.rs`).
+    /// freeze just finished (see `session/project/recovery/`).
     autosave_soon: bool,
     /// The crash-recovery journal of the recording in progress.
     rec_journal: Option<PathBuf>,
@@ -274,10 +274,10 @@ pub struct Session {
     /// What Cut Section Between Locators took out last, for Insert Cut Section. Forgotten when
     /// another project opens, as its ids are this project's.
     section_clip: Option<SectionClip>,
-    /// Plug-ins whose editor is open, watched for undo steps (see `session/plugins/editor_undo.rs`).
+    /// Plug-ins whose editor is open, watched for undo steps (see `session/plugins/editor_undo/`).
     vst_watches: HashMap<Id, plugins::editor_undo::Watch>,
     /// How current the project's copy of each running VST3's state is (see
-    /// `session/plugins/states.rs`).
+    /// `session/plugins/states/`).
     state_copies: HashMap<Id, plugins::states::StateCopy>,
     /// Processing Threads (see `session/engine/threads.rs`), and whether an edit may have changed the
     /// task graph or the setting since it was last looked at.
@@ -354,7 +354,7 @@ fn decode_state(s: &str) -> PluginState {
 }
 
 /// Commands queued for the audio thread, and what it sends back to be dropped (see
-/// `session/engine/sync.rs` for what happens when the command queue is full).
+/// `session/engine/sync/` for what happens when the command queue is full).
 const CMD_QUEUE: usize = 4096;
 const GARBAGE_QUEUE: usize = 4096;
 /// Live MIDI messages on their way from the input callbacks to the engine.

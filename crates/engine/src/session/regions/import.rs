@@ -13,19 +13,7 @@ impl Session {
         }
         let id = self.project.alloc_id();
         let name = self.project.track(track).unwrap().name.clone();
-        self.project.track_mut(track).unwrap().regions.push(Region {
-            id,
-            name,
-            start: start.max(0),
-            length: length.max(1),
-            muted: false,
-            color: None,
-            content: RegionContent::Midi { notes: Vec::new(), cc: Vec::new() },
-            loop_end: None,
-            takes: None,
-            params: Default::default(),
-            pattern: None,
-        });
+        self.project.track_mut(track).unwrap().regions.push(Region::midi(id, name, start.max(0), length.max(1), Vec::new(), Vec::new()));
         self.push_regions(track);
         self.dirty = true;
         Ok(id)

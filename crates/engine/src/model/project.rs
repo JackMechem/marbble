@@ -126,7 +126,7 @@ pub struct Project {
     /// The Autopunch range.
     #[serde(default)]
     pub punch: Punch,
-    /// The Tempo track (see `tempo.rs`). Empty: `tempo` throughout. Otherwise the first
+    /// The Tempo track (see `tempo/`). Empty: `tempo` throughout. Otherwise the first
     /// event is at 0 and `tempo` mirrors it.
     #[serde(default)]
     pub tempo_map: Vec<TempoEvent>,

@@ -1,0 +1,150 @@
+//! Drum Replacement and Doubling: the sampler track, undo, refusals and take folders.
+
+use super::*;
+use crate::audio_io::AudioConfig;
+use crate::edit::drum_replace::{DrumKind, DrumTiming};
+
+const RATE: i64 = 48000;
+
+/// A session with an audio track playing kicks (the made sample) at `hits`, at their
+/// levels, in one region from bar 2 (`RATE * 2`).
+fn session(hits: &[(usize, f32)]) -> (Session, Id, Id) {
+    let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
+    let mut s = Session::new(cfg, Vec::new());
+    s.dir = std::env::temp_dir().join(format!("marbble-drum-replace-{}-{}", std::process::id(), hits.len()));
+    let t = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
+    let kick = DrumKind::Kick.sample(RATE as u32);
+    let mut buf = vec![0.0f32; RATE as usize * 3];
+    for &(a, g) in hits {
+        for (i, v) in kick.iter().enumerate().take(buf.len() - a) {
+            buf[a + i] += v * g;
+        }
+    }
+    let path = s.dir.join("Audio Files").join("kick.wav");
+    let clip = s.add_clip(&path, Clip::from_channels(path.clone(), RATE as u32, vec![buf]));
+    let id = s.project.alloc_id();
+    let content = RegionContent::Audio { clip, offset: 0, gain_db: 0.0, fade_in: 0, fade_out: 0, fade_shape: Default::default() };
+    s.project.track_mut(t).unwrap().regions.push(Region {
+        id,
+        name: "Kick In".into(),
+        start: RATE * 2,
+        length: RATE * 3,
+        muted: false,
+        color: None,
+        content,
+        loop_end: None,
+        takes: None,
+        params: Default::default(),
+        pattern: None,
+    });
+    s.push_regions(t);
+    (s, t, id)
+}
+
+fn midi(s: &Session, t: Id) -> (Region, Vec<Note>) {
+    let r = s.project.track(t).unwrap().regions[0].clone();
+    let RegionContent::Midi { notes, .. } = &r.content else { panic!("not MIDI") };
+    let n = notes.clone();
+    (r, n)
+}
+
+#[test]
+fn replace_makes_a_sampler_track_below_with_a_note_per_hit_and_undoes_in_one_step() {
+    let hits = [(4800, 1.0), (28800, 0.25), (52800, 0.6), (76800, 0.02)];
+    let (mut s, t, _) = session(&hits);
+    let settings = DrumSettings { threshold_db: -30.0, ..Default::default() };
+    s.checkpoint("Drum Replacement", None, false);
+    let new = s.drum_replace(t, &[], &settings).unwrap();
+    let pos = |id: Id| s.project.tracks.iter().position(|x| x.id == id).unwrap();
+    assert_eq!(pos(new), pos(t) + 1);
+    let nt = s.project.track(new).unwrap();
+    assert_eq!((nt.kind, nt.name.as_str()), (TrackKind::Instrument, "Kick Replacement"));
+    let slot = nt.instrument.as_ref().unwrap();
+    assert_eq!(slot.plugin_id, SAMPLER);
+    let zones = SamplerState::parse(slot.state.as_deref()).zones;
+    assert_eq!(zones.len(), 1);
+    assert!(zones[0].one_shot && zones[0].key_lo == 36 && zones[0].key_hi == 36 && zones[0].root == 36);
+    assert!(s.dir.join(&zones[0].file).is_file(), "the kick sample was written into the project");
+    // The -34 dB hit is under the threshold; the others land on their attacks.
+    let (r, n) = midi(&s, new);
+    assert_eq!((r.start, r.length), (RATE * 2, RATE * 3));
+    assert_eq!(n.len(), 3, "{n:?}");
+    for (note, &(a, _)) in n.iter().zip(&hits) {
+        assert!((note.start - a as i64).abs() <= 2, "{note:?} vs {a}");
+        assert_eq!(note.pitch, 36);
+    }
+    assert_eq!(n.iter().map(|x| x.velocity).collect::<Vec<_>>().first(), Some(&127));
+    assert!(n[1].velocity < n[2].velocity && n[2].velocity < n[0].velocity, "{n:?}");
+    assert!(s.project.track(t).unwrap().mute, "Replace mutes the original");
+    s.undo();
+    assert!(s.project.track(new).is_none() && !s.project.track(t).unwrap().mute, "one undo takes it all back");
+    s.redo();
+    assert!(s.project.track(new).is_some() && s.project.track(t).unwrap().mute);
+}
+
+#[test]
+fn doubling_keeps_the_original_and_takes_the_selected_regions_only() {
+    let (mut s, t, id) = session(&[(4800, 1.0), (52800, 0.6)]);
+    // Split, so only the second half is chosen.
+    let pieces = s.split_regions_at(&[id], &[RATE * 2 + 30000]);
+    let second = pieces.into_iter().find(|&p| p != id).unwrap();
+    let settings = DrumSettings { instrument: DrumKind::Snare, mode: DrumMode::Double, timing: DrumTiming::Peak, offset_ms: 1.0, ..Default::default() };
+    let new = s.drum_replace(t, &[second], &settings).unwrap();
+    assert!(!s.project.track(t).unwrap().mute);
+    let (r, n) = midi(&s, new);
+    assert_eq!(r.start, RATE * 2 + 30000);
+    assert_eq!(n.len(), 1);
+    assert_eq!((n[0].pitch, n[0].velocity), (38, 127));
+    // At the peak, a millisecond late: a few ms after the attack at 52800 from the region.
+    let from_attack = n[0].start - (52800 - 30000);
+    assert!(from_attack > 48 && from_attack < 48 * 20, "{n:?}");
+    assert_eq!(s.project.track(new).unwrap().name, "Snare Double");
+}
+
+#[test]
+fn nothing_past_the_threshold_or_no_audio_track_is_refused() {
+    let (mut s, t, _) = session(&[(4800, 0.01)]);
+    let settings = DrumSettings { threshold_db: -20.0, ..Default::default() };
+    assert!(s.drum_replace(t, &[], &settings).is_err());
+    let inst = s.add_track(TrackKind::Instrument, InputSel::None, None, None).unwrap();
+    assert!(s.drum_replace(inst, &[], &settings).is_err());
+    assert_eq!(s.project.tracks.len(), 2, "no track was made");
+}
+
+#[test]
+fn a_take_folder_is_read_through_its_comp() {
+    let (mut s, t, id) = session(&[(4800, 1.0), (52800, 1.0)]);
+    // A second take, silent but for one kick at 100000, heard from take time 40000 on.
+    let other = DrumKind::Kick.sample(RATE as u32);
+    let mut buf = vec![0.0f32; RATE as usize * 3];
+    buf[100000..100000 + other.len()].copy_from_slice(&other);
+    let path = s.dir.join("Audio Files").join("kick 2.wav");
+    let clip2 = s.add_clip(&path, Clip::from_channels(path.clone(), RATE as u32, vec![buf]));
+    let r = s.project.track_mut(t).unwrap().regions.iter_mut().find(|r| r.id == id).unwrap();
+    let RegionContent::Audio { clip, .. } = r.content else { panic!() };
+    let take = |id, clip| crate::model::Take {
+        id,
+        name: String::new(),
+        clip,
+        offset: 0,
+        start: 0,
+        end: RATE * 3,
+        gain_db: 0.0,
+        notes: Vec::new(),
+        cc: Vec::new(),
+        ..Default::default()
+    };
+    r.takes = Some(TakeFolder {
+        takes: vec![take(901, clip), take(902, clip2)],
+        comp: vec![CompSegment { start: 0, end: 40000, take: 901 }, CompSegment { start: 40000, end: RATE * 3, take: 902 }],
+        comps: Vec::new(),
+        current: 0,
+        offset: 0,
+    });
+    let sources = s.drum_sources(t, &[]).unwrap();
+    assert_eq!(sources.len(), 2);
+    let hits = find_hits(&sources, RATE as u32);
+    // The first take's first kick, then the second take's: its 52800 isn't heard.
+    assert_eq!(hits.len(), 2, "{hits:?}");
+    assert!((hits[0].pos - (RATE * 2 + 4800)).abs() <= 2 && (hits[1].pos - (RATE * 2 + 100000)).abs() <= 2, "{hits:?}");
+}

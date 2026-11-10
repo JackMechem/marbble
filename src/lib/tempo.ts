@@ -1,5 +1,5 @@
 // The tempo map and time-signature changes (Logic's Tempo and Signature global tracks), for
-// the UI. This mirrors crates/engine/src/model/tempo.rs; keep the two in step. lib/ holds the pure maths
+// the UI. This mirrors crates/engine/src/model/tempo/; keep the two in step. lib/ holds the pure maths
 // the whole app uses: this, musical time (time.ts) and decibels (decibels.ts).
 //
 // Timeline positions stay in samples. Musical time is counted in quarter notes: quarters(t) =
