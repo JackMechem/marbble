@@ -1,6 +1,6 @@
 // The interface size: applying and stepping the zoom, and the pixel ratio canvases draw at.
 import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { getState, setState } from "../state/store";
+import { getState, setState, showToast } from "../state/store";
 
 /** Interface sizes offered in Settings › Appearance. */
 export const UI_SCALES = [0.9, 1, 1.1, 1.25, 1.5, 1.75, 2];
@@ -33,7 +33,7 @@ export async function applyUiScale(scale: number, persist = true) {
   try {
     await getCurrentWebview().setZoom(s);
   } catch (e) {
-    setState({ toast: { text: `Couldn't change the interface size: ${e}`, at: Date.now() } });
+    showToast(`Couldn't change the interface size: ${e}`);
   }
   if (persist) {
     try {

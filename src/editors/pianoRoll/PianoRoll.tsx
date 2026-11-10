@@ -28,7 +28,7 @@ import { PianoRollBar } from "./PianoRollBar";
 import { usePrefs } from "./prefs";
 import { QuantizePanel } from "./QuantizePanel";
 import { installWheel } from "./wheel";
-import { fitPitchScroll, LANE_MIN_PX, laneShort, midiRegions, timeBase } from "./model";
+import { fitPitchScroll, LANE_MIN_PX, laneShort, midiRegions, timeBase, zoomToSlider } from "./model";
 import type { PCc, PNote } from "../midiEdit";
 import { onPress } from "../../keyboard/keyNav";
 
@@ -191,7 +191,7 @@ export function PianoRoll({ track, region }: { track: Track; region: Region | nu
   const selVel = selNotes.length ? Math.round(selNotes.reduce((a, n) => a + n.velocity, 0) / selNotes.length) : null;
   const focusRegion = regions.find((r) => r.id === focus);
   const title = focusRegion?.name ?? track.name;
-  const hZoom = Math.log(pr.pxPerBeat / 6) / Math.log(1600 / 6);
+  const hZoom = zoomToSlider(pr.pxPerBeat);
   const toolClass = `pr-cursor-${pr.tool}`;
 
   // Velocity slider: previews while dragging, commits on release.

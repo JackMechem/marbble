@@ -4,9 +4,11 @@ import { type CcKind } from "../../engine/regions";
 import * as me from "../midiEdit";
 import { laneValue, laneY, timeAt, xOf, type PrView } from "./draw";
 import { densityStep, drawCcCurve, nearestEvent } from "./ccCurves";
-import { dragWith, local, type Core } from "./core";
+import { local, type Core } from "./core";
+import { dragWith } from "../../ui/pointerDrag";
 import { ccDotAt, laneKind, laneShort, stalkAt, timeBase, type Tool } from "./model";
 import type { PCc } from "../midiEdit";
+import { clamp } from "../../lib/clamp";
 
 export function laneGestures(ed: Core) {
   const { view, snapT, setSelection, commit, regionFor, ensureSelectedTrack, showTag, showLaneTag, noRegionHere, posLabel, selectRegionOf, requestDraw, rootRef, laneCv, work, preview, laneLine, laneRubber, lastArea, lastVelocity, live } = ed;
@@ -214,7 +216,7 @@ export function laneGestures(ed: Core) {
           const dt = Math.round(snapT(grabbed.start + (ev.clientX - sx) / v.pps, free) - grabbed.start);
           // The lane's value range spans its height less 6 px margins top and bottom (laneY).
           const dv = Math.round(((sy - ev.clientY) / (H - 12)) * max);
-          const next = base.map((c) => (c.sel ? { ...c, start: Math.max(0, c.start + dt), value: me.clamp(c.value + dv, 0, max) } : c));
+          const next = base.map((c) => (c.sel ? { ...c, start: Math.max(0, c.start + dt), value: clamp(c.value + dv, 0, max) } : c));
           const g2 = next[base.indexOf(grabbed)];
           showLaneTag(`${laneShort(live.current.pr.lane)} ${g2.value}   ${posLabel(g2.start)}`, ev);
           preview.current = { notes: work.current.notes, cc: next };

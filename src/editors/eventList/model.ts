@@ -11,12 +11,11 @@
 import type { CcKind } from "../../engine/regions";
 import type { PCc, PNote } from "../midiEdit";
 import type { Bbt, TempoMap } from "../../lib/tempo";
+import { clamp } from "../../lib/clamp.ts";
 
 /** Ticks a division, and a beat. */
 const TICKS_PER_DIV = 240;
 const TICKS_PER_BEAT = TICKS_PER_DIV * 4;
-
-const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
 // ---- positions and lengths ------------------------------------------------------------------
 

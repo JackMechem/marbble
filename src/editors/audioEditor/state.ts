@@ -10,7 +10,7 @@ import { fmt } from "../../keyboard/keymap";
 import { framePos, onFrame } from "../../state/frameLoop";
 import { undoRedo } from "../../project/files";
 import { pasteRegions } from "../../tracks/regionCommands";
-import { currentTick, getState, setState } from "../../state/store";
+import { currentTick, getState, setState, showToast } from "../../state/store";
 import { regionsIn, subRegion } from "./range";
 import { detachMenuItems } from "../../app/detach/detach";
 import { zeroCrossingsItem } from "../../tracks/regions/zeroCrossings";
@@ -87,7 +87,6 @@ export function setEditorFocus(on: boolean) {
 }
 
 const project = () => getState().snap?.project;
-const toast = (text: string) => setState({ toast: { text, at: Date.now(), ms: 2500 } });
 
 function edTrack(): Track | undefined {
   return view ? project()?.tracks.find((t) => t.id === view!.track) : undefined;
@@ -118,7 +117,7 @@ async function rangeEdit(action: RangeAction) {
   if (!sel || !t) return;
   const ids = regionsIn(t, sel.start, sel.end).map((r) => r.id);
   if (!ids.length) {
-    toast("The selection doesn't cover a region");
+    showToast("The selection doesn't cover a region", 2500);
     return;
   }
   const made = await actMade("edit_range", { ids, start: Math.round(sel.start), end: Math.round(sel.end), action });
@@ -240,7 +239,7 @@ export async function splitAtTransients() {
   const regs = sel ? regionsIn(t, sel.start, sel.end) : t.regions.filter((r) => selected.includes(r.id));
   const audio = regs.filter((r) => r.content.type === "audio");
   if (!audio.length) {
-    toast(sel ? "The selection doesn't cover a region" : "Select a region or a range first");
+    showToast(sel ? "The selection doesn't cover a region" : "Select a region or a range first", 2500);
     return;
   }
   const lo = sel?.start ?? -Infinity;
@@ -258,13 +257,13 @@ export async function splitAtTransients() {
     }
   }
   if (!positions.length) {
-    toast("No transients found there; try a higher sensitivity");
+    showToast("No transients found there; try a higher sensitivity", 2500);
     return;
   }
   const made = await actMade("split_regions_at", { ids: audio.map((r) => r.id), positions });
   if (made) {
     setState({ selectedRegions: made, focus: "regions" });
-    toast(`Split into ${made.length} regions`);
+    showToast(`Split into ${made.length} regions`, 2500);
   }
 }
 

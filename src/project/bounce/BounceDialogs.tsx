@@ -20,13 +20,11 @@ import {
   type RenderOptions,
 } from "./bounce";
 import { depthFor, depthsFor, extensionOf, fileFilter, FORMATS, withExtension, type AudioFormat } from "./bounceFormat";
-import { getState, setState, useStore } from "../../state/store";
+import { getState, setState, showToast, useStore } from "../../state/store";
 import { formatTime } from "../../lib/time";
 import { tempoMap } from "../../lib/tempo";
 import { Sheet } from "../../ui/Sheet";
 import { NumberField, Select } from "../../ui/Form";
-
-const toast = (text: string, ms = 6000) => setState({ toast: { text, at: Date.now(), ms } });
 
 /** Remembered between uses, like Logic's bounce settings. */
 function loadPref<T extends object>(key: string, fallback: T): T {
@@ -148,7 +146,7 @@ export function BounceDialog() {
       const res = await run(() => call<BounceResult>("export_tracks", { dir, options, ids }));
       if (!res) return;
       setState({ dialog: null });
-      toast(`Exported ${res.paths.length} track${res.paths.length === 1 ? "" : "s"} to ${dir}`);
+      showToast(`Exported ${res.paths.length} track${res.paths.length === 1 ? "" : "s"} to ${dir}`, 6000);
       return;
     }
     const name = (region?.name || project.name || "Bounce").replace(/[\\/:*?"<>|]/g, "_");
@@ -165,7 +163,7 @@ export function BounceDialog() {
     if (!res) return;
     setState({ dialog: null });
     const peak = Number.isFinite(res.peak_db) ? `, peak ${res.peak_db.toFixed(1)} dBFS` : ", silent";
-    toast(`${region ? "Exported" : "Bounced"} ${fileName(file)} (${formatTime(project, res.seconds * project.sample_rate)}${peak}) to ${file}`);
+    showToast(`${region ? "Exported" : "Bounced"} ${fileName(file)} (${formatTime(project, res.seconds * project.sample_rate)}${peak}) to ${file}`, 6000);
   };
 
   const title =
@@ -297,7 +295,7 @@ export function BounceInPlaceDialog() {
     const kept = new Set(res.snapshot.project.tracks.flatMap((t) => t.regions.map((r) => r.id)));
     setState({ snap: res.snapshot, dialog: null, selectedTracks: res.ids, focus: "tracks", selectedRegions: getState().selectedRegions.filter((r) => kept.has(r)) });
     const made = res.snapshot.project.tracks.filter((t) => res.ids.includes(t.id)).map((t) => t.name);
-    toast(`Bounced in place: ${made.join(", ")}`, 3500);
+    showToast(`Bounced in place: ${made.join(", ")}`, 3500);
   };
 
   return (

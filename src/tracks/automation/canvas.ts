@@ -10,7 +10,7 @@ import { keyHint } from "../../keyboard/keymap";
 import type { Layout } from "../trackLayout";
 import { getState, setState } from "../../state/store";
 import { mix, theme } from "../../theme/canvasTheme";
-import { snapPos } from "../../lib/time";
+import { snapToTracksGrid } from "../gridSnap";
 import type { Viewport } from "../viewport";
 import { addLane, closeLane, showUsedAutomation } from "./menus";
 import { fromUnit, fromUnitExact, isOutput, laneOf, outputTrack, paramLabel, stripOf, toUnit } from "./params";
@@ -309,7 +309,7 @@ export function automationMouseDown(e: React.MouseEvent, v: AutoInput) {
     return;
   }
   if (!isOutput(h.track) && h.track.id !== getState().snap?.selected) act("select_track", { id: h.track.id });
-  const snap = (pos: number) => Math.max(0, Math.round(snapPos(v.project, pos, getState().snapMode, getState().pxPerBeat)));
+  const snap = (pos: number) => Math.max(0, Math.round(snapToTracksGrid(v.project, pos)));
   const sameLane = selection && selection.track === h.track.id && sameParam(selection.param, h.param);
 
   if (h.point < 0 && e.shiftKey && (e.ctrlKey || e.altKey) && bendSegment(e, h, v)) return;

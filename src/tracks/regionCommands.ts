@@ -8,7 +8,7 @@ import { type Snapshot } from "../engine/snapshot";
 import { act, actMade, call } from "../engine/commands";
 import { isLooped, regionEnd } from "./regions/loops";
 import { importMidiFiles } from "../project/midiFiles";
-import { currentTick, getState, setState } from "../state/store";
+import { currentTick, getState, setState, showToast } from "../state/store";
 import { tempoMap } from "../lib/tempo";
 import { freePatternBar, templateRows } from "../editors/stepSequencer/model";
 import { duplicateTracks } from "./trackCommands";
@@ -16,7 +16,6 @@ import { duplicateTracks } from "./trackCommands";
 const project = () => getState().snap?.project;
 const tracks = (): Track[] => project()?.tracks ?? [];
 const playhead = () => currentTick()?.pos ?? 0;
-const toast = (text: string, ms = 2500) => setState({ toast: { text, at: Date.now(), ms } });
 
 export function trackOf(regionId: Id): Track | undefined {
   return tracks().find((t) => t.regions.some((r) => r.id === regionId));
@@ -82,7 +81,7 @@ export async function pasteRegions(at?: { track: Id; pos: number }) {
     return t ? [[t.id, region] as [Id, Region]] : [];
   });
   const made = await actMade("paste_regions", { items, offset: (at?.pos ?? playhead()) - earliest, label: "Paste" });
-  if (made && made.length < clip.length) toast("Some regions didn't fit the track they'd land on");
+  if (made && made.length < clip.length) showToast("Some regions didn't fit the track they'd land on", 2500);
   selectRegions(made);
 }
 
@@ -171,7 +170,7 @@ export async function createPatternRegion(track: Id, pos: number, free = false) 
 export function newPatternRegion() {
   const t = tracks().find((x) => x.id === getState().snap?.selected);
   if (t?.kind === "instrument") createPatternRegion(t.id, playhead(), true);
-  else toast("Select a software instrument track for the pattern region");
+  else showToast("Select a software instrument track for the pattern region", 2500);
 }
 
 export async function importAt(track: Track, pos: number) {
@@ -181,7 +180,7 @@ export async function importAt(track: Track, pos: number) {
   const res = await call<{ snapshot: Snapshot; errors: string[] }>("import_audio_files", { paths, track: track.id, start: Math.round(pos), index: null });
   if (res) {
     setState({ snap: res.snapshot });
-    if (res.errors.length) toast(res.errors.join(" · "), 6000);
+    if (res.errors.length) showToast(res.errors.join(" · "), 6000);
   }
 }
 

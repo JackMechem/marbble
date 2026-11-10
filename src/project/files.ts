@@ -7,7 +7,7 @@ import { type Snapshot } from "../engine/snapshot";
 import { act, call } from "../engine/commands";
 import { getSettings } from "../settings/appSettings";
 import { openProjectPath } from "./startup";
-import { currentTick, getState, setState } from "../state/store";
+import { currentTick, getState, setState, showToast } from "../state/store";
 import { AUDIO_EXTENSIONS } from "./fileDrop";
 
 /** Asks before discarding unsaved changes. Resolves true when it is fine to continue. */
@@ -32,13 +32,7 @@ export async function undoRedo(which: "undo" | "redo") {
   if (!res) return;
   const ids = new Set(res.snapshot.project.tracks.flatMap((t) => t.regions.map((r) => r.id)));
   setState({ snap: res.snapshot, selectedRegions: getState().selectedRegions.filter((id) => ids.has(id)) });
-  setState({
-    toast: {
-      text: res.label ? `${which === "undo" ? "Undo" : "Redo"} ${res.label}` : which === "undo" ? "Nothing to undo" : "Nothing to redo",
-      at: Date.now(),
-      ms: 1800,
-    },
-  });
+  showToast(res.label ? `${which === "undo" ? "Undo" : "Redo"} ${res.label}` : which === "undo" ? "Nothing to undo" : "Nothing to redo", 1800);
 }
 
 export async function openProjectDialog() {
@@ -62,7 +56,7 @@ export async function importAudioDialog() {
   const snap = getState().snap;
   const track = snap?.project.tracks.find((t) => t.id === snap.selected && t.kind === "audio") ?? snap?.project.tracks.find((t) => t.kind === "audio");
   if (!track) {
-    setState({ toast: { text: "Create or select an audio track first", at: Date.now() } });
+    showToast("Create or select an audio track first");
     return;
   }
   const file = await open({ title: "Import Audio File", filters: [{ name: "Audio files", extensions: AUDIO_EXTENSIONS }] });

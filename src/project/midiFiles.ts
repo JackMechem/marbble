@@ -5,7 +5,7 @@ import { open, save } from "./fileDialog";
 import { type Id } from "../engine/project";
 import { type Made } from "../engine/snapshot";
 import { call } from "../engine/commands";
-import { currentTick, getState, setState } from "../state/store";
+import { currentTick, getState, setState, showToast } from "../state/store";
 import { barFloor } from "../lib/time";
 
 const MIDI_EXT = /\.(mid|midi|smf|kar)$/i;
@@ -13,8 +13,6 @@ const MIDI_EXT = /\.(mid|midi|smf|kar)$/i;
 export function isMidiPath(p: string): boolean {
   return MIDI_EXT.test(p);
 }
-
-const toast = (text: string, ms = 3000) => setState({ toast: { text, at: Date.now(), ms } });
 
 /**
  * Imports MIDI files: the first onto `track` (an instrument track) or new tracks inserted at
@@ -38,8 +36,8 @@ export async function importMidiFiles(paths: string[], track: Id | null, start: 
     if (last >= 0) at = last + 1;
   }
   if (made.length) setState({ selectedRegions: made, focus: "regions" });
-  if (errors.length) toast(`Couldn't import ${errors.join(", ")}`, 6000);
-  else if (made.length) toast(paths.length > 1 ? `Imported ${paths.length} MIDI files` : "Imported MIDI file", 2000);
+  if (errors.length) showToast(`Couldn't import ${errors.join(", ")}`, 6000);
+  else if (made.length) showToast(paths.length > 1 ? `Imported ${paths.length} MIDI files` : "Imported MIDI file", 2000);
 }
 
 /** File › Import MIDI File…: onto the selected instrument track at the playhead's bar. */
@@ -60,7 +58,7 @@ export async function importMidiDialog() {
 /** Asks where to save, then writes the MIDI regions `ids` as a Standard MIDI File. */
 export async function exportMidi(ids: Id[], name: string) {
   if (!ids.length) {
-    toast("Select MIDI regions to export");
+    showToast("Select MIDI regions to export", 3000);
     return;
   }
   const dir = getState().snap?.path.replace(/[\\/][^\\/]*$/, "") ?? "";
@@ -70,9 +68,9 @@ export async function exportMidi(ids: Id[], name: string) {
   if (!isMidiPath(path)) path += ".mid";
   try {
     await invoke("export_midi", { ids, path });
-    toast(`Exported ${path.split(/[\\/]/).pop()}`, 2500);
+    showToast(`Exported ${path.split(/[\\/]/).pop()}`, 2500);
   } catch (e) {
-    toast(String(e), 6000);
+    showToast(String(e), 6000);
   }
 }
 
@@ -88,7 +86,7 @@ export function exportSelectionMidi() {
   }
   const t = p.tracks.find((x) => x.id === s.snap?.selected);
   if (t?.kind === "instrument") exportTrackMidi(t.id);
-  else toast("Select MIDI regions or an instrument track to export");
+  else showToast("Select MIDI regions or an instrument track to export", 3000);
 }
 
 /** Exports every unmuted MIDI region on a track. */

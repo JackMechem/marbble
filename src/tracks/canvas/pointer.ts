@@ -1,12 +1,12 @@
 // The Tracks area's canvas under the pointer: what a press hits, dragging regions (move, copy, trim,
 // fade, loop), the marquee, take swipes, the context menus and the hover cursor. Built on each render,
 // with window listeners only while a drag is on.
-import { type Id } from "../../engine/project";
-import { type Region } from "../../engine/regions";
+import { type Id, type Project, type Track } from "../../engine/project";
+import { type Region, type Take, type TakeFolder } from "../../engine/regions";
 import { act, actMade } from "../../engine/commands";
 import { getState, setState } from "../../state/store";
 import { waveCache } from "../regions/waveform";
-import { PEAK_BUCKET, snapPos } from "../../lib/time";
+import { PEAK_BUCKET } from "../../lib/time";
 import { tempoMap } from "../../lib/tempo";
 import { indexAt, visibleSteps } from "../trackLayout";
 import { viewport } from "../viewport";
@@ -28,12 +28,14 @@ import { moveAutomationAnswer } from "../regions/moveAutomation";
 import { movedStart, placedAt } from "../regions/musicalMove";
 import { lanesPast, splitDrop } from "../regions/newTrackDrag";
 import { onGainHandle, startGainDrag } from "../regions/regionGainDrag";
-import { activeTool, notePointer, pressOnMarquee, toolHover, toolMouseDown, type ToolView } from "../tools/trackTools";
+import { activeTool, notePointer, pressOnMarquee, toolHover, toolMouseDown, type ToolHit, type ToolView } from "../tools/trackTools";
 import { regionCrossfades, setCrossfadeDrag } from "../regions/regionDraw";
-import { grabKind as regionGrabKind } from "../regions/regionGrab";
+import { grabKind as regionGrabKind, type GrabKind, type RegionPress } from "../regions/regionGrab";
 import { editorPaneFor } from "../regions/regionEditor";
-import { trimAll, trimDelta, trimLimits } from "../regions/regionTrim";
-import { dragNewLanes, dragTarget, type TracksRefs } from "./drag";
+import { trimAll, trimDelta, trimLimits, type TrimEdge } from "../regions/regionTrim";
+import { snapToTracksGrid } from "../gridSnap";
+import { dragWith, pastDragThreshold } from "../../ui/pointerDrag";
+import { dragNewLanes, dragTarget, type Drag, type TracksRefs } from "./drag";
 
 /** Logic's loop tool pointer: a circular arrow. */
 const LOOP_CURSOR =
@@ -41,6 +43,56 @@ const LOOP_CURSOR =
 
 /** How near (px) a comp section's edge a press in a take row grabs the edge instead of swiping. */
 const EDGE_GRAB_PX = 4;
+/** However short a region, this much of it (px) can be grabbed. */
+const MIN_GRAB_W_PX = 2;
+
+type FolderRegion = Region & { takes: TakeFolder };
+
+/** What the pointer is over: content x and y, the track's index and its lane, the region there
+ *  (or a loop repetition of it), the time under the pointer and, in an open take folder's rows
+ *  below the lane, the folder and the take row. */
+interface Hit extends ToolHit, RegionPress {
+  row: { region: FolderRegion; take: Take } | null;
+}
+
+/** The region at content x on a track's lane: the topmost (last drawn) region body, else a loop
+ *  repetition, since bodies are drawn over repetitions. */
+function regionAt(track: Track, x: number, pps: number): { region?: Region; inLoop: boolean } {
+  for (let k = track.regions.length - 1; k >= 0; k--) {
+    const r = track.regions[k];
+    const rx = r.start * pps;
+    if (x >= rx && x <= rx + Math.max(MIN_GRAB_W_PX, r.length * pps)) return { region: r, inLoop: false };
+  }
+  for (let k = track.regions.length - 1; k >= 0; k--) {
+    const r = track.regions[k];
+    if (isLooped(r) && x > (r.start + r.length) * pps && x <= regionEnd(r) * pps) return { region: r, inLoop: true };
+  }
+  return { inLoop: false };
+}
+
+/** In the take rows under a track's lane, the open folder at content x and its take row at
+ *  `localY`. */
+function takeRowAt(track: Track, x: number, localY: number, laneH: number, pps: number): Hit["row"] {
+  let row: Hit["row"] = null;
+  for (const r of track.regions) {
+    if (!isFolder(r) || !isOpen(r.id) || x < r.start * pps || x > (r.start + r.length) * pps) continue;
+    const take = takeAtRow(r, localY, laneH);
+    if (take) row = { region: r, take };
+  }
+  return row;
+}
+
+/** The regions a trim of `grabbed`'s edge changes: it and the other selected regions, except on
+ *  frozen tracks, each with where it is and how far it can go. */
+function trimmedRegions(project: Project, grabbed: Region, sel: Id[]) {
+  return project.tracks.flatMap((t) =>
+    t.frozen
+      ? []
+      : t.regions
+          .filter((x) => x.id === grabbed.id || sel.includes(x.id))
+          .map((x) => ({ id: x.id, span: { start: x.start, length: x.length }, lim: trimLimits(x, x.content.type === "audio" ? waveCache.get(x.content.clip)?.frames : undefined) })),
+  );
+}
 
 type Refs = TracksRefs & {
   scrollRef: React.RefObject<HTMLDivElement | null>;
@@ -49,8 +101,10 @@ type Refs = TracksRefs & {
   showAutomation: boolean;
 };
 
+/** The Tracks canvas's mouse handlers, built on each render from its refs. */
 export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, hoverRef, requestDraw, showAutomation }: Refs) {
-  const hit = (e: React.MouseEvent) => {
+  /** What the pointer is over, or null while no project is open. */
+  const hit = (e: React.MouseEvent): Hit | null => {
     const el = scrollRef.current!;
     const rect = el.getBoundingClientRect();
     const x = e.clientX - rect.left + el.scrollLeft;
@@ -59,49 +113,27 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
     if (!project) return null;
     const ti = y < layout.total ? indexAt(layout, y) : -1;
     const track = ti >= 0 ? project.tracks[ti] : undefined;
-    let region: Region | undefined;
-    let inLoop = false;
-    // Below the lane, in an open take folder's rows: the folder and the take row.
     const laneH = ti >= 0 ? layout.heights[ti] - layout.takeRows[ti] : 0;
-    let row: { region: Region & { takes: NonNullable<Region["takes"]> }; take: NonNullable<Region["takes"]>["takes"][number] } | null = null;
-    if (track && layout.takeRows[ti] && y - layout.tops[ti] >= laneH) {
-      for (const r of track.regions) {
-        if (!isFolder(r) || !isOpen(r.id) || x < r.start * pps || x > (r.start + r.length) * pps) continue;
-        const take = takeAtRow(r, y - layout.tops[ti], laneH);
-        if (take) row = { region: r, take };
-      }
-    } else if (track) {
-      // Topmost (last drawn) region wins; region bodies are drawn over loop repetitions.
-      for (let k = track.regions.length - 1; k >= 0 && !region; k--) {
-        const r = track.regions[k];
-        const rx = r.start * pps;
-        if (x >= rx && x <= rx + Math.max(2, r.length * pps)) region = r;
-      }
-      for (let k = track.regions.length - 1; k >= 0 && !region; k--) {
-        const r = track.regions[k];
-        if (isLooped(r) && x > (r.start + r.length) * pps && x <= regionEnd(r) * pps) {
-          region = r;
-          inLoop = true;
-        }
-      }
-    }
     const localY = ti >= 0 ? y - layout.tops[ti] : 0;
+    const inTakeRows = !!track && layout.takeRows[ti] > 0 && localY >= laneH;
+    const row = track && inTakeRows ? takeRowAt(track, x, localY, laneH, pps) : null;
+    const { region, inLoop } = track && !inTakeRows ? regionAt(track, x, pps) : { region: undefined, inLoop: false };
     return { x, y, ti, track, region, inLoop, localY, laneH, sample: x / pps, row };
   };
 
   /** In an open folder's take row, the comp section edge under the pointer (take time), if any. */
-  const rowEdge = (h: NonNullable<ReturnType<typeof hit>>) => {
+  const rowEdge = (h: Hit) => {
     if (!h.row || isMidiFolder(h.row.region)) return null;
     const pps = live.current.pps;
     return edgeNear(h.row.region.takes, h.row.take.id, h.sample + takeShift(h.row.region), EDGE_GRAB_PX / pps);
   };
 
   /** What a press at `h` on a region grabs (see regionGrab.ts). */
-  const grabKind = (h: NonNullable<ReturnType<typeof hit>>) => regionGrabKind(h, live.current.pps, regionCrossfades);
+  const grabKind = (h: Hit) => regionGrabKind(h, live.current.pps, regionCrossfades);
 
   /** On a take folder's name bar, whether `h` is on its triangle or its badge (see comps.ts).
    *  A short folder is its name bar alone; below where the bar would end, its trims win. */
-  const folderHit = (h: NonNullable<ReturnType<typeof hit>>) => {
+  const folderHit = (h: Hit) => {
     const r = h.region;
     if (!r || !isFolder(r) || h.inLoop) return null;
     const g = regionBar(h.laneH - 3);
@@ -153,8 +185,23 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
       openMenu(e.clientX, e.clientY, takeFolderMenu(r));
       return;
     }
+    const sel = selectOnPress(e, r);
+    if (!sel) return;
+    // A frozen track's regions can be selected but not moved, trimmed or faded.
+    if (h.track.frozen) {
+      if (e.detail === 2) return openEditor(r);
+      refuseFrozen([h.track.id]);
+      return;
+    }
+    if (!h.inLoop && onGainHandle(r, h.x, h.localY, h.laneH, pps, scrollRef.current!.scrollLeft, viewport().width)) return startGainDrag(e, project, r, sel, requestDraw);
+    startRegionDrag(e, h, project, r, sel);
+  };
+
+  /** Selects as a press on region `r` does: Shift adds it and its linked regions, or takes it out
+   *  when it's selected; a plain press on an unselected region selects it (and those linked to
+   *  it) alone. Returns the selection, or null when Shift took `r` out, which drags nothing. */
+  const selectOnPress = (e: React.MouseEvent, r: Region): Id[] | null => {
     let sel = getState().selectedRegions;
-    // Shift-clicking a selected region only takes it out of the selection; nothing is dragged.
     const deselect = e.shiftKey && sel.includes(r.id);
     if (e.shiftKey) {
       sel = deselect ? sel.filter((i) => i !== r.id) : [...sel, ...linkedRegions(r.id)];
@@ -162,50 +209,37 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
       sel = linkedRegions(r.id);
     }
     setState({ selectedRegions: sel, focus: "regions" });
-    if (deselect) return;
-    // A frozen track's regions can be selected but not moved, trimmed or faded.
-    if (h.track.frozen) {
-      if (e.detail === 2) return openEditor(r);
-      refuseFrozen([h.track.id]);
-      return;
-    }
+    return deselect ? null : sel;
+  };
 
-    if (!h.inLoop && onGainHandle(r, h.x, h.localY, h.laneH, pps, scrollRef.current!.scrollLeft, viewport().width)) return startGainDrag(e, project, r, sel, requestDraw);
+  /** Dragging region `r` by what the press grabbed (grabKind): moving or copying the selection,
+   *  trimming an edge, a fade or the loop. The drag shows in `dragRef` and is sent on release;
+   *  a click without a drag opens the editor (double-click) or moves the playhead. */
+  const startRegionDrag = (e: React.MouseEvent, h: Hit, project: Project, r: Region, sel: Id[]) => {
+    const { pps } = live.current;
     const kind = grabKind(h);
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const startContentY = h.y;
     const startScrollTop = scrollRef.current!.scrollTop;
-    const startIndex = h.ti;
-    let moved = false;
     // A trim moves the same edge of every selected region, as in Logic (frozen tracks' stay).
-    const trimEdge = kind === "left" || kind === "right" ? kind : null;
-    const trimming = trimEdge
-      ? project.tracks.flatMap((t) =>
-          t.frozen
-            ? []
-            : t.regions
-                .filter((x) => x.id === r.id || sel.includes(x.id))
-                .map((x) => ({ id: x.id, span: { start: x.start, length: x.length }, lim: trimLimits(x, x.content.type === "audio" ? waveCache.get(x.content.clip)?.frames : undefined) })),
-        )
-      : [];
+    const trimEdge: TrimEdge | null = kind === "left" || kind === "right" ? kind : null;
+    const trimming = trimEdge ? trimmedRegions(project, r, sel) : [];
     dragRef.current = { kind, ids: kind === "move" ? sel : trimEdge ? trimming.map((x) => x.id) : [r.id], dx: 0, dTrack: 0, grabbed: r.id };
     const fadeFrom = r.content.type === "audio" ? (kind === "fadeIn" ? r.content.fade_in : r.content.fade_out) : 0;
     // Dragging a crossfade's handle resizes it about its centre.
     const crossfading = kind === "fadeOut" && !!regionCrossfades(r.id)?.out;
-    const snap = (v: number) => snapPos(project, v, getState().snapMode, getState().pxPerBeat);
+    const snap = (v: number) => snapToTracksGrid(project, v);
+    let moved = false;
 
     const move = (ev: MouseEvent) => {
-      const dxPx = ev.clientX - startX;
-      const dyPx = ev.clientY - startY;
-      if (!moved && Math.abs(dxPx) < 3 && Math.abs(dyPx) < 3) return;
+      const dxPx = ev.clientX - e.clientX;
+      const dyPx = ev.clientY - e.clientY;
+      if (!moved && !pastDragThreshold(dxPx, dyPx)) return;
       moved = true;
       const d = dragRef.current!;
       d.dx = dxPx / pps;
       // Scrolling with the wheel mid-drag counts, so a long project's empty area can be reached.
-      const y = startContentY + dyPx + scrollRef.current!.scrollTop - startScrollTop;
+      const y = h.y + dyPx + scrollRef.current!.scrollTop - startScrollTop;
       const past = kind === "move" ? lanesPast(y, live.current.layout.total, getState().trackHeight) : 0;
-      d.dTrack = visibleSteps(live.current.layout, startIndex, indexAt(live.current.layout, y)) + past;
+      d.dTrack = visibleSteps(live.current.layout, h.ti, indexAt(live.current.layout, y)) + past;
       d.copy = kind === "move" && ev.altKey;
       if (kind === "fadeIn" || kind === "fadeOut") {
         const other = r.content.type === "audio" ? (kind === "fadeIn" ? r.content.fade_out : r.content.fade_in) : 0;
@@ -226,60 +260,64 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
       requestDraw();
     };
     const up = () => {
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseup", up);
       const d = dragRef.current!;
       dragRef.current = null;
       setCrossfadeDrag(null);
-      if (!moved) {
-        if (e.detail === 2) openEditor(r);
-        clickLocate(e, true);
-        requestDraw();
-        return;
-      }
-      if (kind === "move") {
-        const newStart = Math.max(0, snap(r.start + d.dx));
-        // With snapping on, the others keep their bars and beats across tempo changes.
-        const musical = getState().snapMode !== "off";
-        const tracks = project.tracks;
-        const layout = live.current.layout;
-        const moves = d.ids.flatMap((id) => {
-          const ti = tracks.findIndex((t) => t.regions.some((x) => x.id === id));
-          if (ti < 0) return [];
-          const reg = tracks[ti].regions.find((x) => x.id === id)!;
-          const target = tracks[dragTarget(layout, ti, d.dTrack, tracks)];
-          return [{ reg, id, source: ti, start: movedStart(tempoMap(project), reg.start, r.start, newStart, musical), track: target.id }];
-        });
-        // Past the last track: new tracks for the lanes that fell off the end, in the one edit.
-        const { onTracks, onNew } = splitDrop(moves, dragNewLanes(layout, d, tracks));
-        if (d.copy) {
-          // Option-drag: copies at the drop position in one undo step; the copies get selected.
-          const items = onTracks.map((m) => [m.track, placedAt(m.reg, m.start)]);
-          const lanes = onNew.map((l) => [tracks[l.source].id, l.moves.map((m) => placedAt(m.reg, m.start))]);
-          (lanes.length ? actMade("copy_regions_to_new_tracks", { items, lanes }) : actMade("paste_regions", { items, offset: 0, label: "Copy Regions" })).then((made) => made && setState({ selectedRegions: made }));
-        } else {
-          const plain = onTracks.map(({ id, start, track }) => ({ id, start, track }));
-          const lanes = onNew.map((l) => [tracks[l.source].id, l.moves.map(({ id, start }) => ({ id, start }))]);
-          // Regions going onto a new track leave their automation behind, so only the others ask.
-          moveAutomationAnswer(project, plain).then((automation) => {
-            if (lanes.length) actMade("move_regions_to_new_tracks", { moves: plain, lanes, automation });
-            else act("move_regions", { moves: plain, automation });
-          });
-        }
-      } else if (d.loopEnd !== undefined) {
-        const end = Math.round(d.loopEnd);
-        act("set_region_loop", { id: r.id, loopEnd: end > r.start + r.length ? end : null });
-      } else if (d.fade !== undefined) {
-        act("set_region_fades", { ids: [r.id], fadeIn: kind === "fadeIn" ? d.fade : null, fadeOut: kind === "fadeOut" ? d.fade : null });
-      } else if (d.spans?.size) {
-        // One undo step for them all.
-        const resizes = [...d.spans].map(([id, x]) => [id, Math.round(x.start), Math.round(x.length)]);
-        if (resizes.length === 1) act("resize_region", { id: resizes[0][0], start: resizes[0][1], length: resizes[0][2] });
-        else act("resize_regions", { resizes });
-      }
+      if (moved) return dropRegionDrag(project, r, kind, d);
+      if (e.detail === 2) openEditor(r);
+      clickLocate(e, true);
+      requestDraw();
     };
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", up);
+    dragWith(move, up);
+  };
+
+  /** Sends the edit a region drag made, on release. */
+  const dropRegionDrag = (project: Project, r: Region, kind: GrabKind, d: Drag) => {
+    if (kind === "move") {
+      dropMove(project, r, d);
+    } else if (d.loopEnd !== undefined) {
+      const end = Math.round(d.loopEnd);
+      act("set_region_loop", { id: r.id, loopEnd: end > r.start + r.length ? end : null });
+    } else if (d.fade !== undefined) {
+      act("set_region_fades", { ids: [r.id], fadeIn: kind === "fadeIn" ? d.fade : null, fadeOut: kind === "fadeOut" ? d.fade : null });
+    } else if (d.spans?.size) {
+      // One undo step for them all.
+      const resizes = [...d.spans].map(([id, x]) => [id, Math.round(x.start), Math.round(x.length)]);
+      if (resizes.length === 1) act("resize_region", { id: resizes[0][0], start: resizes[0][1], length: resizes[0][2] });
+      else act("resize_regions", { resizes });
+    }
+  };
+
+  /** Moves the dragged regions (`r` the one grabbed) where the drag left them, or with Option
+   *  copies them there; regions dragged past the last track go onto new tracks, in the same edit. */
+  const dropMove = (project: Project, r: Region, d: Drag) => {
+    const newStart = Math.max(0, snapToTracksGrid(project, r.start + d.dx));
+    // With snapping on, the others keep their bars and beats across tempo changes.
+    const musical = getState().snapMode !== "off";
+    const tracks = project.tracks;
+    const layout = live.current.layout;
+    const moves = d.ids.flatMap((id) => {
+      const ti = tracks.findIndex((t) => t.regions.some((x) => x.id === id));
+      if (ti < 0) return [];
+      const reg = tracks[ti].regions.find((x) => x.id === id)!;
+      const target = tracks[dragTarget(layout, ti, d.dTrack, tracks)];
+      return [{ reg, id, source: ti, start: movedStart(tempoMap(project), reg.start, r.start, newStart, musical), track: target.id }];
+    });
+    const { onTracks, onNew } = splitDrop(moves, dragNewLanes(layout, d, tracks));
+    if (d.copy) {
+      // Option-drag: copies at the drop position in one undo step; the copies get selected.
+      const items = onTracks.map((m) => [m.track, placedAt(m.reg, m.start)]);
+      const lanes = onNew.map((l) => [tracks[l.source].id, l.moves.map((m) => placedAt(m.reg, m.start))]);
+      (lanes.length ? actMade("copy_regions_to_new_tracks", { items, lanes }) : actMade("paste_regions", { items, offset: 0, label: "Copy Regions" })).then((made) => made && setState({ selectedRegions: made }));
+    } else {
+      const plain = onTracks.map(({ id, start, track }) => ({ id, start, track }));
+      const lanes = onNew.map((l) => [tracks[l.source].id, l.moves.map(({ id, start }) => ({ id, start }))]);
+      // Regions going onto a new track leave their automation behind, so only the others ask.
+      moveAutomationAnswer(project, plain).then((automation) => {
+        if (lanes.length) actMade("move_regions_to_new_tracks", { moves: plain, lanes, automation });
+        else act("move_regions", { moves: plain, automation });
+      });
+    }
   };
 
   /** A double-click on a region opens it in its editor: the Piano Roll, the Audio Track editor
@@ -295,19 +333,17 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
     if (!project) return;
     const el = scrollRef.current!;
     const x = e.clientX - el.getBoundingClientRect().left + el.scrollLeft;
-    act("locate", { pos: Math.round(Math.max(0, snapPos(project, x / pps, getState().snapMode, getState().pxPerBeat))) });
+    act("locate", { pos: Math.round(Math.max(0, snapToTracksGrid(project, x / pps))) });
   };
 
   /** Rubber-band selection, from empty lane space: the regions the marquee touches are selected
    *  (Shift adds them to the selection). A click without a drag deselects, as before. */
-  const startMarquee = (e: React.MouseEvent, h: NonNullable<ReturnType<typeof hit>>) => {
+  const startMarquee = (e: React.MouseEvent, h: Hit) => {
     const el = scrollRef.current!;
     const base = e.shiftKey ? getState().selectedRegions : [];
-    const startX = e.clientX;
-    const startY = e.clientY;
     let moved = false;
     const move = (ev: MouseEvent) => {
-      if (!moved && Math.abs(ev.clientX - startX) < 3 && Math.abs(ev.clientY - startY) < 3) return;
+      if (!moved && !pastDragThreshold(ev.clientX - e.clientX, ev.clientY - e.clientY)) return;
       moved = true;
       const rect = el.getBoundingClientRect();
       const x = ev.clientX - rect.left + el.scrollLeft;
@@ -328,51 +364,44 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
       requestDraw();
     };
     const up = () => {
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseup", up);
       marqueeRef.current = null;
       if (!moved && !e.shiftKey) setState({ selectedRegions: [] });
       if (!moved) clickLocate(e, false);
       requestDraw();
     };
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", up);
+    dragWith(move, up);
   };
 
   /** Dragging a comp section's edge in a take row: a border between two sections moves both, an
    *  outer edge its own section (snapped, inside the folder). */
-  const startEdgeDrag = (e: React.MouseEvent, r: Region & { takes: NonNullable<Region["takes"]> }, edge: number) => {
+  const startEdgeDrag = (e: React.MouseEvent, r: FolderRegion, edge: number) => {
     const { project, pps } = live.current;
     if (!project) return;
     setState({ selectedRegions: [r.id], focus: "regions" });
     const el = scrollRef.current!;
     const left = el.getBoundingClientRect().left - el.scrollLeft;
-    const snap = (v: number) => Math.min(r.start + r.length, Math.max(r.start, snapPos(project, v, getState().snapMode, getState().pxPerBeat)));
+    const snap = (v: number) => Math.min(r.start + r.length, Math.max(r.start, snapToTracksGrid(project, v)));
     const shift = takeShift(r);
-    const startX = e.clientX;
     let moved = false;
     const move = (ev: MouseEvent) => {
-      if (!moved && Math.abs(ev.clientX - startX) < 3) return;
+      if (!moved && !pastDragThreshold(ev.clientX - e.clientX)) return;
       moved = true;
       swipeRef.current = { region: r.id, edge, to: snap((ev.clientX - left) / pps) + shift };
       requestDraw();
     };
     const up = () => {
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseup", up);
       const sw = swipeRef.current;
       swipeRef.current = null;
       if (moved && sw && "edge" in sw) moveCompEdge(r, edge - shift, sw.to - shift);
       else requestDraw();
     };
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", up);
+    dragWith(move, up);
   };
 
   /** Quick Swipe Comping: dragging across a take row puts that stretch in the comp and selects
    *  it; a click without a drag makes the whole take the one heard, or, on a part of the take
    *  already in the comp, selects that comp section (for the arrow keys and the row's menu). */
-  const startSwipe = (e: React.MouseEvent, r: Region & { takes: NonNullable<Region["takes"]> }, take: Id) => {
+  const startSwipe = (e: React.MouseEvent, r: FolderRegion, take: Id) => {
     const { project, pps } = live.current;
     if (!project) return;
     setState({ selectedRegions: [r.id], focus: "regions" });
@@ -380,13 +409,12 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
     if (isMidiFolder(r)) return act("select_take", { region: r.id, take });
     const el = scrollRef.current!;
     const left = el.getBoundingClientRect().left - el.scrollLeft;
-    const snap = (v: number) => Math.min(r.start + r.length, Math.max(r.start, snapPos(project, v, getState().snapMode, getState().pxPerBeat)));
+    const snap = (v: number) => Math.min(r.start + r.length, Math.max(r.start, snapToTracksGrid(project, v)));
     const toSample = (cx: number) => (cx - left) / pps;
     const from = snap(toSample(e.clientX));
-    const startX = e.clientX;
     let moved = false;
     const move = (ev: MouseEvent) => {
-      if (!moved && Math.abs(ev.clientX - startX) < 3) return;
+      if (!moved && !pastDragThreshold(ev.clientX - e.clientX)) return;
       moved = true;
       const to = snap(toSample(ev.clientX));
       const shift = takeShift(r);
@@ -394,8 +422,6 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
       requestDraw();
     };
     const up = () => {
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseup", up);
       const sw = swipeRef.current;
       swipeRef.current = null;
       const shift = takeShift(r);
@@ -413,8 +439,7 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
         swipeComp(r, take, sw.start - shift, sw.end - shift);
       } else requestDraw();
     };
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", up);
+    dragWith(move, up);
   };
 
   const onContextMenu = (e: React.MouseEvent) => {
@@ -431,7 +456,7 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
     if (!h || !project) return;
     if (h.row) return openMenu(e.clientX, e.clientY, takeFolderMenu(h.row.region, { take: h.row.take.id, at: Math.round(h.sample) }));
     if (!h.region) {
-      const pos = Math.max(0, Math.round(snapPos(project, h.sample, getState().snapMode, getState().pxPerBeat)));
+      const pos = Math.max(0, Math.round(snapToTracksGrid(project, h.sample)));
       if (h.track && h.track.id !== getState().snap?.selected) {
         keepRegionsOn([h.track.id]);
         act("select_track", { id: h.track.id });

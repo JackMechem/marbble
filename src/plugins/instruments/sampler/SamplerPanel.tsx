@@ -13,7 +13,7 @@ import type { FxPanelProps } from "../../builtinEffects";
 import { findFxSlot } from "../../fxHost";
 import { dropOnSampler } from "./samplerDrop";
 import { memorySize, keyName, toZone, type SamplerView, type ZoneView } from "./samplerMap";
-import { setState, useStore } from "../../../state/store";
+import { setState, showToast, useStore } from "../../../state/store";
 import { AUDIO_EXTENSIONS } from "../../../project/fileDrop";
 import { FxGroup } from "../../panels/panelControls";
 import { InstSection, wheelAcross } from "../Instrument";
@@ -23,14 +23,12 @@ import { ZoneWaveform } from "./ZoneWaveform";
 
 type Result<T> = { snapshot: Snapshot; result: T };
 
-const toast = (text: string, ms = 5000) => setState({ toast: { text, at: Date.now(), ms } });
-
 /** A command that returns a snapshot along with something to say. */
 async function callSnap<T>(cmd: string, args: Record<string, unknown>): Promise<T | null> {
   const r = await call<Result<T>>(cmd, args);
   if (!r) return null;
   setState({ snap: r.snapshot });
-  if (r.snapshot.warning) toast(r.snapshot.warning, 8000);
+  if (r.snapshot.warning) showToast(r.snapshot.warning, 8000);
   return r.result;
 }
 
@@ -58,12 +56,12 @@ function RecordControls({ track, onDone }: { track: Id; onDone: (zone: number) =
 
   const start = async () => {
     const input = options[choice]?.value;
-    if (!input) return toast("No audio input is open. Choose one in Settings › Audio.");
+    if (!input) return showToast("No audio input is open. Choose one in Settings › Audio.", 5000);
     try {
       await invoke("sampler_record_start", { track, input });
       setStatus({ secs: 0, peak: 0 });
     } catch (e) {
-      toast(String(e));
+      showToast(String(e), 5000);
     }
   };
   const stop = async () => {
@@ -148,7 +146,7 @@ export function SamplerPanel(props: FxPanelProps) {
   const slice = async (sensitivity: number) => {
     if (!zone) return;
     const n = await callSnap<number>("sampler_slice", { track, zone: zone.id, sensitivity });
-    if (n !== null) toast(`${n} slice${n === 1 ? "" : "s"}, from C1 up`, 3000);
+    if (n !== null) showToast(`${n} slice${n === 1 ? "" : "s"}, from C1 up`, 3000);
   };
   const broken = zones.filter((z) => z.error);
   const gb = (b: number) => (b / (1 << 30)).toFixed(b < 1 << 30 ? 2 : 1);

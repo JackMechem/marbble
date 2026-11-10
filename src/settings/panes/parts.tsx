@@ -3,12 +3,9 @@
 import { useRef } from "react";
 import { open } from "../../project/fileDialog";
 import { updateSettings, type Prefs, type UiPrefs } from "../appSettings";
-import { setState } from "../../state/store";
 import { sheetKey } from "../../ui/Form";
 import { useSheetKeys } from "../../keyboard/sheetKeys";
 import { PathText } from "../../ui/PathText";
-
-export const toast = (text: string, ms = 3000) => setState({ toast: { text, at: Date.now(), ms } });
 
 export function SheetFrame({ title, children, onClose, width, className }: { title: string; children: React.ReactNode; onClose: () => void; width: number; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);

@@ -6,14 +6,12 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { call } from "../../engine/commands";
 import { getSettings } from "../../settings/appSettings";
-import { setState } from "../../state/store";
+import { showToast } from "../../state/store";
 import { effectiveChannel, failedText, httpFailure, updateOffer, upToDateText, type UpdateOffer } from "./updateCheck";
 
 /** The latest releases, newest first. */
 const RELEASES = "https://api.github.com/repos/JackMechem/marbble/releases?per_page=30";
 const TIMEOUT_MS = 15000;
-
-const toast = (text: string, ms: number) => setState({ toast: { text, at: Date.now(), ms } });
 
 let running: string | null = null;
 let asked: Promise<string | null> | null = null;
@@ -95,13 +93,13 @@ export async function checkForUpdates(manual: boolean) {
   try {
     releases = await fetchReleases();
   } catch (reason) {
-    if (manual) toast(failedText(String(reason)), 6000);
+    if (manual) showToast(failedText(String(reason)), 6000);
     else console.warn(`Update check: ${reason}`);
     return;
   }
   const found = updateOffer(releases, channel, version);
   if (found) setOffer(found);
-  else if (manual) toast(upToDateText(releases, channel, version), 5000);
+  else if (manual) showToast(upToDateText(releases, channel, version), 5000);
 }
 
 /** The check at launch, unless Settings › General turns it off. The version is asked for

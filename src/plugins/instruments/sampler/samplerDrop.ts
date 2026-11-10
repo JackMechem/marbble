@@ -4,7 +4,7 @@ import { type Id } from "../../../engine/project";
 import { type Snapshot } from "../../../engine/snapshot";
 import { call } from "../../../engine/commands";
 import { isSfzPath, keyAt } from "./samplerMap";
-import { setState } from "../../../state/store";
+import { setState, showToast } from "../../../state/store";
 
 /** The sampler panel under a point, and the key if it's over the map. */
 export function samplerAt(cx: number, cy: number): { track: Id; key: number | null } | null {
@@ -39,8 +39,6 @@ interface SfzReport {
   missing: string[];
 }
 
-const toast = (text: string, ms: number) => setState({ toast: { text, at: Date.now(), ms } });
-
 /**
  * Takes files: an SFZ replaces the zones, audio is added, mapped by the note in its name or
  * chromatically (see `mapping.rs`). Dropped on the map, one file sits on that key and several go
@@ -49,7 +47,7 @@ const toast = (text: string, ms: number) => setState({ toast: { text, at: Date.n
 export async function dropOnSampler(track: Id, paths: string[], key: number | null): Promise<string | null> {
   const sfz = paths.find(isSfzPath);
   if (sfz) {
-    toast("Loading the SFZ file…", 60000);
+    showToast("Loading the SFZ file…", 60000);
     const r = await call<{ snapshot: Snapshot; result: SfzReport }>("sampler_load_sfz", { track, path: sfz });
     if (!r) return null;
     setState({ snap: r.snapshot });
@@ -59,14 +57,14 @@ export async function dropOnSampler(track: Id, paths: string[], key: number | nu
     if (s.left_out.length) parts.push(`left out: ${s.left_out.slice(0, 3).join(", ")}`);
     if (s.ignored.length) parts.push(`ignored: ${s.ignored.map(([k, n]) => `${k} ×${n}`).join(", ")}`);
     const text = parts.join(". ");
-    toast(parts[0], 3000);
+    showToast(parts[0], 3000);
     return text;
   }
-  toast(paths.length > 1 ? `Loading ${paths.length} files…` : "Loading…", 60000);
+  showToast(paths.length > 1 ? `Loading ${paths.length} files…` : "Loading…", 60000);
   const r = await call<{ snapshot: Snapshot; result: Added }>("sampler_add_files", { track, paths, atKey: key });
   if (!r) return null;
   setState({ snap: r.snapshot });
   const { zones, errors } = r.result;
-  toast(errors.length ? `Added ${zones.length}. ${errors.join(" · ")}` : `Added ${zones.length} zone${zones.length === 1 ? "" : "s"}`, errors.length ? 8000 : 2000);
+  showToast(errors.length ? `Added ${zones.length}. ${errors.join(" · ")}` : `Added ${zones.length} zone${zones.length === 1 ? "" : "s"}`, errors.length ? 8000 : 2000);
   return null;
 }

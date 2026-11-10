@@ -6,9 +6,8 @@ import { type Id, type Track } from "../engine/project";
 import { type Snapshot } from "../engine/snapshot";
 import { act, call } from "../engine/commands";
 import { isBouncing, setBouncing } from "../project/bounce/bounce";
-import { getState, setState } from "../state/store";
+import { getState, setState, showToast } from "../state/store";
 
-const toast = (text: string, ms = 3000) => setState({ toast: { text, at: Date.now(), ms } });
 const tracks = (): Track[] => getState().snap?.project.tracks ?? [];
 
 /** Audio and software instrument tracks have a Freeze button. */
@@ -21,7 +20,7 @@ export const canFreeze = (t: Track) => t.kind === "audio" || t.kind === "instrum
 export function refuseFrozen(ids: Id[]): boolean {
   const t = tracks().find((x) => ids.includes(x.id) && x.frozen);
   if (!t) return false;
-  toast(`${t.name} is frozen. Unfreeze it to edit its regions and plug-ins.`);
+  showToast(`${t.name} is frozen. Unfreeze it to edit its regions and plug-ins.`, 3000);
   return true;
 }
 
@@ -31,13 +30,13 @@ export async function freezeTracks(ids: Id[]) {
   if (!todo.length || isBouncing()) return;
   const label = todo.length > 1 ? `${todo.length} tracks` : todo[0].name;
   setBouncing(true);
-  toast(`Freezing ${label}…`, 60000);
-  const off = await listen<number>("bounce-progress", (e) => toast(`Freezing ${label}… ${Math.round(e.payload * 100)}%`, 60000));
+  showToast(`Freezing ${label}…`, 60000);
+  const off = await listen<number>("bounce-progress", (e) => showToast(`Freezing ${label}… ${Math.round(e.payload * 100)}%`, 60000));
   try {
     const snap = await call<Snapshot>("freeze_tracks", { ids: todo.map((t) => t.id) });
     if (snap) {
       setState({ snap });
-      toast(`Froze ${label}`, 1500);
+      showToast(`Froze ${label}`, 1500);
     }
   } finally {
     off();

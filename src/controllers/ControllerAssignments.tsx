@@ -28,7 +28,7 @@ import {
 import { commandLabel, keyHint, midiCommands } from "../keyboard/keymap";
 import { cancelLearn, learn, learnCommand } from "./learn";
 import type { MenuItem } from "../ui/Menu";
-import { onTick, setState, useStore } from "../state/store";
+import { onTick, setState, showToast, useStore } from "../state/store";
 import { Sheet } from "../ui/Sheet";
 import { Check, NumberField, Select } from "../ui/Form";
 import { openMenuAt } from "../ui/Menu";
@@ -203,7 +203,7 @@ export function LearnBanner() {
     () =>
       onTick((t) => {
         setName(t.learn ?? null);
-        if (t.learned) setState({ toast: { text: t.learned, at: Date.now(), ms: 3000 } });
+        if (t.learned) showToast(t.learned, 3000);
       }),
     [],
   );

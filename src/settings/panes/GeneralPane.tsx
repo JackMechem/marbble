@@ -4,11 +4,11 @@ import { act, call } from "../../engine/commands";
 import { moveFolderKeys } from "../../app/oldName";
 import { loadSettings, useSettings } from "../appSettings";
 import { oldFolderNote, type OldProjectsFolder } from "../settingsText";
-import { useStore } from "../../state/store";
+import { showToast, useStore } from "../../state/store";
 import { effectiveChannel } from "../../app/updates/updateCheck";
 import { useRunningVersion } from "../../app/updates/updates";
 import { Check, NumberField, Select } from "../../ui/Form";
-import { Foot, Row, Section, setPrefs, setUi, FolderField, toast } from "./parts";
+import { Foot, Row, Section, setPrefs, setUi, FolderField } from "./parts";
 
 export function GeneralPane({ close }: { close: () => void }) {
   const s = useSettings((s) => s);
@@ -31,7 +31,7 @@ export function GeneralPane({ close }: { close: () => void }) {
     // The backend moved the folder settings with it; take them back before anything saves the old ones.
     await loadSettings();
     setRenamed((n) => n + 1);
-    toast(`Renamed to ${oldFolder.new}`);
+    showToast(`Renamed to ${oldFolder.new}`, 3000);
   };
   const g = s.prefs.general;
   const version = useRunningVersion();

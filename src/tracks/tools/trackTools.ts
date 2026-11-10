@@ -10,7 +10,7 @@ import { closeMenu, menuOpen, openMenu, type MenuItem } from "../../ui/Menu";
 import { IS_MAC } from "../../keyboard/keyFormat";
 import { equalPieces, fadeToolEdit, nearerEnd, toolFor, toolForKey, TRACK_TOOLS, type FadeEdit, type FadeRegion, type TrackTool } from "./tools";
 import { dragMarquee, inMarquee, marqueeRows, type Marquee } from "./marquee";
-import { snapPos } from "../../lib/time";
+import { snapToTracksGrid } from "../gridSnap";
 import { tempoMap } from "../../lib/tempo";
 import { crossfadesByRegion, followingRegion } from "../regions/fades";
 import { regionEnd } from "../regions/loops";
@@ -103,7 +103,7 @@ export interface ToolView {
   clickLocate: (e: React.MouseEvent, onRegion: boolean) => void;
 }
 
-const snapped = (p: Project, v: number) => Math.max(0, Math.round(snapPos(p, v, getState().snapMode, getState().pxPerBeat)));
+const snapped = (p: Project, v: number) => Math.max(0, Math.round(snapToTracksGrid(p, v)));
 
 const contentX = (ev: MouseEvent, el: HTMLElement) => ev.clientX - el.getBoundingClientRect().left + el.scrollLeft;
 const contentY = (ev: MouseEvent, el: HTMLElement) => ev.clientY - el.getBoundingClientRect().top + el.scrollTop;

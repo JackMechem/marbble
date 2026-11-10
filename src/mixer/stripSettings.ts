@@ -8,7 +8,7 @@ import { MASTER_ID, type Id, type PluginSlot } from "../engine/project";
 import { act, call } from "../engine/commands";
 import type { MenuItem } from "../ui/Menu";
 import { askName } from "../ui/NameSheet";
-import { getState, setState } from "../state/store";
+import { getState, setState, showToast } from "../state/store";
 
 /** A channel strip setting as the engine hands it over (`StripSetting`). */
 export interface StripSetting {
@@ -41,10 +41,6 @@ function pasteStrip(tracks: Id[]) {
   if (stripClip) return act("paste_strip", { tracks, setting: stripClip });
 }
 
-function toast(text: string) {
-  setState({ toast: { text, at: Date.now() } });
-}
-
 /** Save Channel Strip Setting As…: asks for a name, and before replacing a saved one. */
 async function saveStrip(track: Id, suggested: string) {
   const name = await askName({ title: "Save Channel Strip Setting", label: "Save as:", value: suggested, ok: "Save" });
@@ -53,12 +49,12 @@ async function saveStrip(track: Id, suggested: string) {
   for (;;) {
     try {
       const saved = await invoke<string>("save_strip_setting", { track, name, overwrite });
-      toast(`Saved the channel strip setting “${saved}”`);
+      showToast(`Saved the channel strip setting “${saved}”`);
       return;
     } catch (e) {
       const msg = typeof e === "string" ? e : String(e);
       if (overwrite || !/already exists/.test(msg)) {
-        toast(msg);
+        showToast(msg);
         return;
       }
       const ok = await ask(`A channel strip setting named “${name.trim()}” already exists. Replace it?`, { title: "Save Channel Strip Setting", kind: "warning", okLabel: "Replace" });

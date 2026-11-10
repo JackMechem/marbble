@@ -4,17 +4,14 @@
 //
 // Coordinates: time is in samples; "strip" x/y are CSS pixels in the overview canvas; "view"
 // left/top/width/height are CSS pixels of the Tracks area's scrolling content, as in viewport.ts.
+import { clamp } from "../../lib/clamp.ts";
+import { clampZoom } from "../zoom.ts";
 
 /** Height of the strip in CSS pixels, under its 1px top border. */
 export const OVERVIEW_H = 40;
 /** The band along the top of the strip that holds the cycle range and the markers; the track
  *  rows fill the rest. */
 export const OVERVIEW_BAND = 4;
-/** The horizontal zoom limits in px per beat, the same as Ctrl+wheel over the tracks. */
-export const ZOOM_MIN = 2;
-export const ZOOM_MAX = 400;
-/** Zoom factor per wheel notch, as over the tracks. */
-const ZOOM_STEP = 1.15;
 
 export interface Rect {
   x: number;
@@ -72,8 +69,6 @@ export function overviewRows(tops: number[], heights: number[], total: number, r
   const k = total > 0 ? rowsH / total : 0;
   return tops.map((t, i) => ({ y: rowsTop + t * k, h: heights[i] * k }));
 }
-
-const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
 /** Grows the span [a, b] to at least `min`, around its middle, kept within [lo, hi]. */
 function atLeast(a: number, b: number, min: number, lo: number, hi: number): [number, number] {
@@ -136,14 +131,9 @@ export function zoomFromEdge(
   samplesPerBeat: number,
 ): { pxPerBeat: number; start: number } {
   const span = Math.max(1, edge === "left" ? fixed - dragged : dragged - fixed);
-  const pxPerBeat = clamp((viewWidth / span) * samplesPerBeat, ZOOM_MIN, ZOOM_MAX);
+  const pxPerBeat = clampZoom((viewWidth / span) * samplesPerBeat);
   const shown = (viewWidth / pxPerBeat) * samplesPerBeat;
   return { pxPerBeat, start: Math.max(0, edge === "left" ? fixed - shown : fixed) };
-}
-
-/** One wheel notch of zoom (in for a wheel turned away from the user), within the limits. */
-export function wheelZoom(pxPerBeat: number, deltaY: number): number {
-  return clamp(pxPerBeat * (deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP), ZOOM_MIN, ZOOM_MAX);
 }
 
 /** The scroll that keeps sample `anchor` at `cx` px from the view's left edge at `pps`. */

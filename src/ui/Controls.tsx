@@ -1,7 +1,7 @@
 // The shared controls: fader, knob, slider, level and gain-reduction meters, and the `useDrag` they use.
 import { useEffect, useRef } from "react";
 import type { Id } from "../engine/project";
-import { gainReduction, meterLevels, peakHold, tickSeq, useStore } from "../state/store";
+import { gainReduction, inputMeterKey, meterLevels, peakHold, STEREO_OUT_METER, tickSeq, useStore } from "../state/store";
 import { onFrame } from "../state/frameLoop";
 import { pixelRatio } from "./uiScale";
 import { theme } from "../theme/canvasTheme";
@@ -179,6 +179,9 @@ export function HSlider({ db, onChange, width = 90, onTouchStart, onTouchEnd, la
 
 export type MeterSource = { kind: "track"; id: Id } | { kind: "master" } | { kind: "input"; ch: number };
 
+/** The store's meter key for a source. */
+const meterKeyOf = (s: MeterSource): Id => (s.kind === "master" ? STEREO_OUT_METER : s.kind === "input" ? inputMeterKey(s.ch) : s.id);
+
 const METER_FLOOR = -60;
 
 function level(db: number) {
@@ -251,7 +254,7 @@ export function Meter({
       grad.addColorStop(scale(0), stops[4]);
       grad.addColorStop(1, stops[5]);
     }
-    const key = s.kind === "master" ? -1 : s.kind === "input" ? -100 - s.ch : s.id;
+    const key = meterKeyOf(s);
     let seen = -1;
     // What was last painted, per lane: [level px, hold px], then the clip light. Repaint only
     // when it changes.
@@ -336,7 +339,7 @@ export function GrMeter({ source, height, width = 4 }: { source: MeterSource; he
   const uiScale = useStore((s) => s.uiScale);
   useEffect(() => {
     const s: MeterSource = JSON.parse(src);
-    const key = s.kind === "master" ? -1 : s.kind === "input" ? -100 - s.ch : s.id;
+    const key = meterKeyOf(s);
     const cv = ref.current!;
     const dpr = pixelRatio();
     cv.width = width * dpr;

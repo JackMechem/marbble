@@ -8,7 +8,7 @@ import { act, actMade } from "../../engine/commands";
 import { framePos } from "../../state/frameLoop";
 import * as me from "../midiEdit";
 import { drawGrid, drawKeys, drawLane, drawLaneScale, drawNotes, drawRuler, drawRubber, KEY_W, PR_RULER_H, setupCanvas, velocityColor, xOf, type Grid, type PrView } from "./draw";
-import { getState, setState, type MidiSelection } from "../../state/store";
+import { getState, setState, showToast, type MidiSelection } from "../../state/store";
 import { lengthBbt, samplesPerBeat, toBbt } from "../../lib/time";
 import { barLines, musicalWarp, tempoMap, type Warp } from "../../lib/tempo";
 import { type CurveShape } from "./ccCurves";
@@ -21,18 +21,6 @@ export const local = (e: { clientX: number; clientY: number }, el: HTMLElement) 
   const r = el.getBoundingClientRect();
   return { x: e.clientX - r.left, y: e.clientY - r.top };
 };
-
-/** A press-and-drag on the window, with the handlers removed on release. */
-export function dragWith(move: (e: MouseEvent) => void, up: (e: MouseEvent) => void) {
-  const m = (e: MouseEvent) => move(e);
-  const u = (e: MouseEvent) => {
-    window.removeEventListener("mousemove", m);
-    window.removeEventListener("mouseup", u);
-    up(e);
-  };
-  window.addEventListener("mousemove", m);
-  window.addEventListener("mouseup", u);
-}
 
 export interface Work {
   /** The snapshot's region list this was built from (identity). */
@@ -326,7 +314,7 @@ export function editorCore(refs: Refs) {
   };
 
   /** Controller events live in regions; say so when one is drawn where there's none. */
-  const noRegionHere = () => setState({ toast: { text: "Controller events go in a MIDI region: draw over a region, or a note first to make one", at: Date.now(), ms: 4000 } });
+  const noRegionHere = () => showToast("Controller events go in a MIDI region: draw over a region, or a note first to make one", 4000);
 
   const selectRegionOf = (n: PNote) => {
     if (n.region !== live.current.focus) setState({ selectedRegions: [n.region], focus: "regions" });

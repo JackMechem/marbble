@@ -3,9 +3,9 @@ import { type ClickSettings, type ClickSound } from "../../engine/project";
 import { act } from "../../engine/commands";
 import { keyHint } from "../../keyboard/keymap";
 import { DEFAULT_CLICK, useSettings } from "../appSettings";
-import { useStore } from "../../state/store";
+import { showToast, useStore } from "../../state/store";
 import { Check, NumberField, Select, Slider } from "../../ui/Form";
-import { Row, Section, setPrefs, toast } from "./parts";
+import { Row, Section, setPrefs } from "./parts";
 
 const SOUNDS: { id: ClickSound; name: string; description: string }[] = [
   { id: "classic", name: "Classic", description: "A short sine tick" },
@@ -103,7 +103,7 @@ export function MetronomeDefaults() {
             disabled={isDefault}
             onClick={() => {
               setPrefs("click", click);
-              toast("New projects will use these metronome settings");
+              showToast("New projects will use these metronome settings", 3000);
             }}
           >
             Use for New Projects

@@ -6,12 +6,11 @@ import { type Group, type Id, type Track } from "../engine/project";
 import { act, actMade, api } from "../engine/commands";
 import { currentLayout, stepVisible } from "./trackLayout";
 import { openBounceInPlace } from "../project/bounce/bounce";
-import { getState, setState } from "../state/store";
+import { getState, setState, showToast } from "../state/store";
 import { onTracks } from "./regions/regionSelect";
 
 const project = () => getState().snap?.project;
 const tracks = (): Track[] => project()?.tracks ?? [];
-const toast = (text: string, ms = 2500) => setState({ toast: { text, at: Date.now(), ms } });
 
 const inOrder = (ids: Id[]) => tracks().map((t) => t.id).filter((id) => ids.includes(id));
 
@@ -84,7 +83,7 @@ export function deleteTracks(ids = selectedTracks()) {
 
 export async function deleteUnusedTracks() {
   const n = await actMade("delete_unused_tracks");
-  toast(n?.[0] ? `Deleted ${n[0]} unused track${n[0] > 1 ? "s" : ""}` : "No unused tracks");
+  showToast(n?.[0] ? `Deleted ${n[0]} unused track${n[0] > 1 ? "s" : ""}` : "No unused tracks", 2500);
 }
 
 export async function createStack(summing: boolean, ids = selectedTracks()) {

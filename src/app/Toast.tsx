@@ -1,5 +1,5 @@
-// The toast: a short message over the status line that goes after a few seconds (`toast` in the
-// store; errors from engine commands come here too).
+// The toast: a short message over the status line that goes after a few seconds (`showToast` in
+// the store; errors from engine commands come here too).
 import { useEffect, useState } from "react";
 import { useStore } from "../state/store";
 

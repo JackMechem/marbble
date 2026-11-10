@@ -5,7 +5,7 @@ import { act } from "../../engine/commands";
 import { activeTrackAlt, trackAltNames } from "../../project/alternativesModel";
 import { askName } from "../../ui/NameSheet";
 import type { MenuItem } from "../../ui/Menu";
-import { getState, setState } from "../../state/store";
+import { getState, showToast } from "../../state/store";
 
 /** Tracks with regions can have alternatives. */
 export function canHaveAlternatives(t: Track): boolean {
@@ -17,7 +17,7 @@ export function trackForAlternatives(): Track | null {
   const s = getState().snap;
   const t = s?.project.tracks.find((x) => x.id === s.selected);
   if (!t || !canHaveAlternatives(t)) {
-    setState({ toast: { text: "Select an audio or instrument track first", at: Date.now(), ms: 2500 } });
+    showToast("Select an audio or instrument track first", 2500);
     return null;
   }
   return t;
@@ -41,7 +41,7 @@ export async function renameTrackAlternative(t: Track, name = activeTrackAlt(t))
 
 export function deleteTrackAlternative(t: Track, name = activeTrackAlt(t)) {
   if (!t.alternatives?.length) {
-    setState({ toast: { text: "A track keeps at least one alternative", at: Date.now(), ms: 2500 } });
+    showToast("A track keeps at least one alternative", 2500);
     return;
   }
   return act("delete_track_alternative", { track: t.id, name });

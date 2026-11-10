@@ -10,7 +10,7 @@ import { type Snapshot } from "../engine/snapshot";
 import { call } from "../engine/commands";
 import { indexAt, trackLayout, autoLayout } from "../tracks/trackLayout";
 import { importMidiFiles, isMidiPath } from "./midiFiles";
-import { getState, setState } from "../state/store";
+import { getState, setState, showToast } from "../state/store";
 import { samplesPerBeat, snapPos } from "../lib/time";
 import { dropOnSampler, hoverSampler, samplerAt } from "../plugins/instruments/sampler/samplerDrop";
 
@@ -86,7 +86,7 @@ async function performDrop(paths: string[], target: DropTarget | null) {
   const midi = paths.filter(isMidiPath);
   const skipped = paths.length - audio.length - midi.length;
   if (!audio.length && !midi.length) {
-    setState({ toast: { text: "Only audio files (WAV, AIFF, CAF, FLAC, MP3, OGG, M4A, MP4, AAC) and MIDI files can be dropped here", at: Date.now(), ms: 5000 } });
+    showToast("Only audio files (WAV, AIFF, CAF, FLAC, MP3, OGG, M4A, MP4, AAC) and MIDI files can be dropped here", 5000);
     return;
   }
   if (midi.length) {
@@ -98,20 +98,14 @@ async function performDrop(paths: string[], target: DropTarget | null) {
     target.kind === "lane"
       ? { paths: audio, track: target.track, start: target.sample, index: null }
       : { paths: audio, track: null, start: target.kind === "new" ? target.sample : 0, index: target.index };
-  setState({ toast: { text: audio.length > 1 ? `Importing ${audio.length} files…` : "Importing…", at: Date.now(), ms: 20000 } });
+  showToast(audio.length > 1 ? `Importing ${audio.length} files…` : "Importing…", 20000);
   const res = await call<{ snapshot: Snapshot; errors: string[] }>("import_audio_files", args);
   if (!res) return;
   setState({ snap: res.snapshot });
   const notes = [...res.errors];
   if (skipped) notes.push(`${skipped} non-audio file${skipped > 1 ? "s" : ""} skipped`);
   const done = audio.length - res.errors.length;
-  setState({
-    toast: {
-      text: notes.length ? `Imported ${done} of ${audio.length}. ${notes.join(" · ")}` : `Imported ${done} file${done > 1 ? "s" : ""}`,
-      at: Date.now(),
-      ms: notes.length ? 8000 : 2500,
-    },
-  });
+  showToast(notes.length ? `Imported ${done} of ${audio.length}. ${notes.join(" · ")}` : `Imported ${done} file${done > 1 ? "s" : ""}`, notes.length ? 8000 : 2500);
 }
 
 // ---- native drops from the desktop -------------------------------------------------------

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { BUILTIN_SYNTH, INSTRUMENT_SLOT, type Track } from "../engine/project";
 import { call } from "../engine/commands";
-import { setState, useStore } from "../state/store";
+import { setState, showToast, useStore } from "../state/store";
 import { useSelectedTrack } from "../tracks/headers/TrackHeaders";
 import { useListKeys } from "../keyboard/listKeys";
 import { loadPlugin } from "../plugins/fxHost";
@@ -43,7 +43,7 @@ export function Library() {
     if (isInst) loadPlugin(track.id, INSTRUMENT_SLOT, id, true);
     else {
       const slot = track.inserts.findIndex((s) => !s);
-      if (slot < 0) setState({ toast: { text: "All Audio FX slots are in use", at: Date.now() } });
+      if (slot < 0) showToast("All Audio FX slots are in use");
       else loadPlugin(track.id, slot, id, true);
     }
   };

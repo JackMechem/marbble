@@ -3,7 +3,7 @@
 // while nothing changed; see docs/ARCHITECTURE.md § The frontend. state/ also holds the display-frame
 // loop the animated views share (frameLoop.ts).
 import { useSyncExternalStore } from "react";
-import type { AutoParam, Id, PluginSlot } from "../engine/project";
+import { MASTER_ID, type AutoParam, type Id, type PluginSlot } from "../engine/project";
 import type { Region } from "../engine/regions";
 import type { Snapshot, Tick } from "../engine/snapshot";
 import type { PluginDesc } from "../engine/listings";
@@ -225,7 +225,18 @@ export function useStore<T>(sel: (s: State) => T): T {
   return useSyncExternalStore(subscribe, () => sel(state));
 }
 
+/** Shows a short message over the status line (Toast.tsx) for `ms`, or its default time. */
+export function showToast(text: string, ms?: number) {
+  setState({ toast: { text, at: Date.now(), ms } });
+}
+
 // ---- 30 Hz engine ticks are kept outside React state; components subscribe directly. -----
+
+/** The meter maps' keys: a track's id, or these for the strips that aren't tracks. The engine
+ *  names Stereo Out MASTER_ID (0); its meter key is -1. */
+export const STEREO_OUT_METER = -1;
+/** Audio input `n`'s meter key. */
+export const inputMeterKey = (n: number): Id => -100 - n;
 
 let lastTick: Tick | null = null;
 let lastArrival = 0;
@@ -236,17 +247,16 @@ let grMap = new Map<Id, number>();
 const tickListeners = new Set<(t: Tick) => void>();
 
 export function pushTick(t: Tick) {
-  if (t.warning) setState({ toast: { text: t.warning, at: Date.now(), ms: 8000 } });
+  if (t.warning) showToast(t.warning, 8000);
   lastTick = t;
   lastArrival = performance.now();
   seq++;
   const m = new Map<Id, [number, number]>();
   for (const [id, l, r] of t.meters) m.set(id, [l, r]);
-  m.set(-1, t.master);
-  t.inputs.forEach((v, i) => m.set(-100 - i, [v, v]));
+  m.set(STEREO_OUT_METER, t.master);
+  t.inputs.forEach((v, i) => m.set(inputMeterKey(i), [v, v]));
   meterMap = m;
-  // The engine names Stereo Out MASTER_ID (0); meter keys use -1.
-  const key = (id: Id) => (id === 0 ? -1 : id);
+  const key = (id: Id) => (id === MASTER_ID ? STEREO_OUT_METER : id);
   holdMap = new Map((t.peak_holds ?? []).map(([id, v]) => [key(id), v]));
   grMap = new Map((t.gain_reduction ?? []).map(([id, v]) => [key(id), v]));
   tickListeners.forEach((l) => l(t));
@@ -272,7 +282,7 @@ export function tickSeq(): number {
   return seq;
 }
 
-/** Latest peak levels for a meter key: track id, -1 for Stereo Out, -100-n for input n. */
+/** Latest peak levels for a meter key (`STEREO_OUT_METER`, `inputMeterKey`). */
 export function meterLevels(key: Id): [number, number] {
   return meterMap.get(key) ?? [0, 0];
 }

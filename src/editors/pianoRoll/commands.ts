@@ -9,7 +9,7 @@ import { samplesPerBeat } from "../../lib/time";
 import { askName } from "../../ui/NameSheet";
 import type { Core } from "./core";
 import { setPrefs } from "./prefs";
-import { laneKind, timeBase } from "./model";
+import { clampZoom, laneKind, timeBase } from "./model";
 import type { PNote } from "../midiEdit";
 
 /** Notes copied in the Piano Roll (separate from the region clipboard). */
@@ -29,7 +29,7 @@ export function editorCommands(ed: Core) {
     const v = view();
     const ax = anchorX ?? v.W / 2;
     const t = timeAt(v, ax);
-    const next = Math.max(6, Math.min(1600, live.current.pr.pxPerBeat * factor));
+    const next = clampZoom(live.current.pr.pxPerBeat * factor);
     const pps = next / samplesPerBeat(live.current.project);
     pendingScroll.current = { ...pendingScroll.current, left: t * pps - ax };
     setPrefs({ pxPerBeat: next });
@@ -53,7 +53,7 @@ export function editorCommands(ed: Core) {
     const hi = me.maxOf(regs, (r) => r.start + r.length);
     const spb = samplesPerBeat(live.current.project);
     const W = el.clientWidth - 40;
-    const pxPerBeat = Math.max(6, Math.min(1600, (W / (hi - lo)) * spb));
+    const pxPerBeat = clampZoom((W / (hi - lo)) * spb);
     const notes = work.current.notes.filter((n) => regs.some((r) => r.id === n.region));
     const pLo = notes.length ? me.minOf(notes, (n) => n.pitch) : 48;
     const pHi = notes.length ? me.maxOf(notes, (n) => n.pitch) : 72;

@@ -7,6 +7,7 @@ import type { Note, Pattern, PatternRow, PatternStep, Region } from "../../engin
 import { scaleOf } from "../midiEdit.ts";
 import type { TempoMap } from "../../lib/tempo";
 import { regionEnd } from "../../tracks/regions/loops.ts";
+import { clamp } from "../../lib/clamp.ts";
 
 /** Step rates as steps per whole note: 1/4 to 1/32, then their triplets (as pattern.rs). */
 export const RATES = [4, 8, 16, 32, 6, 12, 24, 48] as const;
@@ -172,8 +173,6 @@ export const rowLength = (p: Pattern, row: PatternRow) => Math.max(1, row.length
 
 /** How many step columns the editor shows: the longest row. */
 export const columns = (p: Pattern) => Math.max(p.length, ...p.rows.map((r) => rowLength(p, r)));
-
-const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
 /** The pattern with step `i` of row `r` changed. */
 export function setStep(p: Pattern, r: number, i: number, patch: Partial<FullStep>): Pattern {

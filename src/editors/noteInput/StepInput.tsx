@@ -10,7 +10,7 @@ import { act, actMade } from "../../engine/commands";
 import { commandForEvent, keyHint } from "../../keyboard/keymap";
 import { sheetOpen } from "../../keyboard/sheetKeys";
 import * as si from "./stepInputModel";
-import { currentTick, getState, onTick, setState, useStore } from "../../state/store";
+import { currentTick, getState, onTick, setState, showToast, useStore } from "../../state/store";
 import { tempoMap } from "../../lib/tempo";
 
 const BLACK = new Set([1, 3, 6, 8, 10]);
@@ -116,7 +116,7 @@ export function StepInput() {
     const pr = s.snap?.project;
     const t = editorTrack(pr, s.selectedRegions, s.snap?.selected);
     if (!pr || !t) {
-      if (ev.type === "down" || ev.type === "rest") setState({ toast: { text: "Select a software instrument track (or one of its regions) for Step Input.", at: Date.now() } });
+      if (ev.type === "down" || ev.type === "rest") showToast("Select a software instrument track (or one of its regions) for Step Input.");
       return;
     }
     const { state, effects } = si.reduce(machine.current, ev, tempoMap(pr), Math.round(tick?.pos ?? 0), o);

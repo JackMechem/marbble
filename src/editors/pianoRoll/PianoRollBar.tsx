@@ -13,6 +13,7 @@ import { useBarFit } from "../../ui/useBarFit";
 import type { Commands } from "./commands";
 import type { Menus } from "./menus";
 import { setPrefs, type Prefs } from "./prefs";
+import { sliderToZoom } from "./model";
 import { ToolIcon } from "./ToolIcon";
 import { onPress } from "../../keyboard/keyNav";
 
@@ -176,7 +177,7 @@ export function PianoRollBar({ pr, title, toolBtn, qBtn, qOpen, setQOpen, selNot
               step={0.001}
               value={hZoom}
               title={`Horizontal zoom (${fmt("Mod")}-scroll, ${fmt("Mod+ArrowLeft")} / ${fmt("Mod+ArrowRight")})`}
-              onChange={(e) => zoomX((6 * Math.pow(1600 / 6, parseFloat(e.target.value))) / pr.pxPerBeat)}
+              onChange={(e) => zoomX(sliderToZoom(parseFloat(e.target.value)) / pr.pxPerBeat)}
             />
           </>
         )}

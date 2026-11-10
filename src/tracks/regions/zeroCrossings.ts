@@ -3,12 +3,12 @@
 import { act } from "../../engine/commands";
 import type { MenuItem } from "../../ui/Menu";
 import { keyHint } from "../../keyboard/keymap";
-import { getState, setState } from "../../state/store";
+import { getState, showToast } from "../../state/store";
 
 export function toggleZeroCrossings() {
   const on = !getState().snap?.project.snap_zero_crossings;
   act("set_snap_zero_crossings", { on });
-  setState({ toast: { text: `Snap Edits to Zero Crossings ${on ? "on" : "off"}`, at: Date.now(), ms: 1500 } });
+  showToast(`Snap Edits to Zero Crossings ${on ? "on" : "off"}`, 1500);
 }
 
 /** The Edit menu item, with its tick. */

@@ -9,10 +9,11 @@ import { toggleZeroCrossings } from "../tracks/regions/zeroCrossings";
 import { eventListMenu } from "../editors/eventList/EventList";
 import { toggleOverview } from "../tracks/overview/Overview";
 import { importAudioDialog, openProjectDialog, saveProject, undoRedo } from "../project/files";
-import { currentTick, getState, setState } from "../state/store";
+import { currentTick, getState, setState, showToast } from "../state/store";
 import { transport } from "./controlBar/transport";
 import { applyTheme } from "../theme/themes";
 import { applyUiScale, stepUiScale } from "../ui/uiScale";
+import { stepZoom } from "../tracks/zoom";
 import { newAux } from "../mixer/routing";
 import { editorMenuCommand } from "../editors/audioEditor/state";
 import { showUsedAutomation } from "../tracks/automation/menus";
@@ -33,6 +34,7 @@ import { checkForUpdates } from "./updates/updates";
 import { textFieldMenu } from "../keyboard/textKeys";
 import { KEY_ACTIONS } from "./keyCommands";
 
+/** Runs the menu bar item `id`, after giving a focused text field or editor the chance to. */
 export function handleMenu(id: string) {
   // Select All, Undo and the rest edit a focused name or search field, and the other
   // accelerators (Ctrl+D...) are dropped while it has the focus (textKeys.ts).
@@ -114,7 +116,7 @@ export function handleMenu(id: string) {
     case "export-selected-tracks": {
       const ids = selectedTracks();
       if (ids.length) openBounce("selected", null, ids);
-      else setState({ toast: { text: "Select the tracks to export first", at: Date.now(), ms: 2500 } });
+      else showToast("Select the tracks to export first", 2500);
       break;
     }
     case "bounce-in-place":
@@ -137,7 +139,7 @@ export function handleMenu(id: string) {
     case "low-latency": {
       const on = !getSettings().prefs.latency.low_latency;
       updateSettings((st) => ({ ...st, prefs: { ...st.prefs, latency: { ...st.prefs.latency, low_latency: on } } }));
-      setState({ toast: { text: `Low Latency Mode ${on ? "on" : "off"}`, at: Date.now(), ms: 1500 } });
+      showToast(`Low Latency Mode ${on ? "on" : "off"}`, 1500);
       break;
     }
     case "import-midi":
@@ -327,18 +329,18 @@ export function handleMenu(id: string) {
     case "ui-actual":
       applyUiScale(1);
       break;
-    default:
-      if (id.startsWith("theme:")) applyTheme(id.slice(6));
-      else if (id.startsWith("detach:")) toggleDetached(id.slice(7));
-      else if (id.startsWith("alternative:")) switchAlternative(id.slice(12));
-      else if (id.startsWith("revert:")) revertToBackup(id.slice(7));
-      else if (id.startsWith("repeat:")) repeatRegions(Number(id.slice(7)));
-      break;
     case "zoom-in":
-      setState({ pxPerBeat: Math.min(400, s.pxPerBeat * 1.4) });
+      setState({ pxPerBeat: stepZoom(s.pxPerBeat, 1) });
       break;
     case "zoom-out":
-      setState({ pxPerBeat: Math.max(2, s.pxPerBeat / 1.4) });
+      setState({ pxPerBeat: stepZoom(s.pxPerBeat, -1) });
       break;
+    default:
+      // Items built from a list carry what they act on after a prefix.
+      if (id.startsWith("theme:")) applyTheme(id.slice("theme:".length));
+      else if (id.startsWith("detach:")) toggleDetached(id.slice("detach:".length));
+      else if (id.startsWith("alternative:")) switchAlternative(id.slice("alternative:".length));
+      else if (id.startsWith("revert:")) revertToBackup(id.slice("revert:".length));
+      else if (id.startsWith("repeat:")) repeatRegions(Number(id.slice("repeat:".length)));
   }
 }

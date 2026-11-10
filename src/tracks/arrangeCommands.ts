@@ -14,13 +14,12 @@ import { regionEnd } from "./regions/loops";
 import { menuLabel, type MenuId } from "../app/menuBar/menuLabels";
 import { joinRegions } from "./regionCommands";
 import * as crit from "./regions/regionSelect";
-import { currentTick, getState, setState } from "../state/store";
+import { currentTick, getState, setState, showToast } from "../state/store";
 
 const project = () => getState().snap?.project;
 const tracks = (): Track[] => project()?.tracks ?? [];
 const playhead = () => currentTick()?.pos ?? 0;
 const sel = () => getState().selectedRegions;
-const toast = (text: string) => setState({ toast: { text, at: Date.now(), ms: 2500 } });
 const select = (ids: Id[] | null) => ids && setState({ selectedRegions: ids, focus: "regions" });
 
 /** The tracks in view, as Select All sees them (hidden ones only in hide mode). */
@@ -41,7 +40,7 @@ function marquee() {
 function locators(): { start: number; end: number } | null {
   const c = project()?.cycle;
   if (c && c.end > c.start) return { start: c.start, end: c.end };
-  toast("Set the locators first (drag in the ruler)");
+  showToast("Set the locators first (drag in the ruler)", 2500);
   return null;
 }
 
@@ -165,7 +164,7 @@ async function pasteReplace() {
   const got = clipboardItems(Math.max(0, all.findIndex((t) => t.id === targetId)));
   if (!got) return;
   const made = await actMade("paste_replace", { items: got.items, offset: (m?.start ?? playhead()) - got.earliest });
-  if (made && made.length < getState().clipboard.length) toast("Some regions didn't fit the track they'd land on");
+  if (made && made.length < getState().clipboard.length) showToast("Some regions didn't fit the track they'd land on", 2500);
   if (m) setState({ marquee: null });
   select(made);
 }
@@ -173,7 +172,7 @@ async function pasteReplace() {
 function stripSilence() {
   const ids = regionsOf(sel()).filter((r) => r.content.type === "audio" && !r.takes).map((r) => r.id);
   if (ids.length) openStripSilence(ids);
-  else toast("Select audio regions first");
+  else showToast("Select audio regions first", 2500);
 }
 
 // ---- commands, menus ------------------------------------------------------------------------

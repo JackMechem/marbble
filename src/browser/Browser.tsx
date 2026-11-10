@@ -5,7 +5,7 @@ import { act, call } from "../engine/commands";
 import { Icon } from "../ui/icons";
 import { isAudioPath, startFileDrag } from "../project/fileDrop";
 import { importMidiFiles, isMidiPath } from "../project/midiFiles";
-import { currentTick, getState, setState } from "../state/store";
+import { currentTick, getState, showToast } from "../state/store";
 
 interface DirListing {
   path: string;
@@ -29,12 +29,12 @@ export function Browser() {
       return;
     }
     if (!isAudioPath(path)) {
-      setState({ toast: { text: "Only audio and MIDI files can be imported", at: Date.now() } });
+      showToast("Only audio and MIDI files can be imported");
       return;
     }
     const track = snap?.project.tracks.find((t) => t.id === snap.selected && t.kind === "audio");
     if (!track) {
-      setState({ toast: { text: "Select an audio track to import into", at: Date.now() } });
+      showToast("Select an audio track to import into");
       return;
     }
     act("import_audio", { path, track: track.id, start: pos });

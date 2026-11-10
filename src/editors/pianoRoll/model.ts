@@ -5,6 +5,7 @@ import type { Id, Project, Track } from "../../engine/project";
 import type { CcKind, Region } from "../../engine/regions";
 import { barFloor, ccMax, sameKind, snapTime, type PCc, type PNote, type TimeBase } from "../midiEdit.ts";
 import type { Warp } from "../../lib/tempo";
+import { clamp } from "../../lib/clamp.ts";
 
 export type Tool = "pointer" | "pencil" | "eraser" | "velocity" | "mute" | "scissors" | "glue" | "line";
 
@@ -230,3 +231,18 @@ export function laneShareOf(laneH: number, areaH: number): number {
   if (!(areaH > 0)) return LANE_SHARE.initial;
   return Math.max(LANE_SHARE.min, Math.min(LANE_SHARE.max, laneH / areaH));
 }
+
+// ---- horizontal zoom ------------------------------------------------------------------------
+
+/** The horizontal zoom limits in px per beat. */
+export const ZOOM_MIN = 6;
+export const ZOOM_MAX = 1600;
+
+export const clampZoom = (pxPerBeat: number) => clamp(pxPerBeat, ZOOM_MIN, ZOOM_MAX);
+
+/** The zoom slider's position (0–1) for a zoom. The scale is logarithmic, so every stretch of the
+ *  slider zooms by the same factor. */
+export const zoomToSlider = (pxPerBeat: number) => Math.log(pxPerBeat / ZOOM_MIN) / Math.log(ZOOM_MAX / ZOOM_MIN);
+
+/** The zoom at a slider position (0–1). */
+export const sliderToZoom = (pos: number) => ZOOM_MIN * Math.pow(ZOOM_MAX / ZOOM_MIN, pos);

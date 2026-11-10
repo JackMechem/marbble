@@ -18,7 +18,7 @@ import { Icon } from "../../ui/icons";
 import { commandForEvent, fmt } from "../../keyboard/keymap";
 import { isEditorSelect, selectEvents } from "../noteSelect";
 import * as me from "../midiEdit";
-import { currentTick, getState, setState, useStore, type MidiSelection, type State } from "../../state/store";
+import { currentTick, getState, setState, showToast, useStore, type MidiSelection, type State } from "../../state/store";
 import { barLines, tempoMap } from "../../lib/tempo";
 import { DetachButton } from "../../app/detach/DetachButton";
 import { openMenuAt, type MenuItem } from "../../ui/Menu";
@@ -387,7 +387,7 @@ export function EventList() {
     if (text.trim() === el.cellText(m, l, row, ed.field)) return;
     const ch = el.parseCell(m, l, row, ed.field, text);
     if (!ch) {
-      setState({ toast: { text: `“${text}” isn't a ${ed.field === "pos" ? "position" : ed.field === "len" ? "length" : row.note && ed.field === "num" ? "note" : "value"}`, at: Date.now(), ms: 2000 } });
+      showToast(`“${text}” isn't a ${ed.field === "pos" ? "position" : ed.field === "len" ? "length" : row.note && ed.field === "num" ? "note" : "value"}`, 2000);
       return;
     }
     commit(el.applyChange(m, l, [row], ch), el.changeLabel(row.type, ed.field));

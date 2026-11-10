@@ -1,7 +1,7 @@
 // Unit tests for src/editors/pianoRoll/model.ts: the Piano Roll's lanes, what a point hits and its grid sums.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { ccDotAt, cycleGrab, FIT_MARGIN_ROWS, fitPitchScroll, gridFloor, gridSpanAt, inMusicalTime, keyAtPoint, LANE_SHARE, laneKind, laneShareOf, laneShort, midiRegions, noteAt, pitchAt, regionForTime, snapToGrid, stalkAt, timeAt, xOf, type PrView } from "../../../src/editors/pianoRoll/model.ts";
+import { ccDotAt, clampZoom, cycleGrab, FIT_MARGIN_ROWS, fitPitchScroll, gridFloor, gridSpanAt, inMusicalTime, keyAtPoint, LANE_SHARE, laneKind, laneShareOf, laneShort, midiRegions, noteAt, pitchAt, regionForTime, sliderToZoom, snapToGrid, stalkAt, timeAt, xOf, ZOOM_MAX, ZOOM_MIN, zoomToSlider, type PrView } from "../../../src/editors/pianoRoll/model.ts";
 import type { PCc, PNote } from "../../../src/editors/midiEdit.ts";
 import type { Track } from "../../../src/engine/project.ts";
 import type { Region } from "../../../src/engine/regions.ts";
@@ -172,4 +172,14 @@ test("the lane keeps a share of the editor's height", () => {
   assert.equal(laneShareOf(5, 300), LANE_SHARE.min);
   assert.equal(laneShareOf(290, 300), LANE_SHARE.max);
   assert.equal(laneShareOf(100, 0), LANE_SHARE.initial, "not laid out yet");
+});
+
+test("the zoom slider runs from the least zoom to the most on a log scale", () => {
+  assert.equal(zoomToSlider(ZOOM_MIN), 0);
+  assert.equal(zoomToSlider(ZOOM_MAX), 1);
+  // Halfway along is the geometric mean: each half zooms by the same factor.
+  assert.ok(Math.abs(sliderToZoom(0.5) - Math.sqrt(ZOOM_MIN * ZOOM_MAX)) < 1e-9);
+  for (const z of [6, 80, 333, 1600]) assert.ok(Math.abs(sliderToZoom(zoomToSlider(z)) - z) < 1e-9);
+  assert.equal(clampZoom(1), ZOOM_MIN);
+  assert.equal(clampZoom(1e5), ZOOM_MAX);
 });

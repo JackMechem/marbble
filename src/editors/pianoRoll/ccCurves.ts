@@ -10,7 +10,8 @@
 // This module only imports types and midiEdit.ts, so it runs under plain Node for the tests.
 import type { Id } from "../../engine/project";
 import type { CcKind } from "../../engine/regions";
-import { ccMax, clamp, sameKind, type PCc } from "../midiEdit.ts";
+import { ccMax, sameKind, type PCc } from "../midiEdit.ts";
+import { clamp } from "../../lib/clamp.ts";
 
 export type CurveShape = "linear" | "exponential" | "logarithmic" | "s";
 

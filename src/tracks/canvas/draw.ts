@@ -6,7 +6,8 @@ import { type Region } from "../../engine/regions";
 import { getState, liveTakes } from "../../state/store";
 import { offTracks } from "../trackOff";
 import { drawWave } from "../regions/waveform";
-import { PEAK_BUCKET, snapPos, toBbt } from "../../lib/time";
+import { PEAK_BUCKET, toBbt } from "../../lib/time";
+import { snapToTracksGrid } from "../gridSnap";
 import { forEachGridLine, tempoMap } from "../../lib/tempo";
 import { mix, theme } from "../../theme/canvasTheme";
 import { type Layout } from "../trackLayout";
@@ -104,7 +105,6 @@ export function drawTracks({ canvasRef, live, dragRef, swipeRef, marqueeRef, hov
   }
 
   // Regions
-  const spbSnap = (v: number) => snapPos(project, v, getState().snapMode, getState().pxPerBeat);
   // In the No Overlap and Shuffle drag modes, where the drag will leave every region.
   let outcome: Map<Id, Outcome> | null = null;
   // Where each region draws, with any drag in progress applied.
@@ -121,7 +121,7 @@ export function drawTracks({ canvasRef, live, dragRef, swipeRef, marqueeRef, hov
     if (drag && !still && drag.ids.includes(r.id)) {
       if (drag.kind === "move") {
         const from = getGrabbedStart();
-        start = movedStart(tempoMap(project), r.start, from, Math.max(0, spbSnap(from + drag.dx)), getState().snapMode !== "off");
+        start = movedStart(tempoMap(project), r.start, from, Math.max(0, snapToTracksGrid(project, from + drag.dx)), getState().snapMode !== "off");
         if (loop != null) loop += start - r.start;
         lane = newLaneOf.get(i);
         if (lane === undefined) ti = dragTarget(layout, i, drag.dTrack, project.tracks);

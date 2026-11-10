@@ -3,8 +3,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  ZOOM_MAX,
-  ZOOM_MIN,
   anchoredLeft,
   centreOn,
   dragScroll,
@@ -13,11 +11,11 @@ import {
   overviewSpan,
   timeToX,
   visibleBox,
-  wheelZoom,
   xToTime,
   zoomFromEdge,
   type StripMap,
 } from "../../../src/tracks/overview/overviewModel.ts";
+import { ZOOM_MAX, ZOOM_MIN } from "../../../src/tracks/zoom.ts";
 
 const close = (a: number, b: number, eps = 1e-6) => assert.ok(Math.abs(a - b) < eps, `${a} ≈ ${b}`);
 
@@ -141,11 +139,7 @@ test("edge zoom keeps the zoom limits and moves the dragged edge to match", () =
   assert.equal(outMax.start, 100_000_000 - (800 / ZOOM_MIN) * spb);
 });
 
-test("wheel zoom steps like the tracks, within the limits, around an anchor", () => {
-  close(wheelZoom(100, -1), 115);
-  close(wheelZoom(115, 1), 100);
-  assert.equal(wheelZoom(ZOOM_MAX, -1), ZOOM_MAX);
-  assert.equal(wheelZoom(ZOOM_MIN, 1), ZOOM_MIN);
+test("a wheel zoom keeps the time under the pointer in place", () => {
   // Sample 10 000 at 150 px from the left, at 0.05 px/sample → left 350.
   close(anchoredLeft(10_000, 150, 0.05), 350);
   assert.equal(anchoredLeft(100, 150, 0.05), 0);

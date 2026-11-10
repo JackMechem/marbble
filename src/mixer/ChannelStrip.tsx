@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { canRecord, INSTRUMENT_SLOT, isStack, MASTER_ID, SEND_SLOTS, type Id, type InputSel, type Track } from "../engine/project";
 import { act, actMade, api } from "../engine/commands";
 import { Icon } from "../ui/icons";
-import { onTick, peakHold, useStore } from "../state/store";
+import { onTick, peakHold, STEREO_OUT_METER, useStore } from "../state/store";
 import { formatDb } from "../lib/decibels";
 import { inputLabel } from "../engine/project";
 import { Fader, GrMeter, Knob, Meter } from "../ui/Controls";
@@ -89,7 +89,7 @@ export function ChannelStrip({ track, selected, rows }: { track: Track | null; s
   const inputs = useStore((s) => s.snap?.audio.input_channels ?? 2);
   const isMaster = track === null;
   const id = track?.id ?? MASTER_ID;
-  const peak = usePeakHold(isMaster ? -1 : id);
+  const peak = usePeakHold(isMaster ? STEREO_OUT_METER : id);
   useStore((s) => s.fxList);
   const inserts = isMaster ? master?.inserts ?? [] : track.inserts;
   const volume = isMaster ? master?.volume_db ?? 0 : track.volume_db;

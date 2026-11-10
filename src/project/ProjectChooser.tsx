@@ -10,7 +10,7 @@ import { openMenu } from "../ui/Menu";
 import { askName } from "../ui/NameSheet";
 import { nameProblem } from "./alternativesModel";
 import { confirmDiscard } from "./files";
-import { setState, useStore } from "../state/store";
+import { setState, showToast, useStore } from "../state/store";
 import { NumberField, Select, sheetKey } from "../ui/Form";
 import { useSheetKeys } from "../keyboard/sheetKeys";
 import { useListKeys } from "../keyboard/listKeys";
@@ -147,12 +147,11 @@ export function ProjectChooser() {
   const box = useRef<HTMLDivElement>(null);
   useSheetKeys(box, close);
 
-  const toast = (text: string) => setState({ toast: { text, at: Date.now(), ms: 5000 } });
   const target = `${location.replace(/\/+$/, "")}/${name.trim() || "Untitled"}.marbble`;
 
   const create = async (templateId: string = template) => {
-    if (!name.trim()) return toast("Give the project a name");
-    if (await call<boolean>("path_exists", { path: target })) return toast(`A project named “${name.trim()}” already exists there`);
+    if (!name.trim()) return showToast("Give the project a name", 5000);
+    if (await call<boolean>("path_exists", { path: target })) return showToast(`A project named “${name.trim()}” already exists there`, 5000);
     if (!(await confirmDiscard("Create a new project"))) return;
     if (templateId.startsWith("user:")) return createFromUser(templateId.slice(5));
     const tpl = TEMPLATES.find((t) => t.id === templateId)!;
@@ -212,7 +211,7 @@ export function ProjectChooser() {
             await invoke("rename_template", { name: t.name, newName });
             setTemplate(`user:${newName}`);
           } catch (err) {
-            toast(String(err));
+            showToast(String(err), 5000);
           }
           loadMine();
         },
@@ -224,7 +223,7 @@ export function ProjectChooser() {
             await invoke("delete_template", { name: t.name });
             setTemplate("empty");
           } catch (err) {
-            toast(String(err));
+            showToast(String(err), 5000);
           }
           loadMine();
         },

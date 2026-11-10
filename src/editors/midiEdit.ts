@@ -12,6 +12,7 @@
 import type { Id } from "../engine/project";
 import type { CcEvent, CcKind, Note, Region } from "../engine/regions";
 import type { BarLines } from "../lib/tempo";
+import { clamp } from "../lib/clamp.ts";
 
 // ---- working list ---------------------------------------------------------------------------
 
@@ -59,8 +60,6 @@ export function fromRegions(regions: Region[], selNotes: Set<string> = new Set()
   }
   return { notes, cc };
 }
-
-export const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
 /** Smallest / largest `f(x)` (no spread, so long lists are fine); ±Infinity when empty. */
 export function minOf<T>(xs: Iterable<T>, f: (x: T) => number): number {

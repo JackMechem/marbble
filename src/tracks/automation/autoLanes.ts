@@ -5,6 +5,7 @@
 // segment after it, as the engine plays it (crates/engine/src/edit/automation.rs).
 
 import type { AutoLane, AutoParam, AutoPoint, Track } from "../../engine/project";
+import { clamp } from "../../lib/clamp.ts";
 
 /** Stereo Out's id (`MASTER_ID` in project.ts), which the Output track stands for. */
 export const OUTPUT_ID = 0;
@@ -26,8 +27,6 @@ export function sameParam(a: AutoParam, b: AutoParam): boolean {
 
 /** At curve ±1 a segment follows t^(1/8) or t^8 (the engine's `CURVE_RANGE`). */
 const CURVE_RANGE = 3;
-
-const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
 /** How far along a segment's change the value is at `t` (0..1 of the way in time): a power
  *  curve, exactly 0 at the start and 1 at the end. Positive curves make the change early. */

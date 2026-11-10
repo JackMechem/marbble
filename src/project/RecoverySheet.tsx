@@ -3,8 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { ask } from "@tauri-apps/plugin-dialog";
 import { act, call } from "../engine/commands";
 import { recoveryDone, useRecoveries, type Recovery } from "./startup";
-import { setState } from "../state/store";
-import { SheetFrame, toast } from "../settings/panes/parts";
+import { setState, showToast } from "../state/store";
+import { SheetFrame } from "../settings/panes/parts";
 import { recordingSummary, recoveryHelp, recoveryIntro, when } from "../settings/settingsText";
 
 /** Offers unsaved work found in autosaves and interrupted recordings (after a crash, or when
@@ -27,7 +27,7 @@ export function RecoverySheet() {
     if (snap) {
       setState({ selectedRegions: [] });
       const takes = r.recording ? `, with ${r.recording.takes === 1 ? "the interrupted take" : `${r.recording.takes} interrupted takes`}` : "";
-      toast(`Recovered “${r.name}”${takes}. Save it to keep the changes.`, 6000);
+      showToast(`Recovered “${r.name}”${takes}. Save it to keep the changes.`, 6000);
       recoveryDone(true);
     }
   };

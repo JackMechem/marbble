@@ -145,11 +145,11 @@ app/                the main window's shell: layout and launch, key and menu com
   updates/            the update check and its notice
 engine/             the UI's side of the engine: the document's types, Snapshot and Tick, commands
 state/              the global UI store with the tick channel, and the display-frame loop
-lib/                pure maths used everywhere: tempo map, musical time and snapping, decibels
+lib/                pure maths used everywhere: tempo map, musical time and snapping, decibels, clamp
 keyboard/           key commands and their display, focus ring, keys in slots, menus, lists, sheets
 ui/                 shared pieces: menus, form controls, faders and meters, icons, sheets, tooltips
 theme/              the themes (one file each), applyTheme, canvas colours
-tracks/             the Tracks area: layout, viewport, track and region commands, context menus
+tracks/             the Tracks area: layout, viewport, zoom, grid snap, track and region commands, context menus
   alternatives/       Track Alternatives
   automation/         automation lanes: parameters, curves, drawing and editing
   canvas/             the Tracks area's canvas: component, drawing, pointer, drag state
@@ -752,7 +752,8 @@ flowchart LR
 
 - **The store** (`src/state/store.ts`) is a small external store: `getState`, `setState`,
   `useStore(selector)` on `useSyncExternalStore`. It holds the last `Snapshot` (`snap`) and the UI's
-  own state: panes, zoom, selection, clipboards, open dialogs, theme.
+  own state: panes, zoom, selection, clipboards, open dialogs, theme. `showToast(text, ms?)` puts
+  a short message over the status line.
 - **The snapshot is read-only.** It is replaced whole on every `act` and every `project` event.
 - **Selectors select narrowly** and must return the same value while nothing changed. A selector
   that builds a new array or object on each call re-renders forever and blanks the window
@@ -778,7 +779,8 @@ flowchart LR
   `PianoRoll.tsx`, `AudioEditor.tsx`) owns refs and effects; drawing and pointer handling are plain
   functions beside it that take those refs. Hooks stay in the component. Imperative code reads
   current values through refs, never from a closure over a render. A drag listens on `window`
-  from press to release.
+  from press to release (`dragWith` in `src/ui/pointerDrag.ts`, with the distance a press must
+  move to count as a drag).
 - The tracks' vertical layout is `src/tracks/trackLayout.ts`; the horizontal scroll is shared
   without React state through `src/tracks/viewport.ts`. Waveforms are fetched once per clip as
   raw min/max bytes and cached (`src/tracks/regions/waveform.ts`).

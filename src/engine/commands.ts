@@ -2,13 +2,13 @@
 // the store, `actMade` the same for one that reports what it made, `call` anything else. A failed
 // command shows its error as a toast. `api` names the commands used everywhere.
 import { invoke } from "@tauri-apps/api/core";
-import { setState } from "../state/store";
+import { setState, showToast } from "../state/store";
 import type { Id, Track } from "./project";
 import type { Snapshot, Made } from "./snapshot";
 
 function report(e: unknown) {
   const msg = typeof e === "string" ? e : (e as Error)?.message ?? String(e);
-  setState({ toast: { text: msg, at: Date.now() } });
+  showToast(msg);
 }
 
 /** Invokes a command that returns a fresh snapshot and stores it. */

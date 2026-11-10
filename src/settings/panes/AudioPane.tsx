@@ -8,7 +8,7 @@ import { type Tick } from "../../engine/snapshot";
 import { supportedRates, type AudioConfig, type DeviceList, type InputLevel } from "../../engine/devices";
 import { act, call } from "../../engine/commands";
 import { NumberField, Select } from "../../ui/Form";
-import { onTick, setState, useStore } from "../../state/store";
+import { onTick, showToast, useStore } from "../../state/store";
 import { Foot } from "./parts";
 import { PdcSettings } from "../../mixer/Latency";
 
@@ -72,7 +72,7 @@ function InputLevelCheck() {
           // hiding it as if it were fixed. Errors were reported by call().
           if (!l) return;
           setLevel(l);
-          if (!l.attenuating) setState({ toast: { text: `${l.device} input set to 100%`, at: Date.now() } });
+          if (!l.attenuating) showToast(`${l.device} input set to 100%`);
         }}
       >
         {busy ? "Setting…" : "Set to 100%"}

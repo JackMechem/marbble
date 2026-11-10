@@ -27,6 +27,7 @@ import { keyboardFocus } from "../../keyboard/focusRing";
 import { adjacentRegion, laneKey } from "../../keyboard/keyNav";
 import { linkedRegions } from "../regionCommands";
 import { editorPaneFor } from "../regions/regionEditor";
+import { wheelZoom } from "../zoom";
 
 // ---- peaks ----------------------------------------------------------------------------------
 
@@ -158,8 +159,7 @@ export function Arrange() {
       if (!project) return;
       const cx = e.clientX - el.getBoundingClientRect().left;
       const sample = (el.scrollLeft + cx) / pps;
-      const s = getState();
-      const next = Math.min(400, Math.max(2, s.pxPerBeat * (e.deltaY < 0 ? 1.15 : 1 / 1.15)));
+      const next = wheelZoom(getState().pxPerBeat, e.deltaY);
       setState({ pxPerBeat: next });
       const nextPps = next / samplesPerBeat(project);
       requestAnimationFrame(() => {

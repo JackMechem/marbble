@@ -11,10 +11,11 @@ import { pixelRatio } from "../../ui/uiScale";
 import { scrollTo, viewport } from "../viewport";
 import { timeWheel } from "../../ui/wheel";
 import { openMenu } from "../../ui/Menu";
-import { OVERVIEW_BAND, anchoredLeft, centreOn, dragScroll, hitBox, overviewSpan, timeToX, visibleBox, wheelZoom, xToTime, zoomFromEdge, type BoxPart, type Rect, type StripMap } from "./overviewModel";
+import { OVERVIEW_BAND, anchoredLeft, centreOn, dragScroll, hitBox, overviewSpan, timeToX, visibleBox, xToTime, zoomFromEdge, type BoxPart, type Rect, type StripMap } from "./overviewModel";
 import { type Geometry, drawStatic, drawOverlay } from "./draw";
 import type { Project } from "../../engine/project";
 import { regionEnd } from "../regions/loops";
+import { wheelZoom } from "../zoom";
 
 // ---- showing and hiding (View › Show Overview), remembered per machine -----------------------
 
