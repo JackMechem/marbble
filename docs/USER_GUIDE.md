@@ -2275,7 +2275,8 @@ in the slot menu and the Library.
   or click × to close it. There is one panel per slot. Every plug-in panel (effects,
   instruments, the Sampler and the Channel EQ) has the same header, docked, floating or in a
   window of its own, in this order: the power (bypass) button, the effect and track names, the
-  preset pop-up, the **Side Chain** pop-up for effects with a side-chain, and at the right end
+  preset pop-up, **Compare** (see [Presets](#presets)), the **Side Chain** pop-up for effects with
+  a side-chain, and at the right end
   the window buttons and ×. The window buttons keep their order: **Float in Main Window** (in
   the dock) or **Dock in Bottom Section** (floating), then **Open in Separate Window** (or
   **Attach to Main Window** in that window). A panel's own switches, such as
@@ -2589,8 +2590,19 @@ to the previous and next preset. Loading a preset is one undo step.
   first. **Rename Preset…** and **Delete Preset** work on the user preset that is loaded.
 - **Revert** goes back to the loaded preset; **Reset to “Default”** (“Flat” for the EQ) resets
   everything.
+- **Compare**, the half-filled circle after the preset pop-up, plays the settings as they were
+  when a preset was last loaded or saved (or, before that, when the panel first showed them in
+  this project) in place of your edits, and back again. It is dim while nothing has changed,
+  lights once something has, and stays pressed while the saved settings play; changing something
+  then makes that the edited settings. Each press is one undo step, as loading a preset is.
+- **Copy Settings** and **Paste Settings**, at the end of the preset menu, copy one panel's
+  settings (a Sampler's zones and files included) and paste them into another instance of the
+  same plug-in, in this project or another, as one undo step. Unlike the slot's **Copy
+  Plug-in**, the instance stays where it is. Paste Settings is greyed out until settings of the
+  same plug-in are copied.
 - VST3 plug-ins use their own preset browsers; Marbble saves their state with the project and
-  copies it with Copy Plug-in, but has no preset files for them.
+  copies it with Copy Plug-in, but has no preset files for them. Their windows are their own, so
+  Compare and Copy and Paste Settings are for built-in plug-ins only.
 
 ### Sends and aux buses
 

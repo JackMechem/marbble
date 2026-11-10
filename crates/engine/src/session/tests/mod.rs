@@ -5,6 +5,7 @@ mod channel_eq;
 mod comping;
 mod held_notes;
 mod instruments;
+mod plugin_settings;
 mod presets;
 
 use std::path::PathBuf;

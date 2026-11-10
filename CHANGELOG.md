@@ -6,6 +6,14 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **Compare, and Copy and Paste Settings, in plug-in panels.** Every built-in effect's and
+  instrument's panel (the Channel EQ's and the Sampler's too) has a Compare button after its
+  preset pop-up, as in Logic: it lights once the settings differ from those last loaded or saved,
+  and swaps between the two. The preset menu's Copy Settings and Paste Settings move one panel's
+  settings into another instance of the same plug-in, each paste one undo step.
+
 ## [0.1.0-alpha.13] - 2026-11-10
 
 ### Changed

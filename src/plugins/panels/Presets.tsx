@@ -52,6 +52,7 @@ type Sheet = { mode: "save" | "rename"; text: string; error?: string; replace?: 
  *   tells "(edited)" apart.
  * - `defaultName`: the factory preset that resets it ("Default", "Flat" for the Channel EQ).
  * - `extra`: items for the end of the menu.
+ * - `onStored`: called once a preset has been loaded or saved (Compare remembers those settings).
  */
 export function PresetButton({
   effect,
@@ -62,6 +63,7 @@ export function PresetButton({
   normalize,
   defaultName = "Default",
   extra,
+  onStored,
 }: {
   effect: string;
   track: Id;
@@ -71,6 +73,7 @@ export function PresetButton({
   normalize: (p: Preset) => string;
   defaultName?: string;
   extra?: MenuItem[];
+  onStored?: () => void;
 }) {
   const [rev, setRev] = useState(revision);
   const [sheet, setSheet] = useState<Sheet>(null);
@@ -105,13 +108,16 @@ export function PresetButton({
 
   const { label, edited } = presetBoxLabel(state, current, presetNorm?.key === key ? presetNorm.norm : null, defaultNorm, defaultName);
 
-  const load = (name: string, factory: boolean) => act("load_preset", { track, slot, effect, name, factory });
+  const load = async (name: string, factory: boolean) => {
+    if (await act("load_preset", { track, slot, effect, name, factory })) onStored?.();
+  };
 
   const save = async (name: string, overwrite: boolean): Promise<string | null> => {
     try {
       const res = await invoke<NamedPreset>("save_preset", { track, slot, name, overwrite });
       setState({ snap: res.snapshot });
       presetsChanged();
+      onStored?.();
       return null;
     } catch (e) {
       return typeof e === "string" ? e : String(e);

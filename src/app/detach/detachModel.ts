@@ -58,7 +58,8 @@ export function bottomAfterHide(kind: string, before: string, detached: string[]
  * the main window: the selection (the editor follows it, the keys act on it), the region
  * clipboard (and the channel strip and plug-in clipboards), the snap mode, what is shown of the tracks, the plug-in lists, the appearance,
  * which panels are detached, the notes selected in the Piano Roll and Event List, and the Mixer's
- * strip widths (saved per project by the main window, so a detached Mixer's go there). Window
+ * strip widths (saved per project by the main window, so a detached Mixer's go there), and plug-in
+ * panels' settings clipboard and Compare. Window
  * layout (the bottom section, pane sizes, open sheets and floating editors, zoom) stays per
  * window. The snapshot and the settings travel separately.
  */
@@ -83,6 +84,8 @@ export const SYNCED_FIELDS = [
   "stripClip",
   "pluginClip",
   "mixerView",
+  "settingsClip",
+  "pluginCompare",
 ] as const;
 
 export type SyncedField = (typeof SYNCED_FIELDS)[number];

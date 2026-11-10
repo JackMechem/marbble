@@ -106,7 +106,7 @@ impl Session {
         self.slot_get(track, slot)?.preset.as_ref()
     }
 
-    fn set_preset_ref(&mut self, track: Id, slot: usize, preset: Option<PresetRef>) {
+    pub(crate) fn set_preset_ref(&mut self, track: Id, slot: usize, preset: Option<PresetRef>) {
         let at = self.slot_ref(track, slot).and_then(|s| s.as_mut()).map(|s| &mut s.preset);
         if let Some(at) = at.filter(|at| **at != preset) {
             *at = preset;

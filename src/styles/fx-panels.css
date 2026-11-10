@@ -500,3 +500,26 @@
   flex-wrap: wrap;
 }
 
+
+/* Compare, after the preset box (CompareButton.tsx): faint while the settings are as last loaded or
+   saved, lit once they're edited, filled while it plays the saved ones. */
+.fx-compare {
+  width: 22px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 5px;
+  background: var(--btn);
+  box-shadow: var(--btn-shadow);
+  color: var(--faint);
+}
+
+.fx-compare.edited {
+  color: var(--accent);
+}
+
+.fx-compare.on {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: none;
+}

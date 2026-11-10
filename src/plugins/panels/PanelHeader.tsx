@@ -2,12 +2,13 @@
 // the Sampler or a Channel EQ, docked in the bottom section (FxDock), floating in the main window
 // (FxWindows) or in a window of its own (panelKinds.tsx). Left to right, always in this order:
 //
-//   power · name · track · ‹ preset ▾ › · the panel's own pop-ups (Side Chain) · · · window buttons · ×
+//   power · name · track · ‹ preset ▾ › · Compare · the panel's own pop-ups (Side Chain) · · · window buttons · ×
 //
 // Docked, the tabs stand in for the name and track (the front tab is the panel shown). The window
 // buttons keep their places too: Float in Main Window or Dock in Bottom Section first, then Open in
 // Separate Window or Attach to Main Window, then Close. A panel's own toggles (the Channel EQ's
-// Analyzer, the Linear Phase EQ's Quality) are in its toolbar, under the header.
+// Analyzer, the Linear Phase EQ's Quality) are in its toolbar, under the header. The preset menu
+// also holds Copy and Paste Settings (settings/).
 import type { ReactNode } from "react";
 import { isMain } from "../../app/detach/detach";
 import type { PanelKey } from "./fxDockModel";
