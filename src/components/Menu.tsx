@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Icon } from "../icons";
 import { keyboardFocus } from "../focusRing";
-import { menuEdge, menuKey, menuStep, typeAheadText, type NavItem, type Typed } from "../keyNav";
+import { menuEdge, menuKey, menuStep, typeAheadText, TYPE_AHEAD_ATTR, type NavItem, type Typed } from "../keyNav";
 
 export interface MenuItem {
   /** The menu bar item it matches (src/menuLabels.ts ids), so the menu bar can follow its state. */
@@ -224,6 +224,7 @@ function List({ items, x, y, minWidth, depth, autoFocus, onBack }: { items: Menu
             <div
               key={i}
               data-i={i}
+              {...{ [TYPE_AHEAD_ATTR]: "menu" }}
               tabIndex={-1}
               role={it.checked !== undefined ? "menuitemcheckbox" : "menuitem"}
               aria-checked={it.checked !== undefined ? it.checked : undefined}

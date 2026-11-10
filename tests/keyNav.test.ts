@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { adjacentRegion, laneKey, leavesKeyToFocus, listKey, menuEdge, menuKey, menuStep, slotKey, stepIndex, typeAhead, typeAheadText, TYPE_AHEAD_MS, type NavItem } from "../src/keyNav.ts";
+import { adjacentRegion, laneKey, leavesKeyToFocus, listKey, menuEdge, menuKey, menuStep, slotKey, stepIndex, typeAhead, typeAheadText, typesAhead, typingLeavesKey, TYPE_AHEAD_ATTR, TYPE_AHEAD_MS, type NavItem } from "../src/keyNav.ts";
 import { keyboardFocus, KEYBOARD_FOCUS_ATTR } from "../src/focusRing.ts";
 
 const key = (k: string, mods: Partial<{ altKey: boolean; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean }> = {}) => ({
@@ -193,4 +193,31 @@ test("letters type ahead through a list's names", () => {
   assert.deepEqual(listKey(4, 0, key("x"), "x", names), { move: -1 }, "no match: taken, but nothing moves");
   assert.deepEqual(listKey(4, 0, key(" "), "", names), { open: true }, "Space opens before a word has begun");
   assert.deepEqual(listKey(2, 0, key(" "), "my ", ["My Song", "My Song 2"]), { move: 0 }, "and types ahead after");
+});
+
+// Stand-ins for what has the focus: a row marked for type-ahead ("menu" or "list"), or a plain element.
+const focused = (tagName: string, typeAhead?: "menu" | "list") => ({
+  tagName,
+  closest: (selector: string) => (typeAhead && selector === `[${TYPE_AHEAD_ATTR}]` ? { getAttribute: (name: string) => (name === TYPE_AHEAD_ATTR ? typeAhead : null) } : null),
+});
+
+test("Musical Typing leaves letters to a focused list or menu that types ahead, as to a text field", () => {
+  const menuRow = focused("DIV", "menu");
+  const listRow = focused("DIV", "list");
+  // "a" plays C and "z" is octave down while Musical Typing is open; in a menu they type ahead.
+  assert.equal(typingLeavesKey(key("a"), menuRow, false), true, "a menu row, opened with the mouse or the keyboard");
+  assert.equal(typingLeavesKey(key("z"), menuRow, true), true);
+  assert.equal(typingLeavesKey(key("a"), listRow, true), true, "a list row the keyboard moved to");
+  // A list takes keys only while the keyboard moves the focus (listKeys.ts); after a click, letters play.
+  assert.equal(typingLeavesKey(key("a"), listRow, false), false);
+  assert.equal(typingLeavesKey(key("a"), focused("DIV"), true), false, "anything else: the letter plays");
+  assert.equal(typingLeavesKey(key("a"), null, false), false);
+  // Text fields keep their keys, and a modifier makes it a key command, as before.
+  assert.equal(typingLeavesKey(key("a"), focused("INPUT"), false), true);
+  assert.equal(typingLeavesKey(key("a"), focused("TEXTAREA"), false), true);
+  assert.equal(typingLeavesKey(key("s", { shiftKey: true }), focused("DIV"), false), true);
+  // Keys that aren't letters stay Musical Typing's in a menu too (Tab is its sustain pedal).
+  assert.equal(typesAhead(key("Tab"), menuRow, true), false);
+  assert.equal(typesAhead(key("a", { ctrlKey: true }), menuRow, true), false);
+  assert.equal(typesAhead(key("a"), { tagName: "DIV" }, true), false, "an element without closest()");
 });

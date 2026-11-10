@@ -5,7 +5,7 @@
 // (focusRing.ts): a row focused by a click leaves Return, Delete and the arrows as they were.
 import { useEffect, useRef, useState } from "react";
 import { keyboardFocus } from "./focusRing";
-import { listKey, typeAheadText, type Typed } from "./keyNav";
+import { listKey, typeAheadText, TYPE_AHEAD_ATTR, type Typed } from "./keyNav";
 
 export interface ListKeys {
   /** The rows' keys, in the order they're shown. */
@@ -90,6 +90,8 @@ export function useListKeys(o: ListKeys) {
   const shortcuts = ["Enter", o.remove && "Delete"].filter(Boolean).join(" ");
   const rowProps = (k: string) => ({
     [ROW]: k,
+    // Musical Typing leaves the letters to a list that types ahead (keyNav.ts's typesAhead).
+    [TYPE_AHEAD_ATTR]: o.labels ? "list" : undefined,
     tabIndex: k === stop ? 0 : -1,
     "aria-keyshortcuts": shortcuts,
     onFocus: (e: React.FocusEvent<HTMLElement>) => {

@@ -851,7 +851,9 @@ position, so it works on any keyboard layout:
   louder. The **Sustain** button latches the pedal.
 - While the window is open these keys play notes instead of running their usual commands.
   Combinations with Shift, Ctrl, Alt (and ⌘ on macOS) still work, so Shift+S still selects
-  similar regions, and typing in text fields is not affected.
+  similar regions, and typing in text fields is not affected. Nor is typing a name's first
+  letters in an open menu, or in a list the keyboard moved to (the Library, recent projects,
+  Project Alternatives, the Marker List): the letters go to the item, not to the notes.
 - Notes played this way are recorded like notes from a MIDI keyboard. The MIDI velocity curve
   doesn't apply to them.
 - With the Step Input Keyboard open, they are entered as steps too (see below).

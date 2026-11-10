@@ -6,6 +6,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { setState, useStore } from "../store";
 import { fmt } from "../keymap";
 import { emitLocalMidi } from "../stepInput";
+import { typingLeavesKey } from "../keyNav";
+import { keyboardFocus } from "../focusRing";
 
 // Physical key -> semitone above the current octave's C.
 const NOTE_KEYS: Record<string, number> = {
@@ -66,11 +68,11 @@ export function MusicalTyping() {
   };
 
   useEffect(() => {
-    const isField = (t: EventTarget | null) => t instanceof HTMLElement && ["INPUT", "SELECT", "TEXTAREA"].includes(t.tagName);
     // Capture phase: these keys play notes instead of reaching the app's shortcuts. With a
-    // modifier, Shift included, they stay key commands (Shift+S Select Similar Regions…).
+    // modifier, Shift included, they stay key commands (Shift+S Select Similar Regions…); text
+    // fields and a focused menu's or list's type-ahead keep their letters (keyNav.ts).
     const down = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || isField(e.target)) return;
+      if (typingLeavesKey(e, e.target, keyboardFocus())) return;
       const { base, velocity } = live.current;
       if (e.code in NOTE_KEYS) {
         if (!e.repeat && !heldKeys.current.has(e.code)) {

@@ -4,6 +4,8 @@
 // focus ring on, see focusRing.ts): after a click, Space, Return, Delete and the arrows stay the
 // app's key commands, as they always were.
 
+import { keepsKeys } from "./textKeys.ts";
+
 interface Keyish {
   key: string;
   altKey: boolean;
@@ -254,4 +256,36 @@ export function listKey(count: number, from: number, e: Keyish, typed = "", labe
       return { remove: true };
   }
   return null;
+}
+
+/** The attribute on a row whose letters type ahead: "menu" on a menu's rows (Menu.tsx), which
+ *  always take them, "list" on a list's (listKeys.ts), which take them only while the keyboard
+ *  moves the focus. */
+export const TYPE_AHEAD_ATTR = "data-type-ahead";
+
+interface Rowish {
+  closest(selector: string): { getAttribute(name: string): string | null } | null;
+}
+
+/**
+ * Whether a key pressed with the focus on `el` is a letter for the type-ahead of the menu or
+ * list `el` is a row of (`keyboard`: the keyboard is moving the focus, focusRing.ts).
+ */
+export function typesAhead(e: Keyish, el: unknown, keyboard: boolean): boolean {
+  if (!plain(e) || e.key.length !== 1) return false;
+  const row = el as Partial<Rowish> | null;
+  if (typeof row?.closest !== "function") return false;
+  const kind = row.closest(`[${TYPE_AHEAD_ATTR}]`)?.getAttribute(TYPE_AHEAD_ATTR);
+  return kind === "menu" || (kind === "list" && keyboard);
+}
+
+/**
+ * Whether Musical Typing, which takes its letters in the capture phase before anything else
+ * sees them, leaves a key pressed in `el` alone: with a modifier (Shift too, so Shift+S stays
+ * Select Similar Regions), in a field that keeps its keys (textKeys.ts), and a letter for a
+ * focused menu's or list's type-ahead, which would otherwise play a note instead of going to
+ * the item.
+ */
+export function typingLeavesKey(e: Keyish, el: unknown, keyboard: boolean): boolean {
+  return e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || keepsKeys(el) || typesAhead(e, el, keyboard);
 }

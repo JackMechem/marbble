@@ -1748,7 +1748,10 @@ Audio Track Editor and meters are canvas drawings. The common pattern:
   or a click, so a clicked item with an accelerator is dropped too while a field has the focus.
 - Editors with their own keys (Piano Roll, Event List, Step Sequencer, Audio Track Editor,
   Musical Typing, Step Input, automation selection) handle them in their own listeners when
-  they have focus. Edit › Select's key commands act on notes and events while the Piano Roll or
+  they have focus. Musical Typing's listener takes its letters in the capture phase, ahead of
+  everything, so it leaves them where they're typed (`keyNav.ts`'s `typingLeavesKey`): in a text
+  field, and on a row marked `data-type-ahead` for type-ahead (every menu row, a list's rows
+  while the keyboard moves the focus). Edit › Select's key commands act on notes and events while the Piano Roll or
   the Event List has focus (`src/noteSelect.ts`).
 - A MIDI controller can fire any of them (Settings › Key Commands › MIDI, or Controller
   Assignments): the assignment's target is `CtlTarget::Command { id }`, the session puts the id

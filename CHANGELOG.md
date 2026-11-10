@@ -86,6 +86,10 @@ All notable changes to Marbble are recorded here. The format follows
   remembered a port with the numbers Linux gives it, which change when the device is plugged in
   again, so it came back on. Ports are now remembered by name alone; ones switched off before
   stay off too.
+- **Type-ahead works while Musical Typing is open.** Typing a name's first letters in an open
+  menu, or in the Library, recent projects, Project Alternatives or the Marker List after moving
+  there with the keyboard, played notes instead of going to the item. The letters now go to the
+  menu or list, as they go to text fields.
 
 ## [0.1.0-alpha.12] - 2026-11-09
 
