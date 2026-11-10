@@ -1,4 +1,4 @@
-/* Number fields, checkboxes, range sliders (components/Form.tsx) and the sheets' footer row. */
+/* Number fields, checkboxes, range sliders (ui/Form.tsx) and the sheets' footer row. */
 /* Number field with steppers */
 .numfield {
   display: flex;

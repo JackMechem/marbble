@@ -34,7 +34,7 @@
   font-size: var(--fs-md);
 }
 
-/* ---- update notice (components/UpdateNotice.tsx) -------------------------------------------- */
+/* ---- update notice (app/updates/UpdateNotice.tsx) -------------------------------------------- */
 
 /* Bottom right, clear of the toasts in the middle; above sheets (the Project Chooser is often
    up at launch) and below menus. */

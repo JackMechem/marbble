@@ -1,6 +1,6 @@
 /* Track headers at small heights and the header volume slider. */
 /* ---- track headers at small heights, and the volume slider with its meter ------------------
-   Tiers come from headerTier() in trackHeader.ts: full (the name above the buttons), compact
+   Tiers come from headerTier() in headerGeometry.ts: full (the name above the buttons), compact
    (one line, smaller icon, buttons in the "⋯" menu) and tiny (one line, no icon). */
 
 .track-header.tier-compact .th-main,

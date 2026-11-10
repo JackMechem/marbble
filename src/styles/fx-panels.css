@@ -1,5 +1,5 @@
 /* Effect panels: the window frame, shared groups and knobs, dynamics sections, the Limiter, side-chain and preset pop-ups. */
-/* Built-in effect panels (components/fx). The window borrows the Channel EQ window's frame. */
+/* Built-in effect panels (src/plugins/). The window borrows the Channel EQ window's frame. */
 .fx-window {
   width: auto;
   min-width: 360px;

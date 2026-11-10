@@ -1,7 +1,7 @@
 /* Effect panels docked, floating and at any size: the dock, the window's handles, each panel's flex rules. */
 /* ==== Effect panels (fxdock) ==== */
-/* Built-in effect panels and the Channel EQ, docked in the bottom section (fx/FxDock.tsx) or
-   floating in a window of their own (fx/FxWindow.tsx). A panel fills the box it is given: its
+/* Built-in effect panels and the Channel EQ, docked in the bottom section (plugins/panels/FxDock.tsx) or
+   floating in a window of their own (plugins/panels/FxWindow.tsx). A panel fills the box it is given: its
    graphs and meters grow from their old fixed sizes, which are now minimums, the controls keep
    their size, and the body scrolls when the box is smaller than the panel. Canvases sit
    absolutely in a measured box, so their size never feeds back into the layout. */
@@ -272,7 +272,7 @@
   color: var(--text);
 }
 
-/* The plug-in header (fx/PanelHeader.tsx), the same in the dock, a floating window and a window
+/* The plug-in header (plugins/panels/PanelHeader.tsx), the same in the dock, a floating window and a window
    of its own: power, name, track, presets and the panel's pop-ups, then the window buttons at
    the right end. Docked, the tabs come first, divided from the rest. */
 .fx-header-main {

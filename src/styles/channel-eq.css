@@ -1,4 +1,4 @@
-/* The Channel EQ thumbnail and editor (components/Eq.tsx). */
+/* The Channel EQ thumbnail and editor (mixer/EqThumb.tsx, plugins/effects/eq/EqEditor.tsx). */
 /* ---- Channel EQ ------------------------------------------------------------------------- */
 
 .eq-thumb {

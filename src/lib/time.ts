@@ -1,0 +1,101 @@
+// Samples to bars and beats and back (1-based, like Logic's LCD), and snapping to the grid. The
+// tempo map itself is tempo.ts.
+import type { Project } from "../engine/project";
+import { tempoMap, type Bbt } from "./tempo.ts";
+
+export const PEAK_BUCKET = 256;
+
+/** Samples per beat at the tempo and signature at position 0: the horizontal scale of the
+ *  editors (pixels per beat). Grids, snapping and bars go through the tempo map instead. */
+export function samplesPerBeat(p: Project): number {
+  return ((p.sample_rate * 60) / p.tempo) * (4 / p.sig_den);
+}
+
+export type { Bbt };
+
+/** Position in bars/beats/divisions(16ths)/ticks, 1-based like Logic's LCD. */
+export function toBbt(p: Project, pos: number): Bbt {
+  return tempoMap(p).bbtAt(pos);
+}
+
+/** The bar line at or before `pos`. */
+export function barFloor(p: Project, pos: number): number {
+  const m = tempoMap(p);
+  return m.barStart(m.barAt(pos));
+}
+
+/** The bar line `n` bars after the bar holding `pos` (n may be negative). */
+export function barsFrom(p: Project, pos: number, n: number): number {
+  const m = tempoMap(p);
+  return m.barStart(m.barAt(pos) + n);
+}
+
+/** A length starting at `start`, in bars, beats, divisions and ticks (0-based, Logic's
+ *  length display), counted through the tempo map. */
+export function lengthBbt(p: Project, start: number, len: number): Bbt {
+  const m = tempoMap(p);
+  const [num, den] = m.sigAt(start);
+  const beats = ((m.beatsAt(start + len) - m.beatsAt(start)) * den) / 4;
+  const bar = Math.floor(beats / num + 1e-9);
+  const rest = Math.max(0, beats - bar * num);
+  const beat = Math.floor(rest + 1e-9);
+  const div = Math.floor((rest - beat) * 4 + 1e-9);
+  const tick = Math.round(((rest - beat) * 4 - div) * 240);
+  return { bar, beat, div, tick };
+}
+
+/** A region's or range's length as Logic shows it everywhere (Inspector, help tags, Event List,
+ *  editors' info): bars, beats, divisions and ticks counted from zero, e.g. "4 0 0 0". */
+export function formatLengthBbt(p: Project, start: number, len: number): string {
+  const b = lengthBbt(p, start, len);
+  return `${b.bar} ${b.beat} ${b.div} ${b.tick}`;
+}
+
+export function formatTime(p: Project, pos: number): string {
+  const secs = Math.max(0, pos) / p.sample_rate;
+  const m = Math.floor(secs / 60);
+  const s = secs - m * 60;
+  return `${String(m).padStart(2, "0")}:${s.toFixed(3).padStart(6, "0")}`;
+}
+
+/** Divisions per beat and ticks per division, as the LCD counts them (Bbt, tempo.ts). */
+export const DIVISIONS_PER_BEAT = 4;
+export const TICKS_PER_DIVISION = 240;
+
+/**
+ * The snap grid's step in quarter notes in a bar of `num`/`den`: a bar, a beat (the signature's
+ * denominator), a division (a quarter of a beat, the LCD's third field: a sixteenth in 4/4, a
+ * thirty-second in 6/8), a tick (1/240 of a division), or Smart, which follows the zoom. 0: no
+ * snapping.
+ */
+export function snapStep(mode: string, num: number, den: number, pxPerBeat: number): number {
+  const beat = 4 / den;
+  const division = beat / DIVISIONS_PER_BEAT;
+  switch (mode) {
+    case "off":
+      return 0;
+    case "bar":
+      return beat * num;
+    case "beat":
+      return beat;
+    case "division":
+      return division;
+    case "ticks":
+      return division / TICKS_PER_DIVISION;
+    default:
+      // Smart: follow the visible grid resolution.
+      return pxPerBeat > 60 ? division : pxPerBeat > 14 ? beat : beat * num;
+  }
+}
+
+/** `pos` snapped to the grid, in whole samples: at most tempos a beat isn't a whole number of
+ *  samples, and the engine takes positions as integers. */
+export function snapPos(p: Project, pos: number, mode: string, pxPerBeat: number): number {
+  if (mode === "off") return Math.round(pos);
+  const m = tempoMap(p);
+  const [num, den] = m.sigAt(pos);
+  const step = snapStep(mode, num, den, pxPerBeat);
+  // Counted from the bar line, so the grid follows tempo and signature changes.
+  return Math.round(m.sampleAt(m.snapQ(m.beatsAt(pos), step)));
+}
+

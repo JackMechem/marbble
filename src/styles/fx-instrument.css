@@ -1,5 +1,5 @@
-/* A built-in instrument's panel (fx/Instrument.tsx). */
-/* A built-in instrument's panel (fx/Instrument.tsx): sections from its spec, and a keyboard. */
+/* A built-in instrument's panel (plugins/instruments/Instrument.tsx). */
+/* A built-in instrument's panel (plugins/instruments/Instrument.tsx): sections from its spec, and a keyboard. */
 .fx-body:has(> .inst-panel) {
   overflow: hidden;
 }

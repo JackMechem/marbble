@@ -1,7 +1,7 @@
 /* Panels in windows of their own and the detach button. */
 /* ==== Detached windows (detach) ==== */
 
-/* A panel in a window of its own (components/DetachedWindow.tsx): it fills the window, which
+/* A panel in a window of its own (app/detach/DetachedWindow.tsx): it fills the window, which
    sets its height instead of the bottom section's splitter. */
 .panel-window {
   height: 100%;

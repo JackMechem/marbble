@@ -1,6 +1,6 @@
 /* Theme variables on :root: Studio's values, which applyTheme (themes.ts) overrides at run time. */
 /* Marbble styles. Every colour, gradient and shadow comes from a theme variable (see
-   src/themes.ts); the defaults below are the Studio theme so the first paint matches it. */
+   src/theme/); the defaults below are the Studio theme so the first paint matches it. */
 
 :root {
   --bg: #1c1c1e;

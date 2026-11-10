@@ -52,7 +52,7 @@ html:not([data-keyboard-focus]) :focus-visible:not(input, textarea, select) {
   outline: none;
 }
 
-/* Read by screen readers, not shown: what a key selected on a canvas (Arrange.tsx). */
+/* Read by screen readers, not shown: what a key selected on a canvas (TracksCanvas.tsx). */
 .visually-hidden {
   position: absolute;
   width: 1px;

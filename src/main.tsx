@@ -2,22 +2,22 @@
 // `DetachedWindow`. Key handling, theme and size are set up first so the first paint is right.
 import React from "react";
 import ReactDOM from "react-dom/client";
-import App from "./App";
+import App from "./app/App";
 import "./styles/index.css";
-import { applyTheme, savedThemeId } from "./themes";
-import { applyUiScale, savedUiScale } from "./uiScale";
-import { savedWaveStyle } from "./waveform";
-import { setState } from "./store";
-import { savedShowOverview } from "./components/Overview";
-import "./panelKinds";
-import { ownPanel } from "./detach";
-import { DetachedWindow } from "./components/DetachedWindow";
-import { installSheetKeys } from "./sheetKeys";
-import { migrateStorage } from "./oldName";
-import { installFocusRing } from "./focusRing";
-import { installTooltips } from "./tooltip";
+import { applyTheme, savedThemeId } from "./theme/themes";
+import { applyUiScale, savedUiScale } from "./ui/uiScale";
+import { savedWaveStyle } from "./tracks/regions/waveform";
+import { setState } from "./state/store";
+import { savedShowOverview } from "./tracks/overview/Overview";
+import "./app/detach/panelKinds";
+import { ownPanel } from "./app/detach/detach";
+import { DetachedWindow } from "./app/detach/DetachedWindow";
+import { installSheetKeys } from "./keyboard/sheetKeys";
+import { migrateStorage } from "./app/oldName";
+import { installFocusRing } from "./keyboard/focusRing";
+import { installTooltips } from "./ui/tooltip";
 import { invoke } from "@tauri-apps/api/core";
-import { KEY_STYLE, setGtkKeyNames, type GtkKeyNames } from "./keyFormat";
+import { KEY_STYLE, setGtkKeyNames, type GtkKeyNames } from "./keyboard/keyFormat";
 
 // Before anything reads its preferences.
 migrateStorage();

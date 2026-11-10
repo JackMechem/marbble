@@ -1,0 +1,57 @@
+// The Linear Phase EQ's panel (crates/engine/src/fx/linear_phase_eq.rs): the Channel EQ's graph
+// and band controls working on the effect's parameters, plus the Quality pop-up, as in Logic.
+// Reset is the preset menu's Reset to “Default”, in the panel's header.
+import { useContext } from "react";
+import type { ChannelEq } from "../../../engine/project";
+import type { FxPanelProps } from "../../builtinEffects";
+import { FxLearnContext, learnContext } from "../../../controllers/learn";
+import { changedParams, eqFromValues, latencyFrames, OUTPUT, paramId, QUALITY, QUALITY_LABELS } from "./eqParams";
+import { useStore } from "../../../state/store";
+import { EqEditor, type EqControl } from "./EqEditor";
+import { openMenuAt } from "../../../ui/Menu";
+import { onPress } from "../../../keyboard/keyNav";
+
+const idOf = (c: EqControl) => (c.band === null ? OUTPUT : paramId(c.band, c.field));
+
+export function LinearPhaseEqPanel(p: FxPanelProps) {
+  const sr = useStore((s) => s.snap?.project.sample_rate ?? 48000);
+  const fx = useContext(FxLearnContext);
+  const eq = eqFromValues(p.values);
+  const quality = Math.min(2, Math.max(0, Math.round(p.values[QUALITY] ?? 1)));
+  const ms = ((latencyFrames(quality, sr) / sr) * 1000).toFixed(1);
+
+  // An edit can move several parameters at once (a point dragged in the graph moves frequency
+  // and gain): they go together, as one undo step.
+  const apply = (next: ChannelEq) => {
+    const changes = changedParams(eq, next);
+    if (changes.length === 1 || !p.setMany) changes.forEach(([id, v]) => p.set(id, v));
+    else if (changes.length > 1) p.setMany(changes);
+  };
+  const learn = (id: number) => (fx ? learnContext({ type: "plugin", track: fx.track, uid: fx.uid, plugin: "", param: id }) : undefined);
+
+  return (
+    <EqEditor
+      eq={eq}
+      sr={sr}
+      onChange={apply}
+      extra={
+        <>
+          <span className="dim">Quality</span>
+          <button
+            className="fx-popup lpeq-quality"
+            title="Longer filters shape low frequencies more precisely, with more latency"
+            {...onPress((e) => openMenuAt(e.currentTarget, QUALITY_LABELS.map((label, i) => ({ label, checked: i === quality, onClick: () => p.set(QUALITY, i) }))))}
+            onContextMenu={learn(QUALITY)}
+          >
+            <span className="truncate">{QUALITY_LABELS[quality]}</span>
+          </button>
+          <span className="dim lpeq-latency" title="The latency delay compensation makes up for">
+            {ms} ms
+          </span>
+        </>
+      }
+      learn={(c) => learn(idOf(c))}
+      onGrab={(controls, on) => controls.forEach((c) => p.touch(idOf(c), on))}
+    />
+  );
+}

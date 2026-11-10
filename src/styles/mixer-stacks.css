@@ -1,5 +1,5 @@
 /* The Mixer's strips at their widths, track stacks as brackets over their strips, and the strip
-   width controls (Panels.tsx Mixer, mixerLayout.ts). */
+   width controls (Mixer.tsx, mixerLayout.ts). */
 
 /* Room above the strips for a row of brackets per level of stacks (`--bracket-rows`), so every
    strip keeps the same height and their faders stay level. */

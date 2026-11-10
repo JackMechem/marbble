@@ -1,0 +1,99 @@
+// Built-in effects on the UI side: the description of each effect (mirroring
+// crates/engine/src/fx/mod.rs) and the custom panels that replace the generic one. plugins/ holds
+// plug-ins on the UI side: hosting and the slot menus here, the panels' dock and windows in panels/,
+// each effect's panel in effects/ and the instruments' in instruments/.
+import type { ComponentType } from "react";
+import type { Id } from "../engine/project";
+import { ChannelEqPanel } from "./effects/eq/ChannelEq";
+import { CompressorPanel } from "./effects/dynamics/Compressor";
+import { DeEsserPanel } from "./effects/dynamics/DeEsser";
+import { DelayPanel } from "./effects/Delay";
+import { DistortionPanel, OverdrivePanel } from "./effects/Distortion";
+import { GainPanel } from "./effects/Gain";
+import { GatePanel } from "./effects/dynamics/Gate";
+import { LimiterPanel } from "./effects/dynamics/Limiter";
+import { LinearPhaseEqPanel } from "./effects/eq/LinearPhaseEq";
+import { LoudnessPanel } from "./effects/Loudness";
+import { ChorusPanel, FlangerPanel, PhaserPanel, TremoloPanel } from "./effects/Modulation";
+import { ReverbPanel } from "./effects/Reverb";
+import { SamplerPanel } from "./instruments/sampler/SamplerPanel";
+import { TunerPanel } from "./effects/Tuner";
+
+export type FxUnit = "none" | "db" | "ms" | "hz" | "ratio" | "percent" | "semitones" | "note" | "deg";
+
+export type FxParamKind = { type: "continuous" } | { type: "toggle" } | { type: "choice"; labels: string[] };
+
+/** One parameter, in plain units (see `ParamSpec` in the engine). */
+export interface FxParamSpec {
+  id: number;
+  name: string;
+  min: number;
+  max: number;
+  default: number;
+  unit: FxUnit;
+  kind: FxParamKind;
+  log: boolean;
+}
+
+/** A built-in effect's registry entry (see `EffectInfo` in the engine). */
+export interface FxInfo {
+  /** The plug-in id, for example "builtin:compressor". */
+  id: string;
+  name: string;
+  category: string;
+  params: FxParamSpec[];
+  /** Names of the meter values the effect reports, in order. */
+  meters: string[];
+  sidechain: boolean;
+  /** A built-in instrument's menu blurb (see `InstrumentInfo` in the engine). */
+  about?: string;
+  /** A built-in instrument's panel layout: titled groups of parameter ids. */
+  sections?: { title: string; params: number[] }[];
+}
+
+/** A built-in instrument's registry entry: an effect's, with its group in `category`. */
+export type InstInfo = FxInfo & { about: string; sections: { title: string; params: number[] }[] };
+
+/** What a panel gets from the host. */
+export interface FxPanelProps {
+  info: FxInfo;
+  /** The track and the insert's instance id. */
+  track: Id;
+  uid: Id;
+  /** Current parameter values by id, in plain units. */
+  values: Record<number, number>;
+  /** Sets a parameter (undoable; drags of one parameter merge into one undo step). */
+  set: (id: number, value: number) => void;
+  /** Tells Touch/Latch automation that a control is held (call with true on grab, false on release). */
+  touch: (id: number, on: boolean) => void;
+  /** The latest meter values, in the order of `info.meters` (updated about 30 times a second). */
+  meters: number[];
+  /** Sets several parameters as one undo step (a drag that moves more than one). */
+  setMany?: (values: [number, number][]) => void;
+}
+
+/**
+ * Custom panels by plug-in id. Effects without an entry get the generic panel, which lays out
+ * one control per parameter plus a bar per meter; instruments get the sectioned one from their
+ * spec (`InstrumentPanel`).
+ */
+export const FX_PANELS: Record<string, ComponentType<FxPanelProps>> = {
+  "builtin:compressor": CompressorPanel,
+  "builtin:limiter": LimiterPanel,
+  "builtin:noise-gate": GatePanel,
+  "builtin:deesser": DeEsserPanel,
+  "builtin:reverb": ReverbPanel,
+  "builtin:delay": DelayPanel,
+  "builtin:tuner": TunerPanel,
+  "builtin:loudness": LoudnessPanel,
+  "builtin:chorus": ChorusPanel,
+  "builtin:flanger": FlangerPanel,
+  "builtin:phaser": PhaserPanel,
+  "builtin:tremolo": TremoloPanel,
+  "builtin:overdrive": OverdrivePanel,
+  "builtin:distortion": DistortionPanel,
+  "builtin:gain": GainPanel,
+  "builtin:channel-eq": ChannelEqPanel,
+  "builtin:linear-phase-eq": LinearPhaseEqPanel,
+  "builtin:sampler": SamplerPanel,
+};
