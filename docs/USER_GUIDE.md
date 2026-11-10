@@ -2280,7 +2280,8 @@ in the slot menu and the Library.
   double-click the value under a knob to type one ("2.5k", "-6 dB", "1.2 s"). Every change is
   undoable, and a drag is one undo step.
 - **Meters** show the effect's levels; gain reduction meters hang down from the top. Until audio
-  runs through the effect (no audio device, or a slot just filled) they read −∞.
+  runs through the effect (no audio device, or a slot just filled) they read −∞, and they fall
+  back to −∞ when the audio device stops.
 - **Automation:** every parameter appears in the track's automation lane menu under the effect's
   name, and Touch, Latch and Write record moves of the panel's knobs. While automation plays,
   the panel follows it.

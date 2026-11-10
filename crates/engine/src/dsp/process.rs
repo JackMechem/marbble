@@ -47,6 +47,9 @@ impl Engine {
             return;
         }
 
+        if frames > 0 {
+            self.status.blocks.fetch_add(1, Ordering::Relaxed);
+        }
         let blocks_before = self.status.parallel_blocks.load(Ordering::Relaxed);
         let mut done = 0;
         while done < frames {

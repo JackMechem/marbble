@@ -28,6 +28,9 @@ use super::*;
 use crate::fx::{self, EffectInfo, ParamKind, ParamSpec, Unit};
 use crate::instrument::{self, InstrumentInfo};
 
+/// The least time without a block before the panels' meters read at rest (see `strips_running`).
+pub(super) const STRIPS_STOPPED: Duration = Duration::from_millis(250);
+
 /// A registry entry as the UI sees it (`FxInfo` in src/fx.ts).
 #[derive(Debug, Clone, Serialize)]
 pub struct BuiltinInfo {
@@ -374,8 +377,25 @@ impl Session {
         }
     }
 
-    pub(super) fn fx_ticks(&self) -> Vec<FxTick> {
-        self.fx_watch.iter().filter_map(|uid| self.fx.get(uid).map(|s| FxTick { uid: *uid, meters: s.meters(), values: s.params() })).collect()
+    /// The open panels' meters and live values. With the strips not `running` (see
+    /// `strips_running`) nothing updates the meters, so they read at rest, as on an Off track,
+    /// rather than frozen at their last values.
+    pub(super) fn fx_ticks(&self, running: bool) -> Vec<FxTick> {
+        let meters = |s: &FxShared| if running { s.meters() } else { s.meters_at_rest() };
+        self.fx_watch.iter().filter_map(|uid| self.fx.get(uid).map(|s| FxTick { uid: *uid, meters: meters(s), values: s.params() })).collect()
+    }
+
+    /// Whether the engine has played its strips lately: within three of the device's buffers,
+    /// and at least `STRIPS_STOPPED`, so the gaps between a slow device's callbacks don't count.
+    /// Not when the device has stopped (or failed, or there is none), or the engine is skipping
+    /// blocks after an overload.
+    pub(super) fn strips_running(&mut self, now: Instant) -> bool {
+        let blocks = self.status.blocks.load(Ordering::Relaxed);
+        if blocks != self.strips_seen.0 {
+            self.strips_seen = (blocks, now);
+        }
+        let buffer = self.audio_status.buffer_size as f64 / self.sample_rate().max(1.0);
+        now.saturating_duration_since(self.strips_seen.1) < STRIPS_STOPPED.max(Duration::from_secs_f64(buffer * 3.0))
     }
 
     /// A loaded built-in instance's latency (frames).

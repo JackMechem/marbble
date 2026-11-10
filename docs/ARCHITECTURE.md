@@ -2025,7 +2025,12 @@ it like any plug-in.
   and tail, republished on every parameter change. A new instance (and one put to sleep on an
   Off track) publishes its own idle meter readings (`publish_meters`), so a panel opened before
   the audio thread has run it, or with no audio device, reads −∞ rather than the atomics' zeros,
-  which a level meter would show as 0 dBFS. `InstrumentDsp` does the same. A dynamics effect (one with a meter named
+  which a level meter would show as 0 dBFS. `InstrumentDsp` does the same. Those readings are kept as the
+  meters at rest (`meters_at_rest`): when the strips haven't played for three buffers and at least 250 ms
+  (`EngineStatus::blocks` stops counting: the device stopped or failed, or the engine is shedding after an
+  overload), `Session::strips_running` says so, and the tick sends the panels those instead of the last
+  values, which nothing would update, and the Channel EQ analyzer a spectrum of silence to fall to. The
+  strips' own meters need nothing: `Meter::take` reads zero once nothing feeds them. A dynamics effect (one with a meter named
   "Gain Reduction" or "Reduction") also keeps its largest gain reduction since the last tick,
   panel or not, for the strip's gain-reduction meter (`take_gain_reduction`).
 - `Cmd::FxParam` sets a value; `Cmd::Sidechain` sets the key source (`InsertDsp::key`, for a VST3

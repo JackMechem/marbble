@@ -41,7 +41,7 @@ fn an_instrument_slot_answers_the_calls_an_effects_slot_does() {
     assert!(n > 0.0 && n < 1.0);
     // Its panel's watch and tail come through the same shared values.
     s.watch_builtin(uid, true);
-    assert!(s.fx_ticks().iter().any(|t| t.uid == uid));
+    assert!(s.fx_ticks(true).iter().any(|t| t.uid == uid));
     s.watch_builtin(uid, false);
     s.set_builtin_param(t, usize::MAX, param::A_DECAY, 1000.0).unwrap();
     s.idle();

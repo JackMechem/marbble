@@ -62,6 +62,12 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Fixed
 
+- **Plug-in panel meters fall when the audio device stops.** If the device stopped (or failed)
+  during playback, a built-in effect's or instrument's panel meters froze at their last values,
+  and so did the Channel EQ's analyzer. A quarter of a second after the last buffer they now read
+  −∞, as on an Off track, and the analyzer falls away; they move again when the device is back.
+  Track, mixer and Stereo Out meters already fell.
+
 - **Channel strip settings and templates keep Marbble Sampler's samples.** A saved channel strip
   setting or project template with the sampler kept its zones but not its samples, so in another
   project they showed as missing. Both now keep a copy of the samples beside them, and loading one

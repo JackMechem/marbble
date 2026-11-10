@@ -66,6 +66,9 @@ pub struct FxShared {
     /// The panel is open: the audio thread copies meters and parameter values after each block.
     watched: AtomicBool,
     meters: [AtomicU32; MAX_METERS],
+    /// The meters as they read when the effect isn't running (last published by
+    /// `publish_meters`), for the panel while the engine plays no blocks.
+    rest: [AtomicU32; MAX_METERS],
     meter_count: usize,
     /// Parameter values in the order of the effect's specs.
     ids: Vec<u32>,
@@ -87,6 +90,7 @@ impl FxShared {
         FxShared {
             watched: AtomicBool::new(false),
             meters: std::array::from_fn(|_| AtomicU32::new(0)),
+            rest: std::array::from_fn(|_| AtomicU32::new(0)),
             meter_count: meters.len().min(MAX_METERS),
             ids: params.iter().map(|p| p.id).collect(),
             params: params.iter().map(|p| AtomicU32::new(p.default.to_bits())).collect(),
@@ -110,6 +114,21 @@ impl FxShared {
     /// The latest meter values, in the order of the effect's `meters`.
     pub fn meters(&self) -> Vec<f32> {
         self.meters[..self.meter_count].iter().map(|m| f32::from_bits(m.load(Ordering::Relaxed))).collect()
+    }
+
+    /// The meters as they read with the effect not running (a silent level meter at −∞), in the
+    /// same order: what the panel shows when the device has stopped and nothing updates them.
+    pub fn meters_at_rest(&self) -> Vec<f32> {
+        self.rest[..self.meter_count].iter().map(|m| f32::from_bits(m.load(Ordering::Relaxed))).collect()
+    }
+
+    /// Publishes meter values the effect has when it isn't running, both as the latest and as
+    /// those at rest.
+    fn publish_rest(&self, values: &[f32]) {
+        for ((m, r), v) in self.meters.iter().zip(&self.rest).zip(values) {
+            m.store(v.to_bits(), Ordering::Relaxed);
+            r.store(v.to_bits(), Ordering::Relaxed);
+        }
     }
 
     /// The values the effect is running with (automation included), as (id, plain value).
@@ -248,9 +267,7 @@ impl BuiltinDsp {
     /// silent level meter reads −∞ and not the 0.0 (0 dBFS) the shared values start at.
     fn publish_meters(&mut self) {
         self.fx.meters(&mut self.meter_buf);
-        for (m, v) in self.shared.meters.iter().zip(&self.meter_buf) {
-            m.store(v.to_bits(), Ordering::Relaxed);
-        }
+        self.shared.publish_rest(&self.meter_buf);
     }
 
     /// Tells the effect whether the engine is rendering offline (see `Effect::set_offline`).
@@ -371,9 +388,7 @@ impl InstrumentDsp {
     /// Shows the instrument's meters as they read now, as `BuiltinDsp::publish_meters` does.
     fn publish_meters(&mut self) {
         self.inst.meters(&mut self.meter_buf);
-        for (m, v) in self.shared.meters.iter().zip(&self.meter_buf) {
-            m.store(v.to_bits(), Ordering::Relaxed);
-        }
+        self.shared.publish_rest(&self.meter_buf);
     }
 }
 

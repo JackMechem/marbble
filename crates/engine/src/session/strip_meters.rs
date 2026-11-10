@@ -150,4 +150,87 @@ mod tests {
         let held = s.hold_peaks(&[(a, 0.1, 0.1), (999, 0.9, 0.9)], (0.0, 0.0));
         assert_eq!(held, vec![(MASTER_ID, 0.5), (a, 0.1)]);
     }
+
+    #[test]
+    fn strips_count_as_stopped_after_a_few_buffers() {
+        let cfg = crate::audio_io::AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
+        let mut s = Session::new(cfg, Vec::new());
+        s.audio = None;
+        let ms = |n: u64| Duration::from_millis(n);
+        // A block, played here as a device's callback would, just before t0.
+        s.feed_input_for_checks(&[0.0; 256], 1);
+        let t0 = Instant::now();
+        assert!(s.strips_running(t0));
+        assert!(s.strips_running(t0 + ms(240)));
+        assert!(!s.strips_running(t0 + ms(260)), "a quarter of a second without a block");
+        // Three of a slow device's buffers: 8192 frames at 48 kHz are 171 ms.
+        s.audio_status.buffer_size = 8192;
+        assert!(s.strips_running(t0 + ms(500)));
+        assert!(!s.strips_running(t0 + ms(520)));
+        s.feed_input_for_checks(&[0.0; 256], 1);
+        assert!(s.strips_running(t0 + ms(600)), "a block played");
+    }
+
+    #[test]
+    fn meters_fall_when_the_device_stops_playing() {
+        let cfg = crate::audio_io::AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
+        let mut s = Session::new(cfg, Vec::new());
+        s.dir = std::env::temp_dir().join(format!("marbble-meters-device-{}", std::process::id()));
+        let t = s.add_track(TrackKind::Instrument, InputSel::None, Some(BUILTIN_SYNTH.into()), None).unwrap();
+        s.set_plugin(t, 0, crate::fx::limiter::ID).unwrap();
+        let uid = s.project.track(t).unwrap().inserts[0].as_ref().unwrap().uid;
+        s.watch_builtin(uid, true);
+        s.set_plugin(t, 1, crate::fx::channel_eq::ID).unwrap();
+        s.set_analyzer(Some(s.project.track(t).unwrap().inserts[1].as_ref().unwrap().uid));
+        let rate = s.sample_rate() as i64;
+        let r = s.create_midi_region(t, 0, rate * 20).unwrap();
+        let notes = vec![crate::model::Note { start: 0, length: rate * 20, pitch: 60, velocity: 110, muted: false }];
+        s.set_midi_content(vec![crate::session::MidiContent { region: r, notes, cc: Vec::new(), start: None, length: None }]);
+        s.locate(0);
+        s.play();
+        let input = |tick: &Tick| tick.fx.iter().find(|f| f.uid == uid).map(|f| f.meters[0]).unwrap();
+        let level = |tick: &Tick| tick.meters.iter().find(|m| m.0 == t).map(|m| m.1.max(m.2)).unwrap_or(0.0);
+        let analyzer = |tick: &Tick| tick.spectrum.as_ref().map(|s| s.1.iter().fold(f32::MIN, |m, v| m.max(*v)));
+        let mut tick = s.tick();
+        for _ in 0..300 {
+            std::thread::sleep(Duration::from_millis(10));
+            tick = s.tick();
+            if input(&tick) > -40.0 && level(&tick) > 0.01 && analyzer(&tick) > Some(-60.0) {
+                break;
+            }
+        }
+        assert!(input(&tick) > -40.0, "playing, the panel's input meter reads the note ({} dB)", input(&tick));
+        assert!(analyzer(&tick) > Some(-60.0), "and the Channel EQ's analyzer shows it ({:?} dB)", analyzer(&tick));
+        let rest = s.fx[&uid].meters_at_rest();
+        assert!(rest[0] < -90.0, "at rest it reads silence ({} dB)", rest[0]);
+
+        // The device stops with the transport still running, as when it's unplugged.
+        s.audio = None;
+        // Ticking as the app does, about 30 times a second.
+        let stopped = Instant::now();
+        let mut tick = s.tick();
+        while stopped.elapsed() < crate::session::builtin::STRIPS_STOPPED + Duration::from_millis(100) {
+            std::thread::sleep(Duration::from_millis(30));
+            tick = s.tick();
+        }
+        let panel = &tick.fx.iter().find(|f| f.uid == uid).unwrap().meters;
+        assert_eq!(panel.iter().map(|v| v.to_bits()).collect::<Vec<_>>(), rest.iter().map(|v| v.to_bits()).collect::<Vec<_>>(), "the panel falls to rest");
+        assert_eq!(level(&tick), 0.0, "and so does the track's meter");
+        assert_eq!(tick.master, (0.0, 0.0));
+        assert!(matches!(analyzer(&tick), Some(v) if v < -150.0), "the analyzer is sent silence to fall to ({:?} dB)", analyzer(&tick));
+        assert!(tick.gain_reduction.iter().all(|g| g.1 == 0.0));
+
+        // When the device comes back, the meters move again.
+        s.restart_audio();
+        let mut tick = s.tick();
+        for _ in 0..300 {
+            std::thread::sleep(Duration::from_millis(10));
+            tick = s.tick();
+            if input(&tick) > -40.0 {
+                break;
+            }
+        }
+        assert!(input(&tick) > -40.0, "the device back, it reads the note again ({} dB)", input(&tick));
+        let _ = std::fs::remove_dir_all(&s.dir);
+    }
 }

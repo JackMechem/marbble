@@ -66,6 +66,11 @@ impl Session {
     pub fn tick(&mut self) -> Tick {
         self.check_overload();
         self.check_left_out();
+        let running = self.strips_running(Instant::now());
+        if !running {
+            // Nothing comes from a stopped device: the analyzer falls as it would on silence.
+            self.analyzer_buf.fill(0.0);
+        }
         // Keep the newest FFT_SIZE analyzer samples.
         let fresh = self.analyzer_rx.slots();
         let got = fresh > 0;
@@ -81,7 +86,7 @@ impl Session {
                 self.analyzer_buf[n - incoming.len()..].copy_from_slice(&incoming);
             }
         }
-        let spectrum = match (self.analyzer_target, got) {
+        let spectrum = match (self.analyzer_target, got || !running) {
             (Some((_, uid)), true) => Some((uid, crate::eq::spectrum(&self.analyzer_buf, self.sample_rate()))),
             _ => None,
         };
@@ -114,7 +119,7 @@ impl Session {
             latency: self.latency(),
             spectrum,
             warning: self.warning.take().or_else(|| self.recorder.take_errors()).or_else(|| self.engine_error_warning()).or_else(|| self.bad_audio_warning()),
-            fx: self.fx_ticks(),
+            fx: self.fx_ticks(running),
             peak_holds,
             gain_reduction: self.gain_reductions(),
             learn: self.learning(),

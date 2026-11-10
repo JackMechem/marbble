@@ -275,6 +275,8 @@ pub struct Session {
     engine_error_at: Instant,
     bad_audio_seen: u32,
     bad_audio_at: Instant,
+    /// `EngineStatus::blocks` as last seen, and when it changed (see `strips_running`).
+    strips_seen: (u64, Instant),
     overloads_seen: u32,
     /// Times tracks were left out already reported (see `session/left_out.rs`).
     left_events_seen: u32,
@@ -460,6 +462,7 @@ impl Session {
             marked_unresponsive: false,
             held_unlisted_seen: 0,
             bad_audio_at: Instant::now() - Duration::from_secs(60),
+            strips_seen: (0, Instant::now()),
             fx: HashMap::new(),
             fx_watch: Default::default(),
             pending_pos: None,

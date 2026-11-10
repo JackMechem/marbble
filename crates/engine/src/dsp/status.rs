@@ -83,6 +83,9 @@ pub struct EngineStatus {
     /// (see `parallel.rs`).
     pub threads: AtomicU32,
     pub parallel_blocks: AtomicU64,
+    /// Callbacks in which the strips played. When it stops counting (the device stopped, or the
+    /// engine is skipping blocks), the session shows the effects' meters at rest.
+    pub blocks: AtomicU64,
 }
 
 impl Default for EngineStatus {
@@ -120,6 +123,7 @@ impl Default for EngineStatus {
             held_unlisted: AtomicU32::new(0),
             threads: AtomicU32::new(1),
             parallel_blocks: AtomicU64::new(0),
+            blocks: AtomicU64::new(0),
         }
     }
 }
