@@ -1,5 +1,5 @@
 //! Projects from when every strip had a fixed Channel EQ ahead of its Audio FX. The Channel EQ is
-//! now an insert (`fx/channel_eq.rs`); opening such a project turns each strip's EQ into one, at
+//! now an insert (`fx/channel_eq/`); opening such a project turns each strip's EQ into one, at
 //! the top of its Audio FX, where it plays exactly as before.
 //!
 //! - The old fields (`Track::legacy_eq`, `Master::legacy_eq` and their presets) are only read,
@@ -10,7 +10,7 @@
 //!   are global, so a flat EQ may still be moved from hardware), becomes an insert with the same
 //!   values and preset. The fixed EQ had no automation lanes and groups didn't link it, so there
 //!   is nothing else to carry over. Controller assignments to it (`CtlTarget::Eq`) follow the
-//!   strip's first Channel EQ insert (see `session/controllers.rs`).
+//!   strip's first Channel EQ insert (see `session/control/controllers/`).
 //! - A strip whose eight Audio FX slots are all taken can't take one more: its EQ is dropped and
 //!   the strip named, so the session can say so.
 //! - Channel strip settings and presets saved then are converted where they're read

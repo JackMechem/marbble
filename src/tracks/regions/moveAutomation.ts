@@ -11,7 +11,7 @@ export interface Move {
   track?: Id | null;
 }
 
-/** Whether moving regions would take automation along (crates/engine/src/auto_move.rs): a
+/** Whether moving regions would take automation along (crates/engine/src/edit/auto_move.rs): a
  *  region that stays on its track and changes place has automation points under it. */
 function carriesAutomation(project: Project, moves: Move[]): boolean {
   return moves.some((m) => {

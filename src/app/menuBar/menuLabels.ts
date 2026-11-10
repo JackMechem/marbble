@@ -1,7 +1,7 @@
-// One name per command across the menus. The menu bar (src-tauri/src/menu.rs) and the Tracks
+// One name per command across the menus. The menu bar (src-tauri/src/menu/) and the Tracks
 // area's Edit, Functions and View menus use the names here, by the menu bar's item ids; the
 // Edit menus also share their order (EDIT_MENU). Right-click menus act on what was clicked, so
-// they drop "Regions" from a name (SHORT_LABELS). tests/app/menuBar/menuLabels.test.ts checks menu.rs
+// they drop "Regions" from a name (SHORT_LABELS). tests/app/menuBar/menuLabels.test.ts checks menu/spec.rs
 // against this file. Pure, so the tests can import it.
 
 export const MENU_LABELS = {

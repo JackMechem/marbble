@@ -9,7 +9,7 @@
 //! - At startup, before anything uses GSettings, `ensure_file_chooser_schema` looks for the
 //!   schema where GLib will. If it isn't there but is in a data directory known when Marbble was
 //!   built (the dev shell's `XDG_DATA_DIRS`), that directory is added to `XDG_DATA_DIRS`.
-//! - Before each file dialog the frontend asks `file_dialog_problem` (src/fileDialog.ts), which
+//! - Before each file dialog the frontend asks `file_dialog_problem` (src/project/fileDialog.ts), which
 //!   looks the schema up in GLib's own list; when it is missing, the frontend shows what to do
 //!   instead of opening the dialog.
 //!

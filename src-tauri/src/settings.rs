@@ -5,7 +5,7 @@
 use std::collections::BTreeMap;
 
 use daw_engine::audio_io::AudioConfig;
-use daw_engine::plugin_db::config_dir;
+use daw_engine::library::plugin_db::config_dir;
 use daw_engine::prefs::Prefs;
 use serde::{Deserialize, Serialize};
 
@@ -64,7 +64,7 @@ pub struct UiPrefs {
     /// window), "docked" (in its bottom section, like the Mixer) or "window" (an OS window).
     pub fx_panels: String,
     /// Settings › General: the update channel, "stable" or "unstable". None until one is chosen:
-    /// the check then follows the build (src/updateCheck.ts `effectiveChannel`).
+    /// the check then follows the build (src/app/updates/updateCheck.ts `effectiveChannel`).
     pub update_channel: Option<String>,
     /// Settings › General: ask GitHub at launch whether a newer version is out on the channel.
     pub check_updates: bool,

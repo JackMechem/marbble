@@ -363,17 +363,20 @@ fn main() {
     let home_doc = scratch.join("home/Music/Marbble Instruments/My Keys/instrument.json");
     check("saved in the Music folder, the folder made on first save", name == "My Keys" && home_doc.is_file());
     check("with a copy of its samples", scratch.join("home/Music/Marbble Instruments/My Keys/Samples/Vox.wav").is_file());
-    check("listed in the preset menu", daw_engine::presets::list(&daw_engine::presets::user_root(), SAMPLER).user == vec!["My Keys".to_string()]);
+    check(
+        "listed in the preset menu",
+        daw_engine::library::presets::list(&daw_engine::library::presets::user_root(), SAMPLER).user == vec!["My Keys".to_string()],
+    );
     check("an existing one isn't replaced without asking", s.save_preset(t, SLOT, "My Keys", false).is_err());
     s.save_preset(t, SLOT, "Spare", false).unwrap();
-    let root = daw_engine::presets::user_root();
-    daw_engine::presets::rename_user(&root, SAMPLER, "Spare", "Renamed").unwrap();
+    let root = daw_engine::library::presets::user_root();
+    daw_engine::library::presets::rename_user(&root, SAMPLER, "Spare", "Renamed").unwrap();
     check(
         "renaming takes its samples along",
         scratch.join("home/Music/Marbble Instruments/Renamed/Samples/Vox.wav").is_file()
-            && daw_engine::presets::list(&root, SAMPLER).user.contains(&"Renamed".to_string()),
+            && daw_engine::library::presets::list(&root, SAMPLER).user.contains(&"Renamed".to_string()),
     );
-    daw_engine::presets::delete_user(&root, SAMPLER, "Renamed").unwrap();
+    daw_engine::library::presets::delete_user(&root, SAMPLER, "Renamed").unwrap();
     check("deleting takes them too", !scratch.join("home/Music/Marbble Instruments/Renamed").exists());
     let with_it = render(&mut s);
     s.new_project();
@@ -430,7 +433,7 @@ fn main() {
     s.delete_track(b);
 
     println!("-- Channel strip settings and templates take the samples along");
-    let strips = daw_engine::strip_settings::user_root();
+    let strips = daw_engine::library::strip_settings::user_root();
     let templates = daw_engine::session::templates_dir();
     s.save_strip_setting(&strips, t, "Keys Strip", false).unwrap();
     check("a saved channel strip setting keeps a copy of its samples", strips.join("Keys Strip/Samples/Vox.wav").is_file());
@@ -464,7 +467,7 @@ fn main() {
     play_notes(&mut s, t, &[(0, 60, 127), (RATE, 72, 127)]);
     let err = live[0].iter().zip(&render(&mut s)[0]).fold(0.0f32, |m, (a, b)| m.max((a - b).abs()));
     check(&format!("and it sounds the same ({err:.5})"), err < 1e-4);
-    daw_engine::strip_settings::delete(&strips, "Keys Strip").unwrap();
+    daw_engine::library::strip_settings::delete(&strips, "Keys Strip").unwrap();
     daw_engine::session::delete_template(&templates, "Keys Template").unwrap();
     check("deleting them takes their samples", !strips.join("Keys Strip").exists() && !templates.join("Keys Template").exists());
     std::fs::rename(&away, other_dir.join("Samples")).unwrap();

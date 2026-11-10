@@ -1,4 +1,4 @@
-// The Channel EQ's panel (crates/engine/src/fx/channel_eq.rs): the editor (EqEditor.tsx) working on the
+// The Channel EQ's panel (crates/engine/src/fx/channel_eq/): the editor (EqEditor.tsx) working on the
 // insert's parameters, with the analyzer showing what comes out of it. Bypass and presets are in
 // the panel's header, and a bypassed one dims (fx-linear-phase.css), as for any built-in effect.
 import { useContext } from "react";

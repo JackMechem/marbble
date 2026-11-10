@@ -29,7 +29,7 @@ fn sine(hz: f64, rate: u32, secs: f64) -> Vec<f32> {
 fn sampler(tag: &str, rate: f32, files: &[(&str, u32, Vec<Vec<f32>>)], zones: Vec<Zone>) -> Sampler {
     let dir = temp(tag);
     for (name, r, ch) in files {
-        crate::decode::write_wav(&dir.join(name), *r, ch).unwrap();
+        crate::audio_file::decode::write_wav(&dir.join(name), *r, ch).unwrap();
     }
     let state = SamplerState { version: 1, next_id: 100, zones };
     let (map, issues) = SamplerMap::build(&state, &dir, rate, &SamplePool::default());
@@ -464,7 +464,7 @@ fn nothing_goes_nan_whatever_the_file_holds() {
     w[200] = f32::INFINITY;
     w[300] = 1e30;
     let dir = temp("nan");
-    crate::decode::write_wav(&dir.join("a.wav"), 48000, &[w]).unwrap();
+    crate::audio_file::decode::write_wav(&dir.join("a.wav"), 48000, &[w]).unwrap();
     let state = SamplerState { version: 1, next_id: 2, zones: vec![zone(1, "a.wav", 60)] };
     let (map, _) = SamplerMap::build(&state, &dir, 48000.0, &SamplePool::default());
     let mut s = Sampler::new(48000.0, 1);
@@ -586,8 +586,8 @@ fn reset_repeats_bit_for_bit_and_block_size_doesnt_matter() {
 fn replacing_the_map_leaves_ringing_notes_alone() {
     let dir = temp("swap");
     let pool = SamplePool::default();
-    crate::decode::write_wav(&dir.join("a.wav"), 48000, &[vec![0.5; 96000]]).unwrap();
-    crate::decode::write_wav(&dir.join("b.wav"), 48000, &[vec![0.25; 96000]]).unwrap();
+    crate::audio_file::decode::write_wav(&dir.join("a.wav"), 48000, &[vec![0.5; 96000]]).unwrap();
+    crate::audio_file::decode::write_wav(&dir.join("b.wav"), 48000, &[vec![0.25; 96000]]).unwrap();
     let build = |file: &str| Arc::new(SamplerMap::build(&SamplerState { version: 1, next_id: 2, zones: vec![zone(1, file, 60)] }, &dir, 48000.0, &pool).0);
     let mut s = Sampler::new(48000.0, 1);
     let first = build("a.wav");
@@ -657,7 +657,7 @@ fn one_shots_ignore_the_key_but_not_a_stop() {
 #[test]
 fn a_map_that_cant_load_part_of_itself_says_which() {
     let dir = temp("missing");
-    crate::decode::write_wav(&dir.join("a.wav"), 48000, &[vec![0.5; 4800]]).unwrap();
+    crate::audio_file::decode::write_wav(&dir.join("a.wav"), 48000, &[vec![0.5; 4800]]).unwrap();
     std::fs::write(dir.join("junk.wav"), b"not audio at all").unwrap();
     let state = SamplerState { version: 1, next_id: 4, zones: vec![zone(1, "a.wav", 60), zone(2, "gone.wav", 60), zone(3, "junk.wav", 60)] };
     let (map, issues) = SamplerMap::build(&state, &dir, 48000.0, &SamplePool::default());
@@ -671,8 +671,8 @@ fn a_map_that_cant_load_part_of_itself_says_which() {
 #[test]
 fn the_memory_limit_refuses_what_wont_fit() {
     let dir = temp("limit");
-    crate::decode::write_wav(&dir.join("a.wav"), 48000, &[vec![0.5; 4800]]).unwrap();
-    crate::decode::write_wav(&dir.join("b.wav"), 48000, &[vec![0.5; 4800]]).unwrap();
+    crate::audio_file::decode::write_wav(&dir.join("a.wav"), 48000, &[vec![0.5; 4800]]).unwrap();
+    crate::audio_file::decode::write_wav(&dir.join("b.wav"), 48000, &[vec![0.5; 4800]]).unwrap();
     let pool = SamplePool::with_limit(30000);
     let a = pool.get(&dir.join("a.wav")).unwrap();
     assert_eq!(pool.get(&dir.join("b.wav")).err(), Some(super::sample::LoadError::OverMemoryLimit));
@@ -701,7 +701,7 @@ fn reverse_plays_backwards() {
 fn smpl_chunks_are_read() {
     let dir = temp("smpl");
     let path = dir.join("a.wav");
-    crate::decode::write_wav(&path, 48000, &[vec![0.1; 100]]).unwrap();
+    crate::audio_file::decode::write_wav(&path, 48000, &[vec![0.1; 100]]).unwrap();
     let mut bytes = std::fs::read(&path).unwrap();
     let mut body = vec![0u8; 36 + 24];
     body[12..16].copy_from_slice(&64u32.to_le_bytes());

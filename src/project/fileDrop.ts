@@ -19,7 +19,7 @@ export type DropTarget =
   | { kind: "new"; index: number; sample: number }
   | { kind: "headers"; index: number };
 
-/** What the engine can decode (crates/engine/src/decode.rs, AUDIO_EXTENSIONS). */
+/** What the engine can decode (crates/engine/src/audio_file/decode/mod.rs, AUDIO_EXTENSIONS). */
 export const AUDIO_EXTENSIONS = ["wav", "wave", "aif", "aiff", "aifc", "flac", "mp3", "ogg", "oga", "m4a", "mp4", "aac", "caf"];
 const AUDIO_EXT = new RegExp(`\\.(${AUDIO_EXTENSIONS.join("|")})$`, "i");
 

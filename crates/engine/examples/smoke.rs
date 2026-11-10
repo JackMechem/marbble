@@ -1,6 +1,7 @@
 //! Headless smoke test: lists devices, records two seconds from the default input through a
 //! plug-in, and reports the resulting region.
-use daw_engine::audio_io::{list_devices, AudioConfig};
+use daw_engine::audio_io::devices::list_devices;
+use daw_engine::audio_io::AudioConfig;
 use daw_engine::model::{InputSel, RegionContent, TrackKind};
 use daw_engine::session::TrackPatch;
 use daw_engine::Session;

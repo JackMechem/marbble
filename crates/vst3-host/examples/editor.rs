@@ -1,7 +1,7 @@
 //! Opens one plugin's editor with a tiny run loop of its own (no GTK or Tauri), for debugging
 //! editor embedding: `cargo run -p vst3-host --example editor -- <name substring> [seconds]`.
 
-// Windows has no editor windows yet (see vst3-host's editor_other.rs).
+// Windows has no editor windows yet (see vst3-host's editor/other.rs).
 #[cfg(target_os = "linux")]
 #[path = "editor/linux.rs"]
 mod linux;

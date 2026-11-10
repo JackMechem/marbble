@@ -3,7 +3,7 @@
 use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
-use daw_engine::plugin_db::config_dir;
+use daw_engine::library::plugin_db::config_dir;
 use serde::Serialize;
 
 const MAX: usize = 20;
@@ -51,7 +51,7 @@ pub fn rebase(pairs: &[(PathBuf, PathBuf)]) {
 fn rebased(list: &[String], pairs: &[(PathBuf, PathBuf)]) -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
     for p in list {
-        let p = daw_engine::old_name::moved_str(p, pairs).unwrap_or_else(|| p.clone());
+        let p = daw_engine::library::old_name::moved_str(p, pairs).unwrap_or_else(|| p.clone());
         // Compared as paths: on Windows the moved part is joined with a backslash, and the same
         // project may already be listed with forward slashes.
         if !out.iter().any(|q| Path::new(q) == Path::new(&p)) {

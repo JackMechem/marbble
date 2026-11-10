@@ -80,7 +80,7 @@ pub struct EngineStatus {
     held_tokens: AtomicU64,
     held_unlisted: AtomicU32,
     /// Threads playing the strips in the latest block, and how many blocks went through the pool
-    /// (see `parallel.rs`).
+    /// (see `parallel/`).
     pub threads: AtomicU32,
     pub parallel_blocks: AtomicU64,
     /// Callbacks in which the strips played. When it stops counting (the device stopped, or the

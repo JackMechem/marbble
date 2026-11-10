@@ -14,8 +14,8 @@ use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
+use daw_engine::audio_io::memlock::{MemoryLock, ProcessMemory};
 use daw_engine::audio_io::AudioConfig;
-use daw_engine::memlock::{MemoryLock, ProcessMemory};
 use daw_engine::model::TrackKind;
 use daw_engine::Session;
 
@@ -123,7 +123,7 @@ fn open_and_lock(project: &Path, onfault: bool) {
 
     #[cfg(target_os = "linux")]
     {
-        let limit = daw_engine::memlock::memlock_limit();
+        let limit = daw_engine::audio_io::memlock::memlock_limit();
         match limit {
             None => {
                 check("with RLIMIT_MEMLOCK unlimited the memory is locked", s.memory_lock == MemoryLock::Locked);

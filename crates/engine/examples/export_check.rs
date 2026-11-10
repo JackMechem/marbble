@@ -18,7 +18,7 @@ fn check(name: &str, ok: bool) {
 
 /// Decodes any bounce with the importer's decoder: (rate, channels).
 fn read(path: &Path) -> (u32, Vec<Vec<f32>>) {
-    let d = daw_engine::decode::decode(path).unwrap_or_else(|e| panic!("decoding {}: {e}", path.display()));
+    let d = daw_engine::audio_file::decode::decode(path).unwrap_or_else(|e| panic!("decoding {}: {e}", path.display()));
     (d.sample_rate, d.channels)
 }
 

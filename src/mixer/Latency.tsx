@@ -1,5 +1,5 @@
 // Plug-in latency in the UI: the Settings › Audio options, the channel strip readout and the
-// status line. The figures come from the session (crates/engine/src/session/pdc.rs).
+// status line. The figures come from the session (crates/engine/src/session/engine/pdc.rs).
 import { type Id } from "../engine/project";
 import { updateSettings, useSettings, type PdcMode } from "../settings/appSettings";
 import { setState, useStore } from "../state/store";

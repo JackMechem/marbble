@@ -6,10 +6,10 @@
 //! usage: pattern_check <scratch dir>
 use std::path::{Path, PathBuf};
 
-use daw_engine::arrange_cmds::SectionEdit;
 use daw_engine::audio_io::AudioConfig;
+use daw_engine::edit::arrange_cmds::SectionEdit;
+use daw_engine::edit::pattern::{Pattern, PatternRow, Step};
 use daw_engine::model::{Id, InputSel, Note, RegionContent, TrackKind};
-use daw_engine::pattern::{Pattern, PatternRow, Step};
 use daw_engine::session::{BitDepth, MidiContent, RenderOptions};
 use daw_engine::Session;
 

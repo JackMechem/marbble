@@ -1,4 +1,4 @@
-// Unit tests for src/tracks/regions/fades.ts, which mirrors crates/engine/src/fades.rs for drawing.
+// Unit tests for src/tracks/regions/fades.ts, which mirrors crates/engine/src/edit/fades.rs for drawing.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { crossfadeLaws, crossfadesByRegion, draggedFadeOut, fadeCurve, fadeHandles, followingRegion, resized, sCurve, shapeOf, type Crossfade } from "../../../src/tracks/regions/fades.ts";

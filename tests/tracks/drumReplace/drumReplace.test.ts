@@ -34,7 +34,7 @@ test("markers go where the notes will: attack or peak, plus the offset", () => {
 });
 
 test("the instruments and their notes match the engine's", () => {
-  const rs = readFileSync(fileURLToPath(new URL("../../../crates/engine/src/drum_replace.rs", import.meta.url)), "utf8");
+  const rs = readFileSync(fileURLToPath(new URL("../../../crates/engine/src/edit/drum_replace.rs", import.meta.url)), "utf8");
   for (const k of d.DRUM_KINDS) {
     const variant = k.id.replace(/(^|_)([a-z])/g, (_, __, c: string) => c.toUpperCase());
     assert.match(rs, new RegExp(`DrumKind::${variant} => ${k.note},`), k.id);

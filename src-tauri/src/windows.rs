@@ -1,6 +1,6 @@
 //! Detached panel windows: a bottom-section panel (the Mixer, the editor, a Channel EQ…) shown
 //! in its own window, labelled `panel-<key>`. The frontend decides what is detached and keeps
-//! the windows' UI state in step (src/detach.ts); this module opens, focuses and closes the
+//! the windows' UI state in step (src/app/detach/detach.ts); this module opens, focuses and closes the
 //! windows, sends a fresh snapshot to the other windows after one of them edits the project,
 //! routes native menu items to the focused window, and closes the panels with the main window.
 
@@ -17,7 +17,7 @@ use crate::{commands, AppState};
 /// grants `panel-*` the same access as the main window.
 pub const PANEL_PREFIX: &str = "panel-";
 
-/// The event carrying a snapshot to the windows that didn't make the edit (src/detach.ts).
+/// The event carrying a snapshot to the windows that didn't make the edit (src/app/detach/detach.ts).
 const SYNC_EVENT: &str = "project-sync";
 
 /// Whether `label` names a panel window (and only characters Tauri accepts in a label).
@@ -28,7 +28,7 @@ pub fn is_panel_label(label: &str) -> bool {
 }
 
 /// A window's outer position and inner size in physical pixels, already fitted to the monitors
-/// that are connected now (src/detachModel.ts `fitToMonitors`). In logical pixels on macOS,
+/// that are connected now (src/app/detach/detachModel.ts `fitToMonitors`). In logical pixels on macOS,
 /// where the screens share one coordinate space in points but a physical position would be
 /// converted with the scale of the screen the window is on before it moves.
 #[derive(Deserialize)]
@@ -122,11 +122,11 @@ pub fn route_menu<R: Runtime>(app: &AppHandle<R>, id: String) {
 /// Panel windows close with the main window, so quitting doesn't leave them behind (and the
 /// app exits when the last one goes, as it did with one window). Their detached state is kept
 /// for the next launch: being destroyed, they don't ask to be attached. A window coming to the
-/// front gets the keys its menu bar should show (menu.rs).
+/// front gets the keys its menu bar should show (menu/).
 pub fn on_window_event<R: Runtime>(window: &Window<R>, event: &WindowEvent) {
     match event {
-        WindowEvent::Focused(true) => crate::menu::on_window_focused(window),
-        WindowEvent::Destroyed => crate::menu::on_window_destroyed(window),
+        WindowEvent::Focused(true) => crate::menu::window_menu::on_window_focused(window),
+        WindowEvent::Destroyed => crate::menu::window_menu::on_window_destroyed(window),
         _ => {}
     }
     if window.label() == "main" && matches!(event, WindowEvent::Destroyed) {
@@ -139,7 +139,7 @@ pub fn on_window_event<R: Runtime>(window: &Window<R>, event: &WindowEvent) {
 }
 
 /// The event carrying a key that a plug-in editor window didn't use to the main window, which
-/// handles it as if pressed there (src/pluginKeys.ts).
+/// handles it as if pressed there (src/keyboard/pluginKeys.ts).
 const PLUGIN_KEY_EVENT: &str = "plugin-key";
 
 /// Plug-in editor windows pass the keys their plug-in doesn't use to the main window, as

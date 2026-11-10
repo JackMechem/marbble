@@ -1,0 +1,371 @@
+//! What the engine plays, built from the project: a track's parameters (`track_params`, VCAs
+//! included), its regions as the engine plays them (`regions_dsp`: comps, patterns, region parameters
+//! applied), its strip with plug-ins (`build_track`), and the whole graph (`rebuild_graph`).
+
+use crate::session::*;
+
+impl Session {
+    /// What the engine plays for a track, with its stacks applied: a folder's fader scales its
+    /// subtracks, a muted stack mutes them, and solo reaches both down (a soloed stack's
+    /// subtracks) and up (the stacks a soloed subtrack plays through).
+    pub(crate) fn track_params(p: &Project, t: &Track) -> TrackParams {
+        let ancestors = p.ancestors(t.id);
+        let mut volume_db = t.volume_db;
+        let mut mute = t.mute;
+        let mut solo = t.solo;
+        let mut stack_db = 0.0;
+        let mut stack_mute = false;
+        let mut bus_mute = false;
+        for a in ancestors.iter().filter_map(|id| p.track(*id)) {
+            if a.kind == TrackKind::Folder {
+                volume_db += a.volume_db;
+                stack_db += a.volume_db;
+            } else {
+                bus_mute |= a.mute;
+            }
+            mute |= a.mute;
+            stack_mute |= a.mute;
+            solo |= a.solo;
+        }
+        // A VCA offsets the fader without moving it and mutes with it; like a folder's, both
+        // still apply when automation drives the track's own volume and mute.
+        let (vca_db, vca_mute) = crate::model::vca::offset(&p.vcas, t.vca.filter(|_| crate::model::vca::can_assign(t.kind)));
+        volume_db += vca_db;
+        stack_db += vca_db;
+        mute |= vca_mute;
+        stack_mute |= vca_mute;
+        if t.kind.is_stack() {
+            solo |= p.descendants(t.id).iter().filter_map(|id| p.track(*id)).any(|d| d.solo);
+        }
+        // Solo follows the routing too: a soloed track keeps the auxes it feeds audible, and a
+        // soloed aux keeps the tracks feeding it audible. An aux on an instrument's extra output
+        // doesn't need the instrument's strip audible, so that stays out of the solo.
+        if !solo && p.tracks.iter().any(|y| y.solo) {
+            let soloed = |y: &Track| y.solo || p.ancestors(y.id).iter().filter_map(|a| p.track(*a)).any(|a| a.solo);
+            solo = p
+                .tracks
+                .iter()
+                .filter(|y| y.id != t.id)
+                .any(|y| (soloed(y) && p.reaches(y.id, t.id)) || (y.kind == TrackKind::Aux && y.solo && p.reaches_past_fader(t.id, y.id)));
+        }
+        // Summing stacks and auxes are buses; a folder passes its subtracks on to wherever it
+        // plays. An explicit output overrides the stack.
+        let output = p.output_of(t.id);
+        let mut sends = [None; SEND_SLOTS];
+        if t.kind != TrackKind::Folder {
+            for (k, s) in t.sends.iter().take(SEND_SLOTS).enumerate() {
+                if let Some(s) = s.filter(|s| s.bus != t.id && p.is_aux(s.bus)) {
+                    let gain = if s.muted { 0.0 } else { volume_gain(s.level_db) };
+                    sends[k] = Some(SendParams { bus: s.bus, gain, pre_fader: s.pre_fader });
+                }
+            }
+        }
+        TrackParams {
+            volume: volume_gain(volume_db.max(-96.0)),
+            pan: t.pan,
+            mute,
+            solo,
+            armed: t.armed && t.kind.can_record(),
+            monitor: t.monitor,
+            input: t.input,
+            output,
+            sends,
+            stack_gain: volume_gain(stack_db.max(-96.0)),
+            stack_mute,
+            folder: ancestors.iter().copied().find(|id| p.track(*id).map(|a| a.kind == TrackKind::Folder).unwrap_or(false)),
+            own_gain: volume_gain(t.volume_db.max(-96.0)),
+            own_mute: t.mute,
+            bus_mute,
+            vca_gain: volume_gain(vca_db.max(-96.0)),
+            vca_mute,
+            off: p.is_off(t.id),
+            instrument_output: t.instrument_output,
+        }
+    }
+
+    /// Builds the playback list for a track. Audio regions don't stack: a newer region (later in
+    /// the list) hides whatever older audio it covers, like Logic's "No Overlap" playback, but
+    /// without destroying the older regions.
+    ///
+    /// A looping region plays as one entry per pass. Loop repetitions sit beneath every region
+    /// body (they are laid down first), so a loop dragged over another region never hides it,
+    /// as in Logic where the region covers the loop. The fade-in shapes the start of the first
+    /// pass and the fade-out the end of the last one, at the loop end.
+    ///
+    /// Two regions that crossfade (see [`crate::edit::fades::crossfades`]) both play across the
+    /// crossfade, the outgoing one past its end and the incoming one from before its start;
+    /// outside it, the earlier one is heard before and the later one after, whichever is newer.
+    pub(crate) fn regions_dsp(&self, t: &Track) -> Arc<Vec<RegionDsp>> {
+        if let Some(f) = self.freeze_dsp(t) {
+            return f;
+        }
+        struct Seg {
+            region: Id,
+            start: i64,
+            end: i64,
+            offset: i64,
+            gain: f32,
+            clip: Arc<Clip>,
+            fade_in: (i64, i64),
+            fade_out: (i64, i64),
+            laws: [FadeLaw; 2],
+        }
+        let mut segs: Vec<Seg> = Vec::new();
+        let mut out = Vec::new();
+        // Cuts away the older audio under `rs..re`, except a crossfade partner's (`keep`).
+        let cut = |segs: &mut Vec<Seg>, rs: i64, re: i64, keep: &[Id]| {
+            let mut kept = Vec::with_capacity(segs.len() + 1);
+            for sg in segs.drain(..) {
+                if sg.end <= rs || sg.start >= re || keep.contains(&sg.region) {
+                    kept.push(sg);
+                    continue;
+                }
+                if sg.start < rs {
+                    kept.push(Seg { start: sg.start, end: rs, clip: sg.clip.clone(), laws: sg.laws.clone(), ..sg });
+                }
+                if sg.end > re {
+                    kept.push(Seg { start: re, offset: sg.offset + (re - sg.start), ..sg });
+                }
+            }
+            *segs = kept;
+        };
+        // Lays a new piece of audio over what's there.
+        let lay = |segs: &mut Vec<Seg>, new: Seg, keep: &[Id]| {
+            cut(segs, new.start, new.end, keep);
+            segs.push(new);
+        };
+        // Regions with playback parameters (see `session/regions/params.rs`).
+        let map = self.params_map(t);
+        let delayed = map.as_ref().and_then(|m| Self::delay_audio(t, m));
+        let regions = delayed.as_deref().unwrap_or(&t.regions);
+        // Pattern regions play the notes their patterns make (see `session/midi/patterns.rs`).
+        let patterns = self.realize_patterns(regions);
+        let regions = patterns.as_deref().unwrap_or(regions);
+        // Settings › Editing › Crossfade Time and Curve, for comp boundaries and loop seams.
+        let xfade = self.crossfade_frames();
+        let comp_law = FadeLaw::Curve(self.prefs.editing.crossfade_curve.clamp(-1.0, 1.0));
+        let clip_frames = |c: Id| self.clips.get(&c).map(|c| c.frames() as i64);
+        let crossfades = crate::edit::fades::crossfades(regions, clip_frames);
+        // Loop repetitions first, then the region bodies, so bodies always win.
+        for repeats in [true, false] {
+            for r in regions.iter().filter(|r| !r.muted) {
+                let passes = r.passes();
+                let picked = if repeats { &passes[1..] } else { &passes[..1] };
+                match &r.content {
+                    // A take folder plays its comp: each pass covers what's under it, then its
+                    // pieces go in side by side so their crossfades overlap. The folder's own
+                    // fades take its shape, the comp's crossfades the Crossfade Curve. Crossfades
+                    // with neighbours replace the folder's own fades at those ends.
+                    RegionContent::Audio { gain_db, fade_in, fade_out, fade_shape, .. } if r.takes.is_some() => {
+                        let folder = r.takes.as_ref().unwrap();
+                        let last = passes.last().map(|p| p.1).unwrap_or(r.length);
+                        let fi = (*fade_in).clamp(0, r.length);
+                        let fo = if r.is_looped() { (*fade_out).clamp(0, last) } else { (*fade_out).clamp(0, r.length - fi) };
+                        let x_in = crossfades.iter().find(|x| x.in_region == r.id);
+                        let x_out = crossfades.iter().find(|x| x.out_region == r.id);
+                        let own_in = x_in.map(|x| (x.fade_in, x.laws().1)).unwrap_or(((r.start, fi), FadeLaw::fade_in(fade_shape)));
+                        let own_out = x_out.map(|x| (x.fade_out, x.laws().0)).unwrap_or(((r.end() - fo, fo), FadeLaw::fade_out(fade_shape)));
+                        let keep: Vec<Id> = x_in.map(|x| x.out_region).into_iter().chain(x_out.map(|x| x.in_region)).collect();
+                        for &(ps, pl) in picked {
+                            let mut edges = crate::edit::takes::pieces::PassEdges::default();
+                            if let (Some(x), true) = (x_in, ps == r.start) {
+                                (edges.lead, edges.fade_in) = (ps - x.fade_in.0, Some(x.fade_in));
+                            }
+                            if let (Some(x), true) = (x_out, ps + pl >= r.end()) {
+                                (edges.tail, edges.fade_out) = (x.fade_out.0 + x.fade_out.1 - (ps + pl), Some(x.fade_out));
+                            }
+                            cut(&mut segs, ps - edges.lead.max(0), ps + pl + edges.tail.max(0), &keep);
+                            for p in crate::edit::takes::pieces::pass_pieces_edged(r, folder, ps, pl, xfade, edges) {
+                                let Some(c) = self.clips.get(&p.clip) else { continue };
+                                let gain = volume_gain(*gain_db + p.gain_db);
+                                let law_in = if own_in.0 .1 > 0 && p.fade_in == own_in.0 { own_in.1.clone() } else { comp_law.clone() };
+                                let law_out = if own_out.0 .1 > 0 && p.fade_out == own_out.0 { own_out.1.clone() } else { comp_law.clone() };
+                                segs.push(Seg {
+                                    region: r.id,
+                                    start: p.start,
+                                    end: p.end,
+                                    offset: p.offset,
+                                    gain,
+                                    clip: c.clone(),
+                                    fade_in: p.fade_in,
+                                    fade_out: p.fade_out,
+                                    laws: [law_in, law_out],
+                                });
+                            }
+                        }
+                    }
+                    RegionContent::Audio { clip, offset, gain_db, fade_in, fade_out, fade_shape } => {
+                        let Some(c) = self.clips.get(clip) else { continue };
+                        let (end, last) = (r.end(), passes.last().map(|p| p.1).unwrap_or(r.length));
+                        let fi = (*fade_in).clamp(0, r.length);
+                        let fo = if r.is_looped() { (*fade_out).clamp(0, last) } else { (*fade_out).clamp(0, r.length - fi) };
+                        // The first pass fades in and the last fades out, with the region's own
+                        // fades or a crossfade, which stretches the region to cover it.
+                        let mut first_in = ((r.start, fi), FadeLaw::fade_in(fade_shape));
+                        let mut last_out = ((end - fo, fo), FadeLaw::fade_out(fade_shape));
+                        let mut keep = Vec::new();
+                        if let Some(x) = crossfades.iter().find(|x| x.in_region == r.id) {
+                            first_in = (x.fade_in, x.laws().1);
+                            keep.push(x.out_region);
+                        }
+                        if let Some(x) = crossfades.iter().find(|x| x.out_region == r.id) {
+                            last_out = (x.fade_out, x.laws().0);
+                            keep.push(x.in_region);
+                        }
+                        // Repetitions that crossfade overlap each other at the seams.
+                        let seams = crate::edit::fades::loop_seams(r, clip_frames, xfade);
+                        if !seams.is_empty() {
+                            keep.push(r.id);
+                        }
+                        let seam_law = FadeLaw::Curve(crate::edit::fades::DEFAULT_CURVE);
+                        let (first, n) = (r.start, passes.len());
+                        for &(ps, pl) in picked {
+                            let k = passes.iter().position(|p| p.0 == ps).unwrap_or(0);
+                            let (fin, law_in) = match (ps == first, k.checked_sub(1).and_then(|j| seams.get(j))) {
+                                (true, _) => first_in.clone(),
+                                (false, Some(z)) => (z.1, seam_law.clone()),
+                                (false, None) => ((ps, 0), FadeLaw::default()),
+                            };
+                            let (fout, law_out) = match (k + 1 == n, seams.get(k)) {
+                                (true, _) => last_out.clone(),
+                                (false, Some(z)) => (z.0, seam_law.clone()),
+                                (false, None) => ((ps + pl, 0), FadeLaw::default()),
+                            };
+                            let (s, e) = (ps.min(fin.0), (ps + pl).max(fout.0 + fout.1));
+                            let seg = Seg {
+                                region: r.id,
+                                start: s,
+                                end: e,
+                                offset: *offset + (s - ps),
+                                gain: volume_gain(*gain_db),
+                                clip: c.clone(),
+                                fade_in: fin,
+                                fade_out: fout,
+                                laws: [law_in, law_out],
+                            };
+                            lay(&mut segs, seg, &keep);
+                        }
+                    }
+                    RegionContent::Midi { .. } if !r.params.is_default() => {
+                        out.extend(Self::midi_passes(r, picked, map.as_ref().unwrap()));
+                    }
+                    RegionContent::Midi { notes, cc } => {
+                        if picked.is_empty() {
+                            continue;
+                        }
+                        let mut n: Vec<Note> = notes.iter().filter(|n| !n.muted).copied().collect();
+                        n.sort_by_key(|n| n.start);
+                        let mut c = cc.clone();
+                        c.sort_by_key(|c| c.start);
+                        // Every pass shares one note list and one controller list.
+                        let (n, c) = (Arc::new(n), Arc::new(c));
+                        for &(ps, pl) in picked {
+                            out.push(RegionDsp::Midi { start: ps, length: pl, notes: n.clone(), cc: c.clone() });
+                        }
+                    }
+                }
+            }
+        }
+        segs.sort_by_key(|s| s.start);
+        out.extend(segs.into_iter().map(|s| RegionDsp::Audio {
+            start: s.start,
+            length: s.end - s.start,
+            offset: s.offset,
+            gain: s.gain,
+            clip: s.clip,
+            fade_in: s.fade_in,
+            fade_out: s.fade_out,
+            laws: s.laws,
+        }));
+        Arc::new(out)
+    }
+
+    pub(crate) fn instantiate_slot(&mut self, slot: &PluginSlot) -> Result<InsertDsp> {
+        let sr = self.sample_rate();
+        // Undo frees instance ids for reuse: one that held a built-in effect may come back as
+        // another kind of plug-in, which mustn't inherit its latency or meters.
+        if !crate::session::plugins::builtin::is_builtin(&slot.plugin_id) {
+            self.fx.remove(&slot.uid);
+        }
+        let plugin = if let Some(info) = crate::fx::find(&slot.plugin_id) {
+            self.instantiate_builtin(&info, slot)
+        } else if let Some(info) = crate::instrument::find(&slot.plugin_id) {
+            self.instantiate_instrument(&info, slot)
+        } else {
+            let desc = self.find_plugin(&slot.plugin_id).ok_or_else(|| anyhow!("plug-in not found: {}", slot.name))?.clone();
+            let (proc, ctrl) = vst3_host::instantiate_keyed(&desc, sr, MAX_BLOCK, slot.sidechain.is_some()).map_err(|e| anyhow!(e))?;
+            if let Some(st) = &slot.state {
+                ctrl.load_state(&decode_state(st));
+            }
+            self.track_state_copy(slot, &ctrl);
+            self.controllers.insert(slot.uid, ctrl);
+            Plugin::Vst(Box::new(proc))
+        };
+        Ok(InsertDsp { uid: slot.uid, bypass: slot.bypass, plugin, key: KeyRoute::new(slot.sidechain, slot.sidechain_pre) })
+    }
+
+    pub(crate) fn build_track(&mut self, t: &Track) -> Box<TrackDsp> {
+        let meter = self.meters.entry(t.id).or_default().clone();
+        let mut dsp = TrackDsp::new(t.id, t.kind, Self::track_params(&self.project, t), meter);
+        self.load_clips(t.clips());
+        dsp.set_regions(self.regions_dsp(t));
+        dsp.set_automation(lanes_dsp(&t.automation), t.auto_mode);
+        // A new engine track starts without delay compensation; update_pdc sends it.
+        self.pdc_sent.remove(&t.id);
+        if t.frozen.is_some() {
+            // A frozen track plays its freeze file; its plug-ins stay unloaded.
+            return Box::new(dsp);
+        }
+        if let Some(slot) = &t.instrument {
+            match self.instantiate_slot(slot) {
+                Ok(i) => dsp.set_instrument(Some(i)),
+                Err(e) => log::error!("{}: {e}", t.name),
+            }
+        }
+        for (i, slot) in t.inserts.iter().enumerate() {
+            if let Some(slot) = slot {
+                match self.instantiate_slot(slot) {
+                    Ok(ins) => dsp.set_insert(i, Some(ins)),
+                    Err(e) => log::error!("{}: {e}", t.name),
+                }
+            }
+        }
+        Box::new(dsp)
+    }
+
+    /// Recreates every track and plugin from the project document.
+    pub(crate) fn rebuild_graph(&mut self) {
+        // Every command dropped is made good by this: those still queued are applied to the old
+        // graph before the swap (`Engine::replace_graph`), so none undoes part of the new one.
+        self.engine_resync = false;
+        // The plug-ins threads are still left in keep their editors hidden, untold.
+        self.mark_unresponsive();
+        let snapshot = self.capture_plugin_states();
+        self.adopt_states(&snapshot, true);
+        for c in self.controllers.values_mut() {
+            c.close_editor();
+        }
+        let old_controllers = std::mem::take(&mut self.controllers);
+        self.fx.clear();
+        let tracks: Vec<Track> = snapshot.tracks.clone();
+        let mut built: Vec<Box<TrackDsp>> = tracks.iter().map(|t| self.build_track(t)).collect();
+        // The engine plays tracks in this order; routes only point forwards.
+        let order = snapshot.process_order();
+        built.sort_by_key(|t| order.iter().position(|&i| i == t.id).unwrap_or(usize::MAX));
+        let mut master = Vec::new();
+        for slot in &snapshot.master.inserts {
+            master.push(slot.as_ref().and_then(|s| self.instantiate_slot(s).map_err(|e| log::error!("{e}")).ok()));
+        }
+        let sr = self.project.sample_rate as f64;
+        // The one lock outside an offline render: a swap, with the old graph dropped after.
+        let old = self.engine.lock().replace_graph(sr, built, master);
+        self.engine_rate = sr;
+        self.graph_dirty = true;
+        drop(old);
+        drop(old_controllers);
+        // Another project (or the same one reloaded): its strips start without clips.
+        self.peak_holds.reset(None);
+        self.sync_master_automation();
+        self.sync_globals();
+    }
+}

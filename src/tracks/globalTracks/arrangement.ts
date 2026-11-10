@@ -1,5 +1,5 @@
 // The Arrangement track (Logic's Global Tracks › Arrangement): named sections that tile the
-// timeline. The engine does the edits (crates/engine/src/arrangement.rs); this is what the
+// timeline. The engine does the edits (crates/engine/src/edit/arrangement.rs); this is what the
 // lane needs to draw them and to preview a drag. Pure, so tests can import it.
 import type { ArrangementMarker, Id, Project } from "../../engine/project";
 

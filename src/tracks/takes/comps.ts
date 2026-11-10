@@ -1,5 +1,5 @@
 // Take folder comps and MIDI take folders: what the folder menu lists and what the folder's
-// name bar says. The comp logic itself is in the engine (crates/engine/src/takes.rs).
+// name bar says. The comp logic itself is in the engine (crates/engine/src/edit/takes/).
 import type { Id } from "../../engine/project";
 import type { CompSegment, Region, TakeFolder } from "../../engine/regions";
 

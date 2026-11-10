@@ -1,5 +1,5 @@
 // Pure helpers for project alternatives, backups, user templates and track alternatives
-// (the Rust side is crates/engine/src/session/{alternatives,backups,templates,track_alternatives}.rs).
+// (the Rust side is crates/engine/src/session/project/{alternatives,backups,templates}.rs and session/tracks/alternatives.rs).
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 

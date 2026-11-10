@@ -9,13 +9,13 @@ pub fn audio_devices(host: Option<String>) -> DeviceList {
 }
 
 #[tauri::command]
-pub fn thread_choices(state: State<AppState>) -> daw_engine::threads::ThreadChoices {
+pub fn thread_choices(state: State<AppState>) -> daw_engine::audio_io::threads::ThreadChoices {
     with(&state, |s| s.thread_choices())
 }
 
 /// Settings › Audio › Lock audio memory: whether the memory is locked, or why not.
 #[tauri::command]
-pub fn memory_lock(state: State<AppState>) -> daw_engine::memlock::MemoryLock {
+pub fn memory_lock(state: State<AppState>) -> daw_engine::audio_io::memlock::MemoryLock {
     with(&state, |s| s.memory_lock.clone())
 }
 
@@ -41,7 +41,7 @@ pub fn input_level(state: State<AppState>) -> Option<serde_json::Value> {
         if !enabled || host == "JACK" {
             return None;
         }
-        let level = daw_engine::sysvol::input_level(input.as_deref())?;
+        let level = daw_engine::audio_io::system_volume::input_level(input.as_deref())?;
         let attenuating = level.attenuating();
         let mut v = serde_json::to_value(level).ok()?;
         v["attenuating"] = serde_json::Value::Bool(attenuating);
@@ -59,7 +59,7 @@ pub fn reset_input_level(state: State<AppState>) -> R<Option<serde_json::Value>>
     #[cfg(target_os = "linux")]
     {
         let input = with(&state, |s| s.audio_config.input.clone());
-        daw_engine::sysvol::reset_input_level(input.as_deref())?;
+        daw_engine::audio_io::system_volume::reset_input_level(input.as_deref())?;
     }
     Ok(input_level(state))
 }
@@ -125,18 +125,18 @@ pub fn restart_audio(state: State<AppState>) -> Snapshot {
 }
 
 #[tauri::command]
-pub fn midi_ports(state: State<AppState>) -> Vec<daw_engine::midi_io::MidiPort> {
+pub fn midi_ports(state: State<AppState>) -> Vec<daw_engine::midi::input::MidiPort> {
     with(&state, |s| s.midi_ports())
 }
 
 /// MIDI output ports, for controller feedback.
 #[tauri::command]
-pub fn midi_outputs(state: State<AppState>) -> Vec<daw_engine::midi_io::MidiPort> {
+pub fn midi_outputs(state: State<AppState>) -> Vec<daw_engine::midi::input::MidiPort> {
     with(&state, |s| s.midi_outputs())
 }
 
 #[tauri::command]
-pub fn midi_monitor(state: State<AppState>) -> Vec<daw_engine::midi_io::MidiLogEntry> {
+pub fn midi_monitor(state: State<AppState>) -> Vec<daw_engine::midi::input::MidiLogEntry> {
     with(&state, |s| s.midi_monitor())
 }
 
@@ -146,7 +146,7 @@ pub fn control_surfaces(state: State<AppState>) -> Vec<daw_engine::session::Surf
     with(&state, |s| s.control_surfaces())
 }
 
-/// The running version, for the update check (src/updates.ts). A debug build takes
+/// The running version, for the update check (src/app/updates/updates.ts). A debug build takes
 /// `MARBBLE_FAKE_VERSION` in its place, so the check can be tried against the real releases.
 #[tauri::command]
 pub fn app_version(app: tauri::AppHandle) -> String {

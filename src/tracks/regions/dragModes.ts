@@ -1,4 +1,4 @@
-// The No Overlap and Shuffle drag modes, mirroring crates/engine/src/drag_modes.rs (where the
+// The No Overlap and Shuffle drag modes, mirroring crates/engine/src/edit/drag_modes.rs (where the
 // rules are written out), so the Tracks area can draw where a drag will leave the regions.
 // The engine applies the edit; this is only the preview. Pure, so tests can import it.
 import type { Id } from "../../engine/project";

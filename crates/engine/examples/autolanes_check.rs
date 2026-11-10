@@ -4,8 +4,8 @@
 //! summing and folder stacks' lanes shape their subtracks, and each edit undoes.
 //! usage: autolanes_check <audio file> <scratch dir>
 use daw_engine::audio_io::AudioConfig;
-use daw_engine::automation::value_at;
 use daw_engine::dsp::volume_gain;
+use daw_engine::edit::automation::value_at;
 use daw_engine::model::{AutoMode, AutoParam, AutoPoint, Id, InputSel, TrackKind, MASTER_ID};
 use daw_engine::session::TrackPatch;
 use daw_engine::Session;

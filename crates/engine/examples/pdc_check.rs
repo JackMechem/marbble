@@ -50,7 +50,7 @@ fn noise_file(dir: &Path, sr: u32) -> PathBuf {
         (seed as f32 / u32::MAX as f32 * 2.0 - 1.0) * 0.25
     }));
     let path = dir.join("noise.wav");
-    daw_engine::decode::write_wav(&path, sr, &[x]).unwrap();
+    daw_engine::audio_file::decode::write_wav(&path, sr, &[x]).unwrap();
     path
 }
 
@@ -74,7 +74,7 @@ fn main() {
     let mut args = std::env::args().skip(1);
     let _tone = args.next().expect("audio file");
     let scratch = PathBuf::from(args.next().expect("scratch dir"));
-    let plugins = daw_engine::plugin_db::load_cache().unwrap_or_default();
+    let plugins = daw_engine::library::plugin_db::load_cache().unwrap_or_default();
     let Some(maxim) = plugins.iter().find(|d| d.name == "ZaMaximX2").cloned() else {
         println!("FAIL ZaMaximX2 isn't in the plug-in cache; scan plug-ins first");
         std::process::exit(1);
@@ -93,7 +93,7 @@ fn main() {
     let b = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
     s.import_audio(&noise, a, 0).unwrap();
     s.import_audio(&noise, b, 0).unwrap();
-    let src = daw_engine::decode::decode(&noise).unwrap().channels[0].clone();
+    let src = daw_engine::audio_file::decode::decode(&noise).unwrap().channels[0].clone();
     s.set_plugin(b, 0, &maxim.id).unwrap();
     let r = s.pdc_report();
     let lat_b = r.strips.iter().find(|x| x.track == b).map(|x| x.latency).unwrap_or(0);

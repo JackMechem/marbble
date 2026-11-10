@@ -5,11 +5,11 @@
 
 use std::path::{Path, PathBuf};
 
+use daw_engine::edit::pattern::{Pattern, PatternRow, Step};
+use daw_engine::edit::region_params::RegionParams;
+use daw_engine::edit::strip_silence::StripSettings;
 use daw_engine::model::{AutoParam, AutoPoint, CompSegment, Id, InputSel, Note, Region, RegionContent, Take, TakeFolder, TrackKind, MASTER_ID};
-use daw_engine::pattern::{Pattern, PatternRow, Step};
-use daw_engine::region_params::RegionParams;
 use daw_engine::session::{MidiContent, RegionParamsPatch, VcaPatch, BUILTIN_SYNTH};
-use daw_engine::strip_silence::StripSettings;
 use daw_engine::Session;
 
 pub const RATE: u32 = 48_000;
@@ -339,7 +339,7 @@ pub fn steps() -> Vec<(&'static str, StepFn)> {
             s.transpose_regions(&[r], 2);
         }),
         ("Section cut", |s, _| {
-            s.section_edit(daw_engine::arrange_cmds::SectionEdit::Cut, 7 * BAR, 7 * BAR + BAR / 3, None).unwrap();
+            s.section_edit(daw_engine::edit::arrange_cmds::SectionEdit::Cut, 7 * BAR, 7 * BAR + BAR / 3, None).unwrap();
         }),
     ]
 }

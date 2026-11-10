@@ -1,5 +1,5 @@
 // VCA faders: pure helpers, tested in tests/mixer/vcaModel.test.ts. The rules mirror
-// crates/engine/src/vca.rs, which is what the engine plays; here they only draw the strips.
+// crates/engine/src/model/vca.rs, which is what the engine plays; here they only draw the strips.
 import type { Id, TrackKind, Vca } from "../engine/project";
 
 /** At or below this a VCA silences its strips. */

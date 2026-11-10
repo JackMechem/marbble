@@ -8,7 +8,7 @@
 use std::path::{Path, PathBuf};
 
 use daw_engine::audio_io::AudioConfig;
-use daw_engine::fades::{curve, DragMode, FadeInType, FadeOutType};
+use daw_engine::edit::fades::{curve, DragMode, FadeInType, FadeOutType};
 use daw_engine::model::{Id, InputSel, RegionContent, TrackKind};
 use daw_engine::session::{BipOptions, BipSource, BitDepth, RenderOptions};
 use daw_engine::Session;

@@ -4,9 +4,9 @@
 //! usage: editing_check <audio file> <scratch dir>
 
 use daw_engine::audio_io::AudioConfig;
+use daw_engine::model::tempo::TempoEvent;
 use daw_engine::model::{InputSel, Region, RegionContent, TrackKind};
 use daw_engine::session::RangeEdit;
-use daw_engine::tempo::TempoEvent;
 use daw_engine::Session;
 
 #[path = "common/transport.rs"]

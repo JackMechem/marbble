@@ -134,7 +134,7 @@ fn set_string(state: &mut Vec<u8>, name: &str, v: &str) {
 fn sine(path: &Path, hz: f32, rate: u32) {
     // Shorter than the time between the notes: the sampler plays the whole of it.
     let x: Vec<f32> = (0..rate / 5).map(|i| 0.5 * (std::f32::consts::TAU * hz * i as f32 / rate as f32).sin()).collect();
-    daw_engine::decode::write_wav(path, rate, &[x.clone(), x]).unwrap();
+    daw_engine::audio_file::decode::write_wav(path, rate, &[x.clone(), x]).unwrap();
 }
 
 /// Loads the sines into instruments 1 and 2, the first on its default note and the second two
@@ -366,12 +366,12 @@ fn main() {
     let path = scratch.join("Bounce.wav");
     let o = RenderOptions { end: LEN, tail_secs: 0.0, bit_depth: daw_engine::session::BitDepth::Float32, ..Default::default() };
     s.bounce_project(&path, &o, &mut |_| {}).unwrap();
-    let bounced = daw_engine::decode::decode(&path).unwrap();
+    let bounced = daw_engine::audio_file::decode::decode(&path).unwrap();
     check("a bounce has the main output and the auxes", (peak(&bounced.channels, A) - peak(&plain_mix, A)).abs() < 1e-3);
     let dir = scratch.join("Export");
     let done = s.export_tracks(&dir, &o, &mut |_| {}).unwrap();
     check(&format!("Export All Tracks writes the instrument and both auxes ({} files)", done.paths.len()), done.paths.len() == 3);
-    let aux_file = done.paths.iter().find(|p| p.contains("Direct out 0")).map(|p| daw_engine::decode::decode(Path::new(p)).unwrap());
+    let aux_file = done.paths.iter().find(|p| p.contains("Direct out 0")).map(|p| daw_engine::audio_file::decode::decode(Path::new(p)).unwrap());
     check("the exported aux has its output", aux_file.is_some_and(|f| (db(peak(&f.channels, A)) - db(ma)).abs() < 0.1 && peak(&f.channels, B) < 1e-4));
 
     // Refusals.
@@ -467,7 +467,7 @@ fn main() {
     // own sound fades. Nothing clicks and the engine's thread allocates nothing.
     let tone_path = scratch.join("steady.wav");
     let steady: Vec<f32> = (0..rate * 10).map(|i| 0.2 * (std::f32::consts::TAU * 440.0 * i as f32 / rate as f32).sin()).collect();
-    daw_engine::decode::write_wav(&tone_path, rate, &[steady.clone(), steady]).unwrap();
+    daw_engine::audio_file::decode::write_wav(&tone_path, rate, &[steady.clone(), steady]).unwrap();
     let tone = s.add_track(TrackKind::Audio, InputSel::None, None, None).unwrap();
     s.import_audio(&tone_path, tone, 0).unwrap();
     // Sampler notes through the whole of it, one after another.

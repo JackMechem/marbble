@@ -57,11 +57,6 @@ impl Lfo {
         self.rate = rate;
     }
 
-    /// The phase offset (cycles) added to the transport's.
-    pub fn set_offset(&mut self, cycles: f64) {
-        self.offset = cycles;
-    }
-
     /// Back to the start: phase zero, and the same random values as before.
     pub fn reset(&mut self) {
         self.phase = 0.0;

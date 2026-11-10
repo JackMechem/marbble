@@ -178,7 +178,7 @@ impl SamplePool {
         if now.is_some_and(|(_, len)| len as usize > self.limit) {
             return Err(LoadError::OverMemoryLimit);
         }
-        let d = crate::decode::decode(path).map_err(|e| LoadError::Unreadable(e.to_string()))?;
+        let d = crate::audio_file::decode::decode(path).map_err(|e| LoadError::Unreadable(e.to_string()))?;
         Self::check_decoded(&d, path)?;
         let buf = Arc::new(SampleBuf::new(d.sample_rate, &d.channels));
         drop(d);
@@ -189,7 +189,7 @@ impl SamplePool {
         Ok(buf)
     }
 
-    fn check_decoded(d: &crate::decode::Decoded, path: &Path) -> Result<(), LoadError> {
+    fn check_decoded(d: &crate::audio_file::decode::Decoded, path: &Path) -> Result<(), LoadError> {
         if d.sample_rate == 0 || d.channels.is_empty() || d.channels[0].is_empty() {
             return Err(LoadError::Unreadable(format!("{} has no audio", path.display())));
         }

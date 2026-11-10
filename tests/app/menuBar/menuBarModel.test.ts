@@ -35,7 +35,7 @@ test("later states add to and override earlier ones", () => {
   assert.deepEqual(mergeStates(a, b).get("cut"), { id: "cut", key: "Mod+X", enabled: true });
 });
 
-test("only what changed is sent, starting from the menu as menu.rs builds it", () => {
+test("only what changed is sent, starting from the menu as menu/mod.rs builds it", () => {
   const sent = new Map<string, ItemState>();
   const now = (...s: ItemState[]) => new Map(s.map((x) => [x.id, x]));
   // As built: enabled, unticked, usual label, no key. Nothing to send for that.

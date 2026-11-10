@@ -12,7 +12,7 @@ impl Engine {
     /// `input` holds `frames * in_ch` interleaved samples; `output` holds `frames * out_ch`.
     pub fn process(&mut self, input: &[f32], in_ch: usize, output: &mut [f32], out_ch: usize) {
         let started = Instant::now();
-        let _ftz = crate::denormals::NoDenormals::new();
+        let _ftz = crate::dsp::denormals::NoDenormals::new();
         let frames = output.len().checked_div(out_ch).unwrap_or(0);
 
         // A block was given up on and a strip still isn't done: the strips and everything the
@@ -117,7 +117,7 @@ impl Engine {
                     self.flush_all_notes();
                     // MIDI cycle recording: where one pass ends (a take each, if so set).
                     if self.recording {
-                        let _ = self.midi_rec.push((cs, crate::takes::PASS_MARK));
+                        let _ = self.midi_rec.push((cs, crate::edit::takes::recording::PASS_MARK));
                     }
                 }
             }

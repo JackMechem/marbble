@@ -22,7 +22,7 @@ test("a region without params has the defaults, which change nothing", () => {
 });
 
 test("choice lists match the engine's values", () => {
-  // crates/engine/src/region_params.rs: QUANTIZE_VALUES and DYNAMICS.
+  // crates/engine/src/edit/region_params.rs: QUANTIZE_VALUES and DYNAMICS.
   assert.deepEqual(
     QUANTIZE_OPTIONS.map((o) => o[0]),
     [0, 1, 2, 4, 8, 16, 32, 64, 3, 6, 12, 24, 48, 96],

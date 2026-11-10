@@ -1,5 +1,5 @@
 //! The saved form of automation: what a lane controls, its points and the track's mode. Evaluating
-//! lanes is in `crate::automation`.
+//! lanes is in `crate::edit::automation`.
 
 use super::*;
 

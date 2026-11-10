@@ -281,7 +281,7 @@ pub struct MidiPrefs {
     pub chase_controllers: bool,
     /// Control surfaces (Settings › MIDI › Control Surfaces): a Mackie Control and its
     /// extenders, or a HUI (`surface/`).
-    pub surfaces: Vec<crate::surface::SurfaceConfig>,
+    pub surfaces: Vec<crate::control::surface::SurfaceConfig>,
 }
 
 impl Default for MidiPrefs {
@@ -324,8 +324,8 @@ impl Default for EditingPrefs {
         EditingPrefs {
             fade_ms: 0.0,
             move_automation: MoveAutomation::Never,
-            crossfade_ms: crate::fades::DEFAULT_XFADE_MS as f32,
-            crossfade_curve: crate::fades::DEFAULT_CURVE,
+            crossfade_ms: crate::edit::fades::DEFAULT_XFADE_MS as f32,
+            crossfade_curve: crate::edit::fades::DEFAULT_CURVE,
         }
     }
 }

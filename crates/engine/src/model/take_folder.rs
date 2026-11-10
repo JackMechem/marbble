@@ -1,5 +1,5 @@
 //! The saved form of a take folder: takes, comps and comp segments. The comping logic that works on
-//! them is in `crate::takes`.
+//! them is in `crate::edit::takes`.
 
 use super::*;
 

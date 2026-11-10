@@ -14,7 +14,7 @@ export interface SelectItem {
   muted?: boolean;
 }
 
-/** The Select commands a MIDI editor takes (keymap.ts and menu.rs ids). */
+/** The Select commands a MIDI editor takes (keymap.ts and menu/spec.rs ids). */
 const EDITOR_SELECT_COMMANDS = ["sel-following", "sel-inside-locators", "sel-muted", "sel-same-color", "sel-equal", "sel-invert"] as const;
 
 export function isEditorSelect(id: string): boolean {

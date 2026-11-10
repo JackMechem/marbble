@@ -101,7 +101,7 @@ fn main() {
     s.set_builtin_param(src, 1, daw_engine::fx::channel_eq::gain(4), -6.0).unwrap();
     s.set_plugin(b, 1, "builtin:reverb").unwrap();
     let name = s.save_strip_setting(&root, src, "Squashed", false).unwrap();
-    check("the setting is saved as a file", root.join("Squashed.json").exists() && daw_engine::strip_settings::list(&root) == vec![name.clone()]);
+    check("the setting is saved as a file", root.join("Squashed.json").exists() && daw_engine::library::strip_settings::list(&root) == vec![name.clone()]);
 
     s.checkpoint("Load Channel Strip Setting", None, true);
     s.load_strip_setting(&root, &[a, b], &name).unwrap();

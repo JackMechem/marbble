@@ -1,5 +1,5 @@
 // Settings › Audio › Lock audio memory, kept pure so it can be tested. The engine says whether the
-// memory is locked, or why not (`crates/engine/src/memlock.rs`).
+// memory is locked, or why not (`crates/engine/src/audio_io/memlock.rs`).
 
 /** Whether Marbble's memory is locked in RAM. */
 export type MemoryLock =

@@ -30,14 +30,14 @@ use std::io::Write;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::PathBuf;
 
-use daw_engine::arrange_cmds::SectionEdit;
 use daw_engine::audio_io::AudioConfig;
 use daw_engine::dsp::ParallelTest;
-use daw_engine::fades::DragMode;
+use daw_engine::edit::arrange_cmds::SectionEdit;
+use daw_engine::edit::fades::DragMode;
+use daw_engine::edit::pattern::Step;
+use daw_engine::edit::strip_silence::StripSettings;
 use daw_engine::model::{AutoMode, AutoParam, Id, Note, Project, RegionContent, TrackKind, MASTER_ID};
-use daw_engine::pattern::Step;
 use daw_engine::session::{MidiContent, RegionMove, RegionParamsPatch, TrackPatch, VcaPatch};
-use daw_engine::strip_silence::StripSettings;
 use daw_engine::Session;
 
 #[path = "common/all_features.rs"]

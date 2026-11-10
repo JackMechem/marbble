@@ -9,7 +9,7 @@ import { fxKey, openPanel, togglePanel } from "./panels/fxDockState";
 import { sideChainMenu } from "./sideChain";
 import { refuseFrozen } from "../tracks/freeze";
 
-/** The Channel EQ's plug-in id (crates/engine/src/fx/channel_eq.rs). */
+/** The Channel EQ's plug-in id (crates/engine/src/fx/channel_eq/). */
 export const CHANNEL_EQ = "builtin:channel-eq";
 
 export async function loadFxList() {

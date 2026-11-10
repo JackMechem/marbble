@@ -1,4 +1,4 @@
-// Keeps the native menu bar (src-tauri/src/menu.rs) in step with the app: the key commands' keys
+// Keeps the native menu bar (src-tauri/src/menu/) in step with the app: the key commands' keys
 // beside their items (from Settings › Key Commands, so a reassigned key shows there too), ticks,
 // greyed-out items and the Undo/Redo names. The states come from the Tracks area's own menus,
 // which have the same items by id (TracksArea.tsx), and, for the items only the menu bar has,

@@ -1,5 +1,5 @@
 // Track Alternatives (Track › Track Alternatives, the track header's pop-up): each is a set of
-// regions for the track; one plays. Rust: crates/engine/src/session/track_alternatives.rs.
+// regions for the track; one plays. Rust: crates/engine/src/session/tracks/alternatives.rs.
 import { type Track } from "../../engine/project";
 import { act } from "../../engine/commands";
 import { activeTrackAlt, trackAltNames } from "../../project/alternativesModel";

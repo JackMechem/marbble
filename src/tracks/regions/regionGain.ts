@@ -5,7 +5,7 @@
 // dragging. Pure, so tests can import it.
 import type { Id } from "../../engine/project";
 
-/** Region gain's range (crates/engine/src/session/region_gain.rs). The bottom shows as −∞. */
+/** Region gain's range (crates/engine/src/session/regions/gain.rs). The bottom shows as −∞. */
 const GAIN_MIN = -96;
 const GAIN_MAX = 30;
 /** dB per pixel of vertical drag, and with Shift. */

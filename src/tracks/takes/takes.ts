@@ -1,7 +1,7 @@
 // Take folders in the arrange area, as in Logic: a folder region shows its comp, a disclosure
 // triangle opens it into one row per take below the track's lane, and swiping across a take
 // row puts that stretch of the take in the comp (Quick Swipe Comping). The comp logic lives in
-// the engine (crates/engine/src/takes.rs); this file has the folders' layout and sends the edits.
+// the engine (crates/engine/src/edit/takes/); this file has the folders' layout and sends the edits.
 // Drawing them is takeDraw.ts, their menu takeFolderMenu.ts.
 import { ask } from "@tauri-apps/plugin-dialog";
 import { type Id, type Track } from "../../engine/project";

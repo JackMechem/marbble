@@ -1,6 +1,6 @@
 // Pack Take Folder across tracks: which tracks the selected regions come from, and which of
 // them the pack leaves with no regions (offered for deletion afterwards). The pack itself is
-// in the engine (crates/engine/src/session/takes.rs).
+// in the engine (crates/engine/src/session/takes/).
 import type { Id, Track } from "../../engine/project";
 
 /** The tracks holding any of `ids`, top first. The first gets the folder. */

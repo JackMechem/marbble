@@ -1,6 +1,6 @@
 // The Step Sequencer's pure part: pattern edits, step values, names, where the playhead is in
 // each row, and the miniature a pattern region shows in the Tracks area. The pattern itself
-// (and the notes it plays) lives in crates/engine/src/pattern.rs; StepSequencer.tsx is the
+// (and the notes it plays) lives in crates/engine/src/edit/pattern.rs; StepSequencer.tsx is the
 // editor, which sends each edited pattern with `set_pattern`.
 import type { Track } from "../../engine/project";
 import type { Note, Pattern, PatternRow, PatternStep, Region } from "../../engine/regions";

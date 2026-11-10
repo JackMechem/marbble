@@ -5,7 +5,7 @@
 use std::time::Duration;
 
 use daw_engine::audio_io::AudioConfig;
-use daw_engine::automation::value_at;
+use daw_engine::edit::automation::value_at;
 use daw_engine::model::{AutoMode, AutoParam, AutoPoint, InputSel, TrackKind};
 use daw_engine::session::TrackPatch;
 use daw_engine::Session;
@@ -206,7 +206,7 @@ fn main() {
         println!("SKIP plug-in parameter automation: no plug-in and parameter name given");
         done()
     };
-    let list = daw_engine::plugin_db::load_cache().unwrap_or_default();
+    let list = daw_engine::library::plugin_db::load_cache().unwrap_or_default();
     let Some(desc) = list.iter().find(|d| d.name == name) else {
         println!("SKIP plug-in parameter automation: {name} isn't in the plug-in cache (scan plug-ins first)");
         done()

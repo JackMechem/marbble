@@ -79,7 +79,7 @@ fn rig(desc: &PluginDescriptor, param: &str, v1: f64, tone: &Path, scratch: &Pat
     let uid = s.set_plugin(track, 0, &desc.id).unwrap();
     let id = s.plugin_params(uid).iter().find(|p| p.name == param).map(|p| p.id).unwrap_or_else(|| panic!("{} has no {param}", desc.name));
     let v0 = s.vst_param(uid, id).unwrap();
-    let len = daw_engine::decode::decode(tone).unwrap().channels[0].len() as i64;
+    let len = daw_engine::audio_file::decode::decode(tone).unwrap().channels[0].len() as i64;
     s.set_cycle(true, 0, len);
     s.watch_vst_edits_headless(uid);
     Rig { s, track, uid, param: id, v0, v1, len, audible }
@@ -506,7 +506,7 @@ fn stuck(r: &mut Rig, name: &str) {
     pump(s, 400);
 }
 
-/// The project's copy of a plug-in's state (`session/plugin_states.rs`), for one added this session
+/// The project's copy of a plug-in's state (`session/plugins/states.rs`), for one added this session
 /// that stops responding (marked as the session marks one a processing thread is stuck in) before
 /// any save. Read when it loads and once a change has gone quiet, and not otherwise, so redoing
 /// its insertion, undoing its track's deletion, duplicating the track and rebuilding all bring it

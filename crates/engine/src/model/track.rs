@@ -16,11 +16,11 @@ pub enum TrackKind {
     Instrument,
     /// Folder stack main track: groups its subtracks; its fader, mute and solo apply to them.
     Folder,
-    /// Summing stack main track: its subtracks play through it like a bus, with its own EQ,
-    /// plug-ins and fader.
+    /// Summing stack main track: its subtracks play through it like a bus, with its own
+    /// inserts and fader.
     Summing,
     /// Aux channel strip, as in Logic: no regions of its own. It plays what sends and routed
-    /// outputs deliver to its bus, through its own EQ, plug-ins and fader.
+    /// outputs deliver to its bus, through its own inserts and fader.
     Aux,
 }
 
@@ -87,7 +87,7 @@ pub struct PluginSlot {
     pub preset: Option<PresetRef>,
 }
 
-/// A preset by name: one of the factory presets or one of the user's (see `crate::presets`).
+/// A preset by name: one of the factory presets or one of the user's (see `crate::library::presets`).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PresetRef {
     pub name: String,
@@ -125,7 +125,7 @@ fn default_slope() -> u8 {
 }
 
 /// The eight-band Channel EQ's settings, modelled on Logic's Channel EQ. The Channel EQ itself
-/// is a built-in effect (`fx/channel_eq.rs`) whose parameters these are; this form is what
+/// is a built-in effect (`fx/channel_eq/`) whose parameters these are; this form is what
 /// strips, channel strip settings and presets saved before that held (see `channel_eq_upgrade.rs`),
 /// and what the Linear Phase EQ designs its filter from.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -231,7 +231,7 @@ pub struct Track {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub vca: Option<Id>,
     /// Logic's Track Alternatives: the track's other sets of regions, kept while `regions` plays
-    /// the active one (see `session/track_alternatives.rs`). Empty: the track has just one.
+    /// the active one (see `session/tracks/alternatives.rs`). Empty: the track has just one.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub alternatives: Vec<TrackAlternative>,
     /// The name of the active track alternative ("A" when empty).
@@ -246,7 +246,7 @@ pub struct Track {
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub off: bool,
     /// For auxes: the extra output of an instrument that feeds it, besides anything sent to its
-    /// bus (see `session/multi_out.rs`).
+    /// bus (see `session/mixer/multi_out.rs`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub instrument_output: Option<InstrumentOutput>,
     /// The preset last loaded into the fixed Channel EQ or saved from it, read from older
@@ -254,7 +254,7 @@ pub struct Track {
     #[serde(rename = "eq_preset", default, skip_serializing)]
     pub legacy_eq_preset: Option<PresetRef>,
     /// The icon the user chose for the track, by the UI's id for it ("kick", "mic"). None shows
-    /// the icon its name suggests, else its kind's (see `src/trackIcons.ts`). Not part of channel
+    /// the icon its name suggests, else its kind's (see `src/tracks/icons/trackIcons.ts`). Not part of channel
     /// strip settings: the icon belongs to the track.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub icon: Option<String>,

@@ -1,8 +1,8 @@
 //! Play, stop, locate and record, and the project-wide values that go with them: cycle, tempo,
 //! signature, metronome, count-in, master volume.
 //!
-//! Recording ends here too: `place_recording` turns what `crate::recorder` wrote into regions or,
-//! with a cycle or punch, take folders (see `takes.rs`). The tempo map's edits are in `tempo.rs`.
+//! Recording ends here too: `place_recording` turns what `crate::audio_io::recorder` wrote into regions or,
+//! with a cycle or punch, take folders (see `takes/`). The tempo map's edits are in `tempo.rs`.
 
 use super::*;
 
@@ -177,7 +177,7 @@ impl Session {
 
     /// Turns what the recording in progress (`rec_punch`, `rec_plan`) captured into regions:
     /// the audio `takes`, moved `comp` frames earlier, and the MIDI. Crash recovery replays an
-    /// interrupted recording through here too (`session/recovery.rs`).
+    /// interrupted recording through here too (`session/project/recovery.rs`).
     pub(super) fn place_recording(&mut self, takes: Vec<(Id, FinishedTake)>, comp: i64) {
         let Some(punch) = self.rec_punch.take() else { return };
         let plan = self.rec_plan.take();
@@ -192,7 +192,7 @@ impl Session {
         let mut midi = Vec::new();
         // Shared by the takes every track gets from this recording (`Take::pass`).
         let recording = self.project.alloc_id();
-        let mut passes = takes::RecordingPasses::new(recording);
+        let mut passes = takes::recording::RecordingPasses::new(recording);
         for (track, take) in takes {
             if let Some(e) = &take.error {
                 self.warning = Some(e.clone());
@@ -254,7 +254,7 @@ impl Session {
         }
         if let (Some(track), false) = (self.rec_midi_track.take(), events.is_empty()) {
             let map = self.tempo_map();
-            let w = takes::midi_window(plan, punch, stop_pos);
+            let w = takes::recording::midi_window(plan, punch, stop_pos);
             // From the bar line at or before the first event to the one at or after the last.
             let start = map.bar_start(map.bar_at(w.lo as f64)) as i64;
             let hi = w.hi.max(w.lo + 1) as f64;
@@ -263,12 +263,12 @@ impl Session {
             if self.prefs.recording.midi_mode() == MidiOverlap::TakeFolders {
                 // Each cycle pass is a take; a held note ends at the cycle end, or where
                 // recording stopped in the last pass.
-                let passes = crate::takes::midi_passes(&events);
+                let passes = crate::edit::takes::recording::midi_passes(&events);
                 let n = passes.len();
                 let takes: Vec<(Vec<Note>, Vec<CcEvent>)> = passes
                     .iter()
                     .enumerate()
-                    .map(|(k, p)| takes::midi_take(p, &w, start, if k + 1 == n { stop_pos } else { w.hi }))
+                    .map(|(k, p)| takes::recording::midi_take(p, &w, start, if k + 1 == n { stop_pos } else { w.hi }))
                     .filter(|(n, c)| !n.is_empty() || !c.is_empty())
                     .collect();
                 if !takes.is_empty() {
@@ -277,7 +277,7 @@ impl Session {
                 }
                 events.clear();
             }
-            let (notes, cc) = takes::midi_take(&events, &w, start, stop_pos);
+            let (notes, cc) = takes::recording::midi_take(&events, &w, start, stop_pos);
             if !notes.is_empty() || !cc.is_empty() {
                 let merged = match self.prefs.recording.midi_mode() {
                     MidiOverlap::NewRegion | MidiOverlap::TakeFolders => false,

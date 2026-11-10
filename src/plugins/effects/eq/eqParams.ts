@@ -1,4 +1,4 @@
-// The Channel EQ's and Linear Phase EQ's parameters (crates/engine/src/fx/channel_eq.rs, which
+// The Channel EQ's and Linear Phase EQ's parameters (crates/engine/src/fx/channel_eq/, which
 // linear_phase_eq.rs shares) as Channel EQ settings, so both panels use the Channel EQ editor: the
 // same eight bands, each a set of plug-in parameters. The Linear Phase EQ adds its Quality.
 import type { BandKind, ChannelEq, EqBand } from "../../../engine/project";

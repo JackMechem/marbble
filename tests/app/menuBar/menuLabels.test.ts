@@ -1,4 +1,4 @@
-// Checks the menu bar (src-tauri/src/menu.rs) against src/app/menuBar/menuLabels.ts and the key commands:
+// Checks the menu bar (src-tauri/src/menu/spec.rs) against src/app/menuBar/menuLabels.ts and the key commands:
 // one name per command, the same Edit menu in the menu bar and the Tracks area, and keys that
 // belong either to the menu bar or to the key commands, never both.
 import { test } from "node:test";
@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import { EDIT_MENU, layMenu, MENU_LABELS, SHORT_LABELS, type MenuShape } from "../../../src/app/menuBar/menuLabels.ts";
 
 const read = (path: string) => readFileSync(fileURLToPath(new URL(`../../../${path}`, import.meta.url)), "utf8");
-const menuRs = read("src-tauri/src/menu.rs");
+const menuRs = read("src-tauri/src/menu/spec.rs");
 const keymap = read("src/keyboard/keymap.ts");
 
 interface RsItem {
@@ -20,11 +20,11 @@ interface RsItem {
 }
 type RsNode = RsItem | "-" | { sub: string; items: RsNode[] };
 
-/** menu.rs `spec()`, read as a tree. */
+/** menu/spec.rs `spec()`, read as a tree. */
 function rsSpec(): RsNode[] {
   const start = menuRs.indexOf("fn spec() -> Vec<Spec> {");
-  const end = menuRs.indexOf("\nenum Handle", start);
-  assert.ok(start > 0 && end > start, "menu.rs spec()");
+  const end = menuRs.indexOf("\n}\n", start);
+  assert.ok(start > 0 && end > start, "menu/spec.rs spec()");
   const body = menuRs.slice(start, end);
   const root: RsNode[] = [];
   const stack: RsNode[][] = [root];
@@ -45,7 +45,7 @@ function rsSpec(): RsNode[] {
 const items = (nodes: RsNode[]): RsItem[] => nodes.flatMap((n) => (n === "-" ? [] : "sub" in n ? items(n.items) : [n]));
 const shapeOf = (nodes: RsNode[]): MenuShape => nodes.map((n) => (n === "-" ? n : "sub" in n ? { sub: n.sub, items: shapeOf(n.items) } : (n.id as MenuShape[number])));
 
-test("menu.rs is read whole", () => {
+test("menu/spec.rs is read whole", () => {
   const bar = rsSpec();
   assert.deepEqual(
     bar.map((n) => (typeof n === "object" && "sub" in n ? n.sub : n)),
@@ -97,7 +97,7 @@ test("layMenu lays out items, separators and submenus, leaving out missing items
 /** Key command ids (keymap.ts KEY_COMMANDS). */
 const commandIds = new Set([...keymap.slice(keymap.indexOf("export const KEY_COMMANDS"), keymap.indexOf("\n];")).matchAll(/\{ id: "([^"]+)"/g)].map((m) => m[1]));
 
-/** A menu.rs accelerator in keymap.ts's form. */
+/** A menu/spec.rs accelerator in keymap.ts's form. */
 function fromAccel(a: string): string {
   const parts = a.split("+").map((p) => (p === "CmdOrCtrl" ? "Mod" : p.replace(/^Digit/, "").replace(/^Equal$/, "=").replace(/^Minus$/, "-")));
   const key = parts.pop()!;
@@ -127,5 +127,5 @@ test("Settings › Key Commands lists the menu bar's own keys as they are", () =
     // MIDI controllers fire the item by this id.
     assert.equal(l.id, i.id, i.label);
   }
-  assert.equal(listed.length, accelerated.length + 1, "MENU_SHORTCUTS lists an item menu.rs doesn't have (Bounce in Place aside)");
+  assert.equal(listed.length, accelerated.length + 1, "MENU_SHORTCUTS lists an item menu/spec.rs doesn't have (Bounce in Place aside)");
 });

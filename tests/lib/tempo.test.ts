@@ -1,4 +1,4 @@
-// Unit tests for src/lib/tempo.ts, the UI's mirror of crates/engine/src/tempo.rs. Run with
+// Unit tests for src/lib/tempo.ts, the UI's mirror of crates/engine/src/model/tempo.rs. Run with
 // `npm test`.
 import { test } from "node:test";
 import assert from "node:assert/strict";

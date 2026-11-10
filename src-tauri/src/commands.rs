@@ -4,15 +4,17 @@
 //! This file holds what every command shares: the [`Snapshot`] the frontend gets back, and `edit`,
 //! `try_edit` and `edit_made`, which take the undo checkpoint around a change. The commands are in the
 //! modules below, by what they act on, and all are reachable as `commands::<name>`, which is how
-//! `main.rs` registers them. A new command also goes in that list; `tests/tauriCommands.test.ts` checks
+//! `main.rs` registers them. A new command also goes in that list; `tests/engine/tauriCommands.test.ts` checks
 //! the frontend's calls against both.
 
 use std::path::PathBuf;
 
-use daw_engine::audio_io::{list_devices, AudioConfig, AudioStatus, DeviceList};
-use daw_engine::controllers::CtlTarget;
-use daw_engine::fades::{Crossfade, DragMode, FadeInType, FadeOutType};
+use daw_engine::audio_io::devices::{list_devices, DeviceList};
+use daw_engine::audio_io::{AudioConfig, AudioStatus};
+use daw_engine::control::controllers::CtlTarget;
+use daw_engine::edit::fades::{Crossfade, DragMode, FadeInType, FadeOutType};
 use daw_engine::instrument::sampler::state::Zone;
+use daw_engine::model::tempo::{SigEvent, TempoEvent};
 use daw_engine::model::{AutoMode, AutoParam, AutoPoint, Group, Id, InputSel, Project, Region, TakeRating, TrackKind, TrackSend, MASTER_ID};
 use daw_engine::prefs::{BitDepth, ClickSettings, Prefs};
 use daw_engine::session::{AssignmentPatch, AssignmentRow};
@@ -20,9 +22,8 @@ use daw_engine::session::{
     BipOptions, BipSource, BounceResult, ClipInfo, InstrumentOutputs, MidiContent, PdcReport, PlayedNotes, RangeEdit, RegionParamsPatch, RenderOptions,
     TrackPatch,
 };
-use daw_engine::tempo::{SigEvent, TempoEvent};
 use daw_engine::vst3_host::{ParamInfo, PluginDescriptor};
-use daw_engine::{plugin_db, transients, Session};
+use daw_engine::{edit::transients, library::plugin_db, Session};
 use serde::Serialize;
 use tauri::{Emitter, State};
 

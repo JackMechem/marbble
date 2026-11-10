@@ -136,11 +136,11 @@ pub struct Region {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub takes: Option<TakeFolder>,
     /// Playback parameters (Logic's Region inspector: quantize, transpose, velocity, delay
-    /// and so on), applied as the region plays. See [`crate::region_params`].
+    /// and so on), applied as the region plays. See [`crate::edit::region_params`].
     #[serde(default, skip_serializing_if = "RegionParams::is_default")]
     pub params: RegionParams,
     /// Makes a MIDI region a pattern region (Logic's Step Sequencer): it plays the notes its
-    /// pattern makes instead of `content`'s. See [`crate::pattern`].
+    /// pattern makes instead of `content`'s. See [`crate::edit::pattern`].
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pattern: Option<Pattern>,
 }

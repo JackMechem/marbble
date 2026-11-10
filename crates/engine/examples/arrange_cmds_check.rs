@@ -9,10 +9,10 @@
 //! usage: arrange_cmds_check <scratch dir>
 use std::path::{Path, PathBuf};
 
-use daw_engine::arrange_cmds::SectionEdit;
 use daw_engine::audio_io::AudioConfig;
+use daw_engine::edit::arrange_cmds::SectionEdit;
+use daw_engine::edit::strip_silence::StripSettings;
 use daw_engine::model::{AutoMode, AutoParam, AutoPoint, Id, InputSel, RegionContent, TrackKind};
-use daw_engine::strip_silence::StripSettings;
 use daw_engine::Session;
 
 /// Set by any failed check: the example then exits with status 1, so scripts notice.
@@ -32,7 +32,7 @@ fn write_noise(path: &Path, rate: u32) {
             ((x >> 8) as f32 / (1u32 << 24) as f32 - 0.5) * 0.6
         })
         .collect();
-    daw_engine::decode::write_wav(path, rate, &[buf]).unwrap();
+    daw_engine::audio_file::decode::write_wav(path, rate, &[buf]).unwrap();
 }
 
 /// A 440 Hz tone at half scale over each (start, end) in seconds, silence elsewhere, three
@@ -49,7 +49,7 @@ fn write_notes(path: &Path, rate: u32, notes: &[(f64, f64)]) {
             }
         })
         .collect();
-    daw_engine::decode::write_wav(path, rate, &[buf]).unwrap();
+    daw_engine::audio_file::decode::write_wav(path, rate, &[buf]).unwrap();
 }
 
 /// Two offline renders of `0..len`: the regions alone (automation off), to compare sample for

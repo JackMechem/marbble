@@ -6,9 +6,9 @@ fn main() {
     let reset = args.iter().any(|a| a == "--reset");
     let id = args.iter().find(|a| !a.starts_with("--")).cloned();
     if reset {
-        println!("{:?}", daw_engine::sysvol::reset_input_level(id.as_deref()));
+        println!("{:?}", daw_engine::audio_io::system_volume::reset_input_level(id.as_deref()));
     } else {
-        println!("{:?}", daw_engine::sysvol::input_level(id.as_deref()));
+        println!("{:?}", daw_engine::audio_io::system_volume::input_level(id.as_deref()));
     }
 }
 

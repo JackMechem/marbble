@@ -80,7 +80,7 @@ fn main() {
     let _ = std::fs::remove_dir_all(&config);
     std::env::set_var("XDG_CONFIG_HOME", &config);
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
-    let mut s = Session::new(cfg, daw_engine::plugin_db::load_cache().unwrap_or_default());
+    let mut s = Session::new(cfg, daw_engine::library::plugin_db::load_cache().unwrap_or_default());
     s.dir = scratch.join("LinPhaseCheck.marbble");
     std::fs::create_dir_all(&s.dir).unwrap();
 
@@ -90,7 +90,7 @@ fn main() {
         x.extend((0..BURST).map(|i| 0.25 * (std::f32::consts::TAU * f * i as f32 / sr as f32).sin()));
     }
     let path = scratch.join("bursts.wav");
-    daw_engine::decode::write_wav(&path, sr, &[x]).unwrap();
+    daw_engine::audio_file::decode::write_wav(&path, sr, &[x]).unwrap();
     let len = (FREQS.len() * BURST) as i64;
 
     let t = s.add_track(TrackKind::Audio, InputSel::None, None, None).unwrap();

@@ -38,7 +38,7 @@ fn main() {
     let mut args = std::env::args().skip(1);
     let tone = PathBuf::from(args.next().expect("audio file"));
     let scratch = PathBuf::from(args.next().expect("scratch dir"));
-    let plugins = daw_engine::plugin_db::load_cache().unwrap_or_default();
+    let plugins = daw_engine::library::plugin_db::load_cache().unwrap_or_default();
     let find = |n: &str| plugins.iter().find(|d| d.name == n).cloned();
     let (Some(maxim), Some(amp)) = (find("ZaMaximX2"), find("TONE3000")) else {
         println!("FAIL ZaMaximX2 or TONE3000 isn't in the plug-in cache; scan plug-ins first");
@@ -49,7 +49,7 @@ fn main() {
     s.dir = scratch.join("OnOffVstCheck.marbble");
     std::fs::create_dir_all(&s.dir).unwrap();
 
-    let step = daw_engine::decode::decode(&tone).unwrap().channels[0].len() as i64;
+    let step = daw_engine::audio_file::decode::decode(&tone).unwrap().channels[0].len() as i64;
     println!("     the tone is {step} frames at {} Hz", s.sample_rate());
     let track = |s: &mut Session, id: &str| {
         let t = s.add_track(TrackKind::Audio, InputSel::None, None, None).unwrap();

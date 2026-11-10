@@ -8,10 +8,10 @@
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use daw_engine::drum_replace::{DrumKind, DrumMode, DrumSettings, DrumTiming};
+use daw_engine::edit::drum_replace::{DrumKind, DrumMode, DrumSettings, DrumTiming};
 use daw_engine::instrument::sampler::ID as SAMPLER;
 use daw_engine::model::{Id, InputSel, Note, RegionContent, TrackKind};
-use daw_engine::{audio_io::AudioConfig, transients, Session};
+use daw_engine::{audio_io::AudioConfig, edit::transients, Session};
 
 const RATE: i64 = 48000;
 /// The region's place on the timeline: bar 2 at 120 bpm.
@@ -100,8 +100,8 @@ fn main() {
 
     println!("-- Finding the hits");
     let sources = s.drum_sources(kick_track, &[]).unwrap();
-    let found = daw_engine::drum_replace::find_hits(&sources, RATE as u32);
-    let kept = daw_engine::drum_replace::kept(&found, -30.0);
+    let found = daw_engine::edit::drum_replace::find_hits(&sources, RATE as u32);
+    let kept = daw_engine::edit::drum_replace::kept(&found, -30.0);
     check(&format!("{} hits past -30 dB, as many as were played", kept.len()), kept.len() == hits.len());
     let worst = kept.iter().zip(&hits).map(|(h, &(a, _))| (h.pos - (AT + a as i64)).abs()).max().unwrap_or(i64::MAX);
     check(&format!("each at its attack, {:.2} ms off at worst", worst as f64 * 1000.0 / RATE as f64), worst <= RATE / 1000);

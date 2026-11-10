@@ -417,7 +417,7 @@ mod tests {
     use super::*;
 
     fn write_wav(path: &Path) {
-        crate::decode::write_wav(path, 48000, &[vec![0.1; 1000]]).unwrap();
+        crate::audio_file::decode::write_wav(path, 48000, &[vec![0.1; 1000]]).unwrap();
     }
 
     #[test]

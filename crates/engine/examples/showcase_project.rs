@@ -8,8 +8,8 @@ use std::f32::consts::TAU;
 use std::path::{Path, PathBuf};
 
 use daw_engine::audio_io::AudioConfig;
+use daw_engine::library::presets::CHANNEL_EQ;
 use daw_engine::model::{AutoParam, AutoPoint, Id, InputSel, Note, TrackKind, TrackSend, MASTER_ID};
-use daw_engine::presets::CHANNEL_EQ;
 use daw_engine::session::{MidiContent, TrackPatch};
 use daw_engine::Session;
 

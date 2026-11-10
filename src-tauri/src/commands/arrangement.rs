@@ -78,7 +78,7 @@ pub fn delete_arrangement_marker(state: State<AppState>, id: Id, content: bool) 
 /// `start` and `end`, on `tracks` (a marquee's) or across the project (null). Returns the
 /// repeated regions, to select.
 #[tauri::command]
-pub fn section_edit(state: State<AppState>, edit: daw_engine::arrange_cmds::SectionEdit, start: i64, end: i64, tracks: Option<Vec<Id>>) -> R<Made> {
+pub fn section_edit(state: State<AppState>, edit: daw_engine::edit::arrange_cmds::SectionEdit, start: i64, end: i64, tracks: Option<Vec<Id>>) -> R<Made> {
     edit_made(&state, edit.label(), false, |s| s.section_edit(edit, start, end, tracks.as_deref()))
 }
 
@@ -145,13 +145,13 @@ pub fn move_regions_to(state: State<AppState>, ids: Vec<Id>, pos: i64) -> Snapsh
 
 /// The timeline ranges Strip Silence would keep of region `id`. Not an edit.
 #[tauri::command]
-pub fn strip_silence_preview(state: State<AppState>, id: Id, settings: daw_engine::strip_silence::StripSettings) -> Vec<(i64, i64)> {
+pub fn strip_silence_preview(state: State<AppState>, id: Id, settings: daw_engine::edit::strip_silence::StripSettings) -> Vec<(i64, i64)> {
     with(&state, |s| s.strip_silence_preview(id, &settings))
 }
 
 /// Strip Silence: splits the audio regions around the parts that sound. Returns the parts.
 #[tauri::command]
-pub fn strip_silence(state: State<AppState>, ids: Vec<Id>, settings: daw_engine::strip_silence::StripSettings) -> R<Made> {
+pub fn strip_silence(state: State<AppState>, ids: Vec<Id>, settings: daw_engine::edit::strip_silence::StripSettings) -> R<Made> {
     edit_made(&state, "Strip Silence", false, |s| Ok(s.strip_silence(&ids, &settings)))
 }
 

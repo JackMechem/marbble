@@ -10,9 +10,9 @@
 // - macOS: Logic's glyphs in AppKit's order, ⌃⌥⇧⌘ then the key ("⇧⌘Z").
 // - Linux: GTK's spelling, Shift, Ctrl, Alt then GTK's key name ("Shift+Ctrl+Z", "Ctrl+Right",
 //   "BackSpace"). GTK draws every key in the menu bar this way and can't be told otherwise;
-//   tests/gtkKeyLabels.json pins the pairs, checked against GTK itself by menu.rs's tests.
+//   tests/keyboard/gtkKeyLabels.json pins the pairs, checked against GTK itself by menu/gtk_keys.rs's tests.
 //   GTK translates its names ("Backspace" in English), so at startup the app asks GTK for them
-//   (`setGtkKeyNames`, menu.rs `gtk_key_names`) and writes keys exactly as the menu bar does.
+//   (`setGtkKeyNames`, menu/gtk_keys.rs `gtk_key_names`) and writes keys exactly as the menu bar does.
 // - Windows: Ctrl, Alt, Shift then the key ("Ctrl+Shift+Z"), as its menus write accelerators.
 
 /** A tooltip with a key after the name, "Record (R)"; just the name when there is no key. */
@@ -85,7 +85,7 @@ export interface GtkKeyNames {
 
 let gtkNames: GtkKeyNames | null = null;
 
-/** Takes GTK's names for keys (menu.rs `gtk_key_names`); null goes back to the untranslated ones. */
+/** Takes GTK's names for keys (menu/gtk_keys.rs `gtk_key_names`); null goes back to the untranslated ones. */
 export function setGtkKeyNames(names: GtkKeyNames | null) {
   gtkNames = names;
 }

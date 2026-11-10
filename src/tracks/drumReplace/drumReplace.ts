@@ -1,6 +1,6 @@
 // Drum Replacement and Doubling (Logic's Track › Drum Replacement/Doubling): the sheet's
 // settings, the hits its threshold keeps, and the markers the Tracks area draws for them while
-// the sheet is open. The engine finds every candidate hit once (crates/engine/src/drum_replace.rs);
+// the sheet is open. The engine finds every candidate hit once (crates/engine/src/edit/drum_replace.rs);
 // the threshold chooses among them here, so the markers follow the slider at once. Pure but for
 // the small store of what's shown, so tests can import it.
 

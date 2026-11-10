@@ -247,7 +247,7 @@ fn play_clicks(map: TempoMap, from: i64, punch: Option<i64>, frames: usize) -> V
 
 #[test]
 fn clicks_follow_tempo_and_signature_changes() {
-    use crate::tempo::{SigEvent, TempoEvent};
+    use crate::model::tempo::{SigEvent, TempoEvent};
     // 240 BPM (12000 samples a quarter), 480 BPM from 1 s; 3/4 from bar 2.
     let map = TempoMap::new(
         48000.0,
@@ -268,7 +268,7 @@ fn clicks_follow_tempo_and_signature_changes() {
 
 #[test]
 fn count_in_uses_the_tempo_at_the_punch() {
-    use crate::tempo::TempoEvent;
+    use crate::model::tempo::TempoEvent;
     // 480 BPM until the punch at 2 s, then 240 BPM: a 4/4 count-in bar is 48000 samples
     // at the punch's tempo, whatever the tempo before it.
     let map = TempoMap::new(48000.0, &[TempoEvent { pos: 0, bpm: 480.0, ramp: false }, TempoEvent { pos: 96000, bpm: 240.0, ramp: false }], &[], 480.0, (4, 4));
@@ -280,7 +280,7 @@ fn count_in_uses_the_tempo_at_the_punch() {
 
 #[test]
 fn plugins_get_the_position_in_the_map() {
-    use crate::tempo::{SigEvent, TempoEvent};
+    use crate::model::tempo::{SigEvent, TempoEvent};
     let map = TempoMap::new(
         48000.0,
         &[

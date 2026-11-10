@@ -330,8 +330,8 @@ fn check_effect(s: &mut Session, info: &EffectInfo, tone: &str, scratch: &Path) 
 
 /// Copy and paste of built-in effects, VST3 plug-ins and the Channel EQ, and saving presets.
 fn clipboard_and_presets(s: &mut Session, tone: &str) {
+    use daw_engine::library::presets::CHANNEL_EQ;
     use daw_engine::model::{PluginSlot, MASTER_ID};
-    use daw_engine::presets::CHANNEL_EQ;
     println!("== copy, paste and presets");
     let len = 48000;
     let tracks: Vec<Id> = (0..3).map(|_| s.add_track(TrackKind::Audio, InputSel::None, None, None).unwrap()).collect();
@@ -422,7 +422,7 @@ fn main() {
     let mut args = std::env::args().skip(1);
     let tone = args.next().expect("audio file");
     let scratch = PathBuf::from(args.next().expect("scratch dir"));
-    let plugins = daw_engine::plugin_db::load_cache().unwrap_or_default();
+    let plugins = daw_engine::library::plugin_db::load_cache().unwrap_or_default();
     // User presets go to the scratch folder, not the real config folder.
     let config = scratch.join("config");
     let _ = std::fs::remove_dir_all(&config);
@@ -467,7 +467,7 @@ fn main() {
     // User presets are global: a new session (any project) sees them.
     let mut s = Session::new(cfg, plugins);
     s.dir = scratch.join("FxCheck2.marbble");
-    let list = daw_engine::presets::list(&daw_engine::presets::user_root(), "builtin:noise-gate");
+    let list = daw_engine::library::presets::list(&daw_engine::library::presets::user_root(), "builtin:noise-gate");
     check("user presets outlive the session", list.user.contains(&"Fx Check Kick".to_string()));
     let a = s.add_track(TrackKind::Audio, InputSel::None, None, None).unwrap();
     let uid = s.set_plugin(a, 0, "builtin:noise-gate").unwrap();
@@ -476,13 +476,13 @@ fn main() {
     check("a user preset loads into another project", (value(&s, uid, fx::gate::THRESHOLD) + 22.0).abs() < 1e-4);
     s.undo();
     check("loading a preset is undoable", (value(&s, uid, fx::gate::THRESHOLD) + 40.0).abs() < 1e-4);
-    let root = daw_engine::presets::user_root();
-    let renamed = daw_engine::presets::rename_user(&root, "builtin:noise-gate", "Fx Check Kick", "Kick 2").is_ok();
-    let listed = daw_engine::presets::list_user(&root, "builtin:noise-gate");
-    let deleted = daw_engine::presets::delete_user(&root, "builtin:noise-gate", "Kick 2").is_ok();
+    let root = daw_engine::library::presets::user_root();
+    let renamed = daw_engine::library::presets::rename_user(&root, "builtin:noise-gate", "Fx Check Kick", "Kick 2").is_ok();
+    let listed = daw_engine::library::presets::list_user(&root, "builtin:noise-gate");
+    let deleted = daw_engine::library::presets::delete_user(&root, "builtin:noise-gate", "Kick 2").is_ok();
     check(
         "user presets rename and delete",
-        renamed && listed == vec!["Kick 2".to_string()] && deleted && daw_engine::presets::list_user(&root, "builtin:noise-gate").is_empty(),
+        renamed && listed == vec!["Kick 2".to_string()] && deleted && daw_engine::library::presets::list_user(&root, "builtin:noise-gate").is_empty(),
     );
 
     if FAILED.load(std::sync::atomic::Ordering::Relaxed) {

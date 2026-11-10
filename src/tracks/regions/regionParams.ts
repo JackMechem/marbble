@@ -1,5 +1,5 @@
 // Region playback parameters (Logic's Region inspector): the values the Inspector offers and
-// how it shows them. The engine applies them (crates/engine/src/region_params.rs) and sends
+// how it shows them. The engine applies them (crates/engine/src/edit/region_params.rs) and sends
 // the notes as they play in the snapshot's `played` list, which the Tracks area draws.
 //
 // This module only imports types, so it runs under plain Node for the tests in tests/.

@@ -64,7 +64,7 @@ fn binary_path(bundle: &Path) -> Option<PathBuf> {
     }
     // The Info.plist names the binary, which needn't match the bundle's folder name.
     #[cfg(target_os = "macos")]
-    if let Some(exe) = crate::macos::bundle_executable(bundle) {
+    if let Some(exe) = crate::macos_bundle::bundle_executable(bundle) {
         return Some(exe);
     }
     let stem = bundle.file_stem()?.to_string_lossy().to_string();
@@ -98,13 +98,13 @@ fn load_error(e: libloading::Error) -> String {
 #[cfg_attr(not(target_os = "macos"), allow(unused_variables))]
 fn open_error(bin: &Path, e: libloading::Error) -> String {
     #[cfg(target_os = "macos")]
-    if let Some(why) = crate::macos::wrong_arch(bin) {
+    if let Some(why) = crate::macos_bundle::wrong_arch(bin) {
         return why;
     }
     let msg = load_error(e);
     #[cfg(target_os = "macos")]
     {
-        let reason = crate::macos::dyld_reason(&msg).unwrap_or_else(|| msg.clone());
+        let reason = crate::macos_bundle::dyld_reason(&msg).unwrap_or_else(|| msg.clone());
         // A hardened-runtime host refuses plug-ins signed by another team (or not at all)
         // unless it has the disable-library-validation entitlement.
         if reason.contains("not valid for use in process") || reason.contains("library validation") {
@@ -148,7 +148,7 @@ impl Module {
         let lib: libloading::Library = {
             let lib = libloading::Library::new(&bin).map_err(|e| open_error(&bin, e))?;
             if let Ok(entry) = lib.get::<unsafe extern "C" fn(*mut std::ffi::c_void) -> bool>(b"bundleEntry\0") {
-                let bundle_ref = crate::macos::create_bundle_ref(bundle);
+                let bundle_ref = crate::macos_bundle::create_bundle_ref(bundle);
                 if !entry(bundle_ref) {
                     return Err("bundleEntry returned false".into());
                 }

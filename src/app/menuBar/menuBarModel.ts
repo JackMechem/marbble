@@ -2,7 +2,7 @@
 // menuBar.ts, so the tests can run them.
 import { MENU_LABELS } from "./menuLabels.ts";
 
-/** An item's state as menu.rs `set_menu_state` takes it. Every field but `id` is optional: only
+/** An item's state as menu/mod.rs `set_menu_state` takes it. Every field but `id` is optional: only
  *  what changed is sent. */
 export interface ItemState {
   id: string;
@@ -63,7 +63,7 @@ export function mergeStates(...maps: Map<string, ItemState>[]): Map<string, Item
 const FIELDS = ["enabled", "checked", "text", "key", "keyText"] as const;
 
 /** What to send: the fields that differ from what was sent last (`sent`, updated in place). An
- *  item starts out as menu.rs builds it: enabled, unticked, with its usual label and no key. */
+ *  item starts out as menu/mod.rs builds it: enabled, unticked, with its usual label and no key. */
 export function changedStates(next: Map<string, ItemState>, sent: Map<string, ItemState>): ItemState[] {
   const out: ItemState[] = [];
   for (const [id, st] of next) {

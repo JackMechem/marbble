@@ -6,7 +6,7 @@
 use std::path::{Path, PathBuf};
 
 use daw_engine::audio_io::AudioConfig;
-use daw_engine::fades::DragMode;
+use daw_engine::edit::fades::DragMode;
 use daw_engine::model::{AutoParam, AutoPoint, Id, InputSel, TrackKind};
 use daw_engine::prefs::MoveAutomation;
 use daw_engine::session::RegionMove;
@@ -169,7 +169,7 @@ fn automation(tone: &Path, scratch: &Path) {
     let moved = level(&mut s, 2 * sec, 2 * sec + sec / 2, |_, m| m > 0.03);
     check(&format!("Always: the automation moves with the region ({moved:.3})"), moved > 0.03);
     let lane = &s.project.track(t).unwrap().automation[0].points;
-    let v = |x: i64| daw_engine::automation::value_at(lane, x).unwrap();
+    let v = |x: i64| daw_engine::edit::automation::value_at(lane, x).unwrap();
     check(&format!("the old place is closed again ({} dB)", v(sec * 3 / 4)), v(sec * 3 / 4) < -90.0);
     s.undo();
     let back = level(&mut s, lo, hi, |_, m| m > 0.03);

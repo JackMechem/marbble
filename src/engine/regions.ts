@@ -1,4 +1,4 @@
-// The engine's regions as the UI receives them (crates/engine/src/model.rs; field names are its serde
+// The engine's regions as the UI receives them (crates/engine/src/model/; field names are its serde
 // names): their content (notes, controller events, audio), patterns, playback parameters and take
 // folders. The rest of the document is in project.ts.
 import type { FadeShape } from "../tracks/regions/fades";
@@ -46,7 +46,7 @@ export interface Region {
   pattern?: Pattern | null;
 }
 
-/** One step of a pattern row (crates/engine/src/pattern.rs). Absent fields are the defaults:
+/** One step of a pattern row (crates/engine/src/edit/pattern.rs). Absent fields are the defaults:
  *  off, velocity 100, gate 100 %, not tied. */
 export interface PatternStep {
   on?: boolean;
@@ -85,7 +85,7 @@ export interface Pattern {
   offset?: number;
 }
 
-/** A region's playback parameters, applied as it plays (crates/engine/src/region_params.rs). */
+/** A region's playback parameters, applied as it plays (crates/engine/src/edit/region_params.rs). */
 export interface RegionParams {
   /** Grid as a fraction of a whole note (16 = 1/16, 12 = 1/12, an eighth triplet); 0 = off. */
   quantize: number;

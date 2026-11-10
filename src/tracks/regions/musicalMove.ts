@@ -3,7 +3,7 @@
 // moves by the same distance in quarter notes through the tempo map rather than the same
 // number of samples, so a region two bars on from the grabbed one is still two bars on after
 // crossing from 120 to 90 BPM. The engine does the same for nudges
-// (crates/engine/src/session/musical_moves.rs).
+// (crates/engine/src/session/regions/musical_moves.rs).
 //
 // This module only imports types, so it runs under plain Node for the tests in tests/.
 import type { TempoMap } from "../../lib/tempo";

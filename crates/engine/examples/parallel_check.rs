@@ -1,4 +1,4 @@
-//! Playing tracks on several threads (`dsp/parallel.rs`) must not change one bit of the output.
+//! Playing tracks on several threads (`dsp/parallel/`) must not change one bit of the output.
 //! Plays a project with everything the engine has, through offline renders and through
 //! `Engine::process` itself, at several buffer sizes and thread counts, and compares every sample
 //! with the serial loop's. Edits arrive at fixed blocks during the live runs. Runs on any core count:
@@ -198,7 +198,7 @@ fn build(s: &mut Session, scratch: &Path) -> Extras {
         let mut state = b64.decode(component).unwrap();
         let tone = scratch.join("sampler.wav");
         let x: Vec<f32> = (0..9600).map(|i| 0.5 * (i as f32 * 0.13).sin()).collect();
-        daw_engine::decode::write_wav(&tone, RATE, &[x.clone(), x]).unwrap();
+        daw_engine::audio_file::decode::write_wav(&tone, RATE, &[x.clone(), x]).unwrap();
         set_string(&mut state, "sf_0_0", tone.to_str().unwrap());
         copy.state = Some(format!("{}:{controller}", b64.encode(&state)).into());
         s.paste_plugin(&[inst], usize::MAX, &copy).unwrap();

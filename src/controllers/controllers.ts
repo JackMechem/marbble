@@ -1,5 +1,5 @@
 // Controller assignments (Logic's Control Surfaces › Learn Assignment and Controller
-// Assignments): the types the engine uses (crates/engine/src/controllers.rs) and how the
+// Assignments): the types the engine uses (crates/engine/src/control/controllers/) and how the
 // window and the right-click menus show them. Learning and the menus are in learn.ts, the
 // Controller Assignments window in ControllerAssignments.tsx, control surfaces in surfaces.ts.
 //

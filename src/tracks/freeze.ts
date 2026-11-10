@@ -1,6 +1,6 @@
 // Track Freeze (Logic's snowflake button): renders a track's instrument and plug-ins to a file
 // and plays that instead, with the plug-ins unloaded. The engine side is
-// crates/engine/src/session/freeze.rs; these are the UI's entry points and guards.
+// crates/engine/src/session/tracks/freeze.rs; these are the UI's entry points and guards.
 import { listen } from "@tauri-apps/api/event";
 import { type Id, type Track } from "../engine/project";
 import { type Snapshot } from "../engine/snapshot";

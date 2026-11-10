@@ -1,5 +1,5 @@
 // The control bar's CPU meter, kept pure so it can be tested. The engine measures it (`BlockLoad`
-// in crates/engine/src/dsp.rs) and sends it with each tick.
+// in crates/engine/src/dsp/mod.rs) and sends it with each tick.
 
 /** Where the peak tick goes. The average is smoothed over blocks, so with a long buffer it can
  *  still be coming down after the peak has fallen; a peak under the average would make no sense. */

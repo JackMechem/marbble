@@ -208,11 +208,6 @@ impl Convolver {
         self.pending.as_ref().or(self.next.as_ref()).unwrap_or(&self.cur).gen
     }
 
-    /// The kernel in use (after any fade under way).
-    pub fn kernel_taps(&self) -> usize {
-        self.next.as_ref().unwrap_or(&self.cur).taps
-    }
-
     /// A crossfade is under way or waiting to start.
     pub fn changing(&self) -> bool {
         self.next.is_some() || self.pending.is_some()

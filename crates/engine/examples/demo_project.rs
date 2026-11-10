@@ -80,7 +80,7 @@ fn pluck(notes: &[(f32, f32)], len_s: f32) -> Vec<Vec<f32>> {
 
 fn main() {
     let out = std::path::PathBuf::from(std::env::args().nth(1).expect("output path"));
-    let mut s = Session::new(AudioConfig { input_enabled: false, ..Default::default() }, daw_engine::plugin_db::load_cache().unwrap_or_default());
+    let mut s = Session::new(AudioConfig { input_enabled: false, ..Default::default() }, daw_engine::library::plugin_db::load_cache().unwrap_or_default());
     let audio_dir = out.join("Audio Files");
     std::fs::create_dir_all(&audio_dir).unwrap();
     let dpath = audio_dir.join("Drum Loop.wav");

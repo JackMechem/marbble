@@ -1,6 +1,6 @@
 //! Plug-in delay compensation on the audio thread.
 //!
-//! The session works out how late each strip's audio is (see `session/pdc.rs`) and gives every
+//! The session works out how late each strip's audio is (see `session/engine/pdc.rs`) and gives every
 //! track a [`PdcParams`] and, when it needs one, a [`DelayLine`]. The line holds the strip's
 //! signal after its plug-ins; the output and each send read it at their own delay, so a send
 //! into a latent aux can leave earlier than the same track's dry signal and both still reach

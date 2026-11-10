@@ -1,5 +1,5 @@
 // The main window's menu commands: what each item of the native menu bar does (its ids are in
-// src-tauri/src/menu.rs), also run by the key commands that share an item and by MIDI controllers.
+// src-tauri/src/menu/), also run by the key commands that share an item and by MIDI controllers.
 // An editor with the focus takes its own Edit commands first.
 import { act } from "../engine/commands";
 import { isBouncing, openBounce } from "../project/bounce/bounce";

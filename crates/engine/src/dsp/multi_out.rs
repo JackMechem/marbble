@@ -1,4 +1,4 @@
-//! An aux on an instrument's extra output (see `session/multi_out.rs`), on the audio thread.
+//! An aux on an instrument's extra output (see `session/mixer/multi_out.rs`), on the audio thread.
 //!
 //! The instrument plays earlier in the block (`Project::process_order` treats the output like a
 //! send), and the plug-in keeps each output bus's audio in its own buffers until its next block.

@@ -1,6 +1,6 @@
 // The channel strip's clip indicator (the peak readout over the meter) and gain-reduction
 // meter: pure helpers, tested in tests/mixer/stripMeters.test.ts. The engine holds the peaks
-// (crates/engine/src/session/strip_meters.rs) and sends them with each tick.
+// (crates/engine/src/session/mixer/meters.rs) and sends them with each tick.
 
 /** A held peak (linear) over full scale, 0 dBFS, is a clip: the readout and the top of the
  *  meter go red until the indicator is reset. */

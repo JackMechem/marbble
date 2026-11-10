@@ -83,7 +83,7 @@ pub(super) fn run_strip<R: Routes>(cx: &BlockCtx<'_>, ti: usize, t: &mut TrackDs
     let mut p = t.params;
     let pdc = t.pdc;
     // A live track (recording, or monitored in Low Latency Mode) skips its delay
-    // compensation, so the performer isn't kept waiting (see session/pdc.rs). An aux on an
+    // compensation, so the performer isn't kept waiting (see session/engine/pdc.rs). An aux on an
     // instrument's extra output is monitored with the instrument, so it keeps up with the
     // instrument's main output.
     let monitored = match t.kind {
@@ -266,7 +266,7 @@ pub(super) fn run_strip<R: Routes>(cx: &BlockCtx<'_>, ti: usize, t: &mut TrackDs
                 // ends them where they end.
                 for reg in t.regions.iter().filter(|_| cx.chase.0) {
                     let RegionDsp::Midi { start, length, notes, .. } = reg else { continue };
-                    for note in crate::midi::sounding_at(notes, *start, *start + *length, pos) {
+                    for note in crate::edit::midi_content::sounding_at(notes, *start, *start + *length, pos) {
                         let p = note.pitch as usize & 127;
                         if !t.sounding[p] && t.midi.len() + 2 < t.midi.capacity() {
                             t.midi.push(MidiEvent { offset: 0, data: [0x90, note.pitch, note.velocity.max(1)] });

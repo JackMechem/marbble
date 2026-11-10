@@ -12,7 +12,12 @@ const keyCommands = read("src/app/keyCommands.ts");
 const menuCommands = read("src/app/menuCommands.ts");
 const arrange = read("src/tracks/arrangeCommands.ts");
 const stepInput = read("src/editors/noteInput/StepInput.tsx");
-const menuRs = read("src-tauri/src/menu.rs");
+// The native menu bar, all of src-tauri/src/menu/.
+const menuRs = readdirSync(fileURLToPath(new URL("../../src-tauri/src/menu/", import.meta.url)))
+  .filter((f) => f.endsWith(".rs"))
+  .sort()
+  .map((f) => read(`src-tauri/src/menu/${f}`))
+  .join("\n");
 
 /** The text from `start` up to the first `end` after it. */
 function slice(src: string, start: string, end: string): string {
@@ -134,7 +139,7 @@ test("every native menu item is handled", () => {
   const prefixes = [...handler.matchAll(/id\.startsWith\("([^"]+)"\)/g)].map((m) => m[1]);
   assert.match(handler, /if \(runArrangeCommand\(id\)\) return;/);
   const arranged = new Set(objectKeys(slice(arrange, "export const ARRANGE_COMMANDS", "\n};")));
-  // menu.rs's own, which never reach the page: Quit (it closes the main window), Window's
+  // the menu code's own, which never reach the page: Quit (it closes the main window), Window's
   // Minimize and list of windows, and Help's web pages. Help › Key Commands goes on as
   // Marbble › Key Commands.
   const pages = [...slice(menuRs, "const HELP_PAGES", "];").matchAll(/\("([a-z-]+)", "https:/g)].map((m) => m[1]);

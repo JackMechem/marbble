@@ -7,10 +7,10 @@
 use std::path::{Path, PathBuf};
 
 use daw_engine::audio_io::AudioConfig;
+use daw_engine::edit::region_params::GATE_LEGATO;
+use daw_engine::model::tempo::TempoEvent;
 use daw_engine::model::{Id, InputSel, Note, RegionContent, TrackKind};
-use daw_engine::region_params::GATE_LEGATO;
 use daw_engine::session::{BitDepth, MidiContent, RegionParamsPatch, RenderOptions, TrackPatch};
-use daw_engine::tempo::TempoEvent;
 use daw_engine::Session;
 
 /// Set by any failed check: the example then exits with status 1, so scripts notice.

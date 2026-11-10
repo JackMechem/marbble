@@ -9,20 +9,9 @@ pub mod scan;
 pub mod stream;
 mod util;
 
-#[cfg(target_os = "linux")]
-#[path = "editor_linux.rs"]
 pub mod editor;
 #[cfg(target_os = "macos")]
-#[path = "editor_macos.rs"]
-pub mod editor;
-#[cfg(not(any(target_os = "linux", target_os = "macos")))]
-#[path = "editor_other.rs"]
-pub mod editor;
-
-#[cfg(target_os = "macos")]
-mod macos;
-#[cfg(target_os = "linux")]
-mod x11_scale;
+mod macos_bundle;
 
 pub use host::Gesture;
 pub use module::PluginDescriptor;

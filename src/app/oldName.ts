@@ -1,6 +1,6 @@
 // Marbble was called Fermata up to 0.1.0-alpha.5, and its view preferences were kept in
 // localStorage under `fermata.` keys. The backend moves the webview's storage across at launch
-// (crates/engine/src/old_name.rs); this renames the keys in it, once, before anything reads them.
+// (crates/engine/src/library/old_name.rs); this renames the keys in it, once, before anything reads them.
 
 const OLD = "fermata.";
 const NEW = "marbble.";

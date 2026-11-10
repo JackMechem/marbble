@@ -1,5 +1,5 @@
 // Settings › Audio › Processing Threads, kept pure so it can be tested. The engine says what this
-// machine offers (`crates/engine/src/threads.rs`).
+// machine offers (`crates/engine/src/audio_io/threads.rs`).
 
 /** Threads the running setting asked for that play nothing, and why. */
 export interface LeftOut {

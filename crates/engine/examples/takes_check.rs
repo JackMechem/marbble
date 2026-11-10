@@ -136,7 +136,7 @@ fn main() {
     let wav = std::path::PathBuf::from(&scratch).join("takes_check_bounce.wav");
     let o = RenderOptions { start: 0, end: len, tail_secs: 0.0, bit_depth: BitDepth::Float32, ..Default::default() };
     s.bounce_project(&wav, &o, &mut |_| {}).unwrap();
-    let bounced = daw_engine::decode::decode(&wav).unwrap().channels.swap_remove(0);
+    let bounced = daw_engine::audio_file::decode::decode(&wav).unwrap().channels.swap_remove(0);
     let lb: Vec<f32> = (0..3).map(|k| peak(&bounced[window(k).0..window(k).1]) / refs[k as usize]).collect();
     ok &= check(&format!("the bounce plays the comp ({lb:.3?})"), lb.iter().zip(want).all(|(l, w)| (l - w).abs() < 0.02));
 

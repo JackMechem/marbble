@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use daw_engine::audio_io::AudioConfig;
 use daw_engine::model::{InputSel, RegionContent, TrackKind};
 use daw_engine::session::RangeEdit;
-use daw_engine::{transients, Session};
+use daw_engine::{edit::transients, Session};
 
 #[path = "common/transport.rs"]
 mod transport;
@@ -37,7 +37,7 @@ fn write_hits(path: &Path, rate: u32, hits: usize) -> Vec<i64> {
             buf[a as usize + i] += 0.8 * (-t / 0.04).exp() * (std::f32::consts::TAU * 150.0 * t).sin();
         }
     }
-    daw_engine::decode::write_wav(path, rate, &[buf]).unwrap();
+    daw_engine::audio_file::decode::write_wav(path, rate, &[buf]).unwrap();
     at
 }
 

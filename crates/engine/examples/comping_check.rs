@@ -18,7 +18,7 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use daw_engine::audio_io::AudioConfig;
-use daw_engine::fades::{DragMode, FadeOutType};
+use daw_engine::edit::fades::{DragMode, FadeOutType};
 use daw_engine::model::{Id, InputSel, Region, RegionContent, TrackKind};
 use daw_engine::prefs::MidiOverlap;
 use daw_engine::session::TrackPatch;

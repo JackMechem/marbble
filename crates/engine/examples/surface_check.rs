@@ -20,10 +20,10 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use daw_engine::audio_io::AudioConfig;
-use daw_engine::controllers::db_to_fader;
+use daw_engine::control::controllers::db_to_fader;
+use daw_engine::control::surface::{mcu, SurfaceConfig, SurfaceKind};
 use daw_engine::model::{AutoMode, AutoParam, AutoPoint, Id, InputSel, TrackKind};
 use daw_engine::session::TrackPatch;
-use daw_engine::surface::{mcu, SurfaceConfig, SurfaceKind};
 use daw_engine::Session;
 use parking_lot::Mutex;
 

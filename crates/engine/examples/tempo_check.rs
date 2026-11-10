@@ -8,9 +8,9 @@ use std::time::Duration;
 
 use daw_engine::audio_io::AudioConfig;
 use daw_engine::dsp::{Cmd, Engine, EngineStatus};
+use daw_engine::model::tempo::{Bbt, SigEvent, TempoEvent, TempoMap};
 use daw_engine::model::{InputSel, Note, Project, RegionContent, TrackKind};
 use daw_engine::session::MidiContent;
-use daw_engine::tempo::{Bbt, SigEvent, TempoEvent, TempoMap};
 use daw_engine::Session;
 
 fn check(name: &str, ok: bool) {
@@ -248,7 +248,7 @@ fn main() {
     }]);
     let file = scratch.join("tempo_check.mid");
     s.export_midi(&[rid2], &file).unwrap();
-    let parsed = daw_engine::smf::read(&std::fs::read(&file).unwrap()).unwrap();
+    let parsed = daw_engine::midi::smf::read(&std::fs::read(&file).unwrap()).unwrap();
     check(
         &format!("the exported tempo track has the changes ({} tempos, {} signatures)", parsed.tempos.len(), parsed.signatures.len()),
         parsed.tempos.len() > 10 && parsed.signatures.len() == 3,

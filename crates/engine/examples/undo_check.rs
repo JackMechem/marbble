@@ -16,7 +16,7 @@ fn state(s: &Session) -> String {
 fn main() {
     let tone = std::env::args().nth(1).expect("audio file");
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
-    let plugins = daw_engine::plugin_db::load_cache().unwrap_or_default();
+    let plugins = daw_engine::library::plugin_db::load_cache().unwrap_or_default();
     let comp = plugins.iter().find(|p| p.name == "ZamCompX2").map(|p| p.id.clone());
     let mut s = Session::new(cfg, plugins);
 

@@ -184,7 +184,7 @@ fn main() {
     let j = daw_engine::session::read_journal(&journals[0]).unwrap();
     let mut damaged = 0;
     for t in &j.takes {
-        if let Ok(w) = daw_engine::wav_repair::inspect(Path::new(&t.path)) {
+        if let Ok(w) = daw_engine::audio_file::wav_repair::inspect(Path::new(&t.path)) {
             damaged += w.damaged as usize;
         }
     }
@@ -212,7 +212,7 @@ fn main() {
         };
         let RegionContent::Audio { clip, offset, .. } = r.content else { unreachable!() };
         let path = s.project.clips.iter().find(|c| c.id == clip).map(|c| dir.join(&c.path)).unwrap();
-        let file = daw_engine::decode::decode(&path).unwrap();
+        let file = daw_engine::audio_file::decode::decode(&path).unwrap();
         let frames = file.channels[0].len() as i64;
         starts.push(r.start);
         check(
@@ -228,7 +228,7 @@ fn main() {
                 && file.channels.len() == channels
                 && (r.start - 2 * sr).abs() < sr / 10,
         );
-        check(&format!("{name}'s file is a valid WAV again"), !daw_engine::wav_repair::inspect(&path).unwrap().damaged);
+        check(&format!("{name}'s file is a valid WAV again"), !daw_engine::audio_file::wav_repair::inspect(&path).unwrap().damaged);
     }
     check("an autosave is due right after recovery", s.autosave_job().map(|j| j.write().is_ok()).unwrap_or(false));
     check("the journal is gone once the recovered takes are autosaved", recording_journals(&dir).is_empty());

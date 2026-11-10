@@ -1,9 +1,9 @@
 // Logic's arranging commands in the Tracks area: Edit › Select, Section Between Locators, Trim
 // and Move, Paste Replace, Paste at Original Position, Join per Track, Delete and Shuffle, Strip
 // Silence, and naming and colouring regions and tracks after each other. They are shared by
-// the native Edit menu (menu.rs ids), the Tracks area's Edit menu and the key commands
+// the native Edit menu (menu/spec.rs ids), the Tracks area's Edit menu and the key commands
 // (keymap.ts, same ids). The session makes the edits
-// (crates/engine/src/session/arrange_cmds.rs); the selection criteria are in regionSelect.ts.
+// (crates/engine/src/session/regions/arrange_cmds.rs); the selection criteria are in regionSelect.ts.
 import { type Id, type Track } from "../engine/project";
 import { type Region } from "../engine/regions";
 import { act, actMade, call } from "../engine/commands";

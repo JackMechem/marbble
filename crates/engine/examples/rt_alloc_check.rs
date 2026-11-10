@@ -7,7 +7,7 @@
 //! The silent ALSA null device runs, so edits queue their commands for the next block as they
 //! do during playback; holding the engine's lock keeps its callback out.
 //! Runs twice: with the callback alone, and with every block on the pool of worker threads
-//! (`dsp/pool.rs`), whose threads are counted for as long as a block can be running. On the pool
+//! (`dsp/pool/`), whose threads are counted for as long as a block can be running. On the pool
 //! a plug-in then stops responding on a worker: leaving the worker in it, and its track and what
 //! that feeds out of the blocks after, must not allocate either.
 //! usage: rt_alloc_check <scratch dir>
@@ -219,8 +219,8 @@ fn add_sampler(s: &mut Session, scratch: &std::path::Path) -> Id {
     let wave = |hz: f32, rate: u32| -> Vec<f32> { (0..rate * 2).map(|i| (i as f32 / rate as f32 * hz * std::f32::consts::TAU).sin() * 0.3).collect() };
     let a = dir.join("A.wav");
     let b = dir.join("B.wav");
-    daw_engine::decode::write_wav(&a, 44100, &[wave(220.0, 44100), wave(221.0, 44100)]).unwrap();
-    daw_engine::decode::write_wav(&b, 96000, &[wave(330.0, 96000)]).unwrap();
+    daw_engine::audio_file::decode::write_wav(&a, 44100, &[wave(220.0, 44100), wave(221.0, 44100)]).unwrap();
+    daw_engine::audio_file::decode::write_wav(&b, 96000, &[wave(330.0, 96000)]).unwrap();
     let t = s.add_track(TrackKind::Instrument, daw_engine::model::InputSel::None, Some(daw_engine::instrument::sampler::ID.into()), None).unwrap();
     s.sampler_add_files(t, &[a, b.clone(), b], Some(40)).unwrap();
     let mut zones = SamplerState::parse(s_state(s, t).as_deref()).zones;

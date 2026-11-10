@@ -150,17 +150,17 @@ pub fn convert_region_to_sampler(state: State<AppState>, region: Id, slices: Opt
 /// the sheet to choose among by its threshold. Runs off the main thread, holding the session only
 /// to gather the audio.
 #[tauri::command(async)]
-pub fn drum_hits(state: State<AppState>, track: Id, regions: Vec<Id>) -> R<Vec<daw_engine::drum_replace::DrumHit>> {
+pub fn drum_hits(state: State<AppState>, track: Id, regions: Vec<Id>) -> R<Vec<daw_engine::edit::drum_replace::DrumHit>> {
     let (sources, rate) = with(&state, |s| s.drum_sources(track, &regions).map(|v| (v, s.sample_rate() as u32))).map_err(|e| e.to_string())?;
-    Ok(daw_engine::drum_replace::find_hits(&sources, rate))
+    Ok(daw_engine::edit::drum_replace::find_hits(&sources, rate))
 }
 
 /// Drum Replacement/Doubling: a sampler track below `track` playing a note at each hit. Returns it.
 #[tauri::command]
-pub fn drum_replace(state: State<AppState>, track: Id, regions: Vec<Id>, settings: daw_engine::drum_replace::DrumSettings) -> R<Made> {
+pub fn drum_replace(state: State<AppState>, track: Id, regions: Vec<Id>, settings: daw_engine::edit::drum_replace::DrumSettings) -> R<Made> {
     let label = match settings.mode {
-        daw_engine::drum_replace::DrumMode::Replace => "Drum Replacement",
-        daw_engine::drum_replace::DrumMode::Double => "Drum Doubling",
+        daw_engine::edit::drum_replace::DrumMode::Replace => "Drum Replacement",
+        daw_engine::edit::drum_replace::DrumMode::Double => "Drum Doubling",
     };
     edit_made(&state, label, false, |s| s.drum_replace(track, &regions, &settings).map(|t| vec![t]))
 }

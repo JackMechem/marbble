@@ -1,6 +1,6 @@
 // VCA faders in the Mixer: the VCA strip, and the VCA slot on channel strips (and on VCA
 // strips, for nesting). The pure rules are in src/mixer/vcaModel.ts; the engine side in
-// crates/engine/src/vca.rs and session/vca.rs.
+// crates/engine/src/model/vca.rs and session/mixer/vca.rs.
 import { useLayoutEffect, useRef, useState } from "react";
 import { type Id, type Track, type Vca } from "../engine/project";
 import { act, actMade } from "../engine/commands";

@@ -2,7 +2,7 @@
 // the end becomes a new track below the last one (Logic's behaviour). The tracks moved decide
 // which lanes fall past; the new tracks are then made one after another, in track order, so the
 // preview draws them with no gaps however far down the pointer is. The engine's side is
-// crates/engine/src/session/new_track_drag.rs.
+// crates/engine/src/session/regions/new_track_drag.rs.
 //
 // This module only imports types, so it runs under plain Node for the tests in tests/.
 import type { Id } from "../../engine/project";

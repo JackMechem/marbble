@@ -113,8 +113,8 @@ fn check_model(scratch: &std::path::Path, plugin: &str, edit: u32, to: f32) {
     s.undo();
 
     // Presets.
-    let root = daw_engine::presets::user_root();
-    let list = daw_engine::presets::list(&root, plugin);
+    let root = daw_engine::library::presets::user_root();
+    let list = daw_engine::library::presets::list(&root, plugin);
     check(&format!("{name}: {} factory presets, Default first", list.factory.len()), list.factory.len() > info.presets.len() && list.factory[0] == "Default");
     let mut all_differ = true;
     for p in info.presets {
@@ -144,7 +144,7 @@ fn check_model(scratch: &std::path::Path, plugin: &str, edit: u32, to: f32) {
     check(&format!("{name}: Default puts every value back"), same(&base, &render(&mut s)));
     s.load_preset(a, SLOT, plugin, user, false).unwrap();
     check(&format!("{name}: the user preset loads back, bit for bit"), same(&mine, &render(&mut s)));
-    check(&format!("{name}: it deletes"), daw_engine::presets::delete_user(&root, plugin, user).is_ok());
+    check(&format!("{name}: it deletes"), daw_engine::library::presets::delete_user(&root, plugin, user).is_ok());
 
     // Saving and reopening.
     let dir = scratch.join(format!("{name}.marbble"));
@@ -251,8 +251,8 @@ fn main() {
     check("clearing the lane puts the sound back", same(&base, &render(&mut s)));
 
     // Presets.
-    let root = daw_engine::presets::user_root();
-    let list = daw_engine::presets::list(&root, TRE);
+    let root = daw_engine::library::presets::user_root();
+    let list = daw_engine::library::presets::list(&root, TRE);
     check(&format!("{} factory presets, Default first", list.factory.len()), list.factory.len() >= 11 && list.factory[0] == "Default");
     s.checkpoint("Load Preset", None, false);
     s.load_preset(a, SLOT, TRE, "Funk Pluck", true).unwrap();
@@ -264,18 +264,18 @@ fn main() {
     s.set_builtin_param(a, SLOT, param::EMPHASIS, 6.5).unwrap();
     let mine = render(&mut s);
     check("a user preset saves", s.save_preset(a, SLOT, "Instrument Check Bass", true).is_ok());
-    check("and lists", daw_engine::presets::list(&root, TRE).user.iter().any(|n| n == "Instrument Check Bass"));
+    check("and lists", daw_engine::library::presets::list(&root, TRE).user.iter().any(|n| n == "Instrument Check Bass"));
     check("saving over it asks first", s.save_preset(a, SLOT, "Instrument Check Bass", false).is_err());
     s.load_preset(a, SLOT, TRE, "Default", true).unwrap();
     check("Default puts every value back", same(&base, &render(&mut s)));
     s.load_preset(a, SLOT, TRE, "Instrument Check Bass", false).unwrap();
     check("loading the user preset brings the sound back, bit for bit", same(&mine, &render(&mut s)) && value(&s, uid, param::EMPHASIS) == 6.5);
-    let other_slot = daw_engine::presets::get(&root, TRE, "Instrument Check Bass", false).unwrap();
+    let other_slot = daw_engine::library::presets::get(&root, TRE, "Instrument Check Bass", false).unwrap();
     check("a user preset is a file with values by id", other_slot.values.iter().any(|v| v.0 == param::EMPHASIS && v.1 == 6.5));
-    let wrong = daw_engine::presets::Preset { effect: "builtin:reverb".into(), ..other_slot };
+    let wrong = daw_engine::library::presets::Preset { effect: "builtin:reverb".into(), ..other_slot };
     check("a preset for another plug-in is refused", s.apply_preset(a, SLOT, &wrong).is_err());
-    let renamed = daw_engine::presets::rename_user(&root, TRE, "Instrument Check Bass", "Instrument Check Bass 2");
-    check("it renames and deletes", renamed.is_ok() && daw_engine::presets::delete_user(&root, TRE, "Instrument Check Bass 2").is_ok());
+    let renamed = daw_engine::library::presets::rename_user(&root, TRE, "Instrument Check Bass", "Instrument Check Bass 2");
+    check("it renames and deletes", renamed.is_ok() && daw_engine::library::presets::delete_user(&root, TRE, "Instrument Check Bass 2").is_ok());
 
     // Saving and reopening.
     s.load_preset(a, SLOT, TRE, "Singing Lead", true).unwrap();

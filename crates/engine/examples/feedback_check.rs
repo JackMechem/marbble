@@ -13,8 +13,8 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use daw_engine::audio_io::AudioConfig;
-use daw_engine::controllers::{db_to_fader, CtlKind, CtlTarget, Takeover, TransportAction};
-use daw_engine::feedback::MIN_GAP;
+use daw_engine::control::controllers::{db_to_fader, CtlKind, CtlTarget, Takeover, TransportAction};
+use daw_engine::control::feedback::MIN_GAP;
 use daw_engine::model::{AutoMode, AutoParam, AutoPoint, InputSel, TrackKind};
 use daw_engine::session::{AssignmentPatch, TrackPatch};
 use daw_engine::Session;
@@ -116,7 +116,7 @@ impl Rig {
 
     /// Idles past the quiet time after a controller's move.
     fn settle(&mut self) {
-        std::thread::sleep(daw_engine::feedback::QUIET + Duration::from_millis(50));
+        std::thread::sleep(daw_engine::control::feedback::QUIET + Duration::from_millis(50));
         self.s.idle();
     }
 }

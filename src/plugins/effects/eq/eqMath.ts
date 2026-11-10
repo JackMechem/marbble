@@ -1,4 +1,4 @@
-// Frequency response of the Channel EQ, mirroring crates/engine/src/eq.rs so the curves on
+// Frequency response of the Channel EQ, mirroring crates/engine/src/fx/channel_eq/filters.rs so the curves on
 // screen match what the engine actually does.
 import type { ChannelEq, EqBand } from "../../../engine/project";
 

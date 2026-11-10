@@ -8,7 +8,7 @@
 use std::time::Duration;
 
 use daw_engine::audio_io::AudioConfig;
-use daw_engine::controllers::{ButtonMode, CtlKind, CtlTarget, Encoding, SelectedParam, Takeover, TransportAction};
+use daw_engine::control::controllers::{ButtonMode, CtlKind, CtlTarget, Encoding, SelectedParam, Takeover, TransportAction};
 use daw_engine::model::{AutoMode, AutoParam, InputSel, TrackKind};
 use daw_engine::session::{AssignmentPatch, TrackPatch};
 use daw_engine::Session;
@@ -299,7 +299,7 @@ fn main() {
     let held = vol(&s);
     send(&mut s, &[0x89, 40, 0]);
     let released = vol(&s);
-    let (hi, lo) = (daw_engine::controllers::fader_to_db(0.8), daw_engine::controllers::fader_to_db(0.5));
+    let (hi, lo) = (daw_engine::control::controllers::fader_to_db(0.8), daw_engine::control::controllers::fader_to_db(0.5));
     check(
         &format!("a fixed value while held, the bottom of the range on release ({held} {released})"),
         (held - hi).abs() < 0.06 && (released - lo).abs() < 0.06,
@@ -509,7 +509,7 @@ fn main() {
     let fine = vol_of(&s, b);
     check(
         &format!("the fine part moves it between coarse steps ({coarse} < {fine})"),
-        fine > coarse && fine < daw_engine::controllers::fader_to_db(121.0 / 127.0),
+        fine > coarse && fine < daw_engine::control::controllers::fader_to_db(121.0 / 127.0),
     );
     std::thread::sleep(Duration::from_millis(50));
     check("both parts are taken off the live path", s.tick().midi_activity == seen);

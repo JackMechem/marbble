@@ -1,6 +1,6 @@
 // Text fields keep their editing keys. Key commands come through each window's keydown listener,
 // which leaves a focused field alone (`keepsKeys`). The native menu's accelerators don't: the menu
-// bar takes Select All, Undo, Redo and Delete Track (menu.rs) before the web view sees the key, and
+// bar takes Select All, Undo, Redo and Delete Track (menu/spec.rs) before the web view sees the key, and
 // they arrive as menu items. While a text field has the focus, those items edit the field instead
 // (`textFieldMenu`), so Ctrl+A in a track's name selects its text rather than every region, and
 // the other accelerators (Ctrl+D, Ctrl+T...) do nothing rather than edit the project, except Save.
@@ -120,8 +120,8 @@ function applyFieldEdit(el: FieldLike, edit: FieldEdit, doc: DocLike, mac = IS_M
   doc.execCommand("delete");
 }
 
-/** The menu items that have an accelerator: menu.rs's `keyed` items and Musical Typing's check
- *  item. A guard test keeps the list in step with menu.rs. */
+/** The menu items that have an accelerator: menu/spec.rs's `keyed` items and Musical Typing's check
+ *  item. A guard test keeps the list in step with menu/spec.rs. */
 export const MENU_ACCELERATORS: readonly string[] = [
   "settings",
   "quit",
@@ -152,7 +152,7 @@ export const MENU_ACCELERATORS: readonly string[] = [
 ];
 
 // Accelerators that still run while a field is being typed in: saving loses nothing typed. (Quit
-// never reaches the web view: menu.rs runs it.)
+// never reaches the web view: menu/mod.rs runs it.)
 const RUN_IN_FIELD = new Set(["save", "quit"]);
 
 /**

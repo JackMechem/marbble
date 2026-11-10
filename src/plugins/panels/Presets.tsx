@@ -1,5 +1,5 @@
 // The preset pop-up in built-in effect and instrument panels: factory and user
-// presets (shared by every project, see crates/engine/src/presets.rs), saving, renaming and
+// presets (shared by every project, see crates/engine/src/library/presets.rs), saving, renaming and
 // deleting user presets, and stepping through them. Which preset is loaded comes from the
 // project (`PluginSlot.preset`): the engine sets it when a preset is
 // loaded or saved, so it is saved with the project and follows undo.

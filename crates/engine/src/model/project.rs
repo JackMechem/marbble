@@ -92,7 +92,7 @@ pub struct ClipRef {
 }
 
 /// The whole document: what `project.json` holds and what the undo history snapshots. New fields go at
-/// the end with `#[serde(default)]` so older projects still open, and `src/api.ts` mirrors them.
+/// the end with `#[serde(default)]` so older projects still open, and `src/engine/project.ts` mirrors them.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Project {
     pub name: String,
@@ -141,15 +141,15 @@ pub struct Project {
     #[serde(default)]
     pub vcas: Vec<Vca>,
     /// The name of this project alternative (File › Project Alternatives). Empty in projects
-    /// from before alternatives, where it is the project's name. See `session/alternatives.rs`.
+    /// from before alternatives, where it is the project's name. See `session/project/alternatives.rs`.
     #[serde(default)]
     pub alternative: String,
     /// The Arrangement track: named sections tiling the timeline, sorted by start (see
-    /// `crate::arrangement`).
+    /// `crate::edit::arrangement`).
     #[serde(default)]
     pub arrangement: Vec<ArrangementMarker>,
     /// Edit › Snap Edits to Zero Crossings: splits and trims of audio regions move to the
-    /// nearest zero crossing. See `session/zero_crossings.rs`.
+    /// nearest zero crossing. See `session/regions/zero_crossings.rs`.
     #[serde(default)]
     pub snap_zero_crossings: bool,
 }

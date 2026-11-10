@@ -1,7 +1,7 @@
 // The Drum Replacement/Doubling sheet (Logic's Track › Drum Replacement/Doubling): instrument,
 // mode, threshold and timing, with the hits it will use marked on the audio track's regions
 // while it's open. Create makes a sampler track below playing a note at each hit
-// (crates/engine/src/session/drum_replace.rs).
+// (crates/engine/src/session/regions/drum_replace.rs).
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { type Id } from "../../engine/project";
 import { actMade, api, call } from "../../engine/commands";

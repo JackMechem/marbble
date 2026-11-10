@@ -43,7 +43,7 @@ test("macOS uses Logic's glyphs, ⌃⌥⇧⌘ then the key", () => {
   assert.equal(mac("Alt+'"), "⌥'");
 });
 
-// The pairs menu.rs's tests check against GTK's own gtk_accelerator_get_label: the keys the
+// The pairs menu/gtk_keys.rs's tests check against GTK's own gtk_accelerator_get_label: the keys the
 // menu bar shows beside its items read exactly as the app writes them.
 const GTK_LABELS: [string, string][] = JSON.parse(readFileSync(fileURLToPath(new URL("./gtkKeyLabels.json", import.meta.url)), "utf8"));
 
@@ -66,7 +66,7 @@ test("a bare modifier names the key, for gestures like Alt-drag", () => {
 });
 
 test("on Linux the app writes keys with the names its GTK draws, translated", () => {
-  // As English GTK writes them (menu.rs gtk_key_names in an English session).
+  // As English GTK writes them (menu/gtk_keys.rs gtk_key_names in an English session).
   setGtkKeyNames({ keys: { Backspace: "Backspace", Enter: "Return" }, mods: { Shift: "Shift+", Ctrl: "Ctrl+", Alt: "Alt+" } });
   assert.equal(gtk("Backspace"), "Backspace");
   assert.equal(gtk("Mod+Backspace"), "Ctrl+Backspace");

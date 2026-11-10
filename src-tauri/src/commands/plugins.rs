@@ -70,13 +70,13 @@ pub fn list_plugin_params(state: State<AppState>, uid: Id) -> Vec<ParamInfo> {
     with(&state, |s| s.plugin_params(uid))
 }
 
-/// The built-in effects, as src/fx.ts `FxInfo`.
+/// The built-in effects, as src/plugins/builtinEffects.ts `FxInfo`.
 #[tauri::command]
 pub fn list_builtin_effects() -> Vec<daw_engine::session::BuiltinInfo> {
     daw_engine::session::builtin_effects()
 }
 
-/// The built-in instruments, as src/fx.ts `InstInfo`.
+/// The built-in instruments, as src/plugins/builtinEffects.ts `InstInfo`.
 #[tauri::command]
 pub fn list_builtin_instruments() -> Vec<daw_engine::session::BuiltinInstrument> {
     daw_engine::session::builtin_instruments()
@@ -135,14 +135,14 @@ pub fn insert_channel_eq(state: State<AppState>, track: Id) -> R<Snapshot> {
 
 /// An effect's factory and user presets.
 #[tauri::command]
-pub fn list_presets(effect: String) -> daw_engine::presets::PresetList {
-    daw_engine::presets::list(&daw_engine::presets::user_root(), &effect)
+pub fn list_presets(effect: String) -> daw_engine::library::presets::PresetList {
+    daw_engine::library::presets::list(&daw_engine::library::presets::user_root(), &effect)
 }
 
 /// One preset's settings.
 #[tauri::command]
-pub fn get_preset(effect: String, name: String, factory: bool) -> R<daw_engine::presets::Preset> {
-    daw_engine::presets::get(&daw_engine::presets::user_root(), &effect, &name, factory).map_err(|e| e.to_string())
+pub fn get_preset(effect: String, name: String, factory: bool) -> R<daw_engine::library::presets::Preset> {
+    daw_engine::library::presets::get(&daw_engine::library::presets::user_root(), &effect, &name, factory).map_err(|e| e.to_string())
 }
 
 /// Applies a preset to a built-in effect's slot.
@@ -201,13 +201,13 @@ pub fn reset_clip_indicators(state: State<AppState>, tracks: Option<Vec<Id>>) {
 /// A strip's channel strip setting (instrument, Audio FX with their state, Channel EQ), for
 /// the clipboard.
 #[tauri::command]
-pub fn copy_strip(state: State<AppState>, track: Id) -> R<daw_engine::strip_settings::StripSetting> {
+pub fn copy_strip(state: State<AppState>, track: Id) -> R<daw_engine::library::strip_settings::StripSetting> {
     with(&state, |s| s.copy_strip(track).map_err(|e| e.to_string()))
 }
 
 /// Applies a channel strip setting to each of `tracks`, as one undo step.
 #[tauri::command]
-pub fn paste_strip(state: State<AppState>, tracks: Vec<Id>, setting: daw_engine::strip_settings::StripSetting) -> R<Snapshot> {
+pub fn paste_strip(state: State<AppState>, tracks: Vec<Id>, setting: daw_engine::library::strip_settings::StripSetting) -> R<Snapshot> {
     try_edit(&state, "Paste Channel Strip", None, true, |s| s.paste_strip(&tracks, &setting))
 }
 
@@ -220,27 +220,27 @@ pub fn reset_strip(state: State<AppState>, tracks: Vec<Id>) -> R<Snapshot> {
 /// The saved channel strip settings, by name.
 #[tauri::command]
 pub fn list_strip_settings() -> Vec<String> {
-    daw_engine::strip_settings::list(&daw_engine::strip_settings::user_root())
+    daw_engine::library::strip_settings::list(&daw_engine::library::strip_settings::user_root())
 }
 
 /// Saves a strip's setting under `name`. Refuses to replace an existing one unless
 /// `overwrite`. Returns the name it was saved under.
 #[tauri::command]
 pub fn save_strip_setting(state: State<AppState>, track: Id, name: String, overwrite: Option<bool>) -> R<String> {
-    let root = daw_engine::strip_settings::user_root();
+    let root = daw_engine::library::strip_settings::user_root();
     with(&state, |s| s.save_strip_setting(&root, track, &name, overwrite.unwrap_or(false)).map_err(|e| e.to_string()))
 }
 
 /// Loads a saved channel strip setting onto each of `tracks`, as one undo step.
 #[tauri::command]
 pub fn load_strip_setting(state: State<AppState>, tracks: Vec<Id>, name: String) -> R<Snapshot> {
-    let root = daw_engine::strip_settings::user_root();
+    let root = daw_engine::library::strip_settings::user_root();
     try_edit(&state, "Load Channel Strip Setting", None, true, |s| s.load_strip_setting(&root, &tracks, &name))
 }
 
 #[tauri::command]
 pub fn delete_strip_setting(name: String) -> R<()> {
-    daw_engine::strip_settings::delete(&daw_engine::strip_settings::user_root(), &name).map_err(|e| e.to_string())
+    daw_engine::library::strip_settings::delete(&daw_engine::library::strip_settings::user_root(), &name).map_err(|e| e.to_string())
 }
 
 /// Takes an insert's side-chain key before (`pre`) or after the source's fader.

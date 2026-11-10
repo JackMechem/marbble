@@ -140,7 +140,7 @@ export const KEY_COMMANDS: KeyCommand[] = [
   { id: "step-triplet", label: "Triplet", group: "Step Input", keys: ["0"] },
 ];
 
-/** Accelerators of the native menu (src-tauri/src/menu.rs, by its item ids); they can't be
+/** Accelerators of the native menu (src-tauri/src/menu/, by its item ids); they can't be
  *  changed here, but a MIDI controller can fire them (`midiCommands`). */
 export const MENU_SHORTCUTS: { id: string; label: string; menu: string; key: string }[] = [
   { id: "settings", label: "Settings…", menu: "Marbble", key: "Mod+," },
@@ -154,7 +154,7 @@ export const MENU_SHORTCUTS: { id: string; label: string; menu: string; key: str
   { id: "bounce", label: "Bounce Project or Section…", menu: "File", key: "Mod+B" },
   { id: "export-selected-tracks", label: "Export Selected Tracks as Audio Files…", menu: "File", key: "Mod+E" },
   { id: "export-tracks", label: "Export All Tracks as Audio Files…", menu: "File", key: "Mod+Shift+E" },
-  // BOUNCE_IN_PLACE_KEY in menu.rs: Logic's ⌃B on macOS; elsewhere Ctrl+B is Bounce Project.
+  // BOUNCE_IN_PLACE_KEY in menu/spec.rs: Logic's ⌃B on macOS; elsewhere Ctrl+B is Bounce Project.
   { id: "bounce-in-place", label: "Bounce in Place…", menu: "Track", key: IS_MAC ? "Ctrl+B" : "Ctrl+Alt+B" },
   { id: "undo", label: "Undo", menu: "Edit", key: "Mod+Z" },
   { id: "redo", label: "Redo", menu: "Edit", key: "Mod+Shift+Z" },

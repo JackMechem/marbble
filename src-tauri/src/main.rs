@@ -1,7 +1,7 @@
-//! The application: startup, the threads and timers that drive the session (`ui-tick`, the idle
-//! timer, MIDI refresh, autosave), and the list of commands registered with Tauri. The commands
-//! themselves are in `commands/`, and `session` in the engine crate does the work. Also the
-//! `--scan-vst3` mode, in which a child process scans one bundle (see `plugin_db`).
+//! The application: what runs before the window opens (`startup.rs`, the `--scan-vst3` child mode
+//! among it), the window's setup with the timers that drive the session (`timers.rs`), and the
+//! list of commands registered with Tauri. The commands themselves are in `commands/`, and
+//! `Session` in the engine crate does the work.
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
@@ -13,76 +13,25 @@ mod menu;
 mod recent;
 mod schemas;
 mod settings;
+mod startup;
+mod timers;
 mod windows;
 
 use std::sync::Arc;
-use std::time::Duration;
 
-use daw_engine::plugin_db;
 use daw_engine::Session;
 use parking_lot::Mutex;
-use tauri::{Emitter, Manager};
+use tauri::Manager;
 
 pub struct AppState {
     pub session: Arc<Mutex<Session>>,
 }
 
-/// Takes a due autosave on the main thread (plug-in states are read there) and writes it on
-/// a worker thread, so the disk never holds up the interface.
-fn autosave(s: &mut Session) {
-    if let Some(job) = s.autosave_job() {
-        std::thread::spawn(move || match job.write() {
-            Ok(p) => log::info!("autosaved {}", p.display()),
-            Err(e) => log::warn!("autosave failed: {e}"),
-        });
-    }
-}
-
 fn main() {
-    // Child-process plug-in scanner: `marbble --scan-vst3 <bundle>`.
     let args: Vec<String> = std::env::args().collect();
-    if let Some(i) = args.iter().position(|a| a == plugin_db::SCAN_ARG) {
-        let code = args.get(i + 1).map(|p| plugin_db::scan_child_main(p.as_ref())).unwrap_or(2);
-        std::process::exit(code);
-    }
-
-    // Plug-in editors are X11 windows, so the interface runs through XWayland too unless the
-    // user chose a backend. MARBBLE_WAYLAND=1 runs it natively on Wayland (falling back to X11);
-    // editors still open through XWayland, with OpenGL kept apart (`set_gl_isolation` below).
-    #[cfg(target_os = "linux")]
-    if std::env::var_os("GDK_BACKEND").is_none() {
-        let native = std::env::var("MARBBLE_WAYLAND").is_ok_and(|v| v == "1");
-        std::env::set_var("GDK_BACKEND", if native { "wayland,x11" } else { "x11" });
-    }
-
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info,jack=off")).init();
-
-    // Before GTK starts and anything else runs: it may set XDG_DATA_DIRS.
-    schemas::ensure_file_chooser_schema();
-
-    #[cfg(target_os = "linux")]
-    vst3_host::editor::set_event_loop(Box::new(glib_loop::GlibLoop));
-
-    daw_engine::old_name::migrate();
-    let plugins = plugin_db::load_cache().unwrap_or_else(|| {
-        log::info!("scanning plug-ins for the first time");
-        std::env::current_exe().map(|exe| plugin_db::scan_with(&exe, &settings::extra_plugin_folders())).unwrap_or_default()
-    });
-    let prefs = settings::load();
-    let mut session = Session::new(prefs.audio, plugins);
-    // Before a project loads, so its clips are locked as they're read (Settings › Audio).
-    session.apply_memory_lock();
-    session.set_prefs(prefs.prefs);
-    session.load_controller_assignments(plugin_db::config_dir().join("controller-assignments.json"));
-    // `marbble path/to/Song.marbble` opens a project at launch.
-    if let Some(path) = args.iter().skip(1).find(|a| daw_engine::old_name::is_project(std::path::Path::new(a.trim_end_matches('/')))) {
-        match session.open(std::path::Path::new(path)) {
-            Ok(()) => recent::add(&session.project_path()),
-            Err(e) => log::error!("could not open {path}: {e}"),
-        }
-    }
-    let session = Arc::new(Mutex::new(session));
-    crash::install(session.clone());
+    startup::scan_child_if_asked(&args);
+    startup::prepare_environment();
+    let session = startup::session(&args);
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -99,55 +48,7 @@ fn main() {
             let handle = app.handle().clone();
             windows::forward_plugin_keys(&handle);
 
-            // Meters, playhead and recording previews at ~30 Hz.
-            let s = session.clone();
-            let h = handle.clone();
-            std::thread::Builder::new().name("ui-tick".into()).spawn(move || loop {
-                std::thread::sleep(Duration::from_millis(33));
-                let tick = s.lock().tick();
-                let _ = h.emit("tick", tick);
-            })?;
-
-            // Plug-in controller idle + freeing replaced DSP objects, on the main thread.
-            #[cfg(target_os = "linux")]
-            {
-                let s = session.clone();
-                let h = handle.clone();
-                glib::timeout_add_local(Duration::from_millis(30), move || {
-                    if let Some(mut g) = s.try_lock() {
-                        if vst3_host::editor::gl_isolated(|| g.idle()) {
-                            let _ = h.emit("project", commands::snapshot(&g));
-                        }
-                        autosave(&mut g);
-                    }
-                    glib::ControlFlow::Continue
-                });
-            }
-            #[cfg(not(target_os = "linux"))]
-            {
-                let s = session.clone();
-                let h = handle.clone();
-                std::thread::spawn(move || loop {
-                    std::thread::sleep(Duration::from_millis(30));
-                    let s = s.clone();
-                    let h2 = h.clone();
-                    let _ = h.run_on_main_thread(move || {
-                        if let Some(mut g) = s.try_lock() {
-                            if g.idle() {
-                                let _ = h2.emit("project", commands::snapshot(&g));
-                            }
-                            autosave(&mut g);
-                        }
-                    });
-                });
-            }
-
-            // Pick up MIDI devices plugged in after launch.
-            let s = session.clone();
-            std::thread::spawn(move || loop {
-                std::thread::sleep(Duration::from_secs(3));
-                s.lock().refresh_midi();
-            });
+            timers::start(&handle, &session)?;
 
             if let Some(w) = app.get_webview_window("main") {
                 let _ = w.set_title("Marbble");
@@ -386,9 +287,9 @@ fn main() {
             commands::rename_comp,
             commands::delete_comp,
             commands::set_loop_crossfade,
-            menu::set_project_menus,
+            menu::project_menus::set_project_menus,
             menu::set_menu_state,
-            menu::gtk_key_names,
+            menu::gtk_keys::gtk_key_names,
             schemas::file_dialog_problem,
             commands::set_marker_length,
             commands::add_arrangement_marker,

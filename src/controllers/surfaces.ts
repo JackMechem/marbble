@@ -1,5 +1,5 @@
 // Control surfaces (Settings › MIDI › Control Surfaces): a Mackie Control with its extenders, or
-// a HUI, mirrored from crates/engine/src/surface/mod.rs. Pure, tested.
+// a HUI, mirrored from crates/engine/src/control/surface/mod.rs. Pure, tested.
 import type { MidiPort } from "./controllers";
 
 export type SurfaceKind = "mcu" | "mcu_extender" | "hui";

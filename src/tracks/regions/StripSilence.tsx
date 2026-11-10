@@ -1,7 +1,7 @@
 // The Strip Silence sheet (Logic's Remove Silence from Audio Region): threshold, minimum time,
 // pre-attack and post-release, with a live preview of where the cuts fall on the first selected
 // region. OK splits the selected audio regions around the parts that sound
-// (crates/engine/src/strip_silence.rs).
+// (crates/engine/src/edit/strip_silence.rs).
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { type Id } from "../../engine/project";
 import { type Region } from "../../engine/regions";

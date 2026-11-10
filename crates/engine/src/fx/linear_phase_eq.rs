@@ -1,6 +1,6 @@
 //! Linear Phase EQ, after Logic's: the Channel EQ's eight bands, with linear phase.
 //!
-//! - The bands are the Channel EQ's (`crate::eq`): their combined magnitude response is
+//! - The bands are the Channel EQ's (`crate::fx::channel_eq::filters`): their combined magnitude response is
 //!   realized as a linear-phase FIR (see `fir.rs`), so every frequency is delayed equally and
 //!   nothing smears in time, at the cost of latency, which delay compensation makes up.
 //! - **Quality** picks the kernel length: Low, Medium and High are 2047, 4095 and 8191 taps at
@@ -99,7 +99,7 @@ fn design(values: &[f32; ID_SPACE], sample_rate: f32, gen: u64, fft: &dyn realff
         t[(len - 1) / 2] = util::db_to_gain(eq.output_db);
         t
     } else {
-        let c = crate::eq::coefficients(&eq, sample_rate as f64);
+        let c = crate::fx::channel_eq::filters::coefficients(&eq, sample_rate as f64);
         linear_phase_taps(len, |w| c.magnitude(w))
     };
     Kernel::new(&taps, gen, fft)
@@ -449,7 +449,7 @@ mod tests {
             assert!(ph.abs() < 1e-3, "phase at {f} Hz: {ph}");
         }
         // And it follows the Channel EQ away from the bell.
-        let c = crate::eq::coefficients(&channel_eq(|id| e.param(id)), SR as f64);
+        let c = crate::fx::channel_eq::filters::coefficients(&channel_eq(|id| e.param(id)), SR as f64);
         for f in [100.0, 500.0, 2000.0, 5000.0] {
             let want = 20.0 * c.magnitude(std::f64::consts::TAU * f / SR as f64).log10();
             let (got, _) = response(&h, f, d);

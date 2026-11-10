@@ -1,8 +1,8 @@
 //! What one block of processing shares: the per-thread [`Scratch`] buffers, the read-only
 //! [`BlockCtx`], how a strip reaches other strips ([`Routes`]: directly in the serial loop, deferred
-//! on worker threads, see `parallel.rs`), and the small mixing functions they use.
+//! on worker threads, see `parallel/`), and the small mixing functions they use.
 //!
-//! `strip.rs` plays a strip with these, `process.rs` sets them up and `parallel.rs` runs them
+//! `strip.rs` plays a strip with these, `process.rs` sets them up and `parallel/` runs them
 //! on the pool.
 
 use super::*;

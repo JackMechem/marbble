@@ -88,7 +88,7 @@ fn main() {
     let _ = std::fs::remove_dir_all(&config);
     std::env::set_var("XDG_CONFIG_HOME", &config);
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
-    let mut s = Session::new(cfg, daw_engine::plugin_db::load_cache().unwrap_or_default());
+    let mut s = Session::new(cfg, daw_engine::library::plugin_db::load_cache().unwrap_or_default());
     s.dir = scratch.join("PdcGlideCheck.marbble");
     std::fs::create_dir_all(&s.dir).unwrap();
 
@@ -96,7 +96,7 @@ fn main() {
     let sr = s.sample_rate() as u32;
     let sine: Vec<f32> = (0..sr * 3).map(|i| AMP * (std::f32::consts::TAU * FREQ * i as f32 / sr as f32).sin()).collect();
     let path = scratch.join("sine.wav");
-    daw_engine::decode::write_wav(&path, sr, &[sine]).unwrap();
+    daw_engine::audio_file::decode::write_wav(&path, sr, &[sine]).unwrap();
 
     let a = s.add_track(TrackKind::Audio, InputSel::None, None, None).unwrap();
     s.import_audio(&path, a, 0).unwrap();

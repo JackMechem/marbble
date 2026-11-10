@@ -243,7 +243,7 @@ pub struct TrackDsp {
     pub(super) instrument_ran: bool,
     /// For an aux on an instrument's extra output: where that comes from.
     pub(super) feed: multi_out::OutputFeed,
-    /// What the strip played this block when it ran on the pool (see `parallel.rs`).
+    /// What the strip played this block when it ran on the pool (see `parallel/`).
     pub(super) outs: Outlets,
     /// How long the strip's last block took, in seconds.
     pub(super) spent: f32,

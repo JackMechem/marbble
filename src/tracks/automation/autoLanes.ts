@@ -2,7 +2,7 @@
 // the rest of this folder. A track shows its main lane over its regions and, below it, the extra lanes
 // in `auto_lanes` (Logic's sub-lanes), each with its own parameter. Stereo Out's lanes are
 // shown on the Output track at the bottom of the Tracks area. A point's `curve` bends the
-// segment after it, as the engine plays it (crates/engine/src/automation.rs).
+// segment after it, as the engine plays it (crates/engine/src/edit/automation.rs).
 
 import type { AutoLane, AutoParam, AutoPoint, Track } from "../../engine/project";
 

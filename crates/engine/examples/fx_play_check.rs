@@ -179,7 +179,7 @@ fn main() {
     let _ = std::fs::remove_dir_all(&config);
     std::env::set_var("XDG_CONFIG_HOME", &config);
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
-    let mut s = Session::new(cfg, daw_engine::plugin_db::load_cache().unwrap_or_default());
+    let mut s = Session::new(cfg, daw_engine::library::plugin_db::load_cache().unwrap_or_default());
     s.dir = scratch.join("FxPlayCheck.marbble");
     std::fs::create_dir_all(&s.dir).unwrap();
     let out = scratch.join("bounces");

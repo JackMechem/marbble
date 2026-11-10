@@ -58,7 +58,7 @@ pub struct OldProjectsFolder {
 
 #[tauri::command]
 pub fn old_projects_folder(state: State<AppState>) -> Option<OldProjectsFolder> {
-    let (old, new) = daw_engine::old_name::projects_rename()?;
+    let (old, new) = daw_engine::library::old_name::projects_rename()?;
     let dir = with(&state, |s| s.project_path());
     let open = (dir.exists() && dir.starts_with(&old)).then(|| dir.file_stem().map(|n| n.to_string_lossy().to_string()).unwrap_or_default());
     Some(OldProjectsFolder { old: old.to_string_lossy().to_string(), new: new.to_string_lossy().to_string(), open })
@@ -72,7 +72,7 @@ pub fn rename_old_projects_folder(state: State<AppState>) -> R<Snapshot> {
         let pairs = s.rename_old_projects_folder().map_err(|e| e.to_string())?;
         crate::recent::rebase(&pairs);
         let mut all = crate::settings::load();
-        if daw_engine::old_name::rebase_prefs(&mut all.prefs, &pairs) {
+        if daw_engine::library::old_name::rebase_prefs(&mut all.prefs, &pairs) {
             crate::settings::save(&all);
             s.set_prefs(all.prefs);
         }
@@ -119,7 +119,7 @@ pub fn list_dir(path: Option<String>) -> R<DirListing> {
             }
             let p = e.path();
             let is_dir = p.is_dir();
-            let audio = daw_engine::decode::is_audio_file(&p);
+            let audio = daw_engine::audio_file::decode::is_audio_file(&p);
             (is_dir || audio).then(|| DirEntry { name, path: p.to_string_lossy().to_string(), is_dir })
         })
         .collect();
@@ -146,7 +146,7 @@ pub fn recoverable_projects(state: State<AppState>) -> Vec<daw_engine::session::
     let mut dirs: Vec<PathBuf> = crate::recent::paths().into_iter().map(PathBuf::from).collect();
     for r in [root, daw_engine::session::default_projects_root()] {
         if let Ok(rd) = std::fs::read_dir(&r) {
-            dirs.extend(rd.flatten().map(|e| e.path()).filter(|p| daw_engine::old_name::is_project(p)));
+            dirs.extend(rd.flatten().map(|e| e.path()).filter(|p| daw_engine::library::old_name::is_project(p)));
         }
     }
     let mut seen = Vec::new();

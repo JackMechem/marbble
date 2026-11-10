@@ -46,7 +46,7 @@ fn measure(dir: &Path, pool: &SamplePool, c: &Case, block: usize, seconds: f64) 
     if !path.exists() {
         let frames = c.file_rate as usize * 20;
         let ch: Vec<Vec<f32>> = if c.stereo { vec![noise(frames, 1), noise(frames, 2)] } else { vec![noise(frames, 1)] };
-        daw_engine::decode::write_wav(&path, c.file_rate, &ch).unwrap();
+        daw_engine::audio_file::decode::write_wav(&path, c.file_rate, &ch).unwrap();
     }
     // Across the keys around its root at full polyphony, or a run going up from `up` above it.
     let root = if c.up == 0 { 60 } else { 36 };

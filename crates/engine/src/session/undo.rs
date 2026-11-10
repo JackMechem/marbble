@@ -2,7 +2,7 @@
 //! to one by sending the engine only what differs, so plug-ins that are still there keep running.
 //!
 //! Tauri commands take the checkpoint before an edit. Edits in a VST3's own editor come in through
-//! `vst_undo.rs`. Anything sent to the engine must also be handled in `restore`.
+//! `plugins/editor_undo.rs`. Anything sent to the engine must also be handled in `restore`.
 
 use super::*;
 
@@ -102,7 +102,7 @@ impl Session {
         self.auto_abort();
         let current = std::mem::replace(&mut self.project, target);
         // A plug-in that stays loaded keeps its copy of its state, newer than the step's
-        // (`session/plugin_states.rs`).
+        // (`session/plugins/states.rs`).
         self.adopt_states(&current, false);
         // The drag mode is a setting, not part of the edit history.
         self.project.drag_mode = current.drag_mode;

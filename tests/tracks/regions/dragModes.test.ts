@@ -1,4 +1,4 @@
-// Unit tests for src/tracks/regions/dragModes.ts, the drag preview's copy of crates/engine/src/drag_modes.rs.
+// Unit tests for src/tracks/regions/dragModes.ts, the drag preview's copy of crates/engine/src/edit/drag_modes.rs.
 // The cases are the Rust module's, so the two stay in step.
 import { test } from "node:test";
 import assert from "node:assert/strict";

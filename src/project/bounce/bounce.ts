@@ -67,5 +67,5 @@ export function projectEnd(p: Project): number {
   return Math.max(0, ...p.tracks.flatMap((t) => t.regions.map(regionEnd)));
 }
 
-/** Logic's ⌃B; elsewhere Ctrl+B is Bounce Project, so it gains Alt (see menu.rs). */
+/** Logic's ⌃B; elsewhere Ctrl+B is Bounce Project, so it gains Alt (see menu/spec.rs). */
 export const BOUNCE_IN_PLACE_HINT = fmt(MENU_SHORTCUTS.find((m) => m.label === "Bounce in Place…")!.key);

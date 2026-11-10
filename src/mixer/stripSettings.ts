@@ -1,6 +1,6 @@
 // Channel strip settings, as in Logic's channel strip Setting menu: copy and paste a strip's
 // instrument and Audio FX (Channel EQs among them), reset a strip, and save settings to load in
-// any project (stored by the engine, see crates/engine/src/strip_settings.rs). Also resetting
+// any project (stored by the engine, see crates/engine/src/library/strip_settings.rs). Also resetting
 // the clip indicators, which sit on the same strips.
 import { invoke } from "@tauri-apps/api/core";
 import { ask } from "@tauri-apps/plugin-dialog";

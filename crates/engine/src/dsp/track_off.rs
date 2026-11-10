@@ -9,7 +9,7 @@
 //! the delay line, so audio emerging later from a latent path doesn't start with a jump either.
 //!
 //! The session leaves the track's latency out of delay compensation while it is off, and the
-//! other tracks glide to their new delays as for any other latency change (see `session/pdc.rs`).
+//! other tracks glide to their new delays as for any other latency change (see `session/engine/pdc.rs`).
 
 use super::*;
 

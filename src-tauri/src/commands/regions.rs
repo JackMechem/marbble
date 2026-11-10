@@ -304,7 +304,7 @@ pub fn marquee_copy(state: State<AppState>, tracks: Vec<Id>, start: i64, end: i6
 }
 
 /// Track › New Pattern Region, or Create Pattern Region in a lane's menu: a pattern region with
-/// the rows the Step Sequencer picked for the track (stepSeq.ts `templateRows`), or the default
+/// the rows the Step Sequencer picked for the track (src/editors/stepSequencer/model.ts `templateRows`), or the default
 /// drum kit, on an instrument track.
 #[tauri::command]
 pub fn create_pattern_region(state: State<AppState>, track: Id, start: i64, length: i64, rows: Option<Vec<u8>>) -> R<Made> {
@@ -314,7 +314,7 @@ pub fn create_pattern_region(state: State<AppState>, track: Id, start: i64, leng
 /// The Step Sequencer's edits: replaces a pattern region's pattern. `key` merges a burst of
 /// edits (the steps a drag paints) into one undo step.
 #[tauri::command]
-pub fn set_pattern(state: State<AppState>, id: Id, pattern: daw_engine::pattern::Pattern, label: String, key: Option<String>) -> R<Snapshot> {
+pub fn set_pattern(state: State<AppState>, id: Id, pattern: daw_engine::edit::pattern::Pattern, label: String, key: Option<String>) -> R<Snapshot> {
     try_edit(&state, &label, key, false, |s| s.set_pattern(id, pattern))
 }
 

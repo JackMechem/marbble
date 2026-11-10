@@ -1,5 +1,5 @@
-//! Which strips must finish before which, for running them at the same time (see `pool.rs` and
-//! `parallel.rs`).
+//! Which strips must finish before which, for running them at the same time (see `pool/` and
+//! `parallel/`).
 //!
 //! The session works a graph out from the project, off the audio thread, and sends it in a
 //! `Cmd::Graph`. Tasks are the engine's tracks in processing order, so every edge points forward

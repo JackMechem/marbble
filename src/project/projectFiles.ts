@@ -1,6 +1,6 @@
 // File › Project Alternatives, Revert to Saved, Revert to and Save as Template (Rust:
-// crates/engine/src/session/{alternatives,backups,templates}.rs). The native menu's two lists
-// are rebuilt from here (menu.rs `set_project_menus`) whenever the project changes in a way
+// crates/engine/src/session/project/{alternatives,backups,templates}.rs). The native menu's two lists
+// are rebuilt from here (menu/project_menus.rs `set_project_menus`) whenever the project changes in a way
 // that can change them.
 import { useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";

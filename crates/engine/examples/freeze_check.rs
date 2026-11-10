@@ -46,7 +46,7 @@ fn main() {
     let mut args = std::env::args().skip(1);
     let tone = args.next().expect("audio file");
     let scratch = PathBuf::from(args.next().expect("scratch dir"));
-    let plugins = daw_engine::plugin_db::load_cache().unwrap_or_default();
+    let plugins = daw_engine::library::plugin_db::load_cache().unwrap_or_default();
     let Some(maxim) = plugins.iter().find(|d| d.name == "ZaMaximX2").cloned() else {
         println!("FAIL ZaMaximX2 isn't in the plug-in cache; scan plug-ins first");
         std::process::exit(1);

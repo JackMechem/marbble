@@ -12,7 +12,7 @@ pub(super) struct RoomDef {
     /// The input diffusers' length scale.
     pub(super) diffuser: f32,
     /// Early reflections: tap count, first and last tap in ms, and the pattern's seed.
-    /// `src/components/fx/Reverb.tsx` draws the same pattern; keep the two in step.
+    /// `src/plugins/effects/Reverb.tsx` draws the same pattern; keep the two in step.
     pub(super) er: (usize, f32, f32, u32),
     /// When the late reverb starts after the pre-delay, in ms.
     pub(super) late_ms: f32,

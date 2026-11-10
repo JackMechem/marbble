@@ -1,4 +1,4 @@
-// The TypeScript mirror of the engine's saved document (crates/engine/src/model.rs; field names are
+// The TypeScript mirror of the engine's saved document (crates/engine/src/model/; field names are
 // its serde names): the project, its tracks, plug-in slots, sends, groups, VCAs, markers and
 // automation. Regions are in regions.ts; what the engine sends back in snapshot.ts. engine/ is the
 // UI's side of the engine: these types, devices.ts and listings.ts, and the commands (commands.ts).

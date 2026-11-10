@@ -139,12 +139,12 @@ test("while a field has the focus, other accelerators are dropped; Save and clic
 });
 
 test("the accelerator list matches the menu bar's", () => {
-  const rs = readFileSync(new URL("../../src-tauri/src/menu.rs", import.meta.url), "utf8");
-  // menu.rs's own tests may build items of their own.
+  const rs = readFileSync(new URL("../../src-tauri/src/menu/spec.rs", import.meta.url), "utf8");
+  // menu/spec.rs's own tests may build items of their own.
   const end = rs.indexOf("#[cfg(test)]");
   const spec = end < 0 ? rs : rs.slice(0, end);
   const ids = [...spec.matchAll(/keyed\("([^"]+)"/g), ...spec.matchAll(/(?:Check|Radio)\("([^"]+)", "[^"]*", Some\(/g)].map((m) => m[1]);
-  assert.ok(ids.length > 10, "found menu.rs's accelerators");
+  assert.ok(ids.length > 10, "found menu/spec.rs's accelerators");
   assert.deepEqual([...MENU_ACCELERATORS].sort(), [...new Set(ids)].sort());
 });
 
