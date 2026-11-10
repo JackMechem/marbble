@@ -735,8 +735,9 @@ dock is narrow. It has been tested by measurement only: nobody has listened to i
 - **In a project,** samples are copied into its `Samples` folder when they arrive, so moving the project or deleting the
   original changes nothing. A library takes its size on disk again.
 - **A missing sample** is named when the project opens and shows red in the panel, while everything else plays. **Replace…** points its zone at another file. This also resets the zone's start, end and loop.
-- **Factory presets** shape the sound (a slow pad, a pluck, a filter) and leave your zones alone. A channel strip setting or template keeps a
-  sampler's zones but not its samples; save an instrument to carry it between projects.
+- **Factory presets** shape the sound (a slow pad, a pluck, a filter) and leave your zones alone.
+- **Channel strip settings and templates** keep a copy of the sampler's samples too, and loading one copies them into the project. So does
+  copying the strip or the sampler and pasting it into another project.
 
 **Limits**
 
@@ -2187,9 +2188,12 @@ Channel EQ. Sends, routing, volume and pan aren't part of it.
 When the strip is one of several selected tracks, Paste, Reset and loading apply to all of
 them, as one undo step. A folder stack has no channel strip settings. A VST3 that isn't
 installed on this computer comes along as a missing plug-in (its slot keeps its settings, as
-in a project from another computer). Saved settings are files, one `<name>.json` each, in the
+in a project from another computer). Marbble Sampler's samples come along: a saved setting
+keeps a copy of them, and loading or pasting it into another project copies them into that
+project's `Samples` folder. Saved settings are files, one `<name>.json` each, in the
 `channel-strips` folder of the settings folder (`~/.config/marbble/channel-strips` on Linux
-and macOS, `%APPDATA%\marbble\channel-strips` on Windows).
+and macOS, `%APPDATA%\marbble\channel-strips` on Windows), with a `<name>` folder beside one
+that holds a sampler's samples.
 
 ### Plug-ins
 
@@ -3240,9 +3244,11 @@ replacing it.
 
 Your templates appear under **My Templates** in the [Project Chooser](#the-project-chooser),
 where a project made from one starts with all of that and no regions. Right-click a template
-there to **Rename…** or **Delete** it. Templates are files in the `templates` folder of the
-settings folder (`~/.config/marbble/templates` on Linux and macOS,
-`%APPDATA%\marbble\templates` on Windows), one `<name>.json` each.
+there to **Rename…** or **Delete** it. A template keeps a copy of Marbble Sampler's samples,
+and a project made from it gets copies of its own. Templates are files in the `templates`
+folder of the settings folder (`~/.config/marbble/templates` on Linux and macOS,
+`%APPDATA%\marbble\templates` on Windows), one `<name>.json` each, with a `<name>` folder
+beside one that holds sampler samples.
 
 ### Project alternatives
 

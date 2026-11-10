@@ -7,6 +7,8 @@
 //! - Saved settings are files, `<config dir>/channel-strips/<name>.json`, written like presets
 //!   (`crate::presets`): to a temporary file first and renamed into place. They leave out
 //!   side-chain sources, which name tracks of the project they were saved in.
+//! - A Marbble Sampler's samples go along in a folder beside the file, `<name>/Samples/`, as a
+//!   saved sampler instrument keeps them, and loading the setting copies them into the project.
 //! - Settings from when strips had a fixed Channel EQ hold it apart from the inserts; reading or
 //!   pasting one puts it at the top of the inserts as a Channel EQ (see [`StripSetting::upgrade`]).
 
@@ -79,6 +81,11 @@ fn file(root: &Path, name: &str) -> PathBuf {
     root.join(format!("{name}.json"))
 }
 
+/// The folder a saved setting's sampler files are relative to (they're in its `Samples`).
+pub fn samples_dir(root: &Path, name: &str) -> PathBuf {
+    root.join(name)
+}
+
 /// The saved settings, by name.
 pub fn list(root: &Path) -> Vec<String> {
     let Ok(rd) = std::fs::read_dir(root) else { return Vec::new() };
@@ -103,14 +110,21 @@ pub fn read(root: &Path, name: &str) -> Result<StripSetting> {
     Ok(s)
 }
 
+/// The name a setting would be saved under (`name` cleaned), refusing one that's taken unless
+/// `overwrite`.
+pub fn check_name(root: &Path, name: &str, overwrite: bool) -> Result<String> {
+    let name = clean(name)?;
+    if file(root, &name).exists() && !overwrite {
+        return Err(anyhow!("A channel strip setting named \"{name}\" already exists"));
+    }
+    Ok(name)
+}
+
 /// Saves a setting under `name` (cleaned). Refuses to replace an existing one unless
 /// `overwrite`. Returns the name it was saved under.
 pub fn write(root: &Path, setting: &StripSetting, name: &str, overwrite: bool) -> Result<String> {
-    let name = clean(name)?;
+    let name = check_name(root, name, overwrite)?;
     let path = file(root, &name);
-    if path.exists() && !overwrite {
-        return Err(anyhow!("A channel strip setting named \"{name}\" already exists"));
-    }
     std::fs::create_dir_all(root)?;
     let doc = StripSetting { name: name.clone(), version: VERSION, ..setting.portable() };
     let tmp = path.with_extension("json.tmp");
@@ -121,7 +135,9 @@ pub fn write(root: &Path, setting: &StripSetting, name: &str, overwrite: bool) -
 
 pub fn delete(root: &Path, name: &str) -> Result<()> {
     let name = clean(name)?;
-    std::fs::remove_file(file(root, &name)).with_context(|| format!("No channel strip setting named \"{name}\""))
+    std::fs::remove_file(file(root, &name)).with_context(|| format!("No channel strip setting named \"{name}\""))?;
+    let _ = std::fs::remove_dir_all(samples_dir(root, &name));
+    Ok(())
 }
 
 #[cfg(test)]

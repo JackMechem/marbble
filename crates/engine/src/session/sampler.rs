@@ -154,6 +154,55 @@ fn adopt_file(dir: &Path, sub: &Path, path: &Path) -> Result<String> {
     unreachable!()
 }
 
+/// Points each zone at a copy of its file in `dir`'s Samples folder (under `sub`), copying it there
+/// unless it's in `dir` already. A relative file is found against `from`, an absolute one where it
+/// says. A file that isn't there stays named as it was, and shows as missing where it's loaded.
+fn adopt_zones(state: &mut SamplerState, from: &Path, dir: &Path, sub: &Path) -> Result<()> {
+    let mut done: HashMap<String, String> = HashMap::new();
+    for z in &mut state.zones {
+        if let Some(rel) = done.get(&z.file) {
+            z.file = rel.clone();
+            continue;
+        }
+        let src = from.join(&z.file);
+        let was = std::mem::take(&mut z.file);
+        let rel = if src.is_file() { adopt_file(dir, sub, &src)? } else { was.clone() };
+        done.insert(was, rel.clone());
+        z.file = rel;
+    }
+    Ok(())
+}
+
+/// A sampler slot's zones, rewritten by `f`; anything else is left alone.
+fn with_sampler_state(slot: &mut PluginSlot, f: impl FnOnce(&mut SamplerState) -> Result<()>) -> Result<()> {
+    if slot.plugin_id != SAMPLER || slot.state.is_none() {
+        return Ok(());
+    }
+    let mut state = SamplerState::parse(slot.state.as_deref());
+    f(&mut state)?;
+    slot.state = Some(state.to_json().into());
+    Ok(())
+}
+
+/// Names each of a sampler slot's files in full, found against `from`, for a slot going to another
+/// project: a channel strip setting or plug-in on the clipboard, or a saved setting or template
+/// read from its folder. Pasting it copies them in ([`adopt_samples`]).
+pub(super) fn full_sample_paths(slot: &mut PluginSlot, from: &Path) {
+    let _ = with_sampler_state(slot, |state| {
+        for z in &mut state.zones {
+            z.file = from.join(&z.file).to_string_lossy().into_owned();
+        }
+        Ok(())
+    });
+}
+
+/// Copies a sampler slot's files into `dir`'s Samples folder, unless they're in `dir` already, and
+/// points its zones at the copies (relative files are found against `from`). Anything else is left
+/// alone.
+pub(super) fn adopt_samples(slot: &mut PluginSlot, from: &Path, dir: &Path) -> Result<()> {
+    with_sampler_state(slot, |state| adopt_zones(state, from, dir, Path::new("")))
+}
+
 fn same_bytes(a: &Path, b: &Path) -> bool {
     use std::io::Read;
     let (Ok(ma), Ok(mb)) = (std::fs::metadata(a), std::fs::metadata(b)) else { return false };
@@ -711,19 +760,7 @@ impl Session {
         let tmp = root.join(format!(".saving {name}"));
         let _ = std::fs::remove_dir_all(&tmp);
         std::fs::create_dir_all(tmp.join(SAMPLES_DIR))?;
-        let mut done: HashMap<String, String> = HashMap::new();
-        for z in &mut state.zones {
-            if let Some(rel) = done.get(&z.file) {
-                z.file = rel.clone();
-                continue;
-            }
-            let src = self.dir.join(&z.file);
-            let was = std::mem::take(&mut z.file);
-            // A missing sample stays listed in the instrument, and shows as missing when loaded.
-            let rel = if src.is_file() { adopt_file(&tmp, Path::new(""), &src)? } else { was.clone() };
-            done.insert(was, rel.clone());
-            z.file = rel;
-        }
+        adopt_zones(&mut state, &self.dir, &tmp, Path::new(""))?;
         let p = Preset {
             name: name.clone(),
             effect: SAMPLER.into(),
@@ -750,18 +787,7 @@ impl Session {
         let mut state = SamplerState::parse(Some(state));
         if let Some(base) = base {
             let sub = base.file_name().map(PathBuf::from).unwrap_or_default();
-            let mut done: HashMap<String, String> = HashMap::new();
-            for z in &mut state.zones {
-                if let Some(rel) = done.get(&z.file) {
-                    z.file = rel.clone();
-                    continue;
-                }
-                let src = base.join(&z.file);
-                let was = std::mem::take(&mut z.file);
-                let rel = if src.is_file() { adopt_file(&self.dir, &sub, &src)? } else { was.clone() };
-                done.insert(was, rel.clone());
-                z.file = rel;
-            }
+            adopt_zones(&mut state, base, &self.dir, &sub)?;
         }
         self.sampler_store(track, &state)
     }

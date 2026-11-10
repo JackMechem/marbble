@@ -1135,9 +1135,9 @@ at its new place (`old_name::relocated`).
 | `plugins.json` | `plugin_db.rs` | The plug-in scan cache. |
 | `plugin-scan.json` | `plugin_db.rs` | The last scan's report (bundles, plug-ins, failures with reasons), for Settings › Plug-ins. |
 | `presets/<effect>/<name>.json` | `presets.rs` | User presets of the built-in effects, the Channel EQ among them (see [Presets](#presets)). |
-| `channel-strips/<name>.json` | `strip_settings.rs` | Saved channel strip settings (see [Channel strip settings](#channel-strip-settings)). |
+| `channel-strips/<name>.json` | `strip_settings.rs` | Saved channel strip settings (see [Channel strip settings](#channel-strip-settings)), with a Marbble Sampler's files in `channel-strips/<name>/Samples/`. |
 | `controller-assignments.json` | `session/controllers.rs` | MIDI Learn's controller assignments: controller (port without ALSA's client:port numbers, channel, and a CC number, pitch bend, a note number, a program number, a 14-bit CC pair by its MSB number or an NRPN number), target (track id and parameter including input monitoring and an insert's bypass, plug-in instance id with its plug-in id, a setting of the old fixed Channel EQ, Stereo Out, a VCA's level or mute by its id, a Selected Track control, transport, or a key command by its keymap or menu id), takeover mode, range, button mode (`toggle`, `momentary`, `trigger`), whether a note's velocity sets the value, the relative encoding and its sensitivity, whether the button latches by itself, and whether feedback goes back to the controller. Fields added later have serde defaults, so older files load. Global, like Logic's; written atomically. |
-| `templates/<name>.json` | `session/templates.rs` | User project templates (File › Save as Template…): a `Project` without regions, clips, freeze state or alternatives, with plug-in states. `new_from_template` loads one as a new untitled project at the device's rate, keeping its ids. |
+| `templates/<name>.json` | `session/templates.rs` | User project templates (File › Save as Template…): a `Project` without regions, clips, freeze state or alternatives, with plug-in states, and Marbble Sampler's files in `templates/<name>/Samples/`. `new_from_template` loads one as a new untitled project at the device's rate, keeping its ids, and copies those files into it. Renaming and deleting take the folder along. |
 
 Interface-only state lives in the webview's `localStorage`:
 
@@ -2249,6 +2249,8 @@ and its panel hasn't been opened.** Everything below is measured against generat
 - **Reusable instruments** (`presets.rs`): the sampler's user presets are folders, `~/Music/Marbble Instruments/<name>/`
   with `instrument.json` and `Samples/`, listed in the ordinary preset menu. Loading one copies its samples into the
   project. Renaming and deleting move or remove the folder. Factory presets only shape the parameters and keep the zones.
+  Channel strip settings, templates and the clipboards carry the samples the same way (`adopt_zones`; see
+  [Channel strip settings](#channel-strip-settings)).
 - **Name parsing** (`mapping.rs`): note names read as C3 = 60, as Marbble shows them, so a library named with C4 = 60 lands an
   octave off (its SFZ, if it has one, reads C4 = 60, as SFZ defines). A file's `smpl` chunk outranks its name.
 - **SFZ** (`sfz.rs`). Read: `<control>` (`default_path`, `note_offset`, `octave_offset`), `<global>`, `<master>`, `<group>`, `<region>`,
@@ -2464,6 +2466,13 @@ Going to rest is by the sample (`instrument/common.rs`): a model that stopped at
 - Saved settings go through `strip_settings::{list, read, write, delete}` in a root folder
   (`user_root()` for the app, a scratch folder in tests); saving drops side-chain sources and
   trailing empty slots (`portable`).
+- **A Marbble Sampler's files go along** (`session/sampler.rs`): `copy_strip` and `copy_plugin`
+  name its zone files in full (`full_sample_paths`), and pasting copies any outside the project
+  into its `Samples` (`adopt_samples`: the same file once, a different one of the same name
+  numbered, a missing one left named). `save_strip_setting` copies them into
+  `channel-strips/<name>/Samples/` (`strip_settings::samples_dir`) with the zones relative to
+  it, built in `.saving samples` first; `load_strip_setting` names them in full against that
+  folder before pasting. Templates do the same with `templates/<name>/`.
 - Commands: `copy_strip`, `paste_strip`, `reset_strip`, `list_strip_settings`,
   `save_strip_setting`, `load_strip_setting`, `delete_strip_setting`, and, for the clip
   indicators, `reset_clip_indicators`.

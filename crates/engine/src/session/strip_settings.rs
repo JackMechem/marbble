@@ -6,6 +6,9 @@
 //! instance, as with Paste Plug-in. A VST3 that isn't installed here (or fails to load) stays
 //! in its slot with its saved state, shown as missing, like one in a project opened on another
 //! computer. Sends, routing, volume and pan are left alone, as in Logic.
+//!
+//! A Marbble Sampler's files travel with it: a copied setting names them in full, a saved one
+//! keeps copies beside its file, and applying either copies them into the project's Samples.
 
 use std::path::Path;
 
@@ -37,13 +40,11 @@ impl Session {
         if t.kind == TrackKind::Folder {
             return Err(anyhow!("A folder stack has no channel strip settings"));
         }
-        Ok(StripSetting {
-            name: t.name.clone(),
-            version: 0,
-            instrument: t.instrument.as_ref().filter(|_| t.kind == TrackKind::Instrument).map(capture),
-            inserts: t.inserts.iter().map(|s| s.as_ref().map(capture)).collect(),
-            legacy_eq: None,
-        })
+        let mut instrument = t.instrument.as_ref().filter(|_| t.kind == TrackKind::Instrument).map(capture);
+        if let Some(i) = instrument.as_mut() {
+            sampler::full_sample_paths(i, &self.dir);
+        }
+        Ok(StripSetting { name: t.name.clone(), version: 0, instrument, inserts: t.inserts.iter().map(|s| s.as_ref().map(capture)).collect(), legacy_eq: None })
     }
 
     /// Applies a setting to each strip (MASTER_ID for Stereo Out). One copied before the Channel
@@ -68,15 +69,37 @@ impl Session {
         Ok(())
     }
 
-    /// Saves a strip's setting in `root` (see [`strip_settings::user_root`]). Returns the name
-    /// it was saved under.
+    /// Saves a strip's setting in `root` (see [`strip_settings::user_root`]), with a copy of
+    /// its sampler's files. Returns the name it was saved under.
     pub fn save_strip_setting(&self, root: &Path, track: Id, name: &str, overwrite: bool) -> Result<String> {
-        strip_settings::write(root, &self.copy_strip(track)?, name, overwrite)
+        let mut setting = self.copy_strip(track)?;
+        let name = strip_settings::check_name(root, name, overwrite)?;
+        // The samples are gathered beside it first, so a failure leaves a setting saved before as it was.
+        let tmp = root.join(".saving samples");
+        let _ = std::fs::remove_dir_all(&tmp);
+        let saved = match setting.instrument.as_mut() {
+            Some(i) => sampler::adopt_samples(i, &self.dir, &tmp),
+            None => Ok(()),
+        }
+        .and_then(|_| strip_settings::write(root, &setting, &name, overwrite));
+        if let Err(e) = saved {
+            let _ = std::fs::remove_dir_all(&tmp);
+            return Err(e);
+        }
+        let folder = strip_settings::samples_dir(root, &name);
+        let _ = std::fs::remove_dir_all(&folder);
+        if tmp.exists() {
+            std::fs::rename(&tmp, &folder)?;
+        }
+        Ok(name)
     }
 
-    /// Loads a saved setting onto each strip.
+    /// Loads a saved setting onto each strip, its sampler's files copied into the project.
     pub fn load_strip_setting(&mut self, root: &Path, tracks: &[Id], name: &str) -> Result<()> {
-        let s = strip_settings::read(root, name)?;
+        let mut s = strip_settings::read(root, name)?;
+        if let Some(i) = s.instrument.as_mut() {
+            sampler::full_sample_paths(i, &strip_settings::samples_dir(root, &s.name));
+        }
         self.paste_strip(tracks, &s)
     }
 
@@ -95,10 +118,15 @@ impl Session {
                 _ => {}
             }
         }
+        let instrument_track = |s: &Self, track: Id| track != MASTER_ID && s.project.track(track).map(|t| t.kind == TrackKind::Instrument).unwrap_or(false);
+        // A sampler's files from elsewhere are copied in once, for every strip it goes on.
+        let mut instrument = setting.instrument.clone();
+        if let Some(i) = instrument.as_mut().filter(|_| tracks.iter().any(|&t| instrument_track(self, t))) {
+            sampler::adopt_samples(i, &self.dir, &self.dir)?;
+        }
         for &track in tracks {
-            let instrument_track = track != MASTER_ID && self.project.track(track).map(|t| t.kind == TrackKind::Instrument).unwrap_or(false);
-            if instrument_track && (reset || setting.instrument.is_some()) {
-                self.put_strip_slot(track, usize::MAX, setting.instrument.as_ref())?;
+            if instrument_track(self, track) && (reset || instrument.is_some()) {
+                self.put_strip_slot(track, usize::MAX, instrument.as_ref())?;
             }
             let slots = if track == MASTER_ID { self.project.master.inserts.len() } else { self.project.track(track).map(|t| t.inserts.len()).unwrap_or(0) };
             for k in 0..slots {
@@ -154,7 +182,7 @@ impl Session {
 }
 
 #[cfg(test)]
-mod tests {
+pub(super) mod tests {
     use super::*;
     use crate::audio_io::AudioConfig;
 
@@ -305,6 +333,73 @@ mod tests {
         assert!(t.inserts[1].as_ref().unwrap().sidechain.is_none(), "a strip doesn't key itself");
         let missing: Vec<&str> = s.missing_plugins().iter().map(|m| m.name.as_str()).collect();
         assert_eq!(missing, vec!["Gone"]);
+    }
+
+    /// A sampler on a new instrument track in a project at `dir`, playing a copy of `wav`.
+    pub(in crate::session) fn sampler_track(s: &mut Session, dir: &Path, wav: &Path) -> Id {
+        s.dir = dir.to_path_buf();
+        let t = s.add_track(TrackKind::Instrument, InputSel::None, Some(crate::instrument::sampler::ID.into()), None).unwrap();
+        let added = s.sampler_add_files(t, &[wav.to_path_buf()], None).unwrap();
+        assert!(added.errors.is_empty(), "{:?}", added.errors);
+        t
+    }
+
+    /// The sampler's zones play files inside the project, all of them there.
+    pub(in crate::session) fn plays_from_the_project(s: &Session, t: Id) {
+        let view = s.sampler_view(t).unwrap();
+        assert!(!view.zones.is_empty());
+        for z in &view.zones {
+            assert!(z.zone.file.starts_with("Samples/"), "relative to the project: {}", z.zone.file);
+            assert!(s.dir.join(&z.zone.file).is_file(), "copied into it: {}", z.zone.file);
+            assert!(z.error.is_none() && z.frames == 4800, "and it loads: {:?}", z.error);
+        }
+        assert!(s.sampler_issues(t).is_empty());
+    }
+
+    #[test]
+    fn a_samplers_files_go_along_to_another_project() {
+        let base = std::env::temp_dir().join(format!("marbble-strip-sampler-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        let wav = base.join("originals/Keys.wav");
+        std::fs::create_dir_all(wav.parent().unwrap()).unwrap();
+        crate::decode::write_wav(&wav, 48000, &[(0..4800).map(|i| (i as f32 * 0.05).sin() * 0.5).collect()]).unwrap();
+        let mut a = session("sampler-a");
+        let t = sampler_track(&mut a, &base.join("A.marbble"), &wav);
+        std::fs::remove_file(&wav).unwrap();
+        let root = base.join("channel-strips");
+        a.save_strip_setting(&root, t, "Keys", false).unwrap();
+        assert!(root.join("Keys/Samples/Keys.wav").is_file(), "the setting keeps a copy of its samples");
+        assert!(!root.join(".saving samples").exists());
+        let copied = through_json(&a.copy_strip(t).unwrap());
+
+        let mut b = session("sampler-b");
+        b.dir = base.join("B.marbble");
+        let pasted = b.add_track(TrackKind::Instrument, InputSel::None, None, None).unwrap();
+        let loaded = b.add_track(TrackKind::Instrument, InputSel::None, None, None).unwrap();
+        b.paste_strip(&[pasted], &copied).unwrap();
+        plays_from_the_project(&b, pasted);
+        // The saved setting needs nothing of the project it came from.
+        std::fs::remove_dir_all(&a.dir).unwrap();
+        b.load_strip_setting(&root, &[loaded], "Keys").unwrap();
+        plays_from_the_project(&b, loaded);
+        assert_eq!(std::fs::read_dir(b.dir.join("Samples")).unwrap().count(), 1, "the same file is copied in once");
+
+        // Within a project, nothing is copied.
+        b.paste_strip(&[pasted], &through_json(&b.copy_strip(loaded).unwrap())).unwrap();
+        b.paste_plugin(&[pasted], usize::MAX, &b.copy_plugin(loaded, usize::MAX).unwrap()).unwrap();
+        plays_from_the_project(&b, pasted);
+        assert_eq!(std::fs::read_dir(b.dir.join("Samples")).unwrap().count(), 1);
+
+        // Replacing it with a setting without a sampler, and deleting it, take the samples away.
+        let audio = b.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
+        b.save_strip_setting(&root, audio, "Keys", true).unwrap();
+        assert!(!root.join("Keys").exists());
+        let t = sampler_track(&mut a, &base.join("A2.marbble"), &b.dir.join("Samples/Keys.wav"));
+        a.save_strip_setting(&root, t, "Keys", true).unwrap();
+        assert!(root.join("Keys/Samples/Keys.wav").is_file());
+        crate::strip_settings::delete(&root, "Keys").unwrap();
+        assert!(!root.join("Keys").exists());
+        let _ = std::fs::remove_dir_all(&base);
     }
 
     #[test]

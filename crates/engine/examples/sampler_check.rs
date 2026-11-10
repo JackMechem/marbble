@@ -1,7 +1,8 @@
 //! Marbble Sampler through the real session (silent ALSA null output): loading files and mapping
 //! them, rendering, recording from a simulated input, converting a region, editing with undo and
 //! redo, saving and reopening, moving the project, deleting originals and samples, saving and
-//! loading a reusable instrument, Freeze, Track Off, copying, and an SFZ file made here.
+//! loading a reusable instrument, Freeze, Track Off, copying, channel strip settings and templates
+//! taking the samples to another project, and an SFZ file made here.
 //!
 //! The null device has no input, so a recording here goes in through `feed_input_for_checks`,
 //! which calls the engine as an audio device's callback would with those input samples. That shows
@@ -427,6 +428,47 @@ fn main() {
     check("so does duplicating its track", zones_of(&s, dup).len() == zones_of(&s, t).len());
     s.delete_track(dup);
     s.delete_track(b);
+
+    println!("-- Channel strip settings and templates take the samples along");
+    let strips = daw_engine::strip_settings::user_root();
+    let templates = daw_engine::session::templates_dir();
+    s.save_strip_setting(&strips, t, "Keys Strip", false).unwrap();
+    check("a saved channel strip setting keeps a copy of its samples", strips.join("Keys Strip/Samples/Vox.wav").is_file());
+    let clipboard = s.copy_strip(t).unwrap();
+    s.save_template(&templates, "Keys Template", false).unwrap();
+    check("so does a template", templates.join("Keys Template/Samples/Vox.wav").is_file());
+    s.save(None).unwrap();
+    s.new_project();
+    let third = scratch.join("Third.marbble");
+    s.save(Some(third.clone())).unwrap();
+    let pasted = s.add_track(TrackKind::Instrument, InputSel::None, Some("builtin:synth".into()), None).unwrap();
+    s.paste_strip(&[pasted], &clipboard).unwrap();
+    let in_third = |s: &Session, tr: Id, dir: &Path| {
+        let v = s.sampler_view(tr).unwrap();
+        !v.zones.is_empty() && v.zones.iter().all(|z| z.error.is_none() && z.zone.file.starts_with("Samples/") && dir.join(&z.zone.file).is_file())
+    };
+    check("a pasted setting's samples are copied into the project", in_third(&s, pasted, &third));
+    s.delete_track(pasted);
+    // From here on the first project's samples are gone, as on another computer.
+    let away = scratch.join("Other's samples, moved away");
+    std::fs::rename(other_dir.join("Samples"), &away).unwrap();
+    let loaded = s.add_track(TrackKind::Instrument, InputSel::None, Some("builtin:synth".into()), None).unwrap();
+    s.load_strip_setting(&strips, &[loaded], "Keys Strip").unwrap();
+    check("a loaded one's are too", in_third(&s, loaded, &third));
+    play_notes(&mut s, loaded, &[(0, 60, 127), (RATE, 72, 127)]);
+    let err = live[0].iter().zip(&render(&mut s)[0]).fold(0.0f32, |m, (a, b)| m.max((a - b).abs()));
+    check(&format!("and it sounds as it did ({err:.5})"), err < 1e-4);
+    s.new_from_template(&templates, "Keys Template").unwrap();
+    let new_dir = s.sampler_dir();
+    check("a project from the template has its own copies", in_third(&s, t, &new_dir) && !new_dir.starts_with(&strips));
+    play_notes(&mut s, t, &[(0, 60, 127), (RATE, 72, 127)]);
+    let err = live[0].iter().zip(&render(&mut s)[0]).fold(0.0f32, |m, (a, b)| m.max((a - b).abs()));
+    check(&format!("and it sounds the same ({err:.5})"), err < 1e-4);
+    daw_engine::strip_settings::delete(&strips, "Keys Strip").unwrap();
+    daw_engine::session::delete_template(&templates, "Keys Template").unwrap();
+    check("deleting them takes their samples", !strips.join("Keys Strip").exists() && !templates.join("Keys Template").exists());
+    std::fs::rename(&away, other_dir.join("Samples")).unwrap();
+    s.open(&other_dir).unwrap();
 
     println!("-- SFZ");
     let lib = scratch.join("library/Lib");

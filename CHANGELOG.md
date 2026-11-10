@@ -62,6 +62,12 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Fixed
 
+- **Channel strip settings and templates keep Marbble Sampler's samples.** A saved channel strip
+  setting or project template with the sampler kept its zones but not its samples, so in another
+  project they showed as missing. Both now keep a copy of the samples beside them, and loading one
+  copies them into the project, as a saved sampler instrument does. Copying a strip or the sampler
+  and pasting it into another project brings its samples too.
+
 - **The Marker List's column headings line up.** Length sat over the Go To buttons; each
   heading is over its column now.
 

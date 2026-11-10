@@ -2,6 +2,9 @@
 //! plug-ins with their settings, and project settings, without regions or audio, saved as
 //! `templates/<name>.json` in the config folder. The Project Chooser lists them under My
 //! Templates, next to the built-in ones, and starts new projects from them.
+//!
+//! A Marbble Sampler's samples go along in a folder beside the file, `<name>/Samples/`, and a
+//! project started from the template gets its own copies.
 
 use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
@@ -35,6 +38,11 @@ fn template_path(folder: &Path, name: &str) -> PathBuf {
     folder.join(format!("{name}.json"))
 }
 
+/// The folder a template's sampler files are relative to (they're in its `Samples`).
+fn samples_path(folder: &Path, name: &str) -> PathBuf {
+    folder.join(name)
+}
+
 /// The templates in `folder`, by name.
 pub fn list_templates(folder: &Path) -> Vec<UserTemplate> {
     let mut out: Vec<UserTemplate> = std::fs::read_dir(folder)
@@ -60,7 +68,9 @@ pub fn list_templates(folder: &Path) -> Vec<UserTemplate> {
 
 /// Deletes template `name` from `folder`.
 pub fn delete_template(folder: &Path, name: &str) -> Result<()> {
-    std::fs::remove_file(template_path(folder, name)).map_err(|e| anyhow!("Couldn't delete the template “{name}”: {e}"))
+    std::fs::remove_file(template_path(folder, name)).map_err(|e| anyhow!("Couldn't delete the template “{name}”: {e}"))?;
+    let _ = std::fs::remove_dir_all(samples_path(folder, name));
+    Ok(())
 }
 
 /// Renames template `name` in `folder`.
@@ -77,6 +87,15 @@ pub fn rename_template(folder: &Path, name: &str, new_name: &str) -> Result<()> 
     let mut doc: Project = serde_json::from_slice(&std::fs::read(&from)?)?;
     doc.name = new_name.clone();
     write_atomic(&from, serde_json::to_string_pretty(&doc)?.as_bytes(), true)?;
+    let samples = samples_path(folder, name);
+    if samples.is_dir() {
+        // Through a step, so a change of case renames where names ignore case.
+        let step = folder.join(format!(".renaming {new_name}"));
+        let _ = std::fs::remove_dir_all(&step);
+        std::fs::rename(&samples, &step)?;
+        let _ = std::fs::remove_dir_all(samples_path(folder, &new_name));
+        std::fs::rename(&step, samples_path(folder, &new_name))?;
+    }
     std::fs::rename(&from, &to)?;
     Ok(())
 }
@@ -107,8 +126,24 @@ impl Session {
         if path.exists() && !replace {
             return Err(anyhow!("There's already a template named “{name}”."));
         }
-        let doc = self.template_doc(&name);
-        write_atomic(&path, serde_json::to_string_pretty(&doc)?.as_bytes(), true)?;
+        let mut doc = self.template_doc(&name);
+        // The samples are gathered beside it first, so a failure leaves a template saved before as it was.
+        let tmp = folder.join(".saving samples");
+        let _ = std::fs::remove_dir_all(&tmp);
+        let mut saved = Ok(());
+        for i in doc.tracks.iter_mut().filter_map(|t| t.instrument.as_mut()) {
+            saved = saved.and_then(|_| super::sampler::adopt_samples(i, &self.dir, &tmp));
+        }
+        let saved = saved.and_then(|_| write_atomic(&path, serde_json::to_string_pretty(&doc)?.as_bytes(), true));
+        if let Err(e) = saved {
+            let _ = std::fs::remove_dir_all(&tmp);
+            return Err(e);
+        }
+        let samples = samples_path(folder, &name);
+        let _ = std::fs::remove_dir_all(&samples);
+        if tmp.exists() {
+            std::fs::rename(&tmp, &samples)?;
+        }
         Ok(path)
     }
 
@@ -120,6 +155,15 @@ impl Session {
         self.new_project();
         if let Some(w) = self.upgrade_document(&mut doc) {
             self.warning = Some(w);
+        }
+        // The new project gets its own copies of the samples.
+        let samples = samples_path(folder, name);
+        for i in doc.tracks.iter_mut().filter_map(|t| t.instrument.as_mut()) {
+            super::sampler::full_sample_paths(i, &samples);
+            // One that can't be copied plays from the template's folder.
+            if let Err(e) = super::sampler::adopt_samples(i, &self.dir, &self.dir) {
+                log::warn!("template “{name}”: {e}");
+            }
         }
         doc.name = self.project.name.clone();
         doc.alternative = String::new();
@@ -197,5 +241,37 @@ mod tests {
         assert!(list_templates(&folder).is_empty());
         assert!(s2.new_from_template(&folder, "Trio").is_err());
         let _ = std::fs::remove_dir_all(&folder);
+    }
+
+    #[test]
+    fn a_template_keeps_its_samplers_samples() {
+        use crate::session::strip_settings::tests::{plays_from_the_project, sampler_track};
+        let base = std::env::temp_dir().join(format!("marbble-template-sampler-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        let wav = base.join("originals/Keys.wav");
+        std::fs::create_dir_all(wav.parent().unwrap()).unwrap();
+        crate::decode::write_wav(&wav, 48000, &[(0..4800).map(|i| (i as f32 * 0.05).sin() * 0.5).collect()]).unwrap();
+        let folder = base.join("templates");
+        let mut s = session();
+        let t = sampler_track(&mut s, &base.join("A.marbble"), &wav);
+        s.save_template(&folder, "Keys", false).unwrap();
+        assert!(folder.join("Keys/Samples/Keys.wav").is_file(), "the template keeps a copy of its samples");
+        assert_eq!(list_templates(&folder).len(), 1, "its folder isn't a template");
+        std::fs::remove_dir_all(&s.dir).unwrap();
+        std::fs::remove_file(&wav).unwrap();
+
+        rename_template(&folder, "Keys", "Piano").unwrap();
+        assert!(folder.join("Piano/Samples/Keys.wav").is_file() && !folder.join("Keys").exists(), "renaming takes them along");
+        let mut s2 = session();
+        // Untitled projects go in the projects folder: keep this one in here.
+        s2.prefs.general.project_folder = Some(base.join("projects").to_string_lossy().into_owned());
+        s2.new_from_template(&folder, "Piano").unwrap();
+        assert!(s2.dir.starts_with(base.join("projects")));
+        plays_from_the_project(&s2, t);
+        delete_template(&folder, "Piano").unwrap();
+        assert!(!folder.join("Piano").exists(), "deleting takes them too");
+        // The project has its own copies.
+        plays_from_the_project(&s2, t);
+        let _ = std::fs::remove_dir_all(&base);
     }
 }

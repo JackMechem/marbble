@@ -3,7 +3,8 @@
 //!
 //! The clipboard lives in the UI, so it survives opening another project: copying hands the UI
 //! the slot with its complete settings (a VST3's state captured from its controller), and
-//! pasting makes a new instance from that.
+//! pasting makes a new instance from that. A Marbble Sampler's files are named in full on the
+//! clipboard, and pasting into another project copies them into its Samples folder.
 
 use super::*;
 use crate::presets::{self, Preset};
@@ -18,6 +19,7 @@ impl Session {
         if let Some(st) = self.controllers.get(&s.uid).and_then(|c| c.save_state()) {
             copy.state = Some(encode_state(&st));
         }
+        super::sampler::full_sample_paths(&mut copy, &self.dir);
         Ok(copy)
     }
 
@@ -49,6 +51,8 @@ impl Session {
         if instrument != (slot == usize::MAX) {
             return Err(anyhow!(if instrument { "An instrument goes in the instrument slot" } else { "An audio effect goes in an Audio FX slot" }));
         }
+        let mut copy = copy.clone();
+        super::sampler::adopt_samples(&mut copy, &self.dir, &self.dir)?;
         for &track in tracks {
             if track != MASTER_ID {
                 let t = self.project.track(track).ok_or_else(|| anyhow!("no such track"))?;
