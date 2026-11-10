@@ -168,8 +168,10 @@ A check that plays and reads the meters goes through `examples/common/transport.
 than fixed sleeps: `transport::measure` plays the cycle until the sound the check expects shows
 up on the meters (at most 3 s, starting the transport again if an overload stopped it, and
 printing the tick's warnings), then the check asserts on that window; `transport::once` takes a
-single window, for the checks that something stays silent. A slow or loaded machine (GitHub's
-macOS runners) can otherwise play a window late and read silence.
+single window, for the checks that something stays silent; `transport::tick_until` reads the
+ticks until they show what the check expects without starting the transport, for checks that
+something else (a bounce) left it playing. A slow or loaded machine (GitHub's macOS runners) can
+otherwise play a window late and read silence.
 
 Most take an audio file and a scratch directory, which must be an absolute path and is used as
 the project folder (never point it at your real projects):

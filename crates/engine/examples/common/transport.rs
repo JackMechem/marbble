@@ -60,6 +60,27 @@ pub fn play_until(s: &mut Session, from: i64, ready: impl Fn(&Tick) -> bool) -> 
     }
 }
 
+/// Reads a tick every 100 ms until `ready` accepts one, or after three seconds returns the last,
+/// printing their warnings. Unlike [`play_until`] it never starts the transport: for checks that
+/// something else (a bounce) left it as it was. The tick returned carries the first warning any
+/// of them gave, as an overload's says why the transport stopped.
+pub fn tick_until(s: &mut Session, ready: impl Fn(&Tick) -> bool) -> Tick {
+    let begun = Instant::now();
+    let mut warning = None;
+    loop {
+        std::thread::sleep(Duration::from_millis(100));
+        let mut t = s.tick();
+        if let Some(w) = &t.warning {
+            println!("  (tick warning: {w})");
+        }
+        warning = warning.or_else(|| t.warning.clone());
+        if ready(&t) || begun.elapsed() >= PATIENCE {
+            t.warning = warning;
+            return t;
+        }
+    }
+}
+
 /// One quarter-second window from `from`, however it sounds: for the checks that something is
 /// silent, which waiting for sound would only slow down.
 pub fn play_window(s: &mut Session, from: i64) -> Tick {

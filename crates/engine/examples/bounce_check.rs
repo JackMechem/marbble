@@ -309,18 +309,29 @@ fn main() {
     check(&format!("full mix honours solo: one tone, not two ({:.2} dB)", db(peak(&solo_mix) / tone_peak)), db(peak(&solo_mix) / tone_peak).abs() < 0.1);
     s.update_track(b, TrackPatch { solo: Some(false), ..Default::default() });
 
-    // Bouncing while playing: playback carries on afterwards.
-    s.locate(0);
-    s.play();
-    std::thread::sleep(Duration::from_millis(100));
-    s.bounce_project(&out.join("playing.wav"), &RenderOptions { start: 0, end: 48000, tail_secs: 0.0, ..Default::default() }, &mut |_| {}).unwrap();
-    std::thread::sleep(Duration::from_millis(100));
-    s.tick();
-    std::thread::sleep(Duration::from_millis(200));
-    let t = s.tick();
+    // Bouncing while playing: playback carries on afterwards. The ticks are read until they show
+    // it (see `transport::tick_until`). An overload stops the transport at the next tick, as in
+    // the app, and a slow machine (GitHub's macOS runners) can have one: a try it stopped, which
+    // the tick says, is made again, at most three times.
+    let mut tries = 0;
+    let t = loop {
+        tries += 1;
+        transport::stop(&mut s);
+        // An overload from before, while stopped, would stop the playback below at its first tick.
+        s.tick();
+        s.locate(0);
+        s.play();
+        transport::wait_for(&s, true);
+        std::thread::sleep(Duration::from_millis(100));
+        s.bounce_project(&out.join("playing.wav"), &RenderOptions { start: 0, end: 48000, tail_secs: 0.0, ..Default::default() }, &mut |_| {}).unwrap();
+        let t = transport::tick_until(&mut s, |t| t.playing && t.master.0 > 0.01);
+        let overload = t.warning.as_deref().is_some_and(|w| w.starts_with("System overload"));
+        if t.playing || !overload || tries == 3 {
+            break t;
+        }
+    };
     check(&format!("live playback resumes after a bounce (playing={}, out={:.3})", t.playing, t.master.0), t.playing && t.master.0 > 0.01);
-    s.stop();
-    std::thread::sleep(Duration::from_millis(60));
+    transport::stop(&mut s);
 
     // A real VST3 insert renders offline too.
     match comp {
