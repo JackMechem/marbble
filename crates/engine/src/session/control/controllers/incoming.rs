@@ -38,11 +38,12 @@ impl Session {
             let Some(i) = ctl::find(list, &m.port, &msg) else { continue };
             self.feedback_heard(i, m.data, msg.pressed);
             let a = &self.controls.list[i];
+            let button = self.ctl_is_button(a);
             if self.controls.latch_probe.as_ref().is_some_and(|(c, _)| *c == a.controller) {
                 // It sent its release: on while held.
                 self.controls.latch_probe = None;
             }
-            if a.is_button() {
+            if button {
                 // An NRPN's increment and decrement step a continuous parameter; a switch has
                 // no steps.
                 if msg.step != 0 {
@@ -110,7 +111,7 @@ impl Session {
         if self.ctl_value(&target).is_none() {
             return false;
         }
-        if target.is_button() {
+        if self.ctl_is_switch(&target) {
             self.ctl_switch(&target, act);
         } else {
             let want = self.controls.follow[i].button_value(act, a.press_value(msg), a.scale(0.0));

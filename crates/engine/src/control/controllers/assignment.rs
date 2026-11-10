@@ -113,10 +113,12 @@ pub struct Assignment {
 }
 
 impl Assignment {
-    pub fn new(controller: Controller, target: CtlTarget) -> Assignment {
+    /// `switch`: the target is a switch (the session decides, `Session::ctl_is_switch`, as a
+    /// plug-in parameter can be one).
+    pub fn new(controller: Controller, target: CtlTarget, switch: bool) -> Assignment {
         // A pad on a fader sets a level, and a command runs: they fire on a press rather than
         // toggling.
-        let fires = matches!(target, CtlTarget::Command { .. }) || controller.kind.is_button() && !target.is_button();
+        let fires = matches!(target, CtlTarget::Command { .. }) || controller.kind.is_button() && !switch;
         let button_mode = if fires { ButtonMode::Trigger } else { ButtonMode::Toggle };
         Assignment {
             controller,
@@ -131,12 +133,6 @@ impl Assignment {
             sensitivity: 1.0,
             feedback: true,
         }
-    }
-
-    /// Whether the controller acts as a button here: a note or program change, or any
-    /// controller on a switch.
-    pub fn is_button(&self) -> bool {
-        self.controller.kind.is_button() || self.target.is_button()
     }
 
     /// The steps a relative encoder turned, for an assignment that reads one; None otherwise.

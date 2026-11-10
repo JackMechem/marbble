@@ -96,7 +96,7 @@ fn a_latching_button_presses_with_every_message() {
 #[test]
 fn buttons_on_a_continuous_parameter() {
     let c = Controller { port: "P".into(), channel: 0, kind: CtlKind::Note { number: 60 } };
-    let mut a = Assignment::new(c, CtlTarget::MasterVolume);
+    let mut a = Assignment::new(c, CtlTarget::MasterVolume, false);
     assert_eq!(a.button_mode, ButtonMode::Trigger, "a pad on a fader sets it");
     a.min = 0.2;
     assert!((a.press_value(&note(true)) - 0.6).abs() < 1e-6, "the velocity's place in the range");
@@ -107,11 +107,15 @@ fn buttons_on_a_continuous_parameter() {
     assert_eq!(f.button_value(ButtonAct::Flip, 0.9, 0.2), 0.2);
     assert_eq!(f.button_value(ButtonAct::Set(true), 0.9, 0.2), 0.9);
     assert_eq!(f.button_value(ButtonAct::Set(false), 0.9, 0.2), 0.2);
-    // A command fires; a note on a switch toggles it, as a control change does.
+    // A command fires; a note on a switch toggles it, as a control change does, and a note on a
+    // continuous parameter sets it.
     let c = Controller { port: "P".into(), channel: 0, kind: CtlKind::Cc { number: 20 } };
-    assert_eq!(Assignment::new(c, CtlTarget::Command { id: "undo".into() }).button_mode, ButtonMode::Trigger);
+    assert_eq!(Assignment::new(c, CtlTarget::Command { id: "undo".into() }, false).button_mode, ButtonMode::Trigger);
     let c = Controller { port: "P".into(), channel: 0, kind: CtlKind::Note { number: 60 } };
-    assert_eq!(Assignment::new(c, CtlTarget::Mute { track: 1 }).button_mode, ButtonMode::Toggle);
+    assert_eq!(Assignment::new(c.clone(), CtlTarget::Mute { track: 1 }, true).button_mode, ButtonMode::Toggle);
+    let param = CtlTarget::Plugin { track: 1, uid: 2, plugin: "builtin:channel-eq".into(), param: 0 };
+    assert_eq!(Assignment::new(c.clone(), param.clone(), true).button_mode, ButtonMode::Toggle);
+    assert_eq!(Assignment::new(c, param, false).button_mode, ButtonMode::Trigger);
 }
 
 #[test]
@@ -165,7 +169,7 @@ fn old_eq_assignments_keep_their_travel() {
 #[test]
 fn range_scales_and_inverts() {
     let c = Controller { port: "P".into(), channel: 0, kind: CtlKind::Cc { number: 1 } };
-    let mut a = Assignment::new(c, CtlTarget::MasterVolume);
+    let mut a = Assignment::new(c, CtlTarget::MasterVolume, false);
     assert_eq!(a.scale(0.5), 0.5);
     a.min = 0.25;
     a.max = 0.75;
@@ -216,9 +220,9 @@ fn pickup_follows_a_stepped_parameter() {
 fn finds_by_port_channel_and_controller() {
     let c = |port: &str, channel, number| Controller { port: port.into(), channel, kind: CtlKind::Cc { number } };
     let list = vec![
-        Assignment::new(c("A", 0, 7), CtlTarget::MasterVolume),
-        Assignment::new(c("B", 0, 7), CtlTarget::MasterVolume),
-        Assignment::new(c("A", 1, 7), CtlTarget::MasterVolume),
+        Assignment::new(c("A", 0, 7), CtlTarget::MasterVolume, false),
+        Assignment::new(c("B", 0, 7), CtlTarget::MasterVolume, false),
+        Assignment::new(c("A", 1, 7), CtlTarget::MasterVolume, false),
     ];
     let m = |ch, n| CtlMsg { channel: ch, kind: CtlKind::Cc { number: n }, value: 0.0, pressed: false, step: 0 };
     assert_eq!(find(&list, "A", &m(0, 7)), Some(0));
@@ -251,7 +255,7 @@ fn relative_encodings() {
     assert_eq!((SignMagnitude.steps(1), SignMagnitude.steps(65), SignMagnitude.steps(127), SignMagnitude.steps(64)), (Some(1), Some(-1), Some(-63), Some(0)));
     assert_eq!((BinaryOffset.steps(65), BinaryOffset.steps(63), BinaryOffset.steps(64), BinaryOffset.steps(0)), (Some(1), Some(-1), Some(0), Some(-64)));
     let c = Controller { port: "P".into(), channel: 0, kind: CtlKind::Cc { number: 16 } };
-    let mut a = Assignment::new(c, CtlTarget::MasterVolume);
+    let mut a = Assignment::new(c, CtlTarget::MasterVolume, false);
     let msg = |v: u8| CtlMsg { channel: 0, kind: CtlKind::Cc { number: 16 }, value: v as f32 / 127.0, pressed: v > 63, step: 0 };
     assert_eq!(a.relative_steps(&msg(1)), None, "absolute");
     a.encoding = BinaryOffset;
@@ -263,7 +267,7 @@ fn relative_encodings() {
 #[test]
 fn relative_moves_follow_the_range_and_sensitivity() {
     let c = Controller { port: "P".into(), channel: 0, kind: CtlKind::Cc { number: 16 } };
-    let mut a = Assignment::new(c, CtlTarget::MasterVolume);
+    let mut a = Assignment::new(c, CtlTarget::MasterVolume, false);
     a.encoding = Encoding::TwosComplement;
     let mut f = Follow::default();
     let v = f.relative(&a, 10, 0.5).unwrap();
@@ -338,7 +342,7 @@ fn reads_nrpns() {
     let up = h.read("P", cc(2, 96, 0), none, true).unwrap();
     let down = h.read("P", cc(2, 97, 9), none, true).unwrap();
     assert_eq!((up.kind, up.step, down.kind, down.step), (CtlKind::Nrpn { number: 389 }, 1, CtlKind::Nrpn { number: 389 }, -1));
-    let a = Assignment::new(Controller { port: "P".into(), channel: 2, kind: CtlKind::Nrpn { number: 389 } }, CtlTarget::MasterVolume);
+    let a = Assignment::new(Controller { port: "P".into(), channel: 2, kind: CtlKind::Nrpn { number: 389 } }, CtlTarget::MasterVolume, false);
     assert_eq!((a.relative_steps(&up), a.relative_steps(&down)), (Some(1), Some(-1)));
     assert_eq!(a.relative_steps(&h.read("P", cc(2, 6, 64), none, true).unwrap()), None, "data entry sets it");
     // Without NRPNs in use, these are ordinary controllers.

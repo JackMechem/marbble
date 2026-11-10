@@ -17,6 +17,45 @@ impl Session {
         param.on(track)
     }
 
+    /// Whether a target is a switch, acting on a press rather than following the controller (see
+    /// `CtlTarget::is_button`): a mute, a transport button and the like, or a plug-in parameter
+    /// that is only on or off (a built-in's toggle, a VST3 parameter with one step). Pass a
+    /// Selected Track target resolved (`ctl_resolve`) to ask about the control it stands for.
+    pub(crate) fn ctl_is_switch(&self, t: &CtlTarget) -> bool {
+        let CtlTarget::Plugin { track, uid, plugin, param } = t else { return t.is_button() };
+        // A built-in's parameters are known from its id, even when it isn't in the project.
+        if let Some((_, specs)) = crate::session::plugins::builtin::builtin_spec(plugin) {
+            return specs.iter().any(|p| p.id == *param && p.kind == crate::fx::ParamKind::Toggle);
+        }
+        self.ctl_vst3_switch(*track, *uid, plugin, *param)
+    }
+
+    /// Whether an assignment's controller acts as a button: a note or program change, or any
+    /// controller on a switch.
+    pub(super) fn ctl_is_button(&self, a: &Assignment) -> bool {
+        a.controller.kind.is_button() || self.ctl_is_switch(&a.target)
+    }
+
+    /// Whether a VST3 parameter has one step (off and on), as its controller describes it. Each
+    /// answer is kept: it doesn't change, and feedback asks every idle tick while a plug-in
+    /// describes every parameter to give one.
+    fn ctl_vst3_switch(&self, track: Id, uid: Id, plugin: &str, param: u32) -> bool {
+        if let Some((p, on_off)) = self.controls.vst3_switches.borrow().get(&(uid, param)) {
+            if p == plugin {
+                return *on_off;
+            }
+        }
+        let Some(c) = self.controllers.get(&uid).filter(|_| self.ctl_plugin(track, uid, plugin).is_some()) else { return false };
+        let params = c.parameters();
+        // An unresponsive plug-in describes nothing: ask again later.
+        if params.is_empty() {
+            return false;
+        }
+        let on_off = params.iter().any(|p| p.id == param && p.steps == 1);
+        self.controls.vst3_switches.borrow_mut().insert((uid, param), (plugin.to_string(), on_off));
+        on_off
+    }
+
     /// A plug-in's parameter id at `index` in its list. The lists are kept a moment, as
     /// feedback asks every idle tick and a VST3 plug-in describes every parameter to give one.
     pub(super) fn ctl_param_id(&self, uid: Id, index: usize) -> Option<u32> {
@@ -327,12 +366,9 @@ impl Session {
             }
             // A performance switch, as on a track: no undo step.
             CtlTarget::VcaMute { vca } => self.update_vca(*vca, VcaPatch { mute: Some(on), ..Default::default() }),
-            CtlTarget::Eq { field: EqField::On, .. } => {
-                // A band's on switch: the insert's toggle.
-                if let Some(p) = self.ctl_legacy_eq(t) {
-                    self.ctl_set(&p, on as u8 as f32);
-                }
-            }
+            // A plug-in's on/off parameter (or, in an older assignment, a Channel EQ band's):
+            // set as a move to the top or bottom of its travel would.
+            CtlTarget::Plugin { .. } | CtlTarget::Eq { .. } => self.ctl_set(t, on as u8 as f32),
             CtlTarget::Transport { action: TransportAction::Play } => self.toggle_play(),
             CtlTarget::Transport { action: TransportAction::Record } => {
                 if !on {

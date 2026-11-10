@@ -738,6 +738,9 @@ flowchart LR
   off the live path and applied in `idle` through the same edit paths as the mouse, so undo,
   groups and automation writing come with it. A target can be a key command: its id goes to the
   main window in the next tick, which runs it with the key's rules.
+  Whether a target is a switch (button modes, on/off feedback) is `Session::ctl_is_switch`: the
+  fixed switches such as Mute, and a plug-in parameter that is a toggle (a built-in's `ParamKind`,
+  a VST3 parameter with one step).
 - **Feedback** (`control/feedback.rs`, `session/control/feedback.rs`) sends values, not events:
   every tick it reads each target's value (or what automation plays over it) and sends only what
   differs from what the controller shows. So every source of change is covered by one path. It

@@ -3,7 +3,7 @@
 //! connects to it as one of its outputs, and the controller's moves come in through the hardware
 //! input path (`inject_midi_from`) under the same port name, so the two pair automatically.
 //! It checks what reaches the port after a mouse-style change, an undo, automation playback, a
-//! button press and the transport, a pitch bend's 14 bits, a button matrix's pads (notes) and
+//! button press (on Mute and on a plug-in's on/off parameter) and the transport, a pitch bend's 14 bits, a button matrix's pads (notes) and
 //! none for a key command's, the rate limit, that nothing is echoed while the controller moves,
 //! Feedback off, pairing and a reconnected output.
 //! Prints SKIP when the system has no MIDI sequencer or virtual ports (Windows, CI runners
@@ -15,6 +15,7 @@ use std::time::{Duration, Instant};
 use daw_engine::audio_io::AudioConfig;
 use daw_engine::control::controllers::{db_to_fader, CtlKind, CtlTarget, Takeover, TransportAction};
 use daw_engine::control::feedback::MIN_GAP;
+use daw_engine::fx::channel_eq;
 use daw_engine::model::{AutoMode, AutoParam, AutoPoint, InputSel, TrackKind};
 use daw_engine::session::{AssignmentPatch, TrackPatch};
 use daw_engine::Session;
@@ -317,6 +318,22 @@ fn main() {
     let got = take(&r.rx);
     check(&format!("unmuting with the mouse puts the light out ({got:?})"), got == vec![[0xB0, 30, 0]]);
 
+    // A plug-in's on/off parameter is a switch too: a Channel EQ band's.
+    let eq = r.s.insert_channel_eq(a).unwrap();
+    let band = channel_eq::on(2);
+    let on = |s: &Session| s.builtin_params(eq).iter().find(|p| p.0 == band).is_some_and(|p| p.1 >= 0.5);
+    r.learn(CtlTarget::Plugin { track: a, uid: eq, plugin: String::new(), param: band }, &[0xB0, 33, 0]);
+    r.s.idle();
+    take(&r.rx);
+    let before = on(&r.s);
+    r.cc(33, 127);
+    r.cc(33, 0);
+    let got = take(&r.rx);
+    check(
+        &format!("a learnt Channel EQ band button flips the band and is sent on or off ({got:?})"),
+        on(&r.s) != before && got == vec![[0xB0, 33, if before { 0 } else { 127 }]],
+    );
+
     // Transport buttons.
     r.learn(CtlTarget::Transport { action: TransportAction::Cycle }, &[0xB0, 31, 0]);
     r.learn(CtlTarget::Transport { action: TransportAction::Play }, &[0xB0, 32, 0]);
@@ -422,10 +439,11 @@ fn main() {
     let got = take(&r.rx);
     check(
         &format!("a reconnected output gets every assignment's value ({got:?})"),
-        got.len() == 7
+        got.len() == 8
             && of(&got, 0xB0, 7) == vec![[0xB0, 7, cc_of(-3.0)]]
             && of(&got, 0x90, 36) == vec![[0x90, 36, 0]]
             && of(&got, 0xB0, 30) == vec![[0xB0, 30, 0]]
+            && of(&got, 0xB0, 33).len() == 1
             && of(&got, 0xB0, 31) == vec![[0xB0, 31, 127]],
     );
 

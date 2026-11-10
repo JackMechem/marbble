@@ -54,9 +54,10 @@ impl Session {
         let label = controller_label(&controller);
         // A controller drives one parameter.
         self.controls.list.retain(|a| a.controller != controller);
-        let a = Assignment::new(controller.clone(), target);
+        let switch = self.ctl_is_switch(&target);
+        let a = Assignment::new(controller.clone(), target, switch);
         // A button that sends no release after the press it was learnt from latches by itself.
-        self.controls.latch_probe = (a.is_button() && !matches!(controller.kind, CtlKind::Program { .. })).then(|| (controller, Instant::now()));
+        self.controls.latch_probe = (self.ctl_is_button(&a) && !matches!(controller.kind, CtlKind::Program { .. })).then(|| (controller, Instant::now()));
         self.controls.list.push(a);
         self.midi.set_learning(false);
         self.ctl_list_changed(true);

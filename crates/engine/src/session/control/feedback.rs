@@ -52,7 +52,7 @@ impl Session {
     /// is let go, whatever the button sent.
     pub(crate) fn feedback_heard(&mut self, i: usize, data: [u8; 3], pressed: bool) {
         let Some(a) = self.ctl_list().get(i) else { return };
-        let (c, switch) = (a.controller.clone(), a.target.is_button());
+        let (c, switch) = (a.controller.clone(), self.ctl_is_switch(&a.target));
         let state = self.feedback.state(&c);
         if switch {
             state.button(!pressed, Instant::now());
@@ -106,7 +106,7 @@ impl Session {
         let t = &self.ctl_resolve(t)?;
         let own = self.ctl_value(t)?;
         let v = self.ctl_auto_param(t).and_then(|(track, p)| Some(auto_travel(&p, self.automation_shown(track, &p)?))).unwrap_or(own);
-        Some(if t.is_button() { Shown::Switch(v >= 0.5) } else { Shown::Travel(v) })
+        Some(if self.ctl_is_switch(t) { Shown::Switch(v >= 0.5) } else { Shown::Travel(v) })
     }
 
     /// The automation lane a target plays on: its strip and parameter, None for a target that

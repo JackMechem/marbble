@@ -166,7 +166,9 @@ impl SelectedParam {
 
 impl CtlTarget {
     /// Switches act on a press (a value above 63 after one at or below it) and ignore the
-    /// release, so momentary buttons toggle them, as in Logic.
+    /// release, so momentary buttons toggle them, as in Logic. These targets are switches
+    /// whatever they are in; a plug-in parameter is one when it is only on or off, which the
+    /// session decides (`Session::ctl_is_switch`).
     pub fn is_button(&self) -> bool {
         matches!(
             self,
@@ -174,6 +176,7 @@ impl CtlTarget {
                 | CtlTarget::Solo { .. }
                 | CtlTarget::Arm { .. }
                 | CtlTarget::Transport { .. }
+                // A band's on/off, in an assignment saved before the Channel EQ was an insert.
                 | CtlTarget::Eq { field: EqField::On, .. }
                 | CtlTarget::Command { .. }
                 | CtlTarget::Monitor { .. }

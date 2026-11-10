@@ -1,8 +1,10 @@
 //! The Channel EQ as an Audio FX insert against the session: an older project's fixed Channel EQs
 //! open as inserts and play sample for sample as before, the EQ thumbnail's insert, the
-//! analyzer following an insert, and controller assignments learnt for the fixed EQ.
+//! analyzer following an insert, controller assignments learnt for the fixed EQ, and a learnt
+//! band on/off acting as a switch.
 
-use crate::control::controllers::{Assignment, AssignmentFile, Controller, CtlKind, CtlTarget, EqField};
+use crate::control::controllers::{Assignment, AssignmentFile, ButtonMode, Controller, CtlKind, CtlTarget, EqField};
+use crate::control::feedback::Shown;
 use crate::fx::channel_eq as ceq;
 use crate::fx::channel_eq::filters::{coefficients, EqState};
 use crate::session::*;
@@ -207,10 +209,10 @@ fn assignments_to_the_fixed_eq_drive_the_first_channel_eq_insert() {
     let cc = |number: u8| Controller { port: crate::control::controllers::port_key(PORT).into(), channel: 0, kind: CtlKind::Cc { number } };
     let file = s.dir.join("controller-assignments.json");
     let assignments = vec![
-        Assignment::new(cc(20), CtlTarget::Eq { track: t, band: 3, field: EqField::Gain }),
-        Assignment::new(cc(21), CtlTarget::EqOutput { track: t }),
-        Assignment::new(cc(22), CtlTarget::Eq { track: t, band: 0, field: EqField::On }),
-        Assignment::new(cc(23), CtlTarget::Eq { track: learnt, band: 2, field: EqField::Freq }),
+        Assignment::new(cc(20), CtlTarget::Eq { track: t, band: 3, field: EqField::Gain }, false),
+        Assignment::new(cc(21), CtlTarget::EqOutput { track: t }, false),
+        Assignment::new(cc(22), CtlTarget::Eq { track: t, band: 0, field: EqField::On }, true),
+        Assignment::new(cc(23), CtlTarget::Eq { track: learnt, band: 2, field: EqField::Freq }, false),
     ];
     std::fs::write(&file, serde_json::to_string(&AssignmentFile { assignments }).unwrap()).unwrap();
     s.load_controller_assignments(file);
@@ -245,4 +247,54 @@ fn assignments_to_the_fixed_eq_drive_the_first_channel_eq_insert() {
     s.open(&dir).unwrap();
     assert_eq!(plugin_ids(&s, learnt)[0].as_deref(), Some(ceq::ID));
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn on_off_parameters_are_switches() {
+    let mut s = session("switches");
+    let t = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
+    let uid = s.insert_channel_eq(t).unwrap();
+    let param = |param: u32| CtlTarget::Plugin { track: t, uid, plugin: ceq::ID.into(), param };
+    assert!(s.ctl_is_switch(&param(ceq::on(2))), "a band's on/off");
+    assert!(!s.ctl_is_switch(&param(ceq::freq(2))), "a continuous parameter");
+    assert!(!s.ctl_is_switch(&param(ceq::slope(0))), "a choice");
+    assert!(s.ctl_is_switch(&CtlTarget::Mute { track: t }) && !s.ctl_is_switch(&CtlTarget::Pan { track: t }));
+    // A built-in's toggle is known from its id, in any project.
+    let elsewhere = CtlTarget::Plugin { track: 99, uid: 99, plugin: ceq::ID.into(), param: ceq::on(2) };
+    assert!(s.ctl_is_switch(&elsewhere));
+    assert!(!s.ctl_is_switch(&CtlTarget::Plugin { track: t, uid: 99, plugin: "vst3:missing".into(), param: 0 }));
+    let _ = std::fs::remove_dir_all(&s.dir);
+}
+
+#[test]
+fn a_learnt_band_switch_toggles_and_shows_on_or_off() {
+    let mut s = session("band-switch");
+    let t = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
+    let uid = s.insert_channel_eq(t).unwrap();
+    s.load_controller_assignments(s.dir.join("controller-assignments.json"));
+    let target = CtlTarget::Plugin { track: t, uid, plugin: String::new(), param: ceq::on(2) };
+    let send = |s: &mut Session, value: u8| {
+        s.inject_midi_from(PORT, &[0xB0, 40, value]);
+        s.idle();
+    };
+    s.start_learn(Some(target)).unwrap();
+    send(&mut s, 127);
+    let rows = s.controller_assignments();
+    assert_eq!(rows.len(), 1);
+    assert!(rows[0].button, "the window offers button modes");
+    assert_eq!(rows[0].assignment.button_mode, ButtonMode::Toggle);
+
+    let on = |s: &Session| s.builtin_params(uid).iter().find(|p| p.0 == ceq::on(2)).unwrap().1;
+    let before = on(&s);
+    // A press flips it, the release does nothing, and the next press flips it back.
+    send(&mut s, 127);
+    assert_eq!(on(&s), 1.0 - before);
+    send(&mut s, 0);
+    assert_eq!(on(&s), 1.0 - before);
+    send(&mut s, 127);
+    assert_eq!(on(&s), before);
+    send(&mut s, 0);
+    let shown = s.ctl_shown(&s.controller_assignments()[0].assignment.target);
+    assert_eq!(shown, Some(Shown::Switch(before >= 0.5)), "feedback is on or off");
+    let _ = std::fs::remove_dir_all(&s.dir);
 }

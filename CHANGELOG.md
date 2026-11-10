@@ -67,6 +67,13 @@ All notable changes to Marbble are recorded here. The format follows
   or aftertouch ended the recording's controllers (and notes) part-way through. Recorded MIDI now
   reaches the take however long it is, cycle passes included. In the unlikely case that Marbble
   can't keep up and loses some, a message says how many when recording stops.
+- **A learnt plug-in on/off switch acts as a switch.** Learning a Channel EQ band's on/off (or any
+  built-in effect's or instrument's switch, or a VST3 parameter with two states) made it follow
+  the controller like a knob: a button turned it on while held and off on release, Controller
+  Assignments offered no Toggle, Momentary or Trigger, and feedback wasn't simply on or off. These
+  parameters are switches now, like Mute: a press flips them, the window offers the button modes,
+  and the controller's light is on or off. Assignments learnt before act as switches too; a pad
+  (a note) learnt on one before keeps Trigger, which only switches it on, so choose Toggle for it.
 
 - **Plug-in panel meters fall when the audio device stops.** If the device stopped (or failed)
   during playback, a built-in effect's or instrument's panel meters froze at their last values,

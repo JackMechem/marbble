@@ -65,6 +65,9 @@ pub(crate) struct Controls {
     focused: Option<Id>,
     /// Plug-ins' parameter ids in list order, and when each list was read (`ctl_param_id`).
     param_ids: std::cell::RefCell<Vec<(Id, Instant, Vec<u32>)>>,
+    /// Whether VST3 parameters are on/off switches, by instance and parameter, with the plug-in
+    /// id the instance had (`ctl_vst3_switch`).
+    vst3_switches: std::cell::RefCell<HashMap<(Id, u32), (String, bool)>>,
 }
 
 /// An assignment as the Controller Assignments window shows it.
@@ -143,7 +146,7 @@ impl Session {
                 AssignmentRow {
                     available: name.is_some(),
                     name: name.unwrap_or_else(|| missing_name(&a.target)),
-                    button: a.target.is_button(),
+                    button: self.ctl_is_switch(&a.target),
                     output: self.feedback_output(&a.controller.port),
                     assignment: a.clone(),
                 }

@@ -199,7 +199,7 @@ mod tests {
     use crate::control::controllers::{Controller, CtlTarget};
 
     fn assignment(kind: CtlKind, channel: u8) -> Assignment {
-        Assignment::new(Controller { port: "P".into(), channel, kind }, CtlTarget::MasterVolume)
+        Assignment::new(Controller { port: "P".into(), channel, kind }, CtlTarget::MasterVolume, false)
     }
 
     #[test]

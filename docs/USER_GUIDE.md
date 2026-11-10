@@ -2847,8 +2847,9 @@ else its first Audio FX plug-in.
 - While playing in Touch, Latch or Write, controller moves are written as automation. The
   controller holds the parameter while it moves and lets go half a second after it stops,
   which ends a Touch pass.
-- Mute, Solo, Record Enable, a Channel EQ band's on/off and the transport buttons are
-  **switches**. A press is a note on, a program change, or a control change or pitch bend going
+- Mute, Solo, Record Enable, Input Monitoring, an insert's bypass, a VCA's mute, the transport
+  buttons and every plug-in parameter that is only on or off (a Channel EQ band's on/off, a
+  built-in effect's or instrument's switch, a VST3 parameter with two states) are **switches**. A press is a note on, a program change, or a control change or pitch bend going
   above its middle (a value above 63); the release is the note off, or the value going back
   down. What they do depends on the assignment's button mode:
   - **Toggle** (the default): each press switches it on or off; the release does nothing, so
@@ -2947,8 +2948,8 @@ whether the track is muted and a motor fader stands where the fader on screen do
   Min and Max, on the fader's taper for levels), a 14-bit pitch bend, a 14-bit CC pair (coarse
   then fine part), an NRPN (its number, then its value by data entry), or a note on for a pad
   (velocity 127 lit, 0 out; a pad on a fader gets the level as its velocity). Switches (Mute,
-  Solo, Record Enable, Input Monitoring, an insert's bypass, a VCA's mute, a Channel EQ band's
-  on/off and the transport buttons) are sent full on or off. A Selected Track control shows the
+  Solo, Record Enable, Input Monitoring, an insert's bypass, a VCA's mute, the transport buttons
+  and plug-in on/off parameters) are sent full on or off. A Selected Track control shows the
   selected track's. Program changes, key commands and relative encoders get nothing: they have
   no position to show.
 - It follows every change, whatever made it: the mouse, a plug-in's window, automation, undo,
