@@ -300,6 +300,11 @@ fn a_worker_given_up_on_is_retired_and_the_others_play_on() {
 
 /// Holds up the first task a worker takes (of the first `to_hold` workers): first in the task
 /// itself while `in_task` is set, then out in a "plug-in" for `nap` and while `hold` is set.
+///
+/// Unlike a real job, it counts a worker that comes back out of the "plug-in" to find it was left
+/// there (`done`, `back`), so it touches the job after the pool has let go of it: a test keeps the
+/// job until every worker left in it is gone (`let_go`), or leaks it. A job freed under such a
+/// worker is written to after it's freed, which corrupted the heap on Windows (issue #232).
 struct Hang {
     to_hold: AtomicU32,
     in_task: AtomicBool,
@@ -352,14 +357,23 @@ impl Job for Hang {
                 thread::sleep(Duration::from_millis(1));
             }
             let ours = call.leave();
-            self.done.fetch_add(1, Ordering::SeqCst);
+            // `back` before `done`: a test that has seen `done` reads `back` as final.
             if !ours {
                 self.back.fetch_add(1, Ordering::SeqCst);
+                self.done.fetch_add(1, Ordering::SeqCst);
                 return;
             }
+            self.done.fetch_add(1, Ordering::SeqCst);
         }
         self.ran[task].fetch_add(1, Ordering::SeqCst);
     }
+}
+
+/// Lets the workers out of the "plug-in" and waits until each one left there is gone: on its way
+/// out it touches the job, which must outlive that (see `Hang`).
+fn let_go(p: &Pool, job: &Hang) {
+    job.hold.store(false, Ordering::SeqCst);
+    until("a thread left in the job didn't let go", || (1..p.threads()).all(|t| !p.is_left(t) || p.gone(t)));
 }
 
 fn until(what: &str, ok: impl Fn() -> bool) {
@@ -633,7 +647,7 @@ fn passing_over_a_block_runs_nothing_on_the_caller() {
     }
     assert!(p.is_done());
     assert!(job.ran.iter().all(|r| r.load(Ordering::SeqCst) == 0), "no task ran");
-    job.hold.store(false, Ordering::SeqCst);
+    let_go(&p, &job);
     run_blocks(&p, &g, &Arc::new(Log::new(g.clone())), 20);
 }
 
