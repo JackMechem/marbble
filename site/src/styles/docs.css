@@ -1,154 +1,419 @@
-/* The docs in the app's colours: the Studio theme's graphite (src/theme/studio.ts in the app) with the
-   yellow of Marbble's icon as the one accent. Yellow can't carry text on white, so the light theme
-   links in a deep ochre. */
+/* The docs in the site's paper and ink (tokens.css): Starlight's colours mapped onto the two, full
+   ink rules between the header, sidebar and page, condensed capitals for titles and labels, square
+   corners and no shadows. The body stays in plain Instrument Sans at a reading size. */
 
 :root {
-  --sl-font: "Archivo Variable";
-  --sl-font-mono: "JetBrains Mono Variable";
+  --sl-font: var(--text);
+  --sl-font-mono: var(--mono);
 
-  --sl-color-white: #f4f4f6;
-  --sl-color-gray-1: #e2e2e5;
-  --sl-color-gray-2: #c9c9ce;
-  --sl-color-gray-3: #9b9ba0;
-  --sl-color-gray-4: #6c6c71;
-  --sl-color-gray-5: #3b3b3e;
-  --sl-color-gray-6: #262628;
-  --sl-color-black: #1c1c1e;
+  /* Starlight names its scale for dark mode: "white" is the strongest text in either theme. */
+  --sl-color-white: var(--ink);
+  --sl-color-gray-1: color-mix(in srgb, var(--ink) 92%, var(--paper));
+  --sl-color-gray-2: color-mix(in srgb, var(--ink) 86%, var(--paper));
+  --sl-color-gray-3: var(--dim);
+  --sl-color-gray-4: color-mix(in srgb, var(--ink) 45%, var(--paper));
+  --sl-color-gray-5: color-mix(in srgb, var(--ink) 26%, var(--paper));
+  --sl-color-gray-6: color-mix(in srgb, var(--ink) 9%, var(--paper));
+  --sl-color-gray-7: color-mix(in srgb, var(--ink) 5%, var(--paper));
+  --sl-color-black: var(--paper);
 
-  --sl-color-accent-low: #3d3210;
-  --sl-color-accent: #f2c230;
-  --sl-color-accent-high: #f2c230;
-  --sl-color-text-invert: #2a2205;
+  --sl-color-accent-low: color-mix(in srgb, var(--yellow) 18%, var(--paper));
+  --sl-color-accent: var(--accent);
+  --sl-color-accent-high: var(--ink);
+  --sl-color-text: var(--sl-color-gray-1);
+  --sl-color-text-accent: var(--ink);
+  --sl-color-text-invert: var(--paper);
+  --sl-color-bg: var(--paper);
+  --sl-color-bg-nav: var(--paper);
+  --sl-color-bg-sidebar: var(--paper);
+  --sl-color-bg-inline-code: var(--tint);
+  --sl-color-bg-accent: var(--ink);
+  --sl-color-hairline: var(--rule-soft);
+  --sl-color-hairline-light: var(--rule-soft);
+  --sl-color-hairline-shade: var(--rule);
+  --sl-color-backdrop-overlay: color-mix(in srgb, var(--paper) 70%, transparent);
 
-  --sl-color-bg-nav: #222224;
-  --sl-color-bg-sidebar: #222224;
-  --sl-color-bg-inline-code: #2f2f32;
-  --sl-color-hairline: #2f2f32;
-  --sl-color-hairline-light: #3b3b3e;
-  --sl-color-hairline-shade: #141415;
+  --sl-shadow-sm: none;
+  --sl-shadow-md: none;
+  --sl-shadow-lg: none;
 
-  --sl-text-h1: 2.5rem;
-  --sl-text-h2: 1.625rem;
-  --sl-text-h3: 1.25rem;
-  --sl-text-h4: 1.0625rem;
-  --sl-line-height: 1.6;
+  --sl-nav-height: 3rem;
+  --sl-nav-pad-y: 0.5rem;
+  --sl-menu-button-size: 2.25rem;
+  --sl-text-body: 1.0625rem;
+  --sl-line-height: 1.65;
+  --sl-line-height-headings: 1;
   --sl-content-width: 46rem;
-
-  --mb-badge: #f2c230;
-  --mb-badge-ink: #2a2205;
 }
 
-:root[data-theme="light"] {
-  --sl-color-white: #161617;
-  --sl-color-gray-1: #232325;
-  --sl-color-gray-2: #38383b;
-  --sl-color-gray-3: #5a5a5e;
-  --sl-color-gray-4: #85858a;
-  --sl-color-gray-5: #cfcfd3;
-  --sl-color-gray-6: #ececee;
-  --sl-color-gray-7: #f5f5f6;
-  --sl-color-black: #ffffff;
-
-  --sl-color-accent-low: #fbf0c6;
-  --sl-color-accent: #8a6700;
-  --sl-color-accent-high: #6f5300;
-  --sl-color-text-accent: #6f5300;
-  --sl-color-text-invert: #ffffff;
-
-  --sl-color-bg-nav: #f5f5f6;
-  --sl-color-bg-sidebar: #f5f5f6;
-  --sl-color-bg-inline-code: #ececee;
-  --sl-color-hairline: #e3e3e6;
-  --sl-color-hairline-light: #cfcfd3;
-  --sl-color-hairline-shade: #cfcfd3;
-
-  --mb-badge: #232325;
-  --mb-badge-ink: #f2c230;
+body {
+  font-feature-settings: "tnum" 1;
 }
+::selection {
+  background: var(--ink);
+  color: var(--paper);
+}
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* ---- Header: the title as an inverted block, then search, then the switches in ruled cells ---- */
 
 header.header {
-  border-bottom-color: var(--sl-color-hairline-light);
+  padding-block: 0;
+  padding-inline-start: 0;
+  border-bottom: 1px solid var(--rule);
 }
-
-.content-panel h1 {
-  font-weight: 750;
-  letter-spacing: -0.02em;
+header.header .title-wrapper {
+  align-self: stretch;
+  padding: 0;
+  margin: 0;
 }
-.sl-markdown-content h2 {
-  font-weight: 700;
-  letter-spacing: -0.012em;
-  padding-top: 0.25rem;
+site-search button[data-open-modal] {
+  height: 2rem;
+  border-radius: 0;
 }
-.sl-markdown-content h3 {
-  font-weight: 650;
+@media (min-width: 50rem) {
+  header.header {
+    padding-inline-end: 0;
+  }
+  site-search button[data-open-modal] {
+    border-color: var(--rule);
+    background: transparent;
+  }
+  site-search button[data-open-modal]:hover {
+    border-color: var(--rule);
+    background: var(--ink);
+    color: var(--paper);
+  }
+  site-search button > kbd {
+    border-radius: 0;
+    background: var(--tint);
+  }
+  header.header .right-group {
+    align-self: stretch;
+    gap: 0;
+  }
+  header.header .social-icons {
+    gap: 0;
+    align-self: stretch;
+  }
+  header.header .social-icons::after {
+    display: none;
+  }
+  header.header .social-icons a,
+  header.header starlight-theme-select {
+    display: flex;
+    align-items: center;
+    align-self: stretch;
+    margin: 0;
+    padding: 0 1rem;
+    border-inline-start: 1px solid var(--rule);
+    color: var(--ink);
+  }
+  header.header .social-icons a:hover,
+  header.header starlight-theme-select:hover {
+    background: var(--ink);
+    color: var(--paper);
+  }
 }
-.sl-markdown-content h4,
-.sl-markdown-content h5 {
-  font-weight: 650;
-}
-.sl-markdown-content a {
-  text-underline-offset: 0.18em;
-  text-decoration-thickness: 1px;
-}
-:root:not([data-theme="light"]) .sl-markdown-content a:not(:where(.not-content *)) {
-  color: #f4cf5b;
-}
-
-/* Tables are this manual's reference: tight, ruled, labelled like a panel. */
-.sl-markdown-content table {
-  font-size: var(--sl-text-sm);
-  line-height: 1.45;
-}
-.sl-markdown-content th {
-  font: 600 0.6875rem/1.4 var(--sl-font-mono);
-  letter-spacing: 0.06em;
+starlight-theme-select select {
+  font: 700 1rem/1 var(--display);
+  font-stretch: var(--display-stretch);
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--sl-color-gray-3);
-  background: transparent;
-  border-bottom: 1px solid var(--sl-color-gray-4);
 }
-.sl-markdown-content td {
-  border-bottom: 1px solid var(--sl-color-hairline);
+starlight-theme-select option {
+  background: var(--paper);
+  color: var(--ink);
 }
-.sl-markdown-content code {
-  font-size: 0.875em;
-  border-radius: 3px;
+starlight-menu-button button {
+  border-radius: 0;
+  border: 1px solid var(--rule);
+  background: var(--paper) !important;
+  color: var(--ink) !important;
 }
-.sl-markdown-content hr {
-  display: none;
+starlight-menu-button button:hover {
+  background: var(--ink) !important;
+  color: var(--paper) !important;
 }
 
-/* Sidebar */
+/* The search dialog */
+site-search dialog {
+  border-radius: 0;
+  border-color: var(--rule);
+  background: var(--paper);
+}
+#starlight__search {
+  --pagefind-ui-border-radius: 0;
+  --pagefind-ui-tag: var(--tint);
+}
+
+/* ---- Sidebar ---- */
+
+nav.sidebar .sidebar-pane {
+  border-inline-end-color: var(--rule);
+}
 .sidebar-content {
-  font-size: var(--sl-text-sm);
+  font-size: 0.9375rem;
 }
 .sidebar-content .large {
-  font-size: var(--sl-text-sm) !important;
+  font-size: 0.9375rem !important;
 }
+.sidebar-content a {
+  border-radius: 0;
+  color: var(--sl-color-gray-2);
+}
+.sidebar-content a:hover {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.2em;
+}
+/* Groups are labelled in small spaced capitals; a part inside a section keeps sentence case. */
 .sidebar-content summary .group-label .large {
-  font: 600 0.6875rem/1.4 var(--sl-font-mono);
-  letter-spacing: 0.08em;
+  font: 600 0.75rem/1.4 var(--text);
+  font-size: 0.75rem !important;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--sl-color-gray-3);
+  color: var(--ink);
 }
 .sidebar-content ul ul summary .group-label .large {
-  font: 500 var(--sl-text-sm) / 1.4 var(--sl-font);
+  font: 500 0.9375rem/1.4 var(--text);
+  font-size: 0.9375rem !important;
   letter-spacing: 0;
   text-transform: none;
   color: var(--sl-color-gray-2);
 }
+.sidebar-content ul ul li {
+  border-inline-start-color: var(--rule-soft);
+}
+/* The current page: inverted, with a yellow edge. */
 .sidebar-content a[aria-current="page"],
 .sidebar-content a[aria-current="page"]:hover,
 .sidebar-content a[aria-current="page"]:focus {
-  background: var(--sl-color-accent);
-  color: var(--sl-color-text-invert);
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: inset 4px 0 0 var(--yellow);
 }
 
-/* A diagram waits as its source until Mermaid has drawn it. */
+/* ---- Table of contents ---- */
+
+.right-sidebar {
+  border-inline-start-color: var(--rule) !important;
+}
+starlight-toc h2,
+mobile-starlight-toc .toggle {
+  font: 600 0.75rem/1.4 var(--text) !important;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+starlight-toc a,
+mobile-starlight-toc a {
+  border-radius: 0 !important;
+  color: var(--sl-color-gray-3);
+  font-size: 0.875rem;
+}
+starlight-toc a:hover {
+  color: var(--ink);
+}
+starlight-toc a[aria-current="true"] {
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+mobile-starlight-toc nav {
+  border-bottom-color: var(--rule);
+}
+mobile-starlight-toc .toggle {
+  border-radius: 0;
+  border-color: var(--rule);
+}
+mobile-starlight-toc .dropdown {
+  border-radius: 0;
+  border-color: var(--rule);
+}
+
+/* ---- The page ---- */
+
+.content-panel + .content-panel {
+  border-top-color: var(--rule);
+}
+.mb-kicker {
+  margin: 0;
+  font: 600 0.75rem/1.4 var(--text);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.mb-kicker + h1 {
+  margin-top: 0.6rem !important;
+}
+.content-panel h1 {
+  font: 700 clamp(2.5rem, 4.6vw, 4.25rem) / 0.9 var(--display);
+  font-stretch: var(--display-stretch);
+  letter-spacing: -0.005em;
+  text-transform: uppercase;
+  color: var(--ink);
+  overflow-wrap: break-word;
+}
+
+.sl-markdown-content {
+  font-size: var(--sl-text-body);
+  color: var(--sl-color-gray-1);
+}
+.sl-markdown-content :is(h2, h3, h4, h5) {
+  color: var(--ink);
+  text-wrap: balance;
+}
+/* Starlight wraps each heading with its anchor link; the wrapper carries the size and the rule. */
+.sl-markdown-content .sl-heading-wrapper.level-h2 {
+  margin-top: 3rem;
+  padding-top: 0.85rem;
+  border-top: 2px solid var(--rule);
+  font-size: clamp(1.9rem, 3.2vw, 2.6rem);
+}
+.sl-markdown-content .sl-heading-wrapper.level-h3 {
+  margin-top: 2.25rem;
+  font-size: 1.625rem;
+}
+.sl-markdown-content :is(h2, h3) {
+  font: 700 1em/0.95 var(--display);
+  font-stretch: var(--display-stretch);
+  text-transform: uppercase;
+}
+.sl-markdown-content h4 {
+  margin-top: 1.75rem;
+  font: 700 1.0625rem/1.3 var(--text);
+}
+.sl-markdown-content h5 {
+  font: 600 0.75rem/1.4 var(--text);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.sl-markdown-content :is(.sl-heading-wrapper, h2, h3, h4) + * {
+  margin-top: 0.85rem;
+}
+.sl-markdown-content .sl-anchor-link {
+  color: var(--dim);
+}
+.sl-markdown-content .sl-anchor-link:hover {
+  color: var(--accent);
+}
+
+/* Links are ink, told apart by an underline in the accent. */
+.sl-markdown-content a:not(:where(.not-content *)) {
+  color: var(--ink);
+  text-decoration-line: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.2em;
+}
+.sl-markdown-content a:not(:where(.not-content *)):hover {
+  background: var(--ink);
+  color: var(--paper);
+  text-decoration-color: var(--yellow);
+}
+.sl-markdown-content strong {
+  color: var(--ink);
+  font-weight: 650;
+}
+
+.sl-markdown-content code {
+  font-size: 0.86em;
+  border-radius: 0;
+  padding: 0.1em 0.3em;
+}
+.sl-markdown-content kbd {
+  border-radius: 0;
+}
+.sl-markdown-content hr {
+  display: none;
+}
+.sl-markdown-content blockquote {
+  border-inline-start: 3px solid var(--rule);
+}
+
+/* Tables are this manual's reference: ruled and dense, headed in small capitals. */
+.sl-markdown-content table {
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  border-collapse: collapse;
+}
+.sl-markdown-content th {
+  font: 600 0.6875rem/1.4 var(--text);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: bottom;
+}
+.sl-markdown-content td {
+  border: 0;
+  border-bottom: 1px solid var(--rule-soft);
+}
+.sl-markdown-content :is(th, td):first-child {
+  padding-inline-start: 0;
+}
+.sl-markdown-content tr:nth-child(2n) {
+  background: transparent;
+}
+
+/* Code blocks: square, on a panel a step off the page's paper. Expressive Code's styles sit in a
+   Starlight layer, so these win over its themes' values. */
+.expressive-code {
+  --ec-brdRad: 0px;
+  --ec-brdCol: var(--rule-soft);
+  --ec-codeBg: #f3eee3;
+  --ec-frm-edTabBarBg: #e2d9c5;
+  --ec-frm-trmTtbBg: #e2d9c5;
+  --ec-frm-frameBoxShdCssVal: none;
+}
+:root[data-theme="dark"] .expressive-code {
+  --ec-codeBg: #1a1916;
+  --ec-frm-edTabBarBg: #100f0d;
+  --ec-frm-trmTtbBg: #100f0d;
+}
+
+/* Asides: a rule down the side and a capitals label, without the coloured panels. */
+.starlight-aside {
+  border: 1px solid var(--rule-soft);
+  border-inline-start: 4px solid var(--sl-color-asides-border);
+  background: var(--tint);
+  border-radius: 0;
+}
+.starlight-aside__title {
+  font: 600 0.75rem/1.4 var(--text);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.starlight-aside--note,
+.starlight-aside--tip {
+  --sl-color-asides-border: var(--ink);
+  --sl-color-asides-text-accent: var(--ink);
+}
+.starlight-aside--caution {
+  --sl-color-asides-border: var(--accent);
+  --sl-color-asides-text-accent: var(--ink);
+}
+.starlight-aside--danger {
+  --sl-color-asides-border: #c43d2b;
+  --sl-color-asides-text-accent: var(--ink);
+}
+
+/* A diagram waits as its source until Mermaid has drawn it (Head.astro). */
 pre.mermaid {
   background: transparent;
-  border: 1px solid var(--sl-color-hairline-light);
-  border-radius: 4px;
+  border: 1px solid var(--rule-soft);
+  border-radius: 0;
   padding: 1rem;
   overflow-x: auto;
   font-size: var(--sl-text-xs);
@@ -156,15 +421,65 @@ pre.mermaid {
 }
 pre.mermaid:not([data-processed]) {
   text-align: start;
-  color: var(--sl-color-gray-3);
+  color: var(--dim);
   white-space: pre;
 }
 pre.mermaid svg {
   max-width: 100% !important;
   height: auto;
 }
+pre.mermaid svg :is(.node, .cluster) :is(rect, polygon, path) {
+  filter: none !important; /* no drop shadows */
+}
 
-.starlight-aside--note {
-  --sl-color-asides-text-accent: var(--sl-color-accent);
-  --sl-color-asides-border: var(--sl-color-accent);
+/* ---- Previous / next, as the case-study pages on jackmechem.dev end ---- */
+
+.pagination-links {
+  gap: 0;
+}
+.pagination-links:has(a) {
+  border: 1px solid var(--rule);
+}
+.pagination-links a {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 1.25rem;
+  color: var(--dim);
+  font: 600 0.75rem/1.4 var(--text);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.pagination-links a + a {
+  border-inline-start: 1px solid var(--rule);
+}
+.pagination-links a:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+.pagination-links .link-title {
+  display: inline-block;
+  margin-top: 0.4rem;
+  font: 700 clamp(1.5rem, 2.4vw, 2rem) / 0.95 var(--display);
+  font-stretch: var(--display-stretch);
+  letter-spacing: 0;
+  color: inherit;
+}
+.pagination-links a:hover .link-title {
+  color: var(--paper);
+}
+@media (max-width: 40rem) {
+  .pagination-links a + a {
+    border-inline-start: 0;
+    border-top: 1px solid var(--rule);
+  }
+}
+
+/* Edit link and last-updated line */
+.meta {
+  font-size: 0.875rem;
+}
+.meta a {
+  color: var(--ink);
+  text-decoration-color: var(--accent);
 }

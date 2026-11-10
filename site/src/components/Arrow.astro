@@ -1,0 +1,18 @@
+---
+// The landing page's arrows, drawn as SVG so they match the type (the arrow characters in the font
+// don't), as jackmechem.dev draws its own. Sized to the text and drawn in its colour; on a link they
+// nudge the way they point when it's hovered.
+const PATHS = {
+  right: "M2 8 H13 M9 4 L13 8 L9 12",
+  down: "M8 2 V13 M4 9 L8 13 L12 9",
+  out: "M4 12 L12 4 M6 4 H12 V10", // opens somewhere else
+};
+interface Props {
+  dir?: keyof typeof PATHS;
+}
+const { dir = "right" } = Astro.props;
+---
+
+<svg class={`arrow arrow--${dir}`} viewBox="0 0 16 16" aria-hidden="true">
+  <path d={PATHS[dir]} fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square"></path>
+</svg>

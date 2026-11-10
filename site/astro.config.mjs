@@ -35,8 +35,9 @@ export default defineConfig({
       tableOfContents: { minHeadingLevel: 2, maxHeadingLevel: 3 },
       editLink: { baseUrl: `${REPO_URL}/edit/main/` },
       customCss: [
-        "@fontsource-variable/archivo/wght.css",
+        "@fontsource-variable/instrument-sans/standard.css",
         "@fontsource-variable/jetbrains-mono/wght.css",
+        "./src/styles/tokens.css",
         "./src/styles/docs.css",
       ],
       routeMiddleware: "./src/route-data.ts",
@@ -45,6 +46,7 @@ export default defineConfig({
         SiteTitle: "./src/components/SiteTitle.astro",
         Head: "./src/components/Head.astro",
         Footer: "./src/components/Footer.astro",
+        PageTitle: "./src/components/PageTitle.astro",
       },
       expressiveCode: { themes: ["github-dark", "github-light"], styleOverrides: { borderRadius: "4px" } },
       head: [

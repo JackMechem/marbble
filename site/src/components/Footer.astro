@@ -6,19 +6,26 @@ import { REPO_URL } from "../../docs.config.mjs";
 
 <Default />
 <p class="mb-licence">
-  Marbble is released under the <a href={`${REPO_URL}/blob/main/LICENSE`} rel="noopener">MIT licence</a>.
+  Marbble is released under the <a href={`${REPO_URL}/blob/main/LICENSE`} rel="noopener">MIT licence</a>.{" "}
   <a href={REPO_URL} rel="noopener">Source on GitHub</a>.
 </p>
 
 <style>
   .mb-licence {
     margin-top: 2rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--sl-color-hairline);
-    font-size: var(--sl-text-xs);
-    color: var(--sl-color-gray-3);
+    padding-top: 0.9rem;
+    border-top: 1px solid var(--rule);
+    font: 600 0.6875rem/1.6 var(--text);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--dim);
   }
   .mb-licence a {
     color: inherit;
+    text-decoration-color: var(--accent);
+    text-underline-offset: 0.2em;
+  }
+  .mb-licence a:hover {
+    color: var(--ink);
   }
 </style>

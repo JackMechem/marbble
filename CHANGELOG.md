@@ -8,6 +8,9 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Changed
 
+- **A new look for marbble.dev.** The website and its docs take after the developer's own site:
+  paper and ink with a light and a dark theme, condensed uppercase titles, ruled rows, and yellow
+  only as a small accent. On narrow screens the top bar's links are in a menu.
 - **Control surfaces: Mackie Control and HUI.** Settings › MIDI › Control Surfaces sets up a
   Mackie Control (with any number of Extenders) or a HUI on its ports. Its strips show your tracks
   eight at a time, banked with Bank and Channel: motor faders follow the volume (and stay still

@@ -1,5 +1,6 @@
 // The landing page without this file is complete: a drawn phrase with a still playhead, and download
-// links that go to the releases page. This moves the playhead and points the links at the files.
+// links that go to the releases page. This moves the playhead, points the links at the files, and
+// shows the theme switch.
 import { newestReleases, type Release } from "./releases";
 
 function runPlayhead() {
@@ -160,5 +161,59 @@ function watchDownloads() {
   observer.observe(section);
 }
 
+/**
+ * The Light / Dark switch in the top bar. It shares Starlight's stored choice, so the docs open in
+ * the theme picked here and the other way round; until one is picked, the page follows the system.
+ */
+function themeToggle() {
+  const button = document.querySelector<HTMLButtonElement>("[data-theme-toggle]");
+  if (!button) return;
+  const root = document.documentElement;
+  const label = button.querySelector("[data-theme-label]")!;
+  const show = () => {
+    const other = root.dataset.theme === "dark" ? "light" : "dark";
+    label.textContent = other === "light" ? "Light" : "Dark";
+    button.setAttribute("aria-label", `Switch to the ${other} theme`);
+  };
+  button.addEventListener("click", () => {
+    root.dataset.theme = root.dataset.theme === "dark" ? "light" : "dark";
+    try {
+      localStorage.setItem("starlight-theme", root.dataset.theme);
+    } catch {
+      // Private browsing: the choice lasts as long as the page.
+    }
+    show();
+  });
+  const system = matchMedia("(prefers-color-scheme: light)");
+  system.addEventListener("change", () => {
+    let stored: string | null = null;
+    try {
+      stored = localStorage.getItem("starlight-theme");
+    } catch {}
+    if (stored !== "light" && stored !== "dark") root.dataset.theme = system.matches ? "light" : "dark";
+    show();
+  });
+  show();
+  button.hidden = false;
+}
+
+/** The top bar's menu closes on a link, a click outside it, or Esc (which hands focus back to its button). */
+function menu() {
+  const details = document.querySelector<HTMLDetailsElement>("[data-menu]");
+  if (!details) return;
+  const close = () => (details.open = false);
+  details.querySelectorAll(".menu-panel a").forEach((a) => a.addEventListener("click", close));
+  document.addEventListener("click", (e) => {
+    if (details.open && !details.contains(e.target as Node)) close();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape" || !details.open) return;
+    close();
+    details.querySelector("summary")!.focus();
+  });
+}
+
+themeToggle();
+menu();
 runPlayhead();
 watchDownloads();

@@ -20,37 +20,47 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 <Default />
 
 <style>
+  /* Ruled rows; the current zone is inverted with a yellow edge, like the current page below. */
   .mb-zones {
     display: grid;
-    gap: 1px;
-    margin: 0 0 1rem;
-    background: var(--sl-color-hairline-light);
-    border: 1px solid var(--sl-color-hairline-light);
-    border-radius: 4px;
-    overflow: hidden;
+    margin: 0 0 1.25rem;
+    border: 1px solid var(--rule);
   }
   .mb-zones a {
     display: grid;
-    gap: 0.2rem;
-    padding: 0.5rem 0.7rem 0.55rem;
-    background: var(--sl-color-bg-sidebar);
-    color: var(--sl-color-gray-2);
+    gap: 0.3rem;
+    padding: 0.6rem 0.75rem 0.65rem;
+    color: var(--ink);
     text-decoration: none;
   }
+  .mb-zones a + a {
+    border-top: 1px solid var(--rule);
+  }
   .mb-zones a:hover {
-    background: var(--sl-color-gray-5);
+    background: var(--tint);
+  }
+  .mb-zones a:focus-visible {
+    outline-offset: -3px;
   }
   .mb-zones span {
-    font-weight: 600;
-    font-size: var(--sl-text-sm);
+    font: 700 1.25rem/1 var(--display);
+    font-stretch: var(--display-stretch);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
   }
   .mb-zones small {
-    font: 500 0.625rem/1 var(--sl-font-mono);
-    letter-spacing: 0.04em;
-    color: var(--sl-color-gray-3);
+    font: 600 0.6875rem/1 var(--text);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--dim);
   }
   .mb-zones a[aria-current] {
-    box-shadow: inset 3px 0 0 var(--sl-color-accent);
-    color: var(--sl-color-white);
+    background: var(--ink);
+    color: var(--paper);
+    box-shadow: inset 4px 0 0 var(--yellow);
+  }
+  .mb-zones a[aria-current] small {
+    color: inherit;
+    opacity: 0.7;
   }
 </style>

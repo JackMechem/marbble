@@ -1,8 +1,10 @@
 ---
-import "@fontsource-variable/archivo/wdth.css";
+import "@fontsource-variable/instrument-sans/standard.css";
 import "@fontsource-variable/jetbrains-mono/wght.css";
+import "../styles/tokens.css";
 import "../styles/landing.css";
-import archivoFile from "@fontsource-variable/archivo/files/archivo-latin-wdth-normal.woff2?url";
+import fontFile from "@fontsource-variable/instrument-sans/files/instrument-sans-latin-standard-normal.woff2?url";
+import Arrow from "../components/Arrow.astro";
 import Shot from "../components/Shot.astro";
 import { REPO_URL } from "../../docs.config.mjs";
 import anchors from "../generated/anchors.json";
@@ -115,10 +117,19 @@ const keyX = (k: number) => {
 const zoneTop = 8;
 const zoneH = 112;
 
+// The scrolling line in the top bar, as on jackmechem.dev.
+const ticker = [
+  ["Marbble", "an open-source digital audio workstation"],
+  ["Latest", `v${meta.version}, ${meta.date}`],
+  ["Status", "alpha, developed on Linux"],
+  ["Inside", "six synth models, a sampler, sixteen effects, VST3 hosting"],
+  ["Engine", "Rust, with a Tauri 2 and React interface"],
+  ["Licence", "MIT"],
+];
+
 const title = "Marbble: an open-source digital audio workstation, written in Rust";
 const description = "A digital audio workstation modelled on Logic Pro's workflow and layout, with six synth models, a sampler, sixteen effects and VST3 hosting. MIT licensed, and in alpha.";
 ---
-
 <!doctype html>
 <html lang="en">
   <head>
@@ -126,11 +137,19 @@ const description = "A digital audio workstation modelled on Logic Pro's workflo
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     <meta name="description" content={description} />
-    <meta name="theme-color" content="#1c1c1e" />
-    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#ebe3d2" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#100f0d" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light dark" />
+    <!-- The theme the docs use (Starlight keeps it under this key), picked before the page paints. -->
+    <script is:inline>
+      try {
+        var t = localStorage.getItem("starlight-theme");
+      } catch (e) {}
+      document.documentElement.dataset.theme = t === "light" || t === "dark" ? t : matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+    </script>
     <link rel="canonical" href={new URL(import.meta.env.BASE_URL, Astro.site).href} />
     <link rel="icon" href={`${base}/favicon.svg`} type="image/svg+xml" />
-    <link rel="preload" href={archivoFile} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={fontFile} as="font" type="font/woff2" crossorigin />
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Marbble" />
     <meta property="og:description" content={description} />
@@ -143,15 +162,46 @@ const description = "A digital audio workstation modelled on Logic Pro's workflo
 
     <header class="top">
       <a class="brand" href={`${base}/`} aria-label="Marbble, home">
-        <img src={`${base}/favicon.svg`} width="28" height="28" alt="" />
+        <img src={`${base}/favicon.svg`} width="24" height="24" alt="" />
         <span>Marbble</span>
       </a>
+      <div class="ticker" aria-hidden="true">
+        {/* Twice over, so that sliding by half its width loops without a seam. */}
+        <div class="ticker-track">
+          {[0, 1].map(() => ticker.map(([k, v]) => <span><b>{k}</b>: {v}<i>✳</i></span>))}
+        </div>
+      </div>
       <nav aria-label="Main">
-        <a href={`${base}/guide/`}>User Guide</a>
-        <a href={`${base}/architecture/`}>Contributors</a>
-        <a href={`${base}/changelog/`}>Changelog</a>
-        <a href={REPO_URL} rel="noopener">GitHub</a>
+        <a class="opt" href={`${base}/guide/`}>User Guide</a>
+        <a class="opt" href={`${base}/architecture/`}>Contributors</a>
+        <a class="opt" href={`${base}/changelog/`}>Changelog</a>
+        <a class="opt" href={REPO_URL} rel="noopener">GitHub</a>
         <a class="top-dl" href="#download">Download</a>
+        <button type="button" class="theme" data-theme-toggle hidden>
+          <span class="theme-label" data-theme-label>Light</span>
+          <svg class="theme-icon" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
+            <circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="2"></circle>
+            <path d="M10 2 A8 8 0 0 1 10 18 Z" fill="currentColor"></path>
+          </svg>
+        </button>
+        {/* Shown whenever the bar is too narrow for every link. */}
+        <details class="menu" data-menu>
+          <summary aria-label="Menu">
+            <svg class="menu-open" viewBox="0 0 20 20" width="20" height="20" aria-hidden="true">
+              <path d="M2 4.5h16M2 10h16M2 15.5h16" stroke="currentColor" stroke-width="2.2"></path>
+            </svg>
+            <svg class="menu-close" viewBox="0 0 20 20" width="20" height="20" aria-hidden="true">
+              <path d="M3.5 3.5l13 13M16.5 3.5l-13 13" stroke="currentColor" stroke-width="2.2"></path>
+            </svg>
+          </summary>
+          <div class="menu-panel">
+            <a href={`${base}/guide/`}>User Guide <Arrow /></a>
+            <a href={`${base}/architecture/`}>Contributors <Arrow /></a>
+            <a href={`${base}/changelog/`}>Changelog <Arrow /></a>
+            <a href={REPO_URL} rel="noopener">GitHub <Arrow dir="out" /></a>
+            <a href="#download">Download <Arrow dir="down" /></a>
+          </div>
+        </details>
       </nav>
     </header>
 
@@ -178,39 +228,32 @@ const description = "A digital audio workstation modelled on Logic Pro's workflo
           </div>
         </dl>
 
-        <h1 id="hero-title" class="wordmark">Marbble</h1>
+        <div class="hero-main">
+          <div class="stage">
+            <div class="lane" style={`--p:${START / BARS}`} data-lane data-levels={levels} data-bars={BARS} data-start={START}>
+              <div class="lane-main">
+                <ol class="ruler" aria-hidden="true">
+                  {Array.from({ length: BARS }, (_, i) => <li>{i + 1}</li>)}
+                </ol>
+                <div class="marks" aria-hidden="true">
+                  <small style="left:0.5%">Verse</small>
+                  <small style={`left:${(LAST_BAR / BARS) * 100 + 0.5}%`}>Outro</small>
+                </div>
+                <div class="wave" role="img" aria-label="A drawn waveform: eight bars of a bass line, then one long note left to ring, with a playhead moving across it.">
+                  <svg viewBox={`0 0 ${WAVE_W} ${WAVE_H}`} preserveAspectRatio="none" aria-hidden="true"><path id="phrase" d={waveD}></path></svg>
+                  <svg class="played" viewBox={`0 0 ${WAVE_W} ${WAVE_H}`} preserveAspectRatio="none" aria-hidden="true"><use href="#phrase"></use></svg>
+                  <div class="playhead" aria-hidden="true"><i></i></div>
+                </div>
+              </div>
+              <div class="meters" aria-hidden="true">
+                <div class="meter"><i data-meter style={`--v:${startLevel}`}></i><b data-peak style={`bottom:${startLevel * 100}%`}></b></div>
+                <div class="meter"><i data-meter style={`--v:${startLevel - 0.03}`}></i><b data-peak style={`bottom:${(startLevel - 0.03) * 100}%`}></b></div>
+                <ol class="scale"><li>0</li><li>-6</li><li>-12</li><li>-24</li><li>-∞</li></ol>
+              </div>
+            </div>
+            <h1 id="hero-title" class="wordmark">Marbble</h1>
+          </div>
 
-        <div class="lane" style={`--p:${START / BARS}`} data-lane data-levels={levels} data-bars={BARS} data-start={START}>
-          <div class="lane-main">
-            <ol class="ruler" aria-hidden="true">
-              {Array.from({ length: BARS }, (_, i) => <li>{i + 1}</li>)}
-            </ol>
-            <div class="marks" aria-hidden="true">
-              <small style="left:0.5%">Verse</small>
-              <small style={`left:${(LAST_BAR / BARS) * 100 + 0.5}%`}>Outro</small>
-            </div>
-            <div class="wave" role="img" aria-label="A drawn waveform: eight bars of a bass line, then one long note left to ring, with a playhead moving across it.">
-              <svg viewBox={`0 0 ${WAVE_W} ${WAVE_H}`} preserveAspectRatio="none" aria-hidden="true"><path id="phrase" d={waveD}></path></svg>
-              <svg class="played" viewBox={`0 0 ${WAVE_W} ${WAVE_H}`} preserveAspectRatio="none" aria-hidden="true"><use href="#phrase"></use></svg>
-              <div class="playhead" aria-hidden="true"><i></i></div>
-            </div>
-          </div>
-          <div class="meters" aria-hidden="true">
-            <div class="meter"><i data-meter style={`--v:${startLevel}`}></i><b data-peak style={`bottom:${startLevel * 100}%`}></b></div>
-            <div class="meter"><i data-meter style={`--v:${startLevel - 0.03}`}></i><b data-peak style={`bottom:${(startLevel - 0.03) * 100}%`}></b></div>
-            <ol class="scale"><li>0</li><li>-6</li><li>-12</li><li>-24</li><li>-∞</li></ol>
-          </div>
-        </div>
-
-        <div class="intro">
-          <div class="lead">
-            <p>A digital audio workstation modelled on Logic Pro's workflow and layout. The audio engine and VST3 host are written in Rust; the interface is Tauri 2 with React.</p>
-            <p class="lead-sub">Record, edit, mix and bounce. Developed on Linux, with early builds for Windows and macOS. Open source under the MIT licence.</p>
-            <div class="actions">
-              <a class="btn primary" href="#download">Download the alpha</a>
-              <a class="btn" href={`${base}/guide/`}>Read the User Guide</a>
-            </div>
-          </div>
           <aside class="alpha" aria-labelledby="alpha-title">
             <h2 id="alpha-title"><span class="led" aria-hidden="true"></span>This is alpha software</h2>
             <ul>
@@ -218,19 +261,38 @@ const description = "A digital audio workstation modelled on Logic Pro's workflo
               <li>The synth models follow documented behaviour. None has been tuned by ear or compared with the hardware it's modelled on.</li>
               <li>Keep backups of projects that matter.</li>
             </ul>
-            <p><a href={doc("guide", "20-known-limitations")}>Known limitations</a> · <a href={roadmap} rel="noopener">What's left to do</a></p>
+            <p>
+              <a href={doc("guide", "20-known-limitations")}>Known limitations <Arrow /></a>
+              <a href={roadmap} rel="noopener">What's left to do <Arrow dir="out" /></a>
+            </p>
           </aside>
+        </div>
+
+        <div class="strip">
+          <div class="lead">
+            <p>A digital audio workstation modelled on Logic Pro's workflow and layout. The audio engine and VST3 host are written in Rust; the interface is Tauri 2 with React.</p>
+            <p class="lead-sub">Record, edit, mix and bounce. Developed on Linux, with early builds for Windows and macOS. Open source under the MIT licence.</p>
+          </div>
+          <div class="actions">
+            <a class="act primary" href="#download">Download the alpha <Arrow dir="down" /></a>
+            <a class="act" href={`${base}/guide/`}>Read the User Guide <Arrow /></a>
+          </div>
         </div>
       </section>
 
-      <Shot id="main-window" />
+      <div class="pad">
+        <Shot id="main-window" />
+      </div>
 
       <section class="panel" id="instruments" aria-labelledby="instruments-title">
-        <header class="panel-head">
-          <p class="tag">01 Instruments</p>
-          <h2 id="instruments-title">Six synth models, on the same footing as the effects.</h2>
-          <p>Each has a panel you can dock or float, factory presets, automation, MIDI learn, undo and saving, and each freezes and bounces. They sit under Vintage Synths and Modern Synths in the instrument slot, beside the simple Marbble Synth that new tracks start with.</p>
+        <header class="section-head">
+          <h2 id="instruments-title">Instruments</h2>
+          <p class="cap">01 / 05<br />Six synth models</p>
         </header>
+        <div class="intro">
+          <p class="kicker">Six synth models, on the same footing as the effects.</p>
+          <p>Each has a panel you can dock or float, factory presets, automation, MIDI learn, undo and saving, and each freezes and bounces. They sit under Vintage Synths and Modern Synths in the instrument slot, beside the simple Marbble Synth that new tracks start with.</p>
+        </div>
         <ol class="rack">
           {
             instruments.map((m) => (
@@ -254,49 +316,61 @@ const description = "A digital audio workstation modelled on Logic Pro's workflo
             ))
           }
         </ol>
-        <p class="fine">The traces are textbook waveforms of each kind of engine, drawn for this page, not recordings of the instruments. Five of the six follow a specific instrument's documented behaviour: <a href={doc("guide", "the-other-synth-models")}>the Guide says which</a>, and how far that goes. None has been compared with the original, and every constant each model's source marks as a guess (<a href={doc("arch", "built-in-effects-and-instruments")}>where to look</a>) is still to be tuned by ear.</p>
-        <Shot id="instrument-panel" />
-        <div class="shot-grid">
-          {["sei", "cinque", "sedici", "onda"].map((id) => <Shot id={`synth-${id}`} />)}
-          <div class="wide"><Shot id="synth-uno" /></div>
+        <div class="pad">
+          <p class="fine">The traces are textbook waveforms of each kind of engine, drawn for this page, not recordings of the instruments. Five of the six follow a specific instrument's documented behaviour: <a href={doc("guide", "the-other-synth-models")}>the Guide says which</a>, and how far that goes. None has been compared with the original, and every constant each model's source marks as a guess (<a href={doc("arch", "built-in-effects-and-instruments")}>where to look</a>) is still to be tuned by ear.</p>
+          <Shot id="instrument-panel" />
+          <div class="shot-grid">
+            {["sei", "cinque", "sedici", "onda"].map((id) => <Shot id={`synth-${id}`} />)}
+            <div class="wide"><Shot id="synth-uno" /></div>
+          </div>
         </div>
       </section>
 
-      <section class="panel split" id="sampler" aria-labelledby="sampler-title">
-        <header class="panel-head">
-          <p class="tag">02 Sampler</p>
-          <h2 id="sampler-title">Your own sounds, playable straight away.</h2>
-          <p>Drop a file on Marbble Sampler and it plays across the keyboard. Several files map themselves by the note in their names; layers and round robins sort themselves out the same way. Or record straight in from the audio input, or turn an audio region into a sampler track, whole or sliced at its transients.</p>
-          <p class="fine">Loops with crossfades, one-shot, reverse, an amp envelope, a filter with envelope, an LFO, glide and polyphony. A useful subset of SFZ loads, and what it doesn't do is listed. Samples are copied into the project and held in memory, up to 4 GB; there's no disk streaming yet. <a href={doc("guide", "marbble-sampler")}>Sampler guide</a></p>
+      <section class="panel" id="sampler" aria-labelledby="sampler-title">
+        <header class="section-head">
+          <h2 id="sampler-title">Sampler</h2>
+          <p class="cap">02 / 05<br />Marbble Sampler</p>
         </header>
-        <Shot id="sampler">
-          <figure class="zones">
-            <svg viewBox="0 0 780 226" role="img" aria-label="Diagram: sample zones laid over a three-octave keyboard, stacked by velocity.">
-              {
-                ZONES.map((z) => {
-                  const x0 = keyX(z.a);
-                  const x1 = keyX(z.b) + (isBlack(z.b) ? whiteW * 0.6 : whiteW);
-                  const y0 = zoneTop + (1 - z.hi) * zoneH;
-                  const y1 = zoneTop + (1 - z.lo) * zoneH;
-                  return <rect class:list={["zone", { on: z.on }]} x={x0 + 1} y={y0 + 1} width={x1 - x0 - 2} height={y1 - y0 - 2} rx="1.5"></rect>;
-                })
-              }
-              <g transform="translate(0 128)">
-                {Array.from({ length: KEYS }, (_, k) => k).filter((k) => !isBlack(k)).map((k) => <rect class:list={["key", { on: k >= 7 && k <= 13 }]} x={keyX(k) + 0.5} y="0" width={whiteW - 1} height="82" rx="1"></rect>)}
-                {Array.from({ length: KEYS }, (_, k) => k).filter(isBlack).map((k) => <rect class="key black" x={keyX(k)} y="0" width={whiteW * 0.6} height="50" rx="1"></rect>)}
-                {[0, 12, 24, 36].map((k, i) => <text x={keyX(k) + 1} y="95">{`C${i + 2}`}</text>)}
-              </g>
-            </svg>
-            <figcaption>Diagram: zones across keys, stacked by velocity.</figcaption>
-          </figure>
-        </Shot>
+        <div class="split">
+          <div class="intro">
+            <p class="kicker">Your own sounds, playable straight away.</p>
+            <p>Drop a file on Marbble Sampler and it plays across the keyboard. Several files map themselves by the note in their names; layers and round robins sort themselves out the same way. Or record straight in from the audio input, or turn an audio region into a sampler track, whole or sliced at its transients.</p>
+            <p class="fine">Loops with crossfades, one-shot, reverse, an amp envelope, a filter with envelope, an LFO, glide and polyphony. A useful subset of SFZ loads, and what it doesn't do is listed. Samples are copied into the project and held in memory, up to 4 GB; there's no disk streaming yet. <a href={doc("guide", "marbble-sampler")}>Sampler guide</a></p>
+          </div>
+          <div class="split-art">
+            <Shot id="sampler">
+              <figure class="zones">
+                <svg viewBox="0 0 780 226" role="img" aria-label="Diagram: sample zones laid over a three-octave keyboard, stacked by velocity.">
+                  {
+                    ZONES.map((z) => {
+                      const x0 = keyX(z.a);
+                      const x1 = keyX(z.b) + (isBlack(z.b) ? whiteW * 0.6 : whiteW);
+                      const y0 = zoneTop + (1 - z.hi) * zoneH;
+                      const y1 = zoneTop + (1 - z.lo) * zoneH;
+                      return <rect class:list={["zone", { on: z.on }]} x={x0 + 1} y={y0 + 1} width={x1 - x0 - 2} height={y1 - y0 - 2}></rect>;
+                    })
+                  }
+                  <g transform="translate(0 128)">
+                    {Array.from({ length: KEYS }, (_, k) => k).filter((k) => !isBlack(k)).map((k) => <rect class:list={["key", { on: k >= 7 && k <= 13 }]} x={keyX(k) + 0.5} y="0" width={whiteW - 1} height="82"></rect>)}
+                    {Array.from({ length: KEYS }, (_, k) => k).filter(isBlack).map((k) => <rect class="key black" x={keyX(k)} y="0" width={whiteW * 0.6} height="50"></rect>)}
+                    {[0, 12, 24, 36].map((k, i) => <text x={keyX(k) + 1} y="95">{`C${i + 2}`}</text>)}
+                  </g>
+                </svg>
+                <figcaption>Diagram: zones across keys, stacked by velocity.</figcaption>
+              </figure>
+            </Shot>
+          </div>
+        </div>
       </section>
 
       <section class="panel" id="mixing" aria-labelledby="mixing-title">
-        <header class="panel-head">
-          <p class="tag">03 Mixing</p>
-          <h2 id="mixing-title">A channel strip's whole signal path, with delay compensation on every route.</h2>
+        <header class="section-head">
+          <h2 id="mixing-title">Mixing</h2>
+          <p class="cap">03 / 05<br />Channel strip to output</p>
         </header>
+        <div class="intro">
+          <p class="kicker">A channel strip's whole signal path, with delay compensation on every route.</p>
+        </div>
         <ol class="path">
           {
             path.map((s) => (
@@ -318,7 +392,9 @@ const description = "A digital audio workstation modelled on Logic Pro's workflo
             ))
           }
         </ol>
-        <Shot id="mixer" />
+        <div class="pad">
+          <Shot id="mixer" />
+        </div>
 
         <div class="mix-grid">
           <div>
@@ -361,10 +437,13 @@ const description = "A digital audio workstation modelled on Logic Pro's workflo
       </section>
 
       <section class="panel" id="editing" aria-labelledby="editing-title">
-        <header class="panel-head">
-          <p class="tag">04 Everything else</p>
-          <h2 id="editing-title">The rest of the spec sheet.</h2>
+        <header class="section-head">
+          <h2 id="editing-title">Everything else</h2>
+          <p class="cap">04 / 05<br />The spec sheet</p>
         </header>
+        <div class="intro">
+          <p class="kicker">The rest of the spec sheet.</p>
+        </div>
         <dl class="spec">
           {
             spec.map(([term, text, link]) => (
@@ -375,17 +454,22 @@ const description = "A digital audio workstation modelled on Logic Pro's workflo
             ))
           }
         </dl>
-        <div class="shots-pair">
-          <Shot id="take-folder" />
-          <Shot id="piano-roll" />
+        <div class="pad">
+          <div class="shots-pair">
+            <Shot id="take-folder" />
+            <Shot id="piano-roll" />
+          </div>
+          <p class="fine">Not there yet: Flex Time and Flex Pitch, a Score editor, control surface protocols such as Mackie Control, MP3 and AAC bounces, and ASIO on Windows. <a href={doc("guide", "20-known-limitations")}>The full list</a></p>
         </div>
-        <p class="fine">Not there yet: Flex Time and Flex Pitch, a Score editor, control surface protocols such as Mackie Control, MP3 and AAC bounces, and ASIO on Windows. <a href={doc("guide", "20-known-limitations")}>The full list</a></p>
       </section>
 
       <section class="panel" id="download" aria-labelledby="download-title" data-releases={`https://api.github.com/repos/${REPO_URL.replace("https://github.com/", "")}/releases?per_page=30`}>
-        <header class="panel-head">
-          <p class="tag">05 Download</p>
-          <h2 id="download-title">Get the current alpha.</h2>
+        <header class="section-head">
+          <h2 id="download-title">Download</h2>
+          <p class="cap">05 / 05<br />Linux, Windows, macOS</p>
+        </header>
+        <div class="intro">
+          <p class="kicker">Get the current alpha.</p>
           <p>
             Latest: <a class="mono" data-latest href={releases} rel="noopener">v{meta.version}</a>, <span data-kind>a prerelease</span>. Builds aren't signed yet, so your system will warn about them. Each button gets the newest release's file, or opens the <a href={releases} rel="noopener">releases page</a> if GitHub can't be asked.
           </p>
@@ -394,7 +478,7 @@ const description = "A digital audio workstation modelled on Logic Pro's workflo
             <button type="button" role="radio" aria-checked="false" data-channel="unstable">Unstable</button>
             <p class="fine" data-channel-note></p>
           </div>
-        </header>
+        </div>
         <div class="dl">
           {
             downloads.map((d) => (
@@ -409,6 +493,7 @@ const description = "A digital audio workstation modelled on Logic Pro's workflo
                       <a href={releases} data-asset={pattern} rel="noopener">
                         <b>{format}</b>
                         <span>{arch}</span>
+                        <Arrow dir="down" />
                       </a>
                     </li>
                   ))}
@@ -428,16 +513,16 @@ nix run .</code></pre>
 
       <section class="doors" id="docs" aria-label="Documentation">
         <a class="door" href={`${base}/guide/`}>
-          <p class="tag">If you make music</p>
+          <p class="cap">If you make music</p>
           <h2>User Guide</h2>
           <p>Recording, editing, mixing and exporting, every setting and key command, and what to do when it goes wrong.</p>
-          <span class="go" aria-hidden="true">Open the guide <i>→</i></span>
+          <span class="go" aria-hidden="true">Open the guide <Arrow /></span>
         </a>
         <a class="door" href={`${base}/architecture/`}>
-          <p class="tag">If you read code</p>
+          <p class="cap">If you read code</p>
           <h2>Contributors</h2>
           <p>Threads, real-time rules, the project model, the engine graph, the VST3 host and a map of every source file. How to build, test and debug, and recipes for common changes.</p>
-          <span class="go" aria-hidden="true">Open the docs <i>→</i></span>
+          <span class="go" aria-hidden="true">Open the docs <Arrow /></span>
         </a>
         <ul class="quick" aria-label="Popular pages">
           <li><a href={doc("guide", "1-getting-started")}>Getting started</a></li>

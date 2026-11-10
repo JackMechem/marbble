@@ -12,12 +12,14 @@ import Default from "@astrojs/starlight/components/Head.astro";
     const { default: mermaid } = await import("mermaid");
     const draw = async () => {
       const dark = document.documentElement.dataset.theme !== "light";
+      // The site's paper and ink (styles/tokens.css).
+      const font = "Instrument Sans Variable, sans-serif";
       mermaid.initialize({
         startOnLoad: false,
         theme: "base",
         themeVariables: dark
-          ? { darkMode: true, background: "#1c1c1e", primaryColor: "#2c2c2f", primaryTextColor: "#e2e2e5", primaryBorderColor: "#5a5a5e", lineColor: "#9b9ba0", secondaryColor: "#333336", tertiaryColor: "#262628", fontFamily: "Archivo Variable, sans-serif" }
-          : { background: "#ffffff", primaryColor: "#f3f3f4", primaryTextColor: "#1c1c1e", primaryBorderColor: "#85858a", lineColor: "#54545a", secondaryColor: "#e8e8ea", tertiaryColor: "#f8f8f9", fontFamily: "Archivo Variable, sans-serif" },
+          ? { darkMode: true, background: "#100f0d", primaryColor: "#1a1916", primaryTextColor: "#ebe3d2", primaryBorderColor: "#9c9586", lineColor: "#9c9586", secondaryColor: "#24221e", tertiaryColor: "#161513", edgeLabelBackground: "#100f0d", fontFamily: font }
+          : { background: "#ebe3d2", primaryColor: "#f3eee3", primaryTextColor: "#100f0d", primaryBorderColor: "#5f5a50", lineColor: "#5f5a50", secondaryColor: "#e2d9c5", tertiaryColor: "#f3eee3", edgeLabelBackground: "#ebe3d2", fontFamily: font },
       });
       blocks.forEach((b, i) => {
         b.removeAttribute("data-processed");

@@ -1,0 +1,27 @@
+---
+// The page title under a line of small capitals saying where the page is: its document and the
+// sidebar group it sits in ("User Guide / Arrange").
+import Default from "@astrojs/starlight/components/PageTitle.astro";
+import { DOCS } from "../../docs.config.mjs";
+
+const { id, sidebar, entry } = Astro.locals.starlightRoute;
+const doc = DOCS.find((d) => d.area === id.split("/")[0]);
+type SidebarEntry = (typeof sidebar)[number];
+
+/** The labels of the groups that lead to the current page, outermost first. */
+const trail = (entries: SidebarEntry[]): string[] | undefined => {
+  for (const e of entries) {
+    if (e.type === "link" && e.isCurrent) return [];
+    if (e.type === "group") {
+      const inner = trail(e.entries);
+      if (inner) return [e.label, ...inner];
+    }
+  }
+};
+const parts = [doc?.title, ...(trail(sidebar) ?? [])].filter(
+  (p, i, all): p is string => !!p && all.indexOf(p) === i && p !== entry.data.title,
+);
+---
+
+{parts.length > 0 && <p class="mb-kicker">{parts.join(" / ")}</p>}
+<Default />

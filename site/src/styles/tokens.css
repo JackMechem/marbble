@@ -1,0 +1,46 @@
+/* The site's two colours and its type, shared by the landing page and the docs. They follow the
+   owner's site, jackmechem.dev (src/styles/base.css there): paper and ink that swap with the theme,
+   Instrument Sans throughout, condensed for titles. The yellow of Marbble's icon is the one accent,
+   kept to small marks: an underline, the current page's edge, a focus ring, the Alpha tag.
+
+   Yellow can't be seen on paper, so the light theme's accent is a dark ochre (3.5:1 on paper, for
+   marks, never text), and the bright yellow appears in it only beside ink. */
+
+:root {
+  --paper: #ebe3d2;
+  --ink: #100f0d;
+  --dim: #5f5a50; /* secondary text: 5.4:1 on paper */
+  --yellow: #f2c230; /* the icon's yellow, for fills and marks that sit on ink */
+  --accent: #9a7000; /* marks on paper: underlines, the current item's edge */
+  --focus: var(--ink);
+  --rule: var(--ink); /* the ruled lines between blocks */
+  --rule-soft: color-mix(in srgb, var(--ink) 24%, transparent); /* lines inside a block */
+  --tint: color-mix(in srgb, var(--ink) 6%, transparent); /* a faint panel */
+
+  --text: "Instrument Sans Variable", "Helvetica Neue", system-ui, sans-serif;
+  --display: "Instrument Sans Variable", "Arial Narrow", sans-serif; /* with font-stretch below */
+  --display-stretch: 75%;
+  --mono: "JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --paper: #100f0d;
+  --ink: #ebe3d2;
+  --dim: #9c9586; /* 6.4:1 on paper */
+  --accent: #f2c230;
+  --focus: var(--yellow);
+  color-scheme: dark;
+}
+
+/* Before a script has picked the theme (or without one), follow the system. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --paper: #100f0d;
+    --ink: #ebe3d2;
+    --dim: #9c9586;
+    --accent: #f2c230;
+    --focus: var(--yellow);
+    color-scheme: dark;
+  }
+}
