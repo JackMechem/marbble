@@ -1,6 +1,6 @@
-//! What a worker thread asks of the system: its stack touched before the first block, real-time
-//! priority as cpal gets it for the callback (and losing it again when stuck), and the CPUs it
-//! keeps to.
+//! What a worker thread asks of the system: its stack touched before the first block, and real-time
+//! priority as cpal gets it for the callback (and losing it again when stuck). The CPUs it keeps
+//! to are `audio_io::threads::keep_to`'s.
 
 use std::sync::atomic::Ordering;
 
@@ -71,24 +71,4 @@ pub(super) fn demote(tid: i32) {
     }
     #[cfg(not(target_os = "linux"))]
     let _ = tid;
-}
-
-/// Real-time threads aren't placed by a core's speed: left alone they land on efficiency cores too,
-/// where a heavy plug-in takes about twice as long.
-pub(super) fn keep_to(cpus: &[usize]) {
-    #[cfg(target_os = "linux")]
-    if !cpus.is_empty() {
-        // SAFETY: a plain value struct, and a call about this thread only.
-        unsafe {
-            let mut set: libc::cpu_set_t = std::mem::zeroed();
-            for &c in cpus {
-                libc::CPU_SET(c, &mut set);
-            }
-            if libc::sched_setaffinity(0, std::mem::size_of::<libc::cpu_set_t>(), &set) != 0 {
-                log::warn!("a processing thread can't keep to the fast cores: {}", std::io::Error::last_os_error());
-            }
-        }
-    }
-    #[cfg(not(target_os = "linux"))]
-    let _ = cpus;
 }

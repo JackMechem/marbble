@@ -3950,6 +3950,10 @@ its package rather than a copied binary.
 
 ## 20. Known limitations
 
+- **TONE3000:** the first time one of its windows opens in a session, every instance of it does
+  extra work for about a second, and each instance has a heavier buffer every 8192 samples. A
+  project with many instances at a small buffer size can drop out then; a larger buffer or more
+  Processing Threads gives it room.
 - **LSP's Multi-Sampler:** now and then one of its samples doesn't load, and that instrument stays
   silent. Load the plug-in again, or close and reopen the project.
 - **Platforms:** plug-in editor windows open on Linux and macOS, not yet on Windows, where

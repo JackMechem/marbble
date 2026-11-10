@@ -119,16 +119,24 @@ fn build_output<T>(
     mut in_rx: Option<rtrb::Consumer<f32>>,
     in_ch: usize,
     status: Arc<EngineStatus>,
+    fast_cpus: Vec<usize>,
 ) -> Result<cpal::Stream>
 where
     T: SizedSample + FromSample<f32>,
 {
     let out_ch = cfg.channels as usize;
+    let mut placed = false;
     let mut out_buf = vec![0.0f32; 8192 * out_ch];
     let mut in_buf = vec![0.0f32; 8192 * in_ch.max(1)];
     let stream = d.build_output_stream::<T, _, _>(
         cfg,
         move |data: &mut [T], info: &cpal::OutputCallbackInfo| {
+            // The callback's thread is the driver's (cpal's, PipeWire's or JACK's), so it's placed
+            // from inside. Refused, it plays wherever the system puts it, as it did before.
+            if !placed {
+                placed = true;
+                let _ = threads::keep_to(&fast_cpus);
+            }
             let ts = info.timestamp();
             let lat = ts.playback.duration_since(ts.callback).as_micros() as u64;
             status.output_latency_us.store(lat, Ordering::Relaxed);
@@ -328,7 +336,8 @@ pub fn start(engine: Arc<Mutex<Engine>>, cfg: &AudioConfig) -> (Option<AudioIo>,
                     Some((s, rx, ch)) => (Some(s), Some(rx), ch),
                     None => (None, None, 0),
                 };
-                let out = by_format!(out_fmt, build_output, &out_dev, out_cfg, engine.clone(), in_rx, in_ch, status_arc.clone())?;
+                let fast = threads::Topology::detect().fast;
+                let out = by_format!(out_fmt, build_output, &out_dev, out_cfg, engine.clone(), in_rx, in_ch, status_arc.clone(), fast)?;
                 if let Some(s) = &in_stream {
                     s.play()?;
                 }

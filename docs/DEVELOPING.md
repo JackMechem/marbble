@@ -155,7 +155,7 @@ device. Register a new check in the script's `CHECKS` list.
 - **Tools:** `test_tone`, `demo_project`, `showcase_project` (the website's screenshots), `hosts`
   (audio devices), `input_level`, `smoke` (records from the real default input).
 - `crates/vst3-host/examples/`: `probe` scans and runs installed plug-ins; `editor` opens one
-  plug-in's editor. `scripts/editor-scale-check.sh` checks on a private Xvfb display that editors
+  plug-in's editor; `editor_load` measures what opening one costs the thread playing it. `scripts/editor-scale-check.sh` checks on a private Xvfb display that editors
   double at `GDK_SCALE=2`.
 
 A new check follows `stack_check.rs`: a `Session` on `alsa:null`, its folder set to the scratch
