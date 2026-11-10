@@ -14,6 +14,9 @@ import { FxControl, FxMeter, FxSideChain, isReductionMeter } from "./panelContro
 import { InstrumentPanel } from "../instruments/Instrument";
 import { PresetButton, type Preset } from "./Presets";
 import { FxLearnContext } from "../../controllers/learn";
+import { CompareButton } from "./settings/CompareButton";
+import { settingsMenuItems } from "./settings/settingsMenuModel";
+import { copySettings, pasteSettings, rememberSaved } from "./settings/pluginSettings";
 
 /** Values set from this panel within this long win over the tick's (which lag a little). */
 const LOCAL_MS = 500;
@@ -54,7 +57,8 @@ export function PanelLead({ panelKey }: { panelKey: PanelKey }) {
   return ref ? <FxPower uid={ref.uid} /> : null;
 }
 
-/** The header controls after the name (PanelHeader.tsx): presets, and the side chain for effects with one. */
+/** The header controls after the name (PanelHeader.tsx): presets, Compare, and the side chain for
+ *  effects with one. */
 export function PanelTools({ panelKey }: { panelKey: PanelKey }) {
   const ref = parseKey(panelKey);
   return ref ? <FxTools uid={ref.uid} /> : null;
@@ -82,9 +86,11 @@ function FxPower({ uid }: { uid: Id }) {
   );
 }
 
-/** The preset pop-up and, for effects with a side-chain, the Side Chain pop-up. */
+/** The preset pop-up (with Copy and Paste Settings), Compare and, for effects with a side-chain,
+ *  the Side Chain pop-up. */
 function FxTools({ uid }: { uid: Id }) {
   const fx = useFx(uid);
+  const settingsClip = useStore((s) => s.settingsClip);
   if (!fx) return null;
   const { at, info } = fx;
   const norm = (vals: Record<number, number>) => JSON.stringify(info.params.map((p) => vals[p.id]));
@@ -98,7 +104,10 @@ function FxTools({ uid }: { uid: Id }) {
         current={norm(valuesOf(info.params, at.plugin.params))}
         normalize={(p: Preset) => norm(valuesOf(info.params, p.values))}
         defaultName={info.id === CHANNEL_EQ ? "Flat" : undefined}
+        extra={settingsMenuItems(info.id, settingsClip, () => copySettings(uid), () => pasteSettings(uid))}
+        onStored={() => rememberSaved(uid)}
       />
+      <CompareButton uid={uid} plugin={at.plugin} info={info} />
       {info.sidechain && <FxSideChain uid={uid} />}
     </>
   );

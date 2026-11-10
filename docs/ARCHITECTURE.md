@@ -175,6 +175,7 @@ editors/            the bottom section's editors, and the MIDI edits they share
 mixer/              the Mixer and the channel strip: slots, sends, VCAs, meters, routing, widths
 plugins/            plug-ins on the UI side: built-in registry, hosting, value formats, slot menus
   panels/             plug-in panels: dock, floating windows, header, presets, shared controls
+    settings/           Compare, and Copy and Paste Settings, in the header
   effects/            each built-in effect's panel (dynamics/ and eq/ in their own folders)
   instruments/        built-in instrument panels (sampler/ in its own folder)
 controllers/        MIDI controllers: assignments, MIDI Learn, control surfaces
@@ -686,7 +687,9 @@ Bypass, Low Latency Mode, containment, reordering, copying and Freeze treat all 
 
 The plug-in, channel strip and region clipboards live in the frontend's store, so they survive
 opening another project. `copy_plugin` captures a slot with its VST3 state; pasting makes new
-instances. Reordering inserts moves the running instances in the engine without reloading them
+instances. A built-in panel's Copy and Paste Settings and its Compare move settings as the same
+copies but keep the instance (`session/plugins/settings.rs`); Compare's memory of the saved
+settings is in the store too (`src/plugins/panels/settings/`). Reordering inserts moves the running instances in the engine without reloading them
 (`session/plugins/insert_order.rs`). A channel strip setting (`library/strip_settings.rs`) is a
 strip's instrument and inserts; pasting one is one undo step. Marbble Sampler's files travel with
 copies, strip settings and templates.

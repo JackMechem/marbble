@@ -11,6 +11,7 @@ import type { StripSetting } from "../mixer/stripSettings";
 import type { FxInfo, InstInfo } from "../plugins/builtinEffects";
 import type { DropTarget } from "../project/fileDrop";
 import type { DockPanels } from "../plugins/panels/fxDockModel";
+import type { CompareRecord } from "../plugins/panels/settings/compareModel";
 import type { WaveStyle } from "../tracks/regions/waveform";
 import { DEFAULT_TOOLS, type Tools } from "../tracks/tools/tools";
 import type { Marquee } from "../tracks/tools/marquee";
@@ -132,6 +133,11 @@ export interface State {
   /** The Mixer's strip size and the strips sized by hand (mixerLayout.ts), remembered per
    *  project like track heights. */
   mixerView: MixerView;
+  /** The settings clipboard of plug-in panels' Copy and Paste Settings, and what each panel's
+   *  Compare remembers, by instance id (plugins/panels/settings/). Shared by every window and
+   *  outside the project, like the clipboards above. */
+  settingsClip: PluginSlot | null;
+  pluginCompare: Record<Id, CompareRecord>;
 }
 
 export interface MidiSelection {
@@ -194,6 +200,8 @@ let state: State = {
   stripClip: null,
   pluginClip: null,
   mixerView: DEFAULT_MIXER_VIEW,
+  settingsClip: null,
+  pluginCompare: {},
 };
 
 const listeners = new Set<() => void>();

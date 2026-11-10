@@ -266,3 +266,12 @@ pub fn set_builtin_params(state: State<AppState>, track: Id, slot: i64, values: 
     let key = uid.map(|uid| format!("fxparams:{uid}:{ids:?}"));
     try_edit(&state, "Plug-in Parameter", key, false, set_all)
 }
+
+/// Gives a built-in plug-in the settings of a copy of the same plug-in (`copy_plugin`), as one
+/// undo step: the panel's Paste Settings, or with `compare` its Compare button swapping between
+/// the saved and the edited settings.
+#[tauri::command]
+pub fn paste_plugin_settings(state: State<AppState>, track: Id, slot: i64, plugin: daw_engine::model::PluginSlot, compare: bool) -> R<Snapshot> {
+    let label = if compare { "Compare" } else { "Paste Settings" };
+    try_edit(&state, label, None, false, |s| s.paste_plugin_settings(track, slot_index(slot), &plugin))
+}
