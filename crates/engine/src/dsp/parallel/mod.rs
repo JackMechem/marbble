@@ -1,6 +1,6 @@
 //! Strips playing at the same time: what makes `Engine::process_block`'s strip loop safe to run on
-//! several threads, with output bit-identical to the serial loop. See "Multi-core processing" in
-//! docs/ARCHITECTURE.md for the design and the list of what a block touches.
+//! several threads, with output bit-identical to the serial loop. "Multi-core processing" in
+//! docs/ARCHITECTURE.md has the design in brief; what a block touches is listed at the end here.
 //!
 //! The serial loop lets a strip write straight into the strips after it (their `sum_l`/`sum_r`),
 //! and into the Stereo Out bus. Floats summed in another order give other bits, so here nothing
@@ -17,6 +17,35 @@
 //! A plug-in that stops responding on a worker costs its strip, not the engine: the worker is left
 //! in it (`Pool::abandon`), the strip gives way to a stand-in, and that and everything it feeds sit
 //! out from then on (`Parallel::leave_out`), while the rest plays on.
+//!
+//! **What a block touches, and who may:**
+//! - Commands, `Garbage`, the command ring, `garbage`: the calling thread only, before the strips;
+//!   the graph and the workers change only there, between blocks.
+//! - `live_midi`, `live`, `inputs`: filled before the strips, read-only for them.
+//! - `midi_rec` (recorded MIDI): moved out before the strips, serial loop included; it comes from
+//!   one track anyway.
+//! - The analyzer ring: on the pool the watched strip fills `Outlets::analysis` and the calling
+//!   thread pushes it after the strips. Stereo Out's tap is on the calling thread.
+//! - `bus_l`, `bus_r`: summed by the calling thread after the strips, in order. `sum_l`, `sum_r`:
+//!   the serial loop only. `tap_*`, `gain_*`: per-thread `Scratch`.
+//! - A strip's own `TrackDsp`, its plug-ins, regions and recording ring: its task only, so one thread
+//!   at a time, handed over by the pool's Acquire/Release. Which thread can change from block to
+//!   block, as VST3 allows.
+//! - A feeder's `l`, `r`, `outs`, `key_*`, an instrument's output buses and `instrument_ran`: read
+//!   by its receivers only once its task is done (an edge), by any number at once.
+//! - A folder's parameters and lanes: read before the strips start (`fold_now`).
+//! - Parameters, tempo, `Isolate`, chase, the MIDI target and the transport: `BlockCtx`, copied or
+//!   shared immutably. `TransportInfo` for plug-ins is a copy per strip, at its own input time.
+//! - `Gate`, `OutGate` (VST3 bus changes): atomics; `Cmd::VstGate` applies between blocks.
+//! - Meters, `FxShared`, the `EngineStatus` counters: atomics. `bad_audio_uid` is a plain store,
+//!   so with two bad plug-ins in one block either may be named. Input meters and the load figures:
+//!   the calling thread only.
+//! - Global state inside third-party plug-ins: their concern, as in any host that plays instances
+//!   in parallel. Nothing in `fx/`, `instrument/`, `synth_dsp/` or the VST3 processing path keeps
+//!   mutable globals; an instrument's randomness comes from its slot's seed.
+//!
+//! The `unsafe` here and in `pool/` has its argument beside it. The parallel tests,
+//! `parallel_check` and `soak_check` run clean under ThreadSanitizer (see docs/DEVELOPING.md).
 
 use std::cell::UnsafeCell;
 use std::time::Duration;

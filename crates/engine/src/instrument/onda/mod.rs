@@ -18,6 +18,18 @@
 //! **Tempo-synced LFOs** read the song position at the start of a block (`crate::synth_dsp::lfo`'s
 //! way), and advance sample by sample between, so their values may differ across block sizes by
 //! rounding (measured under 1e-5 in the output), not bit for bit. All else is bit-identical.
+//!
+//! **Tables:** Basic Shapes, Harmonic Rise, Vowels, Pulse Sweep, Sync Sweep, FM Sweep, Stepped
+//! Digital, Drawbars, Wavefolder and Comb Sweep, 32 frames each with 10 levels halving the harmonics
+//! from 512, made by FFT the first time an instance is made (12 MB, shared read-only) and read by a
+//! Catmull-Rom cubic. The reaches, the unison spread and the tables' contents are judgement, not
+//! modelling.
+//!
+//! **Measured:** tuning within 0.01 cents; the worst aliasing across saw, square, narrow pulse,
+//! sync, FM, stepped, folded and comb frames at notes 84 to 108 is -68 dB (sync at note 84); the
+//! largest step at a note-off 0.98 and at a steal 1.17 times the steady note's. 8 voices of two
+//! oscillators are 5.6 % of a core, 16 voices with 7 copies each 30 % (`instrument_bench`,
+//! i7-13700KF).
 
 use vst3_host::MidiEvent;
 

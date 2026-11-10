@@ -254,7 +254,7 @@ const description = "A digital audio workstation modelled on Logic Pro's workflo
             ))
           }
         </ol>
-        <p class="fine">The traces are textbook waveforms of each kind of engine, drawn for this page, not recordings of the instruments. Five of the six follow a specific instrument's documented behaviour: <a href={doc("guide", "the-other-synth-models")}>the Guide says which</a>, and how far that goes. None has been compared with the original, and every constant marked as a guess in the <a href={doc("arch", "built-in-instruments")}>architecture notes</a> is still to be tuned by ear.</p>
+        <p class="fine">The traces are textbook waveforms of each kind of engine, drawn for this page, not recordings of the instruments. Five of the six follow a specific instrument's documented behaviour: <a href={doc("guide", "the-other-synth-models")}>the Guide says which</a>, and how far that goes. None has been compared with the original, and every constant each model's source marks as a guess (<a href={doc("arch", "built-in-effects-and-instruments")}>where to look</a>) is still to be tuned by ear.</p>
         <Shot id="instrument-panel" />
         <div class="shot-grid">
           {["sei", "cinque", "sedici", "onda"].map((id) => <Shot id={`synth-${id}`} />)}
@@ -422,7 +422,7 @@ const description = "A digital audio workstation modelled on Logic Pro's workflo
           <h3 class="sub">Or build it</h3>
           <pre tabindex="0"><code>git clone {REPO_URL} && cd marbble
 nix run .</code></pre>
-          <p class="fine">Nix flakes do it in one go. <a href={doc("dev", "build-and-run")}>Build instructions</a> cover other Linux distributions, Windows and macOS.</p>
+          <p class="fine">Nix flakes do it in one go. <a href={doc("dev", "set-up")}>Build instructions</a> cover other Linux distributions, Windows and macOS.</p>
         </div>
       </section>
 
@@ -443,8 +443,8 @@ nix run .</code></pre>
           <li><a href={doc("guide", "1-getting-started")}>Getting started</a></li>
           <li><a href={doc("guide", "18-key-command-reference")}>Key commands</a></li>
           <li><a href={doc("guide", "19-troubleshooting")}>Troubleshooting</a></li>
-          <li><a href={doc("arch", "3-real-time-rules")}>Real-time rules</a></li>
-          <li><a href={doc("dev", "recipes")}>Recipes</a></li>
+          <li><a href={doc("arch", "4-real-time-rules")}>Real-time rules</a></li>
+          <li><a href={doc("dev", "common-changes")}>Common changes</a></li>
           <li><a href={`${base}${meta.page}`}>What's new in {meta.version}</a></li>
         </ul>
       </section>

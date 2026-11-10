@@ -34,7 +34,7 @@ do the same work.
 ## Building and testing
 
 [docs/DEVELOPING.md](docs/DEVELOPING.md) covers building on each platform, the tests and
-headless checks, debugging, the code conventions, and recipes for common changes.
+headless checks, debugging, the code conventions, and the steps for common changes.
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) explains how the code fits together. Read its
 real-time rules before touching the engine.
 

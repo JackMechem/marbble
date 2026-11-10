@@ -177,8 +177,8 @@ for Windows and macOS, tests and packaging.
 |---|---|
 | [Website](https://marbble.dev/) | The three documents below and the changelog as a searchable site, built from them by [site/](site/) (`cd site && npm ci && npm run build`). |
 | [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Using Marbble: recording, instruments, editing, mixing, exporting, every setting and key command, troubleshooting. |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the code works: threads, real-time rules, the project model, the engine graph, undo, persistence, the VST3 host, the frontend, built-in effects and instruments, and a map of every source file. |
-| [docs/DEVELOPING.md](docs/DEVELOPING.md) | Building, testing, debugging, conventions, and recipes for common changes. |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the code is organised and works: the source tree, threads and real-time rules, the life of an edit and of a block of audio, the project model and its files, plug-ins, MIDI, and the frontend. |
+| [docs/DEVELOPING.md](docs/DEVELOPING.md) | Setting up, building, testing, debugging, the code conventions, common changes, CI and releases. |
 | [docs/logic-reference.md](docs/logic-reference.md) | The Logic Pro research behind the layout and behaviour. |
 | [LOGIC_FEATURES.md](LOGIC_FEATURES.md) | The feature scope: every Logic Pro feature by stage, with Marbble's status. |
 | [TODO.md](TODO.md) | The roadmap in stages; what's open is in the [issues](https://github.com/JackMechem/marbble/issues). |

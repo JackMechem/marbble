@@ -6,7 +6,7 @@
 //! it ticks at, which makes every event alike: a free-running edge, a pulse-width edge moved by
 //! PWM, and a hard-sync reset the oscillator couldn't have seen coming. Run a voice at twice the
 //! output rate and the rest of the aliasing falls above the audio band too: see the measured
-//! figures in the tests and in docs/ARCHITECTURE.md.
+//! figures in the tests.
 //!
 //! Phase is f64 so pitch stays exact in the bottom octaves (a cent is 6e-4 of the increment, and
 //! at 1 Hz an f32 phase couldn't hold that).

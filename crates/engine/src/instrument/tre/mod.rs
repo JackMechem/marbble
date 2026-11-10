@@ -1,8 +1,8 @@
 //! Marbble Tre: a three-oscillator monophonic synth, modelled on the architecture and behaviour of
 //! the Minimoog Model D (this project isn't affiliated with Moog Music, and the product name stays
 //! clear of theirs). The model's reference is what's publicly documented about the instrument and
-//! its circuit; nothing here was compared with the hardware. See docs/ARCHITECTURE.md for what is
-//! modelled from documented behaviour and what's a guess.
+//! its circuit; nothing here was compared with the hardware. What's documented and what's a guess
+//! is at the end of this comment.
 //!
 //! **Signal path, per voice, at twice the output rate below 64 kHz:** three oscillators and
 //! noise into a mixer whose sum saturates (`tanh`), so its top half overdrives the next stage; the
@@ -23,6 +23,23 @@
 //!
 //! **Determinism:** the instance's seed (the slot's id) sets each voice's drift, tolerances, noise
 //! and starting phases, `reset` puts all of them back, and nothing else varies.
+//!
+//! **Documented:** the ranges 32' to 2' and Lo and the panel's waves (osc 3 has reverse saw instead
+//! of the narrow pulse), osc 2 and 3 tunable ±7 semitones, white or pink noise, the ladder losing
+//! bass as emphasis rises, keyboard tracking of 1/3 and 2/3, low-note priority and single trigger,
+//! free-running oscillators. Contour ranges are the commonly cited 1 ms to 10 s and 4 ms to 24 s.
+//! **Guessed**, all named constants here and in `voice.rs`: the shark wave's proportions (peak at
+//! 80 %) and the pulse widths (30 % and 10 %); the Lo range (6 octaves below 8'); the modulation's
+//! reach (±12 semitones at the oscillators, ±30 at the filter) and the wheel's squared response; the
+//! contour attack's target (1.3); how hard the mixer and the feedback drive (`MIX_GAIN`,
+//! `FEEDBACK_GAIN`); the size of drift and tolerances; the 12 ms fast release; self-oscillation
+//! from Emphasis 8.
+//!
+//! **Measured** (`instrument_bench`, release build, i7-13700KF): one voice with all three
+//! oscillators, noise and resonance is 0.8 % of a core, 8 voices 5.6 %, at rest nothing. The same
+//! MIDI gives the same bits at 1, 37, 128, 512 and 1024 frames. No sample-to-sample step at a
+//! note-off, a steal or parameters stepping every block is more than 1.4 times the steady note's. A
+//! saw at note 96 with the filter open aliases at -61 dB through the saturators.
 
 use vst3_host::MidiEvent;
 

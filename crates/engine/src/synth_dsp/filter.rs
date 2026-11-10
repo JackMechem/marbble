@@ -244,7 +244,7 @@ impl ZdfFilter for OtaCascade {
 }
 
 /// Where a [`DiodeLadder`] with the first capacitor at [`DIODE_C1`] peaks, as a fraction of its
-/// `1 / RC` (worked out from the circuit's polynomial: see docs/ARCHITECTURE.md).
+/// `1 / RC` (worked out from the circuit's polynomial, in a script).
 const DIODE_W0: f32 = 1.421_304_3;
 /// The feedback gain at which that polynomial goes unstable.
 const DIODE_K_CRIT: f32 = 21.562_647;

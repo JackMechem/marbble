@@ -1,4 +1,4 @@
-/* The landing page. Its colours are the app's Studio theme (src/styles.css in the app), with the
+/* The landing page. Its colours are the app's Studio theme (src/theme/studio.ts in the app), with the
    yellow of the app's icon as the one accent. */
 
 :root {

@@ -161,7 +161,7 @@ pub struct Section {
 pub struct InstrumentInfo {
     /// The plug-in id used in slots and saved projects, for example "builtin:tre". Forever.
     pub id: &'static str,
-    /// The name in menus and the panel. No trademarks: see docs/ARCHITECTURE.md.
+    /// The name in menus and the panel. No trademarks: see docs/DEVELOPING.md.
     pub name: &'static str,
     /// The menu group: "Marbble" (house instruments), "Vintage Synths", "Samplers" and so on.
     pub group: &'static str,

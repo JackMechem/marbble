@@ -1,8 +1,8 @@
 //! Marbble Uno: a one-oscillator bass line synth, modelled on the architecture and behaviour of
 //! the Roland TB-303 (this project isn't affiliated with Roland, and the product name stays clear
 //! of theirs). Its reference is what's publicly documented about the circuit, Robin Whittle's and
-//! Tim Stinchcombe's analyses above all; nothing here was compared with the hardware. See
-//! docs/ARCHITECTURE.md.
+//! Tim Stinchcombe's analyses above all, from memory of them; nothing here was compared with the
+//! hardware.
 //!
 //! **Signal path, at twice the output rate below 64 kHz:** one oscillator (saw, or a square shaped
 //! from it) into a diode ladder, then a VCA. Two envelopes, neither with a knob of its own bar
@@ -23,6 +23,16 @@
 //! charging time the Resonance pot's other half sets (the "sweep") it lifts the cutoff. At low
 //! resonance the sweep follows the envelope; at high, it rises late and falls slowly, so accents
 //! close together stack up and climb.
+//!
+//! **Guessed:** Env Mod's reach (40 semitones) and its pull on the base cutoff (14); the accent's
+//! reach (36 semitones, +110 % on the VCA) and the sweep's lag (47 to 147 ms, from a reading of 1 µF
+//! with 47 k and 100 k); the square's droop and slew; Resonance stopping at 0.965 of
+//! self-oscillation; the feedback high-pass (150 Hz); the input drive. Accent at Velocity is 110 by
+//! default, above the panel keyboard's and a new note's 100.
+//!
+//! **Measured:** tuning within 0.01 cents; aliasing of a saw at note 84 -77 dB, a square -95, a saw
+//! with resonance -65; the largest step at a note-off 0.94, a new step 1.26 and a slide 0.79 times
+//! the steady note's; 0.74 % of a core (`instrument_bench`, i7-13700KF).
 
 use vst3_host::MidiEvent;
 

@@ -16,7 +16,9 @@
 //! writes in full, the engine, the plug-ins) stays in RAM, while thread stacks, a recording's spare
 //! capacity and heap that nothing uses cost nothing. In `memlock_check` plain `mlockall` made the
 //! process's resident size 29% bigger at once (78 to 101 MB) and 69% bigger after a render (88 to
-//! 149 MB); with `MCL_ONFAULT` it didn't grow (see "Memory locking" in docs/ARCHITECTURE.md).
+//! 149 MB); with `MCL_ONFAULT` it didn't grow. Most of what gets pinned is clips, decoded whole as
+//! f32 (11 MB a minute per mono channel at 48 kHz), which is why opening a project decodes only the
+//! clips its tracks can play.
 //! macOS and Windows have no such limit to work with, and the switch is hidden there.
 
 use serde::Serialize;

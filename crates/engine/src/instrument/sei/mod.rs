@@ -1,8 +1,8 @@
 //! Marbble Sei: a six-voice polyphonic synth, modelled on the architecture and behaviour of the
 //! Roland Juno-106 family (this project isn't affiliated with Roland, and the product name stays
 //! clear of theirs). Its reference is what's publicly documented about the instrument; nothing
-//! here was compared with the hardware. See docs/ARCHITECTURE.md for what's documented behaviour
-//! and what's a guess.
+//! here was compared with the hardware. What's documented and what's a guess is at the end of this
+//! comment.
 //!
 //! **Signal path:** per voice, at twice the output rate below 64 kHz: one DCO's saw, pulse and sub
 //! square (all from one clock, so they stay phase-locked, and with no pitch drift) and noise, into
@@ -17,6 +17,21 @@
 //!
 //! **Determinism:** the seed sets the voices' filter and envelope differences, phases, noise and
 //! the chorus's LFO phase, and `reset` puts them all back.
+//!
+//! **Documented:** the chorus (`chorus.rs`) is two bucket-brigade lines swept in opposite
+//! directions, the dry signal to both sides, modes I and II at 0.513 Hz and 0.863 Hz over 1.66 to
+//! 5.35 ms and I+II at 9.75 Hz over 3.28 to 3.82 ms: the figures widely repeated for the earlier
+//! sibling's board, from memory of those sources. **Guessed**, as named constants: the filter's
+//! chip constants; the high-pass corners (240 Hz and 720 Hz, a shelf at position 0); the knobs'
+//! reach (vibrato ±3 semitones, filter LFO ±30, envelope 7 octaves); the envelope's linear attack
+//! and exponential decay; the widest pulse (5 %); the chorus's filters (9 kHz) and saturation; the
+//! hiss (-65 dBFS peak at Chorus Noise 100 %); Voice Variation's size. **On purpose:** the hiss comes
+//! with the voices and fades 0.25 s after the last, so a silent track costs nothing; clock bleed,
+//! above the audio band, isn't modelled.
+//!
+//! **Measured:** tuning within 0.01 cents at 44.1, 48 and 96 kHz; aliasing of a saw at note 96
+//! -90 dB, a pulse -85; the largest step at a note-off 1.00 and at a steal 0.59 times the steady
+//! note's; six voices with the chorus 4.1 % of a core (`instrument_bench`, i7-13700KF).
 
 use vst3_host::MidiEvent;
 

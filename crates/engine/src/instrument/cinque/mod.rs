@@ -1,7 +1,7 @@
 //! Marbble Cinque: a five-voice polyphonic synth, modelled on the architecture and behaviour of
 //! the Sequential Prophet-5 (this project isn't affiliated with Sequential, and the product name
 //! stays clear of theirs). Its reference is what's publicly documented about the instrument; nothing
-//! here was compared with the hardware. See docs/ARCHITECTURE.md.
+//! here was compared with the hardware.
 //!
 //! **Signal path, per voice, at twice the output rate below 64 kHz:** two VCOs (A: saw and pulse,
 //! with sync to B; B: saw, triangle and pulse, with a low range and a keyboard switch) and noise
@@ -16,6 +16,16 @@
 //! switches. **Slop:** per-voice drift and tolerances, from the instance's seed.
 //!
 //! Velocity is off unless asked for: the instrument it's modelled on has none.
+//!
+//! **Guessed:** Poly Mod's reach (60 semitones at the pitch, ±0.48 of the width, 72 at the filter)
+//! and its source being the sum of B's waves that are on; the wheel's reach; the mixer's drive; the
+//! two filter chips' constants, Early (SSM-like) and Late (Curtis-like); B's Lo range (7 octaves
+//! down). The filter's tuning isn't trimmed (within 23 cents from note 36 to 84). Exponential FM
+//! from Osc B moves the mean pitch, as exponential FM does.
+//!
+//! **Measured:** tuning within 0.01 cents; aliasing of a saw or pulse at note 96 -88 dB, sync -90;
+//! the largest step at a note-off 1.00 and at a steal 0.46 times the steady note's; five voices
+//! 4.7 % of a core, Poly Mod on or off (`instrument_bench`, i7-13700KF).
 
 use vst3_host::MidiEvent;
 

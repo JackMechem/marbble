@@ -1,5 +1,16 @@
 //! Settings › Audio › Processing Threads: how many threads play tracks, and what Automatic means on
-//! this machine. See "Multi-core processing" in docs/ARCHITECTURE.md for the measurements behind it.
+//! this machine.
+//!
+//! Measured on an i7-13700KF (8 performance and 8 efficiency cores), `Engine::process` at real-time
+//! pace with real-time workers (`parallel_bench` measures the same way): wide projects (24
+//! CHOWTapeModels, 16 Dragonfly reverbs, 12 tape models in three summing stacks) ran close to the
+//! thread count faster, down to a fifth of the one-thread block time at 8 threads. Going from 6 to 8
+//! threads helped them another 10 to 25 % and a five-track project not at all, and would leave no
+//! performance core for anything else, so Automatic stops at 6. Keeping workers to the performance
+//! cores took 24 CHOWTapeModels at 128 frames from a mean of 340 µs to 270 µs, and five TONE3000s'
+//! 99th percentile from 1510 µs to about 900 µs; the scheduler places real-time threads without
+//! regard to a core's speed. A light project stays on the callback (`ENGAGE_LOAD` in
+//! `dsp/parallel/`), so it pays nothing for the pool.
 
 /// The setting's value for Automatic.
 pub const AUTOMATIC: u32 = 0;

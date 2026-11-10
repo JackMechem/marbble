@@ -87,42 +87,24 @@ export const DOCS = [
     title: "Architecture",
     overview: "Introduction",
     parts: [
-      ["Foundations", ["overview", "processes-and-threads", "real-time-rules", "how-an-edit-flows"]],
-      ["Data", ["the-project-model", "undo", "persistence", "tempo-map"]],
-      ["Engine", ["the-engine-graph-block-by-block", "the-vst3-host", "audio-io-and-latency", "built-in-effects-and-presets"]],
+      ["Foundations", ["the-parts", "the-source-tree", "threads", "real-time-rules"]],
+      ["Flow", ["the-life-of-an-edit", "the-life-of-a-block"]],
+      ["Data", ["the-project-model", "files-on-disk"]],
+      ["Engine", ["plug-ins", "audio-devices-and-recording", "midi-and-control-surfaces"]],
       ["Interface", ["the-frontend"]],
-      ["Reference", ["cross-cutting-patterns", "module-map"]],
+      ["Reference", ["invariants-and-gotchas"]],
     ],
     split: {
-      "the-project-model": [
-        ["Ids, tracks and routing", "ids"],
-        ["Regions, takes and notes", "regions"],
-        ["Automation, markers and the rest", "automation"],
+      "the-source-tree": [
+        ["The app and the frontend", "the-app-src-taurisrc"],
       ],
-      "the-engine-graph-block-by-block": [
-        [null, "plug-in-delay-compensation"],
+      "the-life-of-a-block": [
+        [null, "delay-compensation"],
         [null, "multi-core-processing"],
-        ["Offline render and Isolate", "offline-render-and-isolate"],
+        [null, "offline-renders"],
       ],
-      "the-vst3-host": [
-        ["Loading and scanning", "finding-and-loading-bundles"],
-        ["Processing and parameters", "processing"],
-        [null, "editor-windows"],
-      ],
-      "built-in-effects-and-presets": [
-        ["The effect framework", "the-effect-framework"],
-        [null, "built-in-instruments"],
-        ["Marbble Tre internals", "marbble-tre"],
-        ["Marbble Sampler internals", "marbble-sampler"],
-        ["Synth model internals", "marbble-sei"],
-        ["Clipboard and strip settings", "clipboard-and-moving-plug-ins"],
-      ],
-      "module-map": [
-        ["The engine crate", "cratesenginesrc"],
-        ["VST3 host and Tauri", "cratesvst3-hostsrc"],
-        ["Frontend", "src-frontend"],
-        ["Frontend components", "srccomponents"],
-        ["Tests and packaging", "tests-examples-and-packaging"],
+      "the-frontend": [
+        ["Keys, menus and windows", "keys-menus-and-sheets"],
       ],
     },
   },
@@ -132,13 +114,10 @@ export const DOCS = [
     file: "docs/DEVELOPING.md",
     title: "Developing",
     overview: "Introduction",
-    parts: [["", ["build-and-run", "tests", "debugging", "conventions", "recipes", "packaging", "versioning-and-releases"]]],
+    parts: [["", ["set-up", "build-and-run", "tests", "debugging", "conventions", "common-changes", "ci", "packaging-and-releases"]]],
     split: {
-      tests: [
-        ["Rust unit tests", "rust-unit-tests"],
-        ["Headless examples", "headless-examples"],
-        ["Frontend tests and what to run", "frontend-tests"],
-      ],
+      tests: [[null, "headless-checks"]],
+      conventions: [[null, "styles-and-the-design-system"]],
     },
   },
   {

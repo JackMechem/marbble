@@ -1,8 +1,8 @@
 //! Marbble Sedici: six-operator FM with sixteen voices, modelled on the architecture and behaviour
 //! of the Yamaha DX7 (this project isn't affiliated with Yamaha, and the product name stays clear
 //! of theirs). Its reference is what's publicly documented about the instrument and the published
-//! reverse engineering of its chips; nothing here was compared with the hardware. See
-//! docs/ARCHITECTURE.md.
+//! reverse engineering of its chips (Ken Shirriff's die photographs, the fits in Raph Levien's MSFA
+//! engine that Dexed grew from), from memory of them; nothing here was compared with the hardware.
 //!
 //! **The engine runs at the instrument's own rate, 49.096 kHz, whatever the session's is.** That's
 //! part of its sound: FM makes partials past that rate's Nyquist, and on this instrument they fold.
@@ -20,6 +20,17 @@
 //! **Changed from the hardware on purpose:** it clicks when a voice with key sync is stolen; this
 //! fades 2 ms first, as the instrument contract asks. A voice that has reached its fourth level at
 //! above zero drones until the transport stops (the hardware's would go on till stolen).
+//!
+//! **Approximated** rather than taken from the tables: velocity (a power-law fit to the published
+//! curve's shape), the pitch envelope's level and rate, the LFO's delay. **Guessed:** vibrato's
+//! reach at full (±12 semitones), amp mod's (about 48 dB), portamento's scale, the converter's
+//! clipping point (1.5 times a full carrier). An operator's level or envelope moved under a held
+//! note is heard on that note, so an automation lane works.
+//!
+//! **Measured:** tuning within 0.01 cents; a sine at note 84 aliases at -95 dB clean and -72 with
+//! the grit. FM is meant to fold: a level 99 modulator into a carrier at note 96 gives -6 dB, at
+//! every session rate alike. The largest step at a note-off 1.00 and at a steal 0.90 times the
+//! steady note's; 16 voices 1.4 to 2.3 % of a core (`instrument_bench`, i7-13700KF).
 
 use std::sync::OnceLock;
 

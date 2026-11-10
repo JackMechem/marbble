@@ -128,7 +128,7 @@ impl Controls {
 }
 
 /// The connected MIDI inputs. Each port's callback pushes messages into the ring the engine reads
-/// (see `docs/ARCHITECTURE.md`, section 2).
+/// (see "Threads" in `docs/ARCHITECTURE.md`).
 pub struct MidiIo {
     sink: Arc<Mutex<rtrb::Producer<[u8; 3]>>>,
     connections: Vec<(String, MidiInputConnection<()>)>,
