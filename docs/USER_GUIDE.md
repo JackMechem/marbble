@@ -2854,9 +2854,11 @@ else its first Audio FX plug-in.
   the next back to the bottom of the range; in Momentary the release goes back to the bottom of
   the range; in Trigger (the default) the press sets it and the release does nothing.
 - Messages from an assigned controller are taken: they don't also play the selected instrument
-  or get recorded, as in Logic. That includes an assigned note's note off, both halves of a
-  14-bit controller, and on a channel with an NRPN assigned, every NRPN and RPN message
-  (CC 6, 38, 96–101).
+  or get recorded, as in Logic. That includes an assigned note's note off and its polyphonic
+  aftertouch, both halves of a 14-bit controller, and on a channel with an NRPN assigned, every
+  NRPN and RPN message (CC 6, 38, 96–101).
+- An NRPN's **data increment** and **decrement** (CC 96 and 97) step its parameter up or down by
+  1/127 of the range per message, as an encoder does.
 - A VCA fader moves as when you drag it (one undo step for a run of moves, not automated); a VCA
   mute and the switches act as their buttons do. A plug-in slot's bypass is an undo step, as a
   click on its button is. They still show in
@@ -2883,8 +2885,8 @@ fires once per press; in **Momentary** it fires again on release, so Show/Hide M
 Mixer while you hold the pad. The command runs in the main window as its key would there, and is
 held back where its key would be: while a dialog or a sheet that holds keys back is open (only the
 transport and Control Surfaces commands get through Controller Assignments), and while you type in
-a text field of the main window, where Undo, Redo and Select All edit the field and the menu bar's
-other items are dropped. Commands that act on a detached window (the Mixer, the Editors) work as
+a text field, in the main window or a detached panel's window, where Undo, Redo and Select All
+edit the field and the menu bar's other items with a key are dropped. Commands that act on a detached window (the Mixer, the Editors) work as
 their keys do. A command has no state, so its pad gets no feedback.
 
 ### The Controller Assignments window
@@ -2920,7 +2922,8 @@ channel and input port) and the parameter. For each one:
   the velocity (a fixed value; set Min % for where Toggle and Momentary go back to).
 - **Feedback**: send the parameter's value back to the controller (on by default). Greyed when
   the controller's input has no output paired with it in Settings › MIDI; the setting is kept for
-  when it has.
+  when it has. Off and disabled for a program change, a key command and a relative encoder, which
+  have nothing to send back (its tooltip says why).
 - **Delete** removes it; that controller plays the instrument again.
 
 An assignment whose track or plug-in isn't in the open project is greyed and does nothing.
@@ -3881,9 +3884,8 @@ its package rather than a copied binary.
   folder's own timing, not each subtrack's delay compensation. Stereo Out's lanes play at the
   output's delay; with latency on Stereo Out's own plug-ins, their parameters change slightly
   early.
-- **Controller assignments:** control changes 0–119 and pitch bend only (no notes, NRPN or
-  aftertouch), and no control surface protocols such as Mackie Control. Assignments are
-  global and refer to tracks and plug-ins by number, not per project.
+- **Controller assignments:** no control surface protocols such as Mackie Control or HUI yet.
+  Assignments are global and refer to tracks and plug-ins by number, not per project.
 - **Piano Roll:** no Score. Controller curves are drawn as ramps of points; a curve between
   two points isn't kept as a shape that can be bent later.
 - **Event List:** lists MIDI regions only (not the regions of the project, or audio), on one

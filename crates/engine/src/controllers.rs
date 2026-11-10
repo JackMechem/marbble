@@ -435,6 +435,9 @@ impl Assignment {
 
     /// The steps a relative encoder turned, for an assignment that reads one; None otherwise.
     pub fn relative_steps(&self, msg: &CtlMsg) -> Option<i32> {
+        if msg.step != 0 {
+            return Some(msg.step as i32);
+        }
         match msg.kind {
             CtlKind::Cc { .. } => self.encoding.steps((msg.value * 127.0).round() as u8),
             _ => None,
@@ -471,6 +474,9 @@ pub struct CtlMsg {
     pub kind: CtlKind,
     pub value: f32,
     pub pressed: bool,
+    /// An NRPN's data increment (1, CC 96) or decrement (-1, CC 97): its parameter steps
+    /// rather than goes to `value`. 0 for every other message.
+    pub step: i8,
 }
 
 /// Reads a control change, pitch bend, note or program change message; anything else is None.
@@ -479,17 +485,17 @@ pub fn parse(data: &[u8]) -> Option<CtlMsg> {
     let channel = status & 0x0F;
     match (status & 0xF0, rest) {
         (0x90, [number, velocity, ..]) if *velocity & 0x7F > 0 => {
-            Some(CtlMsg { channel, kind: CtlKind::Note { number: number & 0x7F }, value: (velocity & 0x7F) as f32 / 127.0, pressed: true })
+            Some(CtlMsg { channel, kind: CtlKind::Note { number: number & 0x7F }, value: (velocity & 0x7F) as f32 / 127.0, pressed: true, step: 0 })
         }
-        (0x80 | 0x90, [number, ..]) => Some(CtlMsg { channel, kind: CtlKind::Note { number: number & 0x7F }, value: 0.0, pressed: false }),
-        (0xC0, [number, ..]) => Some(CtlMsg { channel, kind: CtlKind::Program { number: number & 0x7F }, value: 1.0, pressed: true }),
+        (0x80 | 0x90, [number, ..]) => Some(CtlMsg { channel, kind: CtlKind::Note { number: number & 0x7F }, value: 0.0, pressed: false, step: 0 }),
+        (0xC0, [number, ..]) => Some(CtlMsg { channel, kind: CtlKind::Program { number: number & 0x7F }, value: 1.0, pressed: true, step: 0 }),
         (0xB0, [number, value, ..]) if *number < 120 => {
             let v = value & 0x7F;
-            Some(CtlMsg { channel, kind: CtlKind::Cc { number: *number }, value: v as f32 / 127.0, pressed: v > 63 })
+            Some(CtlMsg { channel, kind: CtlKind::Cc { number: *number }, value: v as f32 / 127.0, pressed: v > 63, step: 0 })
         }
         (0xE0, [lsb, msb, ..]) => {
             let v = ((msb & 0x7F) as u16) << 7 | (lsb & 0x7F) as u16;
-            Some(CtlMsg { channel, kind: CtlKind::PitchBend, value: v as f32 / 16383.0, pressed: v > 8192 })
+            Some(CtlMsg { channel, kind: CtlKind::PitchBend, value: v as f32 / 16383.0, pressed: v > 8192, step: 0 })
         }
         _ => None,
     }
@@ -563,8 +569,11 @@ impl HiRes {
                     let m = c.data?;
                     return with(CtlKind::Nrpn { number }, ((m as u16) << 7 | v as u16) as f32 / 16383.0);
                 }
-                // Increment and decrement aren't read.
-                (96 | 97, Some(_)) => return None,
+                // Increment and decrement step the parameter, as a relative encoder does.
+                (96 | 97, Some(number)) => {
+                    let step = if n == 96 { 1 } else { -1 };
+                    return Some(CtlMsg { kind: CtlKind::Nrpn { number }, value: 0.0, pressed: false, step, ..msg });
+                }
                 // No NRPN chosen: data entry is an ordinary controller.
                 _ => {}
             }
@@ -831,7 +840,7 @@ mod tests {
     }
 
     fn note(pressed: bool) -> CtlMsg {
-        CtlMsg { channel: 0, kind: CtlKind::Note { number: 60 }, value: if pressed { 0.5 } else { 0.0 }, pressed }
+        CtlMsg { channel: 0, kind: CtlKind::Note { number: 60 }, value: if pressed { 0.5 } else { 0.0 }, pressed, step: 0 }
     }
 
     #[test]
@@ -862,7 +871,7 @@ mod tests {
 
     #[test]
     fn program_changes_press_every_time() {
-        let pc = CtlMsg { channel: 0, kind: CtlKind::Program { number: 4 }, value: 1.0, pressed: true };
+        let pc = CtlMsg { channel: 0, kind: CtlKind::Program { number: 4 }, value: 1.0, pressed: true, step: 0 };
         let mut f = Follow::default();
         assert_eq!(f.button(ButtonMode::Toggle, &pc, false), Some(ButtonAct::Flip));
         assert_eq!(f.button(ButtonMode::Toggle, &pc, false), Some(ButtonAct::Flip));
@@ -872,7 +881,7 @@ mod tests {
     #[test]
     fn a_latching_button_presses_with_every_message() {
         // It sends 127 at one press and 0 at the next, with nothing in between.
-        let cc = |v: u8| CtlMsg { channel: 0, kind: CtlKind::Cc { number: 20 }, value: v as f32 / 127.0, pressed: v > 63 };
+        let cc = |v: u8| CtlMsg { channel: 0, kind: CtlKind::Cc { number: 20 }, value: v as f32 / 127.0, pressed: v > 63, step: 0 };
         let mut f = Follow::default();
         assert_eq!(f.button(ButtonMode::Toggle, &cc(127), true), Some(ButtonAct::Flip));
         assert_eq!(f.button(ButtonMode::Toggle, &cc(0), true), Some(ButtonAct::Flip));
@@ -1014,7 +1023,7 @@ mod tests {
             Assignment::new(c("B", 0, 7), CtlTarget::MasterVolume),
             Assignment::new(c("A", 1, 7), CtlTarget::MasterVolume),
         ];
-        let m = |ch, n| CtlMsg { channel: ch, kind: CtlKind::Cc { number: n }, value: 0.0, pressed: false };
+        let m = |ch, n| CtlMsg { channel: ch, kind: CtlKind::Cc { number: n }, value: 0.0, pressed: false, step: 0 };
         assert_eq!(find(&list, "A", &m(0, 7)), Some(0));
         assert_eq!(find(&list, "B", &m(0, 7)), Some(1));
         assert_eq!(find(&list, "A", &m(1, 7)), Some(2));
@@ -1052,7 +1061,7 @@ mod tests {
         assert_eq!((BinaryOffset.steps(65), BinaryOffset.steps(63), BinaryOffset.steps(64), BinaryOffset.steps(0)), (Some(1), Some(-1), Some(0), Some(-64)));
         let c = Controller { port: "P".into(), channel: 0, kind: CtlKind::Cc { number: 16 } };
         let mut a = Assignment::new(c, CtlTarget::MasterVolume);
-        let msg = |v: u8| CtlMsg { channel: 0, kind: CtlKind::Cc { number: 16 }, value: v as f32 / 127.0, pressed: v > 63 };
+        let msg = |v: u8| CtlMsg { channel: 0, kind: CtlKind::Cc { number: 16 }, value: v as f32 / 127.0, pressed: v > 63, step: 0 };
         assert_eq!(a.relative_steps(&msg(1)), None, "absolute");
         a.encoding = BinaryOffset;
         assert_eq!(a.relative_steps(&msg(66)), Some(2));
@@ -1092,7 +1101,7 @@ mod tests {
     }
 
     fn cc(channel: u8, number: u8, v: u8) -> CtlMsg {
-        CtlMsg { channel, kind: CtlKind::Cc { number }, value: v as f32 / 127.0, pressed: v > 63 }
+        CtlMsg { channel, kind: CtlKind::Cc { number }, value: v as f32 / 127.0, pressed: v > 63, step: 0 }
     }
 
     #[test]
@@ -1132,8 +1141,18 @@ mod tests {
         h.read("P", cc(2, 99, 127), none, true);
         h.read("P", cc(2, 98, 127), none, true);
         assert_eq!(h.read("P", cc(2, 6, 1), none, true).unwrap().kind, CtlKind::Cc { number: 6 });
+        // Data increment and decrement step the chosen NRPN, whatever their value byte.
+        h.read("P", cc(2, 99, 3), none, true);
+        h.read("P", cc(2, 98, 5), none, true);
+        let up = h.read("P", cc(2, 96, 0), none, true).unwrap();
+        let down = h.read("P", cc(2, 97, 9), none, true).unwrap();
+        assert_eq!((up.kind, up.step, down.kind, down.step), (CtlKind::Nrpn { number: 389 }, 1, CtlKind::Nrpn { number: 389 }, -1));
+        let a = Assignment::new(Controller { port: "P".into(), channel: 2, kind: CtlKind::Nrpn { number: 389 } }, CtlTarget::MasterVolume);
+        assert_eq!((a.relative_steps(&up), a.relative_steps(&down)), (Some(1), Some(-1)));
+        assert_eq!(a.relative_steps(&h.read("P", cc(2, 6, 64), none, true).unwrap()), None, "data entry sets it");
         // Without NRPNs in use, these are ordinary controllers.
         assert_eq!(h.read("P", cc(2, 99, 1), none, false).unwrap().kind, CtlKind::Cc { number: 99 });
+        assert_eq!(h.read("P", cc(2, 96, 1), none, false).unwrap().step, 0);
         // What an NRPN assignment takes off the live path.
         let n = CtlKind::Nrpn { number: 389 };
         assert!(n.takes(CtlKind::Cc { number: 99 }) && n.takes(CtlKind::Cc { number: 38 }) && !n.takes(CtlKind::Cc { number: 7 }));

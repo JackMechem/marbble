@@ -67,7 +67,7 @@ flowchart LR
 | **`recorder`** | `recorder.rs` | Every 10 ms, drains the ring buffer of each armed track into its WAV file and an in-memory copy, and keeps a peak preview for the UI. | Touch the engine or the project. |
 | **`ui-tick`** | `src-tauri/src/main.rs` | Every 33 ms: locks the session, builds a `Tick` (playhead, meters, input levels, recording previews, CPU, latency, analyzer spectrum, warnings, meters of open built-in effect panels, the clip indicators' held peaks, each strip's gain reduction) and emits it as the `tick` event. | Edit anything. |
 | **MIDI refresh** | `main.rs` | Every 3 s: `Session::refresh_midi`, so input and output devices plugged in later get connected. | |
-| **MIDI input callbacks** | midir, in `midi_io.rs` (one per port) | Drop system messages, take assigned controllers (CCs, pitch bend, notes with their note offs, program changes, both CCs of a 14-bit pair, the NRPN and RPN CCs on a channel with an NRPN assigned; all of them while learning; `CtlKind::takes`) into a queue for `Session::idle` (controller assignments), apply the velocity curve, push the rest into the `live_midi` ring the engine reads, and log the message for Settings › MIDI. | |
+| **MIDI input callbacks** | midir, in `midi_io.rs` (one per port) | Drop system messages, take assigned controllers (CCs, pitch bend, notes with their note offs, program changes, both CCs of a 14-bit pair, the NRPN and RPN CCs on a channel with an NRPN assigned; all of them while learning; `CtlKind::takes`; an assigned note's polyphonic aftertouch is dropped with it) into a queue for `Session::idle` (controller assignments), apply the velocity curve, push the rest into the `live_midi` ring the engine reads, and log the message for Settings › MIDI. | |
 | **`midi-out`** | `midi_out.rs` | Sends the controller feedback `Session::idle` hands it (batches through a channel) to the output ports. | Touch the session. |
 | **Async command workers** | Tauri's async runtime (`#[tauri::command(async)]`) | Offline renders (bounce, export, Bounce in Place, Freeze), plug-in rescans, waveform and transient requests, device lists, recent projects, the input level check, folder listings. Renders hold the session lock and the engine lock for their whole length; the parts that edit tracks or plug-ins are handed back to the main thread with `run_on_main_thread`. | Touch plug-in controllers. |
 | **Autosave writer** | `main.rs::autosave` | Writes an `AutosaveJob` (already serialized on the main thread) to disk, atomically. | |
@@ -1759,8 +1759,11 @@ Audio Track Editor and meters are canvas drawings. The common pattern:
   `runMidiCommand`. That applies the key's rules: nothing while a dialog is open or a sheet holds
   the command back; a key command is held back while a text field in the focused main window is
   typed in (`typingInField`), and a menu item goes through `textFieldMenu` then `handleMenu`;
-  Step Input's commands go to it first, as keys passed on from a panel window do. A text field
-  focused in a detached panel window doesn't hold a MIDI command back.
+  Step Input's commands go to it first, as keys passed on from a panel window do. A detached
+  panel's window tells the main window when a text field there starts or stops being typed in
+  (the `typing` panel message, from its focus events; `typingPanel` in `detach.ts`): a key
+  command is then held back too, and a menu item with an accelerator is sent to that window's
+  `menu` listener, which edits the field or drops it (`midiCommandWhileTyping`).
 - `tests/commands.test.ts` reads `keymap.ts`, `App.tsx` and `menu.rs` and fails when a key
   command or menu id has no handler, or two commands share a default key.
 

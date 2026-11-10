@@ -261,6 +261,16 @@ fn main() {
     std::thread::sleep(Duration::from_millis(50));
     let after = s.tick().midi_activity;
     check(&format!("an assigned note is consumed ({seen} -> {after})"), after == seen);
+    // Its polyphonic aftertouch too; another note's still plays.
+    send(&mut s, &[0xA9, 36, 60]);
+    std::thread::sleep(Duration::from_millis(50));
+    let after = s.tick().midi_activity;
+    check(&format!("an assigned note's aftertouch is consumed ({seen} -> {after})"), after == seen);
+    s.inject_midi_from(PORT, &[0xA9, 38, 60]);
+    std::thread::sleep(Duration::from_millis(50));
+    let after = s.tick().midi_activity;
+    check(&format!("another note's aftertouch still plays ({seen} -> {after})"), after == seen + 1);
+    let seen = after;
     send(&mut s, &[0x99, 38, 90]);
     send(&mut s, &[0x89, 38, 0]);
     s.inject_midi_from(PORT, &[0x99, 38, 90]);
@@ -527,6 +537,21 @@ fn main() {
     let right = pan(&s, b);
     nrpn(&mut s, 0, 0);
     check(&format!("the NRPN moves the pan ({right} {})", pan(&s, b)), right == 1.0 && pan(&s, b) == -1.0);
+    // Data increment and decrement step it, 1/127 of its travel each.
+    let step = |s: &mut Session, cc: u8, times: usize| {
+        for _ in 0..times {
+            s.inject_midi_from(PORT, &[0xB0, cc, 0]);
+        }
+        s.idle();
+    };
+    step(&mut s, 96, 4);
+    let up = pan(&s, b);
+    step(&mut s, 97, 1);
+    let down = pan(&s, b);
+    check(
+        &format!("data increment and decrement step the NRPN's pan ({up} {down})"),
+        (up - (-1.0 + 8.0 / 127.0)).abs() < 0.02 && (down - (up - 2.0 / 127.0)).abs() < 0.02,
+    );
     std::thread::sleep(Duration::from_millis(50));
     let seen = s.tick().midi_activity;
     nrpn(&mut s, 64, 0);

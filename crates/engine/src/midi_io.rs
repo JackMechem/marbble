@@ -83,11 +83,22 @@ struct Controls {
 }
 
 impl Controls {
+    /// Whether a message of `kind` on `channel` of `port` is for the session: an assigned
+    /// controller's, or any controller's while learning.
+    fn ours(&self, port: &Arc<str>, channel: u8, kind: CtlKind) -> bool {
+        self.learning.load(Ordering::Relaxed) || self.assigned.lock().iter().any(|(p, ch, k)| **p == **port && *ch == channel && k.takes(kind))
+    }
+
     /// Takes the message if it's an assigned controller's (or any controller's while
     /// learning). Returns whether it was taken.
     fn take(&self, port: &Arc<str>, data: [u8; 3]) -> bool {
+        // A note's polyphonic aftertouch goes with the note: a pad's pressure doesn't reach the
+        // instrument either. The session has no use for it, so it's dropped.
+        if data[0] & 0xF0 == 0xA0 {
+            return self.ours(port, data[0] & 0x0F, CtlKind::Note { number: data[1] & 0x7F });
+        }
         let Some(m) = controllers::parse(&data) else { return false };
-        let ours = self.learning.load(Ordering::Relaxed) || self.assigned.lock().iter().any(|(p, ch, k)| **p == **port && *ch == m.channel && k.takes(m.kind));
+        let ours = self.ours(port, m.channel, m.kind);
         if ours {
             let mut q = self.taken.lock();
             if q.len() >= TAKEN_LEN {
@@ -267,4 +278,28 @@ fn receive(
     }
     let seq = filter.seq.fetch_add(1, Ordering::Relaxed);
     l.push_back(MidiLogEntry { seq, ms: epoch.elapsed().as_millis() as u64, port: port_name.to_string(), data: d });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn an_assigned_notes_aftertouch_is_taken_with_it() {
+        let (tx, mut rx) = rtrb::RingBuffer::new(16);
+        let io = MidiIo::new(tx);
+        io.set_assigned(vec![("Pads".into(), 9, CtlKind::Note { number: 36 })]);
+        for msg in [[0x99, 36, 100], [0xA9, 36, 50], [0xA9, 38, 50], [0xA0, 36, 50], [0x89, 36, 0]] {
+            io.inject_from("Pads 20:0", &msg);
+        }
+        io.inject_from("Keys 24:0", &[0xA9, 36, 50]);
+        let live: Vec<[u8; 3]> = std::iter::from_fn(|| rx.pop().ok()).collect();
+        assert_eq!(live, [[0xA9, 38, 50], [0xA0, 36, 50], [0xA9, 36, 50]], "another note's, another channel's and another port's play");
+        let taken: Vec<[u8; 3]> = io.take_controls().into_iter().map(|c| c.data).collect();
+        assert_eq!(taken, [[0x99, 36, 100], [0x89, 36, 0]], "the aftertouch isn't queued for the session");
+        // While learning, every note is the session's, and so is its aftertouch.
+        io.set_learning(true);
+        io.inject_from("Keys 24:0", &[0xA0, 60, 10]);
+        assert!(rx.pop().is_err());
+    }
 }

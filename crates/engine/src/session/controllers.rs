@@ -751,6 +751,11 @@ impl Session {
                 self.controls.latch_probe = None;
             }
             if a.is_button() {
+                // An NRPN's increment and decrement step a continuous parameter; a switch has
+                // no steps.
+                if msg.step != 0 {
+                    continue;
+                }
                 if let Some(act) = self.controls.follow[i].button(a.button_mode, &msg, a.latching) {
                     changed |= self.ctl_button(i, act, &msg);
                 }

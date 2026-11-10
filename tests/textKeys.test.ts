@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { deleteBackStart, fieldEdit, fieldMenuAction, isTextField, keepsKeys, MENU_ACCELERATORS, textFieldMenu, typingInField } from "../src/textKeys.ts";
+import { deleteBackStart, fieldEdit, fieldMenuAction, isTextField, keepsKeys, MENU_ACCELERATORS, midiCommandWhileTyping, textFieldMenu, typingInField } from "../src/textKeys.ts";
 
 /** A text input with a caret or selection, recording what's done to it. */
 function input(value: string, start: number, end = start, type = "text") {
@@ -175,4 +175,17 @@ test("a panel window's menu items reach a focused field there before the panel o
 test("the windows' key command listeners leave keys in fields alone", () => {
   assert.match(src("App.tsx"), /function onKey\(e: KeyboardEvent\) \{\r?\n {2}const tgt = e\.target as HTMLElement;\r?\n {2}if \(keepsKeys\(tgt\)\) return;/);
   assert.match(src("detach.ts"), /if \(keepsKeys\(t\)\) return;/);
+});
+
+test("a MIDI-fired command waits while a field in a panel window is typed in, as its key would", () => {
+  // A key command's key would go to the field there.
+  assert.equal(midiCommandWhileTyping("play", false), "drop");
+  assert.equal(midiCommandWhileTyping("next-marker", false), "drop");
+  // A menu item's accelerator goes to that window, which edits the field (Undo, Select All) or drops it (Split).
+  assert.equal(midiCommandWhileTyping("undo", true), "panel");
+  assert.equal(midiCommandWhileTyping("select-all", true), "panel");
+  assert.equal(midiCommandWhileTyping("split", true), "panel");
+  // Save, and items without a key, run as usual.
+  assert.equal(midiCommandWhileTyping("save", true), "run");
+  assert.equal(midiCommandWhileTyping("marker-list", true), "run");
 });

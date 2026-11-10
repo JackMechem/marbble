@@ -16,6 +16,7 @@ import {
   feedbackTitle,
   fromPercent,
   isButtonKind,
+  noFeedback,
   offersLatching,
   portKey,
   rowEditor,
@@ -25,6 +26,7 @@ import {
   toPercent,
   type Controller,
   type CtlKind,
+  type CtlTarget,
 } from "../src/controllers.ts";
 
 test("controllers are labelled like Logic's assignment list", () => {
@@ -132,6 +134,17 @@ test("the Feedback checkbox says where values go, or what's missing", () => {
   assert.match(feedbackTitle({ controller, feedback: true, output: null }), /No MIDI output is paired with nanoKONTROL2:nanoKONTROL2 MIDI 1.*Settings › MIDI/);
   assert.match(feedbackTitle({ controller, feedback: true, output: "nanoKONTROL2:nanoKONTROL2 MIDI 1" }), /^Sends .* back to nanoKONTROL2/);
   assert.match(feedbackTitle({ controller, feedback: false, output: "X" }), /^Send .* back to X/);
+});
+
+test("rows with nothing to send back say why their Feedback checkbox is off", () => {
+  const cc: Controller = { port: "P", channel: 0, kind: { type: "cc", number: 7 } };
+  const volume: CtlTarget = { type: "volume", track: 1 };
+  assert.equal(noFeedback({ controller: cc, target: volume, encoding: "absolute" }), null);
+  assert.equal(noFeedback({ controller: { ...cc, kind: { type: "note", number: 36 } }, target: { type: "mute", track: 1 }, encoding: "absolute" }), null, "a pad's light");
+  assert.equal(noFeedback({ controller: { ...cc, kind: { type: "nrpn", number: 130 } }, target: volume, encoding: "absolute" }), null);
+  assert.match(noFeedback({ controller: { ...cc, kind: { type: "program", number: 5 } }, target: volume, encoding: "absolute" }) ?? "", /program change/);
+  assert.match(noFeedback({ controller: cc, target: { type: "command", id: "undo" }, encoding: "absolute" }) ?? "", /key command/);
+  assert.match(noFeedback({ controller: cc, target: volume, encoding: "twos_complement" }) ?? "", /relative encoder/);
 });
 
 test("an input's feedback pairing round-trips through its pop-up", () => {

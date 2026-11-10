@@ -27,10 +27,6 @@ All notable changes to Marbble are recorded here. The format follows
   through the sheet instead of the window behind it, and closing one gives the focus back to what
   had it. Controller Assignments, which leaves the transport keys to the window, doesn't.
 
-### Fixed
-
-- **The Marker List's column headings line up.** Length sat over the Go To buttons; each
-  heading is over its column now.
 - **MIDI Learn takes notes and program changes, with Toggle, Momentary and Trigger buttons.**
   Pads and button matrices that send notes can now be assigned, as can program changes: learn
   as before and press the pad. In Controller Assignments each switch (Mute, Solo, Record, the
@@ -58,10 +54,12 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Fixed
 
+- **The Marker List's column headings line up.** Length sat over the Go To buttons; each
+  heading is over its column now.
+
 - **Controller Assignments' column headings sit over their columns.** "Min %", "Max %" and the
   others were one column off from the rows, as the heading had no Delete button to size its last
   column.
-### Fixed
 
 - **Insert Cut Section doesn't bring a cut from another project.** After Cut Section Between
   Locators in one project, opening or starting another and choosing Insert Cut Section put the
@@ -90,6 +88,12 @@ All notable changes to Marbble are recorded here. The format follows
   menu, or in the Library, recent projects, Project Alternatives or the Marker List after moving
   there with the keyboard, played notes instead of going to the item. The letters now go to the
   menu or list, as they go to text fields.
+- **MIDI controller loose ends.** A key command fired from a controller now waits while you type
+  in a text field of a detached window (the Mixer, an Editor), as it does in the main window. An
+  assigned pad's polyphonic aftertouch no longer plays the instrument. An NRPN's data increment
+  and decrement buttons step its parameter. Controller Assignments disables the Feedback box,
+  with a tooltip saying why, on rows that have nothing to send back (program changes, key
+  commands, relative encoders).
 
 ## [0.1.0-alpha.12] - 2026-11-09
 

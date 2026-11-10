@@ -42,7 +42,7 @@ import { applyTheme } from "./themes";
 import { applyUiScale } from "./uiScale";
 import { keyboardFocus } from "./focusRing";
 import { leavesKeyToFocus } from "./keyNav";
-import { keepsKeys, textFieldMenu } from "./textKeys";
+import { keepsKeys, textFieldMenu, typingInField } from "./textKeys";
 
 const LABEL = getCurrentWindow().label;
 
@@ -254,14 +254,32 @@ type PanelMsg =
   | { type: "hello" }
   | { type: "attach" | "detach" | "close"; key: string }
   | { type: "key"; id: string; repeat?: boolean }
+  | { type: "typing"; on: boolean }
   | { type: "geometry"; key: string; rect: Rect };
 
 function send(m: PanelMsg): Promise<void> {
   return emitTo("main", "panel-msg", { from: LABEL, ...m }).catch(() => {});
 }
 
+/** In the main window: the panel window (its label) whose text field is being typed in. */
+let typingIn: string | null = null;
+
+/**
+ * The window of a detached panel with a text field being typed in, or null. A key command a MIDI
+ * controller fires is held back then, as it is for a field in the main window (App's
+ * runMidiCommand).
+ */
+export function typingPanel(): string | null {
+  const label = typingIn;
+  return label && getState().detached.some((k) => panelLabel(k) === label) ? label : null;
+}
+
 function onPanelMsg(m: PanelMsg & { from: string }) {
   switch (m.type) {
+    case "typing":
+      if (m.on) typingIn = m.from;
+      else if (typingIn === m.from) typingIn = null;
+      break;
     case "hello":
       emitTo(m.from, "ui-sync", { from: LABEL, patch: syncedState(getState()) }).catch(() => {});
       emitTo(m.from, "ui-settings", { from: LABEL, settings: getSettings() }).catch(() => {});
@@ -529,6 +547,20 @@ export function installPanelWindow(opts: { menu: (id: string) => boolean }): () 
     send({ type: "key", id, repeat: e.repeat });
   };
   window.addEventListener("keydown", onKey);
+  // Tells the main window when a text field here starts or stops being typed in (the window
+  // gains or loses the focus, or a field does), so a MIDI controller's key commands wait.
+  let typing = false;
+  const reportTyping = () => {
+    const now = typingInField();
+    if (now !== typing) {
+      typing = now;
+      send({ type: "typing", on: now });
+    }
+  };
+  // After the event: while focus moves, neither the old element nor the new one has it.
+  const typingSoon = () => window.setTimeout(reportTyping, 0);
+  const focusEvents = ["focusin", "focusout", "focus", "blur"] as const;
+  focusEvents.forEach((ev) => window.addEventListener(ev, typingSoon));
   if (k) remotely(() => setState(k.show(arg, getState())));
   booted = !!k;
   let live = true;
@@ -543,6 +575,7 @@ export function installPanelWindow(opts: { menu: (id: string) => boolean }): () 
     booted = false;
     window.clearTimeout(geomTimer);
     window.removeEventListener("keydown", onKey);
+    focusEvents.forEach((ev) => window.removeEventListener(ev, typingSoon));
     offs.forEach((off) => off());
     pending.forEach((p) => p.then((off) => off()));
   };

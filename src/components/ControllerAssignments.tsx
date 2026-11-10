@@ -16,6 +16,7 @@ import {
   feedbackTitle,
   fromPercent,
   MODE_OPTIONS,
+  noFeedback,
   offersLatching,
   rowEditor,
   selectedTargets,
@@ -37,6 +38,7 @@ function Row({ row, index, onChange }: { row: AssignmentRow; index: number; onCh
   const update = (patch: AssignmentPatch) => call<AssignmentRow[]>("update_controller_assignment", { index, patch }).then(onChange);
   const c = row.controller;
   const editor = rowEditor(row);
+  const none = noFeedback(row);
   // Key commands are named here; the engine only knows their ids.
   const command = row.target.type === "command" ? commandLabel(row.target.id) : undefined;
   const name = row.target.type === "command" ? `Key Command › ${command ?? row.target.id}` : row.name;
@@ -96,12 +98,14 @@ function Row({ row, index, onChange }: { row: AssignmentRow; index: number; onCh
           )}
         </>
       )}
-      {/* Without a paired output the setting is kept for when there is one. */}
-      <label className={"check ctl-feedback" + (row.output ? "" : " dim")} title={feedbackTitle(row)}>
+      {/* Without a paired output the setting is kept for when there is one. A row with nothing
+          to send (a program change, a command, an encoder) has the box off and disabled. */}
+      <label className={"check ctl-feedback" + (row.output && !none ? "" : " dim")} title={none ?? feedbackTitle(row)}>
         <input
           type="checkbox"
           aria-label="Feedback"
-          checked={row.feedback}
+          disabled={none !== null}
+          checked={row.feedback && none === null}
           onChange={(e) => call<AssignmentRow[]>("set_controller_feedback", { index, on: e.target.checked }).then(onChange)}
         />
       </label>

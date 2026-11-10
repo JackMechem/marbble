@@ -167,6 +167,17 @@ export function fieldMenuAction(id: string): "edit" | "ignore" | "run" {
 }
 
 /**
+ * What a key command or menu item a MIDI controller fired does while a text field in a detached
+ * panel's window is being typed in: a key command is held back ("drop"), as its key would go to
+ * the field; a menu item with an accelerator goes to that window ("panel"), where it edits the
+ * field or is dropped (`textFieldMenu` there), as its key would; any other item runs ("run").
+ */
+export function midiCommandWhileTyping(id: string, menu: boolean): "drop" | "panel" | "run" {
+  if (!menu) return "drop";
+  return fieldMenuAction(id) === "run" ? "run" : "panel";
+}
+
+/**
  * Takes native menu item `id` while a text field has the focus: runs it on the field when it's
  * one of the field's edits, drops it when it's another accelerator (`fieldMenuAction`), and says
  * whether it took it. Call it before anything else handles a menu item. Only while this window

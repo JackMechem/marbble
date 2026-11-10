@@ -213,6 +213,16 @@ export function controllerLabel(c: Controller): string {
   }
 }
 
+/** Why a row's Feedback checkbox can't send anything, or null when it can: a program change
+ *  and a key command have no state to show, and a relative encoder has no position to be sent
+ *  (the engine's `feedback::message`). */
+export function noFeedback(row: Pick<AssignmentRow, "controller" | "target" | "encoding">): string | null {
+  if (row.controller.kind.type === "program") return "No feedback: a program change has no value to send back";
+  if (row.target.type === "command") return "No feedback: a key command has no state to send back";
+  if (row.encoding !== "absolute") return "No feedback: a relative encoder has no position to be sent, it shows its own";
+  return null;
+}
+
 /** The Feedback checkbox's tooltip: where the value goes, or why nothing does. */
 export function feedbackTitle(row: Pick<AssignmentRow, "feedback" | "output" | "controller">): string {
   if (!row.output) return `No MIDI output is paired with ${row.controller.port}: choose one in Settings › MIDI, and feedback starts`;

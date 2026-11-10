@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { listen } from "@tauri-apps/api/event";
+import { emitTo, listen } from "@tauri-apps/api/event";
 import { act, api, call, type InputLevel, type PluginDesc, type Snapshot, type Tick } from "./api";
 import { ControlBar } from "./components/ControlBar";
 import { GroupSheet, NewTrackDialog, SettingsDialog } from "./components/Dialogs";
@@ -52,7 +52,7 @@ import { getSettings, toggleReplace, updateSettings } from "./prefs";
 import { createMarker, deleteMarker, deleteSelectedMarker, gotoMarker, markerAtPlayhead, openMarkerList } from "./markers";
 import { MarkerList } from "./components/MarkerList";
 import { moveSelectedSection, packTakeFolder, removeSelectedSection, stepTake } from "./takes";
-import { installDetach, receiveSnapshot, toggleDetached } from "./detach";
+import { installDetach, receiveSnapshot, toggleDetached, typingPanel } from "./detach";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { moveAutomationAnswer } from "./moveAutomation";
 import { resetClipIndicators } from "./stripSettings";
@@ -71,7 +71,7 @@ import { checkForUpdates, checkUpdatesAtLaunch } from "./updates";
 import { UpdateNotice } from "./components/UpdateNotice";
 import { keyboardFocus } from "./focusRing";
 import { leavesKeyToFocus } from "./keyNav";
-import { keepsKeys, textFieldMenu, typingInField } from "./textKeys";
+import { keepsKeys, midiCommandWhileTyping, textFieldMenu, typingInField } from "./textKeys";
 
 function selectedTrack() {
   const s = getState().snap;
@@ -537,13 +537,19 @@ function onKey(e: KeyboardEvent) {
 /**
  * A key command or menu item a MIDI controller fired (Controller Assignments; the engine passes
  * them on in the tick). It runs as its key would here, held back by the same things: an open
- * dialog, a sheet that holds the key back, a text field being typed in (where a menu item's
- * accelerator edits the field or is dropped). Step Input's commands go to it while it is open,
- * as a key passed on from a panel's window does.
+ * dialog, a sheet that holds the key back, a text field being typed in here or in a detached
+ * panel's window (where a menu item's accelerator edits the field or is dropped). Step Input's
+ * commands go to it while it is open, as a key passed on from a panel's window does.
  */
 function runMidiCommand(id: string) {
   const menu = isMenuCommand(id);
   if (menu ? textFieldMenu(id) : typingInField()) return;
+  const panel = typingPanel();
+  if (panel) {
+    const where = midiCommandWhileTyping(id, menu);
+    if (where === "panel") emitTo(panel, "menu", id).catch(() => {});
+    if (where !== "run") return;
+  }
   if (getState().dialog || sheetBlocks(id)) return;
   if (menu) handleMenu(id);
   else if (!runStepInputCommand(id, false)) KEY_ACTIONS[id]?.();

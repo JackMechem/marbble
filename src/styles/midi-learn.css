@@ -91,3 +91,9 @@
 .ctl-row .ctl-feedback.dim input {
   opacity: 0.5;
 }
+
+/* A row with nothing to send: the box is disabled, and the pointer reaches the label, whose
+   tooltip says why. */
+.ctl-row .ctl-feedback input:disabled {
+  pointer-events: none;
+}
