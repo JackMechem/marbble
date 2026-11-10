@@ -1,7 +1,7 @@
 //! The Arrangement track's arithmetic (Logic's arrangement markers). Sections tile the
 //! timeline, each starting where the one before it ends. Moving, copying or deleting a section
 //! rearranges the project's content with it; that is described here as a time map, a list of
-//! [`Piece`]s saying where each stretch of the old timeline lands. `session/global_tracks/arrangement.rs`
+//! [`Piece`]s saying where each stretch of the old timeline lands. `session/global_tracks/arrangement/`
 //! applies the map to the regions; automation and positions are mapped here. Pure.
 
 use crate::edit::auto_move::prune;

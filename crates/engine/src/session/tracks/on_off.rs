@@ -1,7 +1,7 @@
 //! Logic's Track On/Off, the session's side. `Track::off` is switched with `update_track`, like
 //! Mute (a performance switch: no undo step of its own, and an undo or redo puts back the state
 //! its snapshot had). `Project::is_off` applies the stacks above a track, `track_params` tells the
-//! engine, and `update_pdc` leaves the track out of delay compensation. See `dsp/track_off.rs`.
+//! engine, and `update_pdc` leaves the track out of delay compensation. See `dsp/track_off/`.
 //!
 //! An Off track can't record. Record skips it and keeps its R button for later, and refuses when
 //! no other track is enabled, so nothing is armed that won't be taken. Switching any track while

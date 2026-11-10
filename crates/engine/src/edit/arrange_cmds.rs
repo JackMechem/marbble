@@ -1,6 +1,6 @@
 //! The arithmetic of Logic's arranging commands (Edit › Section Between Locators, Trim, Remove
 //! Gaps and so on). Section edits are time maps, as the Arrangement track's are
-//! ([`crate::edit::arrangement::Piece`]): `session/regions/arrange_cmds.rs` applies them to regions,
+//! ([`crate::edit::arrangement::Piece`]): `session/regions/arrange_cmds/` applies them to regions,
 //! automation, markers and arrangement sections. The tempo and signature tracks stay as they
 //! are, as they do when the Arrangement track moves a section. Pure.
 

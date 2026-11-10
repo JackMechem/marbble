@@ -8,7 +8,7 @@
 //!   Projects, channel strip settings and presets from then hold it in that form; [`values_of`]
 //!   turns it into this effect's parameters (see `model/channel_eq_upgrade.rs`), and the result
 //!   plays sample for sample as the fixed EQ did.
-//! - The parameter layout is shared with the Linear Phase EQ (`linear_phase_eq.rs`), which adds
+//! - The parameter layout is shared with the Linear Phase EQ (`linear_phase_eq/`), which adds
 //!   its Quality, so presets and the editor (`src/plugins/effects/eq/EqEditor.tsx`) work for both.
 
 pub mod filters;

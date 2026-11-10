@@ -242,11 +242,11 @@ pub struct Track {
     #[serde(default)]
     pub auto_lanes: Vec<AutoParam>,
     /// Logic's Track On/Off, switched off: the track plays nothing and runs nothing, though its
-    /// plug-ins stay loaded (see `dsp/track_off.rs`). A stack's subtracks go off with it.
+    /// plug-ins stay loaded (see `dsp/track_off/`). A stack's subtracks go off with it.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub off: bool,
     /// For auxes: the extra output of an instrument that feeds it, besides anything sent to its
-    /// bus (see `session/mixer/multi_out.rs`).
+    /// bus (see `session/mixer/multi_out/`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub instrument_output: Option<InstrumentOutput>,
     /// The preset last loaded into the fixed Channel EQ or saved from it, read from older

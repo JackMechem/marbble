@@ -168,11 +168,12 @@ impl Engine {
         self.stopping.map_or((self.pos, self.playing), |(at, _)| (at, false))
     }
 
-    /// Publishes the position and whether the transport plays, for the session.
+    /// Publishes the position and whether the transport plays and records, for the session.
     pub(super) fn publish_transport(&self) {
         let (pos, playing) = self.shown_transport();
         self.status.pos.store(pos, Ordering::Relaxed);
         self.status.playing.store(playing, Ordering::Relaxed);
+        self.status.recording.store(self.recording, Ordering::Relaxed);
     }
 
     pub(super) fn apply(&mut self, cmd: Cmd) {

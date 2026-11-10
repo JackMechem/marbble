@@ -417,7 +417,7 @@ flowchart TD
   gets it as `key`; a VST3 on its aux input bus.
 - **Instrument outputs.** An aux on a multi-output instrument's extra bus reads it from the
   instrument, which played earlier in the block (`dsp/multi_out.rs`).
-- **Track Off** (`dsp/track_off.rs`): an off track fades out, then runs nothing; its plug-ins are
+- **Track Off** (`dsp/track_off/`): an off track fades out, then runs nothing; its plug-ins are
   told to stop processing but stay loaded. Back on, it fades in and chases.
 
 ### Delay compensation
@@ -511,8 +511,8 @@ to the region). Optional parts:
 
 - `loop_end`: the region repeats up to there (at most 4096 passes).
 - `params`: the Region inspector's Quantize, Transpose, Velocity, Gate Time, Delay and the rest,
-  applied when the playback list is built (`edit/region_params.rs`).
-- `pattern`: a Step Sequencer pattern (`edit/pattern.rs`), realized into notes for playback. The
+  applied when the playback list is built (`edit/region_params/`).
+- `pattern`: a Step Sequencer pattern (`edit/pattern/`), realized into notes for playback. The
   stored notes stay empty.
 - `takes`: a take folder (below).
 
@@ -529,7 +529,7 @@ grouped tracks recorded together follow each other's take and comp choices by pa
 
 **Automation.** A lane (`model/automation.rs`) has a parameter (volume, pan, mute, a send, a plug-in
 parameter) and sorted points in native units (dB, -1..1, 0/1, or 0..1 normalized for plug-ins),
-each with an optional curve. `edit/automation.rs` evaluates, splices and thins them;
+each with an optional curve. `edit/automation/` evaluates, splices and thins them;
 `src/tracks/automation/` mirrors the evaluation for drawing. Stereo Out and folder stacks have
 lanes too. Writing collects a pass while a control moves and splices it in as one undo step when
 the pass ends (`session/automation/write.rs`).

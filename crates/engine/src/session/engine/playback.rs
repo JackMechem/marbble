@@ -99,41 +99,6 @@ impl Session {
         if let Some(f) = self.freeze_dsp(t) {
             return f;
         }
-        struct Seg {
-            region: Id,
-            start: i64,
-            end: i64,
-            offset: i64,
-            gain: f32,
-            clip: Arc<Clip>,
-            fade_in: (i64, i64),
-            fade_out: (i64, i64),
-            laws: [FadeLaw; 2],
-        }
-        let mut segs: Vec<Seg> = Vec::new();
-        let mut out = Vec::new();
-        // Cuts away the older audio under `rs..re`, except a crossfade partner's (`keep`).
-        let cut = |segs: &mut Vec<Seg>, rs: i64, re: i64, keep: &[Id]| {
-            let mut kept = Vec::with_capacity(segs.len() + 1);
-            for sg in segs.drain(..) {
-                if sg.end <= rs || sg.start >= re || keep.contains(&sg.region) {
-                    kept.push(sg);
-                    continue;
-                }
-                if sg.start < rs {
-                    kept.push(Seg { start: sg.start, end: rs, clip: sg.clip.clone(), laws: sg.laws.clone(), ..sg });
-                }
-                if sg.end > re {
-                    kept.push(Seg { start: re, offset: sg.offset + (re - sg.start), ..sg });
-                }
-            }
-            *segs = kept;
-        };
-        // Lays a new piece of audio over what's there.
-        let lay = |segs: &mut Vec<Seg>, new: Seg, keep: &[Id]| {
-            cut(segs, new.start, new.end, keep);
-            segs.push(new);
-        };
         // Regions with playback parameters (see `session/regions/params.rs`).
         let map = self.params_map(t);
         let delayed = map.as_ref().and_then(|m| Self::delay_audio(t, m));
@@ -141,111 +106,22 @@ impl Session {
         // Pattern regions play the notes their patterns make (see `session/midi/patterns.rs`).
         let patterns = self.realize_patterns(regions);
         let regions = patterns.as_deref().unwrap_or(regions);
-        // Settings › Editing › Crossfade Time and Curve, for comp boundaries and loop seams.
-        let xfade = self.crossfade_frames();
-        let comp_law = FadeLaw::Curve(self.prefs.editing.crossfade_curve.clamp(-1.0, 1.0));
-        let clip_frames = |c: Id| self.clips.get(&c).map(|c| c.frames() as i64);
-        let crossfades = crate::edit::fades::crossfades(regions, clip_frames);
+        let fades = AudioFades {
+            // Settings › Editing › Crossfade Time and Curve, for comp boundaries and loop seams.
+            xfade: self.crossfade_frames(),
+            comp_law: FadeLaw::Curve(self.prefs.editing.crossfade_curve.clamp(-1.0, 1.0)),
+            crossfades: crate::edit::fades::crossfades(regions, |c| self.clip_frames(c)),
+        };
+        let mut audio = AudioLayout::default();
+        let mut out = Vec::new();
         // Loop repetitions first, then the region bodies, so bodies always win.
         for repeats in [true, false] {
             for r in regions.iter().filter(|r| !r.muted) {
                 let passes = r.passes();
                 let picked = if repeats { &passes[1..] } else { &passes[..1] };
                 match &r.content {
-                    // A take folder plays its comp: each pass covers what's under it, then its
-                    // pieces go in side by side so their crossfades overlap. The folder's own
-                    // fades take its shape, the comp's crossfades the Crossfade Curve. Crossfades
-                    // with neighbours replace the folder's own fades at those ends.
-                    RegionContent::Audio { gain_db, fade_in, fade_out, fade_shape, .. } if r.takes.is_some() => {
-                        let folder = r.takes.as_ref().unwrap();
-                        let last = passes.last().map(|p| p.1).unwrap_or(r.length);
-                        let fi = (*fade_in).clamp(0, r.length);
-                        let fo = if r.is_looped() { (*fade_out).clamp(0, last) } else { (*fade_out).clamp(0, r.length - fi) };
-                        let x_in = crossfades.iter().find(|x| x.in_region == r.id);
-                        let x_out = crossfades.iter().find(|x| x.out_region == r.id);
-                        let own_in = x_in.map(|x| (x.fade_in, x.laws().1)).unwrap_or(((r.start, fi), FadeLaw::fade_in(fade_shape)));
-                        let own_out = x_out.map(|x| (x.fade_out, x.laws().0)).unwrap_or(((r.end() - fo, fo), FadeLaw::fade_out(fade_shape)));
-                        let keep: Vec<Id> = x_in.map(|x| x.out_region).into_iter().chain(x_out.map(|x| x.in_region)).collect();
-                        for &(ps, pl) in picked {
-                            let mut edges = crate::edit::takes::pieces::PassEdges::default();
-                            if let (Some(x), true) = (x_in, ps == r.start) {
-                                (edges.lead, edges.fade_in) = (ps - x.fade_in.0, Some(x.fade_in));
-                            }
-                            if let (Some(x), true) = (x_out, ps + pl >= r.end()) {
-                                (edges.tail, edges.fade_out) = (x.fade_out.0 + x.fade_out.1 - (ps + pl), Some(x.fade_out));
-                            }
-                            cut(&mut segs, ps - edges.lead.max(0), ps + pl + edges.tail.max(0), &keep);
-                            for p in crate::edit::takes::pieces::pass_pieces_edged(r, folder, ps, pl, xfade, edges) {
-                                let Some(c) = self.clips.get(&p.clip) else { continue };
-                                let gain = volume_gain(*gain_db + p.gain_db);
-                                let law_in = if own_in.0 .1 > 0 && p.fade_in == own_in.0 { own_in.1.clone() } else { comp_law.clone() };
-                                let law_out = if own_out.0 .1 > 0 && p.fade_out == own_out.0 { own_out.1.clone() } else { comp_law.clone() };
-                                segs.push(Seg {
-                                    region: r.id,
-                                    start: p.start,
-                                    end: p.end,
-                                    offset: p.offset,
-                                    gain,
-                                    clip: c.clone(),
-                                    fade_in: p.fade_in,
-                                    fade_out: p.fade_out,
-                                    laws: [law_in, law_out],
-                                });
-                            }
-                        }
-                    }
-                    RegionContent::Audio { clip, offset, gain_db, fade_in, fade_out, fade_shape } => {
-                        let Some(c) = self.clips.get(clip) else { continue };
-                        let (end, last) = (r.end(), passes.last().map(|p| p.1).unwrap_or(r.length));
-                        let fi = (*fade_in).clamp(0, r.length);
-                        let fo = if r.is_looped() { (*fade_out).clamp(0, last) } else { (*fade_out).clamp(0, r.length - fi) };
-                        // The first pass fades in and the last fades out, with the region's own
-                        // fades or a crossfade, which stretches the region to cover it.
-                        let mut first_in = ((r.start, fi), FadeLaw::fade_in(fade_shape));
-                        let mut last_out = ((end - fo, fo), FadeLaw::fade_out(fade_shape));
-                        let mut keep = Vec::new();
-                        if let Some(x) = crossfades.iter().find(|x| x.in_region == r.id) {
-                            first_in = (x.fade_in, x.laws().1);
-                            keep.push(x.out_region);
-                        }
-                        if let Some(x) = crossfades.iter().find(|x| x.out_region == r.id) {
-                            last_out = (x.fade_out, x.laws().0);
-                            keep.push(x.in_region);
-                        }
-                        // Repetitions that crossfade overlap each other at the seams.
-                        let seams = crate::edit::fades::loop_seams(r, clip_frames, xfade);
-                        if !seams.is_empty() {
-                            keep.push(r.id);
-                        }
-                        let seam_law = FadeLaw::Curve(crate::edit::fades::DEFAULT_CURVE);
-                        let (first, n) = (r.start, passes.len());
-                        for &(ps, pl) in picked {
-                            let k = passes.iter().position(|p| p.0 == ps).unwrap_or(0);
-                            let (fin, law_in) = match (ps == first, k.checked_sub(1).and_then(|j| seams.get(j))) {
-                                (true, _) => first_in.clone(),
-                                (false, Some(z)) => (z.1, seam_law.clone()),
-                                (false, None) => ((ps, 0), FadeLaw::default()),
-                            };
-                            let (fout, law_out) = match (k + 1 == n, seams.get(k)) {
-                                (true, _) => last_out.clone(),
-                                (false, Some(z)) => (z.0, seam_law.clone()),
-                                (false, None) => ((ps + pl, 0), FadeLaw::default()),
-                            };
-                            let (s, e) = (ps.min(fin.0), (ps + pl).max(fout.0 + fout.1));
-                            let seg = Seg {
-                                region: r.id,
-                                start: s,
-                                end: e,
-                                offset: *offset + (s - ps),
-                                gain: volume_gain(*gain_db),
-                                clip: c.clone(),
-                                fade_in: fin,
-                                fade_out: fout,
-                                laws: [law_in, law_out],
-                            };
-                            lay(&mut segs, seg, &keep);
-                        }
-                    }
+                    RegionContent::Audio { .. } if r.takes.is_some() => self.lay_comp(r, &passes, picked, &fades, &mut audio),
+                    RegionContent::Audio { .. } => self.lay_audio_region(r, &passes, picked, &fades, &mut audio),
                     RegionContent::Midi { .. } if !r.params.is_default() => {
                         out.extend(Self::midi_passes(r, picked, map.as_ref().unwrap()));
                     }
@@ -266,18 +142,110 @@ impl Session {
                 }
             }
         }
-        segs.sort_by_key(|s| s.start);
-        out.extend(segs.into_iter().map(|s| RegionDsp::Audio {
-            start: s.start,
-            length: s.end - s.start,
-            offset: s.offset,
-            gain: s.gain,
-            clip: s.clip,
-            fade_in: s.fade_in,
-            fade_out: s.fade_out,
-            laws: s.laws,
-        }));
+        out.extend(audio.into_regions());
         Arc::new(out)
+    }
+
+    /// A clip's length in frames, if it's loaded.
+    fn clip_frames(&self, clip: Id) -> Option<i64> {
+        self.clips.get(&clip).map(|c| c.frames() as i64)
+    }
+
+    /// A take folder plays its comp: each pass in `picked` covers what's under it, then its pieces
+    /// go in side by side so their crossfades overlap. The folder's own fades take its shape, the
+    /// comp's crossfades the Crossfade Curve. Crossfades with neighbours replace the folder's own
+    /// fades at those ends.
+    fn lay_comp(&self, r: &Region, passes: &[(i64, i64)], picked: &[(i64, i64)], fades: &AudioFades, audio: &mut AudioLayout) {
+        let (RegionContent::Audio { gain_db, fade_in, fade_out, fade_shape, .. }, Some(folder)) = (&r.content, &r.takes) else { return };
+        let last = passes.last().map(|p| p.1).unwrap_or(r.length);
+        let fi = (*fade_in).clamp(0, r.length);
+        let fo = if r.is_looped() { (*fade_out).clamp(0, last) } else { (*fade_out).clamp(0, r.length - fi) };
+        let x_in = fades.crossfades.iter().find(|x| x.in_region == r.id);
+        let x_out = fades.crossfades.iter().find(|x| x.out_region == r.id);
+        let own_in = x_in.map(|x| (x.fade_in, x.laws().1)).unwrap_or(((r.start, fi), FadeLaw::fade_in(fade_shape)));
+        let own_out = x_out.map(|x| (x.fade_out, x.laws().0)).unwrap_or(((r.end() - fo, fo), FadeLaw::fade_out(fade_shape)));
+        let keep: Vec<Id> = x_in.map(|x| x.out_region).into_iter().chain(x_out.map(|x| x.in_region)).collect();
+        for &(ps, pl) in picked {
+            let mut edges = crate::edit::takes::pieces::PassEdges::default();
+            if let (Some(x), true) = (x_in, ps == r.start) {
+                (edges.lead, edges.fade_in) = (ps - x.fade_in.0, Some(x.fade_in));
+            }
+            if let (Some(x), true) = (x_out, ps + pl >= r.end()) {
+                (edges.tail, edges.fade_out) = (x.fade_out.0 + x.fade_out.1 - (ps + pl), Some(x.fade_out));
+            }
+            audio.cut(ps - edges.lead.max(0), ps + pl + edges.tail.max(0), &keep);
+            for p in crate::edit::takes::pieces::pass_pieces_edged(r, folder, ps, pl, fades.xfade, edges) {
+                let Some(c) = self.clips.get(&p.clip) else { continue };
+                let gain = volume_gain(*gain_db + p.gain_db);
+                let law_in = if own_in.0 .1 > 0 && p.fade_in == own_in.0 { own_in.1.clone() } else { fades.comp_law.clone() };
+                let law_out = if own_out.0 .1 > 0 && p.fade_out == own_out.0 { own_out.1.clone() } else { fades.comp_law.clone() };
+                audio.segs.push(Seg {
+                    region: r.id,
+                    start: p.start,
+                    end: p.end,
+                    offset: p.offset,
+                    gain,
+                    clip: c.clone(),
+                    fade_in: p.fade_in,
+                    fade_out: p.fade_out,
+                    laws: [law_in, law_out],
+                });
+            }
+        }
+    }
+
+    /// An audio region's passes in `picked`. The first pass fades in and the last fades out, with
+    /// the region's own fades or a crossfade, which stretches the region to cover it; repetitions
+    /// that crossfade overlap each other at the seams.
+    fn lay_audio_region(&self, r: &Region, passes: &[(i64, i64)], picked: &[(i64, i64)], fades: &AudioFades, audio: &mut AudioLayout) {
+        let RegionContent::Audio { clip, offset, gain_db, fade_in, fade_out, fade_shape } = &r.content else { return };
+        let Some(c) = self.clips.get(clip) else { return };
+        let (end, last) = (r.end(), passes.last().map(|p| p.1).unwrap_or(r.length));
+        let fi = (*fade_in).clamp(0, r.length);
+        let fo = if r.is_looped() { (*fade_out).clamp(0, last) } else { (*fade_out).clamp(0, r.length - fi) };
+        let mut first_in = ((r.start, fi), FadeLaw::fade_in(fade_shape));
+        let mut last_out = ((end - fo, fo), FadeLaw::fade_out(fade_shape));
+        let mut keep = Vec::new();
+        if let Some(x) = fades.crossfades.iter().find(|x| x.in_region == r.id) {
+            first_in = (x.fade_in, x.laws().1);
+            keep.push(x.out_region);
+        }
+        if let Some(x) = fades.crossfades.iter().find(|x| x.out_region == r.id) {
+            last_out = (x.fade_out, x.laws().0);
+            keep.push(x.in_region);
+        }
+        let seams = crate::edit::fades::loop_seams(r, |c| self.clip_frames(c), fades.xfade);
+        if !seams.is_empty() {
+            keep.push(r.id);
+        }
+        let seam_law = FadeLaw::Curve(crate::edit::fades::DEFAULT_CURVE);
+        let (first, n) = (r.start, passes.len());
+        for &(ps, pl) in picked {
+            let k = passes.iter().position(|p| p.0 == ps).unwrap_or(0);
+            let (fin, law_in) = match (ps == first, k.checked_sub(1).and_then(|j| seams.get(j))) {
+                (true, _) => first_in.clone(),
+                (false, Some(z)) => (z.1, seam_law.clone()),
+                (false, None) => ((ps, 0), FadeLaw::default()),
+            };
+            let (fout, law_out) = match (k + 1 == n, seams.get(k)) {
+                (true, _) => last_out.clone(),
+                (false, Some(z)) => (z.0, seam_law.clone()),
+                (false, None) => ((ps + pl, 0), FadeLaw::default()),
+            };
+            let (s, e) = (ps.min(fin.0), (ps + pl).max(fout.0 + fout.1));
+            let seg = Seg {
+                region: r.id,
+                start: s,
+                end: e,
+                offset: *offset + (s - ps),
+                gain: volume_gain(*gain_db),
+                clip: c.clone(),
+                fade_in: fin,
+                fade_out: fout,
+                laws: [law_in, law_out],
+            };
+            audio.lay(seg, &keep);
+        }
     }
 
     pub(crate) fn instantiate_slot(&mut self, slot: &PluginSlot) -> Result<InsertDsp> {
@@ -367,5 +335,75 @@ impl Session {
         self.peak_holds.reset(None);
         self.sync_master_automation();
         self.sync_globals();
+    }
+}
+
+/// The fades `regions_dsp` lays a track's audio with.
+struct AudioFades {
+    /// Crossfade Time, in frames.
+    xfade: i64,
+    /// The Crossfade Curve's law, for the seams between a comp's pieces.
+    comp_law: FadeLaw,
+    /// The crossfades between the track's regions.
+    crossfades: Vec<crate::edit::fades::Crossfade>,
+}
+
+/// A stretch of one region's audio, as the engine will play it.
+struct Seg {
+    region: Id,
+    start: i64,
+    end: i64,
+    offset: i64,
+    gain: f32,
+    clip: Arc<Clip>,
+    fade_in: (i64, i64),
+    fade_out: (i64, i64),
+    laws: [FadeLaw; 2],
+}
+
+/// A track's audio as it is laid down, newer pieces over older ones.
+#[derive(Default)]
+struct AudioLayout {
+    segs: Vec<Seg>,
+}
+
+impl AudioLayout {
+    /// Cuts away the older audio under `rs..re`, except a crossfade partner's (`keep`).
+    fn cut(&mut self, rs: i64, re: i64, keep: &[Id]) {
+        let mut kept = Vec::with_capacity(self.segs.len() + 1);
+        for sg in self.segs.drain(..) {
+            if sg.end <= rs || sg.start >= re || keep.contains(&sg.region) {
+                kept.push(sg);
+                continue;
+            }
+            if sg.start < rs {
+                kept.push(Seg { start: sg.start, end: rs, clip: sg.clip.clone(), laws: sg.laws.clone(), ..sg });
+            }
+            if sg.end > re {
+                kept.push(Seg { start: re, offset: sg.offset + (re - sg.start), ..sg });
+            }
+        }
+        self.segs = kept;
+    }
+
+    /// Lays a new piece of audio over what's there.
+    fn lay(&mut self, new: Seg, keep: &[Id]) {
+        self.cut(new.start, new.end, keep);
+        self.segs.push(new);
+    }
+
+    /// The pieces as the engine plays them, in time order.
+    fn into_regions(mut self) -> impl Iterator<Item = RegionDsp> {
+        self.segs.sort_by_key(|s| s.start);
+        self.segs.into_iter().map(|s| RegionDsp::Audio {
+            start: s.start,
+            length: s.end - s.start,
+            offset: s.offset,
+            gain: s.gain,
+            clip: s.clip,
+            fade_in: s.fade_in,
+            fade_out: s.fade_out,
+            laws: s.laws,
+        })
     }
 }

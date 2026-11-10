@@ -1,6 +1,6 @@
 //! Strip Silence (Logic's Functions › Remove Silence): finds the parts of a region's audio that
 //! sound, so the region can be split into one region per part and the silence between them
-//! left out. Pure; `session/regions/arrange_cmds.rs` cuts the regions.
+//! left out. Pure; `session/regions/arrange_cmds/` cuts the regions.
 //!
 //! A sample sounds when its level (the loudest channel, times the region's gain) reaches the
 //! threshold. Sounding samples less than the minimum time apart belong to the same part, and so

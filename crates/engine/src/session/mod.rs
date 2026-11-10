@@ -352,14 +352,25 @@ fn decode_state(s: &str) -> PluginState {
     PluginState { component: b.decode(a).unwrap_or_default(), controller: b.decode(c).unwrap_or_default() }
 }
 
+/// Commands queued for the audio thread, and what it sends back to be dropped (see
+/// `session/engine/sync.rs` for what happens when the command queue is full).
+const CMD_QUEUE: usize = 4096;
+const GARBAGE_QUEUE: usize = 4096;
+/// Live MIDI messages on their way from the input callbacks to the engine.
+const LIVE_MIDI_QUEUE: usize = 1024;
+/// MIDI recorded by the engine, held until the recording stops (`place_recording`).
+const RECORDED_MIDI_QUEUE: usize = 8192;
+/// Samples for the spectrum analyzer, until the next tick reads them.
+const ANALYZER_QUEUE: usize = 1 << 16;
+
 impl Session {
     pub fn new(audio_config: AudioConfig, plugins: Vec<PluginDescriptor>) -> Session {
-        let (cmd_tx, cmd_rx) = rtrb::RingBuffer::new(4096);
-        let (garbage_tx, garbage_rx) = rtrb::RingBuffer::new(4096);
+        let (cmd_tx, cmd_rx) = rtrb::RingBuffer::new(CMD_QUEUE);
+        let (garbage_tx, garbage_rx) = rtrb::RingBuffer::new(GARBAGE_QUEUE);
         let status = Arc::new(EngineStatus::default());
-        let (live_tx, live_rx) = rtrb::RingBuffer::new(1024);
-        let (rec_tx, rec_rx) = rtrb::RingBuffer::new(8192);
-        let (an_tx, an_rx) = rtrb::RingBuffer::new(1 << 16);
+        let (live_tx, live_rx) = rtrb::RingBuffer::new(LIVE_MIDI_QUEUE);
+        let (rec_tx, rec_rx) = rtrb::RingBuffer::new(RECORDED_MIDI_QUEUE);
+        let (an_tx, an_rx) = rtrb::RingBuffer::new(ANALYZER_QUEUE);
         let engine = Arc::new(Mutex::new(Engine::new(audio_config.sample_rate as f64, cmd_rx, garbage_tx, status.clone(), live_rx, rec_tx, an_tx)));
         let mut midi = MidiIo::new(live_tx);
         midi.refresh();

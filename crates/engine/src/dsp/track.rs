@@ -63,6 +63,15 @@ impl Plugin {
         }
     }
 
+    /// Runs it in an insert slot: a built-in effect or a VST3 hears the side-chain `key`.
+    pub(super) fn process_insert(&mut self, l: &mut [f32], r: &mut [f32], key: crate::fx::Key, t: &TransportInfo) {
+        match self {
+            Plugin::Builtin(b) => b.process(l, r, key, &fx_context(t)),
+            Plugin::Vst(p) => p.process_keyed(l, r, key, &[], t),
+            p => p.process(l, r, &[], t),
+        }
+    }
+
     /// Queues an automation value (normalized 0..1) for the next block. A built-in effect or
     /// instrument takes the block's first value and glides on its own.
     pub(super) fn set_param(&mut self, id: u32, offset: i32, value: f64) {
@@ -181,7 +190,7 @@ pub struct SendParams {
 }
 
 /// One strip on the audio thread: everything it plays and the buffers it plays into, all allocated up
-/// front. See `strip.rs` for a block's work and `track_off.rs` for switching it off.
+/// front. See `strip.rs` for a block's work and `track_off/` for switching it off.
 pub struct TrackDsp {
     pub id: Id,
     pub kind: TrackKind,
@@ -233,7 +242,7 @@ pub struct TrackDsp {
     pub(super) fold_idx: Option<usize>,
     /// Where the output and each send read the delay line, gliding when a delay changes.
     pub(super) pdc_taps: pdc::PdcTaps,
-    /// Switched off and faded out: nothing of the strip runs (see `track_off.rs`).
+    /// Switched off and faded out: nothing of the strip runs (see `track_off/`).
     pub(super) dormant: bool,
     /// Frames of the fade-in left since it was switched back on.
     pub(super) resume_left: u32,
