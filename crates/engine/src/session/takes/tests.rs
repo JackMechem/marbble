@@ -377,6 +377,26 @@ fn export_and_move_the_active_take() {
     assert_eq!((f.takes.len(), f.comp_names().len(), f.whole_take()), (2, 1, Some(takes[1])));
 }
 
+/// Deleting the take a MIDI folder's comp played leaves it playing another, and the comp kept in
+/// the list of comps must say so too (#424).
+#[test]
+fn a_midi_comp_left_empty_by_a_deleted_take_is_stored_as_what_plays() {
+    let cfg = crate::audio_io::AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
+    let mut s = Session::new(cfg, Vec::new());
+    let t = s.add_track(TrackKind::Instrument, InputSel::None, None, None).unwrap();
+    let pass = |pitch: u8| (vec![Note { start: 10, length: 100, pitch, velocity: 100, muted: false }], Vec::new());
+    s.place_midi_takes(t, 0, 1000, vec![pass(60), pass(62)]);
+    let folder = s.project.track(t).unwrap().regions[0].id;
+    let ids: Vec<Id> = s.region(folder).unwrap().takes.as_ref().unwrap().takes.iter().map(|k| k.id).collect();
+    s.select_take(folder, ids[0]);
+    s.duplicate_comp(folder);
+    s.delete_take(folder, ids[0]);
+    assert_eq!(notes_of(&s, folder), vec![62]);
+    let f = s.region(folder).unwrap().takes.clone().unwrap();
+    assert_eq!(f.comp.first().map(|c| c.take), Some(ids[1]));
+    assert_eq!(f.comps[f.current].comp, f.comp, "the comp in the list is the one heard");
+}
+
 #[test]
 fn export_a_midi_take() {
     let cfg = crate::audio_io::AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
