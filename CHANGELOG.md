@@ -6,6 +6,11 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **Linux: a plug-in window resized while its plug-in wasn't responding** is redrawn at the right
+  size once the plug-in recovers, instead of at its old size until the next resize.
+
 ## [0.1.0-alpha.14] - 2026-11-10
 
 ### Added
