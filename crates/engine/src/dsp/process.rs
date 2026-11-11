@@ -1,5 +1,5 @@
-//! The block loop: [`Engine::process`] is what the audio callback calls. It applies commands,
-//! cuts the device buffer into sub-blocks of at most [`MAX_BLOCK`] frames, and for each one
+//! The block loop: [`Engine::process_io`] is what the audio callback calls ([`Engine::process`]
+//! over whole buffers). It applies commands, cuts the device buffer into sub-blocks of at most [`MAX_BLOCK`] frames, and for each one
 //! (`process_block`) moves the transport, plays every strip in order, serially or on the worker
 //! pool, then mixes the master, the click and the output.
 //!
@@ -8,19 +8,87 @@
 
 use super::*;
 
+/// Where [`Engine::process_io`] takes a callback's input from and puts its output, one sub-block
+/// at a time, so a device buffer of any length needs no buffer of that length: the audio
+/// callback converts each sub-block straight into the device's format (`audio_io::callback`).
+/// Everything here runs on the audio thread.
+pub trait BlockIo {
+    /// The input for the callback's next `n` frames (at most [`MAX_BLOCK`]): `n * in_ch`
+    /// interleaved samples, or none.
+    fn input(&mut self, n: usize) -> &[f32];
+    /// Stereo Out for the callback's next `l.len()` frames.
+    fn output(&mut self, l: &[f32], r: &[f32]);
+    /// Silences the whole callback, from its first frame.
+    fn silence(&mut self);
+}
+
+/// Interleaves Stereo Out into a device's `out_ch` channels, through `to`: extra channels get
+/// silence, a mono device the sum of both sides at half level.
+pub fn interleave<T: Copy>(l: &[f32], r: &[f32], output: &mut [T], out_ch: usize, to: impl Fn(f32) -> T) {
+    for ((frame, &l), &r) in output.chunks_exact_mut(out_ch).zip(l).zip(r) {
+        if out_ch >= 2 {
+            frame[0] = to(l);
+            frame[1] = to(r);
+            frame[2..].fill(to(0.0));
+        } else {
+            frame[0] = to(0.5 * (l + r));
+        }
+    }
+}
+
+/// [`BlockIo`] over whole interleaved buffers, for [`Engine::process`].
+struct Slices<'a> {
+    input: &'a [f32],
+    in_ch: usize,
+    output: &'a mut [f32],
+    out_ch: usize,
+    /// Frames handed in and out so far.
+    at_in: usize,
+    at_out: usize,
+}
+
+impl BlockIo for Slices<'_> {
+    fn input(&mut self, n: usize) -> &[f32] {
+        let (from, to) = (self.at_in * self.in_ch, (self.at_in + n) * self.in_ch);
+        self.at_in += n;
+        if self.in_ch > 0 && self.input.len() >= to {
+            &self.input[from..to]
+        } else {
+            &[]
+        }
+    }
+
+    fn output(&mut self, l: &[f32], r: &[f32]) {
+        let at = self.at_out * self.out_ch;
+        interleave(l, r, &mut self.output[at..at + l.len() * self.out_ch], self.out_ch, |s| s);
+        self.at_out += l.len();
+    }
+
+    fn silence(&mut self) {
+        self.output.fill(0.0);
+    }
+}
+
 impl Engine {
     /// `input` holds `frames * in_ch` interleaved samples; `output` holds `frames * out_ch`.
     pub fn process(&mut self, input: &[f32], in_ch: usize, output: &mut [f32], out_ch: usize) {
+        let frames = output.len().checked_div(out_ch).unwrap_or(0);
+        self.process_io(frames, in_ch, &mut Slices { input, in_ch, output, out_ch, at_in: 0, at_out: 0 });
+    }
+
+    /// One device callback of `frames` frames, whatever its length: its input read from `io` and
+    /// its output written there a sub-block at a time. Commands, live MIDI and the load measured
+    /// are the callback's, as for [`Engine::process`].
+    pub fn process_io(&mut self, frames: usize, in_ch: usize, io: &mut impl BlockIo) {
         let started = Instant::now();
         let _ftz = crate::dsp::denormals::NoDenormals::new();
-        let frames = output.len().checked_div(out_ch).unwrap_or(0);
 
         // A block was given up on and a strip still isn't done: the strips and everything the
         // block reads belong to the threads playing it, commands wait, and the output is silent.
         // A worker that has gone into a plug-in that doesn't return is left there meanwhile.
         if self.parallel.stalled {
             if !self.parallel.open_block_over() && !self.parallel.press_on() {
-                output.fill(0.0);
+                io.silence();
                 return;
             }
             self.parallel.stalled = false;
@@ -36,7 +104,7 @@ impl Engine {
         // session stops the transport when it sees the overload count change.
         if self.shedding > 0 {
             self.shedding -= 1;
-            output.fill(0.0);
+            io.silence();
             return;
         }
 
@@ -53,8 +121,7 @@ impl Engine {
             if looping && self.pos < cycle_end && self.pos + n as i64 > cycle_end {
                 n = (cycle_end - self.pos) as usize;
             }
-            let in_slice = if in_ch > 0 && input.len() >= (done + n) * in_ch { &input[done * in_ch..(done + n) * in_ch] } else { &[][..] };
-            match self.process_block(in_slice, in_ch, n) {
+            match self.process_block(io.input(n), in_ch, n) {
                 BlockEnd::Played => {}
                 // As when the callback's own panic is caught: silence, and the transport waits.
                 BlockEnd::Silenced => {
@@ -62,14 +129,14 @@ impl Engine {
                     self.bus_r[..n].fill(0.0);
                 }
                 end @ (BlockEnd::GivenUp | BlockEnd::LeftOut) => {
-                    output.fill(0.0);
+                    io.silence();
                     self.give_up_block(matches!(end, BlockEnd::LeftOut), started, frames);
                     return;
                 }
             }
             // The last line of defence: the plug-ins are checked as they run.
             contain(&mut self.bus_l[..n], &mut self.bus_r[..n]);
-            self.write_output(&mut output[done * out_ch..(done + n) * out_ch], out_ch);
+            io.output(&self.bus_l[..n], &self.bus_r[..n]);
             // Live MIDI is only delivered with the first sub-block.
             self.live.clear();
             self.advance(n, looping);
@@ -94,20 +161,6 @@ impl Engine {
                 self.live.push(MidiEvent { offset: 0, data: m });
             }
             self.status.midi_activity.fetch_add(1, Ordering::Relaxed);
-        }
-    }
-
-    /// Interleaves Stereo Out's bus into the device's `out_ch` channels: extra channels get
-    /// silence, a mono device the sum of both sides at half level.
-    fn write_output(&self, output: &mut [f32], out_ch: usize) {
-        for (i, frame) in output.chunks_exact_mut(out_ch).enumerate() {
-            if out_ch >= 2 {
-                frame[0] = self.bus_l[i];
-                frame[1] = self.bus_r[i];
-                frame[2..].fill(0.0);
-            } else {
-                frame[0] = 0.5 * (self.bus_l[i] + self.bus_r[i]);
-            }
         }
     }
 

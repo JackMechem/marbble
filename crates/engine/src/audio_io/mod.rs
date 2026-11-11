@@ -17,6 +17,7 @@ use serde::{Deserialize, Serialize};
 use crate::dsp::{Engine, EngineStatus};
 use std::sync::atomic::Ordering;
 
+pub mod callback;
 pub mod devices;
 pub mod memlock;
 pub mod recorder;
@@ -116,7 +117,7 @@ fn build_output<T>(
     d: &Device,
     cfg: StreamConfig,
     engine: Arc<Mutex<Engine>>,
-    mut in_rx: Option<rtrb::Consumer<f32>>,
+    in_rx: Option<rtrb::Consumer<f32>>,
     in_ch: usize,
     status: Arc<EngineStatus>,
     fast_cpus: Vec<usize>,
@@ -126,8 +127,7 @@ where
 {
     let out_ch = cfg.channels as usize;
     let mut placed = false;
-    let mut out_buf = vec![0.0f32; 8192 * out_ch];
-    let mut in_buf = vec![0.0f32; 8192 * in_ch.max(1)];
+    let mut cb = callback::Callback::new(in_rx, in_ch, status.clone());
     let stream = d.build_output_stream::<T, _, _>(
         cfg,
         move |data: &mut [T], info: &cpal::OutputCallbackInfo| {
@@ -140,52 +140,9 @@ where
             let ts = info.timestamp();
             let lat = ts.playback.duration_since(ts.callback).as_micros() as u64;
             status.output_latency_us.store(lat, Ordering::Relaxed);
-            let frames = data.len() / out_ch;
-            if out_buf.len() < frames * out_ch {
-                out_buf.resize(frames * out_ch, 0.0);
-            }
-            if in_buf.len() < frames * in_ch {
-                in_buf.resize(frames * in_ch, 0.0);
-            }
-            let want = frames * in_ch;
-            let inp = &mut in_buf[..want];
-            match &mut in_rx {
-                Some(rx) => {
-                    // Keep input latency bounded if the two device clocks drift apart.
-                    let excess = rx.slots().saturating_sub(want * 3);
-                    if excess > 0 {
-                        if let Ok(c) = rx.read_chunk(excess - excess % in_ch.max(1)) {
-                            c.commit_all();
-                        }
-                    }
-                    status.ring_frames.store((rx.slots() / in_ch.max(1)) as u64, Ordering::Relaxed);
-                    let got = rx.slots().min(want);
-                    let got = got - got % in_ch.max(1);
-                    if let Ok(chunk) = rx.read_chunk(got) {
-                        let (a, b) = chunk.as_slices();
-                        inp[..a.len()].copy_from_slice(a);
-                        inp[a.len()..a.len() + b.len()].copy_from_slice(b);
-                        chunk.commit_all();
-                    }
-                    inp[got..].fill(0.0);
-                }
-                None => inp.fill(0.0),
-            }
-            let out = &mut out_buf[..frames * out_ch];
             match engine.try_lock() {
-                Some(mut e) => {
-                    // A panic must never reach the audio driver: unwinding into its C callback
-                    // aborts the whole app. Silence the block instead; the session reports it.
-                    let ok = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| e.process(inp, in_ch, out, out_ch))).is_ok();
-                    if !ok {
-                        out.fill(0.0);
-                        e.status.engine_errors.fetch_add(1, Ordering::Relaxed);
-                    }
-                }
-                None => out.fill(0.0),
-            }
-            for (d, s) in data.iter_mut().zip(out.iter()) {
-                *d = T::from_sample(s.clamp(-4.0, 4.0));
+                Some(mut e) => cb.play(Some(&mut e), data, out_ch),
+                None => cb.play(None, data, out_ch),
             }
         },
         |e| log::error!("output stream error: {e}"),

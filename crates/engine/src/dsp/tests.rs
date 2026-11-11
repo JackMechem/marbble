@@ -97,10 +97,10 @@ fn contain_silences_nans_and_clamps_runaways() {
 
 /// An engine to send commands to and play blocks on, with the far ends of its rings. The tests
 /// in `parallel/` and `track_off/` use it too.
-pub(super) struct Rig {
-    pub(super) engine: Engine,
-    pub(super) tx: rtrb::Producer<Cmd>,
-    pub(super) status: Arc<EngineStatus>,
+pub(crate) struct Rig {
+    pub(crate) engine: Engine,
+    pub(crate) tx: rtrb::Producer<Cmd>,
+    pub(crate) status: Arc<EngineStatus>,
     /// What the engine hands back to be dropped.
     pub(super) garbage: rtrb::Consumer<Garbage>,
     // The other rings' far ends, held open for the rig's life.
@@ -110,7 +110,7 @@ pub(super) struct Rig {
 }
 
 /// A rig at 48 kHz.
-pub(super) fn rig() -> Rig {
+pub(crate) fn rig() -> Rig {
     rig_at(48000.0)
 }
 
@@ -307,7 +307,7 @@ fn plugins_get_the_position_in_the_map() {
 }
 
 /// An audio track at unity, centred, playing `channels` from the start of the timeline.
-fn audio_track(id: Id, channels: Vec<Vec<f32>>) -> TrackDsp {
+pub(crate) fn audio_track(id: Id, channels: Vec<Vec<f32>>) -> TrackDsp {
     let p = TrackParams {
         volume: 1.0,
         pan: 0.0,
