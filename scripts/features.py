@@ -114,14 +114,16 @@ def roadmap_block(areas):
         BEGIN,
         "",
         f"Beta needs **{len(beta)}** features: **{done}** are done, {partial} are partial and {missing} are missing.",
+        "The table counts only those beta features, by area.",
         "",
-        "| Area | Done | Partial | Missing | Beta needs |",
-        "|---|---:|---:|---:|---:|",
+        "| Area | Beta features | Done | Partial | Missing | Left for beta |",
+        "|---|---:|---:|---:|---:|---:|",
     ]
     for a in areas:
         b = [f for f in a["feature"] if f.get("beta")]
         if b:
-            out.append(f"| {a['title']} | {counts(b)[0]} | {counts(b)[1]} | {counts(b)[2]} | {len(beta_left(b))} |")
+            d, p, m = counts(b)
+            out.append(f"| {a['title']} | {len(b)} | {d} | {p} | {m} | {len(beta_left(b))} |")
     out += ["", "What's left for beta, by area (◐ partial, ○ missing):"]
     for a in areas:
         left = beta_left(a["feature"])

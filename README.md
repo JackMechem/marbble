@@ -1,89 +1,25 @@
 # Marbble
 
-A digital audio workstation modelled on Logic Pro's workflow and layout. The audio engine and
-VST3 host are written in Rust; the interface is Tauri 2 with React and TypeScript.
-
-Marbble is in alpha. It is developed and tested on Linux. The macOS build has been run on a real
-Mac, with less testing; the Windows build passes its tests but hasn't been run on a real machine
-yet (see [Platform support](#platform-support)).
+A digital audio workstation modelled on Logic Pro's workflow and layout, with its audio engine and
+VST3 host in Rust and its interface in Tauri 2, React and TypeScript.
 
 **Website, User Guide and developer docs:** <https://marbble.dev/>
 
 ## Features
 
-- **Recording:** audio from any input (mono or stereo per track) with live waveforms, latency
-  compensation and a manual recording delay; MIDI with controllers, pitch bend and aftertouch;
-  count-in and pre-roll; cycle recording into take folders; Autopunch; Logic's Replace mode and
-  a choice of what happens to overlapped audio and MIDI; Step Input; crash-safe takes.
-- **Take folders and comping**, after Logic's Quick Swipe Comping: swipe across take rows to
-  build a comp, keep several comps per folder, crossfaded boundaries; MIDI take folders;
-  Flatten, Flatten and Merge, Pack and Unpack.
-- **Tracks area:** move, trim, split, join, loop, fade, gain, reverse, colour, copy, paste,
-  repeat and nudge regions with Smart snap, musically across tempo changes; Logic's tools and
-  Tool menu; the Overlap, No Overlap, X-Fade and Shuffle drag modes; fade and crossfade shapes;
-  region playback parameters (Quantize, Transpose, Velocity, Dynamics, Gate Time, Delay);
-  Logic's arranging commands (Select, Section Between Locators, Trim, Move, Strip Silence, Name
-  and Color).
-- **Tracks and arrangement:** track stacks (folder and summing), groups, hidden tracks, Track
-  Freeze, Track On/Off, track alternatives; markers with their own lengths, an Arrangement track whose
-  sections move and copy with their content, and an overview of the whole project.
-- **Editors:** a Piano Roll with eight tools, Time Quantize with strength and swing, scale
-  quantize, humanize, note-length functions and a velocity / controller lane with curved
-  ramps; Logic's Event List; a Step Sequencer for drum patterns and riffs (pattern regions);
-  an Audio Track Editor with range edits, normalizing, fades to selection and Split at
-  Transients; Standard MIDI File import and export.
-- **Mixing:** channel strips with an EQ thumbnail that opens (or inserts) an eight-band Channel
-  EQ with an analyzer, eight Audio FX slots, eight pre- or post-fader sends, aux buses, output
-  routing and VCA faders; clip indicators and gain-reduction meters; channel strip settings to
-  copy, paste and save; plug-in delay compensation on every path, with a Low Latency Mode.
-- **Automation:** volume, pan, mute, send levels and plug-in parameters, with Logic's Off,
-  Read, Touch, Latch and Write modes, several lanes per track, curved segments, folder stack
-  and Stereo Out (Output track) automation, and automation that can move with its regions.
-- **MIDI Learn:** assign a controller's knobs, faders, buttons and pads to mixer controls, plug-in
-  parameters, the selected track, the transport and any key command, with feedback to its lights
-  and motor faders (Learn Assignment, Controller Assignments window); Mackie Control and HUI
-  control surfaces.
-- **Plug-ins:** VST3 instruments and effects, scanned out of process, with side-chain inputs,
-  multi-output instruments, and undo for a knob moved in a plug-in's own window. Copy, paste and
-  drag plug-ins (VST3 state included) between slots, strips and projects.
-- **Built-in synths:** six models with panels, factory presets, automation and MIDI learn.
-  Vintage Synths, modelled on the documented behaviour of real instruments (no affiliation, none
-  compared with the hardware): **Marbble Tre** (after the Minimoog Model D), **Sei** (Juno-106),
-  **Cinque** (Prophet-5), **Uno** (TB-303) and **Sedici** (six-operator FM, after the DX7).
-  Modern Synths: **Onda**, two wavetable oscillators with eight modulation slots. The simple
-  Marbble Synth is the default on new instrument tracks.
-- **Marbble Sampler:** instruments from your own sounds: drop files on it (files named by note
-  map themselves), record straight in, or convert an audio region, whole or sliced at its
-  transients. Zones across keys and velocities, loops, round robin, envelopes, a filter, an LFO
-  and glide; a subset of SFZ loads. Samples are copied into the project and held in memory, up
-  to 4 GB.
-- **Multi-core processing:** independent tracks play at the same time on a small pool of real-time
-  threads, sample for sample the same as on one (Settings › Audio › Processing Threads; Automatic
-  stays on one thread on Windows and macOS for now). Track Off frees what a muted track keeps using.
-- **Built-in effects:** Compressor (five modelled circuits), Limiter, Noise Gate, De-Esser,
-  Reverb, Delay, Chorus, Flanger, Phaser, Tremolo, Overdrive, Distortion, Channel EQ, Linear
-  Phase EQ, Gain, Tuner and Loudness Meter, in any Audio FX slot, with Logic-style panels,
-  factory and user presets, automation and side-chain input from any track.
-- **Bounce and export:** offline bounce of the project or a section, Export All or Selected
-  Tracks, Export Region, Bounce in Place, as WAV, AIFF or FLAC at 16-bit (dithered), 24-bit or
-  32-bit float.
-- **Tempo and signature:** tempo changes and smooth ramps, time signature changes, in Tempo and
-  Signature global tracks; the grid, click, quantize, plug-ins and MIDI files all follow them.
-- **Projects:** `.marbble` folders, a Project Chooser with built-in and your own templates,
-  project alternatives, backups with Revert to, autosave and crash recovery (interrupted
-  recordings included), and undo for every edit (100 steps by default).
-- **Interface:** Logic Pro's layout, the Mixer, editors and effect panels in separate
-  windows, five themes, interface scaling from 90 to 200 %, four waveform styles, rebindable key
-  commands, Musical Typing, and a click in the tracks area that moves the playhead
-  (configurable).
-- **Robustness:** every plug-in's output is checked, so NaNs and runaway levels are silenced
-  and the plug-in is named in a message; an internal engine error skips one block instead of
-  crashing; the audio thread never waits on a lock; saves are atomic and a damaged project
-  falls back to its autosave or a backup.
+- Audio and MIDI recording, cycle recording into take folders, swipe comping and Autopunch.
+- Logic's tools, drag modes, fades and crossfades in the tracks area; track stacks, groups,
+  Freeze, markers and an Arrangement track.
+- A Piano Roll, Event List, Step Sequencer and Audio Track Editor.
+- A Mixer with eight insert and eight send slots per strip, aux buses, VCA faders, plug-in delay
+  compensation, and automation in Logic's Read, Touch, Latch and Write modes.
+- VST3 instruments and effects, with side-chains and multi-output instruments.
+- Six built-in synth models, a sampler and seventeen built-in effects.
+- MIDI Learn, and Mackie Control and HUI surfaces (so far tested only with simulated ones).
+- Offline bounce and export as WAV, AIFF or FLAC; templates, backups, autosave and crash recovery.
 
-The [User Guide](docs/USER_GUIDE.md) describes all of it in detail.
-The [feature list](docs/FEATURES.md) shows every Logic Pro feature by area and how far Marbble has
-it, and the [roadmap](ROADMAP.md) what beta needs and what's being worked on.
+The [feature list](docs/FEATURES.md) has every Logic Pro feature by area and how far Marbble has
+it, and the [User Guide](docs/USER_GUIDE.md) describes how each one works.
 
 ## Install
 
@@ -181,7 +117,7 @@ packaging.
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the code is organised and works: the source tree, threads and real-time rules, the life of an edit and of a block of audio, the project model and its files, plug-ins, MIDI, and the frontend. |
 | [docs/DEVELOPING.md](docs/DEVELOPING.md) | Setting up, building, testing, debugging, the code conventions, common changes, CI and releases. |
 | [docs/logic-reference.md](docs/logic-reference.md) | The Logic Pro research behind the layout and behaviour. |
-| [ROADMAP.md](ROADMAP.md) | What beta needs, how far along it is, the current focus and the roadmap's stages. |
+| [ROADMAP.md](ROADMAP.md) | What beta needs, how far along it is, the current focus and the roadmap's stages, each a milestone. |
 | [docs/FEATURES.md](docs/FEATURES.md) | Every Logic Pro feature by area, done, partial or missing in Marbble (generated from [`features/`](features/README.md)). |
 | [CHANGELOG.md](CHANGELOG.md) | What changed in each release. |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Reporting bugs, testing, how issues and milestones are used, and sending a pull request. |

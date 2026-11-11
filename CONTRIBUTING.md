@@ -19,8 +19,10 @@ comment saying what you tried and what you heard or saw is a contribution in its
 ## How the work is tracked
 
 - **Issues** hold everything that's open: bugs, features, and checks that still need a person.
-- **Milestones** are the roadmap's stages, in the order they matter for a usable release.
-  [ROADMAP.md](ROADMAP.md) describes each stage's goal, what beta needs and the current focus.
+- **Milestones** are the roadmap's stages, in the order they matter for a usable release, and
+  [Beta: core features](https://github.com/JackMechem/marbble/milestone/8) gathers the features
+  beta still needs. [ROADMAP.md](ROADMAP.md) describes each stage's goal, what beta needs and the
+  current focus.
 - **The [feature list](docs/FEATURES.md)** has every Logic Pro feature by area, and how far
   Marbble has it. It's generated from [`features/`](features/README.md), one TOML file per area:
   a pull request that builds or extends a feature changes its entry there and runs
