@@ -133,18 +133,21 @@ What's left for beta, by area (◐ partial, ○ missing):
 ## Current focus
 
 Work goes in rounds of a few issues at a time. What's being built right now is in the issues
-labelled [`in progress`][in progress]. The rounds planned towards beta:
+labelled [`in progress`][in progress]. The rounds planned towards beta, in order:
 
-1. **Plug-in hosting.** Several processing threads on macOS and Windows ([#59]), keys from VST3
-   editors on Linux ([#88]), editors following a display scale change ([#94]), the Plug-in Manager,
-   plug-in search and plug-in windows in the Mixer, Compare for VST3 plug-ins ([#292]); then CLAP
-   hosting ([#105]).
-2. **Transport and navigation.** Pause, fast forward and rewind, Play from Selection, Go to
+1. **Stability and performance.** This comes first now, ahead of new features: the dropouts and
+   System Overloads under load ([#35], [#16]), several processing threads on macOS and Windows
+   ([#59]), the stuck-plug-in handling with a real VST3 ([#114]), the checks that fail now and then
+   ([`flaky test`][flaky test]), and any bug that crashes Marbble or loses work.
+2. **Plug-in hosting.** Keys from VST3 editors on Linux ([#88]), editors following a display scale
+   change ([#94]), the Plug-in Manager, plug-in search and plug-in windows in the Mixer, Compare
+   for VST3 plug-ins ([#292]); then CLAP hosting ([#105]).
+3. **Transport and navigation.** Pause, fast forward and rewind, Play from Selection, Go to
    Position, locators typed into the LCD, the cycle and transient key commands.
-3. **Projects, tracks and delivery.** Save a copy with its assets, Close Project, project start and
+4. **Projects, tracks and delivery.** Save a copy with its assets, Close Project, project start and
    end, opening a MIDI file as a project, real-time bounce and dither, searching, renaming and
    sorting tracks.
-4. **Editing and the Mixer.** Scale-constrained note input, time handles, note labels and drum
+5. **Editing and the Mixer.** Scale-constrained note input, time handles, note labels and drum
    names in the Piano Roll, selecting and reordering Mixer strips, the track header's width and
    controls, key command sets.
 
@@ -200,6 +203,9 @@ Besides each stage's milestone, a few labels gather the open work that doesn't b
 [area: ui]: https://github.com/JackMechem/marbble/labels/area%3A%20ui
 [#105]: https://github.com/JackMechem/marbble/issues/105
 [#59]: https://github.com/JackMechem/marbble/issues/59
+[#35]: https://github.com/JackMechem/marbble/issues/35
+[#16]: https://github.com/JackMechem/marbble/issues/16
+[#114]: https://github.com/JackMechem/marbble/issues/114
 [#88]: https://github.com/JackMechem/marbble/issues/88
 [#94]: https://github.com/JackMechem/marbble/issues/94
 [#292]: https://github.com/JackMechem/marbble/issues/292

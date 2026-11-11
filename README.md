@@ -1,5 +1,16 @@
 # Marbble
 
+> **A note on AI.** Most of Marbble's code so far has been written by AI coding agents
+> (Anthropic's Claude Code). I, the maintainer, decide what gets built and how it should work, and
+> try it in the app; every change goes through an issue, a pull request and the full checks on
+> Linux, Windows and macOS. Contributions are welcome whether or not you use AI, under the same
+> rules: see [AI-assisted contributions](CONTRIBUTING.md#ai-assisted-contributions).
+>
+> **What comes next.** Marbble has most of the core features it needs for beta, so the priority
+> now shifts to stability and performance ahead of new features: no dropouts, crashes or lost
+> work, and good use of the CPU on every platform. The [roadmap](ROADMAP.md#current-focus) has
+> the details.
+
 A digital audio workstation modelled on Logic Pro's workflow and layout, with its audio engine and
 VST3 host in Rust and its interface in Tauri 2, React and TypeScript.
 
