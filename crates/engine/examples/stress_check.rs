@@ -26,9 +26,9 @@
 //!   --audio N           audio tracks (default 8)
 //!   --seed N            the project's seed (default 1)
 //!   --buffers A,B,..    buffer sizes (default 64,128,256,512)
-//!   --threads A,B,..    processing threads, the callback's own included (default 1 to the number
-//!                       of performance cores, at most 6, where Linux tells them apart, and 1 to 4
-//!                       elsewhere); always set explicitly, never Automatic
+//!   --threads A,B,..    processing threads, the callback's own included; `auto` is Settings ›
+//!                       Processing Threads › Automatic, resolved as the app resolves it and shown
+//!                       as auto(N) (default 1 to what Automatic is here, at least 2, then auto)
 //!   --seconds S         how long each configuration is measured (default 20)
 //!   --warmup S          played first and not measured (default 2)
 //!   --json PATH         write the results there
@@ -47,7 +47,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::Ordering;
 use std::time::{Duration, Instant};
 
-use daw_engine::audio_io::threads::Topology;
+use daw_engine::audio_io::threads::{Topology, AUTOMATIC};
 use daw_engine::audio_io::{AudioConfig, NULL_OUTPUT};
 use daw_engine::dsp::EngineStatus;
 use daw_engine::model::{Id, InputSel, Note, TrackKind, TrackSend, MASTER_ID};
@@ -70,7 +70,8 @@ struct Opts {
     audio: usize,
     seed: u64,
     buffers: Vec<u32>,
-    threads: Vec<u32>,
+    /// Thread settings, [`AUTOMATIC`] for `auto`; `None` until the session can tell what Automatic is.
+    threads: Option<Vec<u32>>,
     seconds: f64,
     warmup: f64,
     json: Option<PathBuf>,
@@ -96,17 +97,25 @@ fn list<T: std::str::FromStr>(v: &str) -> Vec<T> {
     l
 }
 
+/// Thread settings: numbers, or `auto` for Automatic.
+fn thread_list(v: &str) -> Vec<u32> {
+    v.split(',')
+        .map(|x| match x.trim() {
+            "auto" => AUTOMATIC,
+            "0" => usage("0 threads is Automatic; write auto"),
+            n => n.parse().unwrap_or_else(|_| usage(&format!("not a list of thread counts or auto: {v}"))),
+        })
+        .collect()
+}
+
 fn parse() -> Opts {
-    // The performance cores, where they can be told apart (Linux); four CPUs elsewhere.
-    let t = Topology::detect();
-    let fast = if t.fast_cores > 1 { t.fast_cores.min(6) } else { t.logical.clamp(1, 4) } as u32;
     let mut o = Opts {
         null: false,
         tracks: 32,
         audio: 8,
         seed: 1,
         buffers: vec![64, 128, 256, 512],
-        threads: (1..=fast).collect(),
+        threads: None,
         seconds: 20.0,
         warmup: 2.0,
         json: None,
@@ -128,7 +137,7 @@ fn parse() -> Opts {
             "--audio" => o.audio = num(val()) as usize,
             "--seed" => o.seed = num(val()) as u64,
             "--buffers" => o.buffers = list(&val()),
-            "--threads" => o.threads = list(&val()),
+            "--threads" => o.threads = Some(thread_list(&val())),
             "--seconds" => o.seconds = num(val()),
             "--warmup" => o.warmup = num(val()),
             "--json" => o.json = Some(val().into()),
@@ -142,9 +151,6 @@ fn parse() -> Opts {
             s if s.starts_with('-') => usage(&format!("unknown option {s}")),
             _ => o.scratch = Some(a.into()),
         }
-    }
-    if o.threads.contains(&0) {
-        usage("0 threads is Automatic; give the counts explicitly");
     }
     o
 }
@@ -288,6 +294,8 @@ impl Counters {
 struct Run {
     buffer: u32,
     actual_buffer: u32,
+    /// The setting was Automatic; `threads` is what it resolved to.
+    automatic: bool,
     threads: u32,
     playing: u32,
     realtime: u32,
@@ -306,6 +314,7 @@ impl Run {
     fn json(&self) -> Value {
         json!({
             "buffer": self.buffer, "actual_buffer": self.actual_buffer, "threads": self.threads,
+            "automatic": self.automatic,
             "threads_playing": self.playing, "realtime_workers": self.realtime, "blocks": self.blocks,
             "late_blocks": self.late, "device_gaps": self.gaps, "overloads": self.overloads, "engine_errors": self.errors,
             "load_p50": self.p50, "load_p99": self.p99, "load_max": self.max, "pool_share": self.pool,
@@ -333,8 +342,21 @@ fn play_for(s: &mut Session, secs: f64) {
     }
 }
 
-fn measure(s: &mut Session, o: &Opts, buffer: u32, threads: u32) -> Run {
-    s.set_audio_config(AudioConfig { processing_threads: threads, ..s.audio_config.clone() });
+impl Run {
+    /// The thread setting as the table shows it: a number, or auto(N).
+    fn threads_label(&self) -> String {
+        if self.automatic {
+            format!("auto({})", self.threads)
+        } else {
+            self.threads.to_string()
+        }
+    }
+}
+
+fn measure(s: &mut Session, o: &Opts, buffer: u32, setting: u32) -> Run {
+    s.set_audio_config(AudioConfig { processing_threads: setting, ..s.audio_config.clone() });
+    // What the session resolves the setting to, Automatic included.
+    let threads = s.processing_threads() as u32;
     s.idle();
     let st = s.status.clone();
     s.locate(0);
@@ -353,6 +375,7 @@ fn measure(s: &mut Session, o: &Opts, buffer: u32, threads: u32) -> Run {
     Run {
         buffer,
         actual_buffer: s.audio_status.buffer_size,
+        automatic: setting == AUTOMATIC,
         threads,
         playing: health.map_or(1, |h| h.playing),
         realtime: health.map_or(0, |h| h.realtime),
@@ -380,7 +403,7 @@ fn print_run(r: &Run) {
     println!(
         "{:>6} {:>7} {:>7} {:>7} {:>6} {:>5} {:>5} {:>6.0} {:>6.0} {:>7.0} {:>4.0}%",
         buffer,
-        r.threads,
+        r.threads_label(),
         format!("{}/{}", r.playing, r.realtime),
         r.blocks,
         r.late,
@@ -401,7 +424,7 @@ fn judge(o: &Opts, runs: &[Run]) -> Vec<String> {
         serde_json::from_str(&text).unwrap_or_else(|e| usage(&format!("{} isn't JSON: {e}", p.display())))
     });
     for r in runs {
-        let name = format!("buffer {} on {} threads", r.buffer, r.threads);
+        let name = format!("buffer {} on {} threads", r.buffer, r.threads_label());
         if r.blocks == 0 {
             fails.push(format!("{name}: played no blocks"));
         }
@@ -418,11 +441,11 @@ fn judge(o: &Opts, runs: &[Run]) -> Vec<String> {
             fails.push(format!("{name}: p99 load {:.0} %, more than {m:.0} %", r.p99));
         }
         let Some(base) = baseline.as_ref() else { continue };
-        let earlier = base["runs"]
-            .as_array()
-            .into_iter()
-            .flatten()
-            .find(|b| b["buffer"].as_u64() == Some(r.buffer as u64) && b["threads"].as_u64() == Some(r.threads as u64));
+        let earlier = base["runs"].as_array().into_iter().flatten().find(|b| {
+            // Automatic is compared with Automatic, whatever it resolved to (on another machine).
+            let auto = b["automatic"].as_bool().unwrap_or(false);
+            b["buffer"].as_u64() == Some(r.buffer as u64) && auto == r.automatic && (auto || b["threads"].as_u64() == Some(r.threads as u64))
+        });
         let Some(b) = earlier else {
             println!("(no baseline for {name})");
             continue;
@@ -461,9 +484,13 @@ fn main() {
     }
     assert!(s.audio_status.input_name.is_none(), "opened an input");
     let length = build(&mut s, &o, &scratch);
+    // What Settings › Processing Threads › Automatic is here, as the app works it out.
+    let automatic = s.thread_choices().automatic;
+    let settings = o.threads.clone().unwrap_or_else(|| (1..=automatic.max(2)).chain([AUTOMATIC]).collect());
     let topo = Topology::detect();
     let device = s.audio_status.output_name.clone().unwrap_or_default();
     let cores = if topo.fast.is_empty() { format!("{} CPUs", topo.logical) } else { format!("{} CPUs, {} performance cores", topo.logical, topo.fast_cores) };
+    let cores = format!("{cores}; Automatic: {automatic}");
     println!(
         "{} instrument + {} audio tracks (seed {}), {:.0} s each after {:.0} s warm-up, on {} ({}, {} Hz); {cores}",
         o.tracks, o.audio, o.seed, o.seconds, o.warmup, device, s.audio_status.host, s.audio_status.sample_rate
@@ -481,8 +508,8 @@ fn main() {
             eprintln!("stress_check: the device didn't start at buffer {buffer}: {:?}", s.audio_status.error);
             std::process::exit(2);
         }
-        for &threads in &o.threads {
-            let r = measure(&mut s, &o, buffer, threads);
+        for &setting in &settings {
+            let r = measure(&mut s, &o, buffer, setting);
             print_run(&r);
             runs.push(r);
         }
@@ -498,7 +525,7 @@ fn main() {
             "project": { "instrument_tracks": o.tracks, "audio_tracks": o.audio, "seed": o.seed, "length": length },
             "seconds": o.seconds,
             "warmup": o.warmup,
-            "machine": { "os": std::env::consts::OS, "arch": std::env::consts::ARCH, "logical_cpus": topo.logical, "performance_cores": topo.fast_cores },
+            "machine": { "os": std::env::consts::OS, "arch": std::env::consts::ARCH, "logical_cpus": topo.logical, "performance_cores": topo.fast_cores, "automatic_threads": automatic },
             "runs": runs.iter().map(Run::json).collect::<Vec<_>>(),
         });
         std::fs::write(path, serde_json::to_string_pretty(&doc).unwrap() + "\n").unwrap();
