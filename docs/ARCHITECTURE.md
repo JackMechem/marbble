@@ -466,7 +466,8 @@ inaudible.
   an overload); a worker caught inside a plug-in call is left there, demoted to normal priority, and
   its strip and everything it feeds sit out until the plug-in returns
   (`session/engine/left_out.rs`). The controller of that instance is called no more from the main
-  thread.
+  thread, nor is its editor: its window still resizes, on Linux and macOS, but the view isn't told
+  (`Editor::set_quiet`; on macOS it hears the window's size once the plug-in is back).
 - **When it engages:** two strips with plug-ins can overlap and the load has reached 15 % of the
   buffer. Automatic is the performance cores less one, at most 6; workers keep to performance
   cores, as the callback does. Away from Linux, workers can't get real-time priority yet, so Automatic is 1.

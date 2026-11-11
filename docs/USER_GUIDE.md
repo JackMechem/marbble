@@ -3948,9 +3948,9 @@ and brings the tracks and the thread back. Until then:
 - Bounces, exports, Freeze and Bounce in Place are refused, as those tracks would be missing.
 - Saving, and anything that loads the plug-in again (Reset Audio Engine, undoing its track's
   deletion, duplicating the track), uses the settings it had just before it stopped responding.
-- Its window stops updating and won't open, its controls and automation don't reach it, and
-  closing its window (or deleting its track) only hides the window until the plug-in responds
-  or is unloaded.
+- Its window stops updating and won't open, its controls and automation don't reach it, resizing
+  its window doesn't resize what the plug-in draws, and closing its window (or deleting its
+  track) only hides the window until the plug-in responds or is unloaded.
 
 A plug-in that stops responding on the audio thread itself can't be left like this.
 

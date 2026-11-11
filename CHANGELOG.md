@@ -6,6 +6,12 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **A plug-in that stopped responding no longer freezes Marbble on macOS** when its window is
+  resized: as on Linux, the window resizes without asking the plug-in, which on macOS hears of
+  the new size once it responds again.
+
 ## [0.1.0-alpha.14] - 2026-11-10
 
 ### Added
