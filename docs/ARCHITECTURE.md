@@ -488,6 +488,10 @@ inaudible.
   given up on in a plug-in stays in the group until it returns, as only the thread itself can leave.
 - **Offline renders stay serial.** `parallel_check` and `soak_check` drive them through the pool
   to prove the identity.
+- **Measuring it.** `stress_check` plays a seeded heavy project on the real output at each buffer
+  size and thread count and reports late blocks, device gaps, overloads and load percentiles,
+  from `EngineStatus` (`late_blocks`, `device_gaps`, `overloads`, `block_loads`); with
+  `--baseline` it's a regression gate (`docs/DEVELOPING.md`).
 
 What each piece of a block's state is, and which thread may touch it, is listed in
 `dsp/parallel/mod.rs`; the measurements behind Automatic are in `audio_io/threads.rs`.

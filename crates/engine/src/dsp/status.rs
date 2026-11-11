@@ -39,6 +39,13 @@ pub struct EngineStatus {
     /// See `BlockLoad`.
     pub cpu_peak: AtomicU32,
     pub late_blocks: AtomicU32,
+    /// Every played block's load, for `stress_check` (see [`BlockLoads`]).
+    pub block_loads: BlockLoadStats,
+    /// Output callbacks that came later than the previous one's audio ran out: the device
+    /// played something the engine never gave it, whatever the cause (a late block, or the
+    /// callback's thread not running in time). Counted in `audio_io::build_output`, from the
+    /// device's timestamps; the null device has none.
+    pub device_gaps: AtomicU32,
     pub cmds_done: AtomicU64,
     /// Commands the session gave up sending because the engine took none for a while with the
     /// queue full (see `Session::send`). The session counts these, not the audio thread.
@@ -102,6 +109,8 @@ impl Default for EngineStatus {
             cpu_load: AtomicU32::new(0),
             cpu_peak: AtomicU32::new(0),
             late_blocks: AtomicU32::new(0),
+            block_loads: BlockLoadStats::default(),
+            device_gaps: AtomicU32::new(0),
             cmds_done: AtomicU64::new(0),
             cmds_dropped: AtomicU64::new(0),
             midi_activity: AtomicU32::new(0),
@@ -290,6 +299,81 @@ impl BlockLoad {
     }
 }
 
+/// The buckets of [`BlockLoadStats`]: 1 % of a block's audio each, the last for anything slower.
+pub const LOAD_BUCKETS: usize = 256;
+
+/// Every played block's load (its time over its audio's), in buckets of 1 %, and the worst one.
+/// The audio thread adds to it (`Engine::note_block_load`); `stress_check` reads and clears it
+/// between runs. One relaxed add per callback, nothing more.
+pub struct BlockLoadStats {
+    buckets: [AtomicU32; LOAD_BUCKETS],
+    /// The worst block's load, as f32 bits (non-negative floats order as their bits).
+    max: AtomicU32,
+}
+
+impl Default for BlockLoadStats {
+    fn default() -> Self {
+        BlockLoadStats { buckets: std::array::from_fn(|_| AtomicU32::new(0)), max: AtomicU32::new(0) }
+    }
+}
+
+impl BlockLoadStats {
+    pub(super) fn add(&self, load: f32) {
+        let load = load.max(0.0);
+        let at = ((load * 100.0) as usize).min(LOAD_BUCKETS - 1);
+        self.buckets[at].fetch_add(1, Ordering::Relaxed);
+        self.max.fetch_max(load.to_bits(), Ordering::Relaxed);
+    }
+
+    /// What it has counted since the last `clear`.
+    pub fn read(&self) -> BlockLoads {
+        BlockLoads { buckets: std::array::from_fn(|i| self.buckets[i].load(Ordering::Relaxed)), max: f32::from_bits(self.max.load(Ordering::Relaxed)) }
+    }
+
+    pub fn clear(&self) {
+        for b in &self.buckets {
+            b.store(0, Ordering::Relaxed);
+        }
+        self.max.store(0, Ordering::Relaxed);
+    }
+}
+
+/// A copy of [`BlockLoadStats`].
+#[derive(Debug, Clone)]
+pub struct BlockLoads {
+    pub buckets: [u32; LOAD_BUCKETS],
+    pub max: f32,
+}
+
+impl BlockLoads {
+    pub fn blocks(&self) -> u64 {
+        self.buckets.iter().map(|&n| n as u64).sum()
+    }
+
+    /// The load that `q` (0 to 1) of the blocks stayed under, to the bucket's upper edge (so 1 %
+    /// at worst above the truth) and never above the worst block; past the last bucket, the
+    /// worst block itself. 0 with no blocks.
+    pub fn percentile(&self, q: f64) -> f32 {
+        let total = self.blocks();
+        if total == 0 {
+            return 0.0;
+        }
+        let want = ((q * total as f64).ceil() as u64).clamp(1, total);
+        let mut seen = 0;
+        for (i, &n) in self.buckets.iter().enumerate() {
+            seen += n as u64;
+            if seen >= want {
+                // The last bucket has no upper edge but the worst block.
+                if i == LOAD_BUCKETS - 1 {
+                    return self.max;
+                }
+                return ((i + 1) as f32 / 100.0).min(self.max);
+            }
+        }
+        self.max
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -319,6 +403,23 @@ mod tests {
         assert!(s.held().is_empty());
         let back = s.take_back();
         assert_eq!((back.len(), back[0].token, back[0].stand_in_gone), (1, first, true));
+    }
+
+    #[test]
+    fn block_load_percentiles() {
+        let s = BlockLoadStats::default();
+        assert_eq!(s.read().percentile(0.5), 0.0);
+        for i in 0..100 {
+            s.add(i as f32 / 200.0);
+        }
+        s.add(3.7);
+        let r = s.read();
+        assert_eq!(r.blocks(), 101);
+        assert!((r.percentile(0.5) - 0.26).abs() < 1e-6, "{}", r.percentile(0.5));
+        assert_eq!(r.buckets[LOAD_BUCKETS - 1], 1, "past the last bucket goes in it");
+        assert_eq!(r.percentile(1.0), 3.7);
+        s.clear();
+        assert_eq!((s.read().blocks(), s.read().max), (0, 0.0));
     }
 
     /// Entries freed when the strips are rebuilt aren't marked when their threads let go later, even

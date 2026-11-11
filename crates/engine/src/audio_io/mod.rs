@@ -7,6 +7,7 @@
 
 use std::sync::Arc;
 use std::thread::JoinHandle;
+use std::time::Duration;
 
 use anyhow::{anyhow, Result};
 use cpal::traits::{DeviceTrait, StreamTrait};
@@ -180,6 +181,9 @@ where
 {
     let out_ch = cfg.channels as usize;
     let mut placed = false;
+    // The previous callback's device time and length, for `EngineStatus::device_gaps`.
+    let mut last: Option<(cpal::StreamInstant, Duration)> = None;
+    let rate = cfg.sample_rate.max(1) as f64;
     let mut out_buf = vec![0.0f32; 8192 * out_ch];
     let mut in_buf = vec![0.0f32; 8192 * in_ch.max(1)];
     let stream = d.build_output_stream::<T, _, _>(
@@ -197,6 +201,15 @@ where
             let lat = ts.playback.duration_since(ts.callback).as_micros() as u64;
             status.output_latency_us.store(lat, Ordering::Relaxed);
             let frames = data.len() / out_ch;
+            // A callback more than half a buffer later than the previous one's audio lasted: the
+            // device ran dry in between.
+            let length = Duration::from_secs_f64(frames as f64 / rate);
+            if let Some((at, len)) = last {
+                if ts.callback.checked_duration_since(at).is_some_and(|d| d > len + len / 2) {
+                    status.device_gaps.fetch_add(1, Ordering::Relaxed);
+                }
+            }
+            last = Some((ts.callback, length));
             if out_buf.len() < frames * out_ch {
                 out_buf.resize(frames * out_ch, 0.0);
             }
