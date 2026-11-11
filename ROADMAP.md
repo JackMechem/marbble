@@ -139,6 +139,9 @@ labelled [`in progress`][in progress]. The rounds planned towards beta, in order
    System Overloads under load ([#35], [#16]), several processing threads on macOS and Windows
    ([#59]), the stuck-plug-in handling with a real VST3 ([#114]), the checks that fail now and then
    ([`flaky test`][flaky test]), and any bug that crashes Marbble or loses work.
+   The round under way brings macOS level with Linux: real-time processing threads in the audio
+   device's workgroup and Automatic above one thread ([#59]), audio that follows a changed or
+   unplugged device, a reproducible stress check for multi-core load, and the flaky checks.
 2. **Plug-in hosting.** Keys from VST3 editors on Linux ([#88]), editors following a display scale
    change ([#94]), the Plug-in Manager, plug-in search and plug-in windows in the Mixer, Compare
    for VST3 plug-ins ([#292]); then CLAP hosting ([#105]).
