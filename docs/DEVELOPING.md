@@ -182,14 +182,15 @@ device. Register a new check in the script's `CHECKS` list.
   returns; no plug-ins or sample files) on the real default output, never an input, at each
   buffer size and thread count, 20 s each, and prints per configuration the late blocks, the
   device gaps (callbacks that came after the previous one's audio ran out), the System Overloads
-  and the blocks' p50 / p99 / max load in % of their deadline. Thread counts are always given,
-  never Automatic. `--json` writes the results; `--max-overloads`, `--max-gaps`, `--max-p99` or
+  and the blocks' p50 / p99 / max load in % of their deadline. `--threads` takes counts and `auto`,
+  Settings › Processing Threads › Automatic resolved as the app resolves it (shown as `auto(4)`);
+  by default it runs 1 to what Automatic is on the machine (at least 2), then `auto`. `--json` writes the results; `--max-overloads`, `--max-gaps`, `--max-p99` or
   `--baseline` an earlier JSON make it a gate that exits 1. Measure on a quiet machine, before and
   after a change to the engine's hot paths or the worker pool:
 
   ```sh
   cargo run --release -p daw-engine --example stress_check -- --json before.json
-  cargo run --release -p daw-engine --example stress_check -- --baseline before.json --buffers 128,256 --threads 1,4
+  cargo run --release -p daw-engine --example stress_check -- --baseline before.json --buffers 128,256 --threads 1,auto
   ```
 
   The options are at the top of the file. The script runs it briefly on the null device
