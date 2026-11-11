@@ -6,6 +6,15 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **Freeze and Bounce in Place with multi-output instruments.** Freezing an instrument whose
+  extra outputs have auxes now renders those outputs too, and each aux plays its output's render
+  while the instrument is frozen, through its own plug-ins and fader, so the mix sounds the same
+  (before, Freeze refused). Bounce in Place bounces the main output with the auxes playing on, or
+  with the new Instrument Multi-Output option adds the auxes into the bounce and mutes them with
+  the source.
+
 ## [0.1.0-alpha.13] - 2026-11-10
 
 ### Changed

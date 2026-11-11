@@ -28,6 +28,8 @@ export interface BipOptions {
   fader: boolean;
   source: BipSource;
   tail: boolean;
+  /** Add in the auxes on an instrument's extra outputs (Logic's Include Instrument Multi Output). */
+  outputs: boolean;
 }
 
 export interface BounceResult {

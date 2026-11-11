@@ -212,7 +212,8 @@ fn read_automation(t: &mut TrackDsp, p: &mut TrackParams, fx_at: i64, mix_at: i6
 }
 
 /// A summing stack's or aux's source: what was routed to it this block, and for an aux on an
-/// instrument's extra output, that output, pulled from the instrument's strip.
+/// instrument's extra output, that output, pulled from the instrument's strip, or while the
+/// instrument is frozen played from the render in the aux's own playback list.
 fn take_bus_input<R: Routes>(cx: &BlockCtx<'_>, t: &mut TrackDsp, sc: &mut Scratch, routes: &mut R, p: &TrackParams, live: bool) {
     let n = cx.n;
     let (l, r) = (&mut t.l[..n], &mut t.r[..n]);
@@ -221,7 +222,8 @@ fn take_bus_input<R: Routes>(cx: &BlockCtx<'_>, t: &mut TrackDsp, sc: &mut Scrat
         let delay = if live { 0 } else { t.pdc.feed };
         let pull = multi_out::Pull { bus: o.bus as usize, smooth: cx.smooth, snap: cx.snap_gains, delay, fade: pdc_fade(cx.sr) };
         let src = t.feed.source.and_then(|i| routes.earlier(i));
-        t.feed.pull(src, &pull, &mut t.pdc_taps.feed, (l, r), (&mut sc.tap_l[..n], &mut sc.tap_r[..n]));
+        let frozen = (!t.regions.is_empty()).then(|| multi_out::Frozen { regions: &t.regions[..], pos: cx.pos, sources: cx.sources });
+        t.feed.pull(src, frozen, &pull, &mut t.pdc_taps.feed, (l, r), (&mut sc.tap_l[..n], &mut sc.tap_r[..n]));
         if contain(l, r) {
             cx.status.bad_audio.fetch_add(1, Ordering::Relaxed);
         }

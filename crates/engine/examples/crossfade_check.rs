@@ -307,7 +307,8 @@ fn main() {
     let d = diff(&mix, &read_wav(Path::new(&res.paths[0])));
     check(&format!("Export All Tracks matches ({d:.1e})"), d < 1e-6);
     s.checkpoint("Bounce in Place", None, false);
-    let made = s.bounce_in_place(&[t], &[], &BipOptions { effects: true, fader: false, source: BipSource::Mute, tail: false }, &mut |_| {}).unwrap();
+    let made =
+        s.bounce_in_place(&[t], &[], &BipOptions { effects: true, fader: false, source: BipSource::Mute, tail: false, outputs: false }, &mut |_| {}).unwrap();
     let bip = s.project.track(made[0]).unwrap().regions[0].clone();
     let RegionContent::Audio { clip, .. } = bip.content else { unreachable!() };
     let audio = s.clip_audio(clip).unwrap();

@@ -96,7 +96,7 @@ impl Session {
     /// crossfade, the outgoing one past its end and the incoming one from before its start;
     /// outside it, the earlier one is heard before and the later one after, whichever is newer.
     pub(crate) fn regions_dsp(&self, t: &Track) -> Arc<Vec<RegionDsp>> {
-        if let Some(f) = self.freeze_dsp(t) {
+        if let Some(f) = self.freeze_dsp(t).or_else(|| self.frozen_output_dsp(t)) {
             return f;
         }
         // Regions with playback parameters (see `session/regions/params.rs`).

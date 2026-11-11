@@ -1,5 +1,6 @@
 // Multi-output instruments, kept pure so it can be tested: which output a strip's "+" takes next,
-// and what an aux on an instrument's output shows as its input (see `session/multi_out.rs`).
+// what an aux on an instrument's output shows as its input, and whether a bounce has such auxes to
+// take along (see `session/mixer/multi_out/`).
 import type { Id, Track } from "../engine/project";
 import type { InstrumentOutputs, OutputBusInfo } from "../engine/snapshot";
 
@@ -25,10 +26,22 @@ export interface AuxInput {
 }
 
 /** What an aux shows in its input slot. Its bus can still be sent to, whatever feeds it. */
-export function auxInput(aux: Pick<Track, "bus" | "instrument_output">, tracks: readonly Pick<Track, "id" | "name">[], all: readonly InstrumentOutputs[] | undefined): AuxInput {
+export function auxInput(
+  aux: Pick<Track, "bus" | "instrument_output" | "frozen_output">,
+  tracks: readonly Pick<Track, "id" | "name">[],
+  all: readonly InstrumentOutputs[] | undefined,
+): AuxInput {
   const from = aux.instrument_output;
   if (!from) return { label: `Bus ${aux.bus}`, title: "Sends and outputs set to this bus play through this strip", silent: false };
   const name = tracks.find((t) => t.id === from.track)?.name ?? "?";
+  // A frozen instrument's plug-in is unloaded, so its outputs aren't listed: the aux plays the render.
+  if (aux.frozen_output) {
+    return {
+      label: `${name}: output ${from.bus + 1}, frozen`,
+      title: `${name} is frozen: this strip plays the render of its output ${from.bus + 1}, as does anything sent to Bus ${aux.bus}. Unfreeze ${name} to play it live`,
+      silent: false,
+    };
+  }
   const bus = all?.find((o) => o.track === from.track)?.outputs.find((b) => b.index === from.bus);
   if (!bus) {
     return {
@@ -38,4 +51,9 @@ export function auxInput(aux: Pick<Track, "bus" | "instrument_output">, tracks: 
     };
   }
   return { label: `${name}: ${bus.name}`, title: `This output of ${name}'s instrument plays through this strip, as does anything sent to Bus ${aux.bus}`, silent: false };
+}
+
+/** Whether any of `sources` (tracks a bounce renders) has auxes on its instrument's outputs. */
+export function hasOutputAuxes(tracks: readonly Pick<Track, "instrument_output">[], sources: readonly Id[]): boolean {
+  return tracks.some((t) => !!t.instrument_output && sources.includes(t.instrument_output.track));
 }

@@ -201,7 +201,8 @@ fn main() {
     // ---- Bounce in Place ----------------------------------------------------------------------
     let tracks_before = s.project.tracks.len();
     s.checkpoint("Bounce in Place", None, false);
-    let made = s.bounce_in_place(&[a], &[], &BipOptions { effects: true, fader: false, source: BipSource::Mute, tail: true }, &mut |_| {}).unwrap();
+    let made =
+        s.bounce_in_place(&[a], &[], &BipOptions { effects: true, fader: false, source: BipSource::Mute, tail: true, outputs: false }, &mut |_| {}).unwrap();
     let src = s.project.track(a).unwrap().clone();
     let idx = s.project.tracks.iter().position(|t| t.id == made[0]).unwrap();
     let nt = s.project.tracks[idx].clone();

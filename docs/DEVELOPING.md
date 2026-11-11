@@ -142,8 +142,8 @@ device. Register a new check in the script's `CHECKS` list.
 - **Need real plug-ins, so run by hand:** `pdc_check` and `freeze_check` (ZaMaximX2),
   `onoff_vst_check` (ZaMaximX2, TONE3000), and the plug-in parts of `fx_check`,
   `automation_check` and `bounce_check`, which print `SKIP` without them.
-  `vst_sidechain_check`, `multiout_check` and `vst_undo_check` find LSP's plug-ins themselves, so
-  they're in the script and `SKIP` where they aren't installed.
+  `vst_sidechain_check`, `multiout_check`, `multiout_freeze_check` and `vst_undo_check` find LSP's
+  plug-ins themselves, so they're in the script and `SKIP` where they aren't installed.
 - **The broad ones:** `restore_check` (every feature undone, redone, saved and reopened with
   bit-identical renders), `soak_check` (hundreds of seeded random edits with the pool playing,
   invariants after each, and a replay that must match), `rt_alloc_check` (no block allocates),

@@ -258,15 +258,20 @@ pub struct Track {
     /// strip settings: the icon belongs to the track.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub icon: Option<String>,
+    /// For an aux on an instrument's extra output, while that instrument is frozen: the render of
+    /// the output, which the aux plays in its place (see `session/tracks/freeze/outputs.rs`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub frozen_output: Option<FreezeInfo>,
 }
 
 impl Track {
     /// Every clip the track can play: its regions' (see [`Region::clips`]), its inactive
-    /// alternatives' and its freeze file.
+    /// alternatives' and its freeze files.
     pub fn clips(&self) -> Vec<Id> {
         let alternatives = self.alternatives.iter().flat_map(|a| a.regions.iter());
         let mut out: Vec<Id> = self.regions.iter().chain(alternatives).flat_map(|r| r.clips()).collect();
         out.extend(self.frozen.map(|f| f.clip));
+        out.extend(self.frozen_output.map(|f| f.clip));
         out
     }
 }
@@ -289,7 +294,7 @@ pub struct TrackAlternative {
     pub regions: Vec<Region>,
 }
 
-/// A frozen track's freeze file.
+/// A frozen track's freeze file, or the render of a frozen instrument's extra output.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FreezeInfo {
     /// The clip holding the render (in the project's Freeze Files folder).

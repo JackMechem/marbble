@@ -8,8 +8,14 @@
 //!
 //! Like Bounce in Place, freezing has two steps: the render (`render_freeze`, which may run on
 //! a worker thread) and the edit (`place_freeze`, on the main thread, as one undo step).
+//!
+//! An instrument whose extra outputs feed auxes has those outputs rendered too, and its auxes play
+//! them while it is frozen (`outputs.rs`).
+
+mod outputs;
 
 use crate::session::*;
+use outputs::OutputRender;
 
 /// Freeze files live here inside the project folder.
 const FREEZE_DIR: &str = "Freeze Files";
@@ -24,6 +30,8 @@ pub struct FreezeRender {
     start: i64,
     path: PathBuf,
     clip: Clip,
+    /// Its extra outputs' renders, one per aux on them.
+    outputs: Vec<OutputRender>,
 }
 
 impl Session {
@@ -46,7 +54,11 @@ impl Session {
 
     /// A frozen track's playback list: just its freeze file.
     pub(crate) fn freeze_dsp(&self, t: &Track) -> Option<Arc<Vec<RegionDsp>>> {
-        let f = t.frozen?;
+        self.freeze_file_dsp(t.frozen?)
+    }
+
+    /// A playback list of one freeze file, from where its render starts.
+    fn freeze_file_dsp(&self, f: FreezeInfo) -> Option<Arc<Vec<RegionDsp>>> {
         let clip = self.clips.get(&f.clip)?.clone();
         let length = clip.frames() as i64;
         Some(Arc::new(vec![RegionDsp::Audio {
@@ -62,10 +74,10 @@ impl Session {
     }
 
     /// Freeze, step one: renders each track in `ids` through its instrument, Channel EQ and
-    /// plug-ins (not its fader, pan or sends) into the project's Freeze Files folder.
+    /// plug-ins (not its fader, pan or sends) into the project's Freeze Files folder, and an
+    /// instrument's extra outputs that feed auxes each into a file of its own.
     pub fn render_freeze(&mut self, ids: &[Id], progress: &mut dyn FnMut(f64)) -> Result<Vec<FreezeRender>> {
         self.check_on(ids)?;
-        self.check_no_output_auxes(ids, "Freezing")?;
         let sr = self.sample_rate();
         let tail = (FREEZE_TAIL_SECS * sr).round() as i64;
         let n = ids.len().max(1) as f64;
@@ -90,15 +102,16 @@ impl Session {
             let iso = self.isolate_track(id, false, true);
             // Built-in reverbs and delays may ring longer than the usual tail.
             let tail = tail.max((self.builtin_tail_secs(id).min(60.0) * sr).round() as i64);
-            let mut audio = self.render(from, to, tail, Some(iso), &mut |f| progress((k as f64 + f) / n))?;
-            // Keep the ringing tail, not the silence after it.
-            let keep = (to - from) as usize;
-            let len = audio.first().map(|c| c.len()).unwrap_or(0);
-            let last = (keep..len).rev().find(|&i| audio.iter().any(|c| c[i].abs() > SILENCE)).map(|i| i + 1).unwrap_or(keep);
-            audio.iter_mut().for_each(|c| c.truncate(last.min(len)));
+            // The main output, then each extra output an aux plays.
+            let auxes = self.output_auxes(id);
+            let parts = (1 + auxes.len()) as f64;
+            let mut audio = self.render(from, to, tail, Some(iso), &mut |f| progress((k as f64 + f / parts) / n))?;
+            keep_ringing(&mut audio, (to - from) as usize);
             let path = self.freeze_path(&name);
             crate::audio_file::decode::write_wav(&path, sr as u32, &audio)?;
-            out.push(FreezeRender { track: id, start: from, clip: Clip::from_channels(path.clone(), sr as u32, audio), path });
+            let clip = Clip::from_channels(path.clone(), sr as u32, audio);
+            let outputs = self.render_outputs(&auxes, (from, to, tail), &mut |j, f| progress((k as f64 + (1.0 + j as f64 + f) / parts) / n))?;
+            out.push(FreezeRender { track: id, start: from, clip, path, outputs });
         }
         Ok(out)
     }
@@ -136,6 +149,7 @@ impl Session {
             tm.armed = false;
             self.unload_plugins(&t);
             self.push_regions(r.track);
+            self.place_outputs(r.outputs, r.start);
         }
         // Arming changed, and the frozen tracks' latency went with their plug-ins.
         self.push_all_params();
@@ -157,17 +171,24 @@ impl Session {
         let t = self.project.track(id).ok_or_else(|| anyhow!("no such track"))?;
         let f = t.frozen.ok_or_else(|| anyhow!("{} isn't frozen", t.name))?;
         self.project.track_mut(id).unwrap().frozen = None;
-        if let Some(i) = self.project.clips.iter().position(|c| c.id == f.clip) {
+        self.delete_freeze_file(f.clip);
+        let t = self.project.track(id).unwrap().clone();
+        self.load_plugins(&t);
+        self.push_regions(id);
+        self.unfreeze_outputs(id);
+        self.update_pdc();
+        self.dirty = true;
+        Ok(())
+    }
+
+    /// Forgets a freeze file's clip and deletes the file. The audio stays in memory, so undo can
+    /// bring the freeze back (`ensure_freeze_files`).
+    fn delete_freeze_file(&mut self, clip: Id) {
+        if let Some(i) = self.project.clips.iter().position(|c| c.id == clip) {
             let c = self.project.clips.remove(i);
             let path = if Path::new(&c.path).is_absolute() { PathBuf::from(&c.path) } else { self.dir.join(&c.path) };
             let _ = std::fs::remove_file(path);
         }
-        let t = self.project.track(id).unwrap().clone();
-        self.load_plugins(&t);
-        self.push_regions(id);
-        self.update_pdc();
-        self.dirty = true;
-        Ok(())
     }
 
     /// Unloads a track's plug-ins from the engine (and their controllers and editors).
@@ -235,7 +256,7 @@ impl Session {
     /// Writes back any freeze file that is missing on disk (unfreezing deletes it; undo can
     /// bring the freeze back) from the copy still in memory.
     pub(crate) fn ensure_freeze_files(&self) {
-        for f in self.project.tracks.iter().filter_map(|t| t.frozen) {
+        for f in self.project.tracks.iter().flat_map(|t| t.frozen.into_iter().chain(t.frozen_output)) {
             let (Some(c), Some(r)) = (self.clips.get(&f.clip), self.project.clips.iter().find(|c| c.id == f.clip)) else { continue };
             let path = if Path::new(&r.path).is_absolute() { PathBuf::from(&r.path) } else { self.dir.join(&r.path) };
             if !path.exists() {
@@ -290,57 +311,13 @@ impl Session {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::audio_io::AudioConfig;
-    use crate::session::RegionMove;
-
-    fn session_with_two_tracks() -> (Session, Id, Id, Id) {
-        let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
-        let mut s = Session::new(cfg, Vec::new());
-        let a = s.add_track(TrackKind::Instrument, InputSel::Mono(0), None, None).unwrap();
-        let b = s.add_track(TrackKind::Instrument, InputSel::Mono(0), None, None).unwrap();
-        let id = s.project.alloc_id();
-        let content = RegionContent::Midi { notes: Vec::new(), cc: Vec::new() };
-        s.project.track_mut(a).unwrap().regions.push(Region {
-            id,
-            name: "M".into(),
-            start: 0,
-            length: 1000,
-            muted: false,
-            color: None,
-            content,
-            loop_end: None,
-            takes: None,
-            params: Default::default(),
-            pattern: None,
-        });
-        (s, a, b, id)
-    }
-
-    fn place(s: &Session, id: Id) -> Vec<Id> {
-        s.project.tracks.iter().filter(|t| t.regions.iter().any(|r| r.id == id)).map(|t| t.id).collect()
-    }
-
-    #[test]
-    fn a_region_moved_onto_a_frozen_track_stays_where_it_was() {
-        let (mut s, a, b, id) = session_with_two_tracks();
-        s.project.track_mut(b).unwrap().frozen = Some(FreezeInfo { clip: 0, start: 0 });
-        s.checkpoint("Move Region", None, false);
-        s.move_regions(&[RegionMove { id, start: 0, track: Some(b) }]);
-        assert!(s.frozen_guard().is_err());
-        assert_eq!(place(&s, id), vec![a]);
-        assert!(s.undo_stack.is_empty(), "nothing changed, so no undo step");
-    }
-
-    #[test]
-    fn a_region_moved_off_a_frozen_track_isnt_doubled() {
-        let (mut s, a, b, id) = session_with_two_tracks();
-        s.project.track_mut(a).unwrap().frozen = Some(FreezeInfo { clip: 0, start: 0 });
-        s.checkpoint("Move Region", None, false);
-        s.move_regions(&[RegionMove { id, start: 0, track: Some(b) }]);
-        assert!(s.frozen_guard().is_err());
-        assert_eq!(place(&s, id), vec![a]);
-    }
+/// Cuts a render's silence after its ringing tail, keeping at least `keep` frames (the frozen
+/// range itself).
+fn keep_ringing(audio: &mut [Vec<f32>], keep: usize) {
+    let len = audio.first().map(|c| c.len()).unwrap_or(0);
+    let last = (keep..len).rev().find(|&i| audio.iter().any(|c| c[i].abs() > SILENCE)).map(|i| i + 1).unwrap_or(keep);
+    audio.iter_mut().for_each(|c| c.truncate(last.min(len)));
 }
+
+#[cfg(test)]
+mod tests;

@@ -422,13 +422,18 @@ impl Project {
     /// Drops routing that no longer makes sense: sends and outputs to tracks that are gone or
     /// aren't auxes, routing on folders (which carry no audio), auxes inside stacks, and any
     /// edge that closes a feedback loop. Pads every track to `SEND_SLOTS` send slots. An aux
-    /// whose instrument is gone keeps its settings and its bus, without that input.
+    /// whose instrument is gone keeps its settings and its bus, without that input, and without
+    /// the render of it it played while the instrument was frozen.
     pub fn prune_routes(&mut self) {
         let auxes: HashSet<Id> = self.tracks.iter().filter(|t| t.kind == TrackKind::Aux).map(|t| t.id).collect();
         let instruments: HashSet<Id> = self.tracks.iter().filter(|t| t.kind == TrackKind::Instrument).map(|t| t.id).collect();
+        let frozen: HashSet<Id> = self.tracks.iter().filter(|t| t.frozen.is_some()).map(|t| t.id).collect();
         for t in &mut self.tracks {
             if t.kind != TrackKind::Aux || t.instrument_output.is_some_and(|o| !instruments.contains(&o.track) || o.bus == 0) {
                 t.instrument_output = None;
+            }
+            if !t.instrument_output.is_some_and(|o| frozen.contains(&o.track)) {
+                t.frozen_output = None;
             }
         }
         for t in &mut self.tracks {

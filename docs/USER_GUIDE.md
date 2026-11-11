@@ -1482,6 +1482,10 @@ plug-ins unloaded, so a heavy track stops using CPU.
   plug-ins back with exactly their settings and deletes the freeze file.
 - Freeze and Unfreeze can be undone. Frozen tracks stay frozen when the project is saved and
   reopened. A duplicate of a frozen track is live.
+- An instrument whose extra outputs have auxes (see
+  [Multi-output instruments](#multi-output-instruments)) freezes those outputs too, each into a
+  file of its own, and each aux plays its output's file while the instrument is frozen, through
+  its own plug-ins, fader and sends, which stay live.
 - Freeze files are in the project's `Freeze Files/` folder.
 
 ### Turning tracks off
@@ -2635,8 +2639,13 @@ own. As in Logic, each can get a strip of its own:
   output stays switched on so it comes straight back.
 - **Bounce and Export:** a bounce has the auxes in it. Export All Tracks writes each aux as its
   own file with the instrument's content.
-- **Freeze and Bounce in Place** refuse an instrument with such auxes, because they'd only take
-  the main output: delete the auxes first.
+- **Freeze** renders each output that has an aux along with the main one, as Logic does, and
+  while the instrument is frozen each aux plays its output's render through its own strip (its
+  Input slot says "Drums: output 2, frozen"). Unfreezing gives it the live output back.
+- **Bounce in Place** bounces the main output, and the auxes play on. Tick **Instrument
+  Multi-Output** in its dialog to add the auxes (through their Audio FX, and their Volume/Pan
+  when that's ticked) into the bounce instead; muting the source then mutes them too.
+- **Export Region as Audio File** renders the main output only.
 - **Deleting the instrument** leaves the aux, with its settings, as an ordinary aux on its bus
   (undo reconnects it). **Replacing the instrument** with one that has fewer outputs, or opening
   the project where the plug-in is missing, leaves the aux silent: its Input slot says "Drums: no
@@ -3158,7 +3167,9 @@ the track and region menus:
 - Options: **Audio FX** (Channel EQ and plug-ins, on by default); **Volume/Pan** (off by
   default: the new track takes over the source's fader and pan instead); **Audio Tail** (up to
   2 s); **Source**: Leave, Mute (default; the track, or the regions when bouncing regions) or
-  Delete.
+  Delete. For an instrument with auxes on its extra outputs, **Instrument Multi-Output** (off by
+  default) adds those auxes into the bounce and mutes them with the source (see
+  [Multi-output instruments](#multi-output-instruments)).
 - Instrument tracks bounce their MIDI to audio. A summing stack bounces its output, subtracks
   included. A folder stack bounces the mix of its subtracks, with its fader printed.
 - It is all one undo step, plug-ins included when the source is deleted.
@@ -3166,7 +3177,9 @@ the track and region menus:
 ### Export Region as Audio File
 
 **Export as Audio File…** in the region menu renders one region alone, muted or not, through its
-track's Audio FX plug-ins, before the fader. It uses the same format options as Bounce.
+track's Audio FX plug-ins, before the fader. It uses the same format options as Bounce. A
+multi-output instrument's region is its main output; what its extra outputs send to their auxes
+isn't in the file.
 
 ### MIDI files
 
@@ -3994,7 +4007,8 @@ its package rather than a copied binary.
   and another strip's Channel EQ in the main window take turns showing it.
 - **Freeze** keeps at most 4 s of tail after the last region (a built-in effect's longer tail,
   up to 60 s). A frozen track's plug-in automation lanes stay editable but do nothing until it is
-  unfrozen.
+  unfrozen. An aux on a multi-output instrument's output that is off when the instrument is
+  frozen gets a silent render, so switching it on stays silent until the instrument is unfrozen.
 - **Imports:** a raw AAC stream (`.aac`, not in an M4A/MP4 file) and CAF files aren't trimmed
   of their encoder delay; M4A/MP4 and MP3 are.
 - **Bounce:** WAV, AIFF and FLAC only (no MP3 or AAC).

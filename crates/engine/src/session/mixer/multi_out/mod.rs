@@ -14,8 +14,9 @@
 //! track goes (`prune_routes`; an undo brings both back). A new instrument with fewer outputs, or
 //! a plug-in that's missing, leaves it silent, and the strip says so. A copy of the instrument
 //! starts with no auxes; a copy of the aux takes the same output, as a second strip on it.
-//! Freeze and Bounce in Place would take only the main output (and could leave the auxes with
-//! nothing), so they're refused until the auxes are gone.
+//! Freezing the instrument renders each output with an aux too, which the aux then plays
+//! (`session/tracks/freeze/outputs.rs`); Bounce in Place can add the auxes into its bounce
+//! (`session/project/bounce_outputs.rs`).
 
 use crate::session::*;
 
@@ -103,19 +104,9 @@ impl Session {
         }
     }
 
-    /// Errors (naming the track) if any of `tracks` has auxes on its extra outputs, for renders
-    /// that can't carry those along.
-    pub(crate) fn check_no_output_auxes(&self, tracks: &[Id], what: &str) -> Result<()> {
-        for &id in tracks {
-            if let Some(a) = self.project.tracks.iter().find(|a| a.instrument_output.is_some_and(|o| o.track == id)) {
-                let name = self.project.track(id).map(|t| t.name.as_str()).unwrap_or_default();
-                return Err(anyhow!(
-                    "{name} has auxes on its extra outputs ({} and maybe others). {what} would only take its main output: delete those auxes first.",
-                    a.name
-                ));
-            }
-        }
-        Ok(())
+    /// The auxes on `track`'s extra outputs, in track order.
+    pub(crate) fn output_auxes(&self, track: Id) -> Vec<Id> {
+        self.project.tracks.iter().filter(|a| a.instrument_output.is_some_and(|o| o.track == track)).map(|a| a.id).collect()
     }
 
     /// The instrument that feeds aux `id`, if it plays.
