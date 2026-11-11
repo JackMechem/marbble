@@ -267,6 +267,9 @@ fn main() {
 
 fn scenario(scratch: &Path, threads: u32) {
     std::fs::create_dir_all(scratch).unwrap();
+    // From the start: where Automatic means several threads (macOS, a Linux machine with enough
+    // cores), the project's edits start the workers before the setting below asks for as many.
+    let workers_before = WORKERS_SEEN.load(Ordering::Relaxed);
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg, Vec::new());
     s.dir = scratch.join("RtAlloc.marbble");
@@ -289,7 +292,6 @@ fn scenario(scratch: &Path, threads: u32) {
     s.idle();
     println!("audio: {:?}", s.audio_status.running);
     let test = daw_engine::dsp::ParallelTest { always: threads > 1, renders: false, patient: true };
-    let workers_before = WORKERS_SEEN.load(Ordering::Relaxed);
     s.set_threads_for_checks(threads, test);
     // The counter itself works (quietly: no backtrace for this one).
     SHOWN.store(SHOW, Ordering::Relaxed);

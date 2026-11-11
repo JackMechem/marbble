@@ -10,7 +10,11 @@ All notable changes to Marbble are recorded here. The format follows
 
 - **Real-time processing threads on macOS.** Choosing more than one processing thread in
   Settings › Audio on macOS now gives the extra threads real-time priority, as the audio thread
-  has, so they keep up when the system is busy (Automatic still uses one thread there for now).
+  has, so they keep up when the system is busy.
+- **Automatic processing threads on macOS.** Settings › Audio › Processing Threads › Automatic
+  now plays heavy projects on one thread per performance core on macOS (4 on an M1; the physical
+  cores less one on an Intel Mac, at most 6) instead of one, which on an M1 took a 40-track
+  project from overloading to about a third of each buffer.
 - **Processing threads in the audio device's workgroup on macOS.** The extra processing threads now
   join the audio device's own thread in its workgroup and share its scheduling, so macOS runs them
   on the performance cores together and raises the CPU's clock for their combined work.

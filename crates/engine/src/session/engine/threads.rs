@@ -46,12 +46,18 @@ pub(crate) struct ThreadState {
 impl Session {
     /// The threads the setting means on this machine.
     pub fn processing_threads(&self) -> usize {
-        setting::resolve(self.audio_config.processing_threads, &self.threads.topology)
+        setting::resolve(self.audio_config.processing_threads, &self.threads.topology, self.suggested_threads())
+    }
+
+    /// How many threads the running device's workgroup suggests (macOS), which Automatic stays
+    /// within.
+    fn suggested_threads(&self) -> Option<u32> {
+        self.io_thread().and_then(|io| io.suggested_threads())
     }
 
     /// What Settings › Audio offers, and which threads the running pool left out.
     pub fn thread_choices(&self) -> ThreadChoices {
-        let mut c = setting::choices(&self.threads.topology);
+        let mut c = setting::choices(&self.threads.topology, self.suggested_threads());
         c.left_out = self.threads_left_out();
         c
     }

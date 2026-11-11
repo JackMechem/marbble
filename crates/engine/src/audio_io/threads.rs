@@ -17,6 +17,26 @@
 //! a whole run in one of three tries: there a block took 4.3 ms on average against 2.7 ms, and the
 //! plug-in's own heavy block every 8192 frames 14.5 ms against 9.4, past a 512-frame buffer's
 //! 10.7 ms (vst3-host's `editor_load`).
+//!
+//! On macOS (issue #59) Automatic is one thread per performance core: the efficiency cores run
+//! everything else, so no performance core needs leaving free, and the output device's IO workgroup
+//! (`coreaudio.rs`), which the workers join, suggests as many (`os_workgroup_max_parallel_threads`,
+//! 4 on an M1); Automatic never goes past what it suggests. Measured on an M1 (4 performance and 4
+//! efficiency cores) with `stress_check` (PR #386): 32 instrument and 8 audio tracks of built-in
+//! plug-ins (12 and 4 for the second row) on the built-in speakers, real-time workers in the
+//! workgroup, the median block load in % of the deadline (p99 within 4 points). The 40 tracks came
+//! within 2 points of each other at 128, 256 and 512 frames and in a second run; other agents'
+//! builds kept the load average at 10 to 17 throughout.
+//!
+//! | threads        | 1    | 2  | 3  | 4  | 5  | 6  |
+//! |----------------|------|----|----|----|----|----|
+//! | 40 tracks      | 121* | 64 | 45 | 36 | 38 | 37 |
+//! | 16 tracks, 128 | 47   | 26 | 21 | 17 | 17 | 17 |
+//!
+//! (* over its deadline: every block late.) A fourth thread took the heavy project from 45 % to
+//! 36 %; a fifth or sixth, which must share a performance core or run on an efficiency one,
+//! gained nothing and cost a little. An Intel Mac has one kind of core and leaves one free, as
+//! Linux does.
 
 /// The setting's value for Automatic.
 pub const AUTOMATIC: u32 = 0;
@@ -40,8 +60,12 @@ pub struct Topology {
     /// performance ones).
     pub fast_cores: usize,
     /// The logical CPUs of those cores, on a machine with two kinds of core. Empty on a uniform
-    /// machine or where it can't be told.
+    /// machine, where it can't be told, and on macOS (which has no affinity).
     pub fast: Vec<usize>,
+    /// Physical cores of a slower kind (efficiency cores) that the rest of the system can run on, so
+    /// that Automatic needn't leave a fast core free for it. Counted on macOS only, where that was
+    /// measured; 0 elsewhere.
+    pub others: usize,
 }
 
 impl Topology {
@@ -53,12 +77,41 @@ impl Topology {
             let sibling = |c: usize| read(&format!("/sys/devices/system/cpu/cpu{c}/topology/thread_siblings_list"));
             detect_linux(logical, read("/sys/devices/cpu_core/cpus"), read("/sys/devices/system/cpu/online"), &sibling)
         }
-        // Workers get real-time priority on Linux and macOS, but Automatic's measurements are
-        // Linux's (and away from both, workers at normal priority beside a real-time callback would
-        // cost more than they bring): a number can be chosen, but Automatic stays on one thread.
-        #[cfg(not(target_os = "linux"))]
-        Topology { logical, fast_cores: 1, fast: Vec::new() }
+        #[cfg(target_os = "macos")]
+        {
+            let (perf0, perf1) = (sysctl_count(c"hw.perflevel0.physicalcpu"), sysctl_count(c"hw.perflevel1.physicalcpu"));
+            detect_macos(logical, perf0, perf1, sysctl_count(c"hw.physicalcpu"))
+        }
+        // Workers at normal priority beside a real-time callback would cost more than they bring
+        // (Windows, issue #59): a number can be chosen, but Automatic stays on one thread.
+        #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+        Topology { logical, fast_cores: 1, ..Default::default() }
     }
+}
+
+/// A whole-number `sysctl`, such as `hw.physicalcpu`. None where the system doesn't have it
+/// (`hw.perflevel0.*` is Apple Silicon on macOS 12 and later).
+#[cfg(target_os = "macos")]
+fn sysctl_count(name: &std::ffi::CStr) -> Option<usize> {
+    let mut v: libc::c_int = 0;
+    let mut len = std::mem::size_of::<libc::c_int>();
+    // SAFETY: a NUL-terminated name and an out-buffer of the size given.
+    let r = unsafe { libc::sysctlbyname(name.as_ptr(), (&raw mut v).cast(), &mut len, std::ptr::null_mut(), 0) };
+    (r == 0 && len == std::mem::size_of::<libc::c_int>() && v > 0).then_some(v as usize)
+}
+
+/// macOS: the fast cores are the performance cores (`hw.perflevel0.physicalcpu`) on Apple Silicon,
+/// the efficiency cores (`hw.perflevel1.physicalcpu`) the others; on an Intel Mac or a system
+/// without perflevels, all physical cores (`hw.physicalcpu`) and no others. No list of them: macOS
+/// has no affinity, and the workers reach the performance cores by their time-constraint policy and
+/// by joining the device's workgroup (`coreaudio.rs`).
+#[allow(dead_code)]
+fn detect_macos(logical: usize, perf0: Option<usize>, perf1: Option<usize>, physical: Option<usize>) -> Topology {
+    let (fast, others) = match perf0 {
+        Some(p) => (p, perf1.unwrap_or(0)),
+        None => (physical.unwrap_or(logical), 0),
+    };
+    Topology { logical, fast_cores: fast.min(logical).max(1), fast: Vec::new(), others }
 }
 
 /// Keeps the calling thread to `cpus` (empty: leaves it where it is). Real-time threads aren't
@@ -107,20 +160,24 @@ fn detect_linux(logical: usize, p_cores: Option<String>, online: Option<String>,
     let among = if fast.is_empty() { &all } else { &fast };
     // A core counts once, however many hardware threads it has: its first sibling stands for it.
     let cores = among.iter().filter(|&&c| sibling(c).and_then(|l| parse_cpus(&l).first().copied()).is_none_or(|first| first == c)).count();
-    Topology { logical, fast_cores: cores.max(1), fast }
+    Topology { logical, fast_cores: cores.max(1), fast, others: 0 }
 }
 
-/// What Automatic picks: leave a fast core for everything else the machine and the plug-ins' own
-/// threads do, and stop at [`AUTOMATIC_MAX`]. A machine with a core or two plays serially.
-pub fn automatic(t: &Topology) -> usize {
-    t.fast_cores.min(t.logical).saturating_sub(1).clamp(1, AUTOMATIC_MAX)
+/// What Automatic picks: one thread per fast core, less one left for everything else the machine
+/// and the plug-ins' own threads do unless efficiency cores take that ([`Topology::others`]), no
+/// more than the audio device's workgroup suggests (`suggested`, `IoThread::suggested_threads` on
+/// macOS), and at most [`AUTOMATIC_MAX`]. A machine with a core or two plays serially.
+pub fn automatic(t: &Topology, suggested: Option<u32>) -> usize {
+    let spare = usize::from(t.others == 0);
+    let n = t.fast_cores.min(t.logical).saturating_sub(spare);
+    n.min(suggested.map_or(usize::MAX, |s| s as usize)).clamp(1, AUTOMATIC_MAX)
 }
 
-/// The threads a setting means here. A number is taken at its word, up to what the setting offers
-/// (more threads than cores works, just not well).
-pub fn resolve(setting: u32, t: &Topology) -> usize {
+/// The threads a setting means here, `suggested` as for [`automatic`]. A number is taken at its
+/// word, up to what the setting offers (more threads than cores works, just not well).
+pub fn resolve(setting: u32, t: &Topology, suggested: Option<u32>) -> usize {
     match setting {
-        AUTOMATIC => automatic(t),
+        AUTOMATIC => automatic(t, suggested),
         n => (n as usize).min(MANUAL_MAX),
     }
 }
@@ -150,8 +207,8 @@ pub struct LeftOut {
 }
 
 /// What Settings › Audio › Processing Threads offers on this machine.
-pub fn choices(t: &Topology) -> ThreadChoices {
-    ThreadChoices { automatic: automatic(t) as u32, max: t.logical.clamp(1, MANUAL_MAX) as u32, left_out: None }
+pub fn choices(t: &Topology, suggested: Option<u32>) -> ThreadChoices {
+    ThreadChoices { automatic: automatic(t, suggested) as u32, max: t.logical.clamp(1, MANUAL_MAX) as u32, left_out: None }
 }
 
 #[cfg(test)]
@@ -175,39 +232,75 @@ mod tests {
         let t = detect_linux(24, Some("0-15\n".into()), Some("0-23\n".into()), &hybrid_siblings);
         assert_eq!(t.fast_cores, 8);
         assert_eq!(t.fast, (0..16).collect::<Vec<_>>());
-        assert_eq!(automatic(&t), 6);
+        assert_eq!(automatic(&t, None), 6);
     }
 
     #[test]
     fn a_uniform_machine_counts_its_physical_cores() {
         let t = detect_linux(8, None, Some("0-7".into()), &|c| Some(format!("{},{}", c & !1, c | 1)));
         assert_eq!(t.fast_cores, 4);
-        assert_eq!(automatic(&t), 3);
+        assert_eq!(automatic(&t, None), 3);
+    }
+
+    #[test]
+    fn apple_silicon_counts_its_performance_cores() {
+        // M1: four performance and four efficiency cores. The efficiency cores take everything
+        // else, so Automatic plays on all four performance cores, as the workgroup suggests.
+        let t = detect_macos(8, Some(4), Some(4), Some(8));
+        assert_eq!((t.fast_cores, t.others, t.fast.len()), (4, 4, 0));
+        assert_eq!(automatic(&t, None), 4);
+        assert_eq!(automatic(&t, Some(4)), 4);
+        // M1 Pro / Max: eight and two, to Automatic's limit.
+        let t = detect_macos(10, Some(8), Some(2), Some(10));
+        assert_eq!((t.fast_cores, t.others), (8, 2));
+        assert_eq!(automatic(&t, None), AUTOMATIC_MAX);
+    }
+
+    #[test]
+    fn automatic_takes_no_more_than_the_workgroup_suggests() {
+        let t = detect_macos(10, Some(8), Some(2), Some(10));
+        assert_eq!(automatic(&t, Some(3)), 3);
+        assert_eq!(resolve(AUTOMATIC, &t, Some(3)), 3);
+        assert_eq!(automatic(&t, Some(0)), 1);
+        // A number is taken at its word.
+        assert_eq!(resolve(5, &t, Some(3)), 5);
+        assert_eq!(choices(&t, Some(3)).automatic, 3);
+    }
+
+    #[test]
+    fn an_intel_mac_counts_its_physical_cores() {
+        // Hyper-threaded, no perflevels: one core is left for everything else.
+        let t = detect_macos(8, None, None, Some(4));
+        assert_eq!((t.fast_cores, t.others), (4, 0));
+        assert_eq!(automatic(&t, None), 3);
+        // Nothing to go on: the logical CPUs, at least one.
+        assert_eq!(detect_macos(2, None, None, None).fast_cores, 2);
+        assert_eq!(detect_macos(1, Some(4), None, None).fast_cores, 1);
     }
 
     #[test]
     fn small_machines_stay_serial() {
         for (logical, cores) in [(1, 1), (2, 1), (2, 2)] {
-            let t = Topology { logical, fast_cores: cores, fast: Vec::new() };
-            assert_eq!(automatic(&t), 1, "{logical} logical, {cores} cores");
+            let t = Topology { logical, fast_cores: cores, ..Default::default() };
+            assert_eq!(automatic(&t, None), 1, "{logical} logical, {cores} cores");
         }
     }
 
     #[test]
     fn automatic_is_bounded_on_a_big_machine() {
-        let t = Topology { logical: 128, fast_cores: 64, fast: Vec::new() };
-        assert_eq!(automatic(&t), AUTOMATIC_MAX);
-        assert_eq!(resolve(1, &t), 1);
-        assert_eq!(resolve(AUTOMATIC, &t), AUTOMATIC_MAX);
-        assert_eq!(resolve(4, &t), 4);
-        assert_eq!(resolve(1000, &t), MANUAL_MAX);
+        let t = Topology { logical: 128, fast_cores: 64, ..Default::default() };
+        assert_eq!(automatic(&t, None), AUTOMATIC_MAX);
+        assert_eq!(resolve(1, &t, None), 1);
+        assert_eq!(resolve(AUTOMATIC, &t, None), AUTOMATIC_MAX);
+        assert_eq!(resolve(4, &t, None), 4);
+        assert_eq!(resolve(1000, &t, None), MANUAL_MAX);
     }
 
     #[test]
     fn the_setting_offers_what_the_machine_has() {
-        let c = choices(&Topology { logical: 24, fast_cores: 8, fast: Vec::new() });
+        let c = choices(&Topology { logical: 24, fast_cores: 8, ..Default::default() }, None);
         assert_eq!((c.automatic, c.max), (6, 16));
-        let c = choices(&Topology { logical: 2, fast_cores: 1, fast: Vec::new() });
+        let c = choices(&Topology { logical: 2, fast_cores: 1, ..Default::default() }, None);
         assert_eq!((c.automatic, c.max), (1, 2));
     }
 }
