@@ -4,6 +4,7 @@
 use std::time::{Duration, Instant};
 
 use daw_engine::audio_io::AudioConfig;
+use daw_engine::dsp::ParallelTest;
 use daw_engine::model::{Id, InputSel, Region, RegionContent, TakeRating, TrackKind};
 
 const BALLAST: usize = 40;
@@ -79,6 +80,10 @@ fn main() {
     let _ = std::fs::remove_dir_all(&s.dir);
     std::fs::create_dir_all(s.dir.join("Audio Files")).unwrap();
     s.prefs.recording.pre_roll_secs = 0.0;
+    // The null device runs flat out, so on a loaded machine (a CI runner) blocks can run late
+    // for long enough to count as an overload, and the next `tick()` would stop the recording
+    // just started (#297). Patient, the engine never sheds or stops for time.
+    s.set_threads_for_checks(1, ParallelTest { patient: true, ..Default::default() });
     let sr = s.sample_rate() as i64;
     let mut ok = true;
 
