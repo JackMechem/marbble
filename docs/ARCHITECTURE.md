@@ -477,6 +477,11 @@ inaudible.
   on Linux, and on macOS a Mach time-constraint policy for one buffer
   (`dsp/pool/thread_setup.rs`). On Windows they can't get it yet, and on macOS and Windows
   Automatic is still 1 (a number chosen by hand starts workers).
+- **The device's workgroup (macOS).** Each worker copies the IO thread's time-constraint policy and
+  joins its `os_workgroup` as it starts, leaving when it ends, so the scheduler keeps the group on
+  the performance cores and clocks the CPU for the work of all of it (see
+  [Audio devices](#10-audio-devices-and-recording)). A worker that can't join plays on outside it; one
+  given up on in a plug-in stays in the group until it returns, as only the thread itself can leave.
 - **Offline renders stay serial.** `parallel_check` and `soak_check` drive them through the pool
   to prove the identity.
 
@@ -723,6 +728,14 @@ copies, strip settings and templates.
   ring), calls `Engine::process` under `try_lock`, and converts to the device format. When the
   input ring holds more than three blocks the excess is dropped; an underflow is padded. There is no
   resampling between devices.
+- **The IO thread (macOS, `coreaudio.rs`).** Once the output stream plays, `audio_io::start` finds
+  the device's IO workgroup (`kAudioDevicePropertyIOThreadOSWorkgroup`) and waits for the first
+  callback, which reads its own thread's time-constraint policy into atomics (one Mach call, no
+  allocation). `AudioIo::io_thread` hands both to the workers through `PoolOptions`. The workgroup
+  calls are looked up at run time, as they're macOS 11's; without them, on the null device, or on a
+  device without a workgroup, the workers only get real-time priority. Each new device brings its
+  own: the workers start afresh on every restart. `workgroup_check` plays to the default output and
+  checks the workers joined.
 - **Reset Audio Engine** (`restart_audio`) reopens the devices after an unplug or driver error.
 - **Memory locking** (`memlock.rs`): on Linux, with an unlimited `RLIMIT_MEMLOCK`, the app locks
   its pages as they are first touched, so the audio thread never waits for a swapped-out page.

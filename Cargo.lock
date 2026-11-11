@@ -813,6 +813,8 @@ dependencies = [
  "log",
  "mach2 0.6.0",
  "midir",
+ "objc2-core-audio",
+ "objc2-core-foundation",
  "parking_lot",
  "realfft",
  "rtrb",

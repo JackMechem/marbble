@@ -462,6 +462,8 @@ fn realtime_workers(scratch: &Path) {
     s.idle();
     std::thread::sleep(std::time::Duration::from_millis(200));
     let granted = rt_threads(&s);
+    // The null device has no IO workgroup to join (macOS): `workgroup_check` plays to a real one.
+    let joined = s.threads_health_for_checks().map_or(0, |r| r.joined);
     let engine = s.engine_for_checks();
     let mut guard = engine.lock();
     s.locate(0);
@@ -479,7 +481,10 @@ fn realtime_workers(scratch: &Path) {
     if granted == 0 {
         println!("SKIP real-time workers: this system didn't grant real-time priority (they fell back to normal, and played {pooled} of {blocks} blocks)");
     } else {
-        check(&format!("{granted} real-time workers lived through 800 ms of blocks back to back ({pooled} of {blocks} blocks on the pool)"), pooled > 0);
+        check(
+            &format!("{granted} real-time workers lived through 800 ms of blocks back to back ({pooled} of {blocks} blocks on the pool, {joined} in a device workgroup)"),
+            pooled > 0,
+        );
     }
 }
 

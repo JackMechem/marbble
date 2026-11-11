@@ -33,7 +33,10 @@ audio_thread_priority = { version = "0.35", default-features = false, features =
 libc = "0.2"
 
 # Real-time priority for the threads that play tracks alongside the audio callback (a Mach
-# time-constraint policy). Both are already in the tree via cpal.
+# time-constraint policy), and the Core Audio calls that find the device's IO workgroup for them
+# to join. All are already in the tree via cpal.
 [target.'cfg(target_os = "macos")'.dependencies]
 libc = "0.2"
 mach2 = "0.6"
+objc2-core-audio = { version = "0.3", default-features = false, features = ["std", "AudioHardware"] }
+objc2-core-foundation = { version = "0.3", default-features = false, features = ["std", "CFString"] }

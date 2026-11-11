@@ -164,6 +164,10 @@ device. Register a new check in the script's `CHECKS` list.
   `automation_check` and `bounce_check`, which print `SKIP` without them.
   `vst_sidechain_check`, `multiout_check`, `multiout_freeze_check` and `vst_undo_check` find LSP's
   plug-ins themselves, so they're in the script and `SKIP` where they aren't installed.
+- **Needs a real output device, so run by hand on macOS:** `workgroup_check` plays silence to the
+  default output (never an input) on three real-time workers and checks they joined the device's IO
+  workgroup, before and after reopening it. It prints `SKIP` without an output device or elsewhere
+  than macOS, so it stays out of the script, which never opens a real device.
 - **LSP's Multi-Sampler loses a sample now and then** while it loads, through a bug of LSP's
   (issue #37): its VST3 wrapper's task queue (`vst3::Executor::submit` in lsp-plugin-fw) reports
   a task it failed to queue as queued, so the sampler waits for that file's load or render for

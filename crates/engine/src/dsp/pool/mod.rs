@@ -35,7 +35,7 @@ mod call;
 use call::{phase, GONE, LEFT};
 pub use call::{Call, Job};
 mod thread_setup;
-use thread_setup::{demote, os_thread, promote, touch_stack};
+use thread_setup::{demote, join_workgroup, os_thread, promote, touch_stack};
 
 use std::cell::{Cell, UnsafeCell};
 use std::panic::{catch_unwind, AssertUnwindSafe};
@@ -79,6 +79,9 @@ pub struct PoolOptions {
     pub realtime: Option<(u32, u32)>,
     /// Logical CPUs the workers keep to (empty: anywhere). See `threads::Topology::fast`.
     pub cpus: Vec<usize>,
+    /// The audio device's IO thread (macOS): the workers join its workgroup and copy its
+    /// time-constraint policy, when `realtime` asks for real time.
+    pub io_thread: crate::audio_io::IoThread,
     /// For checks: the workers whose bit is set (bit 1 for the first) act as if real-time priority
     /// was refused them, whether or not `realtime` asks for it.
     #[doc(hidden)]
@@ -105,6 +108,7 @@ pub struct Health {
     refused: AtomicU32,
     stuck: AtomicU32,
     realtime: AtomicU32,
+    joined: AtomicU32,
     /// The first refusal's reason, for the log.
     why: OnceLock<String>,
 }
@@ -124,6 +128,8 @@ pub struct HealthReport {
     pub stuck: u32,
     /// Workers granted real-time priority.
     pub realtime: u32,
+    /// Workers that joined the audio device's IO workgroup (macOS).
+    pub joined: u32,
 }
 
 impl Health {
@@ -136,6 +142,7 @@ impl Health {
             refused: self.refused.load(Ordering::Relaxed),
             stuck: self.stuck.load(Ordering::Relaxed),
             realtime: self.realtime.load(Ordering::Relaxed),
+            joined: self.joined.load(Ordering::Relaxed),
         }
     }
 
@@ -642,6 +649,9 @@ fn worker(sh: Arc<Shared>, index: usize, opts: PoolOptions) {
     if let Err(e) = crate::audio_io::threads::keep_to(&opts.cpus) {
         log::warn!("a processing thread can't keep to the fast cores: {e}");
     }
+    // In the IO thread's workgroup until the worker ends, whichever way: shut down, retired, or
+    // back from a plug-in it was left in. Refused, it plays on as a plain real-time worker.
+    let _joined = join_workgroup(&sh, &opts);
     // Freed now rather than when the worker ends, which for one left in a plug-in is whenever the
     // plug-in returns, maybe in the middle of a block.
     drop(opts);

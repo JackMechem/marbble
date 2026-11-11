@@ -17,6 +17,8 @@ use serde::{Deserialize, Serialize};
 use crate::dsp::{Engine, EngineStatus};
 use std::sync::atomic::Ordering;
 
+#[cfg(target_os = "macos")]
+pub mod coreaudio;
 pub mod devices;
 pub mod memlock;
 pub mod recorder;
@@ -25,6 +27,35 @@ pub mod system_volume;
 pub mod threads;
 
 use devices::{choose_config, device_name, find_device, host_by_name, pick_host};
+
+#[cfg(target_os = "macos")]
+pub use coreaudio::IoThread;
+#[cfg(target_os = "macos")]
+use coreaudio::IoThreadProbe;
+
+/// What the workers take from the device's IO thread: on macOS its workgroup and time-constraint
+/// policy (`coreaudio.rs`), elsewhere nothing.
+#[cfg(not(target_os = "macos"))]
+#[derive(Debug, Clone, Default)]
+pub struct IoThread {}
+
+#[cfg(not(target_os = "macos"))]
+impl IoThread {
+    /// How many threads the system suggests for work beside the IO thread (macOS only).
+    pub fn suggested_threads(&self) -> Option<u32> {
+        None
+    }
+}
+
+/// The output callback's notes about its own thread (macOS only).
+#[cfg(not(target_os = "macos"))]
+#[derive(Debug, Default)]
+struct IoThreadProbe {}
+
+#[cfg(not(target_os = "macos"))]
+impl IoThreadProbe {
+    fn note(&self) {}
+}
 
 /// What to open: host, devices, rate and buffer size, and the engine options that go with them.
 /// Saved in `settings.json`, so new fields need a default.
@@ -101,6 +132,14 @@ pub struct AudioStatus {
 pub struct AudioIo {
     stop: Option<std::sync::mpsc::Sender<()>>,
     thread: Option<JoinHandle<()>>,
+    io_thread: IoThread,
+}
+
+impl AudioIo {
+    /// The output device's IO thread, as the workers that play beside it take it.
+    pub fn io_thread(&self) -> &IoThread {
+        &self.io_thread
+    }
 }
 
 impl Drop for AudioIo {
@@ -112,6 +151,7 @@ impl Drop for AudioIo {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn build_output<T>(
     d: &Device,
     cfg: StreamConfig,
@@ -120,6 +160,7 @@ fn build_output<T>(
     in_ch: usize,
     status: Arc<EngineStatus>,
     fast_cpus: Vec<usize>,
+    probe: Arc<IoThreadProbe>,
 ) -> Result<cpal::Stream>
 where
     T: SizedSample + FromSample<f32>,
@@ -136,6 +177,8 @@ where
             if !placed {
                 placed = true;
                 let _ = threads::keep_to(&fast_cpus);
+                // For the workers to copy (macOS): one Mach call, no allocation.
+                probe.note();
             }
             let ts = info.timestamp();
             let lat = ts.playback.duration_since(ts.callback).as_micros() as u64;
@@ -269,7 +312,7 @@ fn start_null(engine: Arc<Mutex<Engine>>, cfg: &AudioConfig) -> (Option<AudioIo>
         buffer_size: frames as u32,
         ..Default::default()
     };
-    (Some(AudioIo { stop: Some(stop_tx), thread: Some(thread) }), status)
+    (Some(AudioIo { stop: Some(stop_tx), thread: Some(thread), io_thread: IoThread::default() }), status)
 }
 
 /// cpal's real-time promotion sets the process's soft RLIMIT_RTTIME to a single buffer (10.7 ms at
@@ -290,7 +333,7 @@ pub fn start(engine: Arc<Mutex<Engine>>, cfg: &AudioConfig) -> (Option<AudioIo>,
     if cfg.output.as_deref() == Some(NULL_OUTPUT) && host_by_name("ALSA").is_none() {
         return start_null(engine, cfg);
     }
-    let (res_tx, res_rx) = std::sync::mpsc::channel::<AudioStatus>();
+    let (res_tx, res_rx) = std::sync::mpsc::channel::<(AudioStatus, IoThread)>();
     let (stop_tx, stop_rx) = std::sync::mpsc::channel::<()>();
     let cfg = cfg.clone();
     let thread = std::thread::Builder::new()
@@ -301,7 +344,7 @@ pub fn start(engine: Arc<Mutex<Engine>>, cfg: &AudioConfig) -> (Option<AudioIo>,
             status_arc.input_latency_us.store(0, Ordering::Relaxed);
             status_arc.output_latency_us.store(0, Ordering::Relaxed);
             status_arc.ring_frames.store(0, Ordering::Relaxed);
-            let result = (|| -> Result<(cpal::Stream, Option<cpal::Stream>)> {
+            let result = (|| -> Result<((cpal::Stream, Option<cpal::Stream>), IoThread)> {
                 let host = pick_host(cfg.host.as_deref());
                 status.host = host.id().name().to_string();
                 let out_dev = find_device(&host, cfg.output.as_deref(), false).ok_or_else(|| anyhow!("no output device"))?;
@@ -337,31 +380,48 @@ pub fn start(engine: Arc<Mutex<Engine>>, cfg: &AudioConfig) -> (Option<AudioIo>,
                     None => (None, None, 0),
                 };
                 let fast = threads::Topology::detect().fast;
-                let out = by_format!(out_fmt, build_output, &out_dev, out_cfg, engine.clone(), in_rx, in_ch, status_arc.clone(), fast)?;
+                let probe = Arc::new(IoThreadProbe::default());
+                let out = by_format!(out_fmt, build_output, &out_dev, out_cfg, engine.clone(), in_rx, in_ch, status_arc.clone(), fast, probe.clone())?;
                 if let Some(s) = &in_stream {
                     s.play()?;
                 }
                 out.play()?;
-                Ok((out, in_stream))
+                #[cfg(target_os = "macos")]
+                let io_thread = {
+                    let io = out_dev.id().map(|id| IoThread::of(id.id(), &probe)).unwrap_or_default();
+                    log::info!(
+                        "audio device's IO thread: workgroup {}, time constraint {:?}, suggested threads {:?}",
+                        if io.workgroup.is_some() { "found" } else { "none" },
+                        io.policy,
+                        io.suggested_threads()
+                    );
+                    io
+                };
+                #[cfg(not(target_os = "macos"))]
+                let io_thread = {
+                    drop(probe);
+                    IoThread {}
+                };
+                Ok(((out, in_stream), io_thread))
             })();
             match result {
-                Ok(streams) => {
+                Ok((streams, io_thread)) => {
                     status.running = true;
-                    let _ = res_tx.send(status);
+                    let _ = res_tx.send((status, io_thread));
                     let _ = stop_rx.recv();
                     drop(streams);
                 }
                 Err(e) => {
                     status.error = Some(e.to_string());
-                    let _ = res_tx.send(status);
+                    let _ = res_tx.send((status, IoThread::default()));
                 }
             }
         })
         .expect("spawn audio thread");
 
-    let status = res_rx.recv().unwrap_or_default();
+    let (status, io_thread) = res_rx.recv().unwrap_or_default();
     if status.running {
-        (Some(AudioIo { stop: Some(stop_tx), thread: Some(thread) }), status)
+        (Some(AudioIo { stop: Some(stop_tx), thread: Some(thread), io_thread }), status)
     } else {
         let _ = thread.join();
         (None, status)

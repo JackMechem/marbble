@@ -41,7 +41,7 @@ pub(super) fn promote(sh: &Shared, index: usize, opts: &PoolOptions) -> bool {
             audio_thread_priority::promote_current_thread_to_real_time(frames, rate).map(drop).map_err(|e| e.to_string())
         };
         #[cfg(target_os = "macos")]
-        let granted = macos::promote(frames, rate);
+        let granted = macos::promote(frames, rate, opts.io_thread.policy);
         match granted {
             Ok(()) => {
                 sh.workers[index - 1].realtime.store(true, Ordering::Relaxed);
@@ -58,6 +58,28 @@ pub(super) fn promote(sh: &Shared, index: usize, opts: &PoolOptions) -> bool {
         let _ = (frames, rate);
         true
     }
+}
+
+/// Joins the audio device's IO workgroup (macOS), when the worker was promoted for it, until the
+/// result is dropped on this thread. A refusal is logged, and the worker plays on without it.
+#[cfg(target_os = "macos")]
+pub(super) fn join_workgroup(sh: &Shared, opts: &PoolOptions) -> Option<crate::audio_io::coreaudio::Joined> {
+    opts.realtime?;
+    match opts.io_thread.workgroup.as_ref()?.join() {
+        Ok(j) => {
+            sh.health.joined.fetch_add(1, Ordering::Relaxed);
+            Some(j)
+        }
+        Err(e) => {
+            log::warn!("a processing thread couldn't join the audio device's workgroup (errno {e}); it plays on outside it");
+            None
+        }
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+pub(super) fn join_workgroup(_: &Shared, _: &PoolOptions) -> Option<()> {
+    None
 }
 
 /// The system's id for the calling thread, by which another thread can demote it: the kernel's
@@ -103,6 +125,7 @@ pub(super) fn demote(thread: u32) {
 
 #[cfg(target_os = "macos")]
 pub(super) mod macos {
+    use crate::audio_io::coreaudio::TimeConstraint;
     use mach2::kern_return::KERN_SUCCESS;
     use mach2::mach_time::{mach_timebase_info, mach_timebase_info_data_t};
     use mach2::thread_policy::{
@@ -117,9 +140,8 @@ pub(super) mod macos {
 
     /// The time-constraint policy for a worker playing `frames` at `rate`: every buffer (`period`),
     /// up to half of it in work (`computation`), done within the buffer (`constraint`), and
-    /// preemptible, as Core Audio asks for its own IO thread. The pool's workers start before the
-    /// device reports its IO thread's values, so these are worked out from the buffer alone; a later
-    /// change that joins the IO thread's workgroup can hand its values in here instead.
+    /// preemptible, as Core Audio asks for its own IO thread. For when the IO thread's own values
+    /// aren't known (`IoThread::policy`): checks, or a device whose first callback came late.
     pub fn constraint_for(frames: u32, rate: u32) -> Option<thread_time_constraint_policy_data_t> {
         let mut tb = mach_timebase_info_data_t { numer: 0, denom: 0 };
         // SAFETY: fills in the struct it's given.
@@ -139,17 +161,26 @@ pub(super) mod macos {
         })
     }
 
-    /// Puts the calling thread under [`constraint_for`]'s policy.
-    pub fn promote(frames: u32, rate: u32) -> Result<(), String> {
-        let mut policy = constraint_for(frames, rate).ok_or("no Mach timebase")?;
-        // SAFETY: a valid policy of the flavour and size given, for this thread's own port.
-        let r = unsafe {
-            thread_policy_set(super::os_thread(), THREAD_TIME_CONSTRAINT_POLICY, &mut policy as *mut _ as thread_policy_t, THREAD_TIME_CONSTRAINT_POLICY_COUNT)
-        };
+    /// Puts the calling thread under the IO thread's time-constraint policy, `io`, so that it and
+    /// the workers are scheduled alike, or failing that under [`constraint_for`]'s.
+    pub fn promote(frames: u32, rate: u32, io: Option<TimeConstraint>) -> Result<(), String> {
+        let copied =
+            io.map(|p| thread_time_constraint_policy_data_t { period: p.period, computation: p.computation, constraint: p.constraint, preemptible: 1 });
+        if copied.is_some_and(|p| set(p) == KERN_SUCCESS) {
+            return Ok(());
+        }
+        let r = set(constraint_for(frames, rate).ok_or("no Mach timebase")?);
         if r == KERN_SUCCESS {
             Ok(())
         } else {
             Err(format!("thread_policy_set refused the time-constraint policy (kern_return_t {r})"))
+        }
+    }
+
+    fn set(mut policy: thread_time_constraint_policy_data_t) -> mach2::kern_return::kern_return_t {
+        // SAFETY: a valid policy of the flavour and size given, for this thread's own port.
+        unsafe {
+            thread_policy_set(super::os_thread(), THREAD_TIME_CONSTRAINT_POLICY, &mut policy as *mut _ as thread_policy_t, THREAD_TIME_CONSTRAINT_POLICY_COUNT)
         }
     }
 
