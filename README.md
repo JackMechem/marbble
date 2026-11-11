@@ -71,13 +71,12 @@ On NixOS or with Nix, use the flake instead (below).
 | VST3 instruments and effects | Yes | Yes | Yes |
 | VST3 editor windows | Yes (X11; through XWayland on Wayland) | Not yet | Yes |
 | Built-in effects and instruments | Yes | Yes | Yes |
-| Multi-core processing | Yes | One thread for now | One thread for now |
+| Multi-core processing | Yes | One thread for now | Yes |
 | Input level check | Yes (PipeWire, PulseAudio) | No | Yes |
 
 On Windows, VST3 plug-ins still load, play, save their state and can be automated; only their
 own editor window is missing. Both build and pass the engine tests in CI, and macOS the headless
-checks on a silent stand-in device. The macOS build has been run on a real Mac, where it works but
-uses one processing thread ([#59](https://github.com/JackMechem/marbble/issues/59)); the Windows
+checks on a silent stand-in device. The macOS build has been run on a real Mac (an M1); the Windows
 build hasn't been tried on real hardware yet. The
 [Windows](https://github.com/JackMechem/marbble/labels/platform%3A%20windows) and
 [macOS](https://github.com/JackMechem/marbble/labels/platform%3A%20macos) issues list what to try.
