@@ -468,11 +468,15 @@ inaudible.
   (`session/engine/left_out.rs`). The controller of that instance is called no more from the main
   thread.
 - **When it engages:** two strips with plug-ins can overlap and the load has reached 15 % of the
-  buffer. Automatic is the performance cores less one, at most 6; workers keep to performance
-  cores, as the callback does. Workers get real-time priority as the callback does: through rtkit
-  on Linux, and on macOS a Mach time-constraint policy for one buffer
-  (`dsp/pool/thread_setup.rs`). On Windows they can't get it yet, and on macOS and Windows
-  Automatic is still 1 (a number chosen by hand starts workers).
+  buffer. Automatic is the performance cores less one on Linux, at most 6; workers keep to
+  performance cores, as the callback does. On macOS it is one per performance core
+  (`hw.perflevel0.physicalcpu`; the efficiency cores run everything else) or the physical cores
+  less one on an Intel Mac, at most 6 and no more than the device's workgroup suggests
+  (`os_workgroup_max_parallel_threads`): 4 on an M1. macOS has no affinity, so there the workers
+  reach the performance cores through their policy and the workgroup. Workers get real-time
+  priority as the callback does: through rtkit on Linux, and on macOS a Mach time-constraint
+  policy for one buffer (`dsp/pool/thread_setup.rs`). On Windows they can't get it yet, and
+  Automatic is still 1 there (a number chosen by hand starts workers).
 - **The device's workgroup (macOS).** Each worker copies the IO thread's time-constraint policy and
   joins its `os_workgroup` as it starts, leaving when it ends, so the scheduler keeps the group on
   the performance cores and clocks the CPU for the work of all of it (see
