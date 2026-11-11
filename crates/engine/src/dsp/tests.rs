@@ -95,6 +95,13 @@ fn contain_silences_nans_and_clamps_runaways() {
     assert_eq!(r, [-0.25; 4]);
 }
 
+impl Engine {
+    /// Plays silence for the next `callbacks` callbacks, as after an overload.
+    pub(crate) fn shed_for(&mut self, callbacks: u32) {
+        self.shedding = callbacks;
+    }
+}
+
 /// An engine to send commands to and play blocks on, with the far ends of its rings. The tests
 /// in `parallel/` and `track_off/` use it too.
 pub(crate) struct Rig {

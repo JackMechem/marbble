@@ -43,7 +43,7 @@ impl Callback {
             }
             self.status.ring_frames.store((rx.slots() / in_ch.max(1)) as u64, Ordering::Relaxed);
         }
-        let mut io = DeviceIo { data, out_ch, at: 0, in_rx: self.in_rx.as_mut(), in_ch, in_buf: &mut self.in_buf };
+        let mut io = DeviceIo { data, out_ch, at: 0, in_rx: self.in_rx.as_mut(), in_ch, in_buf: &mut self.in_buf, taken: 0 };
         match engine {
             Some(e) => {
                 // A panic must never reach the audio driver: unwinding into its C callback
@@ -54,17 +54,11 @@ impl Callback {
                     e.status.engine_errors.fetch_add(1, Ordering::Relaxed);
                 }
             }
-            None => {
-                // The input this buffer would have played, so the ring doesn't fill meanwhile.
-                let mut left = frames;
-                while left > 0 {
-                    let n = left.min(MAX_BLOCK);
-                    io.input(n);
-                    left -= n;
-                }
-                io.silence();
-            }
+            None => io.silence(),
         }
+        // The input of this buffer that the engine didn't take (busy, shedding after an overload,
+        // or a block given up on), so the ring doesn't fill and monitoring stays as late as before.
+        io.take_rest(frames);
     }
 }
 
@@ -77,10 +71,22 @@ struct DeviceIo<'a, T> {
     in_rx: Option<&'a mut rtrb::Consumer<f32>>,
     in_ch: usize,
     in_buf: &'a mut [f32],
+    /// Frames of input taken so far.
+    taken: usize,
+}
+
+impl<T: Sample + FromSample<f32>> DeviceIo<'_, T> {
+    /// Takes the input up to the buffer's `frames`, a sub-block at a time.
+    fn take_rest(&mut self, frames: usize) {
+        while self.taken < frames {
+            self.input((frames - self.taken).min(MAX_BLOCK));
+        }
+    }
 }
 
 impl<T: Sample + FromSample<f32>> BlockIo for DeviceIo<'_, T> {
     fn input(&mut self, n: usize) -> &[f32] {
+        self.taken += n;
         let Some(rx) = &mut self.in_rx else { return &[] };
         let inp = &mut self.in_buf[..n.min(MAX_BLOCK) * self.in_ch];
         let got = rx.slots().min(inp.len());
@@ -168,5 +174,23 @@ mod tests {
         cb.play(None, &mut out, 2);
         assert!(out.iter().all(|&s| s == 0));
         assert_eq!(tx.slots(), 4096);
+    }
+
+    /// While the engine sheds after an overload it plays nothing, and the input is still taken.
+    #[test]
+    fn a_shedding_engine_still_takes_the_input() {
+        let mut r = rig();
+        r.engine.shed_for(3);
+        let (mut tx, rx) = rtrb::RingBuffer::new(4096);
+        let mut cb = Callback::new(Some(rx), 2, r.status.clone());
+        let mut out = vec![1.0f32; 512 * 2];
+        for _ in 0..3 {
+            for _ in 0..512 * 2 {
+                tx.push(0.5).unwrap();
+            }
+            cb.play(Some(&mut r.engine), &mut out, 2);
+            assert!(out.iter().all(|&s| s == 0.0), "silence while shedding");
+            assert_eq!(tx.slots(), 4096, "the buffer's input was taken");
+        }
     }
 }
