@@ -6,6 +6,12 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **Dropping files from Finder on a Retina Mac.** Audio and MIDI files dragged in from the
+  desktop now land under the pointer; on a Retina display they went to a spot halfway towards the
+  top-left corner (the drop position was read as device pixels when macOS gives points).
+
 ## [0.1.0-alpha.14] - 2026-11-10
 
 ### Added

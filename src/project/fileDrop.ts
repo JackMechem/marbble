@@ -14,6 +14,7 @@ import { getState, setState, showToast } from "../state/store";
 import { samplesPerBeat, snapPos } from "../lib/time";
 import { dropOnSampler, hoverSampler, samplerAt } from "../plugins/instruments/sampler/samplerDrop";
 import { dragWith } from "../ui/pointerDrag";
+import { dropToCss, dropUnits } from "./dropPosition";
 
 export type DropTarget =
   | { kind: "lane"; track: Id; index: number; sample: number }
@@ -111,11 +112,11 @@ async function performDrop(paths: string[], target: DropTarget | null) {
 
 // ---- native drops from the desktop -------------------------------------------------------
 
-/** Native drop positions arrive in webview pixels; convert to CSS pixels. */
+const DROP_UNITS = dropUnits(navigator.userAgent);
+
+/** A native drop position in CSS pixels (see dropPosition.ts for what each webview sends). */
 function toCss(p: { x: number; y: number }): [number, number] {
-  // WebKitGTK reports GTK logical pixels (page zoom aside); other webviews report physical.
-  const f = navigator.userAgent.includes("Linux") ? getState().uiScale : window.devicePixelRatio;
-  return [p.x / f, p.y / f];
+  return dropToCss(p, DROP_UNITS, getState().uiScale, window.devicePixelRatio);
 }
 
 export function installNativeDrop(): () => void {
