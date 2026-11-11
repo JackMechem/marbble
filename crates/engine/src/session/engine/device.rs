@@ -15,8 +15,76 @@ impl Session {
         self.audio.as_ref().map(|a| a.io_thread())
     }
 
-    /// Closes and reopens the device with the current config.
+    /// Closes and reopens the device with the current config (Reset Audio Engine, a new config).
+    /// After restarts by itself that gave up, it starts watching the device afresh.
     pub fn restart_audio(&mut self) {
+        self.device_watch.reset();
+        self.reopen_audio();
+    }
+
+    /// Reopens the device when its streams said it changed or went away, once things settle and
+    /// within limits (`audio_io/watch.rs`), and says so in a toast. If the chosen device is gone,
+    /// the system default takes its place, as when it's missing at startup. True when the device
+    /// was reopened, for a new snapshot of `audio_status`.
+    pub(crate) fn device_idle(&mut self) -> bool {
+        use audio_io::watch::Step;
+        let now = Instant::now();
+        if let Some(io) = &self.audio {
+            let (events, others) = io.events().counts();
+            let (seen_events, seen_others) = self.device_events_seen;
+            if others != seen_others {
+                log::warn!("audio stream reported {} error(s), the last {:?}", others.wrapping_sub(seen_others), io.events().last_other());
+            }
+            if events != seen_events {
+                self.device_watch.event(now);
+            }
+            self.device_events_seen = (events, others);
+        }
+        match self.device_watch.poll(now) {
+            Step::Wait => false,
+            Step::GiveUp => {
+                log::error!("audio device: gave up restarting it");
+                let what = if self.audio.is_some() { "The audio device kept dropping out" } else { "No audio output could be opened" };
+                self.warning.get_or_insert(format!(
+                    "{what}, so Marbble stopped restarting it. Choose a device in Settings › Audio, or click Reset Audio Engine there."
+                ));
+                false
+            }
+            Step::Restart => {
+                let reason = self.audio.as_ref().and_then(|io| io.events().take_reason());
+                let old = self.audio_status.output_name.clone();
+                log::warn!("audio device: {reason:?} on {old:?}, reopening");
+                // A recording whose device went away ends here, with what it has, rather than
+                // carrying on into the next device.
+                if self.is_recording() {
+                    self.stop();
+                }
+                self.reopen_audio();
+                let ok = self.audio_status.running;
+                self.device_watch.restarted(now, ok);
+                let msg = match (ok, reason) {
+                    (true, Some(r)) => {
+                        let name = self.audio_status.output_name.as_deref().unwrap_or("the output device");
+                        Some(format!("Audio restarted on \u{201c}{name}\u{201d} because {}.", r.because(old.as_deref())))
+                    }
+                    // A retry that worked: the toast for its failure said what happened.
+                    (true, None) => Some("Audio is back.".into()),
+                    (false, Some(r)) => Some(format!(
+                        "Audio stopped because {}, and no other output could be opened. Marbble keeps trying for a few seconds; or choose a device in Settings › Audio.",
+                        r.because(old.as_deref())
+                    )),
+                    (false, None) => None,
+                };
+                if let Some(m) = msg {
+                    self.warning.get_or_insert(m);
+                }
+                true
+            }
+        }
+    }
+
+    /// Closes and reopens the device with the current config.
+    fn reopen_audio(&mut self) {
         self.audio = None;
         // What the old device didn't take goes to the engine now, so that the count of commands
         // done keeps up with `cmds_sent` and nothing queued waits on whether the new one starts.
@@ -28,6 +96,8 @@ impl Session {
         let rate = if status.running { status.sample_rate } else { self.audio_config.sample_rate };
         self.audio = io;
         self.audio_status = status;
+        // The new streams' events count from zero.
+        self.device_events_seen = (0, 0);
         // Whether the workers should be real-time threads depends on the device. They start afresh,
         // promoted for its buffer, with any given up on in a stuck plug-in back.
         self.graph_dirty = true;

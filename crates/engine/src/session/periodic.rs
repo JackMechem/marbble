@@ -8,11 +8,13 @@ impl Session {
     /// Main-thread housekeeping: plugin controller idle, freeing replaced DSP objects, taking
     /// the MIDI a recording captured off its ring, keeping MIDI inputs connected, automation
     /// (plug-in editors following it, writes from them) and bringing the engine up to date after
-    /// commands for it were dropped (`resync_engine`).
-    /// Returns true if the set of open editors changed or automation was written, when the UI
-    /// needs a new snapshot.
+    /// commands for it were dropped (`resync_engine`), and reopening the audio device when it
+    /// changed or went away (`device_idle`).
+    /// Returns true if the set of open editors changed, automation was written or the device
+    /// reopened, when the UI needs a new snapshot.
     pub fn idle(&mut self) -> bool {
         self.mark_unresponsive();
+        let reopened = self.device_idle();
         self.sync_parallel();
         let before = self.open_editors().len();
         self.resync_engine();
@@ -43,7 +45,7 @@ impl Session {
         self.feedback_idle(&fresh);
         let surfaced = self.surface_idle(&fresh);
         self.bring_back();
-        before != self.open_editors().len() || written || latency_changed || controlled || stepped || surfaced
+        reopened || before != self.open_editors().len() || written || latency_changed || controlled || stepped || surfaced
     }
 
     /// Plays a MIDI message on the current MIDI target track (the selected instrument track).

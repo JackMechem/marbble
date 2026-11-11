@@ -162,6 +162,13 @@ click outside) drops them. The delay compensation options on the same tab apply 
   limits reached) is left out, and a note under the setting says so.
 - **Reset Audio Engine** closes and reopens the devices, for example after replugging an
   interface.
+- **When a device changes or goes away**, audio restarts by itself and a message says on which
+  device: when you unplug the output (Marbble moves to the system default output), when the input
+  goes away, when another app changes the device's sample rate, and on macOS when the system output
+  changes while the output is System Default (headphones plugged in, AirPods connected). If no
+  device opens, Marbble tries again for a few seconds; if a device keeps dropping out, it stops
+  after three restarts in half a minute and says so; choose a device or click Reset Audio Engine.
+  A recording in progress stops first, keeping what it captured.
 
 The status line at the bottom of the window shows the devices, the sample rate and the buffer
 size, or "Audio stopped" with the reason. Click it to open Settings › Audio.

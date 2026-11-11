@@ -239,6 +239,10 @@ pub struct Session {
     /// `EngineStatus::blocks` as last seen, and when it changed (see `strips_running`).
     strips_seen: (u64, Instant),
     overloads_seen: u32,
+    /// When to reopen the device by itself after it changed or went away, and its events as last
+    /// seen (see `audio_io/watch.rs` and `session/engine/device.rs`).
+    device_watch: audio_io::watch::Watch,
+    device_events_seen: (u32, u32),
     /// Times tracks were left out already reported (see `session/engine/left_out.rs`).
     left_events_seen: u32,
     /// Some plug-in controller is marked as not to be called (see `session/engine/left_out.rs`).
@@ -428,6 +432,8 @@ impl Session {
             engine_error_at: Instant::now() - Duration::from_secs(60),
             bad_audio_seen: 0,
             overloads_seen: 0,
+            device_watch: Default::default(),
+            device_events_seen: (0, 0),
             left_events_seen: 0,
             marked_unresponsive: false,
             held_unlisted_seen: 0,
