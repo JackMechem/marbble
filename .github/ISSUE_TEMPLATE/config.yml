@@ -1,5 +1,14 @@
-blank_issues_enabled: true
+blank_issues_enabled: false
 contact_links:
+  - name: Question
+    url: https://github.com/JackMechem/marbble/discussions/categories/q-a
+    about: How something works, how to build Marbble, or whether it runs on your setup. Ask in Discussions.
+  - name: Idea
+    url: https://github.com/JackMechem/marbble/discussions/categories/ideas
+    about: Something you'd like Marbble to do, before it's a concrete feature request.
+  - name: Security vulnerability
+    url: https://github.com/JackMechem/marbble/security/advisories/new
+    about: Report it privately, not in a public issue. See SECURITY.md.
   - name: User Guide
     url: https://marbble.dev/guide/
     about: How to use Marbble, every setting and key command, and troubleshooting.

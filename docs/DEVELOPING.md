@@ -401,8 +401,8 @@ Linux it also checks `cargo fmt` and clippy on the pinned toolchain, and that `d
 `scripts/headless-checks.sh`. A `nix` job runs `nix flake check`, which builds the package and runs
 the engine's unit tests. Checks that need real plug-ins don't run in CI.
 
-`.github/workflows/pages.yml` builds the website from `docs/`, `ROADMAP.md` and `CHANGELOG.md` when they change on
-`main` and publishes it to <https://marbble.dev/>. `site/docs.config.mjs` groups each document's
+`.github/workflows/pages.yml` builds the website from `docs/`, `ROADMAP.md`, `CONTRIBUTING.md` and
+`CHANGELOG.md` when they change on `main` and publishes it to <https://marbble.dev/>. `site/docs.config.mjs` groups each document's
 `##` sections into the sidebar and splits long ones into pages; a new section needs a place there,
 and a broken link fails the build.
 

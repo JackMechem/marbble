@@ -1,20 +1,57 @@
 # Contributing to Marbble
 
 Thanks for your interest. Marbble is alpha software with a lot still open, and bug reports,
-testing on real hardware and code are all welcome.
+testing on real hardware and code are all welcome. Everyone taking part follows the
+[code of conduct](CODE_OF_CONDUCT.md).
+
+## Questions and ideas
+
+Ask in [Discussions](https://github.com/JackMechem/marbble/discussions): Q&A for how something
+works or how to build it, Ideas for something you'd like Marbble to do before it's a concrete
+feature request.
 
 ## Reporting a bug or asking for a feature
 
 Open an [issue](https://github.com/JackMechem/marbble/issues/new/choose). For a bug, say which
 version and platform you're on, your audio setup, and the steps that reproduce it. The User
 Guide's [known limitations](https://marbble.dev/guide/known-limitations/) lists what's already
-known not to work.
+known not to work. A security problem goes through [SECURITY.md](SECURITY.md) instead, not a
+public issue.
+
+## Testing
 
 Testing is some of the most useful help right now. Many features pass their automated checks
-but haven't been heard through a real interface or seen on Windows and macOS. Those issues
-carry the [`needs listening`](https://github.com/JackMechem/marbble/labels/needs%20listening)
-and [`needs a look`](https://github.com/JackMechem/marbble/labels/needs%20a%20look) labels. A
-comment saying what you tried and what you heard or saw is a contribution in itself.
+but haven't been heard through a real interface or tried on Windows and macOS:
+
+- [#32](https://github.com/JackMechem/marbble/issues/32) lists what to try by hand on Windows
+  and macOS: devices, playback and recording, MIDI, plug-in scanning, the file dialogs, windows.
+- [#16](https://github.com/JackMechem/marbble/issues/16) asks for listening for dropouts and
+  clicks with several processing threads, on a real interface.
+
+A comment on the issue saying what you tried, on what, and what you heard or saw is a
+contribution in itself. For "it works (or doesn't) on my setup" in general, start a
+[discussion](https://github.com/JackMechem/marbble/discussions) with your system, interface and
+driver, or open a bug if something's wrong.
+
+## Your first 30 minutes
+
+1. `git clone https://github.com/JackMechem/marbble && cd marbble`, and install what it needs
+   to build: [DEVELOPING.md › Set up](docs/DEVELOPING.md#set-up) has the packages for Debian,
+   Fedora, Arch, Windows and macOS, or `nix develop` with Nix.
+2. `npm ci`, then `cargo test -p daw-engine --lib`: the engine's unit tests, which need no audio
+   device.
+3. `npm run tauri dev` builds and opens the app. The first build compiles over 500 crates and
+   takes a while; `target/` grows to several GB, and to tens of GB once the tests and headless
+   checks are built too.
+4. Open Settings › Audio, choose a driver and your devices, and click Apply Changes.
+5. For a project to try things on, write the demo the website's screenshots come from:
+   `cargo run -p daw-engine --example showcase_project -- ~/Showcase.marbble`, then open it with
+   File › Open (or start with `npx tauri dev -- -- ~/Showcase.marbble`). It uses only built-in
+   instruments and effects.
+
+From there, [ARCHITECTURE.md](docs/ARCHITECTURE.md) explains how the code fits together, and a
+[`good first issue`](https://github.com/JackMechem/marbble/labels/good%20first%20issue) is a
+small place to start.
 
 ## How the work is tracked
 
@@ -57,8 +94,23 @@ real-time rules before touching the engine.
   update the docs that describe the behaviour you changed.
 - Say in the description what you tested and how, and what you couldn't try (a platform, a
   real interface, listening).
+- Say whether you used AI assistance; see [below](#ai-assisted-contributions).
 
-Pull requests are merged into `main` once CI passes and the change has been reviewed.
+Marbble has one maintainer, Jack Mechem (`JackMechem` on GitHub), who reviews every pull request
+and aims to respond within a few days. A pull request is merged into `main` once CI passes and
+the review is done.
+
+## AI-assisted contributions
+
+AI-assisted contributions are welcome, on the same terms as any other:
+
+- Say in the pull request that you used AI assistance, and for what.
+- You have read and understood every line you send, and you have run it and tested it as the
+  description says. You're the author and answer for it in review.
+- No pull requests opened by an agent working unattended, and no bulk changes (reformatting,
+  renaming or "fixing" across the codebase) that nobody asked for.
+- The review bar is the same as for any code: a change that doesn't follow the conventions or
+  isn't tested goes back, however it was written.
 
 ## Licence
 
