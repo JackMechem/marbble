@@ -1,0 +1,285 @@
+# Logic Pro's time and pitch features, and how far Marbble has each. See features/README.md.
+
+title = "Time and pitch"
+about = "Flex Time and Flex Pitch, Smart Tempo, groove, transposition, tuning and chords."
+order = 8
+
+[[feature]]
+section = "Flex Time"
+name = "Flex on or off per track and region"
+status = "missing"
+tier = "advanced"
+logic = "436–437"
+issue = 102
+
+[[feature]]
+section = "Flex Time"
+name = "Algorithms: Monophonic, Slicing, Rhythmic, Polyphonic, Tempophone, Speed"
+status = "missing"
+tier = "advanced"
+logic = "438–440"
+issue = 102
+
+[[feature]]
+section = "Flex Time"
+name = "Flex markers: add, move, delete, reset; snap to transients in other regions"
+status = "missing"
+tier = "advanced"
+logic = "443–449"
+issue = 102
+
+[[feature]]
+section = "Flex Time"
+name = "Marquee and Flex tool time-stretching"
+status = "missing"
+tier = "advanced"
+logic = "446–447"
+issue = 102
+
+[[feature]]
+section = "Flex Time"
+name = "Quantize the timing of audio tracks"
+status = "missing"
+tier = "advanced"
+logic = "441, 455"
+issue = 102
+
+[[feature]]
+section = "Flex Time"
+name = "Time-stretch audio regions to the locators or nearest bar"
+status = "missing"
+tier = "advanced"
+logic = "317"
+issue = 102
+
+[[feature]]
+section = "Flex Time"
+name = "Choose the time-stretching algorithm"
+status = "missing"
+tier = "advanced"
+logic = "318"
+issue = 102
+
+[[feature]]
+section = "Flex Pitch"
+name = "Flex Pitch editing in the Audio Track Editor"
+status = "missing"
+tier = "advanced"
+logic = "450"
+issue = 103
+
+[[feature]]
+section = "Flex Pitch"
+name = "Move, resize and merge notes"
+status = "missing"
+tier = "advanced"
+logic = "451–452"
+issue = 103
+
+[[feature]]
+section = "Flex Pitch"
+name = "Hotspots: pitch drift, fine pitch, gain, vibrato, formant"
+status = "missing"
+tier = "advanced"
+logic = "452–453"
+issue = 103
+
+[[feature]]
+section = "Flex Pitch"
+name = "Set notes to perfect pitch; reset"
+status = "missing"
+tier = "advanced"
+logic = "454"
+issue = 103
+
+[[feature]]
+section = "Flex Pitch"
+name = "Quantize pitch to a key or scale"
+status = "missing"
+tier = "advanced"
+logic = "455–456"
+issue = 103
+
+[[feature]]
+section = "Flex Pitch"
+name = "Create MIDI from audio"
+status = "missing"
+tier = "advanced"
+logic = "456"
+issue = 103
+
+[[feature]]
+section = "Flex Pitch"
+name = "Per-note gain"
+status = "missing"
+tier = "advanced"
+logic = "457"
+issue = 103
+
+[[feature]]
+section = "Smart Tempo and beat mapping"
+name = "Free tempo recording"
+status = "missing"
+tier = "advanced"
+logic = "767, 769–770"
+
+[[feature]]
+section = "Smart Tempo and beat mapping"
+name = "Project Tempo modes: Keep, Adapt, Automatic"
+status = "missing"
+tier = "advanced"
+logic = "767–771"
+
+[[feature]]
+section = "Smart Tempo and beat mapping"
+name = "Smart Tempo setting per audio region; file tempo"
+status = "missing"
+tier = "advanced"
+logic = "773"
+
+[[feature]]
+section = "Smart Tempo and beat mapping"
+name = "Apply a region's tempo to the project; align the detected downbeat"
+status = "missing"
+tier = "advanced"
+logic = "772"
+
+[[feature]]
+section = "Smart Tempo and beat mapping"
+name = "Smart Tempo multitrack sets"
+status = "missing"
+tier = "advanced"
+logic = "775"
+
+[[feature]]
+section = "Smart Tempo and beat mapping"
+name = "Smart Tempo Editor: hints, tempo ranges, beat markers, locked ranges, double or halve"
+status = "missing"
+tier = "advanced"
+logic = "776–786"
+
+[[feature]]
+section = "Smart Tempo and beat mapping"
+name = "Make recordings follow the project tempo; match the project to a region"
+status = "missing"
+tier = "advanced"
+logic = "788"
+
+[[feature]]
+section = "Smart Tempo and beat mapping"
+name = "Import and export tempo information in audio files"
+status = "missing"
+tier = "advanced"
+logic = "789"
+
+[[feature]]
+section = "Smart Tempo and beat mapping"
+name = "Tempo Operations: scale, stretch, thin out, randomise"
+status = "missing"
+tier = "advanced"
+logic = "790–793"
+
+[[feature]]
+section = "Smart Tempo and beat mapping"
+name = "Tempo Interpreter (manual tap tempo sync)"
+status = "missing"
+tier = "advanced"
+logic = "793"
+
+[[feature]]
+section = "Smart Tempo and beat mapping"
+name = "Beat Mapping track for MIDI and audio"
+status = "missing"
+tier = "advanced"
+logic = "796–800"
+
+[[feature]]
+section = "Groove"
+name = "Groove track: match other tracks to one track's timing"
+status = "missing"
+tier = "advanced"
+logic = "167"
+
+[[feature]]
+section = "Groove"
+name = "Groove templates: create, share, and use from the quantize menu"
+status = "missing"
+tier = "advanced"
+logic = "361–363"
+
+[[feature]]
+section = "Transposition"
+name = "Transposition track / Pitch Source: transpose regions and Apple Loops with the project"
+status = "missing"
+tier = "advanced"
+logic = "757"
+
+[[feature]]
+section = "Tuning"
+name = "Project tuning offset"
+status = "missing"
+tier = "advanced"
+logic = "1118"
+
+[[feature]]
+section = "Tuning"
+name = "Alternative temperaments, Hermode Tuning and user tuning tables"
+status = "missing"
+tier = "advanced"
+logic = "1116–1119"
+
+[[feature]]
+section = "Chords and the Chord track"
+name = "Chord track and region chords"
+status = "missing"
+tier = "advanced"
+logic = "333"
+
+[[feature]]
+section = "Chords and the Chord track"
+name = "Add, delete, select, cut, copy and paste chords"
+status = "missing"
+tier = "advanced"
+logic = "334–337"
+
+[[feature]]
+section = "Chords and the Chord track"
+name = "Move, resize, loop and transpose chords"
+status = "missing"
+tier = "advanced"
+logic = "337–339"
+
+[[feature]]
+section = "Chords and the Chord track"
+name = "Edit chords, including from a MIDI controller or as text"
+status = "missing"
+tier = "advanced"
+logic = "339–341"
+
+[[feature]]
+section = "Chords and the Chord track"
+name = "Chord groups and chord progressions"
+status = "missing"
+tier = "advanced"
+logic = "342–345"
+
+[[feature]]
+section = "Chords and the Chord track"
+name = "Halve or double the chord rhythm"
+status = "missing"
+tier = "advanced"
+logic = "345–346"
+
+[[feature]]
+section = "Chords and the Chord track"
+name = "Analyse the key of a range of chords"
+status = "missing"
+tier = "advanced"
+logic = "347"
+
+[[feature]]
+section = "Chords and the Chord track"
+name = "Chords from Apple Loops"
+status = "missing"
+tier = "advanced"
+logic = "260"

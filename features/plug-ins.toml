@@ -1,0 +1,314 @@
+# Logic Pro's plug-ins features, and how far Marbble has each. See features/README.md.
+
+title = "Plug-ins"
+about = "Hosting plug-ins, their windows and settings, formats and platforms, Smart Controls, patches and MIDI effects."
+order = 10
+
+[[feature]]
+section = "Plug-in hosting"
+name = "Plug-in Manager"
+status = "partial"
+tier = "core"
+beta = true
+logic = "578–580"
+note = "Hide plug-ins, add VST3 folders, rescan, view the scan report; no categories or custom names."
+
+[[feature]]
+section = "Plug-in hosting"
+name = "Third-party plug-ins: Audio Units in Logic, VST3 in Marbble"
+status = "done"
+tier = "core"
+beta = true
+logic = "559"
+
+[[feature]]
+section = "Plug-in hosting"
+name = "Scan in a separate process so a crashing plug-in can't take the app down; results cached"
+status = "done"
+tier = "core"
+beta = true
+
+[[feature]]
+section = "Plug-in hosting"
+name = "Instrument and effect plug-ins; separate component/controller plug-ins"
+status = "done"
+tier = "core"
+beta = true
+
+[[feature]]
+section = "Plug-in hosting"
+name = "Plug-in state saved in the project"
+status = "done"
+tier = "core"
+beta = true
+
+[[feature]]
+section = "Plug-in hosting"
+name = "Tempo and position passed to plug-ins"
+status = "done"
+tier = "core"
+beta = true
+
+[[feature]]
+section = "Plug-in hosting"
+name = "MIDI CC and pitch bend to instruments through the plug-in's MIDI mapping"
+status = "done"
+tier = "core"
+beta = true
+
+[[feature]]
+section = "Plug-in windows and settings"
+name = "Plug-in window header"
+status = "partial"
+tier = "pro"
+logic = "568"
+note = "Built-in effect and instrument panels have bypass, presets, Compare, Copy and Paste Settings and the side-chain pop-up; VST3 editor windows have no header."
+
+[[feature]]
+section = "Plug-in windows and settings"
+name = "Load, save, step through and delete plug-in settings (presets)"
+status = "partial"
+tier = "pro"
+logic = "571–572"
+note = "Factory and user presets for the built-in effects and instruments (the Channel EQ among them), shared by every project; none for VST3s."
+
+[[feature]]
+section = "Plug-in windows and settings"
+name = "Compare edits with the saved setting"
+status = "done"
+tier = "pro"
+logic = "571"
+issue = 80
+note = "Built-in effects' and instruments' panels have Compare, Copy Settings and Paste Settings; VST3 plug-ins don't yet (#292)."
+
+[[feature]]
+section = "Plug-in windows and settings"
+name = "Copy and paste plug-in settings; reset; default setting"
+status = "partial"
+tier = "pro"
+logic = "572"
+note = "Copy and paste for every plug-in (VST3 state included), Copy and Paste Settings between built-in panels, and Reset to Default for built-in plug-ins; no user default setting."
+
+[[feature]]
+section = "Plug-in windows and settings"
+name = "Link or unlink plug-in windows"
+status = "missing"
+tier = "pro"
+logic = "569"
+
+[[feature]]
+section = "Plug-in windows and settings"
+name = "Plug-in undo and redo"
+status = "partial"
+tier = "pro"
+logic = "568"
+note = "In the project's undo history; plug-in windows have no undo and redo of their own."
+
+[[feature]]
+section = "Plug-in windows and settings"
+name = "Controls view: a generic parameter view"
+status = "missing"
+tier = "pro"
+logic = "1039"
+
+[[feature]]
+section = "Plug-in windows and settings"
+name = "Channel strip settings: save, load, step through, paste only plug-ins or sends"
+status = "partial"
+tier = "pro"
+logic = "581–582"
+note = "Save, load, copy, paste and reset (instrument, Audio FX, Channel EQ); no stepping, no partial paste, saved settings aren't sorted into folders."
+
+[[feature]]
+section = "Plug-in windows and settings"
+name = "Copy and paste a whole channel strip (key commands)"
+status = "partial"
+tier = "pro"
+note = "From the Setting menu; no key commands."
+
+[[feature]]
+section = "Plug-in windows and settings"
+name = "Remove all plug-ins, empty slots, bypassed plug-ins or sends"
+status = "partial"
+tier = "pro"
+logic = "582"
+note = "Reset Channel Strip removes every plug-in from the selected strips (and resets fader and pan); no removing only empty slots, bypassed plug-ins or sends."
+
+[[feature]]
+section = "Plug-in windows and settings"
+name = "Plug-in Manager categories and custom names"
+status = "missing"
+tier = "pro"
+logic = "579–580"
+
+[[feature]]
+section = "Operating systems and plug-in formats"
+name = "Windows and macOS builds"
+status = "partial"
+tier = "platform"
+note = "Released as an NSIS installer and .dmg bundles, but early and less tested; plug-in editor windows are not on Windows yet."
+
+[[feature]]
+section = "Operating systems and plug-in formats"
+name = "Plug-in editor windows on Windows (HWND) and macOS (NSView)"
+status = "partial"
+tier = "platform"
+issue = 99
+note = "macOS done."
+
+[[feature]]
+section = "Operating systems and plug-in formats"
+name = "Plug-in editors under native Wayland (they currently run through XWayland)"
+status = "missing"
+tier = "platform"
+issue = 93
+
+[[feature]]
+section = "Operating systems and plug-in formats"
+name = "CLAP plug-in hosting"
+status = "missing"
+tier = "platform"
+issue = 105
+
+[[feature]]
+section = "Operating systems and plug-in formats"
+name = "Audio Units hosting on macOS"
+status = "missing"
+tier = "platform"
+issue = 106
+
+[[feature]]
+section = "Operating systems and plug-in formats"
+name = "VST2 hosting"
+status = "missing"
+tier = "platform"
+
+[[feature]]
+section = "Operating systems and plug-in formats"
+name = "Linux build with desktop entry and icons (Nix flake and other distributions)"
+status = "done"
+tier = "platform"
+
+[[feature]]
+section = "Smart Controls"
+name = "Smart Controls pane (B)"
+status = "missing"
+tier = "pro"
+logic = "645–646"
+
+[[feature]]
+section = "Smart Controls"
+name = "Layouts"
+status = "missing"
+tier = "pro"
+logic = "647"
+
+[[feature]]
+section = "Smart Controls"
+name = "Automatic mapping to the track's plug-ins"
+status = "missing"
+tier = "pro"
+logic = "649"
+
+[[feature]]
+section = "Smart Controls"
+name = "Map screen controls with Learn or a menu; several mappings per control"
+status = "missing"
+tier = "pro"
+logic = "649–652"
+
+[[feature]]
+section = "Smart Controls"
+name = "Parameter mapping graphs"
+status = "missing"
+tier = "pro"
+logic = "652–653"
+
+[[feature]]
+section = "Smart Controls"
+name = "Assign hardware controls to screen controls"
+status = "missing"
+tier = "pro"
+logic = "655"
+
+[[feature]]
+section = "Smart Controls"
+name = "Arpeggiator button"
+status = "missing"
+tier = "pro"
+logic = "656"
+
+[[feature]]
+section = "Smart Controls"
+name = "Automate screen controls"
+status = "missing"
+tier = "pro"
+logic = "657"
+
+[[feature]]
+section = "Library and patches"
+name = "Choose a patch (track, channel strip and Smart Controls) for the selected track"
+status = "missing"
+tier = "pro"
+logic = "150"
+
+[[feature]]
+section = "Library and patches"
+name = "Browse plug-in presets in the Library"
+status = "missing"
+tier = "pro"
+logic = "151"
+
+[[feature]]
+section = "Library and patches"
+name = "Search patches"
+status = "missing"
+tier = "pro"
+logic = "151"
+
+[[feature]]
+section = "Library and patches"
+name = "Patch merging: choose which parts of a patch replace the current ones"
+status = "missing"
+tier = "pro"
+logic = "152"
+
+[[feature]]
+section = "Library and patches"
+name = "Save, reset and delete patches"
+status = "missing"
+tier = "pro"
+logic = "152–153"
+
+[[feature]]
+section = "Library and patches"
+name = "Performance patches"
+status = "missing"
+tier = "pro"
+logic = "153–154"
+
+[[feature]]
+section = "MIDI effects"
+name = "MIDI FX slots on instrument strips"
+status = "missing"
+tier = "advanced"
+logic = "560"
+
+[[feature]]
+section = "MIDI effects"
+name = "Hosting third-party MIDI effect plug-ins"
+status = "missing"
+tier = "advanced"
+
+[[feature]]
+section = "MIDI effects"
+name = "Bundled MIDI FX: Arpeggiator, Chord Trigger, Modifier, Modulator, Note Repeater, Randomizer, Scripter (JavaScript), Transposer, Velocity Processor"
+status = "missing"
+tier = "advanced"
+
+[[feature]]
+section = "MIDI effects"
+name = "Arpeggiator presets"
+status = "missing"
+tier = "advanced"
+logic = "656"

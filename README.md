@@ -82,8 +82,8 @@ machine yet (see [Platform support](#platform-support)).
   falls back to its autosave or a backup.
 
 The [User Guide](docs/USER_GUIDE.md) describes all of it in detail.
-The [feature scope board](https://github.com/users/JackMechem/projects/1) has a card for every Logic Pro feature, showing which
-ones Marbble has, has in part, or doesn't have yet.
+The [feature list](docs/FEATURES.md) shows every Logic Pro feature by area and how far Marbble has
+it, and the [roadmap](ROADMAP.md) what beta needs and what's being worked on.
 
 ## Install
 
@@ -180,8 +180,8 @@ for Windows and macOS, tests and packaging.
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the code is organised and works: the source tree, threads and real-time rules, the life of an edit and of a block of audio, the project model and its files, plug-ins, MIDI, and the frontend. |
 | [docs/DEVELOPING.md](docs/DEVELOPING.md) | Setting up, building, testing, debugging, the code conventions, common changes, CI and releases. |
 | [docs/logic-reference.md](docs/logic-reference.md) | The Logic Pro research behind the layout and behaviour. |
-| [Feature scope board](https://github.com/users/JackMechem/projects/1) | Every Logic Pro feature, one card each, marked Done, Partial or Missing in Marbble. |
-| [TODO.md](TODO.md) | The roadmap in stages; what's open is in the [issues](https://github.com/JackMechem/marbble/issues). |
+| [ROADMAP.md](ROADMAP.md) | What beta needs, how far along it is, the current focus and the roadmap's stages. |
+| [docs/FEATURES.md](docs/FEATURES.md) | Every Logic Pro feature by area, done, partial or missing in Marbble (generated from [`features/`](features/README.md)). |
 | [CHANGELOG.md](CHANGELOG.md) | What changed in each release. |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Reporting bugs, testing, how issues and milestones are used, and sending a pull request. |
 
@@ -203,7 +203,7 @@ main limitations:
 - No Score editor, Flex Time or Flex Pitch; MP3 and AAC aren't offered as bounce formats.
 
 The User Guide's [Known limitations](docs/USER_GUIDE.md#20-known-limitations) has the full list,
-the [issues](https://github.com/JackMechem/marbble/issues) what's open, [TODO.md](TODO.md) the staged roadmap, and
+the [issues](https://github.com/JackMechem/marbble/issues) what's open, [ROADMAP.md](ROADMAP.md) the plan to beta, and
 [CHANGELOG.md](CHANGELOG.md) what each release contains.
 
 ## Versions

@@ -1,0 +1,749 @@
+# Logic Pro's editors features, and how far Marbble has each. See features/README.md.
+
+title = "Editors"
+about = "The Piano Roll, Audio Track Editor, Event List, Step Sequencer, Score and MPE editing."
+order = 7
+
+[[feature]]
+section = "Piano Roll Editor"
+name = "Piano Roll tools"
+status = "partial"
+tier = "core"
+beta = true
+logic = "54–60"
+note = "Pointer, Pencil, Eraser, Velocity, Mute, Scissors, Glue, Line; no Brush, Quantize, Solo or Zoom tools."
+
+[[feature]]
+section = "Piano Roll Editor"
+name = "Delete events"
+status = "partial"
+tier = "core"
+beta = true
+logic = "397"
+note = "No Delete Outside Region or Delete Unselected Within Selection."
+
+[[feature]]
+section = "Piano Roll Editor"
+name = "Brush tool and brush patterns"
+status = "missing"
+tier = "core"
+logic = "381"
+
+[[feature]]
+section = "Piano Roll Editor"
+name = "Add notes constrained to a scale"
+status = "missing"
+tier = "core"
+beta = true
+logic = "381"
+
+[[feature]]
+section = "Piano Roll Editor"
+name = "Sustain pedal events to note lengths"
+status = "missing"
+tier = "core"
+logic = "390"
+
+[[feature]]
+section = "Piano Roll Editor"
+name = "Time handles: stretch selected notes"
+status = "missing"
+tier = "core"
+beta = true
+logic = "398"
+
+[[feature]]
+section = "Piano Roll Editor"
+name = "Note labels on notes"
+status = "done"
+tier = "core"
+beta = true
+logic = "396"
+note = "Note names show on notes large enough to hold them."
+
+[[feature]]
+section = "Piano Roll Editor"
+name = "Drum names and Collapse Mode views"
+status = "missing"
+tier = "core"
+beta = true
+logic = "379"
+
+[[feature]]
+section = "Piano Roll Editor"
+name = "Piano Roll as a separate window, with Link mode"
+status = "partial"
+tier = "core"
+beta = true
+logic = "379–380"
+note = "The Editor detaches and follows the selection; no Link modes."
+
+[[feature]]
+section = "Piano Roll Editor"
+name = "Lock event positions"
+status = "missing"
+tier = "core"
+beta = true
+logic = "395"
+
+[[feature]]
+section = "Piano Roll Editor"
+name = "Assign notes to MIDI channels by pitch"
+status = "missing"
+tier = "core"
+logic = "399"
+
+[[feature]]
+section = "Piano Roll Editor"
+name = "Track and region automation shown in the Piano Roll"
+status = "missing"
+tier = "core"
+beta = true
+logic = "401"
+
+[[feature]]
+section = "Piano Roll Editor"
+name = "Shows every MIDI region on the track in project time; the others dimmed but editable"
+status = "done"
+tier = "core"
+beta = true
+logic = "398–399"
+
+[[feature]]
+section = "Piano Roll Editor"
+name = "Add, select, move, copy (⌥-drag) and resize notes"
+status = "done"
+tier = "core"
+beta = true
+logic = "380–389"
+
+[[feature]]
+section = "Piano Roll Editor"
+name = "Snap grid 1/1 to 1/64 with triplets; override with a modifier"
+status = "done"
+tier = "core"
+beta = true
+logic = "383–384"
+
+[[feature]]
+section = "Piano Roll Editor"
+name = "Transpose with the arrow keys; nudge by the grid or a bar"
+status = "done"
+tier = "core"
+beta = true
+logic = "385"
+
+[[feature]]
+section = "Piano Roll Editor"
+name = "Velocity editing: drag stalks, ramp with the Line tool, set a value"
+status = "done"
+tier = "core"
+beta = true
+logic = "390–392"
+
+[[feature]]
+section = "Piano Roll Editor"
+name = "Time Quantize with strength, swing and note ends"
+status = "done"
+tier = "core"
+beta = true
+logic = "392"
+
+[[feature]]
+section = "Piano Roll Editor"
+name = "Scale Quantize to the project key"
+status = "done"
+tier = "core"
+beta = true
+logic = "393"
+
+[[feature]]
+section = "Piano Roll Editor"
+name = "Legato, Remove Overlaps, fixed and grid note lengths"
+status = "done"
+tier = "core"
+beta = true
+logic = "389–390"
+
+[[feature]]
+section = "Piano Roll Editor"
+name = "Mute notes"
+status = "done"
+tier = "core"
+beta = true
+logic = "395"
+
+[[feature]]
+section = "Piano Roll Editor"
+name = "Delete duplicates"
+status = "done"
+tier = "core"
+beta = true
+logic = "397"
+
+[[feature]]
+section = "Piano Roll Editor"
+name = "Select same pitch, highest or lowest notes of chords, muted notes, notes inside the locators; invert selection"
+status = "done"
+tier = "core"
+beta = true
+logic = "382, 399"
+
+[[feature]]
+section = "Piano Roll Editor"
+name = "Velocity and controller lane: velocity, mod wheel, expression, sustain, pitch bend, aftertouch, any CC"
+status = "done"
+tier = "core"
+beta = true
+logic = "400–401"
+
+[[feature]]
+section = "Piano Roll Editor"
+name = "Colour notes by velocity or by region"
+status = "done"
+tier = "core"
+beta = true
+logic = "396"
+
+[[feature]]
+section = "Piano Roll Editor"
+name = "Highlight the rows of the project key's scale"
+status = "done"
+tier = "core"
+beta = true
+
+[[feature]]
+section = "Piano Roll Editor"
+name = "MIDI Out: hear notes while editing"
+status = "done"
+tier = "core"
+beta = true
+logic = "1121"
+
+[[feature]]
+section = "Piano Roll Editor"
+name = "Humanize timing and velocity"
+status = "done"
+tier = "core"
+beta = true
+
+[[feature]]
+section = "Piano Roll Editor"
+name = "Help tag showing pitch, position and length"
+status = "done"
+tier = "core"
+beta = true
+
+[[feature]]
+section = "Piano Roll Editor"
+name = "Controller editing"
+status = "done"
+tier = "core"
+beta = true
+logic = "400"
+note = "Points, and ramps along Linear, Exponential, Logarithmic and S-Curve shapes; Create Ramp and Thin Out."
+
+[[feature]]
+section = "Audio Track Editor"
+name = "Show automation in the Audio Track Editor"
+status = "missing"
+tier = "core"
+beta = true
+logic = "377"
+
+[[feature]]
+section = "Audio Track Editor"
+name = "Shows all of a track's regions large on the project timeline"
+status = "done"
+tier = "core"
+beta = true
+logic = "372"
+
+[[feature]]
+section = "Audio Track Editor"
+name = "Horizontal zoom and waveform amplitude zoom"
+status = "done"
+tier = "core"
+beta = true
+logic = "373"
+
+[[feature]]
+section = "Audio Track Editor"
+name = "Select, cut, copy, paste, move and trim regions"
+status = "done"
+tier = "core"
+beta = true
+logic = "373–375"
+
+[[feature]]
+section = "Audio Track Editor"
+name = "Time-range selection inside regions"
+status = "done"
+tier = "core"
+beta = true
+logic = "374"
+
+[[feature]]
+section = "Audio Track Editor"
+name = "Split at the selection or playhead"
+status = "done"
+tier = "core"
+beta = true
+logic = "375"
+
+[[feature]]
+section = "Audio Track Editor"
+name = "Fades and gain in the editor"
+status = "done"
+tier = "core"
+beta = true
+
+[[feature]]
+section = "Audio Track Editor"
+name = "0 dBFS markers and dB scale"
+status = "done"
+tier = "core"
+beta = true
+
+[[feature]]
+section = "Audio Track Editor"
+name = "Snap edits to zero crossings"
+status = "done"
+tier = "core"
+beta = true
+logic = "376"
+note = "Also for splits and trims in the tracks area."
+
+[[feature]]
+section = "Advanced editors"
+name = "View the events in a region, or the regions in a project"
+status = "partial"
+tier = "pro"
+logic = "462"
+note = "Events of the selected MIDI regions on one track; no region list."
+
+[[feature]]
+section = "Advanced editors"
+name = "Create, duplicate and edit events numerically"
+status = "partial"
+tier = "pro"
+logic = "467–472"
+note = "Create at the playhead and edit by dragging or typing; no Duplicate, Copy or Paste in the list."
+
+[[feature]]
+section = "Advanced editors"
+name = "Note events, including release velocity"
+status = "partial"
+tier = "pro"
+logic = "474–475"
+note = "No release velocity."
+
+[[feature]]
+section = "Advanced editors"
+name = "Controller, pitch bend, program change, aftertouch and poly aftertouch events"
+status = "partial"
+tier = "pro"
+logic = "475–478"
+note = "Controllers, pitch bend and channel aftertouch; no program change or poly aftertouch."
+
+[[feature]]
+section = "Advanced editors"
+name = "SysEx and meta events"
+status = "missing"
+tier = "pro"
+logic = "478–479"
+
+[[feature]]
+section = "Advanced editors"
+name = "Event Float window"
+status = "missing"
+tier = "pro"
+logic = "480"
+
+[[feature]]
+section = "Advanced editors"
+name = "Lanes of steps for notes and controllers"
+status = "missing"
+tier = "pro"
+logic = "481–490"
+
+[[feature]]
+section = "Advanced editors"
+name = "Lane parameters and the Lane inspector"
+status = "missing"
+tier = "pro"
+logic = "490–495"
+
+[[feature]]
+section = "Advanced editors"
+name = "Lane Sets, including GM drum kits and hi-hat groups"
+status = "missing"
+tier = "pro"
+logic = "496–499"
+
+[[feature]]
+section = "Advanced editors"
+name = "Transform window with presets (Humanize, Quantize, Crescendo, Double Speed and so on)"
+status = "missing"
+tier = "pro"
+logic = "523–527"
+
+[[feature]]
+section = "Advanced editors"
+name = "User transform sets: conditions, operations and the map"
+status = "missing"
+tier = "pro"
+logic = "526–534"
+
+[[feature]]
+section = "Advanced editors"
+name = "Non-destructive range edits"
+status = "partial"
+tier = "pro"
+logic = "511"
+note = "Marbble's Audio Track Editor has split, trim, silence, delete, normalize, reverse and fade on a selection, and transient detection with Split at Transients. Destructive file editing is missing."
+
+[[feature]]
+section = "Advanced editors"
+name = "Destructive editing of the audio file, with backup and revert"
+status = "missing"
+tier = "pro"
+logic = "511, 521"
+
+[[feature]]
+section = "Advanced editors"
+name = "Sample-level view and amplitude scales"
+status = "missing"
+tier = "pro"
+logic = "502–503"
+
+[[feature]]
+section = "Advanced editors"
+name = "Navigate to the loudest point or to silences"
+status = "missing"
+tier = "pro"
+logic = "506"
+
+[[feature]]
+section = "Advanced editors"
+name = "Pencil tool to repair clicks"
+status = "missing"
+tier = "pro"
+logic = "515"
+
+[[feature]]
+section = "Advanced editors"
+name = "Remove DC offset; invert phase"
+status = "missing"
+tier = "pro"
+logic = "516, 520"
+
+[[feature]]
+section = "Advanced editors"
+name = "Set file levels and loop points"
+status = "missing"
+tier = "pro"
+logic = "516, 520"
+
+[[feature]]
+section = "Advanced editors"
+name = "Transient editing mode: move, add and delete markers"
+status = "missing"
+tier = "pro"
+logic = "512–514"
+
+[[feature]]
+section = "Advanced editors"
+name = "Set the project tempo from a selection"
+status = "missing"
+tier = "pro"
+logic = "510–511"
+
+[[feature]]
+section = "Advanced editors"
+name = "Save the selection as a new file"
+status = "missing"
+tier = "pro"
+logic = "522"
+
+[[feature]]
+section = "Advanced editors"
+name = "Open in an external sample editor"
+status = "missing"
+tier = "pro"
+logic = "522–523"
+
+[[feature]]
+section = "Advanced editors"
+name = "Event List as a pane or window"
+status = "done"
+tier = "pro"
+logic = "461"
+
+[[feature]]
+section = "Advanced editors"
+name = "Filter by event type"
+status = "done"
+tier = "pro"
+logic = "463"
+note = "For the types Marbble stores."
+
+[[feature]]
+section = "Step Sequencer"
+name = "Pattern regions and pattern cells"
+status = "partial"
+tier = "advanced"
+logic = "696"
+note = "Pattern regions only; no Live Loops cells."
+
+[[feature]]
+section = "Step Sequencer"
+name = "Edit modes per row: velocity, gate, note repeat, offset, chance, octave and more; subrows"
+status = "partial"
+tier = "advanced"
+logic = "704–708"
+note = "Note On, Velocity, Gate and Tie for all rows; no other modes or subrows."
+
+[[feature]]
+section = "Step Sequencer"
+name = "Randomise patterns and rows, with probability and range"
+status = "missing"
+tier = "advanced"
+logic = "708–709"
+
+[[feature]]
+section = "Step Sequencer"
+name = "Rows as chord degrees; follow the key and chords"
+status = "missing"
+tier = "advanced"
+logic = "711–713"
+
+[[feature]]
+section = "Step Sequencer"
+name = "Live and step recording of patterns"
+status = "missing"
+tier = "advanced"
+logic = "713–715"
+
+[[feature]]
+section = "Step Sequencer"
+name = "Pattern Browser: load, save, templates"
+status = "missing"
+tier = "advanced"
+logic = "715–717"
+
+[[feature]]
+section = "Step Sequencer"
+name = "Mute, solo and rotate rows; playback modes"
+status = "partial"
+tier = "advanced"
+logic = "718–719"
+note = "Mute and solo; no rotate or playback modes (forward only)."
+
+[[feature]]
+section = "Step Sequencer"
+name = "Step Sequencer with Drum Machine Designer"
+status = "missing"
+tier = "advanced"
+logic = "697–698"
+
+[[feature]]
+section = "Step Sequencer"
+name = "Step Sequencer inspector: pattern, row and step settings"
+status = "partial"
+tier = "advanced"
+logic = "723–727"
+note = "Pattern length, rate, swing and loop on the bar; each row's pitch, rate and length in its header; no inspector."
+
+[[feature]]
+section = "Step Sequencer"
+name = "Turn steps on or off; add rows; Learn mode"
+status = "done"
+tier = "advanced"
+logic = "699–701"
+
+[[feature]]
+section = "Step Sequencer"
+name = "Pattern length and step rate, including 5/4 and 7/8"
+status = "done"
+tier = "advanced"
+logic = "702–703"
+
+[[feature]]
+section = "Step Sequencer"
+name = "Convert between MIDI and pattern regions"
+status = "done"
+tier = "advanced"
+logic = "717"
+
+[[feature]]
+section = "Score Editor"
+name = "Score Editor: Linear, Wrapped and Page views"
+status = "missing"
+tier = "advanced"
+logic = "803–806"
+issue = 104
+
+[[feature]]
+section = "Score Editor"
+name = "Enter notes with the pointer, step input or Part box"
+status = "missing"
+tier = "advanced"
+logic = "813–818"
+issue = 104
+
+[[feature]]
+section = "Score Editor"
+name = "Rests, multi-bar rests"
+status = "missing"
+tier = "advanced"
+logic = "818"
+issue = 104
+
+[[feature]]
+section = "Score Editor"
+name = "Key, time signature and clef changes"
+status = "missing"
+tier = "advanced"
+logic = "819–821"
+issue = 104
+
+[[feature]]
+section = "Score Editor"
+name = "Dynamics, slurs, crescendi, accents, trills, ornaments, pedal markings"
+status = "missing"
+tier = "advanced"
+logic = "821–826"
+issue = 104
+
+[[feature]]
+section = "Score Editor"
+name = "Chord symbols, chord grids and tablature"
+status = "missing"
+tier = "advanced"
+logic = "826–828, 851–868"
+issue = 104
+
+[[feature]]
+section = "Score Editor"
+name = "Bar lines, repeats, codas, endings; line and page breaks"
+status = "missing"
+tier = "advanced"
+logic = "828–829"
+issue = 104
+
+[[feature]]
+section = "Score Editor"
+name = "Note attributes: heads, accidentals, stems, beaming, ties, syncopation"
+status = "missing"
+tier = "advanced"
+logic = "832–840"
+issue = 104
+
+[[feature]]
+section = "Score Editor"
+name = "Tuplets, grace notes, independent notes"
+status = "missing"
+tier = "advanced"
+logic = "840–843"
+issue = 104
+
+[[feature]]
+section = "Score Editor"
+name = "Lyrics, text and text styles"
+status = "missing"
+tier = "advanced"
+logic = "844–850"
+issue = 104
+
+[[feature]]
+section = "Score Editor"
+name = "Display quantisation and score region parameters"
+status = "missing"
+tier = "advanced"
+logic = "869–875"
+issue = 104
+
+[[feature]]
+section = "Score Editor"
+name = "Staff styles, including drum and transposing instruments"
+status = "missing"
+tier = "advanced"
+logic = "876–893"
+issue = 104
+
+[[feature]]
+section = "Score Editor"
+name = "Voice separation"
+status = "missing"
+tier = "advanced"
+logic = "886–887"
+issue = 104
+
+[[feature]]
+section = "Score Editor"
+name = "Score sets and part extraction"
+status = "missing"
+tier = "advanced"
+logic = "893–899"
+issue = 104
+
+[[feature]]
+section = "Score Editor"
+name = "Page layout, margins, page numbers"
+status = "missing"
+tier = "advanced"
+logic = "899–902"
+issue = 104
+
+[[feature]]
+section = "Score Editor"
+name = "Print and export to graphics or PDF"
+status = "missing"
+tier = "advanced"
+logic = "903"
+issue = 104
+
+[[feature]]
+section = "Score Editor"
+name = "MusicXML import"
+status = "missing"
+tier = "advanced"
+logic = "806–807"
+issue = 104
+
+[[feature]]
+section = "Score Editor"
+name = "Score project settings"
+status = "missing"
+tier = "advanced"
+logic = "1090–1105"
+issue = 104
+
+[[feature]]
+section = "Articulations and MPE"
+name = "Articulation sets and the Articulation Set Editor"
+status = "missing"
+tier = "advanced"
+logic = "168–175"
+
+[[feature]]
+section = "Articulations and MPE"
+name = "Keyswitches view"
+status = "missing"
+tier = "advanced"
+logic = "170"
+
+[[feature]]
+section = "Articulations and MPE"
+name = "Articulation IDs on notes in the editors"
+status = "missing"
+tier = "advanced"
+logic = "394, 472"
+
+[[feature]]
+section = "Articulations and MPE"
+name = "MPE controllers with software instruments"
+status = "missing"
+tier = "advanced"
+logic = "577"

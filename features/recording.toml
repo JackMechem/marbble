@@ -1,0 +1,352 @@
+# Logic Pro's recording features, and how far Marbble has each. See features/README.md.
+
+title = "Recording"
+about = "Recording audio and instruments, takes and comping."
+order = 4
+
+[[feature]]
+section = "Record audio"
+name = "Record on armed audio tracks"
+status = "done"
+tier = "core"
+beta = true
+logic = "192"
+
+[[feature]]
+section = "Record audio"
+name = "Record to several audio tracks at once"
+status = "done"
+tier = "core"
+beta = true
+logic = "195"
+
+[[feature]]
+section = "Record audio"
+name = "Mono or stereo input per track"
+status = "done"
+tier = "core"
+beta = true
+logic = "554"
+
+[[feature]]
+section = "Record audio"
+name = "Quick Punch-In: start recording while playing"
+status = "done"
+tier = "core"
+beta = true
+logic = "197"
+
+[[feature]]
+section = "Record audio"
+name = "Input monitoring (I) and automatic input monitoring setting"
+status = "done"
+tier = "core"
+beta = true
+logic = "141, 197"
+
+[[feature]]
+section = "Record audio"
+name = "Recording latency compensation plus a manual Recording Delay"
+status = "done"
+tier = "core"
+beta = true
+logic = "1041"
+
+[[feature]]
+section = "Record audio"
+name = "Takes written as 24-bit or 32-bit float WAV in the project's Audio Files folder"
+status = "done"
+tier = "core"
+beta = true
+logic = "1054, 1082"
+
+[[feature]]
+section = "Record audio"
+name = "Regions draw live while recording"
+status = "done"
+tier = "core"
+beta = true
+
+[[feature]]
+section = "Record audio"
+name = "Take naming options"
+status = "done"
+tier = "core"
+beta = true
+
+[[feature]]
+section = "Record audio"
+name = "Overlapping recordings"
+status = "done"
+tier = "core"
+beta = true
+logic = "1057"
+note = "Take folders (the default), on top, new track or replace for audio; MIDI also merges or creates take folders."
+
+[[feature]]
+section = "Record audio"
+name = "A newer region hides the older audio it overlaps during playback"
+status = "done"
+tier = "core"
+beta = true
+
+[[feature]]
+section = "Record software instruments"
+name = "Record MIDI on an armed instrument track"
+status = "done"
+tier = "core"
+beta = true
+logic = "202"
+
+[[feature]]
+section = "Record software instruments"
+name = "Notes, controllers, pitch bend and aftertouch are recorded and played back"
+status = "done"
+tier = "core"
+beta = true
+
+[[feature]]
+section = "Record software instruments"
+name = "Play with Musical Typing or the on-screen keyboard"
+status = "done"
+tier = "core"
+beta = true
+logic = "201"
+
+[[feature]]
+section = "Record software instruments"
+name = "Overdub: merge into an overlapped region"
+status = "done"
+tier = "core"
+beta = true
+logic = "204"
+
+[[feature]]
+section = "Record software instruments"
+name = "Record audio and a software instrument at the same time"
+status = "done"
+tier = "core"
+beta = true
+logic = "209"
+
+[[feature]]
+section = "Record software instruments"
+name = "MIDI Thru on or off; velocity scaling (as played, soft, hard, fixed)"
+status = "done"
+tier = "core"
+beta = true
+logic = "1057, 1087"
+
+[[feature]]
+section = "Record software instruments"
+name = "Built-in Marbble Synth, so instrument tracks make sound without a plug-in"
+status = "done"
+tier = "core"
+beta = true
+
+[[feature]]
+section = "Record software instruments"
+name = "Built-in instruments with panels, presets, automation and MIDI learn, like the built-in effects (Marbble Tre, Sei, Cinque, Uno, Sedici, Onda)"
+status = "done"
+tier = "core"
+beta = true
+
+[[feature]]
+section = "Record: advanced"
+name = "Set punch locators from the playhead (key commands)"
+status = "missing"
+tier = "pro"
+
+[[feature]]
+section = "Record: advanced"
+name = "Record several audio takes to new tracks"
+status = "missing"
+tier = "pro"
+logic = "195"
+
+[[feature]]
+section = "Record: advanced"
+name = "Record to several software instrument tracks at once"
+status = "missing"
+tier = "pro"
+logic = "207"
+
+[[feature]]
+section = "Record: advanced"
+name = "Several MIDI devices to several instrument tracks"
+status = "missing"
+tier = "pro"
+logic = "208"
+
+[[feature]]
+section = "Record: advanced"
+name = "Spot erase notes while recording"
+status = "missing"
+tier = "pro"
+logic = "204"
+
+[[feature]]
+section = "Record: advanced"
+name = "Note Repeat"
+status = "missing"
+tier = "pro"
+logic = "205"
+
+[[feature]]
+section = "Record: advanced"
+name = "Flashback Capture for MIDI and audio"
+status = "missing"
+tier = "pro"
+logic = "220–222"
+
+[[feature]]
+section = "Record: advanced"
+name = "Delete a recording together with its audio file"
+status = "partial"
+tier = "pro"
+logic = "199"
+note = "Discard Last Recording deletes its files once no undo step or saved project needs them."
+
+[[feature]]
+section = "Record: advanced"
+name = "Autopunch mode with punch-in and punch-out locators"
+status = "done"
+tier = "pro"
+logic = "196–198"
+
+[[feature]]
+section = "Record: advanced"
+name = "Replace mode"
+status = "done"
+tier = "pro"
+logic = "199"
+note = "The control bar's Replace button replaces with audio and MIDI; each also has a Replace setting in Settings › Recording."
+
+[[feature]]
+section = "Record: advanced"
+name = "Cycle recording into take folders"
+status = "done"
+tier = "pro"
+logic = "193"
+
+[[feature]]
+section = "Record: advanced"
+name = "Record MIDI over an existing region (Replace)"
+status = "done"
+tier = "pro"
+logic = "206"
+
+[[feature]]
+section = "Record: advanced"
+name = "MIDI cycle recording into take folders"
+status = "done"
+tier = "pro"
+logic = "203"
+
+[[feature]]
+section = "Record: advanced"
+name = "Step input: musical typing, Step Input keyboard, MIDI keyboard, rests"
+status = "done"
+tier = "pro"
+logic = "210–211"
+
+[[feature]]
+section = "Record: advanced"
+name = "Discard recording and return to the last play position (⌘.)"
+status = "done"
+tier = "pro"
+note = "Ctrl+. outside macOS; one undo step, and the files go once nothing can bring them back."
+
+[[feature]]
+section = "Record: advanced"
+name = "Colour takes automatically; mark a take while recording"
+status = "done"
+tier = "pro"
+logic = "218–220"
+note = "Good and bad marks from the take folder menu, a take row or a key; Delete Bad Takes."
+
+[[feature]]
+section = "Record: advanced"
+name = "Low Latency Monitoring mode"
+status = "done"
+tier = "pro"
+logic = "575"
+
+[[feature]]
+section = "Take folders and comping"
+name = "Edit take regions: trim, cut, slice at comp borders, move between lanes"
+status = "missing"
+tier = "pro"
+logic = "234–237"
+
+[[feature]]
+section = "Take folders and comping"
+name = "Unpack to existing tracks, new tracks or track alternatives"
+status = "partial"
+tier = "pro"
+logic = "243–246"
+note = "New and existing tracks; not track alternatives."
+
+[[feature]]
+section = "Take folders and comping"
+name = "Take folders from cycle recording"
+status = "done"
+tier = "pro"
+logic = "222"
+
+[[feature]]
+section = "Take folders and comping"
+name = "Quick Swipe Comping"
+status = "done"
+tier = "pro"
+logic = "222"
+
+[[feature]]
+section = "Take folders and comping"
+name = "Open a take folder and preview or choose takes"
+status = "done"
+tier = "pro"
+logic = "223–224"
+
+[[feature]]
+section = "Take folders and comping"
+name = "Create, save, rename and delete comps"
+status = "done"
+tier = "pro"
+logic = "224–233"
+
+[[feature]]
+section = "Take folders and comping"
+name = "Grouped take folders switch and comp together; Select Previous/Next Take"
+status = "done"
+tier = "pro"
+
+[[feature]]
+section = "Take folders and comping"
+name = "Edit comp sections: move, alternate between lanes, remove a take"
+status = "done"
+tier = "pro"
+logic = "227–229"
+
+[[feature]]
+section = "Take folders and comping"
+name = "Export the active take to a new track"
+status = "done"
+tier = "pro"
+logic = "238"
+note = "Or the comp, flattened; Move Active Take too."
+
+[[feature]]
+section = "Take folders and comping"
+name = "Flatten, and Flatten and Merge"
+status = "done"
+tier = "pro"
+logic = "241"
+
+[[feature]]
+section = "Take folders and comping"
+name = "Pack regions into a take folder"
+status = "done"
+tier = "pro"
+logic = "247"
+note = "From one track or several; the tracks left empty can be deleted."

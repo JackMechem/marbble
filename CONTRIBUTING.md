@@ -20,11 +20,11 @@ comment saying what you tried and what you heard or saw is a contribution in its
 
 - **Issues** hold everything that's open: bugs, features, and checks that still need a person.
 - **Milestones** are the roadmap's stages, in the order they matter for a usable release.
-  [TODO.md](TODO.md) describes each stage's goal.
-- **The [feature scope board](https://github.com/users/JackMechem/projects/1)** has a card for
-  every Logic Pro feature, marked Missing, Partial, In progress or Done. A card is a draft until
-  someone takes it on: convert it to an issue then. A pull request that finishes a feature moves
-  its card to Done, or rewrites a Partial card's note to say what's still missing.
+  [ROADMAP.md](ROADMAP.md) describes each stage's goal, what beta needs and the current focus.
+- **The [feature list](docs/FEATURES.md)** has every Logic Pro feature by area, and how far
+  Marbble has it. It's generated from [`features/`](features/README.md), one TOML file per area:
+  a pull request that builds or extends a feature changes its entry there and runs
+  `python3 scripts/features.py`. A feature someone takes on gets an issue, named in its entry.
 - **Labels** say what an issue is (`bug`, `enhancement`, `documentation`), which part of
   Marbble it touches (`area: engine`, `area: ui`, `area: plug-ins` and so on), and which
   platform, if only one (`platform: macos`). `flaky test` marks checks that fail now and then.

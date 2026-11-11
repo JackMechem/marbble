@@ -1,0 +1,670 @@
+# Logic Pro's mixing and automation features, and how far Marbble has each. See features/README.md.
+
+title = "Mixing and automation"
+about = "The Mixer, automation, surround and Dolby Atmos."
+order = 9
+
+[[feature]]
+section = "Mixer"
+name = "Channel strip types"
+status = "partial"
+tier = "core"
+beta = true
+logic = "541"
+note = "Audio, instrument, aux, summing stack, VCA and Stereo Out; no MIDI, output or master strips."
+
+[[feature]]
+section = "Mixer"
+name = "Reorder strips"
+status = "partial"
+tier = "core"
+beta = true
+logic = "559"
+note = "Follows the track order."
+
+[[feature]]
+section = "Mixer"
+name = "Search for plug-ins"
+status = "partial"
+tier = "core"
+beta = true
+logic = "563"
+note = "The Library has search; slot menus are grouped by vendor and category, without search."
+
+[[feature]]
+section = "Mixer"
+name = "Plug-in windows"
+status = "partial"
+tier = "core"
+beta = true
+logic = "567"
+note = "Built-in effect panels everywhere; a VST3's own editor on Linux/X11 and macOS so far."
+
+[[feature]]
+section = "Mixer"
+name = "Mixer modes: Single, Tracks, All"
+status = "missing"
+tier = "core"
+logic = "613"
+
+[[feature]]
+section = "Mixer"
+name = "Select several strips, or strips by type"
+status = "missing"
+tier = "core"
+beta = true
+logic = "543"
+
+[[feature]]
+section = "Mixer"
+name = "A channel strip for every track plus Stereo Out"
+status = "done"
+tier = "core"
+beta = true
+logic = "539"
+
+[[feature]]
+section = "Mixer"
+name = "Filter strips by type (Audio, Inst, Aux)"
+status = "done"
+tier = "core"
+beta = true
+logic = "542"
+
+[[feature]]
+section = "Mixer"
+name = "Volume fader with Logic's taper"
+status = "done"
+tier = "core"
+beta = true
+logic = "552"
+
+[[feature]]
+section = "Mixer"
+name = "Level meters with a 2 s peak hold"
+status = "done"
+tier = "core"
+beta = true
+logic = "551–553"
+
+[[feature]]
+section = "Mixer"
+name = "Peak level display and clipping"
+status = "done"
+tier = "core"
+beta = true
+logic = "551"
+
+[[feature]]
+section = "Mixer"
+name = "Input format mono or stereo"
+status = "done"
+tier = "core"
+beta = true
+logic = "554"
+
+[[feature]]
+section = "Mixer"
+name = "Pan, with a −3 dB compensated pan law"
+status = "done"
+tier = "core"
+beta = true
+logic = "555"
+
+[[feature]]
+section = "Mixer"
+name = "Mute and solo"
+status = "done"
+tier = "core"
+beta = true
+logic = "557–558"
+
+[[feature]]
+section = "Mixer"
+name = "Audio FX insert slots: add, replace, remove and bypass plug-ins"
+status = "done"
+tier = "core"
+beta = true
+logic = "560–563"
+
+[[feature]]
+section = "Mixer"
+name = "Instrument slot"
+status = "done"
+tier = "core"
+beta = true
+logic = "561"
+
+[[feature]]
+section = "Mixer"
+name = "Channel EQ on every strip: 8 bands, 12/24/48 dB/oct cuts, analyzer, output gain, thumbnail on the strip"
+status = "done"
+tier = "core"
+beta = true
+logic = "566"
+
+[[feature]]
+section = "Mixer"
+name = "Sends: eight per strip, pre or post fader, mute, level knob"
+status = "done"
+tier = "core"
+beta = true
+logic = "583–589"
+
+[[feature]]
+section = "Mixer"
+name = "Aux channel strips fed by buses; new aux from any send or output menu"
+status = "done"
+tier = "core"
+beta = true
+logic = "590"
+
+[[feature]]
+section = "Mixer"
+name = "Subgroups through auxes"
+status = "done"
+tier = "core"
+beta = true
+logic = "591"
+
+[[feature]]
+section = "Mixer"
+name = "Output routing to Stereo Out or an aux"
+status = "done"
+tier = "core"
+beta = true
+logic = "594–596"
+
+[[feature]]
+section = "Mixer"
+name = "Solo follows routing: soloing a track keeps its auxes audible, and the reverse"
+status = "done"
+tier = "core"
+beta = true
+
+[[feature]]
+section = "Mixer"
+name = "Feedback loops refused"
+status = "done"
+tier = "core"
+beta = true
+
+[[feature]]
+section = "Mixer"
+name = "Rename strips"
+status = "done"
+tier = "core"
+beta = true
+logic = "616"
+
+[[feature]]
+section = "Mixer"
+name = "Move or copy plug-ins by dragging between slots"
+status = "done"
+tier = "core"
+beta = true
+logic = "562"
+
+[[feature]]
+section = "Mixing: professional"
+name = "Side-chain inputs for plug-ins"
+status = "done"
+tier = "pro"
+logic = "570"
+note = "The built-in Compressor, Noise Gate and De-Esser and any VST3 with a side-chain input, keyed pre- or post-fader from any track or aux."
+
+[[feature]]
+section = "Mixing: professional"
+name = "VCA faders and VCA groups"
+status = "partial"
+tier = "pro"
+logic = "603–604"
+note = "VCA strips with level, mute, names, colours and nesting, a VCA slot on each strip and an offset mark on its fader; no VCA automation, VCA solo, or VCAs made from groups."
+
+[[feature]]
+section = "Mixing: professional"
+name = "Groups"
+status = "partial"
+tier = "pro"
+logic = "598–603"
+note = "Volume, pan, mute, solo, record, selection and editing links, plus an on/off clutch; missing are several groups per strip, a Groups window, automation, send and colour links, and copy/paste of group settings."
+
+[[feature]]
+section = "Mixing: professional"
+name = "Enable or disable all groups (⇧G)"
+status = "missing"
+tier = "pro"
+logic = "602"
+
+[[feature]]
+section = "Mixing: professional"
+name = "Solo safe"
+status = "missing"
+tier = "pro"
+logic = "558"
+
+[[feature]]
+section = "Mixing: professional"
+name = "Pre-fader metering"
+status = "missing"
+tier = "pro"
+logic = "554"
+
+[[feature]]
+section = "Mixing: professional"
+name = "Switch between two volume levels"
+status = "missing"
+tier = "pro"
+logic = "552"
+
+[[feature]]
+section = "Mixing: professional"
+name = "Stereo Pan mode, with width"
+status = "missing"
+tier = "pro"
+logic = "556"
+
+[[feature]]
+section = "Mixing: professional"
+name = "Independent send pan"
+status = "missing"
+tier = "pro"
+logic = "587–588"
+
+[[feature]]
+section = "Mixing: professional"
+name = "Copy fader level or pan to a send"
+status = "missing"
+tier = "pro"
+logic = "588"
+
+[[feature]]
+section = "Mixing: professional"
+name = "Sends on Faders"
+status = "missing"
+tier = "pro"
+logic = "589"
+
+[[feature]]
+section = "Mixing: professional"
+name = "Highlight a send's destination; select strips with the same destination"
+status = "missing"
+tier = "pro"
+logic = "586"
+
+[[feature]]
+section = "Mixing: professional"
+name = "Create tracks for aux strips"
+status = "done"
+tier = "pro"
+logic = "597"
+note = "Every aux is a track in the Tracks area, with its header and automation."
+
+[[feature]]
+section = "Mixing: professional"
+name = "Narrow and wide strips, long faders, show or hide strip components"
+status = "partial"
+tier = "pro"
+logic = "613–614"
+note = "Narrow, Normal and Wide strips, and a width of its own for any strip; no long faders, and strip components can't be shown or hidden."
+
+[[feature]]
+section = "Mixing: professional"
+name = "Enter and exit folder stacks in the Mixer"
+status = "partial"
+tier = "pro"
+logic = "614–615"
+note = "Stacks sit under a bracket and collapse in the Mixer; no entering a folder stack as its own view."
+
+[[feature]]
+section = "Mixing: professional"
+name = "Track notes in the Mixer"
+status = "missing"
+tier = "pro"
+logic = "617"
+
+[[feature]]
+section = "Mixing: professional"
+name = "I/O Labels window"
+status = "missing"
+tier = "pro"
+logic = "618"
+
+[[feature]]
+section = "Mixing: professional"
+name = "Gain-reduction meter on the strip"
+status = "partial"
+tier = "pro"
+note = "For the built-in dynamics effects; VST3s don't report it."
+
+[[feature]]
+section = "Mixing: professional"
+name = "Show or hide all plug-in windows (V)"
+status = "missing"
+tier = "pro"
+
+[[feature]]
+section = "Mixing: professional"
+name = "Plug-in delay compensation"
+status = "done"
+tier = "pro"
+logic = "573–575"
+
+[[feature]]
+section = "Mixing: professional"
+name = "Multi-output instruments"
+status = "done"
+tier = "pro"
+logic = "592"
+note = "A \"+\" on the strip adds an aux per output."
+
+[[feature]]
+section = "Mixing: professional"
+name = "Clip indicators with reset"
+status = "done"
+tier = "pro"
+logic = "551–552"
+
+[[feature]]
+section = "Automation"
+name = "Track automation of volume, pan, mute, send levels and any plug-in parameter"
+status = "done"
+tier = "core"
+beta = true
+logic = "621"
+
+[[feature]]
+section = "Automation"
+name = "Show Automation (A)"
+status = "done"
+tier = "core"
+beta = true
+logic = "622"
+
+[[feature]]
+section = "Automation"
+name = "Parameter picker, with automated parameters marked"
+status = "done"
+tier = "core"
+beta = true
+logic = "623"
+
+[[feature]]
+section = "Automation"
+name = "Automation lanes"
+status = "done"
+tier = "core"
+beta = true
+logic = "626–627"
+
+[[feature]]
+section = "Automation"
+name = "Modes: Off, Read, Touch, Latch, Write"
+status = "done"
+tier = "core"
+beta = true
+logic = "627–628"
+
+[[feature]]
+section = "Automation"
+name = "Write switches to Latch afterwards, as in Logic"
+status = "done"
+tier = "core"
+beta = true
+logic = "1064"
+
+[[feature]]
+section = "Automation"
+name = "Add, move and delete points; rubber-band select"
+status = "done"
+tier = "core"
+beta = true
+logic = "631–636"
+
+[[feature]]
+section = "Automation"
+name = "Record live automation, including moves in a plug-in's own editor"
+status = "done"
+tier = "core"
+beta = true
+logic = "633"
+
+[[feature]]
+section = "Automation"
+name = "Each pass is one undo step, thinned to the points the curve needs"
+status = "done"
+tier = "core"
+beta = true
+
+[[feature]]
+section = "Automation"
+name = "Snap automation to the grid"
+status = "done"
+tier = "core"
+beta = true
+logic = "640"
+
+[[feature]]
+section = "Automation"
+name = "Fader, pan knob and plug-in editors follow during playback"
+status = "done"
+tier = "core"
+beta = true
+
+[[feature]]
+section = "Automation: advanced"
+name = "Region automation, and converting between region and track automation"
+status = "missing"
+tier = "pro"
+logic = "621–623"
+
+[[feature]]
+section = "Automation: advanced"
+name = "Trim mode"
+status = "missing"
+tier = "pro"
+logic = "629"
+
+[[feature]]
+section = "Automation: advanced"
+name = "Relative automation"
+status = "missing"
+tier = "pro"
+logic = "629–630"
+
+[[feature]]
+section = "Automation: advanced"
+name = "Automation curves"
+status = "partial"
+tier = "pro"
+logic = "59"
+note = "Ctrl-Shift-drag bends a segment; no S-curves."
+
+[[feature]]
+section = "Automation: advanced"
+name = "Copy and move automation, within and between tracks"
+status = "missing"
+tier = "pro"
+logic = "637"
+
+[[feature]]
+section = "Automation: advanced"
+name = "Move automation with regions"
+status = "partial"
+tier = "pro"
+logic = "638"
+note = "Never, Always and Ask, along a track; not onto another track or for copies."
+
+[[feature]]
+section = "Automation: advanced"
+name = "Stepped automation and vertical lines"
+status = "missing"
+tier = "pro"
+logic = "638–639"
+
+[[feature]]
+section = "Automation: advanced"
+name = "Points at region, marquee and selection borders"
+status = "missing"
+tier = "pro"
+logic = "632"
+
+[[feature]]
+section = "Automation: advanced"
+name = "Delete redundant, visible, orphaned or all automation (key commands, p. 640)"
+status = "partial"
+tier = "pro"
+note = "Delete one parameter's automation or all automation on a track from the lane's menus; no deleting redundant, orphaned or visible automation, or every track's at once."
+
+[[feature]]
+section = "Automation: advanced"
+name = "Set modes for selected or all tracks"
+status = "missing"
+tier = "pro"
+logic = "628"
+
+[[feature]]
+section = "Automation: advanced"
+name = "Automation Event List"
+status = "missing"
+tier = "pro"
+logic = "642"
+
+[[feature]]
+section = "Automation: advanced"
+name = "Automation Quick Access"
+status = "missing"
+tier = "pro"
+logic = "643"
+
+[[feature]]
+section = "Automation: advanced"
+name = "Automation settings: ramp times, which parameters Write overwrites"
+status = "missing"
+tier = "pro"
+logic = "1064"
+
+[[feature]]
+section = "Automation: advanced"
+name = "Several automation lanes per track"
+status = "done"
+tier = "pro"
+logic = "626–627"
+
+[[feature]]
+section = "Automation: advanced"
+name = "Automation for folder stacks and Stereo Out (Show Output Track)"
+status = "done"
+tier = "pro"
+
+[[feature]]
+section = "Surround"
+name = "Surround project formats: quad, LCRS, 5.1, 7.1 and others"
+status = "missing"
+tier = "studio"
+logic = "934, 1005"
+
+[[feature]]
+section = "Surround"
+name = "Surround input and output formats on strips"
+status = "missing"
+tier = "studio"
+logic = "943–946"
+
+[[feature]]
+section = "Surround"
+name = "Surround Panner and Surround Balancer"
+status = "missing"
+tier = "studio"
+logic = "955–964"
+
+[[feature]]
+section = "Surround"
+name = "Multichannel and multi-mono effects, with linked instances"
+status = "missing"
+tier = "studio"
+logic = "969–974"
+
+[[feature]]
+section = "Surround"
+name = "Surround I/O assignments and bounce extensions"
+status = "missing"
+tier = "studio"
+logic = "937–940"
+
+[[feature]]
+section = "Surround"
+name = "Surround bounce"
+status = "missing"
+tier = "studio"
+logic = "991"
+
+[[feature]]
+section = "Surround"
+name = "Convert between surround and stereo projects"
+status = "missing"
+tier = "studio"
+logic = "943, 997"
+
+[[feature]]
+section = "Surround"
+name = "Binaural panner on stereo strips"
+status = "missing"
+tier = "studio"
+logic = "605–610"
+
+[[feature]]
+section = "Spatial Audio with Dolby Atmos"
+name = "Spatial Audio projects; create from stereo or from an ADM file"
+status = "missing"
+tier = "studio"
+logic = "946–949"
+
+[[feature]]
+section = "Spatial Audio with Dolby Atmos"
+name = "Bed tracks and object tracks"
+status = "missing"
+tier = "studio"
+logic = "952–953"
+
+[[feature]]
+section = "Spatial Audio with Dolby Atmos"
+name = "3D Object Panner"
+status = "missing"
+tier = "studio"
+logic = "965–968"
+
+[[feature]]
+section = "Spatial Audio with Dolby Atmos"
+name = "Dolby Atmos plug-in: object view, monitoring formats"
+status = "missing"
+tier = "studio"
+logic = "975–982"
+
+[[feature]]
+section = "Spatial Audio with Dolby Atmos"
+name = "Binaural rendering, render modes, personalised profiles"
+status = "missing"
+tier = "studio"
+logic = "982–984"
+
+[[feature]]
+section = "Spatial Audio with Dolby Atmos"
+name = "Downmix and trim controls"
+status = "missing"
+tier = "studio"
+logic = "985–988"
+
+[[feature]]
+section = "Spatial Audio with Dolby Atmos"
+name = "Export ADM BWF masters and MP4 (Dolby Digital Plus / AC-4)"
+status = "missing"
+tier = "studio"
+logic = "994–996"
+
+[[feature]]
+section = "Spatial Audio with Dolby Atmos"
+name = "Import QTA files and bed/object tracks from other projects"
+status = "missing"
+tier = "studio"
+logic = "998–999"

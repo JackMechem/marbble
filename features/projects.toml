@@ -1,0 +1,270 @@
+# Logic Pro's projects features, and how far Marbble has each. See features/README.md.
+
+title = "Projects"
+about = "Opening, saving and managing projects, undo, and exchanging projects with other apps."
+order = 2
+
+[[feature]]
+section = "Work with projects"
+name = "Project Chooser"
+status = "partial"
+tier = "core"
+beta = true
+logic = "79"
+note = "New, Recent and Open, with four built-in templates and the user's own (My Templates); no demo projects or tutorials."
+
+[[feature]]
+section = "Work with projects"
+name = "Open several projects at once and switch between them"
+status = "missing"
+tier = "core"
+logic = "82"
+
+[[feature]]
+section = "Work with projects"
+name = "Save a copy including all assets"
+status = "partial"
+tier = "core"
+beta = true
+logic = "84"
+note = "Save As into a new folder copies every file the project uses into it; no Save a Copy As that leaves the open project as it is."
+
+[[feature]]
+section = "Work with projects"
+name = "Delete a project from the chooser"
+status = "missing"
+tier = "core"
+beta = true
+logic = "85"
+
+[[feature]]
+section = "Work with projects"
+name = "Project start and end points"
+status = "missing"
+tier = "core"
+beta = true
+logic = "104"
+
+[[feature]]
+section = "Work with projects"
+name = "Close Project without quitting"
+status = "missing"
+tier = "core"
+beta = true
+logic = "113"
+
+[[feature]]
+section = "Work with projects"
+name = "Project Information window"
+status = "missing"
+tier = "core"
+logic = "114"
+
+[[feature]]
+section = "Work with projects"
+name = "New project with name, location, tempo, time signature and key"
+status = "done"
+tier = "core"
+beta = true
+logic = "79"
+
+[[feature]]
+section = "Work with projects"
+name = "Create an empty project"
+status = "done"
+tier = "core"
+beta = true
+logic = "81"
+
+[[feature]]
+section = "Work with projects"
+name = "Open a project; Open Recent with project details and missing-file flags"
+status = "done"
+tier = "core"
+beta = true
+logic = "81–82"
+
+[[feature]]
+section = "Work with projects"
+name = "Save and Save As"
+status = "done"
+tier = "core"
+beta = true
+logic = "84"
+
+[[feature]]
+section = "Work with projects"
+name = "Warn before discarding unsaved changes"
+status = "done"
+tier = "core"
+beta = true
+
+[[feature]]
+section = "Work with projects"
+name = "Autosave and crash recovery"
+status = "done"
+tier = "core"
+beta = true
+logic = "1034"
+
+[[feature]]
+section = "Work with projects"
+name = "Project sample rate, with a warning when existing audio would play at the wrong speed"
+status = "done"
+tier = "core"
+beta = true
+logic = "102"
+
+[[feature]]
+section = "Work with projects"
+name = "Project tempo, time signature and key"
+status = "done"
+tier = "core"
+beta = true
+logic = "99–101"
+
+[[feature]]
+section = "Work with projects"
+name = "Master volume slider"
+status = "done"
+tier = "core"
+beta = true
+logic = "91, 105"
+
+[[feature]]
+section = "Work with projects"
+name = "Revert to the last saved version"
+status = "done"
+tier = "core"
+beta = true
+logic = "85"
+
+[[feature]]
+section = "Project management"
+name = "Clean up project files"
+status = "missing"
+tier = "pro"
+logic = "107"
+
+[[feature]]
+section = "Project management"
+name = "Consolidate project assets"
+status = "missing"
+tier = "pro"
+logic = "108"
+
+[[feature]]
+section = "Project management"
+name = "Rename, copy and move projects"
+status = "missing"
+tier = "pro"
+logic = "109"
+
+[[feature]]
+section = "Project management"
+name = "Import tracks, channel strips and settings from another project"
+status = "partial"
+tier = "pro"
+logic = "110–113"
+note = "Saved channel strip settings load in any project, and copied strips and plug-ins paste into another one; no importing tracks or their regions."
+
+[[feature]]
+section = "Project management"
+name = "Project alternatives"
+status = "done"
+tier = "pro"
+logic = "106–107"
+
+[[feature]]
+section = "Project management"
+name = "Backups of each alternative"
+status = "done"
+tier = "pro"
+logic = "107"
+
+[[feature]]
+section = "Project management"
+name = "User project templates"
+status = "done"
+tier = "pro"
+
+[[feature]]
+section = "Undo and redo"
+name = "Undo and redo every edit: regions, tracks, names, colours, volume, pan, EQ, plug-in slots, recordings, imports"
+status = "done"
+tier = "core"
+beta = true
+logic = "60"
+
+[[feature]]
+section = "Undo and redo"
+name = "Edit menu shows what will be undone"
+status = "done"
+tier = "core"
+beta = true
+
+[[feature]]
+section = "Undo and redo"
+name = "A run of drags on one control is one undo step"
+status = "done"
+tier = "core"
+beta = true
+
+[[feature]]
+section = "Undo and redo"
+name = "Mute, solo, arm and monitoring are excluded from undo, as in Logic"
+status = "done"
+tier = "core"
+beta = true
+
+[[feature]]
+section = "Undo and redo"
+name = "Number of undo steps is configurable"
+status = "done"
+tier = "core"
+beta = true
+logic = "61"
+
+[[feature]]
+section = "Undo and redo"
+name = "Mixer and plug-in edits in the undo history"
+status = "done"
+tier = "core"
+beta = true
+logic = "61, 619"
+note = "Built-in effects, the Channel EQ and parameter changes made in a VST3's own editor."
+
+[[feature]]
+section = "Project interchange"
+name = "Open GarageBand projects"
+status = "missing"
+tier = "studio"
+logic = "283–284"
+
+[[feature]]
+section = "Project interchange"
+name = "Final Cut Pro XML import and export"
+status = "missing"
+tier = "studio"
+logic = "284, 929"
+
+[[feature]]
+section = "Project interchange"
+name = "AAF import and export"
+status = "missing"
+tier = "studio"
+logic = "286–287, 929"
+
+[[feature]]
+section = "Project interchange"
+name = "MusicXML export"
+status = "missing"
+tier = "studio"
+logic = "930"
+
+[[feature]]
+section = "Project interchange"
+name = "Spatial Audio export"
+status = "missing"
+tier = "studio"
+logic = "930"

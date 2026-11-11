@@ -193,7 +193,8 @@ read the sources.
 
 ### Around the code
 
-`scripts/` has the headless check runner, the version bump and the editor scale check. `nix/`
+`scripts/` has the headless check runner, the version bump, the editor scale check and the feature
+list's generator. `features/` lists Logic Pro's features and how far Marbble has each. `nix/`
 holds the package and the dev shell, `site/` the website built from these docs, `.github/workflows/`
 CI, releases and the website's deploy.
 

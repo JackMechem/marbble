@@ -60,6 +60,9 @@ jobs:
       - name: Install the pinned lint toolchain
         if: runner.os == 'Linux'
         run: rustup toolchain install "$LINT_TOOLCHAIN" --profile minimal --component clippy --component rustfmt
+      - name: Feature list is current
+        if: runner.os == 'Linux'
+        run: python3 scripts/features.py --check
       - name: Formatting
         if: runner.os == 'Linux'
         run: cargo "+$LINT_TOOLCHAIN" fmt --all --check

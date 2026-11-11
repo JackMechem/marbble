@@ -1,0 +1,490 @@
+# Logic Pro's instruments and content features, and how far Marbble has each. See features/README.md.
+
+title = "Instruments and content"
+about = "Built-in instruments and effects, samplers, loops, Session Players, Live Loops and machine learning."
+order = 11
+
+[[feature]]
+section = "Bundled instruments (Logic Pro Instruments guide)"
+name = "Synthesisers: Alchemy, Retro Synth, ES1, ES2, ES E, ES M, ES P, EFM1, Sculpture, Vocoder (EVOC 20 PolySynth)"
+status = "partial"
+tier = "content"
+note = "Marbble Synth; Tre, Sei, Cinque and Uno (analog); Sedici (FM, closest to EFM1 but with six operators); Onda (wavetable, closest to Retro Synth's table mode and Alchemy's simple use)."
+
+[[feature]]
+section = "Bundled instruments (Logic Pro Instruments guide)"
+name = "Granular synthesis, including Alchemy granular sync"
+status = "missing"
+tier = "content"
+logic = "10"
+
+[[feature]]
+section = "Bundled instruments (Logic Pro Instruments guide)"
+name = "Sample-based instruments: Sampler, Quick Sampler, Sample Alchemy (engines in Stage 3)"
+status = "partial"
+tier = "content"
+note = "Marbble Sampler; no Sample Alchemy."
+
+[[feature]]
+section = "Bundled instruments (Logic Pro Instruments guide)"
+name = "Keyboards: Studio Piano, Vintage B3 organ, Vintage Electric Piano, Vintage Clav, Vintage Mellotron"
+status = "missing"
+tier = "content"
+
+[[feature]]
+section = "Bundled instruments (Logic Pro Instruments guide)"
+name = "Orchestral: Studio Strings, Studio Horns"
+status = "missing"
+tier = "content"
+
+[[feature]]
+section = "Bundled instruments (Logic Pro Instruments guide)"
+name = "Bass: Studio Bass"
+status = "missing"
+tier = "content"
+
+[[feature]]
+section = "Bundled instruments (Logic Pro Instruments guide)"
+name = "Drums: Drum Kit Designer, Drum Machine Designer, Drum Synth, Ultrabeat"
+status = "missing"
+tier = "content"
+
+[[feature]]
+section = "Bundled instruments (Logic Pro Instruments guide)"
+name = "Utility: Klopfgeist (metronome), Test Oscillator"
+status = "missing"
+tier = "content"
+
+[[feature]]
+section = "Bundled instruments (Logic Pro Instruments guide)"
+name = "Session Player sound content (Synth Session Players pack and others)"
+status = "missing"
+tier = "content"
+
+[[feature]]
+section = "Bundled audio effects (Logic Pro Effects guide)"
+name = "EQ: Channel EQ, Linear Phase EQ, Match EQ, Single Band EQ, Vintage Console, Graphic and Tube EQs"
+status = "partial"
+tier = "content"
+note = "Channel EQ and Linear Phase EQ (with a Low/Medium/High quality setting)."
+
+[[feature]]
+section = "Bundled audio effects (Logic Pro Effects guide)"
+name = "Dynamics: Compressor (with circuit models), Limiter, Adaptive Limiter, Multipressor, Noise Gate, Expander, Enveloper, DeEsser 2"
+status = "partial"
+tier = "content"
+note = "Compressor with five circuits, Limiter (with an Adaptive mode), Noise Gate and De-Esser; no Multipressor, Expander or Enveloper."
+
+[[feature]]
+section = "Bundled audio effects (Logic Pro Effects guide)"
+name = "Reverb: ChromaVerb, Space Designer (convolution), Quantec Room Simulator, SilverVerb"
+status = "partial"
+tier = "content"
+note = "One algorithmic Reverb (plate and five room types); no convolution."
+
+[[feature]]
+section = "Bundled audio effects (Logic Pro Effects guide)"
+name = "Delay: Delay Designer, Echo, Stereo Delay, Tape Delay, Sample Delay"
+status = "partial"
+tier = "content"
+note = "One Delay with Stereo, Ping-Pong, Tape and Digital modes; no Delay Designer or Sample Delay."
+
+[[feature]]
+section = "Bundled audio effects (Logic Pro Effects guide)"
+name = "Modulation: Chorus, Ensemble, Flanger, Phaser, Microphaser, Modulation Delay, Ringshifter, Rotor Cabinet, Scanner Vibrato, Spreader, Tremolo"
+status = "partial"
+tier = "content"
+note = "Chorus, Flanger, Phaser and Tremolo (tempo-synced); no Ensemble, Modulation Delay, Ringshifter, Rotor Cabinet, Scanner Vibrato or Spreader."
+
+[[feature]]
+section = "Bundled audio effects (Logic Pro Effects guide)"
+name = "Distortion and saturation: ChromaGlow, Bitcrusher, Clip Distortion, Distortion, Distortion II, Overdrive, Phase Distortion"
+status = "partial"
+tier = "content"
+note = "Overdrive, and a Distortion with Soft, Hard, Tube and Fuzz curves (4× oversampled); no ChromaGlow, Bitcrusher or Phase Distortion."
+
+[[feature]]
+section = "Bundled audio effects (Logic Pro Effects guide)"
+name = "Amps and pedals: Amp Designer, Bass Amp Designer, Pedalboard"
+status = "missing"
+tier = "content"
+
+[[feature]]
+section = "Bundled audio effects (Logic Pro Effects guide)"
+name = "Filters: AutoFilter, EVOC 20 Filterbank and TrackOscillator, Fuzz-Wah, Spectral Gate, Step FX"
+status = "missing"
+tier = "content"
+
+[[feature]]
+section = "Bundled audio effects (Logic Pro Effects guide)"
+name = "Pitch: Pitch Correction, Pitch Shifter, Vocal Transformer"
+status = "missing"
+tier = "content"
+
+[[feature]]
+section = "Bundled audio effects (Logic Pro Effects guide)"
+name = "Imaging: Stereo Spread, Direction Mixer, Binaural Post-Processing"
+status = "missing"
+tier = "content"
+
+[[feature]]
+section = "Bundled audio effects (Logic Pro Effects guide)"
+name = "Metering: Level Meter, Loudness Meter, MultiMeter, Correlation Meter, BPM Counter, Tuner"
+status = "partial"
+tier = "content"
+note = "Loudness Meter and Tuner; no Level Meter, MultiMeter, Correlation Meter or BPM Counter."
+
+[[feature]]
+section = "Bundled audio effects (Logic Pro Effects guide)"
+name = "Specialised: Exciter, SubBass, Denoiser, Grooveshifter, Phat FX"
+status = "missing"
+tier = "content"
+
+[[feature]]
+section = "Bundled audio effects (Logic Pro Effects guide)"
+name = "Performance effects: Remix FX, Beat Breaker (with Cutoff, Resonance and Pan modes and randomise, p. 10)"
+status = "missing"
+tier = "content"
+
+[[feature]]
+section = "Bundled audio effects (Logic Pro Effects guide)"
+name = "Utility: Gain, Multichannel Gain, Test Oscillator, I/O"
+status = "partial"
+tier = "content"
+note = "Gain (with phase invert, swap, mono and balance); no Multichannel Gain, Test Oscillator or I/O."
+
+[[feature]]
+section = "Bundled audio effects (Logic Pro Effects guide)"
+name = "Multichannel versions for surround"
+status = "missing"
+tier = "content"
+logic = "1002–1003"
+
+[[feature]]
+section = "Sampler, Quick Sampler and Drum Machine Designer"
+name = "Quick Sampler: Classic, One Shot, Slice and Recorder modes"
+status = "partial"
+tier = "advanced"
+note = "All in Marbble Sampler's one panel: a zone over the keyboard, one-shot, Slice, Record."
+
+[[feature]]
+section = "Sampler, Quick Sampler and Drum Machine Designer"
+name = "Create sampler tracks by dropping files on Sampler or Quick Sampler zones, Original or Optimized"
+status = "partial"
+tier = "advanced"
+logic = "122"
+note = "Dropping on the panel of a sampler track that exists. No Optimized mode."
+
+[[feature]]
+section = "Sampler, Quick Sampler and Drum Machine Designer"
+name = "Drum Machine Designer: a pad grid of sub-tracks with per-pad channel strips"
+status = "missing"
+tier = "advanced"
+logic = "122, 697"
+
+[[feature]]
+section = "Sampler, Quick Sampler and Drum Machine Designer"
+name = "Sample Alchemy"
+status = "missing"
+tier = "advanced"
+logic = "122"
+
+[[feature]]
+section = "Sampler, Quick Sampler and Drum Machine Designer"
+name = "Sampler instrument (multi-zone, mapping, modulation)"
+status = "done"
+tier = "advanced"
+note = "Marbble Sampler; see its [open issues](https://github.com/JackMechem/marbble/labels/area%3A%20sampler)."
+
+[[feature]]
+section = "Sampler, Quick Sampler and Drum Machine Designer"
+name = "Convert audio regions to a new Sampler track, sliced at transients or markers"
+status = "done"
+tier = "advanced"
+logic = "329"
+note = "Whole or at transients; not at markers."
+
+[[feature]]
+section = "Sampler, Quick Sampler and Drum Machine Designer"
+name = "Drum replacement and doubling from a recorded drum track"
+status = "done"
+tier = "advanced"
+logic = "133"
+note = "Kick, snare, three toms and hi-hat, each with a sample Marbble makes; threshold with live markers, attack or peak timing and an offset. No Prelisten, and no Drum Machine Designer kit to load."
+
+[[feature]]
+section = "Sound content and loops"
+name = "Sound Library: browse, download, delete and relocate sound packs"
+status = "missing"
+tier = "content"
+logic = "62–64, 1040"
+
+[[feature]]
+section = "Sound content and loops"
+name = "Loop Browser (O)"
+status = "missing"
+tier = "content"
+logic = "250"
+
+[[feature]]
+section = "Sound content and loops"
+name = "Search and browse loops by keyword, type, scale, signature"
+status = "missing"
+tier = "content"
+logic = "252–265"
+
+[[feature]]
+section = "Sound content and loops"
+name = "Preview loops at the project tempo and key"
+status = "missing"
+tier = "content"
+logic = "257, 267"
+
+[[feature]]
+section = "Sound content and loops"
+name = "Favourite loops"
+status = "missing"
+tier = "content"
+logic = "259"
+
+[[feature]]
+section = "Sound content and loops"
+name = "Loop families: swap a loop for another in the family"
+status = "missing"
+tier = "content"
+logic = "261"
+
+[[feature]]
+section = "Sound content and loops"
+name = "Create your own loops; add a region to the loop library"
+status = "missing"
+tier = "content"
+logic = "261"
+
+[[feature]]
+section = "Sound content and loops"
+name = "Index and add untagged loops"
+status = "missing"
+tier = "content"
+logic = "263, 266"
+
+[[feature]]
+section = "Sound content and loops"
+name = "Apple Loops metadata: follow tempo and pitch (Flex Time and Flex Pitch separately, p. 11)"
+status = "missing"
+tier = "content"
+
+[[feature]]
+section = "Sound content and loops"
+name = "Patch, channel strip and plug-in setting libraries (see Stage 2 for the system)"
+status = "missing"
+tier = "content"
+
+[[feature]]
+section = "Sound content and loops"
+name = "Demo projects"
+status = "missing"
+tier = "content"
+logic = "82"
+
+[[feature]]
+section = "Session Players and Drummer"
+name = "Session Player tracks and regions"
+status = "missing"
+tier = "advanced"
+logic = "404–405"
+
+[[feature]]
+section = "Session Players and Drummer"
+name = "Session Player Editor"
+status = "missing"
+tier = "advanced"
+logic = "406"
+
+[[feature]]
+section = "Session Players and Drummer"
+name = "Player types: Drummer, Keyboard Player, Bass Player; styles and players"
+status = "missing"
+tier = "advanced"
+logic = "407"
+
+[[feature]]
+section = "Session Players and Drummer"
+name = "Synth Player styles: Modulated Pad, Rhythmic Chords, Pump Bass, 808 Bass, Sequenced Bass"
+status = "missing"
+tier = "advanced"
+logic = "419–428"
+
+[[feature]]
+section = "Session Players and Drummer"
+name = "Presets"
+status = "missing"
+tier = "advanced"
+logic = "409–410"
+
+[[feature]]
+section = "Session Players and Drummer"
+name = "Complexity and intensity XY pad, patterns, fills, swing"
+status = "missing"
+tier = "advanced"
+logic = "411–412"
+
+[[feature]]
+section = "Session Players and Drummer"
+name = "Keyboard Player hands, voicings and movement"
+status = "missing"
+tier = "advanced"
+logic = "413–415"
+
+[[feature]]
+section = "Session Players and Drummer"
+name = "Bass Player notes, octaves, muting, slides"
+status = "missing"
+tier = "advanced"
+logic = "416–418"
+
+[[feature]]
+section = "Session Players and Drummer"
+name = "Drummer kit-piece mutes, brush technique, custom patterns"
+status = "missing"
+tier = "advanced"
+logic = "428–432"
+
+[[feature]]
+section = "Session Players and Drummer"
+name = "Follow the rhythm of another track or the chords"
+status = "missing"
+tier = "advanced"
+logic = "433"
+
+[[feature]]
+section = "Session Players and Drummer"
+name = "Regenerate a performance"
+status = "missing"
+tier = "advanced"
+logic = "432"
+
+[[feature]]
+section = "Session Players and Drummer"
+name = "Multi-channel drum kits"
+status = "missing"
+tier = "advanced"
+logic = "434"
+
+[[feature]]
+section = "Session Players and Drummer"
+name = "Convert a Session Player region to MIDI or a pattern region"
+status = "missing"
+tier = "advanced"
+logic = "435"
+
+[[feature]]
+section = "Live Loops"
+name = "Live Loops grid alongside the Tracks area"
+status = "missing"
+tier = "advanced"
+logic = "658–659"
+
+[[feature]]
+section = "Live Loops"
+name = "Play, stop, queue and retrigger cells and scenes"
+status = "missing"
+tier = "advanced"
+logic = "660–662"
+
+[[feature]]
+section = "Live Loops"
+name = "Quantize Start, Smart Pickup, trigger modes"
+status = "missing"
+tier = "advanced"
+logic = "663–665"
+
+[[feature]]
+section = "Live Loops"
+name = "Add regions, files and loops to cells; copy between grid and Tracks area"
+status = "missing"
+tier = "advanced"
+logic = "666–669"
+
+[[feature]]
+section = "Live Loops"
+name = "Record into cells, with take folders"
+status = "missing"
+tier = "advanced"
+logic = "670–676"
+
+[[feature]]
+section = "Live Loops"
+name = "Cell loop settings: start, loop start, length, speed, reverse"
+status = "missing"
+tier = "advanced"
+logic = "676–684"
+
+[[feature]]
+section = "Live Loops"
+name = "Scenes: select, reorder, duplicate, rename"
+status = "missing"
+tier = "advanced"
+logic = "684–687"
+
+[[feature]]
+section = "Live Loops"
+name = "Cell Editor"
+status = "missing"
+tier = "advanced"
+logic = "687"
+
+[[feature]]
+section = "Live Loops"
+name = "Bounce cells in place"
+status = "missing"
+tier = "advanced"
+logic = "689"
+
+[[feature]]
+section = "Live Loops"
+name = "Record a Live Loops performance to the Tracks area"
+status = "missing"
+tier = "advanced"
+logic = "691"
+
+[[feature]]
+section = "Live Loops"
+name = "Control Live Loops from controllers"
+status = "missing"
+tier = "advanced"
+logic = "693"
+
+[[feature]]
+section = "Machine-learning tools"
+name = "Stem Splitter: separate vocals, drums, bass and other parts from an audio region or cell"
+status = "missing"
+tier = "content"
+logic = "353, 670"
+
+[[feature]]
+section = "Machine-learning tools"
+name = "Mastering Assistant on the Stereo Out strip"
+status = "missing"
+tier = "content"
+logic = "1049"
+
+[[feature]]
+section = "Machine-learning tools"
+name = "Chord ID: detect chords in audio or MIDI regions and add them to the Chord track"
+status = "missing"
+tier = "content"
+logic = "11, 348"
+
+[[feature]]
+section = "Machine-learning tools"
+name = "Session Players' generated performances (Stage 3)"
+status = "missing"
+tier = "content"
+
+[[feature]]
+section = "Machine-learning tools"
+name = "Enhanced loop detection: set the file tempo and downbeat on import"
+status = "missing"
+tier = "content"
+logic = "10"

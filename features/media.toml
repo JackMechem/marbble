@@ -1,0 +1,312 @@
+# Logic Pro's import, export and media features, and how far Marbble has each. See features/README.md.
+
+title = "Import, export and media"
+about = "Importing media and MIDI files, the audio browser, bouncing and exporting, and video."
+order = 13
+
+[[feature]]
+section = "Import, media and MIDI files"
+name = "All Files Browser"
+status = "partial"
+tier = "core"
+beta = true
+logic = "268–273"
+note = "Browses folders; no search conditions or bookmarks."
+
+[[feature]]
+section = "Import, media and MIDI files"
+name = "Open a MIDI file as a new project"
+status = "missing"
+tier = "core"
+beta = true
+logic = "285"
+
+[[feature]]
+section = "Import, media and MIDI files"
+name = "Import audio by dragging from the file manager or browser, or with Import Audio File (⇧⌘I)"
+status = "done"
+tier = "core"
+beta = true
+logic = "268–269"
+
+[[feature]]
+section = "Import, media and MIDI files"
+name = "WAV, AIFF, FLAC, MP3, OGG Vorbis, M4A/AAC and CAF"
+status = "done"
+tier = "core"
+beta = true
+logic = "282"
+
+[[feature]]
+section = "Import, media and MIDI files"
+name = "High-quality sample-rate conversion on import"
+status = "done"
+tier = "core"
+beta = true
+logic = "103"
+
+[[feature]]
+section = "Import, media and MIDI files"
+name = "Import Standard MIDI Files (format 0 and 1) at the playhead or drop position"
+status = "done"
+tier = "core"
+beta = true
+logic = "285"
+
+[[feature]]
+section = "Import, media and MIDI files"
+name = "An empty project takes a MIDI file's tempo and signature"
+status = "done"
+tier = "core"
+beta = true
+logic = "285"
+
+[[feature]]
+section = "Import, media and MIDI files"
+name = "Export a region, track or selection as a MIDI file"
+status = "done"
+tier = "core"
+beta = true
+logic = "187, 286"
+
+[[feature]]
+section = "Project Audio Browser"
+name = "Project Audio Browser: list files and regions, play them, add them to tracks"
+status = "missing"
+tier = "pro"
+logic = "274–278"
+
+[[feature]]
+section = "Project Audio Browser"
+name = "Delete unused files and unused sections of files"
+status = "missing"
+tier = "pro"
+logic = "277"
+
+[[feature]]
+section = "Project Audio Browser"
+name = "Sort, group and rename audio files"
+status = "missing"
+tier = "pro"
+logic = "278–279"
+
+[[feature]]
+section = "Project Audio Browser"
+name = "Move, copy or convert files; convert regions to independent files"
+status = "missing"
+tier = "pro"
+logic = "279–280"
+
+[[feature]]
+section = "Project Audio Browser"
+name = "Import and export region information in audio files"
+status = "missing"
+tier = "pro"
+logic = "281"
+
+[[feature]]
+section = "Bounce and export"
+name = "Bounce file formats"
+status = "partial"
+tier = "core"
+beta = true
+logic = "914–918"
+note = "WAV and AIFF at 16, 24 or 32-bit float, FLAC at 16 or 24-bit; no CAF, MP3 or M4A."
+
+[[feature]]
+section = "Bounce and export"
+name = "Dither"
+status = "partial"
+tier = "core"
+beta = true
+logic = "914"
+note = "TPDF only; no POW-r."
+
+[[feature]]
+section = "Bounce and export"
+name = "Bounce all tracks in place"
+status = "partial"
+tier = "core"
+beta = true
+logic = "177"
+note = "Works on the selected tracks; no dedicated command."
+
+[[feature]]
+section = "Bounce and export"
+name = "Real-time bounce"
+status = "missing"
+tier = "core"
+beta = true
+logic = "914"
+
+[[feature]]
+section = "Bounce and export"
+name = "Bounce Project or Section offline, faster than real time (⌘B)"
+status = "done"
+tier = "core"
+beta = true
+logic = "909"
+
+[[feature]]
+section = "Bounce and export"
+name = "Bounce range: whole project, cycle or a span of bars"
+status = "done"
+tier = "core"
+beta = true
+logic = "914"
+
+[[feature]]
+section = "Bounce and export"
+name = "Audio tail, with trailing silence trimmed"
+status = "done"
+tier = "core"
+beta = true
+
+[[feature]]
+section = "Bounce and export"
+name = "Bounce sample-rate conversion to 44.1–96 kHz"
+status = "done"
+tier = "core"
+beta = true
+
+[[feature]]
+section = "Bounce and export"
+name = "Normalize on bounce"
+status = "done"
+tier = "core"
+beta = true
+logic = "914"
+
+[[feature]]
+section = "Bounce and export"
+name = "Export All Tracks as Audio Files (⇧⌘E)"
+status = "done"
+tier = "core"
+beta = true
+logic = "184"
+
+[[feature]]
+section = "Bounce and export"
+name = "Export a region as an audio file"
+status = "done"
+tier = "core"
+beta = true
+logic = "185"
+
+[[feature]]
+section = "Bounce and export"
+name = "Bounce tracks in place, with Audio FX, volume/pan, tail and source options"
+status = "done"
+tier = "core"
+beta = true
+logic = "175–176"
+
+[[feature]]
+section = "Bounce and export"
+name = "Bounce regions in place"
+status = "done"
+tier = "core"
+beta = true
+logic = "178"
+
+[[feature]]
+section = "Bounce and export"
+name = "Export the selected track as an audio file (⌘E)"
+status = "done"
+tier = "core"
+beta = true
+logic = "183"
+note = "File › Export Selected Tracks as Audio Files…, one file per selected track."
+
+[[feature]]
+section = "Bounce and export: professional"
+name = "AIFF, CAF and FLAC bounce"
+status = "partial"
+tier = "pro"
+logic = "914"
+note = "AIFF and FLAC; no CAF."
+
+[[feature]]
+section = "Bounce and export: professional"
+name = "MP3 and M4A/AAC bounce"
+status = "missing"
+tier = "pro"
+logic = "916–918"
+issue = 101
+
+[[feature]]
+section = "Bounce and export: professional"
+name = "POW-r dither"
+status = "missing"
+tier = "pro"
+logic = "914"
+
+[[feature]]
+section = "Bounce and export: professional"
+name = "Bounce several outputs at once"
+status = "missing"
+tier = "pro"
+logic = "914"
+
+[[feature]]
+section = "Bounce and export: professional"
+name = "Add the bounce to the project"
+status = "missing"
+tier = "pro"
+logic = "914"
+
+[[feature]]
+section = "Bounce and export: professional"
+name = "Export tracks with options: bypass effects, include volume and pan automation"
+status = "missing"
+tier = "pro"
+logic = "183"
+
+[[feature]]
+section = "Video and movies"
+name = "Open a movie; Movie window"
+status = "missing"
+tier = "studio"
+logic = "1016–1018"
+
+[[feature]]
+section = "Video and movies"
+name = "Movie track with thumbnails"
+status = "missing"
+tier = "studio"
+logic = "1019"
+
+[[feature]]
+section = "Video and movies"
+name = "Detect scene cuts; scene markers"
+status = "missing"
+tier = "studio"
+logic = "1020–1021"
+
+[[feature]]
+section = "Video and movies"
+name = "Import movie audio; export audio to a movie"
+status = "missing"
+tier = "studio"
+logic = "1021–1022"
+
+[[feature]]
+section = "Video and movies"
+name = "SMPTE-lock regions and events; move a region to a frame"
+status = "missing"
+tier = "studio"
+logic = "1023–1024"
+
+[[feature]]
+section = "Video and movies"
+name = "Sync audio to a video hit point"
+status = "missing"
+tier = "studio"
+logic = "789"
+
+[[feature]]
+section = "Video and movies"
+name = "Movie project settings"
+status = "missing"
+tier = "studio"
+logic = "1105"

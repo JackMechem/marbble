@@ -1,0 +1,269 @@
+# Logic Pro's tracks features, and how far Marbble has each. See features/README.md.
+
+title = "Tracks"
+about = "Creating and organising tracks and their headers."
+order = 5
+
+[[feature]]
+section = "Work with tracks"
+name = "Change header controls on several tracks"
+status = "partial"
+tier = "core"
+beta = true
+logic = "149"
+note = "Track On, Mute, Solo and Record Enable in the track menu, the Freeze button and the icon act on the selected tracks; the header's own buttons and volume only through groups."
+
+[[feature]]
+section = "Work with tracks"
+name = "New track for overlapped regions"
+status = "missing"
+tier = "core"
+beta = true
+logic = "125"
+
+[[feature]]
+section = "Work with tracks"
+name = "Several tracks sharing one channel strip (New Track with Same Channel Strip / Next Channel)"
+status = "missing"
+tier = "core"
+logic = "125–126"
+
+[[feature]]
+section = "Work with tracks"
+name = "Search for and select a track"
+status = "missing"
+tier = "core"
+beta = true
+logic = "128"
+
+[[feature]]
+section = "Work with tracks"
+name = "Rename several tracks at once"
+status = "missing"
+tier = "core"
+beta = true
+logic = "129"
+
+[[feature]]
+section = "Work with tracks"
+name = "Track icons, including custom icons"
+status = "partial"
+tier = "core"
+logic = "130"
+note = "38 built-in icons in groups, picked from the header, Mixer strip, Inspector or track menu; a new track's name picks one. No custom (image file) icons."
+
+[[feature]]
+section = "Work with tracks"
+name = "Sort tracks"
+status = "missing"
+tier = "core"
+beta = true
+logic = "131"
+
+[[feature]]
+section = "Work with tracks"
+name = "Automatically zoom the focused track"
+status = "missing"
+tier = "core"
+logic = "132"
+
+[[feature]]
+section = "Work with tracks"
+name = "Hide tracks through groups"
+status = "missing"
+tier = "core"
+logic = "147"
+
+[[feature]]
+section = "Work with tracks"
+name = "New Tracks dialog: audio and software instrument tracks"
+status = "done"
+tier = "core"
+beta = true
+logic = "117–118"
+
+[[feature]]
+section = "Work with tracks"
+name = "Create tracks by dropping audio or MIDI files on the headers or below the tracks"
+status = "done"
+tier = "core"
+beta = true
+logic = "121–123"
+
+[[feature]]
+section = "Work with tracks"
+name = "New Track with Same Settings"
+status = "done"
+tier = "core"
+beta = true
+logic = "125"
+
+[[feature]]
+section = "Work with tracks"
+name = "Move selected regions to a new track"
+status = "done"
+tier = "core"
+beta = true
+logic = "125"
+
+[[feature]]
+section = "Work with tracks"
+name = "Duplicate a track with its plug-ins and content"
+status = "done"
+tier = "core"
+beta = true
+logic = "128–129"
+
+[[feature]]
+section = "Work with tracks"
+name = "Select tracks: click, ⌘-click, Shift-click range"
+status = "done"
+tier = "core"
+beta = true
+logic = "127"
+
+[[feature]]
+section = "Work with tracks"
+name = "Select previous or next track (↑/↓)"
+status = "done"
+tier = "core"
+beta = true
+logic = "128"
+
+[[feature]]
+section = "Work with tracks"
+name = "Rename tracks"
+status = "done"
+tier = "core"
+beta = true
+logic = "129"
+
+[[feature]]
+section = "Work with tracks"
+name = "Track colours"
+status = "done"
+tier = "core"
+beta = true
+logic = "131"
+
+[[feature]]
+section = "Work with tracks"
+name = "Reorder tracks by dragging"
+status = "done"
+tier = "core"
+beta = true
+logic = "131"
+
+[[feature]]
+section = "Work with tracks"
+name = "Hide tracks, Show Hidden Tracks (H), Unhide All"
+status = "done"
+tier = "core"
+beta = true
+logic = "146–148"
+
+[[feature]]
+section = "Work with tracks"
+name = "Delete tracks; Delete Unused Tracks"
+status = "done"
+tier = "core"
+beta = true
+logic = "148"
+
+[[feature]]
+section = "Track header controls"
+name = "Pan knob in the header"
+status = "missing"
+tier = "core"
+logic = "139"
+
+[[feature]]
+section = "Track header controls"
+name = "Configure Track Header: choose which controls show"
+status = "missing"
+tier = "core"
+beta = true
+logic = "136"
+
+[[feature]]
+section = "Track header controls"
+name = "Resize the header column"
+status = "done"
+tier = "core"
+beta = true
+logic = "136"
+note = "Drag the divider between the headers and the tracks (220 to 520 px)."
+
+[[feature]]
+section = "Track header controls"
+name = "Mute, Solo, Record Enable and Input Monitoring buttons"
+status = "done"
+tier = "core"
+beta = true
+logic = "137–141"
+
+[[feature]]
+section = "Track header controls"
+name = "Volume slider with level meter"
+status = "done"
+tier = "core"
+beta = true
+logic = "139"
+
+[[feature]]
+section = "Tracks: professional"
+name = "Convert a folder stack to a summing stack"
+status = "missing"
+tier = "pro"
+logic = "166"
+
+[[feature]]
+section = "Tracks: professional"
+name = "Track alternatives: add, duplicate, switch, rename, delete inactive, hear an inactive one"
+status = "partial"
+tier = "pro"
+logic = "141–143"
+note = "All but hearing an inactive one (and editing its regions in place)."
+
+[[feature]]
+section = "Tracks: professional"
+name = "Turn a track off, making its plug-ins inactive"
+status = "done"
+tier = "pro"
+logic = "144"
+note = "Track On/Off in the header, the Mixer and the Track menu; an Off track runs nothing and frees its CPU."
+
+[[feature]]
+section = "Tracks: professional"
+name = "Protect tracks"
+status = "missing"
+tier = "pro"
+logic = "144"
+
+[[feature]]
+section = "Tracks: professional"
+name = "Folder stacks: collapsible main track whose fader, mute and solo apply to its subtracks"
+status = "done"
+tier = "pro"
+logic = "161–162"
+
+[[feature]]
+section = "Tracks: professional"
+name = "Summing stacks: subtracks play through the stack's own channel strip"
+status = "done"
+tier = "pro"
+logic = "161–163"
+
+[[feature]]
+section = "Tracks: professional"
+name = "Create, nest and flatten stacks; add and remove subtracks; show or hide subtracks"
+status = "done"
+tier = "pro"
+logic = "164–166"
+
+[[feature]]
+section = "Tracks: professional"
+name = "Freeze tracks"
+status = "done"
+tier = "pro"
+logic = "145"

@@ -1,0 +1,219 @@
+# Logic Pro's transport and tempo sync features, and how far Marbble has each. See features/README.md.
+
+title = "Transport and tempo sync"
+about = "Playing and moving around a project, the metronome, sync and varispeed."
+order = 3
+
+[[feature]]
+section = "Play and navigate projects"
+name = "Stop hung notes"
+status = "partial"
+tier = "core"
+beta = true
+logic = "94"
+note = "Stopping releases the sustain pedal and re-centres pitch bend; no explicit panic command."
+
+[[feature]]
+section = "Play and navigate projects"
+name = "Pause, fast forward and rewind, Play from Left Window Edge, Play from Selection"
+status = "missing"
+tier = "core"
+beta = true
+logic = "88"
+
+[[feature]]
+section = "Play and navigate projects"
+name = "Transport shortcut menus on Play and Stop"
+status = "missing"
+tier = "core"
+beta = true
+logic = "89"
+
+[[feature]]
+section = "Play and navigate projects"
+name = "Go to Position dialog (/)"
+status = "missing"
+tier = "core"
+beta = true
+
+[[feature]]
+section = "Play and navigate projects"
+name = "Set locators numerically in the LCD"
+status = "missing"
+tier = "core"
+beta = true
+logic = "95"
+
+[[feature]]
+section = "Play and navigate projects"
+name = "Skip cycle; move, double or halve the cycle by its length (key commands, p. 1121)"
+status = "missing"
+tier = "core"
+beta = true
+
+[[feature]]
+section = "Play and navigate projects"
+name = "Forward and rewind by transient (key commands, p. 1121)"
+status = "missing"
+tier = "core"
+beta = true
+
+[[feature]]
+section = "Play and navigate projects"
+name = "Play/Stop (Space), Record (R), Go to Beginning (Return), back and forward one bar (, .)"
+status = "done"
+tier = "core"
+beta = true
+logic = "85–88"
+
+[[feature]]
+section = "Play and navigate projects"
+name = "Set the playhead by clicking the ruler"
+status = "done"
+tier = "core"
+beta = true
+logic = "86"
+
+[[feature]]
+section = "Play and navigate projects"
+name = "Set the playhead in the LCD"
+status = "done"
+tier = "core"
+beta = true
+logic = "86"
+
+[[feature]]
+section = "Play and navigate projects"
+name = "Cycle mode (C); create, move and resize the cycle area in the ruler"
+status = "done"
+tier = "core"
+beta = true
+logic = "94–96"
+
+[[feature]]
+section = "Play and navigate projects"
+name = "Set locators by regions (U)"
+status = "done"
+tier = "core"
+beta = true
+logic = "95"
+
+[[feature]]
+section = "Play and navigate projects"
+name = "Musical time and clock time display"
+status = "done"
+tier = "core"
+beta = true
+logic = "92"
+
+[[feature]]
+section = "Play and navigate projects"
+name = "Chase events"
+status = "done"
+tier = "core"
+beta = true
+logic = "97"
+note = "Notes and controllers (pitch bend, sustain, every CC), each switchable in Settings › MIDI › Chase; no program changes or SysEx."
+
+[[feature]]
+section = "Metronome"
+name = "Route the click to its own output, or send it as MIDI"
+status = "missing"
+tier = "core"
+beta = true
+logic = "1113–1115"
+
+[[feature]]
+section = "Metronome"
+name = "Metronome on or off (K), Count-in (⇧K)"
+status = "done"
+tier = "core"
+beta = true
+logic = "217"
+
+[[feature]]
+section = "Metronome"
+name = "Count-in length in bars, pre-roll when Count-in is off"
+status = "done"
+tier = "core"
+beta = true
+logic = "218"
+
+[[feature]]
+section = "Metronome"
+name = "Click sound, volume, accent, bar and beat pitch, subdivisions"
+status = "done"
+tier = "core"
+beta = true
+logic = "1113"
+
+[[feature]]
+section = "Metronome"
+name = "Click while playing, while recording, or only during the count-in"
+status = "done"
+tier = "core"
+beta = true
+logic = "217"
+
+[[feature]]
+section = "Metronome"
+name = "Metronome settings saved per project with \"Use for New Projects\""
+status = "done"
+tier = "core"
+beta = true
+
+[[feature]]
+section = "Synchronisation"
+name = "Send MIDI clock"
+status = "missing"
+tier = "studio"
+logic = "1026, 1106"
+
+[[feature]]
+section = "Synchronisation"
+name = "Sync to external MIDI clock or MIDI Time Code"
+status = "missing"
+tier = "studio"
+logic = "1026–1029"
+
+[[feature]]
+section = "Synchronisation"
+name = "Send MIDI Time Code"
+status = "missing"
+tier = "studio"
+logic = "1106"
+
+[[feature]]
+section = "Synchronisation"
+name = "Frame rates and MTC interpretation"
+status = "missing"
+tier = "studio"
+logic = "1028–1029, 1107"
+
+[[feature]]
+section = "Synchronisation"
+name = "MIDI Machine Control"
+status = "missing"
+tier = "studio"
+logic = "1029–1030"
+
+[[feature]]
+section = "Synchronisation"
+name = "Ableton Link"
+status = "missing"
+tier = "studio"
+logic = "1027–1028"
+
+[[feature]]
+section = "Synchronisation"
+name = "Synchronisation project settings: bar position vs SMPTE, audio sync"
+status = "missing"
+tier = "studio"
+logic = "1106–1112"
+
+[[feature]]
+section = "Varispeed"
+name = "Varispeed: speed only, or speed and pitch, in percent or semitones"
+status = "missing"
+tier = "advanced"
+logic = "458"

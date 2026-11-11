@@ -111,7 +111,11 @@ export function generate() {
     const source = fs.readFileSync(path.join(repoDir, doc.file), "utf8");
     const lines = source.split("\n");
     const headings = headingsOf(lines);
-    const pages = doc.releases ? releasePages(doc, lines, headings) : splitPages(doc, lines, headings, warnings);
+    const pages = doc.releases
+      ? releasePages(doc, lines, headings)
+      : doc.single
+        ? singlePage(doc, lines, headings)
+        : splitPages(doc, lines, headings, warnings);
     placeAnchors(doc, pages, headings);
     return { ...doc, lines, headings, pages };
   });
@@ -234,6 +238,15 @@ function splitPages(doc, lines, headings, warnings) {
   return pages;
 }
 
+/** A short document kept whole: one page, its sections as headings on it. */
+function singlePage(doc, lines, headings) {
+  const titleLine = headings.find((h) => h.level === 1)?.line ?? -1;
+  const page = { slug: doc.area, title: doc.title, from: titleLine + 1, to: lines.length, kind: "single", section: null };
+  page.body = lines.slice(page.from, page.to);
+  doc.sections = [];
+  return [page];
+}
+
 /** The changelog: one page per `## [version]` heading. */
 function releasePages(doc, lines, headings) {
   const h2s = headings.filter((h) => h.level === 2);
@@ -276,8 +289,9 @@ function releasePages(doc, lines, headings) {
 /** Works out where each source heading ends up: its page and its anchor there. */
 function placeAnchors(doc, pages, headings) {
   for (const page of pages) {
-    // A page that starts on a heading promotes the ones below it, so that its first level is `##`.
-    page.demote = (page.kind === "sub" ? page.topLevel : 2) - 1;
+    // A page that starts on a heading promotes the ones below it, so that its first level is `##`;
+    // a whole document on one page keeps its levels.
+    page.demote = page.kind === "single" ? 0 : (page.kind === "sub" ? page.topLevel : 2) - 1;
     const slugger = new GithubSlugger();
     for (const h of headings) {
       if (h.line < page.from || h.line >= page.to) continue;
@@ -308,6 +322,7 @@ function sidebarOf(doc) {
     };
   };
   const overview = doc.pages[0];
+  if (doc.single) return { label: doc.title, items: [item(overview, "Overview")] };
   if (doc.releases) {
     return { label: doc.title, items: [item(overview, "About the changelog"), ...doc.sections.map(sectionItem)] };
   }

@@ -1,0 +1,430 @@
+# Logic Pro's interface and settings features, and how far Marbble has each. See features/README.md.
+
+title = "Interface and settings"
+about = "The main window, zoom, key commands, settings, help and accessibility."
+order = 1
+
+[[feature]]
+section = "Logic Pro basics: the interface"
+name = "Control bar: view buttons, transport, LCD, Cycle, Count-in, Metronome, master volume, CPU"
+status = "partial"
+tier = "core"
+beta = true
+logic = "87"
+note = "Fixed layout; no Customize Control Bar."
+
+[[feature]]
+section = "Logic Pro basics: the interface"
+name = "LCD display modes"
+status = "partial"
+tier = "core"
+beta = true
+logic = "93"
+note = "Beats and Time only; no Custom mode or large LCD."
+
+[[feature]]
+section = "Logic Pro basics: the interface"
+name = "Right inspector strip follows the left strip's output or aux"
+status = "partial"
+tier = "core"
+beta = true
+logic = "21"
+note = "Always shows Stereo Out."
+
+[[feature]]
+section = "Logic Pro basics: the interface"
+name = "Library pane"
+status = "partial"
+tier = "core"
+logic = "17"
+note = "Lists plug-ins to load, with search; no patches (see Stage 2)."
+
+[[feature]]
+section = "Logic Pro basics: the interface"
+name = "Project notes"
+status = "partial"
+tier = "core"
+beta = true
+logic = "30"
+note = "Free-form notes in Project Settings; no Note Pad pane."
+
+[[feature]]
+section = "Logic Pro basics: the interface"
+name = "Track notes"
+status = "missing"
+tier = "core"
+beta = true
+logic = "31"
+
+[[feature]]
+section = "Logic Pro basics: the interface"
+name = "Toolbar"
+status = "missing"
+tier = "core"
+logic = "298"
+
+[[feature]]
+section = "Logic Pro basics: the interface"
+name = "Giant beats or time display"
+status = "missing"
+tier = "core"
+logic = "91"
+
+[[feature]]
+section = "Logic Pro basics: the interface"
+name = "Region inspector as a floating window"
+status = "missing"
+tier = "core"
+logic = "21"
+
+[[feature]]
+section = "Logic Pro basics: the interface"
+name = "Single main window with Tracks area, control bar, inspector, Library, editors, Mixer and browsers as panes"
+status = "done"
+tier = "core"
+beta = true
+logic = "15"
+
+[[feature]]
+section = "Logic Pro basics: the interface"
+name = "Show or hide panes with Logic's keys: Inspector (I), Library (Y), Mixer (X), Editors (E), Browsers (F)"
+status = "done"
+tier = "core"
+beta = true
+logic = "16–41"
+
+[[feature]]
+section = "Logic Pro basics: the interface"
+name = "LCD showing position, tempo, time signature and key; drag or double-click to edit"
+status = "done"
+tier = "core"
+beta = true
+logic = "93"
+
+[[feature]]
+section = "Logic Pro basics: the interface"
+name = "MIDI input activity shown live (Settings › MIDI monitor)"
+status = "done"
+tier = "core"
+beta = true
+logic = "93"
+
+[[feature]]
+section = "Logic Pro basics: the interface"
+name = "CPU/load meter"
+status = "done"
+tier = "core"
+beta = true
+logic = "92"
+
+[[feature]]
+section = "Logic Pro basics: the interface"
+name = "Inspector with Region and Track sections and two channel strips"
+status = "done"
+tier = "core"
+beta = true
+logic = "19–21"
+
+[[feature]]
+section = "Logic Pro basics: the interface"
+name = "Mixer pane"
+status = "done"
+tier = "core"
+beta = true
+logic = "22"
+
+[[feature]]
+section = "Logic Pro basics: the interface"
+name = "Editors pane: Piano Roll for instrument tracks, Audio Track Editor for audio tracks"
+status = "done"
+tier = "core"
+beta = true
+logic = "24"
+
+[[feature]]
+section = "Logic Pro basics: the interface"
+name = "All Files Browser"
+status = "done"
+tier = "core"
+beta = true
+logic = "41"
+
+[[feature]]
+section = "Logic Pro basics: the interface"
+name = "Musical Typing window with on-screen keyboard (⌘K)"
+status = "done"
+tier = "core"
+beta = true
+logic = "201"
+
+[[feature]]
+section = "Windows, zoom and catch"
+name = "Zoom to fit selection or all content (Z)"
+status = "partial"
+tier = "core"
+beta = true
+logic = "47"
+note = "In the Piano Roll and Audio Track Editor; not in the Tracks area."
+
+[[feature]]
+section = "Windows, zoom and catch"
+name = "Open, close and focus windows"
+status = "partial"
+tier = "core"
+beta = true
+logic = "45"
+note = "The Window menu brings any open window to the front or minimises it, and the Mixer, Editors, Event List, Step Sequencer and effect panels open in windows of their own; no second main window."
+
+[[feature]]
+section = "Windows, zoom and catch"
+name = "Horizontal zoom (⌘←/⌘→, ⌘-scroll) and track-height zoom (⌘↑/⌘↓, Alt-scroll)"
+status = "done"
+tier = "core"
+beta = true
+logic = "47, 132"
+
+[[feature]]
+section = "Windows, zoom and catch"
+name = "Resize one track or all tracks, reset height, heights saved per project"
+status = "done"
+tier = "core"
+beta = true
+logic = "132"
+
+[[feature]]
+section = "Windows, zoom and catch"
+name = "Scale the whole interface (90–200%)"
+status = "done"
+tier = "core"
+beta = true
+logic = "48"
+
+[[feature]]
+section = "Windows, zoom and catch"
+name = "Catch playhead (`)"
+status = "done"
+tier = "core"
+beta = true
+logic = "49"
+
+[[feature]]
+section = "Windows and workspace"
+name = "Detach editors, Mixer and lists into separate windows"
+status = "partial"
+tier = "pro"
+logic = "22–39"
+note = "Mixer, Editors, Event List, Step Sequencer, effect panels and Channel EQ; the Marker List opens only as a sheet."
+
+[[feature]]
+section = "Windows and workspace"
+name = "Screensets: create, recall, lock, copy and import"
+status = "missing"
+tier = "pro"
+logic = "51–54"
+
+[[feature]]
+section = "Windows and workspace"
+name = "Save and recall zoom settings; navigation snapshots"
+status = "missing"
+tier = "pro"
+logic = "48"
+
+[[feature]]
+section = "Windows and workspace"
+name = "Link and Content Catch modes"
+status = "missing"
+tier = "pro"
+logic = "50"
+
+[[feature]]
+section = "Windows and workspace"
+name = "Undo History window"
+status = "missing"
+tier = "pro"
+logic = "61"
+
+[[feature]]
+section = "Key commands"
+name = "Customisable keys"
+status = "partial"
+tier = "core"
+beta = true
+logic = "1121"
+note = "Window keys only; menu shortcuts are fixed."
+
+[[feature]]
+section = "Key commands"
+name = "Save, import and choose key command sets"
+status = "missing"
+tier = "core"
+beta = true
+logic = "1124"
+
+[[feature]]
+section = "Key commands"
+name = "Key Commands window: search by name or key, add, remove, restore defaults"
+status = "done"
+tier = "core"
+beta = true
+logic = "1121–1124"
+
+[[feature]]
+section = "Settings"
+name = "Project Settings"
+status = "partial"
+tier = "core"
+beta = true
+logic = "1076–1120"
+note = "Tempo, signature, key, sample rate, bit depth, metronome and notes; most of Logic's project panes are missing."
+
+[[feature]]
+section = "Settings"
+name = "Reset all settings"
+status = "missing"
+tier = "core"
+beta = true
+logic = "1033"
+
+[[feature]]
+section = "Settings"
+name = "Notifications: reset \"don't show again\" warnings"
+status = "missing"
+tier = "core"
+beta = true
+logic = "1039"
+
+[[feature]]
+section = "Settings"
+name = "General: what happens at launch, project folder, autosave, undo steps, quit prompt"
+status = "done"
+tier = "core"
+beta = true
+logic = "1034"
+
+[[feature]]
+section = "Settings"
+name = "Audio: driver, devices, rate, buffer, monitoring, recording delay, latency, input level check"
+status = "done"
+tier = "core"
+beta = true
+logic = "1041–1046"
+
+[[feature]]
+section = "Settings"
+name = "Recording: bit depth, folder, take names, count-in, pre-roll, overlap behaviour"
+status = "done"
+tier = "core"
+beta = true
+logic = "1054–1057"
+
+[[feature]]
+section = "Settings"
+name = "MIDI: inputs, MIDI Thru, velocity, activity monitor"
+status = "done"
+tier = "core"
+beta = true
+logic = "1057–1063"
+
+[[feature]]
+section = "Settings"
+name = "Editing: default snap mode, nudge value, anti-click fades"
+status = "done"
+tier = "core"
+beta = true
+logic = "1035"
+
+[[feature]]
+section = "Settings"
+name = "Plug-ins (Plug-in Manager) and Key Commands panes"
+status = "done"
+tier = "core"
+beta = true
+
+[[feature]]
+section = "Settings"
+name = "Appearance: interface size, waveform style, theme"
+status = "done"
+tier = "core"
+beta = true
+logic = "1070–1076"
+
+[[feature]]
+section = "Help and documentation"
+name = "Quick Help: describes the element under the pointer"
+status = "missing"
+tier = "platform"
+logic = "66"
+
+[[feature]]
+section = "Help and documentation"
+name = "Help tags"
+status = "partial"
+tier = "platform"
+logic = "1068"
+note = "Some controls have tooltips; no Help Tags setting."
+
+[[feature]]
+section = "Help and documentation"
+name = "User guide (USER_GUIDE.md)"
+status = "done"
+tier = "platform"
+
+[[feature]]
+section = "Help and documentation"
+name = "Developer documentation (ARCHITECTURE.md, DEVELOPING.md)"
+status = "done"
+tier = "platform"
+
+[[feature]]
+section = "Help and documentation"
+name = "README with feature sections and key command tables"
+status = "done"
+tier = "platform"
+
+[[feature]]
+section = "Accessibility"
+name = "Screen reader support (VoiceOver in Logic; AT-SPI/Orca on Linux, Narrator on Windows)"
+status = "missing"
+tier = "platform"
+logic = "1039"
+issue = 107
+
+[[feature]]
+section = "Accessibility"
+name = "Announce the playhead position when playing, recording or scrubbing"
+status = "missing"
+tier = "platform"
+logic = "1039"
+
+[[feature]]
+section = "Accessibility"
+name = "Open plug-ins in Controls view for screen readers"
+status = "missing"
+tier = "platform"
+logic = "1039"
+
+[[feature]]
+section = "Accessibility"
+name = "Full keyboard operation"
+status = "partial"
+tier = "platform"
+note = "Tab reaches the channel strips, slots, menus, lists and the Tracks area; not checked end to end."
+
+[[feature]]
+section = "Accessibility"
+name = "Readable interface: High Contrast theme and 90–200% interface scaling"
+status = "done"
+tier = "platform"
+
+[[feature]]
+section = "Localisation"
+name = "Translated interface (Logic ships in many languages)"
+status = "missing"
+tier = "platform"
+issue = 108
+
+[[feature]]
+section = "Localisation"
+name = "Locale-aware number and time formats"
+status = "missing"
+tier = "platform"

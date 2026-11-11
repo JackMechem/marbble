@@ -1,0 +1,863 @@
+# Logic Pro's arranging features, and how far Marbble has each. See features/README.md.
+
+title = "Arranging"
+about = "Editing regions in the Tracks area, fades, region parameters, tools and the global tracks."
+order = 6
+
+[[feature]]
+section = "Arranging in the Tracks area"
+name = "Snap to grid"
+status = "done"
+tier = "core"
+beta = true
+logic = "290"
+note = "Smart, Bar, Beat, Division, Ticks and Off."
+
+[[feature]]
+section = "Arranging in the Tracks area"
+name = "Loop continuously"
+status = "partial"
+tier = "core"
+beta = true
+logic = "312"
+note = "Loops to the next region, or four times the length when nothing follows."
+
+[[feature]]
+section = "Arranging in the Tracks area"
+name = "Ruler with bars and beats"
+status = "done"
+tier = "core"
+beta = true
+logic = "289"
+
+[[feature]]
+section = "Arranging in the Tracks area"
+name = "Grid lines"
+status = "done"
+tier = "core"
+beta = true
+logic = "291"
+
+[[feature]]
+section = "Arranging in the Tracks area"
+name = "Horizontal and vertical scrolling and zoom"
+status = "done"
+tier = "core"
+beta = true
+logic = "297"
+
+[[feature]]
+section = "Arranging in the Tracks area"
+name = "Select regions"
+status = "done"
+tier = "core"
+beta = true
+logic = "299"
+note = "Click, Shift-click and rubber-band selection."
+
+[[feature]]
+section = "Arranging in the Tracks area"
+name = "Select all regions on a track, and all following"
+status = "done"
+tier = "core"
+beta = true
+logic = "300"
+
+[[feature]]
+section = "Arranging in the Tracks area"
+name = "Cut, copy and paste; paste at the playhead keeps the spacing of several regions"
+status = "done"
+tier = "core"
+beta = true
+logic = "303"
+
+[[feature]]
+section = "Arranging in the Tracks area"
+name = "Duplicate (⌘D) and Repeat Regions 2–16 times"
+status = "done"
+tier = "core"
+beta = true
+logic = "304, 313"
+
+[[feature]]
+section = "Arranging in the Tracks area"
+name = "Move regions, including to other tracks"
+status = "done"
+tier = "core"
+beta = true
+logic = "305"
+
+[[feature]]
+section = "Arranging in the Tracks area"
+name = "Nudge regions by the nudge value (⌥←/⌥→), in bars and beats across tempo changes"
+status = "done"
+tier = "core"
+beta = true
+logic = "305–306"
+
+[[feature]]
+section = "Arranging in the Tracks area"
+name = "Loop regions (L) and the loop pointer at the top-right corner"
+status = "done"
+tier = "core"
+beta = true
+logic = "311–312"
+
+[[feature]]
+section = "Arranging in the Tracks area"
+name = "Convert Loops to Real Copies"
+status = "done"
+tier = "core"
+beta = true
+logic = "313"
+
+[[feature]]
+section = "Arranging in the Tracks area"
+name = "Trim region start and end"
+status = "done"
+tier = "core"
+beta = true
+logic = "314"
+
+[[feature]]
+section = "Arranging in the Tracks area"
+name = "Mute regions (⌃M)"
+status = "done"
+tier = "core"
+beta = true
+logic = "316"
+
+[[feature]]
+section = "Arranging in the Tracks area"
+name = "Reverse audio regions (into a new file, so the original stays intact)"
+status = "done"
+tier = "core"
+beta = true
+logic = "318"
+
+[[feature]]
+section = "Arranging in the Tracks area"
+name = "Split at the playhead (⌘T)"
+status = "done"
+tier = "core"
+beta = true
+logic = "319"
+
+[[feature]]
+section = "Arranging in the Tracks area"
+name = "Join regions (⌘J): MIDI notes merge, audio is mixed into a new file"
+status = "done"
+tier = "core"
+beta = true
+logic = "322"
+
+[[feature]]
+section = "Arranging in the Tracks area"
+name = "Create an empty MIDI region"
+status = "done"
+tier = "core"
+beta = true
+logic = "325"
+
+[[feature]]
+section = "Arranging in the Tracks area"
+name = "Audio region gain and Normalize, and a gain handle to drag on the region"
+status = "done"
+tier = "core"
+beta = true
+logic = "325–326"
+
+[[feature]]
+section = "Arranging in the Tracks area"
+name = "Region colours"
+status = "done"
+tier = "core"
+beta = true
+logic = "328"
+
+[[feature]]
+section = "Arranging in the Tracks area"
+name = "Rename regions"
+status = "done"
+tier = "core"
+beta = true
+logic = "331"
+
+[[feature]]
+section = "Arranging in the Tracks area"
+name = "Delete regions"
+status = "done"
+tier = "core"
+beta = true
+logic = "332"
+
+[[feature]]
+section = "Arranging in the Tracks area"
+name = "Pointer tool"
+status = "done"
+tier = "core"
+beta = true
+logic = "58"
+note = "Moves, trims, loops and sets fades; a click inside the marquee splits at its edges."
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "Marquee selection; marquee ruler"
+status = "partial"
+tier = "pro"
+logic = "301–302"
+note = "Delete, Cut, Copy, Paste, the Pointer click, the section edits and Crop; no marquee ruler, no playback of the marquee range."
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "Split at the marquee or locators"
+status = "partial"
+tier = "pro"
+logic = "320"
+note = "At the marquee, by a Pointer click inside it."
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "Alignment guides"
+status = "missing"
+tier = "pro"
+logic = "290"
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "Full snap modes and relative snap"
+status = "partial"
+tier = "pro"
+logic = "290–292"
+note = "Division and Ticks besides Bar and Beat; no Frames, Quarter Frames or Samples, and no relative snap."
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "Horizontal auto zoom"
+status = "missing"
+tier = "pro"
+logic = "292"
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "Scrubbing"
+status = "missing"
+tier = "pro"
+logic = "296"
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "Waveform vertical zoom"
+status = "partial"
+tier = "pro"
+logic = "297"
+note = "In the Audio Track Editor only."
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "Move to recorded position"
+status = "missing"
+tier = "pro"
+logic = "305"
+note = "Regions don't keep their recorded position yet."
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "Slip and rotate by the nudge value"
+status = "missing"
+tier = "pro"
+logic = "306"
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "Nudge value in ticks, frames and samples"
+status = "partial"
+tier = "pro"
+logic = "306"
+note = "Samples (1 to 50), and Nudge Left/Right by Sample; no ticks or frames."
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "Region anchor / shift playback position"
+status = "missing"
+tier = "pro"
+logic = "311"
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "Convert repetitions to loops"
+status = "missing"
+tier = "pro"
+logic = "313, 328"
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "Resize adjacent regions together (junction)"
+status = "missing"
+tier = "pro"
+logic = "314"
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "Solo regions; lock solo status"
+status = "missing"
+tier = "pro"
+logic = "316–317"
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "Time-stretch MIDI regions"
+status = "missing"
+tier = "pro"
+logic = "317"
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "Split into equal portions"
+status = "done"
+tier = "pro"
+logic = "320"
+note = "Alt-click with the Scissors cuts a region into equal pieces as long as the part before the click."
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "Demix MIDI by channel or note pitch"
+status = "missing"
+tier = "pro"
+logic = "321–322"
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "Mixdown options for joined audio, with crossfades"
+status = "partial"
+tier = "pro"
+logic = "324"
+note = "Join mixes through the playback path, so crossfades are kept; no options."
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "MIDI aliases"
+status = "missing"
+tier = "pro"
+logic = "326–328"
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "Folders: pack MIDI regions into a folder region, unpack"
+status = "missing"
+tier = "pro"
+logic = "358–360"
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "Rubber-band region selection in the Tracks area"
+status = "done"
+tier = "pro"
+logic = "299"
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "Select by criteria: equal, similar, muted, same colour, overlapped, inside locators"
+status = "done"
+tier = "pro"
+logic = "300"
+note = "Also All Following (of the same track) and Invert Selection."
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "Drag modes: Overlap, No Overlap, X-Fade, Shuffle R and Shuffle L"
+status = "done"
+tier = "pro"
+logic = "295"
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "Paste at the original position; Paste Replace"
+status = "done"
+tier = "pro"
+logic = "303"
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "Move to playhead (pickup clock)"
+status = "done"
+tier = "pro"
+logic = "305"
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "Insert silence, cut, insert or repeat a section between the locators across all tracks"
+status = "done"
+tier = "pro"
+logic = "307–310"
+note = "Or within the marquee on its tracks. The tempo and signature tracks stay put, as with the Arrangement track."
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "Remove gaps between regions"
+status = "done"
+tier = "pro"
+logic = "308"
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "Resize to the same length or to the playhead"
+status = "done"
+tier = "pro"
+logic = "314"
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "Remove overlaps, trim to the next region, fill within locators"
+status = "done"
+tier = "pro"
+logic = "315"
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "Join per track"
+status = "done"
+tier = "pro"
+logic = "323"
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "Name regions by track, tracks by region, colour tracks by region and the reverse (key commands)"
+status = "done"
+tier = "pro"
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "Delete and shuffle the following regions"
+status = "done"
+tier = "pro"
+logic = "332"
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "Crop regions outside the locators or marquee (key commands)"
+status = "done"
+tier = "pro"
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "Remove Silence (strip silence)"
+status = "done"
+tier = "pro"
+logic = "355–357"
+note = "Threshold, minimum time, pre-attack and post-release, with a preview; no Search Zero Crossings."
+
+[[feature]]
+section = "Arranging: advanced editing"
+name = "Snap Regions to Relative Value"
+status = "missing"
+tier = "pro"
+issue = 83
+
+[[feature]]
+section = "Fades"
+name = "Fade-in and fade-out from the handles at the top corners, presets or the inspector"
+status = "done"
+tier = "core"
+beta = true
+logic = "348–349"
+
+[[feature]]
+section = "Fades"
+name = "Edit fade length"
+status = "done"
+tier = "core"
+beta = true
+logic = "350"
+
+[[feature]]
+section = "Fades and crossfades"
+name = "Crossfades between adjacent regions"
+status = "partial"
+tier = "pro"
+logic = "352"
+note = "Take folders and loops (at the loop end) too; not muted regions."
+
+[[feature]]
+section = "Fades and crossfades"
+name = "Apply the last fade to a marquee selection"
+status = "missing"
+tier = "pro"
+logic = "350"
+
+[[feature]]
+section = "Fades and crossfades"
+name = "Fade curve shape"
+status = "done"
+tier = "pro"
+logic = "351"
+
+[[feature]]
+section = "Fades and crossfades"
+name = "Fade types: crossfade, equal-power crossfade, speed-up and slow-down fades"
+status = "done"
+tier = "pro"
+logic = "351–352"
+
+[[feature]]
+section = "Fades and crossfades"
+name = "Automatic crossfades on edits"
+status = "done"
+tier = "pro"
+logic = "352"
+note = "The X-Fade drag mode, with the Crossfade Time and Curve settings."
+
+[[feature]]
+section = "Region parameters"
+name = "Region inspector"
+status = "partial"
+tier = "pro"
+logic = "363"
+note = "Mute, position, length, loop, playback parameters, gain and fades; no default region settings."
+
+[[feature]]
+section = "Region parameters"
+name = "Advanced quantize: Q-Strength, Q-Range, Q-Flam, Q-Velocity, Q-Length"
+status = "missing"
+tier = "pro"
+logic = "371"
+
+[[feature]]
+section = "Region parameters"
+name = "Audio region transpose and fine tune"
+status = "missing"
+tier = "pro"
+logic = "364"
+
+[[feature]]
+section = "Region parameters"
+name = "Dequantize (key commands)"
+status = "missing"
+tier = "pro"
+
+[[feature]]
+section = "Region parameters"
+name = "Default region settings"
+status = "missing"
+tier = "pro"
+logic = "363"
+
+[[feature]]
+section = "Region parameters"
+name = "Non-destructive MIDI quantize in the inspector, with Q-Swing"
+status = "done"
+tier = "pro"
+logic = "366, 369"
+note = "Straight and triplet values; no swing presets (8F Swing A–F)."
+
+[[feature]]
+section = "Region parameters"
+name = "MIDI region transpose, velocity, dynamics and gate time"
+status = "done"
+tier = "pro"
+logic = "366"
+
+[[feature]]
+section = "Region parameters"
+name = "Region delay in ticks or ms"
+status = "done"
+tier = "pro"
+logic = "364, 366"
+note = "For audio regions too."
+
+[[feature]]
+section = "Region parameters"
+name = "Apply region parameters permanently"
+status = "done"
+tier = "pro"
+logic = "369"
+note = "One command, Apply Region Parameters, for all of them."
+
+[[feature]]
+section = "Tools"
+name = "Assign the left-click and ⌘-click tools; right-click behaviour"
+status = "partial"
+tier = "pro"
+logic = "55"
+note = "Left-click and ⌘-click tools; the right button always opens the menu."
+
+[[feature]]
+section = "Tools"
+name = "Pencil tool: create regions"
+status = "partial"
+tier = "pro"
+logic = "58"
+note = "Empty MIDI regions; no import on audio tracks."
+
+[[feature]]
+section = "Tools"
+name = "Text tool: rename regions"
+status = "missing"
+tier = "pro"
+logic = "58"
+
+[[feature]]
+section = "Tools"
+name = "Solo tool"
+status = "missing"
+tier = "pro"
+logic = "58"
+
+[[feature]]
+section = "Tools"
+name = "Zoom tool"
+status = "missing"
+tier = "pro"
+logic = "59"
+
+[[feature]]
+section = "Tools"
+name = "Automation Select and Automation Curve tools"
+status = "missing"
+tier = "pro"
+logic = "59"
+
+[[feature]]
+section = "Tools"
+name = "Gain tool"
+status = "missing"
+tier = "pro"
+logic = "325"
+
+[[feature]]
+section = "Tools"
+name = "Slip and Rotate tools"
+status = "missing"
+tier = "pro"
+logic = "59, 1159"
+
+[[feature]]
+section = "Tools"
+name = "Tool menu (T) in the Tracks area"
+status = "done"
+tier = "pro"
+logic = "54"
+
+[[feature]]
+section = "Tools"
+name = "Eraser tool"
+status = "done"
+tier = "pro"
+logic = "58"
+
+[[feature]]
+section = "Tools"
+name = "Scissors tool, with Alt-click equal pieces"
+status = "done"
+tier = "pro"
+logic = "58"
+
+[[feature]]
+section = "Tools"
+name = "Join (Glue) tool"
+status = "done"
+tier = "pro"
+logic = "58"
+
+[[feature]]
+section = "Tools"
+name = "Fade tool: fades and crossfades by dragging, Alt-click removes"
+status = "done"
+tier = "pro"
+logic = "59"
+
+[[feature]]
+section = "Tools"
+name = "Marquee tool"
+status = "done"
+tier = "pro"
+logic = "59"
+
+[[feature]]
+section = "Global tracks, markers, tempo and signatures"
+name = "Configure, resize and reorder global tracks"
+status = "partial"
+tier = "pro"
+logic = "734–735"
+note = "Each global track shows or hides on its own and the Tempo track resizes; no reordering."
+
+[[feature]]
+section = "Global tracks, markers, tempo and signatures"
+name = "Markers from the cycle area or the selected regions"
+status = "missing"
+tier = "pro"
+logic = "738–739"
+
+[[feature]]
+section = "Global tracks, markers, tempo and signatures"
+name = "Move, resize, colour and protect markers"
+status = "partial"
+tier = "pro"
+logic = "740–742"
+note = "Move, resize (own length) and colour; none can be protected."
+
+[[feature]]
+section = "Global tracks, markers, tempo and signatures"
+name = "Rename markers in the track, list or ruler; Marker Text window"
+status = "partial"
+tier = "pro"
+logic = "743–744"
+note = "In the marker lane and the Marker List; no Marker Text window."
+
+[[feature]]
+section = "Global tracks, markers, tempo and signatures"
+name = "Go to marker by number; set the cycle to a marker"
+status = "partial"
+tier = "pro"
+logic = "745"
+note = "Set Locators to Marker; no go to marker by number."
+
+[[feature]]
+section = "Global tracks, markers, tempo and signatures"
+name = "Marker sets"
+status = "missing"
+tier = "pro"
+logic = "746"
+
+[[feature]]
+section = "Global tracks, markers, tempo and signatures"
+name = "Import and export marker information in audio files"
+status = "missing"
+tier = "pro"
+logic = "747"
+
+[[feature]]
+section = "Global tracks, markers, tempo and signatures"
+name = "Tempo curves between tempo points"
+status = "partial"
+tier = "pro"
+logic = "763"
+note = "Linear ramps only."
+
+[[feature]]
+section = "Global tracks, markers, tempo and signatures"
+name = "Tempo point operations: constant, smoothing, average, snap"
+status = "missing"
+tier = "pro"
+logic = "761"
+
+[[feature]]
+section = "Global tracks, markers, tempo and signatures"
+name = "Tempo List"
+status = "missing"
+tier = "pro"
+logic = "764"
+
+[[feature]]
+section = "Global tracks, markers, tempo and signatures"
+name = "Tempo sets"
+status = "missing"
+tier = "pro"
+logic = "765"
+
+[[feature]]
+section = "Global tracks, markers, tempo and signatures"
+name = "Record tempo changes"
+status = "missing"
+tier = "pro"
+logic = "790"
+
+[[feature]]
+section = "Global tracks, markers, tempo and signatures"
+name = "Key signature changes"
+status = "missing"
+tier = "pro"
+logic = "753"
+
+[[feature]]
+section = "Global tracks, markers, tempo and signatures"
+name = "Edit, move, split and merge signatures; Signature List"
+status = "partial"
+tier = "pro"
+logic = "751–755"
+note = "Double-click a signature to edit it and right-click it to delete it; no moving, splitting or merging, and no Signature List."
+
+[[feature]]
+section = "Global tracks, markers, tempo and signatures"
+name = "Signature sets"
+status = "missing"
+tier = "pro"
+logic = "756"
+
+[[feature]]
+section = "Global tracks, markers, tempo and signatures"
+name = "Global Tracks area; show or hide it and its tracks"
+status = "done"
+tier = "pro"
+logic = "733–735"
+note = "Arrangement, Signature and Tempo tracks (G)."
+
+[[feature]]
+section = "Global tracks, markers, tempo and signatures"
+name = "Marker track"
+status = "done"
+tier = "pro"
+logic = "737"
+
+[[feature]]
+section = "Global tracks, markers, tempo and signatures"
+name = "Marker List"
+status = "done"
+tier = "pro"
+logic = "737"
+
+[[feature]]
+section = "Global tracks, markers, tempo and signatures"
+name = "Create markers at the playhead"
+status = "done"
+tier = "pro"
+logic = "737–738"
+
+[[feature]]
+section = "Global tracks, markers, tempo and signatures"
+name = "Go to the next or previous marker"
+status = "done"
+tier = "pro"
+logic = "745"
+
+[[feature]]
+section = "Global tracks, markers, tempo and signatures"
+name = "Tempo track with tempo changes (a tempo map)"
+status = "done"
+tier = "pro"
+logic = "759–762"
+
+[[feature]]
+section = "Global tracks, markers, tempo and signatures"
+name = "Signature track with time signature changes"
+status = "done"
+tier = "pro"
+logic = "751–752"
+
+[[feature]]
+section = "Arrangement track"
+name = "Move, copy, replace, split and delete sections together with their regions"
+status = "partial"
+tier = "advanced"
+logic = "749–750"
+note = "Move, copy and delete with content; no replace or split."
+
+[[feature]]
+section = "Arrangement track"
+name = "Cut the sections of selected arrangement markers; insert scenes (key commands)"
+status = "missing"
+tier = "advanced"
+
+[[feature]]
+section = "Arrangement track"
+name = "Arrangement track with section markers (Intro, Verse, Chorus…)"
+status = "done"
+tier = "advanced"
+logic = "748"
+
+[[feature]]
+section = "Selection-based processing"
+name = "Apply effect plug-ins to selected regions or a marquee selection, with preview"
+status = "missing"
+tier = "pro"
+logic = "180–182"

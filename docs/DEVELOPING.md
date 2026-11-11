@@ -89,6 +89,7 @@ npm test                                   # frontend tests
 | `src-tauri` | `cargo test -p daw` |
 | Any Rust | `cargo clippy --workspace --all-targets -- -D warnings` and `cargo fmt --all --check` |
 | The docs | `cd site && npm ci && npm run build` (it fails on a broken link) |
+| A feature's scope | its entry in `features/`, then `python3 scripts/features.py` |
 | Anything visible | a look in the running app |
 
 ### Frontend tests
@@ -303,6 +304,10 @@ report races inside their own loading and teardown.
 
 ## Common changes
 
+**A feature, or more of one.** Change its entry in `features/<area>.toml` (`status`, and a `note`
+saying what's still missing if it's partial; the fields are in `features/README.md`), then run
+`python3 scripts/features.py` to regenerate `docs/FEATURES.md` and `ROADMAP.md`'s beta progress.
+
 **An undoable command.**
 
 1. A method on `Session` in the fitting `session/<area>/` file: change `self.project`, send the
@@ -375,11 +380,12 @@ Contrast). A canvas colour is a field of `CanvasTheme` (`src/theme/canvasTheme.t
 `.github/workflows/ci.yml` runs on every push to `main` and every pull request, on Ubuntu, Windows
 and macOS: `npm ci`, `npm run build`, `npm test`, `cargo test -p daw-engine --lib`,
 `cargo test -p daw` and `cargo check --workspace --all-targets` (so the examples must compile). On
-Linux it also checks `cargo fmt` and clippy on the pinned toolchain; on Linux and macOS it runs
+Linux it also checks `cargo fmt` and clippy on the pinned toolchain, and that `docs/FEATURES.md` and
+`ROADMAP.md` match `features/`; on Linux and macOS it runs
 `scripts/headless-checks.sh`. A `nix` job runs `nix flake check`, which builds the package and runs
 the engine's unit tests. Checks that need real plug-ins don't run in CI.
 
-`.github/workflows/pages.yml` builds the website from `docs/` and `CHANGELOG.md` when they change on
+`.github/workflows/pages.yml` builds the website from `docs/`, `ROADMAP.md` and `CHANGELOG.md` when they change on
 `main` and publishes it to <https://marbble.dev/>. `site/docs.config.mjs` groups each document's
 `##` sections into the sidebar and splits long ones into pages; a new section needs a place there,
 and a broken link fails the build.

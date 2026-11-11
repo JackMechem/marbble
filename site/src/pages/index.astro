@@ -22,7 +22,7 @@ const doc = (file: "guide" | "arch" | "dev", anchor = "") => {
 };
 
 const releases = `${REPO_URL}/releases`;
-const roadmap = `${REPO_URL}/blob/main/TODO.md`;
+const roadmap = `${base}/roadmap/`;
 
 const WAVE_W = 1440;
 const WAVE_H = 200;
@@ -174,6 +174,7 @@ const description = "A digital audio workstation modelled on Logic Pro's workflo
       <nav aria-label="Main">
         <a class="opt" href={`${base}/guide/`}>User Guide</a>
         <a class="opt" href={`${base}/architecture/`}>Contributors</a>
+        <a class="opt" href={`${base}/roadmap/`}>Roadmap</a>
         <a class="opt" href={`${base}/changelog/`}>Changelog</a>
         <a class="opt" href={REPO_URL} rel="noopener">GitHub</a>
         <a class="top-dl" href="#download">Download</a>
@@ -197,6 +198,7 @@ const description = "A digital audio workstation modelled on Logic Pro's workflo
           <div class="menu-panel">
             <a href={`${base}/guide/`}>User Guide <Arrow /></a>
             <a href={`${base}/architecture/`}>Contributors <Arrow /></a>
+            <a href={`${base}/roadmap/`}>Roadmap <Arrow /></a>
             <a href={`${base}/changelog/`}>Changelog <Arrow /></a>
             <a href={REPO_URL} rel="noopener">GitHub <Arrow dir="out" /></a>
             <a href="#download">Download <Arrow dir="down" /></a>
@@ -263,7 +265,7 @@ const description = "A digital audio workstation modelled on Logic Pro's workflo
             </ul>
             <p>
               <a href={doc("guide", "20-known-limitations")}>Known limitations <Arrow /></a>
-              <a href={roadmap} rel="noopener">What's left to do <Arrow dir="out" /></a>
+              <a href={roadmap}>What's left to do <Arrow /></a>
             </p>
           </aside>
         </div>

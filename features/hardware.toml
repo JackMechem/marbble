@@ -1,0 +1,290 @@
+# Logic Pro's midi and hardware features, and how far Marbble has each. See features/README.md.
+
+title = "MIDI and hardware"
+about = "MIDI devices, controller assignments, control surfaces, external hardware and remote apps."
+order = 12
+
+[[feature]]
+section = "Connect external devices"
+name = "Receive MIDI from other apps"
+status = "partial"
+tier = "core"
+beta = true
+logic = "76"
+note = "Through system MIDI ports; Marbble doesn't create a virtual port of its own."
+
+[[feature]]
+section = "Connect external devices"
+name = "Local Off: stop a keyboard's own sound generation"
+status = "missing"
+tier = "core"
+beta = true
+logic = "75"
+
+[[feature]]
+section = "Connect external devices"
+name = "Choose audio input and output devices, which can be different devices"
+status = "done"
+tier = "core"
+beta = true
+logic = "72, 1041"
+
+[[feature]]
+section = "Connect external devices"
+name = "Sample rate and I/O buffer size"
+status = "done"
+tier = "core"
+beta = true
+logic = "1041"
+
+[[feature]]
+section = "Connect external devices"
+name = "Live input and output latency measurement"
+status = "done"
+tier = "core"
+beta = true
+logic = "1046"
+
+[[feature]]
+section = "Connect external devices"
+name = "Reset the audio engine (reopen devices)"
+status = "done"
+tier = "core"
+beta = true
+logic = "1041"
+
+[[feature]]
+section = "Connect external devices"
+name = "Connect USB/MIDI keyboards; every input routed to the selected instrument track"
+status = "done"
+tier = "core"
+beta = true
+logic = "73"
+
+[[feature]]
+section = "Connect external devices"
+name = "Turn individual MIDI inputs on or off"
+status = "done"
+tier = "core"
+beta = true
+logic = "1061"
+
+[[feature]]
+section = "Controller assignments"
+name = "Expert view: zones, modes, value scaling, feedback"
+status = "partial"
+tier = "studio"
+logic = "1204–1221"
+note = "Toggle, Momentary, Trigger and Latching buttons, a value range, relative encoders, 14-bit and NRPN, feedback to the controller, Selected Track assignments; no zones or modes."
+
+[[feature]]
+section = "Controller assignments"
+name = "OSC message paths; game controllers"
+status = "missing"
+tier = "studio"
+logic = "1207–1208, 1219"
+
+[[feature]]
+section = "Controller assignments"
+name = "Learn a controller assignment (⌘L)"
+status = "done"
+tier = "studio"
+logic = "1203"
+
+[[feature]]
+section = "Controller assignments"
+name = "Easy view"
+status = "done"
+tier = "studio"
+logic = "1202–1204"
+note = "(the Controller Assignments window: controller, parameter, Jump/Pickup, range, delete)"
+
+[[feature]]
+section = "Controller assignments"
+name = "Write automation from external controllers"
+status = "done"
+tier = "studio"
+logic = "643"
+
+[[feature]]
+section = "Control surfaces"
+name = "Add control surfaces by scanning or manually"
+status = "partial"
+tier = "studio"
+logic = "1185"
+note = "Added by hand in Settings › MIDI › Control Surfaces, which picks the ports when their names give them away; no scanning."
+
+[[feature]]
+section = "Control surfaces"
+name = "Automatic assignment for USB MIDI controllers"
+status = "missing"
+tier = "studio"
+logic = "1186"
+
+[[feature]]
+section = "Control surfaces"
+name = "Control surface groups"
+status = "missing"
+tier = "studio"
+logic = "1187"
+
+[[feature]]
+section = "Control surfaces"
+name = "Control Surface inspector and group parameters"
+status = "partial"
+tier = "studio"
+logic = "1189–1199"
+note = "Type, ports, first strip and function keys per surface; no group parameters."
+
+[[feature]]
+section = "Control surfaces"
+name = "OSC devices"
+status = "missing"
+tier = "studio"
+logic = "1191"
+
+[[feature]]
+section = "Control surfaces"
+name = "Control surface bars in the Mixer"
+status = "missing"
+tier = "studio"
+logic = "617–618"
+
+[[feature]]
+section = "Remote control"
+name = "A Logic Remote equivalent: transport, mixer, Smart Controls, Live Loops from a tablet or phone"
+status = "missing"
+tier = "studio"
+logic = "98"
+
+[[feature]]
+section = "Remote control"
+name = "Touch instruments on the remote"
+status = "missing"
+tier = "studio"
+logic = "98"
+
+[[feature]]
+section = "Remote control"
+name = "Mirror Loop Browser filters on the remote"
+status = "missing"
+tier = "studio"
+logic = "258"
+
+[[feature]]
+section = "External hardware and the Environment"
+name = "External MIDI tracks"
+status = "missing"
+tier = "studio"
+logic = "117"
+
+[[feature]]
+section = "External hardware and the Environment"
+name = "External Instrument plug-in: hardware synth in and out as a channel strip"
+status = "missing"
+tier = "studio"
+logic = "68, 928"
+
+[[feature]]
+section = "External hardware and the Environment"
+name = "I/O plug-in for hardware inserts, with latency detection"
+status = "missing"
+tier = "studio"
+
+[[feature]]
+section = "External hardware and the Environment"
+name = "MIDI channel strips"
+status = "missing"
+tier = "studio"
+logic = "611–613"
+
+[[feature]]
+section = "External hardware and the Environment"
+name = "Route strips to any hardware output pair or mono output"
+status = "missing"
+tier = "studio"
+logic = "595–596"
+
+[[feature]]
+section = "External hardware and the Environment"
+name = "Output channel strips"
+status = "missing"
+tier = "studio"
+logic = "594"
+
+[[feature]]
+section = "External hardware and the Environment"
+name = "Program change, bank select and SysEx to external devices"
+status = "missing"
+tier = "studio"
+logic = "476–478"
+
+[[feature]]
+section = "External hardware and the Environment"
+name = "Environment: layers, objects, cabling"
+status = "missing"
+tier = "studio"
+logic = "1224–1241"
+
+[[feature]]
+section = "External hardware and the Environment"
+name = "Environment objects: instruments, multi-instruments, mapped instruments, transformers, arpeggiators, faders, touch tracks"
+status = "missing"
+tier = "studio"
+logic = "1243–1295"
+
+[[feature]]
+section = "External hardware and the Environment"
+name = "MIDI to Track and Instrument Output routing between tracks"
+status = "missing"
+tier = "studio"
+logic = "212–214"
+
+[[feature]]
+section = "Tablet, phone and sharing"
+name = "Share projects with a tablet version, and open projects made there"
+status = "missing"
+tier = "platform"
+logic = "924–928"
+
+[[feature]]
+section = "Tablet, phone and sharing"
+name = "Consolidate assets and save as a package for sharing"
+status = "missing"
+tier = "platform"
+logic = "925"
+
+[[feature]]
+section = "Tablet, phone and sharing"
+name = "Share to music apps, voice-memo apps, AirDrop or mail (Logic's Music app, Voice Memos, AirDrop, Mail)"
+status = "missing"
+tier = "platform"
+logic = "919–922"
+
+[[feature]]
+section = "Tablet, phone and sharing"
+name = "Burn an audio CD or DVD"
+status = "missing"
+tier = "platform"
+logic = "911"
+
+[[feature]]
+section = "Tablet, phone and sharing"
+name = "File-manager preview of projects (Quick Look in Logic)"
+status = "missing"
+tier = "platform"
+logic = "113"
+
+[[feature]]
+section = "Tablet, phone and sharing"
+name = "Privacy and analytics settings"
+status = "missing"
+tier = "platform"
+logic = "1034"
+
+[[feature]]
+section = "Tablet, phone and sharing"
+name = "My Info (user name for metadata)"
+status = "missing"
+tier = "platform"
+logic = "1076"

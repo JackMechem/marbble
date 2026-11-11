@@ -1,4 +1,4 @@
-# Builds the website in site/ from docs/ and CHANGELOG.md and publishes it to GitHub Pages at
+# Builds the website in site/ from docs/, ROADMAP.md and CHANGELOG.md and publishes it to GitHub Pages at
 # https://marbble.dev/ (the custom domain is set in Settings › Pages). A broken link in the docs
 # fails the build, and the site that's live stays as it was. Needs Settings › Pages › Source set
 # to "GitHub Actions" once.
@@ -11,6 +11,7 @@ on:
       - "site/**"
       - "docs/**"
       - "CHANGELOG.md"
+      - "ROADMAP.md"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
