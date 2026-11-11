@@ -419,7 +419,8 @@ flowchart TD
   plug-ins, before its delay line (post-fader, or pre-fader for `sidechain_pre`). A built-in effect
   gets it as `key`; a VST3 on its aux input bus.
 - **Instrument outputs.** An aux on a multi-output instrument's extra bus reads it from the
-  instrument, which played earlier in the block (`dsp/multi_out.rs`).
+  instrument, which played earlier in the block (`dsp/multi_out.rs`). While the instrument is
+  frozen, the aux plays its output's render from its own playback list instead.
 - **Track Off** (`dsp/track_off/`): an off track fades out, then runs nothing; its plug-ins are
   told to stop processing but stay loaded. Back on, it fades in and chases.
 
@@ -551,7 +552,9 @@ the old timeline lands (`edit/arrangement/`, `edit/arrange_cmds.rs`). One apply 
 
 **Freeze.** `Track::frozen` names the freeze file. While set, the playback list is that file alone,
 the plug-ins are unloaded from the engine with their state kept, and edits to the track's regions
-and plug-ins are refused (`check_unfrozen` before, `frozen_guard` after). Freeze files live in
+and plug-ins are refused (`check_unfrozen` before, `frozen_guard` after). An aux on a frozen
+instrument's extra output has the render of that output in `Track::frozen_output`, and plays it in
+place of the unloaded plug-in's bus (`session/tracks/freeze/outputs.rs`). Freeze files live in
 `Freeze Files/`.
 
 **Track alternatives.** `Track::regions` is always the active set; the inactive ones sit in

@@ -114,6 +114,7 @@ impl Session {
             t.alternative.clear();
             // Its plug-ins come back live; the settings were saved when it was frozen.
             t.frozen = None;
+            t.frozen_output = None;
         }
         doc
     }

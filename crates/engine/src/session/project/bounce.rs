@@ -72,11 +72,13 @@ pub struct BipOptions {
     pub source: BipSource,
     /// Keep up to two seconds of reverb and release after the last region.
     pub tail: bool,
+    /// Add in the auxes on an instrument's extra outputs (see `bounce_outputs.rs`).
+    pub outputs: bool,
 }
 
 impl Default for BipOptions {
     fn default() -> Self {
-        BipOptions { effects: true, fader: false, source: BipSource::Mute, tail: true }
+        BipOptions { effects: true, fader: false, source: BipSource::Mute, tail: true, outputs: false }
     }
 }
 
@@ -275,7 +277,8 @@ impl Session {
 
     /// Export Region as Audio File: the region played alone through its track's Channel EQ
     /// and plug-ins (pre-fader, so the track's level and pan don't colour the file). A muted
-    /// region is exported too.
+    /// region is exported too. A multi-output instrument's region is its main output; its
+    /// auxes' parts are left out, as they leave the instrument ahead of its strip.
     pub fn export_region(&mut self, id: Id, path: &Path, o: &RenderOptions, progress: &mut dyn FnMut(f64)) -> Result<BounceResult> {
         let (track, idx) = self.find_region(id).ok_or_else(|| anyhow!("no such region"))?;
         self.check_on(&[track])?;
@@ -297,7 +300,8 @@ impl Session {
 
     /// Bounce in Place, step one: renders each track in `ids` (or, when `regions` is given,
     /// just those regions on their tracks) through its channel strip into the project's Audio
-    /// Files folder. A track whose stack is also being bounced goes with the stack.
+    /// Files folder, with an instrument's output auxes added in when the options say. A track
+    /// whose stack is also being bounced goes with the stack.
     pub fn render_in_place(&mut self, ids: &[Id], regions: &[Id], o: &BipOptions, progress: &mut dyn FnMut(f64)) -> Result<Vec<InPlaceRender>> {
         let mut jobs: Vec<(Id, Option<Vec<Id>>)> = Vec::new();
         if regions.is_empty() {
@@ -315,7 +319,6 @@ impl Session {
             }
         }
         self.check_on(&jobs.iter().map(|j| j.0).collect::<Vec<_>>())?;
-        self.check_no_output_auxes(&jobs.iter().map(|j| j.0).collect::<Vec<_>>(), "Bounce in Place")?;
         let sr = self.sample_rate();
         let tail = if o.tail { self.tail_frames(IN_PLACE_TAIL_SECS) } else { 0 };
         let n = jobs.len() as f64;
@@ -334,7 +337,13 @@ impl Session {
                 self.send(Cmd::Regions(source, self.regions_dsp(&t)));
             }
             let iso = self.isolate_track(source, o.fader, o.effects);
-            let rendered = self.render(from, to, tail, Some(iso), &mut |f| progress((k as f64 + f) / n));
+            let auxes = if o.outputs { self.output_auxes(source) } else { Vec::new() };
+            let parts = (1 + auxes.len()) as f64;
+            let rendered = self.render(from, to, tail, Some(iso), &mut |f| progress((k as f64 + f / parts) / n)).and_then(|mut audio| {
+                let mut step = |j: usize, f: f64| progress((k as f64 + (1.0 + j as f64 + f) / parts) / n);
+                self.add_output_renders(&auxes, (from, to, tail), o, &mut audio, &mut step)?;
+                Ok(audio)
+            });
             if only.is_some() {
                 self.push_regions(source);
             }
@@ -392,7 +401,12 @@ impl Session {
             self.push_regions(id);
             match (o.source, b.regions) {
                 (BipSource::Leave, _) => {}
-                (BipSource::Mute, None) => self.project.track_mut(src.id).unwrap().mute = true,
+                (BipSource::Mute, None) => {
+                    self.project.track_mut(src.id).unwrap().mute = true;
+                    if o.outputs {
+                        self.mute_output_auxes(src.id);
+                    }
+                }
                 (BipSource::Mute, Some(ids)) => {
                     for r in self.project.track_mut(src.id).unwrap().regions.iter_mut().filter(|r| ids.contains(&r.id)) {
                         r.muted = true;

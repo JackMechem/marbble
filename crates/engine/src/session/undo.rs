@@ -147,7 +147,7 @@ impl Session {
 
     /// A track in both projects, from `cur` to `t`: regions, automation, then its plug-ins.
     fn restore_track(&mut self, cur: &Track, t: &Track) {
-        if !same(&cur.regions, &t.regions) {
+        if !same(&cur.regions, &t.regions) || cur.frozen_output != t.frozen_output {
             self.push_regions(t.id);
         }
         if !same(&cur.automation, &t.automation) {

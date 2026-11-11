@@ -142,15 +142,16 @@ device. Register a new check in the script's `CHECKS` list.
 - **Need real plug-ins, so run by hand:** `pdc_check` and `freeze_check` (ZaMaximX2),
   `onoff_vst_check` (ZaMaximX2, TONE3000), and the plug-in parts of `fx_check`,
   `automation_check` and `bounce_check`, which print `SKIP` without them.
-  `vst_sidechain_check`, `multiout_check` and `vst_undo_check` find LSP's plug-ins themselves, so
-  they're in the script and `SKIP` where they aren't installed.
+  `vst_sidechain_check`, `multiout_check`, `multiout_freeze_check` and `vst_undo_check` find LSP's
+  plug-ins themselves, so they're in the script and `SKIP` where they aren't installed.
 - **LSP's Multi-Sampler loses a sample now and then** while it loads, through a bug of LSP's
   (issue #37): its VST3 wrapper's task queue (`vst3::Executor::submit` in lsp-plugin-fw) reports
   a task it failed to queue as queued, so the sampler waits for that file's load or render for
   ever. It fails when two threads reach the queue at once, so it's likelier with several
-  instances loading on several threads. `multiout_check` and `parallel_check` load a fresh
-  instance when it happens and say so. vst3-host's `lsp_sampler_loads` measures it without the
-  engine: 12 of 600 loads, four at a time, against none of 1200 with that one line fixed.
+  instances loading on several threads. `multiout_check`, `multiout_freeze_check` and
+  `parallel_check` load a fresh instance when it happens and say so. vst3-host's
+  `lsp_sampler_loads` measures it without the engine: 12 of 600 loads, four at a time, against
+  none of 1200 with that one line fixed.
 - **The broad ones:** `restore_check` (every feature undone, redone, saved and reopened with
   bit-identical renders), `soak_check` (hundreds of seeded random edits with the pool playing,
   invariants after each, and a replay that must match), `rt_alloc_check` (no block allocates),

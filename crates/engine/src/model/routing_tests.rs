@@ -38,6 +38,7 @@ fn track(p: &mut Project, kind: TrackKind) -> Id {
         legacy_eq_preset: None,
         off: false,
         icon: None,
+        frozen_output: None,
     });
     id
 }

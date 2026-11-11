@@ -130,6 +130,9 @@ export interface Track {
   auto_lanes?: AutoParam[];
   /** The icon chosen for the track (trackIcons.ts ids); absent shows the name's or kind's. */
   icon?: string | null;
+  /** For an aux on an instrument's output, while the instrument is frozen: the render of that
+   *  output, which the aux plays in its place. */
+  frozen_output?: FreezeInfo | null;
 }
 
 export interface FreezeInfo {

@@ -161,6 +161,7 @@ mod tests {
                 instrument_output: None,
                 legacy_eq_preset: None,
                 icon: None,
+                frozen_output: None,
             };
             if name == "Full" {
                 t.inserts = (100..108).map(slot).collect();

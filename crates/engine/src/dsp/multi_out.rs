@@ -7,6 +7,10 @@
 //!
 //! The output leaves the instrument ahead of its strip, so the instrument's fader, mute and
 //! inserts don't touch it. Its Off switch does: the output fades as the strip does.
+//!
+//! While the instrument is frozen its plug-in is unloaded, and the aux plays the output's render
+//! from its own playback list instead (see `session/tracks/freeze/outputs.rs`), through the same
+//! line and fade.
 
 use super::pdc::Tap;
 use super::*;
@@ -19,6 +23,14 @@ pub struct OutputFeed {
     pub(super) source: Option<usize>,
     gain: f32,
     line: Option<Box<DelayLine>>,
+}
+
+/// A frozen instrument's output, played from its render: the aux's playback list, and where the
+/// block starts. `sources` is false where nothing new may play (past a render's range).
+pub(super) struct Frozen<'a> {
+    pub regions: &'a [RegionDsp],
+    pub pos: i64,
+    pub sources: bool,
 }
 
 /// What `OutputFeed::pull` needs to know about this block.
@@ -51,8 +63,17 @@ impl OutputFeed {
     }
 
     /// Adds this block of the output to `out`. `src` is the instrument's track, played earlier in
-    /// the block, `scratch` two buffers of the block's length.
-    pub(super) fn pull(&mut self, src: Option<&TrackDsp>, p: &Pull, tap: &mut Tap, out: (&mut [f32], &mut [f32]), scratch: (&mut [f32], &mut [f32])) {
+    /// the block, `frozen` the output's render while it is frozen, `scratch` two buffers of the
+    /// block's length.
+    pub(super) fn pull(
+        &mut self,
+        src: Option<&TrackDsp>,
+        frozen: Option<Frozen<'_>>,
+        p: &Pull,
+        tap: &mut Tap,
+        out: (&mut [f32], &mut [f32]),
+        scratch: (&mut [f32], &mut [f32]),
+    ) {
         let (l, r) = out;
         let (sl, sr) = scratch;
         // A plug-in that didn't run this block (off, bypassed, skipped) has last block's audio
@@ -61,16 +82,23 @@ impl OutputFeed {
             Plugin::Vst(v) => v.output_bus(p.bus, l.len()),
             _ => None,
         });
-        match bus {
-            Some((a, b)) => {
+        match (frozen, bus) {
+            (Some(f), _) => {
+                sl.fill(0.0);
+                sr.fill(0.0);
+                if f.sources {
+                    play_audio(f.regions, f.pos, sl, sr, (0, 0));
+                }
+            }
+            (None, Some((a, b))) => {
                 sl.copy_from_slice(a);
                 sr.copy_from_slice(b);
             }
-            None if self.line.is_none() => {
+            (None, None) if self.line.is_none() => {
                 self.gain = 0.0;
                 return;
             }
-            None => {
+            (None, None) => {
                 sl.fill(0.0);
                 sr.fill(0.0);
             }

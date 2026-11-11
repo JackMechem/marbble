@@ -1,7 +1,8 @@
-// Unit tests for src/mixer/multiOut.ts: the output a strip's "+" takes next and an aux's input.
+// Unit tests for src/mixer/multiOut.ts: the output a strip's "+" takes next, an aux's input, and
+// whether a bounce has output auxes to take along.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { auxInput, hasExtraOutputs, nextOutput } from "../../src/mixer/multiOut.ts";
+import { auxInput, hasExtraOutputs, hasOutputAuxes, nextOutput } from "../../src/mixer/multiOut.ts";
 
 const bus = (index: number, name: string) => ({ index, name, channels: 2, active: false });
 const outputs = [{ track: 1, outputs: [bus(0, "Stereo out"), bus(1, "Direct out 0"), bus(2, "Direct out 1")] }];
@@ -47,4 +48,19 @@ test("an aux whose output is gone says so", () => {
     assert.equal(got.label, "Drums: no output 8");
     assert.match(got.title, /Bus 3/);
   }
+});
+
+test("an aux on a frozen instrument plays its output's render, not nothing", () => {
+  // The frozen plug-in is unloaded, so the snapshot lists no outputs for it.
+  const got = auxInput({ bus: 3, instrument_output: { track: 1, bus: 2 }, frozen_output: { clip: 9, start: 0 } }, [inst], []);
+  assert.equal(got.silent, false);
+  assert.equal(got.label, "Drums: output 3, frozen");
+  assert.match(got.title, /Unfreeze Drums/);
+});
+
+test("a bounce has output auxes to take along only from its own instruments", () => {
+  const tracks = [{ instrument_output: null }, onAux(1)];
+  assert.equal(hasOutputAuxes(tracks, [1]), true);
+  assert.equal(hasOutputAuxes(tracks, [2, 3]), false);
+  assert.equal(hasOutputAuxes([], [1]), false);
 });

@@ -1,5 +1,5 @@
-//! Multi-output instruments: their auxes' routes and solo, deleting and copying them, and what they
-//! play.
+//! Multi-output instruments: their auxes' routes and solo, deleting and copying them, what they
+//! play, and Bounce in Place taking them along. (Freezing them is `session/tracks/freeze/tests.rs`.)
 
 use super::*;
 
@@ -172,16 +172,17 @@ fn a_new_aux_needs_a_loaded_instrument_with_extra_outputs() {
 }
 
 #[test]
-fn freeze_and_bounce_in_place_refuse_and_say_why() {
-    let mut s = session();
+fn bounce_in_place_mutes_the_auxes_only_when_it_took_them_along() {
+    let (mut s, scratch) = crate::session::tests::scratch_session("bip-outputs");
     let (inst, aux) = wired(&mut s);
     s.create_midi_region(inst, 0, 4800).unwrap();
-    for e in [s.render_freeze(&[inst], &mut |_| {}).err(), s.render_in_place(&[inst], &[], &BipOptions::default(), &mut |_| {}).err()] {
-        let e = e.expect("refused").to_string();
-        assert!(e.contains("extra outputs") && e.contains("delete those auxes"), "{e}");
-    }
-    s.delete_track(aux);
-    assert!(s.check_no_output_auxes(&[inst], "Freeze").is_ok());
+    let muted = |s: &Session, id: Id| s.project.track(id).unwrap().mute;
+    s.bounce_in_place(&[inst], &[], &BipOptions::default(), &mut |_| {}).unwrap();
+    assert!(muted(&s, inst) && !muted(&s, aux), "without them, the auxes play the live outputs on");
+    s.update_track(inst, TrackPatch { mute: Some(false), ..Default::default() });
+    s.bounce_in_place(&[inst], &[], &BipOptions { outputs: true, ..Default::default() }, &mut |_| {}).unwrap();
+    assert!(muted(&s, inst) && muted(&s, aux), "with them, their sound is in the bounce");
+    let _ = std::fs::remove_dir_all(&scratch);
 }
 
 #[test]

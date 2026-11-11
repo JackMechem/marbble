@@ -333,7 +333,8 @@ fn main() {
     check("unfrozen, it renders live again, bit for bit", same(&live, &render(&mut s)));
 
     // Bounce in Place and a bounce's tail.
-    let made = s.bounce_in_place(&[a], &[], &BipOptions { effects: true, fader: false, source: BipSource::Leave, tail: true }, &mut |_| {}).unwrap();
+    let made =
+        s.bounce_in_place(&[a], &[], &BipOptions { effects: true, fader: false, source: BipSource::Leave, tail: true, outputs: false }, &mut |_| {}).unwrap();
     check("Bounce in Place makes a track from it", made.len() == 1 && !s.project.track(made[0]).unwrap().regions.is_empty());
     s.delete_track(made[0]);
     let wav = scratch.join("bounce.wav");

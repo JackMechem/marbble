@@ -13,6 +13,12 @@ All notable changes to Marbble are recorded here. The format follows
   preset pop-up, as in Logic: it lights once the settings differ from those last loaded or saved,
   and swaps between the two. The preset menu's Copy Settings and Paste Settings move one panel's
   settings into another instance of the same plug-in, each paste one undo step.
+- **Freeze and Bounce in Place with multi-output instruments.** Freezing an instrument whose
+  extra outputs have auxes now renders those outputs too, and each aux plays its output's render
+  while the instrument is frozen, through its own plug-ins and fader, so the mix sounds the same
+  (before, Freeze refused). Bounce in Place bounces the main output with the auxes playing on, or
+  with the new Instrument Multi-Output option adds the auxes into the bounce and mutes them with
+  the source.
 
 ### Fixed
 

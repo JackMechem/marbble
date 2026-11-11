@@ -25,6 +25,7 @@ import { formatTime } from "../../lib/time";
 import { tempoMap } from "../../lib/tempo";
 import { Sheet } from "../../ui/Sheet";
 import { NumberField, Select } from "../../ui/Form";
+import { hasOutputAuxes } from "../../mixer/multiOut";
 
 /** Remembered between uses, like Logic's bounce settings. */
 function loadPref<T extends object>(key: string, fallback: T): T {
@@ -274,7 +275,7 @@ const SOURCES: [BipSource, string][] = [
 export function BounceInPlaceDialog() {
   const { tracks: ids, regions } = inPlaceRequest;
   const project = useStore((s) => s.snap?.project) as Project;
-  const [opts, setOpts] = useState<BipOptions>(() => loadPref<BipOptions>(BIP_PREFS, { effects: true, fader: false, source: "mute", tail: true }));
+  const [opts, setOpts] = useState<BipOptions>(() => loadPref<BipOptions>(BIP_PREFS, { effects: true, fader: false, source: "mute", tail: true, outputs: false }));
   const { progress, busy, run } = useRender();
   const close = () => !busy && setState({ dialog: null });
   const set = (p: Partial<BipOptions>) => {
@@ -283,6 +284,9 @@ export function BounceInPlaceDialog() {
     savePref(BIP_PREFS, next);
   };
   const tracks = project.tracks.filter((t) => ids.includes(t.id));
+  // The tracks rendered: those chosen, or those holding the chosen regions.
+  const sources = project.tracks.filter((t) => ids.includes(t.id) || t.regions.some((r) => regions.includes(r.id))).map((t) => t.id);
+  const multiOutput = hasOutputAuxes(project.tracks, sources);
   const what = regions.length
     ? `${regions.length} region${regions.length === 1 ? "" : "s"}`
     : tracks.length === 1
@@ -290,7 +294,8 @@ export function BounceInPlaceDialog() {
       : `${tracks.length} tracks`;
 
   const go = async () => {
-    const res = await run(() => call<Made>("bounce_in_place", { ids, regions, options: opts }));
+    const options = { ...opts, outputs: multiOutput && opts.outputs };
+    const res = await run(() => call<Made>("bounce_in_place", { ids, regions, options }));
     if (!res) return;
     const kept = new Set(res.snapshot.project.tracks.flatMap((t) => t.regions.map((r) => r.id)));
     setState({ snap: res.snapshot, dialog: null, selectedTracks: res.ids, focus: "tracks", selectedRegions: getState().selectedRegions.filter((r) => kept.has(r)) });
@@ -326,6 +331,12 @@ export function BounceInPlaceDialog() {
               <input type="checkbox" checked={opts.tail} onChange={(e) => set({ tail: e.target.checked })} />
               Audio Tail
             </label>
+            {multiOutput && (
+              <label className="check">
+                <input type="checkbox" checked={opts.outputs} onChange={(e) => set({ outputs: e.target.checked })} />
+                Instrument Multi-Output <span className="dim">{opts.outputs ? "(the auxes are muted with the source)" : "(the auxes play on)"}</span>
+              </label>
+            )}
           </div>
         </div>
       </fieldset>

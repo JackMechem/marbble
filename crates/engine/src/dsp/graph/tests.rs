@@ -74,6 +74,7 @@ fn track(id: Id, kind: TrackKind) -> Track {
         legacy_eq_preset: None,
         off: false,
         icon: None,
+        frozen_output: None,
     }
 }
 

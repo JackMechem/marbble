@@ -64,6 +64,7 @@ CHECKS=(
   "onoff_check tone dir"
   "vst_sidechain_check tone dir"
   "multiout_check dir"
+  "multiout_freeze_check dir"
   "vst_undo_check tone dir"
   "memlock_check dir"
 )
