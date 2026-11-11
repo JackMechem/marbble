@@ -122,46 +122,82 @@ fn a_panic_is_counted_and_the_pool_carries_on() {
     }
 }
 
+/// The first task a worker gets is held until [`Sleepy::release`], as if the worker were
+/// preempted or stuck: however slow the machine, the block can't end without it. The caller's
+/// tasks nap, which gives the worker the chance to take one, as on a single core it might
+/// otherwise never run.
 struct Sleepy {
     slow: AtomicUsize,
+    held: AtomicBool,
     ran: AtomicUsize,
+    epoch: Instant,
+    /// When the caller's latest task ended, in nanoseconds since `epoch`.
+    caller_done: AtomicU64,
+}
+
+impl Sleepy {
+    fn new() -> Sleepy {
+        Sleepy { slow: AtomicUsize::new(1), held: AtomicBool::new(true), ran: AtomicUsize::new(0), epoch: Instant::now(), caller_done: AtomicU64::new(0) }
+    }
+
+    fn release(&self) {
+        self.held.store(false, Ordering::SeqCst);
+    }
+
+    fn caller_done(&self) -> Instant {
+        self.epoch + Duration::from_nanos(self.caller_done.load(Ordering::SeqCst))
+    }
 }
 
 impl Job for Sleepy {
     fn run(&self, _task: usize, thread: usize, _: &Call) {
-        // Whichever worker gets a task first holds on to it, as if preempted. The caller gives
-        // it the chance, as on a single core it might otherwise never run.
         if thread == 0 {
             thread::sleep(Duration::from_micros(200));
         } else if self.slow.swap(0, Ordering::SeqCst) == 1 {
-            thread::sleep(Duration::from_millis(300));
+            // Not for ever: a pool that waits for it fails its test rather than hanging it.
+            let t = Instant::now();
+            while self.held.load(Ordering::SeqCst) && t.elapsed() < Duration::from_secs(10) {
+                thread::sleep(Duration::from_millis(1));
+            }
         }
         self.ran.fetch_add(1, Ordering::SeqCst);
+        if thread == 0 {
+            self.caller_done.store(self.epoch.elapsed().as_nanos() as u64, Ordering::SeqCst);
+        }
     }
 }
 
 #[test]
 fn a_stuck_worker_cannot_hang_the_caller_and_everything_else_gets_done() {
+    const LIMIT: Duration = Duration::from_millis(20);
     let ids: Vec<u64> = (0..64).collect();
     let g = TaskGraph::new(ids, &[], |_| true).unwrap();
-    let job = Arc::new(Sleepy { slow: AtomicUsize::new(1), ran: AtomicUsize::new(0) });
+    let job = Arc::new(Sleepy::new());
     let p = pool(2);
     let ptr: *const Sleepy = Arc::as_ptr(&job);
     // Until the worker gets started and takes a task, the caller could do them all; tries go on
     // until it does.
     for _ in 0..200 {
+        let ran = job.ran.load(Ordering::SeqCst);
         unsafe { p.start(&g, ptr) };
         let t = Instant::now();
-        let done = p.finish(Some(Duration::from_millis(20)));
-        assert!(t.elapsed() < Duration::from_millis(280), "only the time limit and a nap past it");
+        let done = p.finish(Some(LIMIT));
+        let back = Instant::now();
         if !done {
-            assert!(!p.is_done());
-            assert!(job.ran.load(Ordering::SeqCst) >= 63, "the caller took everything that was ready");
+            assert!(!p.is_done(), "the worker is still in its task");
+            assert_eq!(job.ran.load(Ordering::SeqCst) - ran, 63, "the caller took everything that was ready");
+            // It gives up a nap past the time limit, or past its own last task if that ended
+            // later: the caller's 63 naps are the test's, and a loaded machine can stretch them
+            // far past the limit.
+            let past = back.saturating_duration_since((t + LIMIT).max(job.caller_done()));
+            assert!(past < Duration::from_millis(200), "gave up {past:?} after it could have ({:?} in all)", back - t);
+            job.release();
             while !p.is_done() {
                 thread::sleep(Duration::from_millis(1));
             }
             return;
         }
+        assert_eq!(job.slow.load(Ordering::SeqCst), 1, "the caller waited for the stuck worker ({:?})", back - t);
         thread::sleep(Duration::from_millis(2));
     }
     panic!("the worker never got a task in 200 blocks");
@@ -262,7 +298,7 @@ fn with_every_worker_refused_the_pool_has_none() {
 fn a_worker_given_up_on_is_retired_and_the_others_play_on() {
     let ids: Vec<u64> = (0..64).collect();
     let g = TaskGraph::new(ids, &[], |_| true).unwrap();
-    let job = Arc::new(Sleepy { slow: AtomicUsize::new(1), ran: AtomicUsize::new(0) });
+    let job = Arc::new(Sleepy::new());
     let p = pool(3);
     started(&p);
     let ptr: *const Sleepy = Arc::as_ptr(&job);
@@ -282,6 +318,7 @@ fn a_worker_given_up_on_is_retired_and_the_others_play_on() {
     assert_eq!((r.playing, r.stuck), (2, 1));
     assert!(p.has_workers());
     let gone = p.shared.workers.iter().position(|w| w.state.load(Ordering::SeqCst) == RETIRED).unwrap() + 1;
+    job.release();
     while !p.is_done() {
         thread::sleep(Duration::from_millis(1));
     }
@@ -690,7 +727,7 @@ fn two_workers_can_be_left_in_one_block_or_one_after_the_other() {
 fn a_worker_held_up_outside_a_plug_in_is_not_left() {
     let ids: Vec<u64> = (0..64).collect();
     let g = TaskGraph::new(ids, &[], |_| true).unwrap();
-    let job = Arc::new(Sleepy { slow: AtomicUsize::new(1), ran: AtomicUsize::new(0) });
+    let job = Arc::new(Sleepy::new());
     let p = pool(2);
     started(&p);
     let ptr: *const Sleepy = Arc::as_ptr(&job);
@@ -699,6 +736,7 @@ fn a_worker_held_up_outside_a_plug_in_is_not_left() {
         if !p.finish(Some(Duration::from_millis(20))) {
             assert_eq!(p.abandon(&g, Duration::ZERO, |_, _, _| panic!("left")), 0);
             assert_eq!(p.retire_stuck(), 1);
+            job.release();
             while !p.is_done() {
                 thread::sleep(Duration::from_millis(1));
             }
