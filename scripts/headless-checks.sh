@@ -123,8 +123,39 @@ isolated=(
   XDG_RUNTIME_DIR="$env_home/runtime"
   JACK_NO_START_SERVER=1
 )
+# The time limit: coreutils' `timeout` (`gtimeout` from Homebrew's coreutils), or else, as on a
+# stock Mac, the same in Perl, which macOS always has. Like `timeout`, it runs the check in a
+# process group of its own, ends the whole group when time is up (TERM, then KILL 10 s later) and
+# exits 124; otherwise it exits as the check did. It also kills whatever the check left running
+# in its group, which would otherwise hold the pipe to `tee` open.
+limit_perl='
+use strict; use warnings; use POSIX ();
+my $secs = shift;
+my $pid = fork; die "fork: $!\n" unless defined $pid;
+if (!$pid) { setpgrp(0, 0); exec { $ARGV[0] } @ARGV or POSIX::_exit(127) }
+setpgrp($pid, $pid);   # in both processes, so the group exists before any kill below
+my $timed_out = 0;
+for my $sig (qw(INT TERM HUP)) { $SIG{$sig} = sub { kill $sig, -$pid } }
+$SIG{ALRM} = sub {
+  $timed_out = 1;
+  kill "TERM", -$pid;
+  $SIG{ALRM} = sub { kill "KILL", -$pid };
+  alarm 10;
+};
+alarm $secs;
+while (waitpid($pid, 0) < 0) { die "waitpid: $!\n" unless $!{EINTR} }
+my $st = $?;
+alarm 0;
+kill "KILL", -$pid;
+exit 124 if $timed_out;
+exit(($st & 127) ? 128 + ($st & 127) : $st >> 8);
+'
 if command -v timeout > /dev/null; then
-  isolated+=(timeout "$TIMEOUT")
+  isolated+=(timeout -k 10 "$TIMEOUT")
+elif command -v gtimeout > /dev/null; then
+  isolated+=(gtimeout -k 10 "$TIMEOUT")
+else
+  isolated+=(perl -e "$limit_perl" "$TIMEOUT")
 fi
 
 tone="$scratch/tone.wav"
@@ -155,6 +186,9 @@ for entry in "${CHECKS[@]}"; do
   ran=$((ran + 1))
   status=0
   "${isolated[@]}" "$bin/$name" "${argv[@]}" 2>&1 | tee "$dir/output.log" || status=$?
+  if [ "$status" -eq 124 ]; then
+    echo "== $name timed out after ${TIMEOUT} s" | tee -a "$dir/output.log"
+  fi
   # tempo_check reports failures only in its output, so look there too.
   if [ "$status" -ne 0 ] || grep -q '^FAIL' "$dir/output.log"; then
     failed+=("$name")

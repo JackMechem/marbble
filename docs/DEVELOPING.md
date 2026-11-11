@@ -152,7 +152,9 @@ cargo run -q -p daw-engine --example stack_check -- /path/to/tone.wav /tmp/marbb
 The script builds the examples once, writes a test tone (`test_tone`), and runs each check in its
 own folder as on a fresh CI runner: `HOME` and the `XDG_*` folders point into the scratch folder and
 the audio server variables are cleared, so nothing reads or touches your settings. A check fails
-when it exits non-zero, prints a `FAIL` line, or runs longer than `HEADLESS_CHECK_TIMEOUT` (600 s).
+when it exits non-zero, prints a `FAIL` line, or runs longer than `HEADLESS_CHECK_TIMEOUT` (600 s),
+when it and anything it started are killed. The limit uses coreutils' `timeout` (`gtimeout` on a Mac
+with Homebrew's coreutils), or a few lines of Perl where neither is installed, as on a stock Mac.
 Its output is in `<scratch>/<check>/output.log`. On macOS the engine runs on a silent stand-in
 device. Register a new check in the script's `CHECKS` list.
 
