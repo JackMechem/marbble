@@ -112,7 +112,7 @@ packaging.
 
 | Document | For |
 |---|---|
-| [Website](https://marbble.dev/) | The User Guide, Architecture, Developing, the roadmap, the feature list and the changelog as a searchable site, built from them by [site/](site/) (`cd site && npm ci && npm run build`). |
+| [Website](https://marbble.dev/) | The User Guide, the contributing guide, Architecture, Developing, the roadmap, the feature list and the changelog as a searchable site, built from them by [site/](site/) (`cd site && npm ci && npm run build`). |
 | [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Using Marbble: recording, instruments, editing, mixing, exporting, every setting and key command, troubleshooting. |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the code is organised and works: the source tree, threads and real-time rules, the life of an edit and of a block of audio, the project model and its files, plug-ins, MIDI, and the frontend. |
 | [docs/DEVELOPING.md](docs/DEVELOPING.md) | Setting up, building, testing, debugging, the code conventions, common changes, CI and releases. |
@@ -120,7 +120,9 @@ packaging.
 | [ROADMAP.md](ROADMAP.md) | What beta needs, how far along it is, the current focus and the roadmap's stages, each a milestone. |
 | [docs/FEATURES.md](docs/FEATURES.md) | Every Logic Pro feature by area, done, partial or missing in Marbble (generated from [`features/`](features/README.md)). |
 | [CHANGELOG.md](CHANGELOG.md) | What changed in each release. |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Reporting bugs, testing, how issues and milestones are used, and sending a pull request. |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Questions, reporting bugs, testing, your first 30 minutes with the code, how issues and milestones are used, sending a pull request, and the policy on AI-assisted contributions. |
+| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | The Contributor Covenant, and how to report a problem. |
+| [SECURITY.md](SECURITY.md) | Which versions get fixes, and how to report a vulnerability privately. |
 
 ## Status and known limitations
 

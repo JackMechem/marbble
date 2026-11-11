@@ -83,6 +83,13 @@ export const DOCS = [
     },
   },
   {
+    area: "contributing",
+    zone: "contributors",
+    file: "CONTRIBUTING.md",
+    title: "Contributing",
+    single: true,
+  },
+  {
     area: "architecture",
     zone: "contributors",
     file: "docs/ARCHITECTURE.md",
@@ -170,7 +177,7 @@ export const DOCS = [
 // The four zones of the docs. The sidebar shows one zone at a time, and the header names them all.
 export const ZONES = [
   { id: "guide", label: "User Guide", audience: "For musicians", href: "/guide/", areas: ["guide"] },
-  { id: "contributors", label: "Architecture, Developing", audience: "For contributors", href: "/architecture/", areas: ["architecture", "developing"] },
+  { id: "contributors", label: "Contributing, Architecture, Developing", audience: "For contributors", href: "/contributing/", areas: ["contributing", "architecture", "developing"] },
   { id: "roadmap", label: "Roadmap, Feature list", audience: "What's next", href: "/roadmap/", areas: ["roadmap", "features"] },
   { id: "changelog", label: "Changelog", audience: "What changed", href: "/changelog/", areas: ["changelog"] },
 ];
