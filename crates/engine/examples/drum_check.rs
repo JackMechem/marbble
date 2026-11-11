@@ -62,7 +62,9 @@ fn notes_of(s: &Session, t: Id) -> (i64, Vec<Note>) {
 }
 
 fn main() {
-    let scratch = PathBuf::from(std::env::args().nth(1).expect("scratch dir"));
+    // Everything goes in a folder of its own inside the one given, and only that is cleared:
+    // scripts/headless-checks.sh writes this check's output.log beside it.
+    let scratch = PathBuf::from(std::env::args().nth(1).expect("scratch dir")).join("work");
     let _ = std::fs::remove_dir_all(&scratch);
     std::fs::create_dir_all(&scratch).unwrap();
     std::env::set_var("HOME", scratch.join("home"));
