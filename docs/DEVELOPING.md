@@ -156,7 +156,8 @@ the audio server variables are cleared, so nothing reads or touches your setting
 when it exits non-zero, prints a `FAIL` line, or runs longer than `HEADLESS_CHECK_TIMEOUT` (600 s),
 when it and anything it started are killed. The limit uses coreutils' `timeout` (`gtimeout` on a Mac
 with Homebrew's coreutils), or a few lines of Perl where neither is installed, as on a stock Mac.
-Its output is in `<scratch>/<check>/output.log`. On macOS the engine runs on a silent stand-in
+Its output is in `<scratch>/<check>/output.log`; a check that deletes that file fails too, so a check
+that clears its scratch folder clears a folder of its own inside it. On macOS the engine runs on a silent stand-in
 device. Register a new check in the script's `CHECKS` list.
 
 - **Need real plug-ins, so run by hand:** `pdc_check` and `freeze_check` (ZaMaximX2),

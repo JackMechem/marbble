@@ -193,7 +193,12 @@ for entry in "${CHECKS[@]}"; do
   if [ "$status" -eq 124 ]; then
     echo "== $name timed out after ${TIMEOUT} s" | tee -a "$dir/output.log"
   fi
-  # tempo_check reports failures only in its output, so look there too.
+  # tempo_check reports failures only in its output, so look there too. A check that deleted its
+  # own log can't be read, so it fails.
+  if [ ! -f "$dir/output.log" ]; then
+    echo "== $name deleted its output.log, so its FAIL lines can't be checked"
+    status=1
+  fi
   if [ "$status" -ne 0 ] || grep -q '^FAIL' "$dir/output.log"; then
     failed+=("$name")
   fi

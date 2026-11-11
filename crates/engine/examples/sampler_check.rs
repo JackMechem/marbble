@@ -109,7 +109,9 @@ fn state_of(s: &Session, t: Id) -> Option<std::sync::Arc<str>> {
 }
 
 fn main() {
-    let scratch = PathBuf::from(std::env::args().nth(1).expect("scratch dir"));
+    // Everything goes in a folder of its own inside the one given, and only that is cleared:
+    // scripts/headless-checks.sh writes this check's output.log beside it.
+    let scratch = PathBuf::from(std::env::args().nth(1).expect("scratch dir")).join("work");
     let _ = std::fs::remove_dir_all(&scratch);
     std::fs::create_dir_all(&scratch).unwrap();
     // Saved instruments go under HOME's Music folder, and presets under the config folder: keep
