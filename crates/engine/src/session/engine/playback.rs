@@ -278,6 +278,7 @@ impl Session {
     pub(crate) fn build_track(&mut self, t: &Track) -> Box<TrackDsp> {
         let meter = self.meters.entry(t.id).or_default().clone();
         let mut dsp = TrackDsp::new(t.id, t.kind, Self::track_params(&self.project, t), meter);
+        dsp.load = self.strip_loads.entry(t.id).or_default().clone();
         self.load_clips(t.clips());
         dsp.set_regions(self.regions_dsp(t));
         dsp.set_automation(lanes_dsp(&t.automation), t.auto_mode);

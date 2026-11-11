@@ -155,6 +155,8 @@ pub struct Watch {
     failures: u32,
     recent: Vec<Instant>,
     gave_up: bool,
+    /// Restarts since the last reset, for the Diagnostics window.
+    restarts: u32,
 }
 
 impl Watch {
@@ -189,6 +191,7 @@ impl Watch {
     pub fn restarted(&mut self, now: Instant, ok: bool) {
         self.last_event = None;
         self.recent.push(now);
+        self.restarts += 1;
         if ok {
             self.failures = 0;
             self.retry_at = None;
@@ -201,6 +204,11 @@ impl Watch {
     /// Whether it gave up (and waits for [`Watch::reset`]).
     pub fn gave_up(&self) -> bool {
         self.gave_up
+    }
+
+    /// How many restarts it made since the last reset, whether they opened a device or not.
+    pub fn restarts(&self) -> u32 {
+        self.restarts
     }
 
     /// A fresh start, when the user reopens the device themselves.

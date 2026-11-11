@@ -1,5 +1,5 @@
 // The frontend's entry point: every window loads this and renders `App`, or just a panel's
-// `DetachedWindow`. Key handling, theme and size are set up first so the first paint is right.
+// `DetachedWindow`, or the Diagnostics window's view. Key handling, theme and size are set up first so the first paint is right.
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./app/App";
@@ -12,6 +12,8 @@ import { savedShowOverview } from "./tracks/overview/Overview";
 import "./app/detach/panelKinds";
 import { ownPanel } from "./app/detach/detach";
 import { DetachedWindow } from "./app/detach/DetachedWindow";
+import { DiagnosticsWindow } from "./diagnostics/DiagnosticsWindow";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { installSheetKeys } from "./keyboard/sheetKeys";
 import { migrateStorage } from "./app/oldName";
 import { installFocusRing } from "./keyboard/focusRing";
@@ -51,7 +53,7 @@ void loadKeyNames().finally(() =>
   ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
     <React.StrictMode>
       {/* A detached panel's window (detach.ts) shows just that panel. */}
-      {ownPanel ? <DetachedWindow /> : <App />}
+      {getCurrentWindow().label === "diagnostics" ? <DiagnosticsWindow /> : ownPanel ? <DetachedWindow /> : <App />}
     </React.StrictMode>,
   ),
 );

@@ -113,13 +113,15 @@ pub fn broadcast_snapshot(webview: tauri::Webview, state: State<AppState>) -> Re
 
 /// Sends a native menu item to the focused panel window, which handles what belongs to its
 /// panel (Select All in a detached Piano Roll) and passes the rest on to the main window;
-/// otherwise to the main window, as before panels could be detached.
+/// otherwise to the main window, as before panels could be detached. The Diagnostics window
+/// takes its search field's edits the same way.
 pub fn route_menu<R: Runtime>(app: &AppHandle<R>, id: String) {
-    let panel = app.webview_windows().into_iter().find(|(label, w)| is_panel_label(label) && w.is_focused().unwrap_or(false)).map(|(label, _)| label);
+    let own = |label: &str| is_panel_label(label) || label == crate::diagnostics::window::LABEL;
+    let panel = app.webview_windows().into_iter().find(|(label, w)| own(label) && w.is_focused().unwrap_or(false)).map(|(label, _)| label);
     let _ = app.emit_to(EventTarget::webview_window(panel.as_deref().unwrap_or("main")), "menu", id);
 }
 
-/// Panel windows close with the main window, so quitting doesn't leave them behind (and the
+/// Panel windows and the Diagnostics window close with the main window, so quitting doesn't leave them behind (and the
 /// app exits when the last one goes, as it did with one window). Their detached state is kept
 /// for the next launch: being destroyed, they don't ask to be attached. A window coming to the
 /// front gets the keys its menu bar should show (menu/).
@@ -131,7 +133,7 @@ pub fn on_window_event<R: Runtime>(window: &Window<R>, event: &WindowEvent) {
     }
     if window.label() == "main" && matches!(event, WindowEvent::Destroyed) {
         for (label, w) in window.app_handle().webview_windows() {
-            if is_panel_label(&label) {
+            if is_panel_label(&label) || label == crate::diagnostics::window::LABEL {
                 let _ = w.destroy();
             }
         }

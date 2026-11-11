@@ -230,7 +230,10 @@ report races inside their own loading and teardown.
 
 - **Logs** go to the terminal that started the app, at `info`. `RUST_LOG=debug` (or
   `RUST_LOG=daw_engine=debug`) shows more; `RUST_BACKTRACE=1` adds backtraces to a caught engine
-  panic.
+  panic. The same lines are kept in memory for Window › Diagnostics.
+- **The Diagnostics window** (Window › Diagnostics) shows the device, the engine's load and
+  counts of what went wrong, the threads and which one played each track, memory, MIDI and the
+  log, live; Copy Report gives it all as text for an issue.
 - **A failed command** shows its error as a toast. Everything the UI knows is `getState().snap`
   and the last tick (`currentTick()`, `src/state/store.ts`).
 - **Blank window on Linux:** some GPU drivers need `WEBKIT_DISABLE_DMABUF_RENDERER=1`. Leave it

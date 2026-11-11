@@ -1,0 +1,186 @@
+// The Diagnostics window (Window › Diagnostics; main.tsx renders this in the `diagnostics` window):
+// how the device, the engine, its threads and the tracks are doing, live, with Marbble's log. It
+// asks the app for a snapshot four times a second while open (src-tauri/src/diagnostics/), keeps
+// the log lines it was sent, and counts what went wrong from its last reset. The figures are
+// worded in facts.ts, the copied report in report.ts.
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { emitTo } from "@tauri-apps/api/event";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { countersOf, noteRises, type Counters, type Rises } from "./counters";
+import { countsAt, headline } from "./facts";
+import { addLines, lastSeq } from "./logLines";
+import { buildReport } from "./report";
+import type { Diagnostics, DiagnosticsSnapshot, LogLine } from "./snapshot";
+import { OverviewTab } from "./OverviewTab";
+import { TracksTab } from "./TracksTab";
+import { LogTab } from "./LogTab";
+import { FactChip } from "./FactViews";
+import { copyText } from "./copyText";
+import { holdPeaks, type HeldPeaks } from "./peaks";
+import { Icon } from "../ui/icons";
+import { MenuHost } from "../ui/Menu";
+import { applyTheme, savedThemeId } from "../theme/themes";
+import { applyUiScale, savedUiScale } from "../ui/uiScale";
+import { getState } from "../state/store";
+import { textFieldMenu } from "../keyboard/textKeys";
+
+/** How often the window asks for a snapshot. */
+const POLL_MS = 250;
+const TABS = [
+  ["overview", "Overview"],
+  ["tracks", "Tracks"],
+  ["log", "Log"],
+] as const;
+type Tab = (typeof TABS)[number][0];
+const TAB_KEY = "marbble.diagnostics.tab";
+
+function savedTab(): Tab {
+  try {
+    const t = localStorage.getItem(TAB_KEY);
+    return TABS.some(([id]) => id === t) ? (t as Tab) : "overview";
+  } catch {
+    return "overview";
+  }
+}
+
+/** Menu bar items come here while this window is in front: a focused search field takes its
+ *  edits (Select All, Copy…), and the rest go on to the main window, as from a panel window. */
+function useMenuItems() {
+  useEffect(() => {
+    const off = getCurrentWebviewWindow().listen<string>("menu", (e) => {
+      if (!textFieldMenu(e.payload)) emitTo("main", "menu", e.payload).catch(() => {});
+    });
+    return () => {
+      off.then((f) => f()).catch(() => {});
+    };
+  }, []);
+}
+
+/** The theme and interface size follow the main window's, which saves them where this window can
+ *  hear it change. */
+function useFollowTheme() {
+  useEffect(() => {
+    const onStorage = () => {
+      const theme = savedThemeId();
+      if (theme !== getState().themeId) applyTheme(theme, false);
+      const scale = savedUiScale();
+      if (scale !== getState().uiScale) void applyUiScale(scale, false);
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+}
+
+export function DiagnosticsWindow() {
+  const [about, setAbout] = useState({ version: "", os: "", arch: "" });
+  const [engine, setEngine] = useState<Diagnostics | null>(null);
+  const [held, setHeld] = useState<HeldPeaks>(() => new Map());
+  const [log, setLog] = useState<LogLine[]>([]);
+  const [base, setBase] = useState<{ counters: Counters; at: string } | null>(null);
+  const [rises, setRises] = useState<Rises>({});
+  const [now, setNow] = useState(() => performance.now());
+  const [tab, setTab] = useState<Tab>(savedTab);
+  const [copied, setCopied] = useState(false);
+  const logRef = useRef<LogLine[]>([]);
+  const prevCounters = useRef<Counters | null>(null);
+  useFollowTheme();
+  useMenuItems();
+
+  useEffect(() => {
+    document.title = "Diagnostics";
+    let busy = false;
+    let live = true;
+    const poll = async () => {
+      if (busy) return;
+      busy = true;
+      try {
+        const s = await invoke<DiagnosticsSnapshot>("diagnostics", { logAfter: lastSeq(logRef.current) });
+        if (!live) return;
+        const at = performance.now();
+        setAbout((a) => (a.version === s.version ? a : { version: s.version, os: s.os, arch: s.arch }));
+        if (s.log.length) {
+          logRef.current = addLines(logRef.current, s.log);
+          setLog(logRef.current);
+        }
+        if (s.engine) {
+          const c = countersOf(s.engine);
+          const prev = prevCounters.current;
+          setRises((r) => noteRises(r, prev, c, at));
+          prevCounters.current = c;
+          const tracks = s.engine.tracks;
+          setHeld((h) => holdPeaks(h, tracks, at));
+          setEngine(s.engine);
+        }
+        setNow(at);
+      } catch {
+        // The app is closing, or the session is busy with a render: try again next time.
+      } finally {
+        busy = false;
+      }
+    };
+    void poll();
+    const id = window.setInterval(poll, POLL_MS);
+    return () => {
+      live = false;
+      window.clearInterval(id);
+    };
+  }, []);
+
+  const counts = useMemo(() => (engine ? countsAt(countersOf(engine), base?.counters ?? null, rises, now) : null), [engine, base, rises, now]);
+
+  const reset = useCallback(() => {
+    if (!engine) return;
+    setBase({ counters: countersOf(engine), at: new Date().toLocaleTimeString() });
+    setRises({});
+    invoke("reset_diagnostics").catch(() => {});
+  }, [engine]);
+
+  const copy = useCallback(async () => {
+    const text = buildReport({ ...about, taken: new Date().toLocaleString(), resetAt: base?.at ?? null }, engine, counts, logRef.current, held);
+    if (await copyText(text)) {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    }
+  }, [about, base, engine, counts, held]);
+
+  const choose = (t: Tab) => {
+    setTab(t);
+    try {
+      localStorage.setItem(TAB_KEY, t);
+    } catch {
+      // Remembering the tab is a nicety.
+    }
+  };
+
+  return (
+    <div className="diag">
+      <header className="diag-bar">
+        <div className="diag-headline">{engine && counts ? headline(engine, counts).map((f) => <FactChip key={f.label} fact={f} />) : <span className="diag-waiting">Waiting for the engine…</span>}</div>
+        <div className="diag-actions">
+          <button type="button" className="diag-btn" title={base ? `Counting since ${base.at}. Start the counts and load figures afresh` : "Start the counts and load figures afresh"} aria-label="Reset counts" onClick={reset} disabled={!engine}>
+            <Icon.reset />
+          </button>
+          <button type="button" className={"diag-btn" + (copied ? " done" : "")} title={copied ? "Copied" : "Copy everything as a text report, to paste into an issue"} aria-label="Copy report" onClick={copy}>
+            <Icon.copy />
+          </button>
+        </div>
+      </header>
+      <nav className="diag-tabs" role="tablist" aria-label="Diagnostics">
+        {TABS.map(([id, label]) => (
+          <button key={id} type="button" role="tab" aria-selected={tab === id} className={"diag-tab" + (tab === id ? " on" : "")} onClick={() => choose(id)}>
+            {label}
+            {id === "tracks" && engine ? <span className="diag-tab-count">{engine.tracks.length}</span> : null}
+          </button>
+        ))}
+      </nav>
+      <main className="diag-body" role="tabpanel">
+        {!engine && tab !== "log" ? <div className="diag-empty">Waiting for the engine…</div> : null}
+        {engine && counts && tab === "overview" ? <OverviewTab d={engine} counts={counts} /> : null}
+        {engine && tab === "tracks" ? <TracksTab d={engine} held={held} /> : null}
+        {tab === "log" ? <LogTab lines={log} /> : null}
+      </main>
+      <MenuHost />
+    </div>
+  );
+}

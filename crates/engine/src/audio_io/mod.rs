@@ -52,6 +52,11 @@ impl IoThread {
     pub fn suggested_threads(&self) -> Option<u32> {
         None
     }
+
+    /// Whether the device has an IO workgroup for the workers to join (macOS only).
+    pub fn has_workgroup(&self) -> Option<bool> {
+        None
+    }
 }
 
 /// The output callback's notes about its own thread (macOS only).

@@ -90,6 +90,7 @@ export const MENU_LABELS = {
   "detach:mixer": "Mixer in Separate Window",
   "detach:editor": "Editor in Separate Window",
   "detach:list": "Event List in Separate Window",
+  diagnostics: "Diagnostics",
   // Help: the website's pages, Settings › Key Commands and the update check.
   "help-guide": "Marbble User Guide",
   "help-keys": "Key Commands…",

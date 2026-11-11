@@ -11,6 +11,13 @@ All notable changes to Marbble are recorded here. The format follows
 - **The input level check on macOS.** Settings › Audio, and a notice at launch, now warn on macOS
   too when the recording device's input volume is turned down or muted in the system, with a
   **Set to 100%** button.
+- **A Diagnostics window** (Window › Diagnostics) for testing and reporting problems. It shows,
+  live: the audio device as asked for and as opened, its latencies, gaps and restarts; the
+  engine's load (average, peak, median, 99th percentile and worst buffer) and the counts of late
+  buffers, overloads and errors; the cores and the processing threads, with which thread played
+  each track and its share of the buffer; each track's plug-ins and delay compensation; memory;
+  MIDI ports; and Marbble's log, with a level filter and search. Copy Report puts it all on the
+  clipboard as text, to paste into an issue.
 
 ### Changed
 

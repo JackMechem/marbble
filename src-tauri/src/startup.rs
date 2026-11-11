@@ -29,7 +29,8 @@ pub fn prepare_environment() {
         std::env::set_var("GDK_BACKEND", if native { "wayland,x11" } else { "x11" });
     }
 
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info,jack=off")).init();
+    // To stderr, and kept for the Diagnostics window.
+    crate::diagnostics::logger::install("info,jack=off");
 
     // Before GTK starts and anything else runs: it may set XDG_DATA_DIRS.
     schemas::ensure_file_chooser_schema();

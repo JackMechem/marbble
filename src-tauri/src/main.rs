@@ -1,12 +1,13 @@
 //! The application: what runs before the window opens (`startup.rs`, the `--scan-vst3` child mode
 //! among it), the window's setup with the timers that drive the session (`timers.rs`), and the
-//! list of commands registered with Tauri. The commands themselves are in `commands/`, and
-//! `Session` in the engine crate does the work.
+//! list of commands registered with Tauri. The commands themselves are in `commands/` (the
+//! Diagnostics window's in `diagnostics/`), and `Session` in the engine crate does the work.
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod commands;
 mod crash;
+mod diagnostics;
 #[cfg(target_os = "linux")]
 mod glib_loop;
 mod menu;
@@ -340,6 +341,9 @@ fn main() {
             commands::open_release_page,
             commands::paste_plugin_settings,
             commands::set_track_midi,
+            diagnostics::window::open_diagnostics_window,
+            diagnostics::diagnostics,
+            diagnostics::reset_diagnostics,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Marbble");

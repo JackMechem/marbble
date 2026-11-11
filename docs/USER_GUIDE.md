@@ -110,7 +110,7 @@ Contents:
     [Plug-in windows are small or blurry on a HiDPI screen](#plug-in-windows-are-small-or-blurry-on-a-hidpi-screen) ·
     [Your computer's audio is recorded, or loops back](#your-computers-audio-is-recorded-or-loops-back) ·
     [Recordings are early or late](#recordings-are-early-or-late) ·
-    [The CPU meter](#the-cpu-meter) ·
+    [The CPU meter](#the-cpu-meter) · [The Diagnostics window](#the-diagnostics-window) ·
     ["System overload" and playback stops](#system-overload-and-playback-stops) ·
     ["… stopped responding" and a track goes quiet](#-stopped-responding-and-a-track-goes-quiet) ·
     ["… put out invalid audio" and a plug-in goes quiet](#-put-out-invalid-audio-and-a-plug-in-goes-quiet) ·
@@ -394,7 +394,7 @@ status, the audio devices, and the number of MIDI inputs.
 | Record | Play / Stop, Record, Discard Last Recording, Cycle, Autopunch, Metronome, Count-in, Low Latency Mode |
 | Navigate | Create Marker, Delete Marker, Go to Previous Marker, Go to Next Marker, Open Marker List |
 | View | Library, Inspector, Mixer, Editors, List Editors, Browsers, Show Automation, Show Used Automation, Show Global Tracks, Show Overview, Musical Typing, Step Input Keyboard, Show Hidden Tracks, Zoom In, Zoom Out, Larger Interface, Smaller Interface, Actual Size, Theme › |
-| Window | Minimize, Mixer in Separate Window, Editor in Separate Window, Event List in Separate Window, then the open windows (the main window and each [separate window](#separate-windows)): choose one to bring it to the front |
+| Window | Minimize, Mixer in Separate Window, Editor in Separate Window, Event List in Separate Window, [Diagnostics](#the-diagnostics-window), then the open windows (the main window and each [separate window](#separate-windows)): choose one to bring it to the front |
 | Help | Marbble User Guide, Key Commands…, What's New in Marbble, Check for Updates…, Report an Issue…, Marbble Website. Key Commands opens Settings › Key Commands; Check for Updates… asks GitHub whether a newer version is out on your [update channel](#general) and says what it found; the others open this guide, the changelog, a new issue on GitHub and the website in your browser |
 
 Each item shows its key beside it, as set in Settings › Key Commands. (On macOS the menu holds
@@ -3936,6 +3936,38 @@ the meter for the numbers and how many threads are playing.
 
 A red label alone means a dropout, and playback carries on; a
 ["System overload"](#system-overload-and-playback-stops) stops playback too.
+
+### The Diagnostics window
+
+**Window › Diagnostics** opens a window that shows how Marbble is running, live (four times a
+second), to watch while you test and to attach to a bug report. Values worth a look are amber;
+red ones are going wrong now (a count that rose in the last few seconds, real-time priority
+refused, memory swapped out, the device stopped). Hover over a figure for what it means. Along
+the top are the load, its 99th percentile, late buffers, device gaps, overloads, the threads
+playing and the buffer.
+
+- **Overview:** the audio device (driver, devices, the sample rate and buffer size it gave and
+  what you asked for, latencies, gaps, device events, stream errors and automatic restarts, and
+  on macOS its audio workgroup); the engine's load (average, recent peak, median, 99th
+  percentile and worst buffer, late buffers, overloads, engine errors, invalid plug-in output,
+  commands to the audio thread and any dropped, recording overruns); the cores and processing
+  threads (performance cores, the Processing Threads setting, how many threads play, real time
+  granted or refused, threads stuck in a plug-in, tracks left out) with each thread's share of
+  the latest buffer as a bar; memory (the lock, resident, locked and swapped memory on Linux, the
+  audio files in memory); and MIDI (ports in use, the live MIDI target, the last message).
+- **Tracks:** each track's thread (Audio is the audio thread, DSP 1 and up the processing
+  threads), its share of the latest buffer and its peak over the last two seconds, its plug-ins'
+  latency and its compensation delay, its plug-ins (latency in frames in brackets), and whether
+  it is off, frozen or held up by a plug-in that stopped responding. The sort button puts the
+  heaviest tracks first.
+- **Log:** what Marbble writes to the terminal (warnings, errors and what it did), with a level
+  filter and a search box. It keeps the last 2,000 lines; `RUST_LOG=debug` adds more detail.
+- **Reset** (the arrow) counts late buffers, gaps and the other counts from now, and starts the
+  load figures afresh. **Copy Report** (the two sheets) puts everything, the last 300 log lines
+  included, on the clipboard as plain text. Values the system doesn't give show as —.
+
+Watching costs the audio thread only a few stored numbers per track per buffer. The window closes
+with the main window.
 
 ### "System overload" and playback stops
 
