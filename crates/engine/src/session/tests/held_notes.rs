@@ -202,9 +202,10 @@ fn moving_the_target_releases_a_key_held_on_it() {
     let mut got = run(&mut e, inst);
     got[..2].sort();
     assert_eq!(got, vec![(false, PITCH), (false, 72), (true, PITCH)]);
-    // The key comes up on the new target, which never had it: nothing is left held.
+    // The key comes up on the new target, which never had it, so its note-off goes nowhere
+    // (`dsp/live_keys.rs`): nothing is left held.
     s.send_midi([0x80, 72, 0]);
-    assert_eq!(run(&mut e, other), vec![(false, 72)]);
+    assert_eq!(run(&mut e, other), vec![]);
     assert_eq!(run(&mut e, inst), vec![]);
     s.select_track(Some(inst));
     assert_eq!(run(&mut e, inst), vec![]);

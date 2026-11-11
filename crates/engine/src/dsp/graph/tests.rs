@@ -75,6 +75,7 @@ fn track(id: Id, kind: TrackKind) -> Track {
         off: false,
         icon: None,
         frozen_output: None,
+        midi_settings: Default::default(),
     }
 }
 

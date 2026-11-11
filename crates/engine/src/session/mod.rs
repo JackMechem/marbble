@@ -76,6 +76,7 @@ pub use regions::moves::RegionMove;
 pub use regions::params::{PlayedNotes, RegionParamsPatch};
 pub use regions::range_edit::{ClipInfo, RangeEdit};
 pub use tracks::freeze::FreezeRender;
+pub use tracks::midi_settings::TrackMidiPatch;
 
 pub const BUILTIN_SYNTH: &str = "builtin:synth";
 const PROJECT_FILE: &str = "project.json";

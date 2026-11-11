@@ -339,6 +339,7 @@ fn main() {
             commands::app_version,
             commands::open_release_page,
             commands::paste_plugin_settings,
+            commands::set_track_midi,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Marbble");

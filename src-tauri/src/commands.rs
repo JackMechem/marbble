@@ -20,7 +20,7 @@ use daw_engine::prefs::{BitDepth, ClickSettings, Prefs};
 use daw_engine::session::{AssignmentPatch, AssignmentRow};
 use daw_engine::session::{
     BipOptions, BipSource, BounceResult, ClipInfo, InstrumentOutputs, MidiContent, PdcReport, PlayedNotes, RangeEdit, RegionParamsPatch, RenderOptions,
-    TrackPatch,
+    TrackMidiPatch, TrackPatch,
 };
 use daw_engine::vst3_host::{ParamInfo, PluginDescriptor};
 use daw_engine::{edit::transients, library::plugin_db, Session};

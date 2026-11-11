@@ -162,6 +162,7 @@ mod tests {
                 legacy_eq_preset: None,
                 icon: None,
                 frozen_output: None,
+                midi_settings: Default::default(),
             };
             if name == "Full" {
                 t.inserts = (100..108).map(slot).collect();

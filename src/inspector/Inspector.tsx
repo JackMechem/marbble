@@ -1,7 +1,8 @@
 // The Inspector, the left side pane as in Logic: the selected region's section, the track's
 // section, and the track's channel strip beside Stereo Out's. inspector/ holds it and its rows: the
-// track's (TrackInspector.tsx), a region's fades (FadeRows.tsx) and playback parameters
-// (RegionParamRows.tsx).
+// track's (TrackInspector.tsx, with an instrument track's MIDI settings in TrackMidiRows.tsx), a
+// region's fades (FadeRows.tsx) and playback parameters (RegionParamRows.tsx), and the menu
+// values both use (Choice.tsx).
 import { useMemo, useState } from "react";
 import { type Region } from "../engine/regions";
 import { act } from "../engine/commands";

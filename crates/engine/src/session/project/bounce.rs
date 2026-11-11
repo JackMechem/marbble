@@ -97,7 +97,7 @@ impl Session {
     /// Where the last region ends (0 for an empty project): the end of "Whole Project".
     pub fn project_end(&self) -> i64 {
         let map = self.tempo_map();
-        self.project.tracks.iter().flat_map(|t| t.regions.iter()).map(|r| crate::edit::region_params::bounds(r, &map).1).max().unwrap_or(0)
+        self.project.tracks.iter().flat_map(|t| t.regions.iter().map(move |r| (t, r))).map(|(t, r)| sounding(t, r, &map).1).max().unwrap_or(0)
     }
 
     /// Renders `[from, to)` plus `tail` frames through the engine, as stereo at the project
@@ -175,7 +175,7 @@ impl Session {
     fn content_span(&self, id: Id) -> Option<(i64, i64)> {
         let mut family = vec![id];
         family.extend(self.project.descendants(id));
-        let regions = family.iter().filter_map(|t| self.project.track(*t)).flat_map(|t| t.regions.iter()).filter(|r| !r.muted);
+        let regions = family.iter().filter_map(|t| self.project.track(*t)).flat_map(|t| t.regions.iter().map(move |r| (t, r))).filter(|(_, r)| !r.muted);
         span(regions, &self.tempo_map())
     }
 
@@ -284,7 +284,7 @@ impl Session {
         self.check_on(&[track])?;
         let mut t = self.project.track(track).unwrap().clone();
         let r = Region { muted: false, ..t.regions[idx].clone() };
-        let (from, to) = crate::edit::region_params::bounds(&r, &self.tempo_map());
+        let (from, to) = sounding(&t, &r, &self.tempo_map());
         t.regions = vec![r];
         self.send(Cmd::Regions(track, self.regions_dsp(&t)));
         let iso = self.isolate_track(track, false, true);
@@ -327,7 +327,7 @@ impl Session {
             let Some(mut t) = self.project.track(source).cloned() else { continue };
             let range = match &only {
                 None => self.content_span(source),
-                Some(keep) => span(t.regions.iter().filter(|r| keep.contains(&r.id)), &self.tempo_map()),
+                Some(keep) => span(t.regions.iter().filter(|r| keep.contains(&r.id)).map(|r| (&t, r)), &self.tempo_map()),
             };
             let Some((from, to)) = range else { continue };
             if let Some(keep) = &only {
@@ -431,9 +431,16 @@ impl Session {
     }
 }
 
-fn span<'a>(regions: impl Iterator<Item = &'a Region>, map: &crate::model::tempo::TempoMap) -> Option<(i64, i64)> {
-    regions.fold(None, |acc, r| {
-        let (s, e) = crate::edit::region_params::bounds(r, map);
+/// Where region `r` of track `t` sounds on the timeline, with its parameters and the track's
+/// MIDI settings.
+fn sounding(t: &Track, r: &Region, map: &crate::model::tempo::TempoMap) -> (i64, i64) {
+    crate::edit::track_midi::bounds(&t.midi_settings, r, map)
+}
+
+/// The span the regions sound over, each given with its track.
+fn span<'a>(regions: impl Iterator<Item = (&'a Track, &'a Region)>, map: &crate::model::tempo::TempoMap) -> Option<(i64, i64)> {
+    regions.fold(None, |acc, (t, r)| {
+        let (s, e) = sounding(t, r, map);
         Some(acc.map_or((s, e), |(a, b): (i64, i64)| (a.min(s), b.max(e))))
     })
 }

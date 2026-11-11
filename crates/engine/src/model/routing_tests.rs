@@ -39,6 +39,7 @@ fn track(p: &mut Project, kind: TrackKind) -> Id {
         off: false,
         icon: None,
         frozen_output: None,
+        midi_settings: Default::default(),
     });
     id
 }

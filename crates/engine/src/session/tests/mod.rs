@@ -7,6 +7,7 @@ mod held_notes;
 mod instruments;
 mod plugin_settings;
 mod presets;
+mod track_midi;
 
 use std::path::PathBuf;
 

@@ -240,6 +240,7 @@ fn stand_in() -> Box<TrackDsp> {
         vca_mute: false,
         off: false,
         instrument_output: None,
+        midi: Default::default(),
     };
     let mut t = Box::new(TrackDsp::new(0, TrackKind::Audio, p, Arc::new(Meter::default())));
     t.left_out = true;

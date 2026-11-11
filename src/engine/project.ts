@@ -133,6 +133,24 @@ export interface Track {
   /** For an aux on an instrument's output, while the instrument is frozen: the render of that
    *  output, which the aux plays in its place. */
   frozen_output?: FreezeInfo | null;
+  /** The Track inspector's MIDI settings (instrument tracks); absent means the defaults. */
+  midi_settings?: TrackMidiSettings;
+}
+
+/** What an instrument track plays differs from its regions and live input by these
+ *  (crates/engine/src/edit/track_midi/). */
+export interface TrackMidiSettings {
+  /** Semitones, -96 to 96. */
+  transpose: number;
+  /** Added to every velocity, -99 to 99; the result stays within 1–127. */
+  velocity: number;
+  /** The lowest and highest note played. */
+  key_limit: [number, number];
+  /** The lowest and highest velocity played. */
+  velocity_limit: [number, number];
+  /** In ticks (960 to a quarter note), or ms with `delay_ms`; negative plays early. */
+  delay: number;
+  delay_ms: boolean;
 }
 
 export interface FreezeInfo {

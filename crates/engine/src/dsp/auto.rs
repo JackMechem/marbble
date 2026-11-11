@@ -168,6 +168,7 @@ mod tests {
             vca_mute: false,
             off: false,
             instrument_output: None,
+            midi: Default::default(),
         }
     }
 

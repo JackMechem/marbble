@@ -6,6 +6,7 @@
 use std::sync::Arc;
 
 use super::*;
+use crate::edit::track_midi::TrackMidiSettings;
 
 /// What a track is. Folder and Summing are the two kinds of stack; only Audio and Instrument hold
 /// regions of their own.
@@ -262,6 +263,10 @@ pub struct Track {
     /// the output, which the aux plays in its place (see `session/tracks/freeze/outputs.rs`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub frozen_output: Option<FreezeInfo>,
+    /// The Track inspector's MIDI settings (Transpose, Velocity, Key and Velocity Limits, Delay),
+    /// applied to what an instrument track plays (see `edit/track_midi/`).
+    #[serde(default, skip_serializing_if = "TrackMidiSettings::is_default")]
+    pub midi_settings: TrackMidiSettings,
 }
 
 impl Track {

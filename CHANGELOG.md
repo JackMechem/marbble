@@ -6,6 +6,13 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Track MIDI settings in the Inspector.** An instrument track's Track section has Logic's
+  Transpose, Velocity, Key Limit, Vel Limit and Delay (in ticks or ms). They change what the track
+  plays, its regions and what you play live, without touching its notes, and every bounce, export
+  and freeze plays them too. The limits let two tracks split one keyboard between them.
+
 ### Changed
 
 - **Compare, and Copy and Paste Settings, in plug-in panels.** Every built-in effect's and

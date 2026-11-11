@@ -99,3 +99,11 @@
   flex: 1;
 }
 
+/* A low–high pair of number fields (Key Limit, Vel Limit), the low one above: side by side they
+   don't fit the Inspector's width with their steppers. */
+.insp-limit {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  vertical-align: middle;
+}

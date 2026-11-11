@@ -95,7 +95,7 @@ impl Session {
                 .regions
                 .iter()
                 .filter(|r| !r.muted)
-                .map(|r| crate::edit::region_params::bounds(r, &map))
+                .map(|r| crate::edit::track_midi::bounds(&t.midi_settings, r, &map))
                 .fold(None, |acc: Option<(i64, i64)>, (s, e)| Some(acc.map_or((s, e), |(a, b)| (a.min(s), b.max(e)))));
             let Some((from, to)) = span else { return Err(anyhow!("{} has no regions to freeze", t.name)) };
             let name = t.name.clone();
@@ -275,7 +275,8 @@ impl Session {
         let mut hit: Vec<(Track, String)> = Vec::new();
         for t in self.project.tracks.iter().filter(|t| t.frozen.is_some()) {
             let Some(b) = before.track(t.id).filter(|b| b.frozen == t.frozen) else { continue };
-            if !same(&t.regions, &b.regions) || !same(&t.instrument, &b.instrument) || !same(&t.inserts, &b.inserts) {
+            let changed = !same(&t.regions, &b.regions) || !same(&t.instrument, &b.instrument) || !same(&t.inserts, &b.inserts);
+            if changed || t.midi_settings != b.midi_settings {
                 hit.push((b.clone(), t.name.clone()));
             }
         }
@@ -300,6 +301,7 @@ impl Session {
                 t.regions = b.regions;
                 t.instrument = b.instrument;
                 t.inserts = b.inserts;
+                t.midi_settings = b.midi_settings;
             }
         }
         let nothing_else = same(&target.tracks, &before.tracks) && same(&target.groups, &before.groups);

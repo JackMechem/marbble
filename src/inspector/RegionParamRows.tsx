@@ -3,11 +3,9 @@
 // A value set here goes to every selected region (the MIDI ones to every MIDI region).
 import { type Region, type RegionParams } from "../engine/regions";
 import { act } from "../engine/commands";
-import { Icon } from "../ui/icons";
-import { DELAY_MS_MAX, DELAY_TICKS_MAX, DYNAMICS_OPTIONS, GATE_OPTIONS, optionLabel, paramsOf, QUANTIZE_OPTIONS, shared } from "../tracks/regions/regionParams";
+import { DELAY_MS_MAX, DELAY_TICKS_MAX, DYNAMICS_OPTIONS, GATE_OPTIONS, paramsOf, QUANTIZE_OPTIONS, shared } from "../tracks/regions/regionParams";
 import { NumberField } from "../ui/Form";
-import { openMenuAt } from "../ui/Menu";
-import { onPress } from "../keyboard/keyNav";
+import { Choice, DELAY_UNITS } from "./Choice";
 
 type Patch = Partial<RegionParams>;
 
@@ -17,28 +15,6 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
       <span className="insp-label">{label}</span>
       <span className="insp-value">{children}</span>
     </div>
-  );
-}
-
-/** A value chosen from a menu, drawn as text with a small chevron; "*" when the selected
- *  regions differ. */
-function Choice({ value, options, onChange }: { value: number | null; options: [number, string][]; onChange: (v: number) => void }) {
-  return (
-    <button
-      type="button"
-      className="insp-popup"
-      {...onPress((e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        openMenuAt(
-          e.currentTarget,
-          options.map(([v, label]) => ({ label, checked: v === value, onClick: () => onChange(v) })),
-        );
-      })}
-    >
-      {value === null ? "*" : optionLabel(options, value)}
-      <Icon.chevron />
-    </button>
   );
 }
 
@@ -85,14 +61,7 @@ export function RegionParamRows({ regions }: { regions: Region[] }) {
           width={70}
           onChange={(delay) => set({ delay })}
         />
-        <Choice
-          value={shared(regions, "delay_ms") === null ? null : ms ? 1 : 0}
-          options={[
-            [0, "ticks"],
-            [1, "ms"],
-          ]}
-          onChange={(v) => set({ delay_ms: v === 1 })}
-        />
+        <Choice value={shared(regions, "delay_ms") === null ? null : ms ? 1 : 0} options={DELAY_UNITS} onChange={(v) => set({ delay_ms: v === 1 })} />
       </Row>
     </>
   );

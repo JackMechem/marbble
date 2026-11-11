@@ -132,6 +132,8 @@ impl TrackDsp {
         for (sounding, held) in self.sounding.iter_mut().zip(&mut self.live_held) {
             *sounding |= std::mem::take(held);
         }
+        // Their keys' note-offs, when they come, have nothing left to end.
+        self.live_keys.clear();
     }
 }
 

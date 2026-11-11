@@ -32,6 +32,7 @@ fn params(output: Option<Id>, sends: &[(Id, f32, bool)]) -> TrackParams {
         vca_mute: false,
         off: false,
         instrument_output: None,
+        midi: Default::default(),
     }
 }
 

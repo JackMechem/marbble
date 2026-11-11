@@ -316,8 +316,10 @@ fn play_instrument<R: Routes>(cx: &BlockCtx<'_>, t: &mut TrackDsp, routes: &mut 
     if cx.midi_target == Some(t.id) {
         for m in cx.live {
             if cx.midi_thru && t.midi.len() < t.midi.capacity() {
-                t.midi.push(*m);
-                track_off::note_held(&mut t.live_held, m.data);
+                // Through the track's MIDI settings (Transpose, Velocity, the limits).
+                let Some(data) = t.live_keys.play(&t.params.midi, m.data) else { continue };
+                t.midi.push(MidiEvent { data, ..*m });
+                track_off::note_held(&mut t.live_held, data);
             }
         }
     }

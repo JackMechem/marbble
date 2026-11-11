@@ -52,6 +52,7 @@ impl Session {
             off: false,
             icon: None,
             frozen_output: None,
+            midi_settings: Default::default(),
         };
         if kind == TrackKind::Instrument {
             let pid = instrument.unwrap_or_else(|| BUILTIN_SYNTH.to_string());
