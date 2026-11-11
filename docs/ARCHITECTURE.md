@@ -611,8 +611,15 @@ Song.marbble/
 
 ### Settings and other files
 
-The config folder is `$XDG_CONFIG_HOME/marbble`, else `%APPDATA%\marbble`, else
-`~/.config/marbble` (macOS too).
+The config folder is `$XDG_CONFIG_HOME/marbble` when that is set (on every system, so the
+headless checks can point it at a scratch folder); else, on macOS,
+`~/Library/Application Support/io.github.jackmechem.marbble` (the bundle identifier, as Tauri's
+`app_config_dir`); else `%APPDATA%\marbble`, else `~/.config/marbble`. `library/config_dir.rs`
+works it out, as a pure function of the system, the home folder and the environment, and at
+launch moves the folder from where earlier versions kept it: `~/.config/fermata` (the old name)
+to `~/.config/marbble`, then, on macOS, that to Application Support. A move is a rename, or, across
+volumes, a copy to `<folder>.partial` renamed once complete, so an interrupted one starts over;
+when the macOS folder exists already it takes each entry it doesn't have, overwriting nothing.
 
 | File | Written by | Holds |
 |---|---|---|

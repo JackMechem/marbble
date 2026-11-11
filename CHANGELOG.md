@@ -6,6 +6,13 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **Settings on macOS live in `~/Library/Application Support/io.github.jackmechem.marbble`**, the
+  native place, instead of `~/.config/marbble`. Settings, recent projects, presets, channel strip
+  settings, templates and the plug-in list are moved there automatically the first time Marbble
+  starts.
+
 ## [0.1.0-alpha.14] - 2026-11-10
 
 ### Added
