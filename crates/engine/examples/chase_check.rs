@@ -2,11 +2,12 @@
 //! built-in synth: playback started in the middle of a long note sounds at once, a jump into one
 //! does too, and neither does with Chase: Notes off; a controller set before the playhead is in
 //! effect from the start, unless Chase: Controllers is off. usage: chase_check <scratch dir>
-use std::time::Duration;
-
-use daw_engine::model::{CcEvent, CcKind, InputSel, Note, TrackKind};
-use daw_engine::session::MidiContent;
+use daw_engine::model::{CcEvent, CcKind, Id, InputSel, Note, TrackKind};
+use daw_engine::session::{MidiContent, Tick};
 use daw_engine::{audio_io::AudioConfig, Session};
+
+#[path = "common/transport.rs"]
+mod transport;
 
 /// Set by any failed check: the example then exits with status 1, so scripts notice.
 static FAILED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
@@ -16,43 +17,31 @@ fn check(name: &str, ok: bool) {
     println!("{} {name}", if ok { "PASS" } else { "FAIL" });
 }
 
-/// The track's peak level over a moment of playback, read off the meters.
-fn peak(s: &mut Session, id: u64) -> f32 {
-    s.tick();
-    std::thread::sleep(Duration::from_millis(250));
-    let t = s.tick();
-    t.meters.iter().find(|m| m.0 == id).map(|m| m.1.max(m.2)).unwrap_or(-1.0)
+/// The track's peak level in a tick.
+fn level(t: &Tick, id: Id) -> f32 {
+    transport::levels(t, &[id]).0[0]
 }
 
 /// Plays from `from` (with the cycle kept inside the note, so no note starts on its own) and
-/// returns the level.
-fn play_from(s: &mut Session, id: u64, from: i64) -> f32 {
-    s.locate(from);
-    s.play();
-    std::thread::sleep(Duration::from_millis(60));
-    let lv = peak(s, id);
-    s.stop();
-    std::thread::sleep(Duration::from_millis(60));
-    lv
+/// returns the level: once it sounds, or one window's when `sound` isn't expected.
+fn play_from(s: &mut Session, id: Id, from: i64, sound: bool) -> f32 {
+    let (lv, _) = transport::measure(s, from, &[id], |lv, _| !sound || lv[0] > 0.01);
+    lv[0]
 }
 
 /// Plays from `away` (past every note: silent), then jumps to `to` while playing. Returns the
-/// level before and after the jump. The cycle is off meanwhile: the engine would wrap a playhead
+/// level before the jump, and after it: once it sounds, or one window's when `sound` isn't
+/// expected. The cycle is off meanwhile: the engine would wrap a playhead
 /// past its end straight back to its start.
-fn jump(s: &mut Session, id: u64, away: i64, to: i64) -> (f32, f32) {
+fn jump(s: &mut Session, id: Id, away: i64, to: i64, sound: bool) -> (f32, f32) {
     let c = s.project.cycle.clone();
     s.set_cycle(false, c.start, c.end);
-    s.locate(away);
-    s.play();
-    std::thread::sleep(Duration::from_millis(60));
-    let before = peak(s, id);
-    // The meters were just read: what they hold next is from the jump on (and silence before).
+    let before = level(&transport::play_window(s, away), id);
+    // The meters hold each strip's peak since the last tick, which `play_window` just read: from
+    // here on they hold the jump and what follows it.
     s.locate(to);
-    std::thread::sleep(Duration::from_millis(250));
-    let t = s.tick();
-    let after = t.meters.iter().find(|m| m.0 == id).map(|m| m.1.max(m.2)).unwrap_or(-1.0);
-    s.stop();
-    std::thread::sleep(Duration::from_millis(60));
+    let after = level(&transport::tick_until(s, |t| !sound || level(t, id) > 0.01), id);
+    transport::stop(s);
     s.set_cycle(c.enabled, c.start, c.end);
     (before, after)
 }
@@ -83,16 +72,16 @@ fn main() {
     let mid = bar + beat;
 
     check("chase is on by default", s.prefs.midi.chase_notes && s.prefs.midi.chase_controllers);
-    let lv = play_from(&mut s, inst, mid);
+    let lv = play_from(&mut s, inst, mid, true);
     check(&format!("starting inside a long note sounds ({lv:.3})"), lv > 0.01);
-    let (before, after) = jump(&mut s, inst, 6 * bar, mid);
+    let (before, after) = jump(&mut s, inst, 6 * bar, mid, true);
     check(&format!("past the note it is silent ({before:.4})"), before < 1e-4);
     check(&format!("jumping into the note sounds ({after:.3})"), after > 0.01);
 
     set_chase(&mut s, false, true);
-    let lv = play_from(&mut s, inst, mid);
+    let lv = play_from(&mut s, inst, mid, false);
     check(&format!("with Chase: Notes off it is silent ({lv:.4})"), lv < 1e-4);
-    let (_, after) = jump(&mut s, inst, 6 * bar, mid);
+    let (_, after) = jump(&mut s, inst, 6 * bar, mid, false);
     check(&format!("and a jump into the note is silent too ({after:.4})"), after < 1e-4);
     set_chase(&mut s, true, true);
 
@@ -112,10 +101,10 @@ fn main() {
     s.set_midi_content(vec![MidiContent { region: r, notes: beats, cc: quiet, start: None, length: None }]);
     // Off first: the synth keeps a controller value it was sent until something changes it.
     set_chase(&mut s, true, false);
-    let lv = play_from(&mut s, inst, bar);
+    let lv = play_from(&mut s, inst, bar, true);
     check(&format!("with Chase: Controllers off the notes play ({lv:.3})"), lv > 0.01);
     set_chase(&mut s, true, true);
-    let lv = play_from(&mut s, inst, bar);
+    let lv = play_from(&mut s, inst, bar, false);
     check(&format!("a chased expression of 0 silences ({lv:.4})"), lv < 1e-4);
 
     std::process::exit(FAILED.load(std::sync::atomic::Ordering::Relaxed) as i32);
