@@ -159,6 +159,12 @@ with Homebrew's coreutils), or a few lines of Perl where neither is installed, a
 Its output is in `<scratch>/<check>/output.log`. On macOS the engine runs on a silent stand-in
 device. Register a new check in the script's `CHECKS` list.
 
+That isolation doesn't reach the system's MIDI ports, which a session opens all of. A check that
+feeds MIDI in by hand (`inject_midi_from`, `send_midi`) calls
+`daw_engine::midi::leave_system_ports_alone()` first; otherwise a keyboard, or the virtual ports of
+a `surface_check` or `feedback_check` running at the same time (which need real ports), play into
+it too.
+
 - **Need real plug-ins, so run by hand:** `pdc_check` and `freeze_check` (ZaMaximX2),
   `onoff_vst_check` (ZaMaximX2, TONE3000), and the plug-in parts of `fx_check`,
   `automation_check` and `bounce_check`, which print `SKIP` without them.

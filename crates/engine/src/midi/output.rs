@@ -60,7 +60,7 @@ impl MidiOut {
     }
 
     fn port_names() -> Vec<String> {
-        if !super::SYSTEM_PORTS {
+        if !super::system_ports() {
             return Vec::new();
         }
         let Ok(out) = MidiOutput::new("Marbble") else { return Vec::new() };
@@ -137,7 +137,7 @@ impl MidiOut {
             gone
         };
         drop(gone);
-        if !super::SYSTEM_PORTS {
+        if !super::system_ports() {
             return;
         }
         let Ok(probe) = MidiOutput::new("Marbble") else { return };

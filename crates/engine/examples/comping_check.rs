@@ -94,6 +94,8 @@ fn wait_for(s: &Session, lo: i64, hi: i64) {
 }
 
 fn main() {
+    // MIDI comes in by hand here: none from the system's ports (a keyboard, another check's).
+    daw_engine::midi::leave_system_ports_alone();
     let scratch = PathBuf::from(std::env::args().nth(1).expect("scratch dir"));
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg, Vec::new());
