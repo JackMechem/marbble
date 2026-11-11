@@ -65,8 +65,9 @@ impl Session {
         (plugin, name)
     }
 
-    /// The message when tracks were left out (in `tick`). A recording stops, as the take now has a
-    /// gap; playback goes on.
+    /// The message when tracks were left out (in `tick`), naming every plug-in left since the
+    /// last one: several can stop in one block, as every instance of a plug-in that deadlocks
+    /// does. A recording stops, as the take now has a gap; playback goes on.
     pub(crate) fn check_left_out(&mut self) {
         let unlisted = self.status.held_unlisted();
         if unlisted != self.held_unlisted_seen {
@@ -84,14 +85,37 @@ impl Session {
         if recording {
             self.stop();
         }
-        let (plugin, track) = self.who(self.status.left_track.load(Ordering::Relaxed), self.status.left_plugin.load(Ordering::Relaxed));
-        let plugin = plugin.unwrap_or_else(|| "A plug-in".into());
-        log::warn!("{plugin} on \"{track}\" stopped responding: that track and what it feeds sit out");
+        let mut held: Vec<HeldStrip> = self.held().into_iter().filter(|h| h.token > self.left_token_seen).collect();
+        held.sort_by_key(|h| h.token);
+        self.left_token_seen = held.last().map_or(self.left_token_seen, |h| h.token);
+        let mut left: Vec<(Id, Id)> = held.iter().map(|h| (h.track, h.plugin)).collect();
+        // Back already: the engine still says which one it was.
+        if left.is_empty() {
+            left.push((self.status.left_track.load(Ordering::Relaxed), self.status.left_plugin.load(Ordering::Relaxed)));
+        }
+        let who: Vec<(String, String)> = left
+            .iter()
+            .map(|&(track, uid)| {
+                let (plugin, track) = self.who(track, uid);
+                let plugin = plugin.unwrap_or_else(|| "A plug-in".into());
+                log::warn!("{plugin} on \"{track}\" stopped responding: that track and what it feeds sit out");
+                (plugin, track)
+            })
+            .collect();
         let stopped = if recording { " Recording stopped." } else { "" };
         // Above an overload's message from the same moment, which says less.
-        self.warning = Some(format!(
-            "{plugin} on \"{track}\" stopped responding, so \"{track}\" and anything it feeds sit out while the rest plays on.{stopped} They come back if it responds again, or with Reset Audio Engine in Settings › Audio. Saving keeps the settings it had before it stopped."
-        ));
+        self.warning = Some(match &who[..] {
+            [(plugin, track)] => format!(
+                "{plugin} on \"{track}\" stopped responding, so \"{track}\" and anything it feeds sit out while the rest plays on.{stopped} They come back if it responds again, or with Reset Audio Engine in Settings › Audio. Saving keeps the settings it had before it stopped."
+            ),
+            _ => {
+                let names: Vec<String> = who.iter().map(|(plugin, track)| format!("{plugin} on \"{track}\"")).collect();
+                format!(
+                    "{} stopped responding, so their tracks and anything they feed sit out while the rest plays on.{stopped} They come back as each responds again, or with Reset Audio Engine in Settings › Audio. Saving keeps the settings they had before they stopped.",
+                    and_list(&names)
+                )
+            }
+        });
     }
 
     /// Brings back the tracks of plug-ins that responded again (in `idle`): the track gets a new
@@ -152,7 +176,7 @@ impl Session {
         if n == 0 {
             return None;
         }
-        let tracks = if n == 1 { "1 track is".to_string() } else { format!("{n} tracks are") };
+        let (tracks, them) = if n == 1 { ("1 track is".to_string(), "it") } else { (format!("{n} tracks are"), "they") };
         let after = match self.held().first() {
             Some(h) => {
                 let (plugin, track) = self.who(h.track, h.plugin);
@@ -161,7 +185,16 @@ impl Session {
             }
             None => String::new(),
         };
-        Some(format!("{tracks} sitting out{after}, so they'd be missing. Use Reset Audio Engine in Settings › Audio first."))
+        Some(format!("{tracks} sitting out{after}, so {them}'d be missing. Use Reset Audio Engine in Settings › Audio first."))
+    }
+}
+
+/// "a", "a and b", "a, b and c".
+fn and_list(items: &[String]) -> String {
+    match items {
+        [] => String::new(),
+        [one] => one.clone(),
+        [rest @ .., last] => format!("{} and {last}", rest.join(", ")),
     }
 }
 
@@ -203,6 +236,46 @@ mod tests {
     fn session() -> Session {
         let cfg = crate::audio_io::AudioConfig { host: Some("ALSA".into()), output: Some(NULL_OUTPUT.into()), input_enabled: false, ..Default::default() };
         Session::new(cfg, Vec::new())
+    }
+
+    /// Two plug-ins that stop in the same block are both named, not only the first (#428).
+    #[test]
+    fn plug_ins_left_in_one_block_are_all_named() {
+        let mut s = session();
+        // Ids apart from the engine's tests, as `test_hooks` goes by track id.
+        while s.project.alloc_id() < 200_000 {}
+        let mut add = || s.add_track(TrackKind::Audio, InputSel::None, None, None).unwrap();
+        let (first, a, b) = (add(), add(), add());
+        // The caller waits in the first track's strip until the two workers have the others, so
+        // both are held up in the same block.
+        test_hooks::gate(first, &[a, b]);
+        let hold = Arc::new(AtomicBool::new(true));
+        let rate = s.sample_rate() as f32;
+        s.insert_for_checks(a, 7, tar_for_checks(888_881, rate, hold.clone()));
+        s.insert_for_checks(b, 7, tar_for_checks(888_882, rate, hold.clone()));
+        s.set_threads_for_checks(3, ParallelTest { always: true, renders: false, patient: false });
+        s.play();
+        let engine = s.engine_for_checks();
+        {
+            let mut e = engine.lock();
+            let mut out = vec![0.0f32; 512];
+            let started = Instant::now();
+            while s.held().len() < 2 || e.stalled_for_tests() {
+                assert!(started.elapsed().as_secs() < 20, "the two weren't left in a block: {:?}", s.held());
+                e.process(&[], 0, &mut out, 2);
+            }
+        }
+        s.check_left_out();
+        let names = |id: Id| s.project.track(id).unwrap().name.clone();
+        let said = s.warning.clone().unwrap_or_default();
+        assert!(said.contains(&format!("\"{}\" and", names(a))) && said.contains(&format!("\"{}\" stopped", names(b))), "{said}");
+        assert!(said.contains("their tracks"), "{said}");
+        // Said once.
+        s.warning = None;
+        s.check_left_out();
+        assert_eq!(s.warning, None);
+        test_hooks::gate(first, &[]);
+        hold.store(false, Ordering::SeqCst);
     }
 
     /// A render that starts while a block given up on is still open, with a worker left in a
