@@ -138,10 +138,18 @@ fn changes_while_playing_fade_without_clicks() {
     }
     e.set_param(freq(4), f);
     e.set_param(gain(4), 12.0);
-    // Give the worker time between blocks, as real time would.
-    for _ in 0..60 {
+    // Play on, giving the worker time between blocks as real time would, until the convolver
+    // has faded to its kernel. How soon the worker runs is up to a loaded machine's scheduler
+    // (a fixed 60 blocks wasn't always enough), so this waits for the kernel, not a set time.
+    let deadline = Instant::now() + Duration::from_secs(20);
+    while e.stale() || e.conv.changing() {
+        assert!(Instant::now() < deadline, "the worker's kernel never arrived");
         block(&mut e, &mut out);
         std::thread::sleep(Duration::from_millis(2));
+    }
+    // Then the new kernel alone, for longer than the stretch measured below.
+    for _ in 0..10 {
+        block(&mut e, &mut out);
     }
     let end_peak = out[out.len() - 2000..].iter().fold(0.0f32, |m, x| m.max(x.abs()));
     assert!((end_peak / amp - 4.0).abs() < 0.1, "the boost arrived: peak {end_peak}");
