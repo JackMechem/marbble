@@ -60,6 +60,9 @@ impl MidiOut {
     }
 
     fn port_names() -> Vec<String> {
+        if !super::SYSTEM_PORTS {
+            return Vec::new();
+        }
         let Ok(out) = MidiOutput::new("Marbble") else { return Vec::new() };
         out.ports().iter().filter_map(|p| out.port_name(p).ok()).filter(|n| listed_port(n)).collect()
     }
@@ -134,6 +137,9 @@ impl MidiOut {
             gone
         };
         drop(gone);
+        if !super::SYSTEM_PORTS {
+            return;
+        }
         let Ok(probe) = MidiOutput::new("Marbble") else { return };
         for port in probe.ports() {
             let Ok(name) = probe.port_name(&port) else { continue };
