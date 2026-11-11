@@ -811,6 +811,7 @@ dependencies = [
  "hound",
  "libc",
  "log",
+ "mach2 0.6.0",
  "midir",
  "parking_lot",
  "realfft",

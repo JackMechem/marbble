@@ -745,7 +745,7 @@ fn a_real_time_worker_given_up_on_is_demoted_before_the_kernel_kills_it() {
         eprintln!("skipped: this system doesn't grant real-time priority ({:?})", p.health().refusal());
         return;
     }
-    let tid = p.shared.workers[0].tid.load(Ordering::SeqCst);
+    let tid = p.shared.workers[0].os_thread.load(Ordering::SeqCst) as i32;
     // SAFETY: a plain query about a thread of this process.
     let policy = || unsafe { libc::sched_getscheduler(tid) } & !SCHED_RESET_ON_FORK;
     assert_ne!(policy(), libc::SCHED_OTHER, "promoted");
@@ -770,4 +770,66 @@ fn a_real_time_worker_given_up_on_is_demoted_before_the_kernel_kills_it() {
         thread::sleep(Duration::from_millis(1));
     }
     assert_eq!(p.health().report().stuck, 1);
+}
+
+/// The macOS twin: the worker gets a Mach time-constraint policy, and loses it when the caller
+/// gives up on it. (A time-constraint thread that never yields isn't killed there, but it would
+/// hold a core at real-time priority until the scheduler's fail-safe caught it.)
+#[cfg(target_os = "macos")]
+#[test]
+fn a_real_time_worker_given_up_on_is_demoted() {
+    use mach2::thread_policy::{
+        thread_policy_get, thread_policy_t, thread_time_constraint_policy_data_t, THREAD_TIME_CONSTRAINT_POLICY, THREAD_TIME_CONSTRAINT_POLICY_COUNT,
+    };
+    let p = Pool::new(PoolOptions { threads: 2, realtime: Some((512, 48000)), ..Default::default() });
+    let r = started(&p);
+    assert_eq!(r.realtime, 1, "refused: {:?}", p.health().refusal());
+    let port = p.shared.workers[0].os_thread.load(Ordering::SeqCst);
+    assert_ne!(port, 0);
+    // The thread's time-constraint policy, or None while it has the default (none).
+    let policy = || {
+        let mut info = thread_time_constraint_policy_data_t { period: 0, computation: 0, constraint: 0, preemptible: 0 };
+        let mut count = THREAD_TIME_CONSTRAINT_POLICY_COUNT;
+        let mut default = 0;
+        // SAFETY: a query about a thread of this process, into a struct of the size given.
+        let r = unsafe { thread_policy_get(port, THREAD_TIME_CONSTRAINT_POLICY, &mut info as *mut _ as thread_policy_t, &mut count, &mut default) };
+        assert_eq!(r, 0);
+        (default == 0).then_some(info)
+    };
+    let want = super::thread_setup::macos::constraint_for(512, 48000).unwrap();
+    let got = policy().expect("promoted");
+    assert_eq!((got.period, got.computation, got.constraint), (want.period, want.computation, want.constraint));
+    let g = TaskGraph::new((0..64).collect(), &[], |_| true).unwrap();
+    let job = Arc::new(Spinner { spin: AtomicBool::new(true), on: AtomicUsize::new(0) });
+    let ptr: *const Spinner = Arc::as_ptr(&job);
+    let mut stuck = false;
+    for _ in 0..200 {
+        unsafe { p.start(&g, ptr) };
+        if !p.finish(Some(Duration::from_millis(40))) {
+            stuck = true;
+            break;
+        }
+    }
+    assert!(stuck, "the worker never got a task");
+    assert_eq!(p.retire_stuck(), 1);
+    assert!(policy().is_none(), "demoted");
+    job.spin.store(false, Ordering::Relaxed);
+    while !p.is_done() {
+        thread::sleep(Duration::from_millis(1));
+    }
+    assert_eq!(p.health().report().stuck, 1);
+}
+
+#[cfg(target_os = "macos")]
+#[test]
+fn the_scheduler_accepts_the_time_constraint_for_every_buffer() {
+    use super::thread_setup::macos::constraint_for;
+    for (frames, rate) in [(16, 192000), (32, 44100), (512, 48000), (2048, 44100), (8192, 8000), (0, 0)] {
+        let c = constraint_for(frames, rate).unwrap();
+        assert!(c.computation > 0 && c.computation <= c.constraint && c.constraint >= c.period, "{frames}@{rate}: {c:?}");
+        assert_eq!(c.preemptible, 1);
+        // And the scheduler takes it, on a thread of its own.
+        let granted = thread::spawn(move || super::thread_setup::macos::promote(frames, rate)).join().unwrap();
+        assert_eq!(granted, Ok(()), "{frames}@{rate}");
+    }
 }

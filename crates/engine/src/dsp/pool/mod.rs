@@ -35,11 +35,11 @@ mod call;
 use call::{phase, GONE, LEFT};
 pub use call::{Call, Job};
 mod thread_setup;
-use thread_setup::{demote, promote, touch_stack};
+use thread_setup::{demote, os_thread, promote, touch_stack};
 
 use std::cell::{Cell, UnsafeCell};
 use std::panic::{catch_unwind, AssertUnwindSafe};
-use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU32, AtomicU64, AtomicU8, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, AtomicU8, Ordering};
 use std::sync::{Arc, OnceLock};
 use std::thread::{self, JoinHandle, Thread};
 use std::time::{Duration, Instant};
@@ -158,8 +158,8 @@ struct Slot {
     busy: AtomicBool,
     /// Granted real-time priority, so a demotion is due if it gets stuck.
     realtime: AtomicBool,
-    /// The kernel's id for the thread, to demote it from another (Linux).
-    tid: AtomicI32,
+    /// The system's id for the thread, to demote it from another (`thread_setup::os_thread`).
+    os_thread: AtomicU32,
     /// The block it was retired in (`Shared::block`).
     retired_in: AtomicU32,
     /// The task it took last.
@@ -348,7 +348,7 @@ impl Pool {
                     state: AtomicU8::new(STARTING),
                     busy: AtomicBool::new(false),
                     realtime: AtomicBool::new(false),
-                    tid: AtomicI32::new(0),
+                    os_thread: AtomicU32::new(0),
                     retired_in: AtomicU32::new(0),
                     task: AtomicU32::new(0),
                 })
@@ -418,7 +418,7 @@ impl Pool {
     /// then goes into a plug-in that doesn't return, a later call here leaves it after all.
     ///
     /// On the audio thread, with `graph` the open block's: allocates nothing and takes no lock, and
-    /// makes one `sched_setscheduler` call per real-time worker it demotes.
+    /// makes one system call (`thread_setup::demote`) per real-time worker it demotes.
     pub fn abandon(&self, graph: &TaskGraph, least: Duration, mut left: impl FnMut(usize, usize, u64)) -> u32 {
         let sh = &*self.shared;
         let block = sh.block.load(Ordering::Relaxed);
@@ -440,7 +440,7 @@ impl Pool {
                 h.active.fetch_sub(1, Ordering::Relaxed);
                 h.stuck.fetch_add(1, Ordering::Relaxed);
                 if w.realtime.load(Ordering::Relaxed) {
-                    demote(w.tid.load(Ordering::Relaxed));
+                    demote(w.os_thread.load(Ordering::Relaxed));
                 }
             }
             // Stored before the claim's task ran, so before the call it's in.
@@ -490,8 +490,8 @@ impl Pool {
     /// open: once out of its task the worker helps finish it (the caller has gone, and there may be
     /// no other worker), then ends. The other workers play on. Returns how many it retired.
     ///
-    /// On the audio thread: allocates nothing and takes no lock, and makes one `sched_setscheduler`
-    /// call per real-time worker it demotes, only ever here.
+    /// On the audio thread: allocates nothing and takes no lock, and makes one system call
+    /// (`thread_setup::demote`) per real-time worker it demotes, only ever here.
     pub fn retire_stuck(&self) -> u32 {
         let mut n = 0;
         let block = self.shared.block.load(Ordering::Relaxed);
@@ -507,7 +507,7 @@ impl Pool {
             h.active.fetch_sub(1, Ordering::Relaxed);
             h.stuck.fetch_add(1, Ordering::Relaxed);
             if w.realtime.load(Ordering::Relaxed) {
-                demote(w.tid.load(Ordering::Relaxed));
+                demote(w.os_thread.load(Ordering::Relaxed));
             }
             n += 1;
         }
@@ -632,9 +632,7 @@ impl Drop for Pool {
 fn worker(sh: Arc<Shared>, index: usize, opts: PoolOptions) {
     let slot = &sh.workers[index - 1];
     let _ = slot.thread.set(thread::current());
-    #[cfg(target_os = "linux")]
-    // SAFETY: a plain system call about this thread.
-    slot.tid.store(unsafe { libc::gettid() }, Ordering::Relaxed);
+    slot.os_thread.store(os_thread(), Ordering::Relaxed);
     let fit = promote(&sh, index, &opts);
     if !fit {
         slot.state.store(LEFT_OUT, Ordering::Relaxed);

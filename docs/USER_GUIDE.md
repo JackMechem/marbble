@@ -155,10 +155,10 @@ click outside) drops them. The delay compensation options on the same tab apply 
   **Automatic** (the default) adds threads only when a project needs them. **1** keeps everything
   on the audio thread, to rule threads out if you suspect them. The output is identical whatever
   you choose, and a change applies without restarting audio. Bounces and other renders always
-  use one thread. On macOS and Windows, Automatic stays on one thread for now (only Linux gives
-  the extra threads real-time priority so far). On Linux, a thread the system refuses real-time
-  priority (rtkit not running, or its limits reached) is left out, and a note under the setting
-  says so.
+  use one thread. On macOS and Windows, Automatic stays on one thread for now; on Linux and macOS
+  the extra threads you choose get real-time priority, as the audio thread does (not yet on
+  Windows). A thread the system refuses real-time priority (on Linux, rtkit not running or its
+  limits reached) is left out, and a note under the setting says so.
 - **Reset Audio Engine** closes and reopens the devices, for example after replugging an
   interface.
 

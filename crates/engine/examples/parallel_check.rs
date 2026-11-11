@@ -450,8 +450,10 @@ fn wait_for_workers(s: &Session) {
     }
 }
 
-/// Real-time workers, where the system grants it (rtkit): blocks back to back with nothing else
-/// letting them sleep. The kernel's 200 ms limit would SIGKILL this process if they never did.
+/// Real-time workers, where the system grants it (rtkit, or Mach's time-constraint policy on
+/// macOS): blocks back to back with nothing else letting them sleep. On Linux the kernel's 200 ms
+/// limit would SIGKILL this process if they never did; on macOS the scheduler's fail-safe would
+/// demote them.
 fn realtime_workers(scratch: &Path) {
     let mut s = session(scratch);
     let _e = build(&mut s, &scratch.join("rt"));
@@ -459,7 +461,7 @@ fn realtime_workers(scratch: &Path) {
     s.start_workers_for_checks(PoolOptions { threads: 3, realtime: Some((512, RATE)), ..Default::default() });
     s.idle();
     std::thread::sleep(std::time::Duration::from_millis(200));
-    let granted = rt_threads();
+    let granted = rt_threads(&s);
     let engine = s.engine_for_checks();
     let mut guard = engine.lock();
     s.locate(0);
@@ -481,7 +483,15 @@ fn realtime_workers(scratch: &Path) {
     }
 }
 
-fn rt_threads() -> usize {
+/// Workers running real time: as the kernel sees them on Linux, as the pool was granted it on macOS
+/// (whose unit tests read the policy back with `thread_policy_get`).
+#[cfg(not(target_os = "linux"))]
+fn rt_threads(s: &Session) -> usize {
+    s.threads_health_for_checks().map_or(0, |r| r.realtime as usize)
+}
+
+#[cfg(target_os = "linux")]
+fn rt_threads(_: &Session) -> usize {
     let Ok(dir) = std::fs::read_dir("/proc/self/task") else { return 0 };
     dir.flatten()
         .filter(|d| std::fs::read_to_string(d.path().join("comm")).is_ok_and(|c| c.starts_with("marbble-dsp")))

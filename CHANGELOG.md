@@ -6,6 +6,12 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **Real-time processing threads on macOS.** Choosing more than one processing thread in
+  Settings › Audio on macOS now gives the extra threads real-time priority, as the audio thread
+  has, so they keep up when the system is busy (Automatic still uses one thread there for now).
+
 ### Fixed
 
 - **A plug-in that stopped responding no longer freezes Marbble on macOS** when its window is
