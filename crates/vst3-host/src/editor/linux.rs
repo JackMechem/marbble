@@ -125,6 +125,8 @@ struct Window {
     conn: RustConnection,
     id: u32,
     size: Mutex<(u32, u32)>,
+    /// The window size the view last heard (`onSize`), which `size` moves past while quiet.
+    heard: Mutex<(u32, u32)>,
     /// The view said it can be resized by the user; otherwise the WM hints pin its size.
     resizable: bool,
     /// The plug-in mustn't be called for now (`Editor::set_quiet`).
@@ -179,6 +181,7 @@ impl IPlugFrameTrait for PlugFrame {
         let r = *new_size;
         let (w, h) = ((r.right - r.left).max(1) as u32, (r.bottom - r.top).max(1) as u32);
         *self.window.size.lock() = (w, h);
+        *self.window.heard.lock() = (w, h);
         // A fixed-size editor's hints hold it at its old size; move them along, or the WM
         // refuses the new one.
         if !self.window.resizable {
@@ -369,7 +372,8 @@ impl Editor {
             let _ = conn.change_property8(PropMode::REPLACE, id, AtomEnum::WM_NAME, AtomEnum::STRING, title.as_bytes());
             let _ = conn.change_property8(PropMode::REPLACE, id, net_wm_name, utf8, title.as_bytes());
             let _ = conn.change_property8(PropMode::REPLACE, id, AtomEnum::WM_CLASS, AtomEnum::STRING, b"marbble-plugin\0Marbble\0");
-            let window = Arc::new(Window { conn, id, size: Mutex::new((w as u32, h as u32)), resizable, quiet: AtomicBool::new(false) });
+            let size = (w as u32, h as u32);
+            let window = Arc::new(Window { conn, id, size: Mutex::new(size), heard: Mutex::new(size), resizable, quiet: AtomicBool::new(false) });
             if resizable {
                 // WM_NORMAL_HINTS: just PPosition.
                 let hints: [u32; 18] = [4, x as u32, y as u32, w as u32, h as u32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -420,9 +424,14 @@ impl Editor {
     }
 
     /// While `on`, nothing of the host's calls into the plug-in: a resize isn't passed on, and its
-    /// timers don't fire. Its own event handlers still do, as their sockets must be read.
+    /// timers don't fire. Its own event handlers still do, as their sockets must be read. When
+    /// quiet ends, a resizable view hears the size the window took meanwhile. On the main thread.
     pub fn set_quiet(&self, on: bool) {
-        self.window.quiet.store(on, Ordering::Relaxed);
+        let was = self.window.quiet.swap(on, Ordering::Relaxed);
+        if was && !on && self.resizable {
+            let now = *self.window.size.lock();
+            tell_size(&self.window, &self.view, now);
+        }
     }
 
     /// Takes the window off the screen, without a word to the plug-in.
@@ -461,18 +470,13 @@ fn drain_events(win: &Window, wm_delete: u32, closed: &AtomicBool, view: Option<
                 closed.store(true, Ordering::Relaxed);
             }
             XEvent::ConfigureNotify(e) if e.window == win.id => {
-                let (w, h) = (e.width as u32, e.height as u32);
+                let now = (e.width as u32, e.height as u32);
                 let mut size = win.size.lock();
-                if *size != (w, h) {
-                    *size = (w, h);
+                if *size != now {
+                    *size = now;
                     drop(size);
                     if let Some(v) = view {
-                        let mut r = ViewRect { left: 0, top: 0, right: w as i32, bottom: h as i32 };
-                        gl_isolated(|| unsafe {
-                            if v.checkSizeConstraint(&mut r) == kResultOk {
-                                v.onSize(&mut r);
-                            }
-                        });
+                        tell_size(win, v, now);
                     }
                 }
             }
@@ -481,12 +485,37 @@ fn drain_events(win: &Window, wm_delete: u32, closed: &AtomicBool, view: Option<
     }
 }
 
+/// Tells a resizable view the window's size is now `now`, within its constraints, unless it
+/// already knows.
+fn tell_size(win: &Window, v: &ComPtr<IPlugView>, now: (u32, u32)) {
+    let Some(mut r) = size_change(*win.heard.lock(), now) else { return };
+    gl_isolated(|| unsafe {
+        if v.checkSizeConstraint(&mut r) == kResultOk {
+            *win.heard.lock() = now;
+            v.onSize(&mut r);
+        }
+    });
+}
+
+/// The rect to pass to `onSize` when the window is `now` and the view last heard `heard`; None if
+/// it already knows.
+fn size_change(heard: (u32, u32), now: (u32, u32)) -> Option<ViewRect> {
+    (heard != now).then_some(ViewRect { left: 0, top: 0, right: now.0 as i32, bottom: now.1 as i32 })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::sync::atomic::AtomicU32;
 
     static RELEASES: AtomicU32 = AtomicU32::new(0);
+
+    #[test]
+    fn size_change_only_for_a_new_size() {
+        assert!(size_change((300, 200), (300, 200)).is_none());
+        let r = size_change((300, 200), (420, 260)).unwrap();
+        assert_eq!((r.left, r.top, r.right, r.bottom), (0, 0, 420, 260));
+    }
 
     #[test]
     fn gl_isolation_releases_once_per_outermost_call() {

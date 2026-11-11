@@ -45,6 +45,8 @@ All notable changes to Marbble are recorded here. The format follows
 - **No click when a device delivers very large buffers.** A buffer of more than 8192 frames no
   longer makes the audio thread allocate memory, which could cause a dropout as it arrived; it now
   plays a block at a time like any other.
+- **Linux: a plug-in window resized while its plug-in wasn't responding** is redrawn at the right
+  size once the plug-in recovers, instead of at its old size until the next resize.
 
 ## [0.1.0-alpha.14] - 2026-11-10
 
