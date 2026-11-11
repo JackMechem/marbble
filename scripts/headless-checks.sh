@@ -15,7 +15,8 @@
 # Elsewhere (macOS) the engine stands in for that device with a silent thread of its own.
 set -euo pipefail
 
-# Each check and its arguments: "tone" is the test tone, "dir" its scratch folder.
+# Each check and its arguments: "tone" is the test tone, "dir" its scratch folder, anything else
+# is passed as it is.
 CHECKS=(
   "stack_check tone dir"
   "loop_check tone dir"
@@ -67,6 +68,8 @@ CHECKS=(
   "multiout_freeze_check dir"
   "vst_undo_check tone dir"
   "memlock_check dir"
+  # Only that the stress check runs: a small project, briefly, on the null device.
+  "stress_check --null --tracks 8 --audio 2 --buffers 256 --threads 1,2 --seconds 2 --warmup 1 dir"
 )
 # A check that hangs (a transport that never stops, say) fails instead of stalling CI.
 TIMEOUT=${HEADLESS_CHECK_TIMEOUT:-600}
@@ -148,6 +151,7 @@ for entry in "${CHECKS[@]}"; do
     case $a in
       tone) argv+=("$tone") ;;
       dir) argv+=("$dir") ;;
+      *) argv+=("$a") ;;
     esac
   done
   echo

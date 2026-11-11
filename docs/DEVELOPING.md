@@ -177,6 +177,23 @@ device. Register a new check in the script's `CHECKS` list.
 - **Read, not checked:** `undo_check` and `import_check` print what they did.
 - **Benches** (run with `--release`): `fx_bench`, `instrument_bench`, `sampler_bench`,
   `parallel_bench`.
+- **The stress check** (run with `--release`): `stress_check` plays one seeded heavy project
+  (32 instrument and 8 audio tracks of built-in instruments and effects, summing stacks, two aux
+  returns; no plug-ins or sample files) on the real default output, never an input, at each
+  buffer size and thread count, 20 s each, and prints per configuration the late blocks, the
+  device gaps (callbacks that came after the previous one's audio ran out), the System Overloads
+  and the blocks' p50 / p99 / max load in % of their deadline. Thread counts are always given,
+  never Automatic. `--json` writes the results; `--max-overloads`, `--max-gaps`, `--max-p99` or
+  `--baseline` an earlier JSON make it a gate that exits 1. Measure on a quiet machine, before and
+  after a change to the engine's hot paths or the worker pool:
+
+  ```sh
+  cargo run --release -p daw-engine --example stress_check -- --json before.json
+  cargo run --release -p daw-engine --example stress_check -- --baseline before.json --buffers 128,256 --threads 1,4
+  ```
+
+  The options are at the top of the file. The script runs it briefly on the null device
+  (`--null`), only to see that it runs: with no clock there, its loads mean little.
 - **Tools:** `test_tone`, `demo_project`, `showcase_project` (the website's screenshots), `hosts`
   (audio devices), `input_level`, `smoke` (records from the real default input).
 - `crates/vst3-host/examples/`: `probe` scans and runs installed plug-ins; `editor` opens one

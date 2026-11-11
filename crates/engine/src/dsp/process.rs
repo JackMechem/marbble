@@ -184,6 +184,7 @@ impl Engine {
     /// of late blocks.
     fn note_block_load(&mut self, load: f32, budget: f64) {
         self.block_load.block(load, budget);
+        self.status.block_loads.add(load);
         self.status.cpu_peak.store(self.block_load.peak.to_bits(), Ordering::Relaxed);
         self.status.late_blocks.store(self.block_load.late, Ordering::Relaxed);
     }
