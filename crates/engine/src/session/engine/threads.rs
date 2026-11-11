@@ -175,12 +175,18 @@ impl Session {
     }
 
     /// For checks: sets the setting and routes blocks through the pool as `test` says (see
-    /// [`ParallelTest`]), and takes effect by the next block.
+    /// [`ParallelTest`]), and takes effect by the next block. A patient `test` is in effect when
+    /// this returns, and an overload the engine reported before it (a check's first blocks on a
+    /// loaded machine) is forgotten, so the next [`Session::tick`] doesn't stop a transport for it.
     pub fn set_threads_for_checks(&mut self, threads: u32, test: ParallelTest) {
         self.audio_config.processing_threads = threads;
         self.threads.test = test;
         self.send(Cmd::ParallelTest(test));
         self.graph_dirty = true;
         self.sync_parallel();
+        if test.patient {
+            self.wait_for_engine();
+            self.overloads_seen = self.status.overloads.load(Ordering::Relaxed);
+        }
     }
 }

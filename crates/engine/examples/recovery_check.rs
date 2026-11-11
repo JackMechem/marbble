@@ -17,6 +17,7 @@ use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
 use daw_engine::audio_io::AudioConfig;
+use daw_engine::dsp::ParallelTest;
 use daw_engine::model::{Id, InputSel, Project, RegionContent, TrackKind};
 use daw_engine::prefs::BitDepth;
 use daw_engine::session::{recording_journals, recovery_info, TrackPatch, AUTOSAVE_FILE};
@@ -38,6 +39,10 @@ fn session(dir: &Path) -> Session {
     // Only the immediate autosaves should happen during the check.
     s.prefs.general.autosave_minutes = 10;
     s.set_count_in(false);
+    // The null device runs flat out, so on a loaded machine (a CI runner) blocks can run late
+    // for long enough to count as an overload, and the next `tick()` would stop the recording
+    // (#289). Patient, the engine never sheds or stops for time: the check is about recovery.
+    s.set_threads_for_checks(1, ParallelTest { patient: true, ..Default::default() });
     s
 }
 
