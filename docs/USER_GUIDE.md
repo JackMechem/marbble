@@ -3438,7 +3438,7 @@ per project, in [Project Settings › Metronome](#metronome).
 **Updates.** With Check for updates at launch on, Marbble asks GitHub once per launch for its
 list of releases (`api.github.com/repos/JackMechem/marbble/releases`). The request says nothing
 about your projects or settings; GitHub sees your IP address, as with any web page. When a newer
-version is out on your channel, a notice at the bottom right says so ("Marbble 0.1.0-alpha.15 is
+version is out on your channel, a notice at the bottom right says so ("Marbble 0.1.0-alpha.16 is
 out"): **View Release** opens its release page in your browser, where you download it yourself,
 and **Later** hides the notice until the next launch. The notice never takes the keyboard and
 waits while you record. Marbble never downloads or installs anything, and when GitHub can't be

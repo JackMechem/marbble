@@ -6,6 +6,8 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0-alpha.15] - 2026-11-11
+
 ### Added
 
 - **The input level check on macOS.** Settings › Audio, and a notice at launch, now warn on macOS
@@ -1341,7 +1343,8 @@ The first prerelease. Everything below is new.
 - The `takes_check` headless check "autopunch trims the take" fails about one run in five,
   from the null audio device's timing.
 
-[Unreleased]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.14...HEAD
+[Unreleased]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.15...HEAD
+[0.1.0-alpha.15]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.14...v0.1.0-alpha.15
 [0.1.0-alpha.14]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.13...v0.1.0-alpha.14
 [0.1.0-alpha.13]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.12...v0.1.0-alpha.13
 [0.1.0-alpha.12]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.11...v0.1.0-alpha.12
