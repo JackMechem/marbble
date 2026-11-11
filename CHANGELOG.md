@@ -6,6 +6,13 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **Switching outputs a few times in a row no longer stops audio from following.** The automatic
+  restart when the output changes gave up after three restarts in 30 seconds, even ones that
+  worked, and then stayed on the old device's settings until Reset Audio Engine. Now only
+  restarts that fail, or after which the device drops out again within seconds, count.
+
 ## [0.1.0-alpha.15] - 2026-11-11
 
 ### Added
