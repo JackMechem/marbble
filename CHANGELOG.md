@@ -16,6 +16,10 @@ All notable changes to Marbble are recorded here. The format follows
   another output in Control Center while recording with the output on System Default stopped the
   recording, though the input never changed. The take now carries on, and the audio restarts on
   the new output once you stop.
+- **Save As opens next to the project, with its name filled in.** It opened inside the project's
+  own folder with no name, so saving there put one project inside another; that happened every
+  time for a project never saved, once it had autosaved.
+- **A project name with a dot in it keeps all of it.** Saving as "Mix v1.2" made "Mix v1.marbble".
 - **Removing a side-chained plug-in no longer puts every track on one thread.** Taking out a
   plug-in with a side-chain key, or loading another in its slot, left the engine playing the
   tracks in the old order, so with more than one processing thread every buffer was played on

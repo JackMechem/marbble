@@ -22,12 +22,16 @@ pub fn is_project(path: &Path) -> bool {
     path.extension().is_some_and(|e| e == EXT || e == OLD_EXT)
 }
 
-/// `path` as a project folder: kept as it is when it already is one, given `.marbble` otherwise.
+/// `path` as a project folder: kept as it is when it already is one, given `.marbble` otherwise
+/// (added, so a name with a dot in it, "Mix v1.2", keeps all of it).
 pub fn project_path(path: PathBuf) -> PathBuf {
     if is_project(&path) {
         path
     } else {
-        path.with_extension(EXT)
+        let mut named = path.into_os_string();
+        named.push(".");
+        named.push(EXT);
+        PathBuf::from(named)
     }
 }
 
@@ -178,6 +182,7 @@ mod tests {
         assert_eq!(project_path(PathBuf::from("/m/Song.fermata")), PathBuf::from("/m/Song.fermata"));
         assert_eq!(project_path(PathBuf::from("/m/Song.marbble")), PathBuf::from("/m/Song.marbble"));
         assert_eq!(project_path(PathBuf::from("/m/Song")), PathBuf::from("/m/Song.marbble"));
+        assert_eq!(project_path(PathBuf::from("/m/Mix v1.2")), PathBuf::from("/m/Mix v1.2.marbble"));
         assert!(!is_project(Path::new("/m/Song.wav")));
     }
 
