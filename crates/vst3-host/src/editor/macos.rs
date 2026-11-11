@@ -62,6 +62,28 @@ struct DelegateIvars {
     closed: Cell<bool>,
     /// `close` has started; late window callbacks leave the view alone.
     detached: Cell<bool>,
+    /// The plug-in mustn't be called for now (`Editor::set_quiet`): the window still resizes,
+    /// but the view isn't asked about it or told, and `size` stays what it last heard.
+    quiet: AtomicBool,
+}
+
+impl DelegateIvars {
+    /// Whether a window callback may call into the view.
+    fn may_call(&self) -> bool {
+        !self.detached.get() && !self.quiet.load(Ordering::Relaxed)
+    }
+}
+
+/// The rect to pass to `onSize` when the window's content is `now` (points, rounded) and the view
+/// last heard `seen`; None if it already knows.
+fn size_change(seen: (f64, f64), now: (f64, f64)) -> Option<ViewRect> {
+    (seen != now).then_some(ViewRect { left: 0, top: 0, right: now.0 as i32, bottom: now.1 as i32 })
+}
+
+/// The window's content size, in whole points.
+fn content_size(window: &NSWindow) -> (f64, f64) {
+    let s = window.contentRectForFrameRect(window.frame()).size;
+    (s.width.round(), s.height.round())
 }
 
 define_class!(
@@ -86,7 +108,7 @@ define_class!(
         #[unsafe(method(windowWillResize:toSize:))]
         fn window_will_resize(&self, sender: &NSWindow, frame_size: NSSize) -> NSSize {
             let iv = self.ivars();
-            if iv.detached.get() || !iv.resizable {
+            if !iv.may_call() || !iv.resizable {
                 return frame_size;
             }
             let content = sender.contentRectForFrameRect(NSRect::new(NSPoint::new(0.0, 0.0), frame_size)).size;
@@ -103,17 +125,13 @@ define_class!(
         #[unsafe(method(windowDidResize:))]
         fn window_did_resize(&self, n: &NSNotification) {
             let iv = self.ivars();
-            if iv.detached.get() || !iv.resizable {
+            if !iv.may_call() || !iv.resizable {
                 return;
             }
             let Some(window) = n.object().and_then(|o| o.downcast::<NSWindow>().ok()) else { return };
-            let s = window.contentRectForFrameRect(window.frame()).size;
-            let size = (s.width.round(), s.height.round());
-            if iv.size.get() == size {
-                return;
-            }
+            let size = content_size(&window);
+            let Some(mut r) = size_change(iv.size.get(), size) else { return };
             iv.size.set(size);
-            let mut r = ViewRect { left: 0, top: 0, right: size.0 as i32, bottom: size.1 as i32 };
             unsafe {
                 iv.view.onSize(&mut r);
             }
@@ -129,19 +147,49 @@ impl WindowDelegate {
 }
 
 /// Resizes the window's content to `r`, keeping its top-left corner where it is (Cocoa frames
-/// grow from the bottom-left), then calls `onSize`.
+/// grow from the bottom-left), then calls `onSize`. While quiet the window still resizes, and the
+/// view hears about it when quiet ends (`catch_up`).
 fn apply_resize(window: &NSWindow, delegate: &WindowDelegate, view: &ComPtr<IPlugView>, mut r: ViewRect) {
-    if delegate.ivars().detached.get() {
+    let iv = delegate.ivars();
+    if iv.detached.get() {
         return;
     }
+    let quiet = iv.quiet.load(Ordering::Relaxed);
     let (w, h) = ((r.right - r.left).max(1) as f64, (r.bottom - r.top).max(1) as f64);
-    delegate.ivars().size.set((w, h));
+    if !quiet {
+        iv.size.set((w, h));
+    }
     let old = window.frame();
     let mut frame = window.frameRectForContentRect(NSRect::new(old.origin, NSSize::new(w, h)));
     frame.origin.y = old.origin.y + old.size.height - frame.size.height;
     window.setFrame_display(frame, true);
+    if !quiet {
+        unsafe {
+            view.onSize(&mut r);
+        }
+    }
+}
+
+/// Once quiet ends, tells the view the size the window took meanwhile (by the user, or by a
+/// `resizeView` while quiet), within its constraints for a user-resizable one.
+fn catch_up(window: &NSWindow, delegate: &WindowDelegate) {
+    let iv = delegate.ivars();
+    if !iv.may_call() {
+        return;
+    }
+    let Some(mut r) = size_change(iv.size.get(), content_size(window)) else { return };
     unsafe {
-        view.onSize(&mut r);
+        if iv.resizable && iv.view.checkSizeConstraint(&mut r) == kResultOk {
+            let c = ((r.right - r.left).max(1) as f64, (r.bottom - r.top).max(1) as f64);
+            if c != content_size(window) {
+                // `apply_resize` records the size and calls `onSize`; the window callbacks it
+                // causes see the size already known.
+                apply_resize(window, delegate, &iv.view, r);
+                return;
+            }
+        }
+        iv.size.set(content_size(window));
+        iv.view.onSize(&mut r);
     }
 }
 
@@ -220,7 +268,14 @@ impl Editor {
             let content = window.contentView().ok_or("editor window has no content view")?;
             let delegate = WindowDelegate::new(
                 mtm,
-                DelegateIvars { view: view.clone(), resizable, size: Cell::new((w, h)), closed: Cell::new(false), detached: Cell::new(false) },
+                DelegateIvars {
+                    view: view.clone(),
+                    resizable,
+                    size: Cell::new((w, h)),
+                    closed: Cell::new(false),
+                    detached: Cell::new(false),
+                    quiet: AtomicBool::new(false),
+                },
             );
             window.setDelegate(Some(ProtocolObject::from_ref(&*delegate)));
             let frame = ComWrapper::new(PlugFrame { window: window.clone(), delegate: delegate.clone() });
@@ -243,8 +298,24 @@ impl Editor {
         MainThreadMarker::new().is_some() && self.delegate.ivars().closed.get()
     }
 
-    /// Resizes reach the plug-in as they happen, from the window's delegate: not held back yet.
-    pub fn set_quiet(&self, _on: bool) {}
+    /// While `on`, nothing of the host's calls into the plug-in: the window can still be resized
+    /// (by the user, or by the plug-in's `resizeView`), but the view isn't asked about it
+    /// (`checkSizeConstraint`) or told (`onSize`) until quiet ends, when it hears the size the
+    /// window has then. Its own timers and its view's events are AppKit's, not the host's, and
+    /// still reach it.
+    pub fn set_quiet(&self, on: bool) {
+        self.delegate.ivars().quiet.store(on, Ordering::Relaxed);
+        if !on {
+            let (w, d) = (MainOnly(self.window.clone()), MainOnly(self.delegate.clone()));
+            on_main(move || {
+                let (w, d) = (w, d);
+                // Not if quiet started again before this ran.
+                if !d.0.ivars().quiet.load(Ordering::Relaxed) {
+                    catch_up(&w.0, &d.0);
+                }
+            });
+        }
+    }
 
     /// Takes the window off the screen, without a word to the plug-in.
     pub fn hide(&self) {
@@ -352,4 +423,16 @@ fn forward_key(event: &NSEvent, up: bool) -> bool {
         meta_key: flags.contains(NSEventModifierFlags::Command),
         repeat: !up && event.isARepeat(),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn size_change_only_for_a_new_size() {
+        assert!(size_change((300.0, 200.0), (300.0, 200.0)).is_none());
+        let r = size_change((300.0, 200.0), (420.0, 260.0)).unwrap();
+        assert_eq!((r.left, r.top, r.right, r.bottom), (0, 0, 420, 260));
+    }
 }
