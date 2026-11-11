@@ -25,8 +25,10 @@ pub mod recorder;
 #[cfg(target_os = "linux")]
 pub mod system_volume;
 pub mod threads;
+pub mod watch;
 
 use devices::{choose_config, device_name, find_device, host_by_name, pick_host};
+use watch::DeviceEvents;
 
 #[cfg(target_os = "macos")]
 pub use coreaudio::IoThread;
@@ -133,12 +135,19 @@ pub struct AudioIo {
     stop: Option<std::sync::mpsc::Sender<()>>,
     thread: Option<JoinHandle<()>>,
     io_thread: IoThread,
+    /// What the streams' error callbacks reported (see `watch.rs`).
+    events: Arc<DeviceEvents>,
 }
 
 impl AudioIo {
     /// The output device's IO thread, as the workers that play beside it take it.
     pub fn io_thread(&self) -> &IoThread {
         &self.io_thread
+    }
+
+    /// The device changes and errors its streams reported, for `Session::idle` to act on.
+    pub fn events(&self) -> &DeviceEvents {
+        &self.events
     }
 }
 
@@ -161,6 +170,7 @@ fn build_output<T>(
     status: Arc<EngineStatus>,
     fast_cpus: Vec<usize>,
     probe: Arc<IoThreadProbe>,
+    events: Arc<DeviceEvents>,
 ) -> Result<cpal::Stream>
 where
     T: SizedSample + FromSample<f32>,
@@ -231,13 +241,14 @@ where
                 *d = T::from_sample(s.clamp(-4.0, 4.0));
             }
         },
-        |e| log::error!("output stream error: {e}"),
+        // Atomics only: some errors come from the audio thread. `Session::idle` acts on them.
+        move |e: cpal::Error| events.note(e.kind(), false),
         None,
     )?;
     Ok(stream)
 }
 
-fn build_input<T>(d: &Device, cfg: StreamConfig, mut tx: rtrb::Producer<f32>, status: Arc<EngineStatus>) -> Result<cpal::Stream>
+fn build_input<T>(d: &Device, cfg: StreamConfig, mut tx: rtrb::Producer<f32>, status: Arc<EngineStatus>, events: Arc<DeviceEvents>) -> Result<cpal::Stream>
 where
     T: SizedSample,
     f32: FromSample<T>,
@@ -257,7 +268,7 @@ where
                 chunk.commit_all();
             }
         },
-        |e| log::error!("input stream error: {e}"),
+        move |e: cpal::Error| events.note(e.kind(), true),
         None,
     )?;
     Ok(stream)
@@ -312,7 +323,7 @@ fn start_null(engine: Arc<Mutex<Engine>>, cfg: &AudioConfig) -> (Option<AudioIo>
         buffer_size: frames as u32,
         ..Default::default()
     };
-    (Some(AudioIo { stop: Some(stop_tx), thread: Some(thread), io_thread: IoThread::default() }), status)
+    (Some(AudioIo { stop: Some(stop_tx), thread: Some(thread), io_thread: IoThread::default(), events: Default::default() }), status)
 }
 
 /// cpal's real-time promotion sets the process's soft RLIMIT_RTTIME to a single buffer (10.7 ms at
@@ -336,6 +347,8 @@ pub fn start(engine: Arc<Mutex<Engine>>, cfg: &AudioConfig) -> (Option<AudioIo>,
     let (res_tx, res_rx) = std::sync::mpsc::channel::<(AudioStatus, IoThread)>();
     let (stop_tx, stop_rx) = std::sync::mpsc::channel::<()>();
     let cfg = cfg.clone();
+    let events = Arc::new(DeviceEvents::default());
+    let ev = events.clone();
     let thread = std::thread::Builder::new()
         .name("audio-io".into())
         .spawn(move || {
@@ -362,7 +375,7 @@ pub fn start(engine: Arc<Mutex<Engine>>, cfg: &AudioConfig) -> (Option<AudioIo>,
                             Ok((in_cfg, in_fmt)) => {
                                 let ch = in_cfg.channels as usize;
                                 let (tx, rx) = rtrb::RingBuffer::new(cfg.sample_rate as usize * ch);
-                                match by_format!(in_fmt, build_input, &in_dev, in_cfg, tx, status_arc.clone()) {
+                                match by_format!(in_fmt, build_input, &in_dev, in_cfg, tx, status_arc.clone(), ev.clone()) {
                                     Ok(s) => {
                                         status.input_name = Some(device_name(&in_dev));
                                         status.input_channels = ch as u16;
@@ -381,7 +394,8 @@ pub fn start(engine: Arc<Mutex<Engine>>, cfg: &AudioConfig) -> (Option<AudioIo>,
                 };
                 let fast = threads::Topology::detect().fast;
                 let probe = Arc::new(IoThreadProbe::default());
-                let out = by_format!(out_fmt, build_output, &out_dev, out_cfg, engine.clone(), in_rx, in_ch, status_arc.clone(), fast, probe.clone())?;
+                let out =
+                    by_format!(out_fmt, build_output, &out_dev, out_cfg, engine.clone(), in_rx, in_ch, status_arc.clone(), fast, probe.clone(), ev.clone())?;
                 if let Some(s) = &in_stream {
                     s.play()?;
                 }
@@ -421,7 +435,7 @@ pub fn start(engine: Arc<Mutex<Engine>>, cfg: &AudioConfig) -> (Option<AudioIo>,
 
     let (status, io_thread) = res_rx.recv().unwrap_or_default();
     if status.running {
-        (Some(AudioIo { stop: Some(stop_tx), thread: Some(thread), io_thread }), status)
+        (Some(AudioIo { stop: Some(stop_tx), thread: Some(thread), io_thread, events }), status)
     } else {
         let _ = thread.join();
         (None, status)

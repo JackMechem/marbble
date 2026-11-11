@@ -91,7 +91,7 @@ prefs.rs            Settings and Project Settings types
 fx/                 built-in effects and their registry
 instrument/         built-in instruments and their registry, one folder per model
 synth_dsp/          oscillators, filters, envelopes, LFOs, voice allocation, resampling
-audio_io/           the duplex device stream, device lists, the recorder, memory locking, thread counts
+audio_io/           the duplex device stream, device lists, restarts on device changes, the recorder, memory locking, thread counts
 audio_file/         reading (decode/), writing (encode/), clips in memory, WAV repair
 midi/               MIDI input and output ports, Standard MIDI Files
 control/            controller assignments, feedback messages, the Mackie Control and HUI protocols
@@ -733,6 +733,20 @@ copies, strip settings and templates.
   own: the workers start afresh on every restart. `workgroup_check` plays to the default output and
   checks the workers joined.
 - **Reset Audio Engine** (`restart_audio`) reopens the devices after an unplug or driver error.
+- **Device changes** (`watch.rs`). The streams' error callbacks only note what cpal reports in
+  atomics (`DeviceEvents`), as some of them run on the audio thread (every one on ALSA; on macOS
+  overloads and timestamp errors, the rest on cpal's listener threads). A device gone
+  (`DeviceNotAvailable`, for either stream) or changed under the stream (`StreamInvalidated`: on
+  macOS its sample rate, for a chosen device) reopens it; so does `DeviceChanged` on macOS, where a
+  System Default stream follows a new default output by itself but keeps the old device's buffer
+  size, latency and IO workgroup. PipeWire reroutes a default stream in its graph, so there it is
+  left alone, as are underruns. `Session::idle` (`device_idle`) waits until the events have
+  settled for 400 ms, reopens the device with `reopen_audio` (a chosen device that's gone falls back
+  to the system default, as at startup) and puts a toast up through the tick's `warning`. A restart
+  that opens nothing is retried after 1, 2, 4 s; after three restarts within 30 s it gives up with a
+  message until the user resets the engine or applies a device. Nothing polls: a System Default
+  device whose own rate changes is converted by its AudioUnit, and every change cpal can't see
+  needs a reset as before. The null device never reports anything.
 - **Memory locking** (`memlock.rs`): on Linux, with an unlimited `RLIMIT_MEMLOCK`, the app locks
   its pages as they are first touched, so the audio thread never waits for a swapped-out page.
 - **Without a device**, `send` runs the engine inline, and ALSA's `null` device runs as fast as the

@@ -15,6 +15,14 @@ All notable changes to Marbble are recorded here. The format follows
   join the audio device's own thread in its workgroup and share its scheduling, so macOS runs them
   on the performance cores together and raises the CPU's clock for their combined work.
 
+### Fixed
+
+- **Audio restarts by itself when the output device changes or is unplugged.** Unplugging the
+  output or input device, another app changing its sample rate, or (on macOS) the system output
+  switching while Marbble plays to System Default now reopens the audio after a moment, on the
+  system default if the device is gone, with a message saying so, instead of leaving playback
+  silent or on the old device's settings until you click Reset Audio Engine.
+
 ## [0.1.0-alpha.14] - 2026-11-10
 
 ### Added
