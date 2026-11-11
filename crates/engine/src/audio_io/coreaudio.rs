@@ -122,7 +122,7 @@ pub fn own_policy_for_checks() -> Option<TimeConstraint> {
 }
 
 /// The device whose UID is `uid`.
-fn device_id(uid: &str) -> Option<AudioObjectID> {
+pub(crate) fn device_id(uid: &str) -> Option<AudioObjectID> {
     let uid = CFString::from_str(uid);
     let qualifier: *const CFString = &*uid;
     let mut device: AudioObjectID = 0;

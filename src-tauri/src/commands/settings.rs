@@ -32,10 +32,10 @@ pub fn set_audio_config(state: State<AppState>, config: AudioConfig) -> Snapshot
     snap(&state, |s| s.set_audio_config(config))
 }
 
-/// The system mixer volume on the current recording device (Linux sound servers only).
+/// The system volume on the current recording device (Linux sound servers and macOS).
 #[tauri::command(async)]
 pub fn input_level(state: State<AppState>) -> Option<serde_json::Value> {
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     {
         let (host, input, enabled) = with(&state, |s| (s.audio_status.host.clone(), s.audio_config.input.clone(), s.audio_config.input_enabled));
         if !enabled || host == "JACK" {
@@ -47,7 +47,7 @@ pub fn input_level(state: State<AppState>) -> Option<serde_json::Value> {
         v["attenuating"] = serde_json::Value::Bool(attenuating);
         Some(v)
     }
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
     {
         let _ = state;
         None
@@ -56,7 +56,7 @@ pub fn input_level(state: State<AppState>) -> Option<serde_json::Value> {
 
 #[tauri::command(async)]
 pub fn reset_input_level(state: State<AppState>) -> R<Option<serde_json::Value>> {
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     {
         let input = with(&state, |s| s.audio_config.input.clone());
         daw_engine::audio_io::system_volume::reset_input_level(input.as_deref())?;

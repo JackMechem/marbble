@@ -20,7 +20,7 @@ Contents:
 
 1. [Getting started](#1-getting-started): [First launch](#first-launch) ·
    [Choosing a driver and devices](#choosing-a-driver-and-devices) ·
-   [The input level check (Linux)](#the-input-level-check-linux) · [Monitoring](#monitoring)
+   [The input level check (Linux, macOS)](#the-input-level-check-linux-macos) · [Monitoring](#monitoring)
 2. [The main window](#2-the-main-window): [Control bar](#control-bar) ·
    [Tracks area](#tracks-area) · [Inspector](#inspector) ·
    [Library and Browser](#library-and-browser) · [Status line](#status-line) ·
@@ -173,7 +173,7 @@ click outside) drops them. The delay compensation options on the same tab apply 
 The status line at the bottom of the window shows the devices, the sample rate and the buffer
 size, or "Audio stopped" with the reason. Click it to open Settings › Audio.
 
-### The input level check (Linux)
+### The input level check (Linux, macOS)
 
 PipeWire and PulseAudio have their own volume control for each recording device, and it is
 often below 100%. That lowers everything you record before Marbble sees it, and at 0% or
@@ -182,7 +182,13 @@ muted you record silence. With PipeWire or PulseAudio, Settings › Audio checks
 Marbble also shows a notice at launch when the level is low. Set your recording level with the
 gain knob on your interface instead.
 
-The check is not available with JACK, with direct `hw:` ALSA devices, or on Windows and macOS.
+On macOS the check reads the input volume and mute of the recording device (the **Input
+volume** slider in System Settings › Sound › Input, or the device's Input tab in Audio MIDI
+Setup), and **Set to 100%** sets them there. The built-in microphone and some USB devices have
+this volume; most audio interfaces don't, and then there is nothing to check. Reading it doesn't
+open the input, so it doesn't ask for microphone access.
+
+The check is not available with JACK, with direct `hw:` ALSA devices, or on Windows.
 
 ### Monitoring
 
@@ -3452,7 +3458,7 @@ what it found; with the launch check off, that is the only time Marbble contacts
 | Low Latency Mode | On, with a limit of 0 to 100 ms (applies at once) | Off, 5 ms |
 
 Below them: the measured input and output latency and how far recordings are shifted, the
-[input level check](#the-input-level-check-linux) (Linux), and **Reset Audio Engine**. Everything
+[input level check](#the-input-level-check-linux-macos) (Linux, macOS), and **Reset Audio Engine**. Everything
 except the two delay compensation rows needs **Apply Changes**, or **Done**, which applies them
 and closes the window (see [Choosing a driver and devices](#choosing-a-driver-and-devices)).
 
@@ -3807,13 +3813,15 @@ octave, C / V the velocity, Tab is the sustain pedal.
 
 On Linux, PipeWire and PulseAudio have their own volume for each recording device, often
 below 100%, and Marbble records after it: a source at 40% records about 24 dB quieter, and a
-muted one records silence (see [The input level check](#the-input-level-check-linux)).
+muted one records silence (see [The input level check](#the-input-level-check-linux-macos)).
 
 - Settings › Audio warns with **Set to 100%** when the level is low, and Marbble shows a
   notice at launch.
 - Or set it yourself: `wpctl get-volume @DEFAULT_AUDIO_SOURCE@` shows it, and
   `wpctl set-volume @DEFAULT_AUDIO_SOURCE@ 1.0` sets it to 100% (use the node id from
   `wpctl status` for another device). pavucontrol's Input Devices tab does the same.
+- On macOS the recording device's input volume and mute do the same; Settings › Audio warns
+  about them too, or set them in System Settings › Sound › Input or Audio MIDI Setup.
 - Then set the recording level with the gain knob on your interface.
 
 ### Crackles, clicks or dropouts
@@ -4021,7 +4029,7 @@ its package rather than a copied binary.
   plug-ins still load, play and can be automated. On macOS, keys a plug-in's window doesn't use
   (Space, R, other key commands, Musical Typing) go to Marbble, while typing into the plug-in's
   own fields stays there; Esc doesn't close the window. On Linux only menu shortcuts work while
-  a plug-in's window is in front. The input level check is Linux only. On Windows and macOS only
+  a plug-in's window is in front. The input level check works on Linux and macOS, not Windows. On Windows and macOS only
   the system's default audio driver is available (no ASIO).
 - **Plug-in formats:** VST3 only; no CLAP, AU or VST2.
 - **Tempo:** a region's length stays in samples when it is moved across a tempo change (only

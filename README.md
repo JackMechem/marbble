@@ -72,7 +72,7 @@ On NixOS or with Nix, use the flake instead (below).
 | VST3 editor windows | Yes (X11; through XWayland on Wayland) | Not yet | Yes |
 | Built-in effects and instruments | Yes | Yes | Yes |
 | Multi-core processing | Yes | One thread for now | One thread for now |
-| Input level check | Yes (PipeWire, PulseAudio) | No | No |
+| Input level check | Yes (PipeWire, PulseAudio) | No | Yes |
 
 On Windows, VST3 plug-ins still load, play, save their state and can be automated; only their
 own editor window is missing. Both build and pass the engine tests in CI, and macOS the headless
