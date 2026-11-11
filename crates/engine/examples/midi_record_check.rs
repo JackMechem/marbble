@@ -93,6 +93,8 @@ fn in_order(values: &[u16], n: u32) -> bool {
 }
 
 fn main() {
+    // MIDI comes in by hand here: none from the system's ports (a keyboard, another check's).
+    daw_engine::midi::leave_system_ports_alone();
     let scratch = std::path::PathBuf::from(std::env::args().nth(1).expect("scratch dir"));
     std::fs::create_dir_all(&scratch).unwrap();
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };

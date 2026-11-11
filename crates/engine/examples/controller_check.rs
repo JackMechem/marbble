@@ -75,6 +75,8 @@ fn set_button(s: &mut Session, i: usize, button: ButtonMode) {
 }
 
 fn main() {
+    // MIDI comes in by hand here: none from the system's ports (a keyboard, another check's).
+    daw_engine::midi::leave_system_ports_alone();
     let mut args = std::env::args().skip(1);
     let tone = args.next().expect("audio file");
     let scratch = std::path::PathBuf::from(args.next().expect("scratch dir"));

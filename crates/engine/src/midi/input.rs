@@ -194,7 +194,7 @@ impl MidiIo {
     }
 
     pub fn port_names() -> Vec<String> {
-        if !super::SYSTEM_PORTS {
+        if !super::system_ports() {
             return Vec::new();
         }
         let Ok(input) = MidiInput::new("Marbble") else { return Vec::new() };
@@ -248,7 +248,7 @@ impl MidiIo {
         let names = Self::port_names();
         let disabled = &self.disabled;
         self.connections.retain(|(n, _)| names.contains(n) && !disabled.iter().any(|k| k == controllers::port_key(n)));
-        if !super::SYSTEM_PORTS {
+        if !super::system_ports() {
             return;
         }
         let Ok(probe) = MidiInput::new("Marbble") else { return };

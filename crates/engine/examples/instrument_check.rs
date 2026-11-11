@@ -177,6 +177,8 @@ fn check_model(scratch: &std::path::Path, plugin: &str, edit: u32, to: f32) {
 }
 
 fn main() {
+    // MIDI comes in by hand here: none from the system's ports (a keyboard, another check's).
+    daw_engine::midi::leave_system_ports_alone();
     let scratch = PathBuf::from(std::env::args().nth(1).expect("scratch dir"));
     std::fs::create_dir_all(&scratch).unwrap();
     let mut s = session();
