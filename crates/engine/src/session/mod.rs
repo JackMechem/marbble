@@ -14,6 +14,7 @@
 //! - `tracks/`, `mixer/`, `plugins/`: the track list, the channel strips, and their slots.
 //! - `regions/`, `midi/`, `takes/`, `global_tracks/`, `automation/`: what the tracks hold.
 //! - `control/`: controller assignments, feedback and control surfaces.
+//! - `diagnostics/`: the snapshot the Diagnostics window shows.
 //! - `tests/`: tests across areas.
 //!
 //! Pure logic those call is in `crate::edit` and the other root modules, where it can be tested
@@ -47,6 +48,7 @@ mod undo;
 
 mod automation;
 mod control;
+mod diagnostics;
 mod engine;
 mod global_tracks;
 mod midi;
@@ -61,6 +63,9 @@ mod tracks;
 
 pub use control::controllers::{controller_label, AssignmentPatch, AssignmentRow};
 pub use control::surface::SurfaceStatus;
+pub use diagnostics::{
+    AudioDiagnostics, Diagnostics, LoadDiagnostics, MemoryDiagnostics, MidiDiagnostics, PluginDiagnostics, PoolDiagnostics, ThreadDiagnostics, TrackDiagnostics,
+};
 pub use engine::pdc::{PdcReport, StripLatency};
 pub use midi::content::MidiContent;
 pub use mixer::meters::PeakHolds;
@@ -292,6 +297,9 @@ pub struct Session {
     /// from the project once it has taken the rest (`resync_engine`), and until then a command
     /// finding the queue full is dropped at once.
     engine_resync: bool,
+    /// Which thread played each track's strip and its share of the block, shared with the strips as
+    /// `meters` are (see `dsp/strip_load.rs`), for the Diagnostics window.
+    strip_loads: HashMap<Id, Arc<StripLoad>>,
 }
 
 /// A project snapshot taken before an edit.
@@ -457,6 +465,7 @@ impl Session {
             threads: engine::threads::ThreadState { topology: crate::audio_io::threads::Topology::detect(), ..Default::default() },
             graph_dirty: true,
             engine_resync: false,
+            strip_loads: HashMap::new(),
         };
         s.restart_audio();
         s.sync_globals();

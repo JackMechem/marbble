@@ -154,7 +154,12 @@ pub struct ProcessMemory {
 
 impl ProcessMemory {
     pub fn read() -> ProcessMemory {
-        std::fs::read_to_string("/proc/self/status").map(|t| ProcessMemory::parse(&t)).unwrap_or_default()
+        ProcessMemory::try_read().unwrap_or_default()
+    }
+
+    /// None where there is no `/proc/self/status` (macOS, Windows).
+    pub fn try_read() -> Option<ProcessMemory> {
+        std::fs::read_to_string("/proc/self/status").ok().map(|t| ProcessMemory::parse(&t))
     }
 
     fn parse(status: &str) -> ProcessMemory {

@@ -113,6 +113,7 @@ impl Session {
                 self.controllers.remove(&slot.uid);
             }
             self.meters.remove(id);
+            self.strip_loads.remove(id);
             self.send(Cmd::RemoveTrack(*id));
         }
         if self.selected.map(|s| all.contains(&s)).unwrap_or(false) {

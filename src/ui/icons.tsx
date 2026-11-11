@@ -203,4 +203,30 @@ export const Icon = {
       <path d="M4.6 1.8 6 3l1.4-1.2M4.6 10.2 6 9l1.4 1.2" strokeWidth={1} />
     </S>
   ),
+  /** Copy to the clipboard: two sheets. */
+  copy: () => (
+    <S>
+      <rect x="5.5" y="5.5" width="8" height="8.5" rx="1.2" />
+      <path d="M10.5 3.5v-.8c0-.7-.5-1.2-1.2-1.2H3.7c-.7 0-1.2.5-1.2 1.2v6.6c0 .7.5 1.2 1.2 1.2h.8" />
+    </S>
+  ),
+  /** Start counting afresh: an arrow turning back. */
+  reset: () => (
+    <S>
+      <path d="M3.2 8a4.8 4.8 0 1 0 1.5-3.5" />
+      <path d="M4.4 1.9v2.9h2.9" />
+    </S>
+  ),
+  /** Heaviest first: bars getting shorter. */
+  sortDown: () => (
+    <S>
+      <path d="M2.5 4h11M2.5 8h7.5M2.5 12h4" />
+    </S>
+  ),
+  /** Keep the newest in view: an arrow down to a line. */
+  follow: () => (
+    <S>
+      <path d="M8 2.5v8M4.8 7.6 8 10.8l3.2-3.2M3.5 13.5h9" />
+    </S>
+  ),
 };

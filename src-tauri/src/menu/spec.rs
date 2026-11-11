@@ -307,6 +307,9 @@ pub(super) fn spec() -> Vec<Spec> {
                 check("detach:mixer", "Mixer in Separate Window"),
                 check("detach:editor", "Editor in Separate Window"),
                 check("detach:list", "Event List in Separate Window"),
+                Sep,
+                // How the engine, device and threads are doing, and the log (src/diagnostics/).
+                item("diagnostics", "Diagnostics"),
                 Spec::Windows,
             ],
         ),

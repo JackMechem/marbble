@@ -415,6 +415,7 @@ impl Engine {
                 parallel::Outcome::LeftOut => return BlockEnd::LeftOut,
             }
         } else {
+            let budget = (n as f64 / self.sample_rate) as f32;
             for ti in 0..self.tracks.len() {
                 let (before, rest) = self.tracks.split_at_mut(ti);
                 let (cur, tail) = rest.split_first_mut().unwrap();
@@ -422,6 +423,7 @@ impl Engine {
                 let at = Instant::now();
                 run_strip(&cx, ti, cur, &mut self.scratch, &mut routes);
                 cur.spent = at.elapsed().as_secs_f32();
+                cur.load.played(0, cur.spent, budget);
             }
         }
 

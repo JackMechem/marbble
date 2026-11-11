@@ -26,13 +26,16 @@ pub(super) fn window_command<R: Runtime>(app: &AppHandle<R>, id: &str) -> bool {
     true
 }
 
-/// The windows Window lists, in its order: the main window, then the panel windows by title.
+/// The windows Window lists, in its order: the main window, then the panel windows and the
+/// Diagnostics window by title.
 /// `gone` is a window being destroyed.
 pub(super) fn window_list<R: Runtime>(app: &AppHandle<R>, gone: Option<&str>) -> Vec<(String, String)> {
     let mut list: Vec<(String, String)> = app
         .webview_windows()
         .into_iter()
-        .filter(|(label, _)| Some(label.as_str()) != gone && (label == "main" || crate::windows::is_panel_label(label)))
+        .filter(|(label, _)| {
+            Some(label.as_str()) != gone && (label == "main" || label == crate::diagnostics::window::LABEL || crate::windows::is_panel_label(label))
+        })
         .map(|(label, w)| {
             let title = w.title().unwrap_or_default();
             (label, if title.is_empty() { "Marbble".to_string() } else { title })

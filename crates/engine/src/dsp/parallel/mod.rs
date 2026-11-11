@@ -37,7 +37,7 @@
 //! - Parameters, tempo, `Isolate`, chase, the MIDI target and the transport: `BlockCtx`, copied or
 //!   shared immutably. `TransportInfo` for plug-ins is a copy per strip, at its own input time.
 //! - `Gate`, `OutGate` (VST3 bus changes): atomics; `Cmd::VstGate` applies between blocks.
-//! - Meters, `FxShared`, the `EngineStatus` counters: atomics. `bad_audio_uid` is a plain store,
+//! - Meters, `FxShared`, the `EngineStatus` counters, a strip's `StripLoad`: atomics. `bad_audio_uid` is a plain store,
 //!   so with two bad plug-ins in one block either may be named. Input meters and the load figures:
 //!   the calling thread only.
 //! - Global state inside third-party plug-ins: their concern, as in any host that plays instances
@@ -112,6 +112,7 @@ impl Job for StripJob {
             return;
         }
         t.spent = at.elapsed().as_secs_f32();
+        t.load.played(thread, t.spent, (self.cx.n as f64 / self.cx.sr) as f32);
         busy.store(0, Ordering::Relaxed);
     }
 }

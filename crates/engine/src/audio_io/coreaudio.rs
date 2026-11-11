@@ -47,6 +47,11 @@ impl IoThread {
     pub fn suggested_threads(&self) -> Option<u32> {
         self.workgroup.as_ref()?.max_parallel_threads()
     }
+
+    /// Whether the device has an IO workgroup for the workers to join.
+    pub fn has_workgroup(&self) -> Option<bool> {
+        Some(self.workgroup.is_some())
+    }
 }
 
 /// A Mach time-constraint policy, in Mach absolute-time units.

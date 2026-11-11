@@ -1,7 +1,7 @@
 // The main window's menu commands: what each item of the native menu bar does (its ids are in
 // src-tauri/src/menu/), also run by the key commands that share an item and by MIDI controllers.
 // An editor with the focus takes its own Edit commands first.
-import { act } from "../engine/commands";
+import { act, call } from "../engine/commands";
 import { isBouncing, openBounce } from "../project/bounce/bounce";
 import { bounceInPlace, createStack, deleteTracks, deleteUnusedTracks, duplicateTracks, groupTracks, hideTracks, selectedTracks, switchAll, toggleShowHidden, unhideAllTracks } from "../tracks/trackCommands";
 import { convertLoops, copyRegions, cutRegions, duplicate, joinRegions, newPatternRegion, pasteRegions, repeatRegions, selectAllRegions, setLocatorsByRegions, toggleLoop } from "../tracks/regionCommands";
@@ -160,6 +160,9 @@ export function handleMenu(id: string) {
       break;
     case "help-updates":
       checkForUpdates(true);
+      break;
+    case "diagnostics":
+      call("open_diagnostics_window");
       break;
     case "project-settings":
       setState({ dialog: "project-settings" });

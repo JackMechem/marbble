@@ -141,6 +141,7 @@ impl Session {
                 self.controllers.remove(&slot.uid);
             }
             self.meters.remove(&t.id);
+            self.strip_loads.remove(&t.id);
             self.send(Cmd::RemoveTrack(t.id));
         }
     }

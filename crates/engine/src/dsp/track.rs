@@ -271,6 +271,9 @@ pub struct TrackDsp {
     /// strip it stands in for.
     pub(super) stand_in: bool,
     pub(super) held_token: u64,
+    /// Which thread played it and its share of the block, for the Diagnostics window. The session
+    /// gives the strips it builds the one it keeps for the track (`Session::build_track`).
+    pub load: Arc<StripLoad>,
 }
 
 impl TrackDsp {
@@ -323,6 +326,7 @@ impl TrackDsp {
             left_out: false,
             stand_in: false,
             held_token: 0,
+            load: Arc::default(),
         }
     }
 

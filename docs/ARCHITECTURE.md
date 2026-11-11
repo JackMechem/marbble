@@ -83,6 +83,7 @@ session/            the non-real-time half: Session, one `impl Session` per feat
   global_tracks/      the Arrangement, Marker, Tempo and Signature tracks
   automation/         writing lanes while playing, editing them, extra lanes
   control/            controller assignments, feedback, control surfaces
+  diagnostics/        the snapshot the Diagnostics window shows
   tests/              session tests across areas and their helpers
 model/              the project document's types, the tempo map, VCA rules
 edit/               pure editing logic on the document: fades, comps, drag modes, arranging, patterns…
@@ -128,6 +129,7 @@ commands.rs         Snapshot and the wrappers every command shares (edit, try_ed
 commands/           the commands, one file per area (tracks, regions, plugins, project…)
 menu/               the native menu bar: spec.rs (the bar as data), mod.rs (build, handle), GTK and macOS keys
 windows.rs          detached panel windows and routing menu items to them
+diagnostics/        the Diagnostics window, the command it polls, and the log kept in memory for it
 settings.rs         settings.json
 recent.rs           recent projects
 schemas.rs          the GSettings schema GTK's file chooser needs
@@ -184,6 +186,7 @@ project/            the project as a file: open, save, import, templates, recove
 browser/            the Library and All Files panes
 settings/           the Settings window and the app-wide settings
   panes/              one file per Settings pane, and Project Settings
+diagnostics/        the Diagnostics window: its tabs, the figures it marks, the log view, Copy Report
 styles/             the stylesheet, one CSS file per area; index.css's order is the cascade
 ```
 
@@ -211,7 +214,7 @@ CI, releases and the website's deploy.
 | **MIDI refresh** | `src-tauri/src/timers.rs` | Every 3 s, connects MIDI devices plugged in since. | |
 | **MIDI input callbacks** | midir, `midi/input.rs` | Route each message: a control surface's port to the session whole, assigned controllers to a queue for `idle`, the rest (after the velocity curve) to the `live_midi` ring the engine reads. | |
 | **`midi-out`** | `midi/output.rs` | Sends the feedback and surface messages `idle` hands it. | Touch the session. |
-| **Async commands** | Tauri's runtime | Renders (bounce, export, Bounce in Place, Freeze), plug-in rescans, waveforms, device lists, folder listings. Renders hold the session and engine locks throughout; edits they make go back to the main thread with `run_on_main_thread`. | Touch plug-in controllers. |
+| **Async commands** | Tauri's runtime | Renders (bounce, export, Bounce in Place, Freeze), plug-in rescans, waveforms, device lists, folder listings, the Diagnostics window's snapshots (which wait at most 5 ms for the session and skip a refresh rather than wait longer). Renders hold the session and engine locks throughout; edits they make go back to the main thread with `run_on_main_thread`. | Touch plug-in controllers. |
 | **Autosave writer** | `src-tauri/src/timers.rs` | Writes a job serialized on the main thread to disk, atomically. | |
 | **Scan child process** | `library/plugin_db.rs` | `marbble --scan-vst3 <bundle>` loads one bundle in a child process, so a crashing plug-in can't take the app down. | |
 
@@ -285,6 +288,15 @@ The queue's edges (`session/engine/sync/`):
 - **Bad plug-in output.** After every instrument, insert and Stereo Out plug-in, `contain()`
   (`dsp/track.rs`) silences NaNs and clamps past ±1000, and the session names the plug-in in a
   toast. The mix is contained once more before the output, which the callback clamps to ±4.
+
+**What the Diagnostics window reads.** Each strip has a `StripLoad` (`dsp/strip_load.rs`), made
+with the strip off the audio thread and shared with the session as its `Meter` is: the thread that
+plays the strip, the callback or a worker, stores its thread number and its share of the block
+(from `spent`, which the block loop measures anyway) with relaxed atomic stores, and nothing else.
+The rest of the window's figures are the `EngineStatus` atomics the tick reads already. The session
+assembles the snapshot without the engine's lock (`session/diagnostics/`). Logging stays off the
+audio thread: the app's logger keeps each line in a small ring behind its own lock as well as
+writing it to stderr (`src-tauri/src/diagnostics/`), and nothing the audio thread runs logs.
 
 **Habits inside the engine.** Gains glide through a 5 ms one-pole (`smooth`), so fader moves,
 mutes and sends don't click; a render snaps them first so it doesn't depend on what played before.
@@ -933,6 +945,10 @@ renders `DetachedWindow` instead of `App` for a panel's label.
   (`route_menu`); on macOS the bar is the app's, so this decides which window it acts on.
 - A panel kind is registered in `src/app/detach/panelKinds.tsx` (the `PanelKind` interface is in
   `panelRegistry.ts`); where each kind's window was is kept by `panelMemory.ts`.
+- **The Diagnostics window** (`diagnostics`, `src/diagnostics/`) is not a panel: it shares no store
+  with the others and asks the app for a snapshot four times a second (`diagnostics`, with the log
+  lines after the last it has). It follows the theme and interface size through `localStorage`'s
+  `storage` event, and closes with the main window.
 
 ## 13. Invariants and gotchas
 

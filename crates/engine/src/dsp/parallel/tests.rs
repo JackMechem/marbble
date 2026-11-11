@@ -767,3 +767,29 @@ fn a_stand_in_removed_with_its_track_is_noted_in_its_entry() {
     assert!(e.status.held()[0].stand_in_gone);
     hold.store(false, Ordering::SeqCst);
 }
+
+/// Each strip's `StripLoad` names the thread that played it: the caller waits in the first strip
+/// until a worker has started the second (see `test_hooks::gate`), so they're played apart.
+#[test]
+fn a_strip_notes_the_thread_that_played_it() {
+    let (on_caller, on_worker) = (961, 962);
+    let mut e = rig();
+    let tracks = vec![
+        strip(on_caller, TrackKind::Audio, params(None, &[]), vec![tone(963, 210.0, None, false)]),
+        strip(on_worker, TrackKind::Audio, params(None, &[]), vec![tone(964, 290.0, None, false)]),
+    ];
+    let loads: Vec<Arc<StripLoad>> = tracks.iter().map(|t| t.load.clone()).collect();
+    e.engine.replace_graph(SR, tracks, (0..INSERT_SLOTS).map(|_| None).collect());
+    e.tx.push(Cmd::Graph(Some(Box::new(TaskGraph::new(vec![on_caller, on_worker], &[], |_| true).unwrap())))).ok().unwrap();
+    e.tx.push(Cmd::Workers(Some(Workers::new(PoolOptions { threads: 2, ..Default::default() })))).ok().unwrap();
+    e.tx.push(Cmd::ParallelTest(ParallelTest { always: true, renders: false, patient: true })).ok().unwrap();
+    gate(on_caller, &[on_worker]);
+    after(on_worker, Some(on_caller));
+    let mut out = vec![0.0f32; BLOCK * 2];
+    e.engine.process(&[], 0, &mut out, 2);
+    gate(on_caller, &[]);
+    after(on_worker, None);
+    let (caller, worker) = (loads[0].take(), loads[1].take());
+    assert_eq!((caller.thread, worker.thread), (Some(0), Some(1)));
+    assert!(caller.share > 0.0 && worker.share > 0.0);
+}
