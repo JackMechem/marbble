@@ -5,8 +5,10 @@
 //! threads, but some (overloads, a bad timestamp; every error on ALSA) come from the audio thread,
 //! so [`DeviceEvents`] only stores atomics there. `Session::idle` takes them and asks [`Watch`]
 //! when to restart: once the events have settled ([`DEBOUNCE`]), with retries further and further
-//! apart when no device opens, and never more than [`MAX_RESTARTS`] in [`WINDOW`], after which
-//! it gives up until the user resets the audio engine or picks a device.
+//! apart when no device opens. It gives up, until the user resets the audio engine or picks a
+//! device, after [`MAX_RESTARTS`] restarts in [`WINDOW`] that opened nothing or didn't hold (the
+//! device dropped out again within [`HOLD`]). Restarts that hold never count: someone trying one
+//! output after another isn't a device dropping out.
 
 use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
 use std::time::{Duration, Instant};
@@ -143,10 +145,12 @@ impl DeviceEvents {
 /// How long the events must have settled before the device reopens: unplugging or switching
 /// sends a few in a row, and the system needs a moment to settle on its new default.
 pub const DEBOUNCE: Duration = Duration::from_millis(400);
-/// The most restarts (failed or not) in [`WINDOW`] before giving up: a device that keeps dropping
-/// out mustn't keep the app reopening it.
+/// The most restarts in [`WINDOW`] that opened no device or didn't hold, before giving up: a device
+/// that keeps dropping out mustn't keep the app reopening it.
 pub const MAX_RESTARTS: usize = 3;
 pub const WINDOW: Duration = Duration::from_secs(30);
+/// A restart that opened a device held if no event came for this long after it.
+pub const HOLD: Duration = Duration::from_secs(3);
 /// When a restart opened no device, the next try waits this long, doubling each time.
 pub const RETRY: Duration = Duration::from_secs(1);
 
@@ -165,7 +169,10 @@ pub struct Watch {
     last_event: Option<Instant>,
     retry_at: Option<Instant>,
     failures: u32,
+    /// The restarts in the last [`WINDOW`] that opened no device or didn't hold.
     recent: Vec<Instant>,
+    /// The last restart that opened a device, until it has held or an event says it didn't.
+    unproven: Option<Instant>,
     gave_up: bool,
     /// Restarts since the last reset, for the Diagnostics window.
     restarts: u32,
@@ -174,6 +181,11 @@ pub struct Watch {
 impl Watch {
     /// A device event came in at `now`.
     pub fn event(&mut self, now: Instant) {
+        if let Some(t) = self.unproven.take() {
+            if now.duration_since(t) < HOLD {
+                self.recent.push(t);
+            }
+        }
         if !self.gave_up {
             self.last_event = Some(now);
         }
@@ -202,12 +214,13 @@ impl Watch {
     /// The restart [`Watch::poll`] asked for happened at `now`, and opened a device or not.
     pub fn restarted(&mut self, now: Instant, ok: bool) {
         self.last_event = None;
-        self.recent.push(now);
         self.restarts += 1;
         if ok {
+            self.unproven = Some(now);
             self.failures = 0;
             self.retry_at = None;
         } else {
+            self.recent.push(now);
             self.retry_at = Some(now + RETRY * (1 << self.failures.min(6)));
             self.failures += 1;
         }
@@ -295,6 +308,21 @@ mod tests {
         w.reset();
         w.event(now + ms(1000));
         assert_eq!(w.poll(now + ms(1000) + DEBOUNCE), Step::Restart);
+    }
+
+    /// Someone trying outputs one after another: every restart holds, so however many there are
+    /// in the window, it never gives up.
+    #[test]
+    fn restarts_that_hold_never_give_up() {
+        let t0 = Instant::now();
+        let mut w = Watch::default();
+        for i in 0..8u32 {
+            let now = t0 + (DEBOUNCE + HOLD + ms(100)) * i;
+            w.event(now);
+            assert_eq!(w.poll(now + DEBOUNCE), Step::Restart, "restart {i}");
+            w.restarted(now + DEBOUNCE, true);
+        }
+        assert!(!w.gave_up());
     }
 
     #[test]

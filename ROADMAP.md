@@ -139,9 +139,10 @@ labelled [`in progress`][in progress]. The rounds planned towards beta, in order
    System Overloads under load ([#35], [#16]), several processing threads on macOS and Windows
    ([#59]), the stuck-plug-in handling with a real VST3 ([#114]), the checks that fail now and then
    ([`flaky test`][flaky test]), and any bug that crashes Marbble or loses work.
-   The round under way brings macOS level with Linux: real-time processing threads in the audio
-   device's workgroup and Automatic above one thread ([#59]), audio that follows a changed or
-   unplugged device, a reproducible stress check for multi-core load, and the flaky checks.
+   macOS is now level with Linux (0.1.0-alpha.15: real-time processing threads in the audio
+   device's workgroup, Automatic above one thread, audio that follows a changed or unplugged
+   device). The round under way ([#416]) takes on the flaky checks, follow-ups to the automatic
+   device restarts, and longer soak runs looking for bugs that break undo, saving or renders.
 2. **Plug-in hosting.** Keys from VST3 editors on Linux ([#88]), editors following a display scale
    change ([#94]), the Plug-in Manager, plug-in search and plug-in windows in the Mixer, Compare
    for VST3 plug-ins ([#292]); then CLAP hosting ([#105]).
@@ -206,6 +207,7 @@ Besides each stage's milestone, a few labels gather the open work that doesn't b
 [area: ui]: https://github.com/JackMechem/marbble/labels/area%3A%20ui
 [#105]: https://github.com/JackMechem/marbble/issues/105
 [#59]: https://github.com/JackMechem/marbble/issues/59
+[#416]: https://github.com/JackMechem/marbble/issues/416
 [#35]: https://github.com/JackMechem/marbble/issues/35
 [#16]: https://github.com/JackMechem/marbble/issues/16
 [#114]: https://github.com/JackMechem/marbble/issues/114
