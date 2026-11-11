@@ -775,7 +775,9 @@ copies, strip settings and templates.
   size, latency and IO workgroup. PipeWire reroutes a default stream in its graph, so there it is
   left alone, as are underruns. `Session::idle` (`device_idle`) waits until the events have
   settled for 400 ms, reopens the device with `reopen_audio` (a chosen device that's gone falls back
-  to the system default, as at startup) and puts a toast up through the tick's `warning`. A restart
+  to the system default, as at startup) and puts a toast up through the tick's `warning`. A recording
+  stops first, except for a moved system output, which waits for the take to end
+  (`Reason::waits_for_take`). A restart
   that opens nothing is retried after 1, 2, 4 s; after three restarts within 30 s it gives up with a
   message until the user resets the engine or applies a device. Nothing polls: a System Default
   device whose own rate changes is converted by its AudioUnit, and every change cpal can't see

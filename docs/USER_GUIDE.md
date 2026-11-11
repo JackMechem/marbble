@@ -168,7 +168,8 @@ click outside) drops them. The delay compensation options on the same tab apply 
   changes while the output is System Default (headphones plugged in, AirPods connected). If no
   device opens, Marbble tries again for a few seconds; if a device keeps dropping out, it stops
   after three restarts in half a minute and says so; choose a device or click Reset Audio Engine.
-  A recording in progress stops first, keeping what it captured.
+  A recording in progress stops first, keeping what it captured, unless only the system output
+  changed: then the take carries on and the audio restarts once you stop.
 
 The status line at the bottom of the window shows the devices, the sample rate and the buffer
 size, or "Audio stopped" with the reason. Click it to open Settings › Audio.

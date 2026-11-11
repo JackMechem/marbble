@@ -53,6 +53,13 @@ impl Reason {
         }
     }
 
+    /// Whether a recording carries on and the restart waits for it to end. Only when the system
+    /// output moved (macOS): the stream followed it, so nothing went silent, and the input is
+    /// untouched. Every other reason means the take's audio went or changed under it.
+    pub fn waits_for_take(self) -> bool {
+        self == Reason::DefaultChanged
+    }
+
     /// The end of "Audio restarted on X because …".
     pub fn because(self, old_output: Option<&str>) -> String {
         match (self, old_output) {
@@ -120,6 +127,11 @@ impl DeviceEvents {
     /// The kind of the last error that was neither a restart nor an underrun.
     pub fn last_other(&self) -> ErrorKind {
         OTHER_KINDS[self.last_other.load(Ordering::Relaxed) as usize % OTHER_KINDS.len()]
+    }
+
+    /// The worst reason so far, left for [`DeviceEvents::take_reason`].
+    pub fn reason(&self) -> Option<Reason> {
+        Reason::from_u8(self.reason.load(Ordering::Relaxed))
     }
 
     /// The worst reason since the last call.
@@ -310,6 +322,14 @@ mod tests {
     }
 
     #[test]
+    fn only_a_moved_system_output_waits_for_a_take() {
+        assert!(Reason::DefaultChanged.waits_for_take());
+        for r in [Reason::Invalidated, Reason::InputGone, Reason::OutputGone] {
+            assert!(!r.waits_for_take(), "{r:?}");
+        }
+    }
+
+    #[test]
     fn events_keep_the_worst_reason_and_skip_underruns() {
         let e = DeviceEvents::default();
         e.note(ErrorKind::Xrun, false);
@@ -321,6 +341,7 @@ mod tests {
         e.note(ErrorKind::BackendError, false);
         assert_eq!(e.counts(), (3, 1));
         assert_eq!(e.last_other(), ErrorKind::BackendError);
+        assert_eq!(e.reason(), Some(Reason::OutputGone), "looking leaves it");
         assert_eq!(e.take_reason(), Some(Reason::OutputGone));
         assert_eq!(e.take_reason(), None, "taken");
         e.note(ErrorKind::DeviceNotAvailable, true);

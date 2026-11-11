@@ -6,6 +6,13 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **macOS: a take no longer ends when the system output changes.** Connecting AirPods or choosing
+  another output in Control Center while recording with the output on System Default stopped the
+  recording, though the input never changed. The take now carries on, and the audio restarts on
+  the new output once you stop.
+
 ## [0.1.0-alpha.15] - 2026-11-11
 
 ### Added
