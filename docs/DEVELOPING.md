@@ -270,9 +270,9 @@ report races inside their own loading and teardown.
   Long work goes in an async command, which hands edits back with `run_on_main_thread`.
 - **Every platform.** Platform code stays behind `cfg`. VST3 enum casts stay explicit even where
   clippy calls them a no-op on Linux: the C enums are `i32` in the MSVC bindings.
-- **Clippy** is clean with `-D warnings` on Linux, on the toolchain pinned as `LINT_TOOLCHAIN` in
-  `.github/workflows/ci.yml`. To move to a newer one, bump it there and fix what it reports in the
-  same commit. A narrow `#[allow]` with a one-line reason is fine where a lint would make DSP or a
+- **Clippy** is clean with `-D warnings` on Linux and macOS, on the toolchain pinned as
+  `LINT_TOOLCHAIN` in `.github/workflows/ci.yml`. To move to a newer one, bump it there and fix
+  what it reports in the same commit. A narrow `#[allow]` with a one-line reason is fine where a lint would make DSP or a
   table worse.
 - **Formatting** is `cargo fmt --all` (`rustfmt.toml`: lines up to 160 columns).
   `.git-blame-ignore-revs` lists the one project-wide pass; `git config blame.ignoreRevsFile
@@ -396,10 +396,10 @@ Contrast). A canvas colour is a field of `CanvasTheme` (`src/theme/canvasTheme.t
 `.github/workflows/ci.yml` runs on every push to `main` and every pull request, on Ubuntu, Windows
 and macOS: `npm ci`, `npm run build`, `npm test`, `cargo test -p daw-engine --lib`,
 `cargo test -p daw` and `cargo check --workspace --all-targets` (so the examples must compile). On
-Linux it also checks `cargo fmt` and clippy on the pinned toolchain, and that `docs/FEATURES.md` and
-`ROADMAP.md` match `features/`; on Linux and macOS it runs
-`scripts/headless-checks.sh`. A `nix` job runs `nix flake check`, which builds the package and runs
-the engine's unit tests. Checks that need real plug-ins don't run in CI.
+Linux it also checks `cargo fmt` and that `docs/FEATURES.md` and `ROADMAP.md` match `features/`;
+on Linux and macOS it runs clippy on the pinned toolchain (so code behind `cfg(target_os = "macos")`
+is linted too) and `scripts/headless-checks.sh`. A `nix` job runs `nix flake check`, which builds
+the package and runs the engine's unit tests. Checks that need real plug-ins don't run in CI.
 
 `.github/workflows/pages.yml` builds the website from `docs/`, `ROADMAP.md`, `CONTRIBUTING.md` and
 `CHANGELOG.md` when they change on `main` and publishes it to <https://marbble.dev/>. `site/docs.config.mjs` groups each document's
