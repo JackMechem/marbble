@@ -31,3 +31,9 @@ cpal = { version = "0.18", features = ["pipewire", "pulseaudio", "jack", "realti
 # The same promotion for the threads that play tracks alongside the audio callback.
 audio_thread_priority = { version = "0.35", default-features = false, features = ["with_dbus"] }
 libc = "0.2"
+
+# Real-time priority for the threads that play tracks alongside the audio callback (a Mach
+# time-constraint policy). Both are already in the tree via cpal.
+[target.'cfg(target_os = "macos")'.dependencies]
+libc = "0.2"
+mach2 = "0.6"

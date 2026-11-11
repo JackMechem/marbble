@@ -129,7 +129,8 @@ module or a `tests.rs` beside them; `session/tests/` holds the session tests tha
 `dsp/tests.rs` drives a small `Engine` through its `rig()`, which the tests in `dsp/`'s folders
 use too. The worker pool's tests include workers refused real-time priority and a worker stuck in
 a plug-in; where rtkit grants real-time priority, one makes a worker spin past `RLIMIT_RTTIME`, so
-a test binary killed by SIGKILL there is a failure.
+a test binary killed by SIGKILL there is a failure. On macOS its twin checks that a worker gets a
+Mach time-constraint policy and loses it once given up on.
 
 `cargo test -p daw` covers settings files (old and malformed ones load), the menu bar's spec and,
 on Linux, that GTK draws each key in `tests/keyboard/gtkKeyLabels.json` as the app writes it. On

@@ -53,9 +53,9 @@ impl Topology {
             let sibling = |c: usize| read(&format!("/sys/devices/system/cpu/cpu{c}/topology/thread_siblings_list"));
             detect_linux(logical, read("/sys/devices/cpu_core/cpus"), read("/sys/devices/system/cpu/online"), &sibling)
         }
-        // Workers only get real-time priority on Linux so far, and at normal priority beside a
-        // real-time callback they'd cost more than they bring: a number can be chosen, but Automatic
-        // stays on one thread.
+        // Workers get real-time priority on Linux and macOS, but Automatic's measurements are
+        // Linux's (and away from both, workers at normal priority beside a real-time callback would
+        // cost more than they bring): a number can be chosen, but Automatic stays on one thread.
         #[cfg(not(target_os = "linux"))]
         Topology { logical, fast_cores: 1, fast: Vec::new() }
     }
