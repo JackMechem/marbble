@@ -1,5 +1,5 @@
 //! Commands that add, remove and arrange tracks and change their settings: stacks, groups, sends and
-//! outputs, VCAs, track alternatives and Freeze.
+//! outputs, VCAs, track alternatives, MIDI settings and Freeze.
 
 use super::*;
 
@@ -312,4 +312,12 @@ pub fn delete_track_alternative(state: State<AppState>, track: Id, name: String)
 #[tauri::command]
 pub fn add_output_aux(state: State<AppState>, track: Id) -> R<Made> {
     edit_made(&state, "New Aux", false, |s| Ok(vec![s.add_output_aux(track)?]))
+}
+
+/// Sets an instrument track's MIDI settings (Track inspector). Steps on one value of the same
+/// track share an undo step; switching the delay's unit is a step of its own.
+#[tauri::command]
+pub fn set_track_midi(state: State<AppState>, id: Id, patch: TrackMidiPatch) -> R<Snapshot> {
+    let key = patch.delay_ms.is_none().then(|| format!("track-midi:{id}:{}", patch.label()));
+    try_edit(&state, patch.label(), key, false, |s| s.set_track_midi(id, &patch))
 }

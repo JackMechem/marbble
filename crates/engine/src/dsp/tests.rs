@@ -328,6 +328,7 @@ fn audio_track(id: Id, channels: Vec<Vec<f32>>) -> TrackDsp {
         vca_mute: false,
         off: false,
         instrument_output: None,
+        midi: Default::default(),
     };
     let mut t = TrackDsp::new(id, TrackKind::Audio, p, Arc::new(Meter::default()));
     let len = channels[0].len() as i64;

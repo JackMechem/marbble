@@ -87,6 +87,8 @@ export function NumberField({
   width = 76,
   resolution = step,
   title,
+  format = String,
+  parse = parseFloat,
 }: {
   value: number;
   onChange: (v: number) => void;
@@ -98,18 +100,23 @@ export function NumberField({
   resolution?: number;
   /** A tooltip, for a field shown without its caption. */
   title?: string;
+  /** How the value is shown (a note name, say), and how typed text is read back: a number, or
+   *  null or NaN when it isn't one. */
+  format?: (v: number) => string;
+  parse?: (text: string) => number | null;
 }) {
-  const [text, setText] = useState(String(value));
-  useEffect(() => setText(String(value)), [value]);
+  const [text, setText] = useState(format(value));
+  // On a new value only: a `format` made in the caller's render mustn't clobber typing.
+  useEffect(() => setText(format(value)), [value]); // eslint-disable-line react-hooks/exhaustive-deps
   const clamp = (v: number) => Math.min(max, Math.max(min, v));
   const commit = () => {
-    const v = parseFloat(text);
+    const v = parse(text) ?? NaN;
     if (Number.isFinite(v)) {
       // Rounded to the resolution, then tidied of float noise (0.1 * 3 = 0.30000000000000004).
       const r = clamp(Math.round(Math.round(v / resolution) * resolution * 1e6) / 1e6);
-      setText(String(r));
+      setText(format(r));
       onChange(r);
-    } else setText(String(value));
+    } else setText(format(value));
   };
   const nudge = (d: number) => onChange(clamp(Math.round((value + d) * 1000) / 1000));
   return (

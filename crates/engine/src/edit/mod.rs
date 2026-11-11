@@ -14,4 +14,5 @@ pub mod pattern; // Step Sequencer pattern regions and the notes they play.
 pub mod region_params; // The Region inspector's playback transforms (quantize, transpose, velocity…).
 pub mod strip_silence; // Strip Silence: the sounding parts of a region's audio.
 pub mod takes; // Take folders and comping, and cutting a cycle or punch recording into takes.
+pub mod track_midi; // The Track inspector's MIDI settings: transpose, velocity, limits and delay.
 pub mod transients; // Transient detection, for splits, sampler slices and Drum Replacement.

@@ -1,6 +1,6 @@
 //! What the engine plays, built from the project: a track's parameters (`track_params`, VCAs
 //! included), its regions as the engine plays them (`regions_dsp`: comps, patterns, region parameters
-//! applied), its strip with plug-ins (`build_track`), and the whole graph (`rebuild_graph`).
+//! and the track's MIDI settings applied), its strip with plug-ins (`build_track`), and the whole graph (`rebuild_graph`).
 
 use crate::session::*;
 
@@ -80,6 +80,7 @@ impl Session {
             vca_mute,
             off: p.is_off(t.id),
             instrument_output: t.instrument_output,
+            midi: t.midi_settings,
         }
     }
 
@@ -142,6 +143,8 @@ impl Session {
                 }
             }
         }
+        // The track's MIDI settings (see `session/tracks/midi_settings.rs`).
+        self.play_through_track_midi(&t.midi_settings, &mut out);
         out.extend(audio.into_regions());
         Arc::new(out)
     }

@@ -9,7 +9,7 @@ use daw_engine::edit::pattern::{Pattern, PatternRow, Step};
 use daw_engine::edit::region_params::RegionParams;
 use daw_engine::edit::strip_silence::StripSettings;
 use daw_engine::model::{AutoParam, AutoPoint, CompSegment, Id, InputSel, Note, Region, RegionContent, Take, TakeFolder, TrackKind, MASTER_ID};
-use daw_engine::session::{MidiContent, RegionParamsPatch, VcaPatch, BUILTIN_SYNTH};
+use daw_engine::session::{MidiContent, RegionParamsPatch, TrackMidiPatch, VcaPatch, BUILTIN_SYNTH};
 use daw_engine::Session;
 
 pub const RATE: u32 = 48_000;
@@ -292,6 +292,10 @@ pub fn steps() -> Vec<(&'static str, StepFn)> {
             s.set_region_params(&[r], &RegionParamsPatch { delay: Some(7.5), delay_ms: Some(true), ..Default::default() });
         }),
         ("MIDI take folder parameters", |s, w| s.set_region_params(&[w.midi_folder], &RegionParamsPatch { transpose: Some(5), ..Default::default() })),
+        ("Track MIDI settings", |s, w| {
+            let patch = TrackMidiPatch { transpose: Some(-3), velocity: Some(12), key_limit: Some((40, 100)), delay: Some(-20.0), ..Default::default() };
+            s.set_track_midi(w.inst, &patch).unwrap();
+        }),
         ("Pack take folder", |s, w| {
             let ids = region_ids(s, w.a2);
             w.take_folder = s.pack_take_folder(&ids[..2]).unwrap();

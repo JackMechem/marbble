@@ -1,6 +1,7 @@
 // The Inspector's Track section, as in Logic's Track inspector, from what a track already has:
-// name, colour, icon, type, input or instrument, output, freeze, regions and group. Name, colour,
-// icon, input, output and freeze can be changed here; the channel strip below has the rest.
+// name, colour, icon, type, input or instrument, output, freeze, an instrument track's MIDI
+// settings (TrackMidiRows.tsx), regions and group. Name, colour, icon, input, output, freeze and
+// the MIDI settings can be changed here; the channel strip below has the rest.
 import { useEffect, useState } from "react";
 import { isStack, type Project, type Track } from "../engine/project";
 import { api } from "../engine/commands";
@@ -16,6 +17,8 @@ import { TrackIcon } from "../tracks/icons/trackIconArt";
 import { iconLabel } from "../tracks/icons/trackIcons";
 import { openTrackIconPicker } from "../tracks/icons/TrackIconPicker";
 import { onPress } from "../keyboard/keyNav";
+import { TrackMidiRows } from "./TrackMidiRows";
+import { hasMidiSettings } from "./trackMidiModel";
 
 const KIND_NAMES: Record<Track["kind"], string> = { audio: "Audio", instrument: "Software Instrument", folder: "Folder Stack", summing: "Summing Stack", aux: "Aux" };
 
@@ -140,6 +143,7 @@ export function TrackRows({ project, track }: { project: Project; track: Track }
           <input type="checkbox" aria-label="Freeze" checked={!!track.frozen} onChange={() => toggleFreeze([track.id])} />
         </Row>
       )}
+      {hasMidiSettings(track) && <TrackMidiRows track={track} />}
       {track.kind === "aux" ? null : stack ? (
         <Row label="Subtracks">{project.tracks.filter((t) => t.parent === track.id).length}</Row>
       ) : (

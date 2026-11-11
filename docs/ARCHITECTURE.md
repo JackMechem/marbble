@@ -398,7 +398,7 @@ flowchart TD
   (`session/engine/playback.rs`) turns a track's regions into sorted, non-overlapping audio
   segments and plain MIDI regions, applying in order: Freeze (only the freeze file plays), region
   playback parameters, pattern regions realized into notes, take folders expanded into comp
-  pieces, and crossfades and loop seams placed. A newer region hides older audio under it without
+  pieces, crossfades and loop seams placed, and last the track's MIDI settings. A newer region hides older audio under it without
   deleting it, as Logic's No Overlap playback does. So a feature built as a transform here needs
   no new `Cmd` and sounds the same in every render. Code that reads regions directly (Join, MIDI
   export, render ranges) uses `edit::region_params::bake` or `bounds` instead.
@@ -413,7 +413,9 @@ flowchart TD
 - **MIDI.** Notes are cut at the region end; a flush (stop, locate, a change of regions or
   instrument) sends note-offs for what's sounding. When playback starts or jumps, controllers are
   chased (the latest value of each before the playhead) and then held notes, as Settings › MIDI ›
-  Chase says. Live MIDI goes to the selected instrument track, else the first armed one.
+  Chase says. Live MIDI goes to the selected instrument track, else the first armed one, through
+  that track's MIDI settings (`dsp/live_keys.rs`, from `TrackParams`): each held key remembers the
+  note it started, so its note-off ends that note whatever changed meanwhile.
 - **Side-chains.** A track that keys another copies its signal into a key buffer as it leaves its
   plug-ins, before its delay line (post-fader, or pre-fader for `sidechain_pre`). A built-in effect
   gets it as `key`; a VST3 on its aux input bus.
@@ -552,6 +554,11 @@ the old timeline lands (`edit/arrangement/`, `edit/arrange_cmds.rs`). One apply 
 the plug-ins are unloaded from the engine with their state kept, and edits to the track's regions
 and plug-ins are refused (`check_unfrozen` before, `frozen_guard` after). Freeze files live in
 `Freeze Files/`.
+
+**Track MIDI settings.** An instrument track's `midi_settings` (the Track inspector's Transpose,
+Velocity, Key and Velocity Limits and Delay; `edit/track_midi/`) change what it plays, never its
+notes: the playback list applies them after the regions' parameters, and live input meets them in
+the engine. Recording keeps what was played.
 
 **Track alternatives.** `Track::regions` is always the active set; the inactive ones sit in
 `Track::alternatives`, so nothing else needs to know about them.

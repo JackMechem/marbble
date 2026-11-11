@@ -178,6 +178,9 @@ pub struct TrackParams {
     pub off: bool,
     /// For an aux: the instrument output that feeds it.
     pub instrument_output: Option<InstrumentOutput>,
+    /// The track's MIDI settings, for live input (`live_keys.rs`). What its regions play has
+    /// them applied already, in the playback list.
+    pub midi: crate::edit::track_midi::TrackMidiSettings,
 }
 
 /// A send as the engine plays it. A muted send keeps its slot at gain 0, so it fades out
@@ -248,6 +251,8 @@ pub struct TrackDsp {
     pub(super) resume_left: u32,
     /// Notes the player is holding through MIDI Thru, released if the track goes off meanwhile.
     pub(super) live_held: [bool; 128],
+    /// The note each key held on the live input plays, after the track's MIDI settings.
+    pub(super) live_keys: live_keys::LiveKeys,
     /// The instrument played this block, so its outputs hold this block's audio.
     pub(super) instrument_ran: bool,
     /// For an aux on an instrument's extra output: where that comes from.
@@ -309,6 +314,7 @@ impl TrackDsp {
             dormant: false,
             resume_left: 0,
             live_held: [false; 128],
+            live_keys: Default::default(),
             instrument_ran: false,
             feed: Default::default(),
             outs: Outlets::new(),

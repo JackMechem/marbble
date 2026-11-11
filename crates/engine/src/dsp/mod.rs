@@ -5,7 +5,7 @@
 //! This file holds [`Engine`] and how it's made. A block runs through `process.rs`, which plays each
 //! strip with `strip.rs` (on the worker pool through `parallel/` and `pool/`, when `graph/` has a
 //! graph); `apply.rs` handles commands; `track.rs` holds a strip's state and `block.rs` what a block
-//! shares. `offline.rs` renders without a device. `crate::session` is the other side of every message.
+//! shares; `live_keys.rs` plays live input through a track's MIDI settings. `offline.rs` renders without a device. `crate::session` is the other side of every message.
 
 use std::sync::atomic::{AtomicBool, AtomicI64, AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
@@ -46,6 +46,7 @@ pub use builtin::{clamp as builtin_clamp, to_normalized, to_plain, BuiltinDsp, F
 pub(crate) mod auto;
 use auto::MasterAuto;
 pub mod graph;
+mod live_keys;
 mod multi_out;
 pub mod parallel;
 pub mod pool;

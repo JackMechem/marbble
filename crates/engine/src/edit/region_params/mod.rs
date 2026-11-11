@@ -104,27 +104,39 @@ impl RegionParams {
 
     /// Where an event at timeline sample `at` plays once delayed.
     pub fn delayed(&self, at: f64, map: &TempoMap) -> f64 {
-        if self.delay == 0.0 {
-            at
-        } else if self.delay_ms {
-            at + self.delay * map.sample_rate() / 1000.0
-        } else {
-            map.sample_at(map.beats_at(at) + self.delay / TICKS_PER_QUARTER)
-        }
+        delayed(self.delay, self.delay_ms, at, map)
     }
 
     /// The delay in the other unit, measured at timeline sample `at` (for switching units
     /// without changing what plays there).
     pub fn delay_in(&self, ms: bool, at: f64, map: &TempoMap) -> f64 {
-        if ms == self.delay_ms {
-            return self.delay;
-        }
-        let shift = self.delayed(at, map) - at;
-        if ms {
-            shift * 1000.0 / map.sample_rate()
-        } else {
-            (map.beats_at(at + shift) - map.beats_at(at)) * TICKS_PER_QUARTER
-        }
+        delay_in(self.delay, self.delay_ms, ms, at, map)
+    }
+}
+
+/// Where an event at timeline sample `at` plays once delayed by `delay` ticks (following the
+/// tempo map) or, with `ms`, milliseconds. The Track inspector's Delay uses it too.
+pub fn delayed(delay: f64, ms: bool, at: f64, map: &TempoMap) -> f64 {
+    if delay == 0.0 {
+        at
+    } else if ms {
+        at + delay * map.sample_rate() / 1000.0
+    } else {
+        map.sample_at(map.beats_at(at) + delay / TICKS_PER_QUARTER)
+    }
+}
+
+/// A delay of `delay` (in ms when `from_ms`, else ticks) in the unit `to_ms` asks for, measured
+/// at timeline sample `at`, so switching units doesn't change what plays there.
+pub fn delay_in(delay: f64, from_ms: bool, to_ms: bool, at: f64, map: &TempoMap) -> f64 {
+    if to_ms == from_ms {
+        return delay;
+    }
+    let shift = delayed(delay, from_ms, at, map) - at;
+    if to_ms {
+        shift * 1000.0 / map.sample_rate()
+    } else {
+        (map.beats_at(at + shift) - map.beats_at(at)) * TICKS_PER_QUARTER
     }
 }
 

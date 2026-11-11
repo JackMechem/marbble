@@ -6,6 +6,7 @@ mod comping;
 mod held_notes;
 mod instruments;
 mod presets;
+mod track_midi;
 
 use std::path::PathBuf;
 

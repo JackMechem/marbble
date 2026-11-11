@@ -99,3 +99,9 @@
   flex: 1;
 }
 
+/* A low–high pair of number fields on one row (Key Limit, Vel Limit). */
+.insp-limit {
+  display: inline-flex;
+  gap: 4px;
+  vertical-align: middle;
+}

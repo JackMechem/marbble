@@ -348,8 +348,9 @@ by the selected track's channel strip and the Stereo Out strip.
   the old one back), **Color** (click the swatch for the colour grid), **Icon** (click it for
   the icon grid; see [Track headers](#tracks-area)), type, **Input** (audio
   tracks: a pop-up, as on the channel strip) or instrument, **Output** (a pop-up: Stereo Out,
-  the stack, or an aux), **Freeze** (as the snowflake button), the region or subtrack count
-  and the group. Choosing a track (its header, its Mixer strip, a right-click on its empty
+  the stack, or an aux), **Freeze** (as the snowflake button), on an instrument track its
+  [MIDI settings](#track-midi-settings) (Transpose, Velocity, Key Limit, Vel Limit and Delay),
+  the region or subtrack count and the group. Choosing a track (its header, its Mixer strip, a right-click on its empty
   lane, or Up and Down) deselects the regions on other tracks, so both sections describe the
   same track.
 
@@ -1198,6 +1199,32 @@ changing its notes. With one or more regions selected, the Inspector's Region se
   them, as one undo step: the notes move, change pitch, velocity and length; the region grows
   to keep notes a delay moved past its edges (a looped region keeps its length, its notes are
   kept inside it); an audio region moves by its delay. The region plays exactly as before.
+
+### Track MIDI settings
+
+As in Logic's Track inspector, a software instrument track can play differently from what its
+regions hold and what you play into it. The Inspector's Track section shows, for an instrument
+track:
+
+| Row | What it does | Values |
+|---|---|---|
+| **Transpose** | Semitones; notes stop at 0 and 127. | -96 to +96 |
+| **Velocity** | Added to every velocity; the result stays within 1–127. | -99 to +99 |
+| **Key Limit** | The lowest and highest note the track plays; notes outside are left out. Type a note name (`C3` is middle C) or a number. | C-2 to G8 |
+| **Vel Limit** | The softest and hardest velocity the track plays; notes outside are left out. | 1 to 127 |
+| **Delay** | Plays the track earlier (negative) or later, in ticks (following the tempo) or ms, like the Region inspector's Delay. | ±3840 ticks, ±2000 ms |
+
+- The limits look at a note as it arrives, before Transpose and Velocity, so two tracks can
+  split one keyboard (or a drum pad's soft and hard hits) between them.
+- They apply to the regions, after the regions' own [playback
+  parameters](#region-playback-parameters), pattern regions and take folders included, and to
+  live input: MIDI keyboards, Musical Typing, Step Input and the notes the editors play as you
+  click them. Delay applies to the regions only. A key held while a value changes still ends the note it started.
+- Recording keeps what you played, as Logic does: the settings change how the take plays, not
+  its notes. Bounce, Export, Bounce in Place and Freeze play the settings; Export as MIDI File
+  and Apply Region Parameters don't write them into the notes.
+- Each change is one undo step (steps on one field in quick succession are one). A frozen
+  track's settings can't change until it is unfrozen.
 
 ### Colours, names and mute
 
