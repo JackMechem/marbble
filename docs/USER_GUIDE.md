@@ -2261,8 +2261,9 @@ installed on this computer comes along as a missing plug-in (its slot keeps its 
 in a project from another computer). Marbble Sampler's samples come along: a saved setting
 keeps a copy of them, and loading or pasting it into another project copies them into that
 project's `Samples` folder. Saved settings are files, one `<name>.json` each, in the
-`channel-strips` folder of the settings folder (`~/.config/marbble/channel-strips` on Linux
-and macOS, `%APPDATA%\marbble\channel-strips` on Windows), with a `<name>` folder beside one
+`channel-strips` folder of the settings folder (`~/.config/marbble/channel-strips` on Linux,
+`~/Library/Application Support/io.github.jackmechem.marbble/channel-strips` on macOS, `%APPDATA%\marbble\channel-strips` on
+Windows), with a `<name>` folder beside one
 that holds a sampler's samples.
 
 ### Plug-ins
@@ -2628,8 +2629,8 @@ to the previous and next preset. Loading a preset is one undo step.
   Presence, Vocal Air, Kick Punch, Snare Crack, Bass Clarity, Acoustic Guitar, Telephone and
   Master Polish). **User**
   presets are yours, and every project sees them: they are files in the `presets/<effect>/`
-  folder of the settings folder (`~/.config/marbble/presets` on Linux and macOS,
-  `%APPDATA%\marbble\presets` on Windows), one `<name>.json` each.
+  folder of the settings folder (`~/.config/marbble/presets` on Linux,
+  `~/Library/Application Support/io.github.jackmechem.marbble/presets` on macOS, `%APPDATA%\marbble\presets` on Windows), one `<name>.json` each.
 - **Save Preset…** names and saves the current settings (or updates the user preset that is
   loaded); **Save Preset As…** saves a copy under a new name. Saving over an existing name asks
   first. **Rename Preset…** and **Delete Preset** work on the user preset that is loaded.
@@ -3309,8 +3310,8 @@ Your templates appear under **My Templates** in the [Project Chooser](#the-proje
 where a project made from one starts with all of that and no regions. Right-click a template
 there to **Rename…** or **Delete** it. A template keeps a copy of Marbble Sampler's samples,
 and a project made from it gets copies of its own. Templates are files in the `templates`
-folder of the settings folder (`~/.config/marbble/templates` on Linux and macOS,
-`%APPDATA%\marbble\templates` on Windows), one `<name>.json` each, with a `<name>` folder
+folder of the settings folder (`~/.config/marbble/templates` on Linux,
+`~/Library/Application Support/io.github.jackmechem.marbble/templates` on macOS, `%APPDATA%\marbble\templates` on Windows), one `<name>.json` each, with a `<name>` folder
 beside one that holds sampler samples.
 
 ### Project alternatives
@@ -3412,7 +3413,9 @@ brings back Marbble's own.
 Open Settings with **Marbble › Settings…** (Ctrl+,), which opens on the Audio tab;
 Marbble › Appearance… and Marbble › Key Commands… (Alt+K) open those tabs. Changes apply at
 once, except the Audio devices (**Apply Changes**), and are kept in `settings.json`
-(`~/.config/marbble` on Linux and macOS, `%APPDATA%\marbble` on Windows). The metronome is set
+(`~/.config/marbble` on Linux, `~/Library/Application Support/io.github.jackmechem.marbble` on macOS, `%APPDATA%\marbble` on
+Windows; Marbble moves the macOS folder from `~/.config/marbble`, where versions up to
+0.1.0-alpha.14 kept it, the first time it starts). The metronome is set
 per project, in [Project Settings › Metronome](#metronome).
 
 ### General

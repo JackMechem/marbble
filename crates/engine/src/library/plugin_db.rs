@@ -12,16 +12,7 @@ use vst3_host::PluginDescriptor;
 
 pub const SCAN_ARG: &str = "--scan-vst3";
 
-/// Marbble's config folder: `$XDG_CONFIG_HOME/marbble` (usually `~/.config/marbble`), and
-/// `%APPDATA%\marbble` on Windows.
-pub fn config_dir() -> PathBuf {
-    let base = std::env::var_os("XDG_CONFIG_HOME")
-        .map(PathBuf::from)
-        .or_else(|| std::env::var_os("APPDATA").map(PathBuf::from))
-        .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".config")))
-        .unwrap_or_else(|| PathBuf::from("."));
-    base.join("marbble")
-}
+pub use crate::library::config_dir::config_dir;
 
 fn cache_path() -> PathBuf {
     config_dir().join("plugins.json")

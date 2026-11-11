@@ -24,6 +24,10 @@ All notable changes to Marbble are recorded here. The format follows
 - **Processing threads in the audio device's workgroup on macOS.** The extra processing threads now
   join the audio device's own thread in its workgroup and share its scheduling, so macOS runs them
   on the performance cores together and raises the CPU's clock for their combined work.
+- **Settings on macOS live in `~/Library/Application Support/io.github.jackmechem.marbble`**, the
+  native place, instead of `~/.config/marbble`. Settings, recent projects, presets, channel strip
+  settings, templates and the plug-in list are moved there automatically the first time Marbble
+  starts.
 
 ### Fixed
 

@@ -1,4 +1,5 @@
-//! Application settings persisted between launches, in `~/.config/marbble/settings.json`.
+//! Application settings persisted between launches, in `settings.json` in the config folder
+//! ([`daw_engine::library::config_dir`]).
 //!
 //! Every section and field falls back to its default, so files written by older versions load.
 

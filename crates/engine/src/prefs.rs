@@ -1,6 +1,6 @@
 //! Options chosen in Settings and Project Settings.
 //!
-//! [`Prefs`] are app-wide: the Tauri side keeps them in `~/.config/marbble/settings.json` and
+//! [`Prefs`] are app-wide: the Tauri side keeps them in `settings.json` in the config folder and
 //! hands them to the session with [`crate::Session::set_prefs`]. [`ClickSettings`] and
 //! [`BitDepth`] also appear in the project document, so they are saved with each project, as
 //! Logic does with its metronome and recording settings.

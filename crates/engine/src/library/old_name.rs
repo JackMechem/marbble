@@ -11,7 +11,7 @@ pub const EXT: &str = "marbble";
 pub const OLD_EXT: &str = "fermata";
 
 /// The config folder's name before the rename.
-const OLD_CONFIG: &str = "fermata";
+pub(crate) const OLD_CONFIG: &str = "fermata";
 /// The app identifier before the rename; the webview keeps its storage in a folder named after it.
 const OLD_IDENTIFIER: &str = "studio.fermata.daw";
 /// The app identifier, as in tauri.conf.json.
@@ -138,13 +138,9 @@ fn adopt(from: PathBuf, to: PathBuf) {
 
 /// Moves the config folder (settings, recent projects, plug-in cache, presets), the folder of
 /// saved instruments and the webview's storage (window layout and view preferences) from their
-/// old names. The projects folder is left where it is, since recent projects point into it;
+/// old names, and the config folder from its old place on macOS ([`crate::library::config_dir`]). The projects folder is left where it is, since recent projects point into it;
 /// [`crate::session::default_projects_root`] keeps using it.
 pub fn migrate() {
-    let config = crate::library::plugin_db::config_dir();
-    if let Some(parent) = config.parent() {
-        adopt(parent.join(OLD_CONFIG), config.clone());
-    }
     let instruments = crate::library::presets::bundle_root();
     if let Some(parent) = instruments.parent() {
         adopt(parent.join("Fermata Instruments"), instruments.clone());
@@ -152,6 +148,9 @@ pub fn migrate() {
     for base in webview_bases() {
         adopt(base.join(OLD_IDENTIFIER), base.join(IDENTIFIER));
     }
+    // After the webview's storage: on macOS the settings folder shares its folder in
+    // Application Support, and merges into it.
+    crate::library::config_dir::migrate();
 }
 
 /// The folders the webview keeps per-app storage in, by identifier.
