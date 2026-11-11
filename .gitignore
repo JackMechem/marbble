@@ -5,3 +5,6 @@
 tsconfig.tsbuildinfo
 result
 result-*
+
+# The maintainer's own agent instructions (CLAUDE.md imports the shared AGENTS.md)
+CLAUDE.local.md
