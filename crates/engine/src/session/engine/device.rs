@@ -51,11 +51,17 @@ impl Session {
                 false
             }
             Step::Restart => {
+                // A take carries on through a moved system output, and the device reopens once
+                // it ends (`Reason::waits_for_take`). A worse event meanwhile replaces the reason.
+                let pending = self.audio.as_ref().and_then(|io| io.events().reason());
+                if self.is_recording() && pending.is_some_and(|r| r.waits_for_take()) {
+                    return false;
+                }
                 let reason = self.audio.as_ref().and_then(|io| io.events().take_reason());
                 let old = self.audio_status.output_name.clone();
                 log::warn!("audio device: {reason:?} on {old:?}, reopening");
-                // A recording whose device went away ends here, with what it has, rather than
-                // carrying on into the next device.
+                // A recording whose device went away, or whose device changed under it, ends here
+                // with what it has rather than carrying on into the next device.
                 if self.is_recording() {
                     self.stop();
                 }
