@@ -827,7 +827,36 @@ fn the_scheduler_accepts_the_time_constraint_for_every_buffer() {
         assert!(c.computation > 0 && c.computation <= c.constraint && c.constraint >= c.period, "{frames}@{rate}: {c:?}");
         assert_eq!(c.preemptible, 1);
         // And the scheduler takes it, on a thread of its own.
-        let granted = thread::spawn(move || super::thread_setup::macos::promote(frames, rate)).join().unwrap();
+        let granted = thread::spawn(move || super::thread_setup::macos::promote(frames, rate, None)).join().unwrap();
         assert_eq!(granted, Ok(()), "{frames}@{rate}");
     }
+}
+
+/// A worker copies the IO thread's time-constraint policy when the device gave one, and works one
+/// out from the buffer when the scheduler won't take it.
+#[cfg(target_os = "macos")]
+#[test]
+fn a_worker_copies_the_io_threads_policy() {
+    use crate::audio_io::coreaudio::{own_policy, IoThread, TimeConstraint};
+    let constraint_for = |frames, rate| {
+        let c = super::thread_setup::macos::constraint_for(frames, rate).unwrap();
+        TimeConstraint { period: c.period, computation: c.computation, constraint: c.constraint }
+    };
+    // The policy for another buffer than the pool's, so it can only have come from the IO thread.
+    let io = constraint_for(256, 44100);
+    let promoted = |policy| {
+        thread::spawn(move || {
+            let opts = PoolOptions { realtime: Some((512, 48000)), io_thread: IoThread { workgroup: None, policy }, ..Default::default() };
+            let sh = Pool::new(PoolOptions { threads: 2, ..Default::default() }).shared.clone();
+            assert!(super::thread_setup::promote(&sh, 1, &opts));
+            own_policy()
+        })
+        .join()
+        .unwrap()
+    };
+    assert_eq!(promoted(Some(io)), Some(io));
+    // Computation longer than the constraint: refused, so the buffer's own.
+    let bad = TimeConstraint { computation: io.constraint * 2, ..io };
+    assert_eq!(promoted(Some(bad)), Some(constraint_for(512, 48000)));
+    assert_eq!(promoted(None), Some(constraint_for(512, 48000)));
 }

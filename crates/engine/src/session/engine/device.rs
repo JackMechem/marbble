@@ -8,6 +8,13 @@ impl Session {
         self.engine_rate
     }
 
+    /// The output device's IO thread as the workers take it (its workgroup and time-constraint
+    /// policy on macOS), while the device runs. `IoThread::suggested_threads` is the system's
+    /// suggestion for how many threads to play on beside it.
+    pub fn io_thread(&self) -> Option<&audio_io::IoThread> {
+        self.audio.as_ref().map(|a| a.io_thread())
+    }
+
     /// Closes and reopens the device with the current config.
     pub fn restart_audio(&mut self) {
         self.audio = None;

@@ -80,6 +80,9 @@ impl Session {
                 r.playing
             );
         }
+        if r.realtime > told.realtime || r.joined > told.joined {
+            log::info!("processing threads: {} of {} real time, {} in the audio device's workgroup", r.realtime, r.threads - 1, r.joined);
+        }
         if r.stuck > told.stuck {
             log::warn!("processing threads given up on in a plug-in, demoted and left out: {}; tracks play on {} threads", r.stuck, r.playing);
         }
@@ -129,6 +132,7 @@ impl Session {
                 threads,
                 realtime: realtime.then_some((self.audio_status.buffer_size, self.audio_status.sample_rate)),
                 cpus: self.threads.topology.fast.clone(),
+                io_thread: self.audio.as_ref().filter(|_| realtime).map(|a| a.io_thread().clone()).unwrap_or_default(),
                 ..Default::default()
             };
             self.threads.running = Some(wanted);
