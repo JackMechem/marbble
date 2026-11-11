@@ -24,3 +24,10 @@ glib = "0.18"
 gio = "0.18"
 gdk = "0.18"
 gtk = "0.18"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+# The menu bar's keys (src/menu/mac_keys.rs). The versions muda already uses.
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "block2", "NSNotification", "NSOperation", "NSString"] }
+objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSApplication", "NSEvent", "NSMenu", "NSMenuItem", "NSResponder"] }
+block2 = "0.6"

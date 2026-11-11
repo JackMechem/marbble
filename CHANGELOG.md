@@ -6,6 +6,13 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **Keys in the macOS menu bar.** The menu bar now shows each item's key command (R, X, Space,
+  ⌘→…) beside it on macOS too, as it does on Linux and Windows, and follows the keys you
+  reassign. The keys are only bound while a menu is open, so typing in text fields and Musical
+  Typing still get every key.
+
 ## [0.1.0-alpha.14] - 2026-11-10
 
 ### Added

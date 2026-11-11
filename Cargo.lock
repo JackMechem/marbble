@@ -782,6 +782,7 @@ name = "daw"
 version = "0.1.0-alpha.14"
 dependencies = [
  "anyhow",
+ "block2",
  "daw-engine",
  "env_logger",
  "gdk",
@@ -789,6 +790,9 @@ dependencies = [
  "glib",
  "gtk",
  "log",
+ "objc2",
+ "objc2-app-kit",
+ "objc2-foundation",
  "parking_lot",
  "serde",
  "serde_json",
