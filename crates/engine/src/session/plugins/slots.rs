@@ -45,6 +45,7 @@ impl Session {
         let ins = self.instantiate_slot(&new_slot)?;
         self.mark_unresponsive();
         let old = self.slot_ref(track, slot).ok_or_else(|| anyhow!("no such slot"))?.replace(new_slot);
+        let keyed = old.as_ref().is_some_and(|o| o.sidechain.is_some());
         if let Some(o) = old {
             self.controllers.remove(&o.uid);
         }
@@ -53,6 +54,7 @@ impl Session {
         } else {
             self.send(Cmd::Insert { track, slot, insert: Some(ins) });
         }
+        self.key_dropped(keyed);
         self.update_pdc();
         self.dirty = true;
         Ok(uid)
@@ -66,6 +68,7 @@ impl Session {
         // A plug-in a processing thread is left in keeps its editor, hidden, untold.
         self.mark_unresponsive();
         let old = self.slot_ref(track, slot).and_then(|s| s.take());
+        let keyed = old.as_ref().is_some_and(|o| o.sidechain.is_some());
         if let Some(o) = old {
             if let Some(mut c) = self.controllers.remove(&o.uid) {
                 c.close_editor();
@@ -76,8 +79,19 @@ impl Session {
         } else {
             self.send(Cmd::Insert { track, slot, insert: None });
         }
+        self.key_dropped(keyed);
         self.update_pdc();
         self.dirty = true;
+    }
+
+    /// After a plug-in left a slot: one that was `keyed` (side-chained) had its key's source play
+    /// before its track, so the processing order may have changed. The engine is told, or it keeps
+    /// the old order, which the task graph built from the new one doesn't match, and every block
+    /// plays serially from then on.
+    fn key_dropped(&mut self, keyed: bool) {
+        if keyed {
+            self.send(Cmd::Order(self.project.process_order()));
+        }
     }
 
     pub fn set_bypass(&mut self, track: Id, slot: usize, bypass: bool) {

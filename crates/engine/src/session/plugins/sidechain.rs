@@ -175,6 +175,30 @@ mod tests {
         assert!(s.set_sidechain(a, 7, Some(b)).is_err(), "an empty slot");
     }
 
+    /// A key makes its source play first; taking the keyed plug-in out, or putting another in its
+    /// place, lets the order go back. The engine must hear of it, or the task graph built from the
+    /// new order doesn't fit its strips and every block plays serially from then on (#418).
+    #[test]
+    fn the_task_graph_still_fits_once_a_keyed_plug_in_is_gone() {
+        let mut s = session();
+        let a = s.add_track(TrackKind::Audio, InputSel::None, None, None).unwrap();
+        let b = s.add_track(TrackKind::Audio, InputSel::None, None, None).unwrap();
+        s.set_threads_for_checks(2, crate::dsp::ParallelTest { always: true, renders: false, patient: false });
+        for replace in [false, true] {
+            s.set_plugin(a, 0, "builtin:compressor").unwrap();
+            s.set_sidechain(a, 0, Some(b)).unwrap();
+            assert_eq!(s.project.process_order(), [b, a]);
+            assert!(s.pool_usable_for_checks(), "keyed");
+            if replace {
+                s.set_plugin(a, 0, "builtin:reverb").unwrap();
+            } else {
+                s.remove_plugin(a, 0);
+            }
+            assert_eq!(s.project.process_order(), [a, b]);
+            assert!(s.pool_usable_for_checks(), "{} the keyed plug-in", if replace { "replaced" } else { "removed" });
+        }
+    }
+
     #[test]
     fn a_slot_saved_before_side_chains_has_no_key() {
         let slot: PluginSlot = serde_json::from_str(r#"{"uid":3,"plugin_id":"/x.vst3|AB","name":"X"}"#).unwrap();

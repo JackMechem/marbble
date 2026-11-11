@@ -473,7 +473,10 @@ inaudible.
   processing order. Float addition isn't associative, so that order is what keeps the bits equal.
 - **The graph.** The session builds a `TaskGraph` (`dsp/graph/`) from the project's routes and
   sends it in `Cmd::Graph` after each edit (`Session::sync_parallel`). The engine checks it against
-  the routes it resolved itself and plays serially until it holds, so a route can't race.
+  the routes it resolved itself and plays serially until it holds, so a route can't race. The
+  graph's tasks are `Project::process_order`, which outputs, sends and side-chain keys decide, so
+  an edit that can change that order sends `Cmd::Order` too, a plug-in leaving a keyed slot among
+  them; otherwise the engine keeps its old order, which the graph no longer matches.
 - **The pool** has no locks or queues: a task is a bit in an atomic word, and whoever clears it
   owns it. The callback can always take ready work, so a preempted worker costs only its own task.
   Workers park on a futex when idle and nap before `RLIMIT_RTTIME` could catch them.

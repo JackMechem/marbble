@@ -16,6 +16,10 @@ All notable changes to Marbble are recorded here. The format follows
   another output in Control Center while recording with the output on System Default stopped the
   recording, though the input never changed. The take now carries on, and the audio restarts on
   the new output once you stop.
+- **Removing a side-chained plug-in no longer puts every track on one thread.** Taking out a
+  plug-in with a side-chain key, or loading another in its slot, left the engine playing the
+  tracks in the old order, so with more than one processing thread every buffer was played on
+  one thread until the next routing change.
 
 ## [0.1.0-alpha.15] - 2026-11-11
 
