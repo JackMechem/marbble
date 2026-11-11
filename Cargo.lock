@@ -782,6 +782,7 @@ name = "daw"
 version = "0.1.0-alpha.14"
 dependencies = [
  "anyhow",
+ "core-foundation",
  "daw-engine",
  "env_logger",
  "gdk",
