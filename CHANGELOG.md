@@ -6,6 +6,12 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **The input level check on macOS.** Settings › Audio, and a notice at launch, now warn on macOS
+  too when the recording device's input volume is turned down or muted in the system, with a
+  **Set to 100%** button.
+
 ### Changed
 
 - **Real-time processing threads on macOS.** Choosing more than one processing thread in

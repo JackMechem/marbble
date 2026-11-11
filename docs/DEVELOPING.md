@@ -58,7 +58,7 @@ Then `npm ci`. Real-time audio scheduling needs rtkit.
 Install Rust, Node.js 22.18 or newer and the Tauri 2 prerequisites for the platform (WebView2
 and the MSVC build tools on Windows, the Xcode command line tools on macOS), then `npm ci`. The
 engine, MIDI, VST3 loading, the built-in effects and the UI are cross-platform. Plug-in editor
-windows exist for Linux (X11) and macOS only, and the input level check is Linux-only. CI tests all
+windows exist for Linux (X11) and macOS only, and the input level check is Linux and macOS only. CI tests all
 three platforms. The macOS build has been run on a real Mac, with little hands-on testing so far;
 the Windows build hasn't been run on a real machine yet
 ([#32](https://github.com/JackMechem/marbble/issues/32)).

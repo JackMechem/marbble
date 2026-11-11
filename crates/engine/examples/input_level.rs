@@ -1,6 +1,6 @@
-//! Prints (or with `--reset`, restores to 100%) the system mixer volume for a recording device:
+//! Prints (or with `--reset`, restores to 100%) the system input volume for a recording device (Linux, macOS):
 //! `--example input_level [--reset] [device-id]`.
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let reset = args.iter().any(|a| a == "--reset");
@@ -12,7 +12,7 @@ fn main() {
     }
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 fn main() {
-    eprintln!("input_level reads the ALSA mixer, so it only runs on Linux");
+    eprintln!("input_level reads the system input volume, which Marbble checks on Linux and macOS only");
 }

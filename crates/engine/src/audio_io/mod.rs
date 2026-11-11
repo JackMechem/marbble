@@ -24,6 +24,9 @@ pub mod memlock;
 pub mod recorder;
 #[cfg(target_os = "linux")]
 pub mod system_volume;
+#[cfg(target_os = "macos")]
+#[path = "system_volume_macos.rs"]
+pub mod system_volume;
 pub mod threads;
 
 use devices::{choose_config, device_name, find_device, host_by_name, pick_host};
