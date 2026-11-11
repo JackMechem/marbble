@@ -1,0 +1,99 @@
+# Throwaway diagnostic for issue #387 (never merged): runs the engine's unit tests on Windows
+# repeatedly, plainly and then under full page heap with cdb attached, to catch the crash's stack.
+name: Diagnose 387
+
+on:
+  push:
+    branches: ['diag/387-*']
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    env:
+      CARGO_INCREMENTAL: 0
+      CARGO_PROFILE_DEV_DEBUG: line-tables-only
+      CARGO_TERM_COLOR: never
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          rustflags: ""
+      - name: Build the engine's unit tests
+        run: |
+          cargo test -p daw-engine --lib --no-run --message-format=json-render-diagnostics > build.json
+          $exe = Get-Content build.json | ForEach-Object { try { $_ | ConvertFrom-Json } catch {} } |
+            Where-Object { $_.reason -eq 'compiler-artifact' -and $_.executable -and $_.target.name -eq 'daw_engine' } |
+            ForEach-Object { $_.executable } | Select-Object -Last 1
+          Write-Output "test binary: $exe"
+          "EXE=$exe" >> $env:GITHUB_ENV
+      - name: What the runner has
+        continue-on-error: true
+        run: |
+          Get-PnpDevice -Class MEDIA,AudioEndpoint -ErrorAction SilentlyContinue | Format-Table -AutoSize
+          Get-Service Audiosrv,AudioEndpointBuilder -ErrorAction SilentlyContinue | Format-Table -AutoSize
+          Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\Debuggers\x64" -Filter *.exe -ErrorAction SilentlyContinue | Select-Object Name
+          (Get-CimInstance Win32_ComputerSystem).NumberOfLogicalProcessors
+      - name: Plain runs, to see how often it crashes
+        working-directory: crates/engine
+        run: |
+          $crashes = 0
+          for ($i = 1; $i -le 12; $i++) {
+            & $env:EXE -q *> "plain-$i.txt"
+            $code = $LASTEXITCODE
+            Write-Output ("run {0}: exit 0x{1:x8}" -f $i, $code)
+            if ($code -ne 0) {
+              $crashes++
+              Get-Content "plain-$i.txt" | Select-Object -Last 20
+            }
+          }
+          Write-Output "crashes: $crashes of 12"
+          exit 0
+      - name: Under full page heap with cdb attached
+        working-directory: crates/engine
+        run: |
+          $name = Split-Path $env:EXE -Leaf
+          $ifeo = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\$name"
+          New-Item -Path $ifeo -Force | Out-Null
+          # FLG_HEAP_PAGE_ALLOCS, full page heap.
+          New-ItemProperty -Path $ifeo -Name GlobalFlag -Value 0x02000000 -PropertyType DWord -Force | Out-Null
+          New-ItemProperty -Path $ifeo -Name PageHeapFlags -Value 3 -PropertyType DWord -Force | Out-Null
+          $cdb = "C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\cdb.exe"
+          $dir = Split-Path $env:EXE
+          $stop = '.echo ===== STOPPED =====; .lastevent; r; kn 80; .echo ===== ALL THREADS =====; ~*kn 40; q'
+          $cmds = @(
+            "sxe -c `"$stop`" av",
+            "sxe -c `"$stop`" c0000374",
+            "sxe -c `"$stop`" c0000409",
+            "sxe -c `"$stop`" bpe",
+            "g",
+            "q"
+          ) -join "`n"
+          Set-Content cdb.txt $cmds
+          for ($i = 1; $i -le 6; $i++) {
+            Write-Output "===== page heap run $i ====="
+            if (Test-Path $cdb) {
+              & $cdb -G -lines -y "$dir" -cf cdb.txt $env:EXE -q *> "heap-$i.txt"
+            } else {
+              & $env:EXE -q *> "heap-$i.txt"
+            }
+            Write-Output ("exit 0x{0:x8}" -f $LASTEXITCODE)
+            $text = Get-Content "heap-$i.txt"
+            $at = ($text | Select-String -Pattern 'STOPPED' | Select-Object -First 1).LineNumber
+            if ($at) {
+              $text | Select-Object -Skip ([Math]::Max(0, $at - 40)) | Select-Object -First 600
+            } else {
+              $text | Select-String -Pattern 'test result|panicked|FAILED|error' | Select-Object -Last 10
+            }
+          }
+          exit 0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: diag-logs
+          path: |
+            crates/engine/plain-*.txt
+            crates/engine/heap-*.txt
