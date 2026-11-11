@@ -4,7 +4,9 @@
 
 use std::collections::HashMap;
 
-use tauri::{AppHandle, Manager, Runtime};
+use tauri::Runtime;
+#[cfg(target_os = "linux")]
+use tauri::{AppHandle, Manager};
 
 use super::MenuBar;
 
@@ -91,6 +93,7 @@ pub(super) fn gtk_key(spec: &str) -> Option<GtkKey> {
 }
 
 /// A key as GDK names it.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))] // only the tests use it off Linux
 #[derive(Debug, PartialEq)]
 pub(super) enum Key {
     /// A keyval name ("space", "BackSpace", "comma").
@@ -99,6 +102,7 @@ pub(super) enum Key {
     Char(char),
 }
 
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))] // only the tests use it off Linux
 #[derive(Debug, PartialEq)]
 pub(super) struct ParsedKey {
     ctrl: bool,
@@ -107,10 +111,12 @@ pub(super) struct ParsedKey {
     key: Key,
 }
 
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))] // only the tests use it off Linux
 pub(super) const F_KEYS: [&str; 12] = ["F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12"];
 
 /// Reads a key spec as src/keyboard/keymap.ts writes it: modifiers then the key, joined with "+" ("Mod" is
 /// Ctrl outside macOS, where this is used; "Mod++" is the + key). None for an empty spec.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))] // only the tests use it off Linux
 pub(super) fn parse_key(spec: &str) -> Option<ParsedKey> {
     let (mods, key) = match spec.strip_suffix("++") {
         Some(m) => (m, "+"),

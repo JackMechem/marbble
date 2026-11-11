@@ -711,11 +711,13 @@ fn a_worker_held_up_outside_a_plug_in_is_not_left() {
 
 /// Spins without sleeping on the first worker that gets a task, as a plug-in in an endless loop
 /// would, until it's told to stop.
+#[cfg(target_os = "linux")]
 struct Spinner {
     spin: AtomicBool,
     on: AtomicUsize,
 }
 
+#[cfg(target_os = "linux")]
 impl Job for Spinner {
     fn run(&self, _task: usize, thread: usize, _: &Call) {
         if thread == 0 {
