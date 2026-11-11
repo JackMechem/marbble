@@ -6,6 +6,12 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **macOS: idle work keeps up.** Plug-in idle, MIDI controller assignments and autosave now also
+  run while a menu is open or a window is being resized, and no longer pile up behind a busy main
+  thread (on Windows too).
+
 ## [0.1.0-alpha.14] - 2026-11-10
 
 ### Added

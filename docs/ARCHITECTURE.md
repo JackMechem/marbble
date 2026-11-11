@@ -215,8 +215,11 @@ CI, releases and the website's deploy.
 | **Autosave writer** | `src-tauri/src/timers.rs` | Writes a job serialized on the main thread to disk, atomically. | |
 | **Scan child process** | `library/plugin_db.rs` | `marbble --scan-vst3 <bundle>` loads one bundle in a child process, so a crashing plug-in can't take the app down. | |
 
-On Windows and macOS there is no GTK timer: a helper thread posts the idle work to the main thread
-every 30 ms.
+On macOS the idle timer is a `CFRunLoopTimer` on the main run loop in its common modes, so it
+also fires while a menu is open or a window is being resized; a busy main thread only makes it
+fire late. On Windows a helper thread posts the idle work to the main thread every 30 ms, but
+keeps at most one post in flight: while the main thread is busy it skips ticks rather than
+queueing them.
 
 The session sits behind a `parking_lot::Mutex` in `AppState`. The engine has a mutex of its own,
 but the audio callback only `try_lock`s it: while an offline render holds it, the device plays
