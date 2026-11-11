@@ -16,9 +16,11 @@ pub fn save_midi_take(r: &mut Region) {
 /// Makes a MIDI take folder's content the notes of the take it plays, inside the region.
 pub fn load_midi_take(r: &mut Region) {
     let (Some(f), RegionContent::Midi { notes, cc }) = (r.takes.as_mut(), &mut r.content) else { return };
-    // The comp names the take, even after the one it named was deleted.
+    // The comp names the take, even after the one it named was deleted, and so does its place
+    // in the list of comps.
     if let (None, Some(t)) = (f.comp.first(), f.midi_take()) {
         f.select_whole(t);
+        f.store_comp();
     }
     if let Some(t) = f.midi_take() {
         (*notes, *cc) = f.midi_window(t, f.offset, r.length);
