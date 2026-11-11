@@ -3,7 +3,8 @@
 //! folders, region parameters, the Linear Phase EQ) through `Engine::process` on this thread,
 //! with a counting allocator, and checks that no block allocates or frees memory once warmed
 //! up: while playing, cycling, locating (with note chase), and while edits arrive between
-//! blocks, among them a latency change that makes delay compensation glide.
+//! blocks, among them a latency change that makes delay compensation glide; and a device
+//! buffer far larger than usual through the output callback (`audio_io::callback`) as a device runs it.
 //! The silent ALSA null device runs, so edits queue their commands for the next block as they
 //! do during playback; holding the engine's lock keeps its callback out.
 //! Runs twice: with the callback alone, and with every block on the pool of worker threads
@@ -338,6 +339,26 @@ fn scenario(scratch: &Path, threads: u32) {
     run(&mut guard, bars(1.0), true);
     let playing = ALLOCS.load(Ordering::Relaxed) - before;
     check(&format!("playing allocates nothing ({playing} allocations or frees)"), playing == 0);
+
+    // A device that delivers a far larger buffer than usual, through the output callback as a
+    // device runs it: input from its ring, the output in 16-bit samples.
+    const HUGE: usize = 3 * 8192 + 100;
+    let (mut in_tx, in_rx) = rtrb::RingBuffer::new(HUGE * 2);
+    let mut callback = daw_engine::audio_io::callback::Callback::new(Some(in_rx), 2, guard.status.clone());
+    let mut huge = vec![0i16; HUGE * 2];
+    let mark = ALLOCS.load(Ordering::Relaxed);
+    for _ in 0..3 {
+        while in_tx.push(0.1).is_ok() {}
+        WORKERS_COUNTED.store(true, Ordering::Relaxed);
+        COUNTING.with(|c| c.set(true));
+        callback.play(Some(&mut guard), &mut huge, 2);
+        COUNTING.with(|c| c.set(false));
+        WORKERS_COUNTED.store(false, Ordering::Relaxed);
+    }
+    let n = ALLOCS.load(Ordering::Relaxed) - mark;
+    let heard = huge.iter().any(|&s| s != 0);
+    check(&format!("a device buffer of {HUGE} frames allocates nothing in the callback ({n})"), n == 0 && heard);
+    drop((callback, in_tx, huge));
 
     let mark = ALLOCS.load(Ordering::Relaxed);
     // A latency change: the Linear Phase EQ's quality, then the glide as compensation follows.

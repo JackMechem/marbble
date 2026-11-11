@@ -30,6 +30,7 @@ pub use click::*;
 mod cmd;
 pub use cmd::*;
 mod process;
+pub use process::{interleave, BlockIo};
 mod status;
 pub use status::*;
 mod strip;
@@ -232,4 +233,4 @@ impl Engine {
 }
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;

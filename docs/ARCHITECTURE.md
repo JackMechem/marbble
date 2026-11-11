@@ -203,7 +203,7 @@ CI, releases and the website's deploy.
 | Thread | Started by | What it does | What it may not do |
 |---|---|---|---|
 | **Main** | Tauri | Synchronous Tauri commands (most edits), the native menu, the GTK main loop, and the 30 ms idle timer (`Session::idle`: plug-in controller idle, latency changes, dropping `Garbage`, taking recorded MIDI off its ring, automation, controller assignments and feedback, control surfaces, taking autosaves). Every VST3 controller and editor lives here. | Block for long. Renders are async commands for that reason. |
-| **Audio callback** | cpal | Calls `Engine::process` once per device buffer, inside `catch_unwind`. Real-time priority (rtkit on Linux, Core Audio's own on macOS), on the performance cores where a CPU has two kinds (`audio_io::threads::keep_to`). The input stream's callback only fills the input ring. | Allocate, lock, block, do I/O ([Real-time rules](#4-real-time-rules)). |
+| **Audio callback** | cpal | Calls `Engine::process_io` once per device buffer, inside `catch_unwind`. Real-time priority (rtkit on Linux, Core Audio's own on macOS), on the performance cores where a CPU has two kinds (`audio_io::threads::keep_to`). The input stream's callback only fills the input ring. | Allocate, lock, block, do I/O ([Real-time rules](#4-real-time-rules)). |
 | **`marbble-dsp-N`** | `Session::sync_parallel` | Plays strips beside the callback when Processing Threads allows and the project is heavy enough ([Multi-core](#multi-core-processing)). | The same as the callback. |
 | **`audio-io`** | `audio_io::start` | Builds and owns the cpal streams until the device closes. | |
 | **`recorder`** | `audio_io/recorder.rs` | Every 10 ms, drains each armed track's ring into its WAV file, an in-memory copy and the preview peaks. | Touch the engine or the project. |
@@ -732,10 +732,12 @@ copies, strip settings and templates.
 - **Hosts.** On Linux: PipeWire, PulseAudio, JACK (when a server runs), then ALSA; Windows and macOS
   use the system default (WASAPI, Core Audio). `devices.rs` hides devices that only confuse
   (ALSA's non-`hw:` PCMs, monitor sources).
-- **The output callback is the clock.** It pulls the input that arrived (through a one-second
-  ring), calls `Engine::process` under `try_lock`, and converts to the device format. When the
-  input ring holds more than three blocks the excess is dropped; an underflow is padded. There is no
-  resampling between devices.
+- **The output callback is the clock** (`callback.rs`). It calls `Engine::process_io` under
+  `try_lock` once per device buffer, which takes the input that arrived (through a one-second
+  ring) and hands back the output a sub-block at a time, each converted straight into the device
+  format; so a buffer of any length needs nothing allocated for it. When the input ring holds
+  more than three buffers the excess is dropped; an underflow is padded. There is no resampling
+  between devices.
 - **The IO thread (macOS, `coreaudio.rs`).** Once the output stream plays, `audio_io::start` finds
   the device's IO workgroup (`kAudioDevicePropertyIOThreadOSWorkgroup`) and waits for the first
   callback, which reads its own thread's time-constraint policy into atomics (one Mach call, no
