@@ -126,7 +126,7 @@ startup.rs          the --scan-vst3 child mode, display backend and logging, the
 timers.rs           the tick thread, the idle timer with autosave, MIDI device refresh
 commands.rs         Snapshot and the wrappers every command shares (edit, try_edit, edit_made…)
 commands/           the commands, one file per area (tracks, regions, plugins, project…)
-menu/               the native menu bar: spec.rs (the bar as data), mod.rs (build, handle), GTK keys
+menu/               the native menu bar: spec.rs (the bar as data), mod.rs (build, handle), GTK and macOS keys
 windows.rs          detached panel windows and routing menu items to them
 settings.rs         settings.json
 recent.rs           recent projects
@@ -895,8 +895,11 @@ flowchart LR
   enabled states, undo names and keys in step through `set_menu_state`
   (`src/app/menuBar/menuBar.ts`), from the same states the Tracks area's own menus use.
   Accelerators belong to the menu and run before the page sees the key; key commands are handled by
-  the page and only *drawn* in the menu bar, so a key is never both. Text fields keep their editing
-  keys (`src/keyboard/textKeys.ts`).
+  the page and only *drawn* in the menu bar, so a key is never both. AppKit draws only keys an item
+  is bound to, so on macOS the key commands' keys are bound only while the menu bar is open
+  (between `NSMenuDidBeginTrackingNotification` and `NSMenuDidEndTrackingNotification`, when the
+  page gets no keys) and taken off when it closes (`src-tauri/src/menu/mac_keys.rs`). Text fields
+  keep their editing keys (`src/keyboard/textKeys.ts`).
 - **Sheets** (anything modal over the window) register with `useSheetKeys`
   (`src/keyboard/sheetKeys.ts`): keys typed in a sheet stay there, keys outside it don't reach the
   app except Esc, Return and Tab, and closing a sheet gives the focus back. `Sheet` (`src/ui/Sheet.tsx`)

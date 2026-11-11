@@ -397,7 +397,8 @@ status, the audio devices, and the number of MIDI inputs.
 | Window | Minimize, Mixer in Separate Window, Editor in Separate Window, Event List in Separate Window, then the open windows (the main window and each [separate window](#separate-windows)): choose one to bring it to the front |
 | Help | Marbble User Guide, Key Commands…, What's New in Marbble, Check for Updates…, Report an Issue…, Marbble Website. Key Commands opens Settings › Key Commands; Check for Updates… asks GitHub whether a newer version is out on your [update channel](#general) and says what it found; the others open this guide, the changelog, a new issue on GitHub and the website in your browser |
 
-Each item shows its key beside it, as set in Settings › Key Commands. Settings and modes that
+Each item shows its key beside it, as set in Settings › Key Commands. (On macOS the menu holds
+those keys only while it's open, so a key typed in a text field always reaches the field.) Settings and modes that
 are on are ticked, and items that don't apply are greyed out, as in the Tracks area's menus (Cut
 or Delete with no regions selected, Paste with nothing copied), as is a submenu whose items all
 don't apply. One-of-several choices (View › Theme, File › Project Alternatives) show a round

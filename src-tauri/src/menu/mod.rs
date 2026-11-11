@@ -7,7 +7,8 @@
 //! Two kinds of key. The accelerators in `spec` (Ctrl+S, Ctrl+Z…) belong to the menu: GTK,
 //! AppKit or Win32 runs the item when the key is pressed, before the page sees it. Every other
 //! key is a key command (src/keyboard/keymap.ts) that the window handles itself and the user can
-//! reassign; the menu bar only shows those keys and never registers them. A registered key
+//! reassign; the menu bar only shows those keys and doesn't register them (on macOS only while
+//! a menu is open, when the page gets no keys anyway: `mac_keys.rs`). A registered key
 //! would be taken before the page sees it: R or X would stop reaching text fields and Musical
 //! Typing, and the page's own handling (key repeat, the editors' keys, sheets that block
 //! keys) would be skipped. So nothing can run twice either: a key either belongs to the menu
@@ -20,8 +21,11 @@
 //! Here: building the bar, handling its items, and `set_menu_state`. The bar as data is in
 //! `spec.rs`, the Window menu in `window_menu.rs`, File's project lists in `project_menus.rs`, and
 //! what GTK needs drawn by hand (keys beside items, radio items, key names) in `gtk_keys.rs`.
+//! AppKit draws a key only beside an item bound to it, so on macOS the key commands' keys are
+//! bound only while the menu bar is open (`mac_keys.rs`).
 
 pub mod gtk_keys;
+mod mac_keys;
 pub mod project_menus;
 mod spec;
 pub mod window_menu;
@@ -45,12 +49,15 @@ enum Handle<R: Runtime> {
 }
 
 /// A built item: its handle, its label in `spec`, and where it sits (its index in the menu bar,
-/// then in each submenu down to it, separators counted), which finds its GTK widget.
+/// then in each submenu down to it, separators counted), which finds its GTK widget or NSMenuItem,
+/// and whether it has an accelerator of its own (`spec`).
 struct Entry<R: Runtime> {
     handle: Handle<R>,
     label: &'static str,
-    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+    #[cfg_attr(not(any(target_os = "linux", target_os = "macos")), allow(dead_code))]
     path: Vec<usize>,
+    #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+    accel: bool,
 }
 
 /// A submenu of `spec` (Repeat, Trim, Track Alternatives…), greyed out while none of its items
@@ -133,17 +140,17 @@ impl<R: Runtime> Builder<'_, R> {
                 Item(id, label, accel) => {
                     let m = MenuItem::with_id(self.app, *id, *label, true, *accel)?;
                     parent.append(&m)?;
-                    self.items.insert(id.to_string(), Entry { handle: Handle::Item(m), label, path: path.clone() });
+                    self.items.insert(id.to_string(), Entry { handle: Handle::Item(m), label, path: path.clone(), accel: accel.is_some() });
                 }
                 Check(id, label, accel) => {
                     let m = CheckMenuItem::with_id(self.app, *id, *label, true, false, *accel)?;
                     parent.append(&m)?;
-                    self.items.insert(id.to_string(), Entry { handle: Handle::Check(m), label, path: path.clone() });
+                    self.items.insert(id.to_string(), Entry { handle: Handle::Check(m), label, path: path.clone(), accel: accel.is_some() });
                 }
                 Radio(id, label) => {
                     let m = CheckMenuItem::with_id(self.app, *id, *label, true, false, None::<&str>)?;
                     parent.append(&m)?;
-                    self.items.insert(id.to_string(), Entry { handle: Handle::Check(m), label, path: path.clone() });
+                    self.items.insert(id.to_string(), Entry { handle: Handle::Check(m), label, path: path.clone(), accel: false });
                     self.radios.push(path.clone());
                 }
                 Sep => parent.append(&PredefinedMenuItem::separator(self.app)?)?,
@@ -210,6 +217,8 @@ pub fn install<R: Runtime>(app: &App<R>) -> tauri::Result<()> {
         shown: Mutex::new(Shown::default()),
     });
     refresh_windows(app.handle(), None);
+    #[cfg(target_os = "macos")]
+    mac_keys::observe_menu_tracking(app.handle());
     app.on_menu_event(|app, ev| {
         let id = ev.id().0.clone();
         if id == "quit" {
