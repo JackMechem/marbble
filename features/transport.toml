@@ -11,6 +11,7 @@ status = "partial"
 tier = "core"
 beta = true
 logic = "94"
+issue = 313
 note = "Stopping releases the sustain pedal and re-centres pitch bend; no explicit panic command."
 
 [[feature]]
@@ -20,6 +21,7 @@ status = "missing"
 tier = "core"
 beta = true
 logic = "88"
+issue = 314
 
 [[feature]]
 section = "Play and navigate projects"
@@ -28,6 +30,7 @@ status = "missing"
 tier = "core"
 beta = true
 logic = "89"
+issue = 315
 
 [[feature]]
 section = "Play and navigate projects"
@@ -35,6 +38,7 @@ name = "Go to Position dialog (/)"
 status = "missing"
 tier = "core"
 beta = true
+issue = 316
 
 [[feature]]
 section = "Play and navigate projects"
@@ -43,6 +47,7 @@ status = "missing"
 tier = "core"
 beta = true
 logic = "95"
+issue = 317
 
 [[feature]]
 section = "Play and navigate projects"
@@ -50,6 +55,7 @@ name = "Skip cycle; move, double or halve the cycle by its length (key commands,
 status = "missing"
 tier = "core"
 beta = true
+issue = 318
 
 [[feature]]
 section = "Play and navigate projects"
@@ -57,6 +63,7 @@ name = "Forward and rewind by transient (key commands, p. 1121)"
 status = "missing"
 tier = "core"
 beta = true
+issue = 320
 
 [[feature]]
 section = "Play and navigate projects"
@@ -122,6 +129,7 @@ status = "missing"
 tier = "core"
 beta = true
 logic = "1113–1115"
+issue = 321
 
 [[feature]]
 section = "Metronome"

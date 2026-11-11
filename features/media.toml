@@ -11,6 +11,7 @@ status = "partial"
 tier = "core"
 beta = true
 logic = "268–273"
+issue = 357
 note = "Browses folders; no search conditions or bookmarks."
 
 [[feature]]
@@ -20,6 +21,7 @@ status = "missing"
 tier = "core"
 beta = true
 logic = "285"
+issue = 358
 
 [[feature]]
 section = "Import, media and MIDI files"
@@ -111,6 +113,7 @@ status = "partial"
 tier = "core"
 beta = true
 logic = "914–918"
+issue = 101
 note = "WAV and AIFF at 16, 24 or 32-bit float, FLAC at 16 or 24-bit; no CAF, MP3 or M4A."
 
 [[feature]]
@@ -120,6 +123,7 @@ status = "partial"
 tier = "core"
 beta = true
 logic = "914"
+issue = 359
 note = "TPDF only; no POW-r."
 
 [[feature]]
@@ -129,6 +133,7 @@ status = "partial"
 tier = "core"
 beta = true
 logic = "177"
+issue = 360
 note = "Works on the selected tracks; no dedicated command."
 
 [[feature]]
@@ -138,6 +143,7 @@ status = "missing"
 tier = "core"
 beta = true
 logic = "914"
+issue = 361
 
 [[feature]]
 section = "Bounce and export"

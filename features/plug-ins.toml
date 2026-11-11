@@ -11,6 +11,7 @@ status = "partial"
 tier = "core"
 beta = true
 logic = "578–580"
+issue = 366
 note = "Hide plug-ins, add VST3 folders, rescan, view the scan report; no categories or custom names."
 
 [[feature]]

@@ -11,6 +11,7 @@ status = "partial"
 tier = "core"
 beta = true
 logic = "87"
+issue = 322
 note = "Fixed layout; no Customize Control Bar."
 
 [[feature]]
@@ -20,6 +21,7 @@ status = "partial"
 tier = "core"
 beta = true
 logic = "93"
+issue = 323
 note = "Beats and Time only; no Custom mode or large LCD."
 
 [[feature]]
@@ -29,6 +31,7 @@ status = "partial"
 tier = "core"
 beta = true
 logic = "21"
+issue = 324
 note = "Always shows Stereo Out."
 
 [[feature]]
@@ -46,6 +49,7 @@ status = "partial"
 tier = "core"
 beta = true
 logic = "30"
+issue = 325
 note = "Free-form notes in Project Settings; no Note Pad pane."
 
 [[feature]]
@@ -55,6 +59,7 @@ status = "missing"
 tier = "core"
 beta = true
 logic = "31"
+issue = 325
 
 [[feature]]
 section = "Logic Pro basics: the interface"
@@ -164,6 +169,7 @@ status = "partial"
 tier = "core"
 beta = true
 logic = "47"
+issue = 326
 note = "In the Piano Roll and Audio Track Editor; not in the Tracks area."
 
 [[feature]]
@@ -173,6 +179,7 @@ status = "partial"
 tier = "core"
 beta = true
 logic = "45"
+issue = 327
 note = "The Window menu brings any open window to the front or minimises it, and the Mixer, Editors, Event List, Step Sequencer and effect panels open in windows of their own; no second main window."
 
 [[feature]]
@@ -250,6 +257,7 @@ status = "partial"
 tier = "core"
 beta = true
 logic = "1121"
+issue = 328
 note = "Window keys only; menu shortcuts are fixed."
 
 [[feature]]
@@ -259,6 +267,7 @@ status = "missing"
 tier = "core"
 beta = true
 logic = "1124"
+issue = 329
 
 [[feature]]
 section = "Key commands"
@@ -275,6 +284,7 @@ status = "partial"
 tier = "core"
 beta = true
 logic = "1076–1120"
+issue = 330
 note = "Tempo, signature, key, sample rate, bit depth, metronome and notes; most of Logic's project panes are missing."
 
 [[feature]]
@@ -284,6 +294,7 @@ status = "missing"
 tier = "core"
 beta = true
 logic = "1033"
+issue = 331
 
 [[feature]]
 section = "Settings"
@@ -292,6 +303,7 @@ status = "missing"
 tier = "core"
 beta = true
 logic = "1039"
+issue = 332
 
 [[feature]]
 section = "Settings"

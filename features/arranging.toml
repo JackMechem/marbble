@@ -20,6 +20,7 @@ status = "partial"
 tier = "core"
 beta = true
 logic = "312"
+issue = 345
 note = "Loops to the next region, or four times the length when nothing follows."
 
 [[feature]]

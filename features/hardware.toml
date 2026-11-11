@@ -11,6 +11,7 @@ status = "partial"
 tier = "core"
 beta = true
 logic = "76"
+issue = 355
 note = "Through system MIDI ports; Marbble doesn't create a virtual port of its own."
 
 [[feature]]
@@ -20,6 +21,7 @@ status = "missing"
 tier = "core"
 beta = true
 logic = "75"
+issue = 356
 
 [[feature]]
 section = "Connect external devices"

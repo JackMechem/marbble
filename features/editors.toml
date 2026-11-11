@@ -11,6 +11,7 @@ status = "partial"
 tier = "core"
 beta = true
 logic = "54–60"
+issue = 346
 note = "Pointer, Pencil, Eraser, Velocity, Mute, Scissors, Glue, Line; no Brush, Quantize, Solo or Zoom tools."
 
 [[feature]]
@@ -20,6 +21,7 @@ status = "partial"
 tier = "core"
 beta = true
 logic = "397"
+issue = 347
 note = "No Delete Outside Region or Delete Unselected Within Selection."
 
 [[feature]]
@@ -36,6 +38,7 @@ status = "missing"
 tier = "core"
 beta = true
 logic = "381"
+issue = 348
 
 [[feature]]
 section = "Piano Roll Editor"
@@ -51,6 +54,7 @@ status = "missing"
 tier = "core"
 beta = true
 logic = "398"
+issue = 349
 
 [[feature]]
 section = "Piano Roll Editor"
@@ -68,6 +72,7 @@ status = "missing"
 tier = "core"
 beta = true
 logic = "379"
+issue = 350
 
 [[feature]]
 section = "Piano Roll Editor"
@@ -76,6 +81,7 @@ status = "partial"
 tier = "core"
 beta = true
 logic = "379–380"
+issue = 351
 note = "The Editor detaches and follows the selection; no Link modes."
 
 [[feature]]
@@ -85,6 +91,7 @@ status = "missing"
 tier = "core"
 beta = true
 logic = "395"
+issue = 352
 
 [[feature]]
 section = "Piano Roll Editor"
@@ -100,6 +107,7 @@ status = "missing"
 tier = "core"
 beta = true
 logic = "401"
+issue = 353
 
 [[feature]]
 section = "Piano Roll Editor"
@@ -250,6 +258,7 @@ status = "missing"
 tier = "core"
 beta = true
 logic = "377"
+issue = 354
 
 [[feature]]
 section = "Audio Track Editor"

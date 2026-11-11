@@ -11,6 +11,7 @@ status = "partial"
 tier = "core"
 beta = true
 logic = "149"
+issue = 338
 note = "Track On, Mute, Solo and Record Enable in the track menu, the Freeze button and the icon act on the selected tracks; the header's own buttons and volume only through groups."
 
 [[feature]]
@@ -20,6 +21,7 @@ status = "missing"
 tier = "core"
 beta = true
 logic = "125"
+issue = 340
 
 [[feature]]
 section = "Work with tracks"
@@ -35,6 +37,7 @@ status = "missing"
 tier = "core"
 beta = true
 logic = "128"
+issue = 341
 
 [[feature]]
 section = "Work with tracks"
@@ -43,6 +46,7 @@ status = "missing"
 tier = "core"
 beta = true
 logic = "129"
+issue = 342
 
 [[feature]]
 section = "Work with tracks"
@@ -59,6 +63,7 @@ status = "missing"
 tier = "core"
 beta = true
 logic = "131"
+issue = 343
 
 [[feature]]
 section = "Work with tracks"
@@ -184,6 +189,7 @@ status = "missing"
 tier = "core"
 beta = true
 logic = "136"
+issue = 344
 
 [[feature]]
 section = "Track header controls"

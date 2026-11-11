@@ -45,88 +45,88 @@ What's left for beta, by area (◐ partial, ○ missing):
 
 **Interface and settings**
 
-- ◐ Control bar: view buttons, transport, LCD, Cycle, Count-in, Metronome, master volume, CPU: Fixed layout; no Customize Control Bar.
-- ◐ LCD display modes: Beats and Time only; no Custom mode or large LCD.
-- ◐ Right inspector strip follows the left strip's output or aux: Always shows Stereo Out.
-- ◐ Project notes: Free-form notes in Project Settings; no Note Pad pane.
-- ○ Track notes
-- ◐ Zoom to fit selection or all content (Z): In the Piano Roll and Audio Track Editor; not in the Tracks area.
-- ◐ Open, close and focus windows: The Window menu brings any open window to the front or minimises it, and the Mixer, Editors, Event List, Step Sequencer and effect panels open in windows of their own; no second main window.
-- ◐ Customisable keys: Window keys only; menu shortcuts are fixed.
-- ○ Save, import and choose key command sets
-- ◐ Project Settings: Tempo, signature, key, sample rate, bit depth, metronome and notes; most of Logic's project panes are missing.
-- ○ Reset all settings
-- ○ Notifications: reset "don't show again" warnings
+- ◐ Control bar: view buttons, transport, LCD, Cycle, Count-in, Metronome, master volume, CPU ([#322](https://github.com/JackMechem/marbble/issues/322)): Fixed layout; no Customize Control Bar.
+- ◐ LCD display modes ([#323](https://github.com/JackMechem/marbble/issues/323)): Beats and Time only; no Custom mode or large LCD.
+- ◐ Right inspector strip follows the left strip's output or aux ([#324](https://github.com/JackMechem/marbble/issues/324)): Always shows Stereo Out.
+- ◐ Project notes ([#325](https://github.com/JackMechem/marbble/issues/325)): Free-form notes in Project Settings; no Note Pad pane.
+- ○ Track notes ([#325](https://github.com/JackMechem/marbble/issues/325))
+- ◐ Zoom to fit selection or all content (Z) ([#326](https://github.com/JackMechem/marbble/issues/326)): In the Piano Roll and Audio Track Editor; not in the Tracks area.
+- ◐ Open, close and focus windows ([#327](https://github.com/JackMechem/marbble/issues/327)): The Window menu brings any open window to the front or minimises it, and the Mixer, Editors, Event List, Step Sequencer and effect panels open in windows of their own; no second main window.
+- ◐ Customisable keys ([#328](https://github.com/JackMechem/marbble/issues/328)): Window keys only; menu shortcuts are fixed.
+- ○ Save, import and choose key command sets ([#329](https://github.com/JackMechem/marbble/issues/329))
+- ◐ Project Settings ([#330](https://github.com/JackMechem/marbble/issues/330)): Tempo, signature, key, sample rate, bit depth, metronome and notes; most of Logic's project panes are missing.
+- ○ Reset all settings ([#331](https://github.com/JackMechem/marbble/issues/331))
+- ○ Notifications: reset "don't show again" warnings ([#332](https://github.com/JackMechem/marbble/issues/332))
 
 **Projects**
 
-- ◐ Project Chooser: New, Recent and Open, with four built-in templates and the user's own (My Templates); no demo projects or tutorials.
-- ◐ Save a copy including all assets: Save As into a new folder copies every file the project uses into it; no Save a Copy As that leaves the open project as it is.
-- ○ Delete a project from the chooser
-- ○ Project start and end points
-- ○ Close Project without quitting
+- ◐ Project Chooser ([#333](https://github.com/JackMechem/marbble/issues/333)): New, Recent and Open, with four built-in templates and the user's own (My Templates); no demo projects or tutorials.
+- ◐ Save a copy including all assets ([#334](https://github.com/JackMechem/marbble/issues/334)): Save As into a new folder copies every file the project uses into it; no Save a Copy As that leaves the open project as it is.
+- ○ Delete a project from the chooser ([#335](https://github.com/JackMechem/marbble/issues/335))
+- ○ Project start and end points ([#336](https://github.com/JackMechem/marbble/issues/336))
+- ○ Close Project without quitting ([#337](https://github.com/JackMechem/marbble/issues/337))
 
 **Transport and tempo sync**
 
-- ◐ Stop hung notes: Stopping releases the sustain pedal and re-centres pitch bend; no explicit panic command.
-- ○ Pause, fast forward and rewind, Play from Left Window Edge, Play from Selection
-- ○ Transport shortcut menus on Play and Stop
-- ○ Go to Position dialog (/)
-- ○ Set locators numerically in the LCD
-- ○ Skip cycle; move, double or halve the cycle by its length (key commands, p. 1121)
-- ○ Forward and rewind by transient (key commands, p. 1121)
-- ○ Route the click to its own output, or send it as MIDI
+- ◐ Stop hung notes ([#313](https://github.com/JackMechem/marbble/issues/313)): Stopping releases the sustain pedal and re-centres pitch bend; no explicit panic command.
+- ○ Pause, fast forward and rewind, Play from Left Window Edge, Play from Selection ([#314](https://github.com/JackMechem/marbble/issues/314))
+- ○ Transport shortcut menus on Play and Stop ([#315](https://github.com/JackMechem/marbble/issues/315))
+- ○ Go to Position dialog (/) ([#316](https://github.com/JackMechem/marbble/issues/316))
+- ○ Set locators numerically in the LCD ([#317](https://github.com/JackMechem/marbble/issues/317))
+- ○ Skip cycle; move, double or halve the cycle by its length (key commands, p. 1121) ([#318](https://github.com/JackMechem/marbble/issues/318))
+- ○ Forward and rewind by transient (key commands, p. 1121) ([#320](https://github.com/JackMechem/marbble/issues/320))
+- ○ Route the click to its own output, or send it as MIDI ([#321](https://github.com/JackMechem/marbble/issues/321))
 
 **Tracks**
 
-- ◐ Change header controls on several tracks: Track On, Mute, Solo and Record Enable in the track menu, the Freeze button and the icon act on the selected tracks; the header's own buttons and volume only through groups.
-- ○ New track for overlapped regions
-- ○ Search for and select a track
-- ○ Rename several tracks at once
-- ○ Sort tracks
-- ○ Configure Track Header: choose which controls show
+- ◐ Change header controls on several tracks ([#338](https://github.com/JackMechem/marbble/issues/338)): Track On, Mute, Solo and Record Enable in the track menu, the Freeze button and the icon act on the selected tracks; the header's own buttons and volume only through groups.
+- ○ New track for overlapped regions ([#340](https://github.com/JackMechem/marbble/issues/340))
+- ○ Search for and select a track ([#341](https://github.com/JackMechem/marbble/issues/341))
+- ○ Rename several tracks at once ([#342](https://github.com/JackMechem/marbble/issues/342))
+- ○ Sort tracks ([#343](https://github.com/JackMechem/marbble/issues/343))
+- ○ Configure Track Header: choose which controls show ([#344](https://github.com/JackMechem/marbble/issues/344))
 
 **Arranging**
 
-- ◐ Loop continuously: Loops to the next region, or four times the length when nothing follows.
+- ◐ Loop continuously ([#345](https://github.com/JackMechem/marbble/issues/345)): Loops to the next region, or four times the length when nothing follows.
 
 **Editors**
 
-- ◐ Piano Roll tools: Pointer, Pencil, Eraser, Velocity, Mute, Scissors, Glue, Line; no Brush, Quantize, Solo or Zoom tools.
-- ◐ Delete events: No Delete Outside Region or Delete Unselected Within Selection.
-- ○ Add notes constrained to a scale
-- ○ Time handles: stretch selected notes
-- ○ Drum names and Collapse Mode views
-- ◐ Piano Roll as a separate window, with Link mode: The Editor detaches and follows the selection; no Link modes.
-- ○ Lock event positions
-- ○ Track and region automation shown in the Piano Roll
-- ○ Show automation in the Audio Track Editor
+- ◐ Piano Roll tools ([#346](https://github.com/JackMechem/marbble/issues/346)): Pointer, Pencil, Eraser, Velocity, Mute, Scissors, Glue, Line; no Brush, Quantize, Solo or Zoom tools.
+- ◐ Delete events ([#347](https://github.com/JackMechem/marbble/issues/347)): No Delete Outside Region or Delete Unselected Within Selection.
+- ○ Add notes constrained to a scale ([#348](https://github.com/JackMechem/marbble/issues/348))
+- ○ Time handles: stretch selected notes ([#349](https://github.com/JackMechem/marbble/issues/349))
+- ○ Drum names and Collapse Mode views ([#350](https://github.com/JackMechem/marbble/issues/350))
+- ◐ Piano Roll as a separate window, with Link mode ([#351](https://github.com/JackMechem/marbble/issues/351)): The Editor detaches and follows the selection; no Link modes.
+- ○ Lock event positions ([#352](https://github.com/JackMechem/marbble/issues/352))
+- ○ Track and region automation shown in the Piano Roll ([#353](https://github.com/JackMechem/marbble/issues/353))
+- ○ Show automation in the Audio Track Editor ([#354](https://github.com/JackMechem/marbble/issues/354))
 
 **Mixing and automation**
 
-- ◐ Channel strip types: Audio, instrument, aux, summing stack, VCA and Stereo Out; no MIDI, output or master strips.
-- ◐ Reorder strips: Follows the track order.
-- ◐ Search for plug-ins: The Library has search; slot menus are grouped by vendor and category, without search.
-- ◐ Plug-in windows: Built-in effect panels everywhere; a VST3's own editor on Linux/X11 and macOS so far.
-- ○ Select several strips, or strips by type
+- ◐ Channel strip types ([#362](https://github.com/JackMechem/marbble/issues/362)): Audio, instrument, aux, summing stack, VCA and Stereo Out; no MIDI, output or master strips.
+- ◐ Reorder strips ([#363](https://github.com/JackMechem/marbble/issues/363)): Follows the track order.
+- ◐ Search for plug-ins ([#364](https://github.com/JackMechem/marbble/issues/364)): The Library has search; slot menus are grouped by vendor and category, without search.
+- ◐ Plug-in windows ([#99](https://github.com/JackMechem/marbble/issues/99)): Built-in effect panels everywhere; a VST3's own editor on Linux/X11 and macOS so far.
+- ○ Select several strips, or strips by type ([#365](https://github.com/JackMechem/marbble/issues/365))
 
 **Plug-ins**
 
-- ◐ Plug-in Manager: Hide plug-ins, add VST3 folders, rescan, view the scan report; no categories or custom names.
+- ◐ Plug-in Manager ([#366](https://github.com/JackMechem/marbble/issues/366)): Hide plug-ins, add VST3 folders, rescan, view the scan report; no categories or custom names.
 
 **MIDI and hardware**
 
-- ◐ Receive MIDI from other apps: Through system MIDI ports; Marbble doesn't create a virtual port of its own.
-- ○ Local Off: stop a keyboard's own sound generation
+- ◐ Receive MIDI from other apps ([#355](https://github.com/JackMechem/marbble/issues/355)): Through system MIDI ports; Marbble doesn't create a virtual port of its own.
+- ○ Local Off: stop a keyboard's own sound generation ([#356](https://github.com/JackMechem/marbble/issues/356))
 
 **Import, export and media**
 
-- ◐ All Files Browser: Browses folders; no search conditions or bookmarks.
-- ○ Open a MIDI file as a new project
-- ◐ Bounce file formats: WAV and AIFF at 16, 24 or 32-bit float, FLAC at 16 or 24-bit; no CAF, MP3 or M4A.
-- ◐ Dither: TPDF only; no POW-r.
-- ◐ Bounce all tracks in place: Works on the selected tracks; no dedicated command.
-- ○ Real-time bounce
+- ◐ All Files Browser ([#357](https://github.com/JackMechem/marbble/issues/357)): Browses folders; no search conditions or bookmarks.
+- ○ Open a MIDI file as a new project ([#358](https://github.com/JackMechem/marbble/issues/358))
+- ◐ Bounce file formats ([#101](https://github.com/JackMechem/marbble/issues/101)): WAV and AIFF at 16, 24 or 32-bit float, FLAC at 16 or 24-bit; no CAF, MP3 or M4A.
+- ◐ Dither ([#359](https://github.com/JackMechem/marbble/issues/359)): TPDF only; no POW-r.
+- ◐ Bounce all tracks in place ([#360](https://github.com/JackMechem/marbble/issues/360)): Works on the selected tracks; no dedicated command.
+- ○ Real-time bounce ([#361](https://github.com/JackMechem/marbble/issues/361))
 
 <!-- End of the generated block. -->
 

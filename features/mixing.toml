@@ -11,6 +11,7 @@ status = "partial"
 tier = "core"
 beta = true
 logic = "541"
+issue = 362
 note = "Audio, instrument, aux, summing stack, VCA and Stereo Out; no MIDI, output or master strips."
 
 [[feature]]
@@ -20,6 +21,7 @@ status = "partial"
 tier = "core"
 beta = true
 logic = "559"
+issue = 363
 note = "Follows the track order."
 
 [[feature]]
@@ -29,6 +31,7 @@ status = "partial"
 tier = "core"
 beta = true
 logic = "563"
+issue = 364
 note = "The Library has search; slot menus are grouped by vendor and category, without search."
 
 [[feature]]
@@ -38,6 +41,7 @@ status = "partial"
 tier = "core"
 beta = true
 logic = "567"
+issue = 99
 note = "Built-in effect panels everywhere; a VST3's own editor on Linux/X11 and macOS so far."
 
 [[feature]]
@@ -54,6 +58,7 @@ status = "missing"
 tier = "core"
 beta = true
 logic = "543"
+issue = 365
 
 [[feature]]
 section = "Mixer"

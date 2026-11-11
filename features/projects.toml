@@ -11,6 +11,7 @@ status = "partial"
 tier = "core"
 beta = true
 logic = "79"
+issue = 333
 note = "New, Recent and Open, with four built-in templates and the user's own (My Templates); no demo projects or tutorials."
 
 [[feature]]
@@ -27,6 +28,7 @@ status = "partial"
 tier = "core"
 beta = true
 logic = "84"
+issue = 334
 note = "Save As into a new folder copies every file the project uses into it; no Save a Copy As that leaves the open project as it is."
 
 [[feature]]
@@ -36,6 +38,7 @@ status = "missing"
 tier = "core"
 beta = true
 logic = "85"
+issue = 335
 
 [[feature]]
 section = "Work with projects"
@@ -44,6 +47,7 @@ status = "missing"
 tier = "core"
 beta = true
 logic = "104"
+issue = 336
 
 [[feature]]
 section = "Work with projects"
@@ -52,6 +56,7 @@ status = "missing"
 tier = "core"
 beta = true
 logic = "113"
+issue = 337
 
 [[feature]]
 section = "Work with projects"
