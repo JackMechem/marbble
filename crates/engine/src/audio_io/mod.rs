@@ -37,7 +37,7 @@ use coreaudio::IoThreadProbe;
 /// policy (`coreaudio.rs`), elsewhere nothing.
 #[cfg(not(target_os = "macos"))]
 #[derive(Debug, Clone, Default)]
-pub struct IoThread;
+pub struct IoThread {}
 
 #[cfg(not(target_os = "macos"))]
 impl IoThread {
@@ -50,7 +50,7 @@ impl IoThread {
 /// The output callback's notes about its own thread (macOS only).
 #[cfg(not(target_os = "macos"))]
 #[derive(Debug, Default)]
-struct IoThreadProbe;
+struct IoThreadProbe {}
 
 #[cfg(not(target_os = "macos"))]
 impl IoThreadProbe {
@@ -400,7 +400,7 @@ pub fn start(engine: Arc<Mutex<Engine>>, cfg: &AudioConfig) -> (Option<AudioIo>,
                 #[cfg(not(target_os = "macos"))]
                 let io_thread = {
                     drop(probe);
-                    IoThread
+                    IoThread {}
                 };
                 Ok(((out, in_stream), io_thread))
             })();
