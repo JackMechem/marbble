@@ -3,9 +3,9 @@
 A digital audio workstation modelled on Logic Pro's workflow and layout. The audio engine and
 VST3 host are written in Rust; the interface is Tauri 2 with React and TypeScript.
 
-Marbble is in alpha. It is developed and tested on Linux; the Windows and macOS builds pass their
-tests (macOS its headless checks too, on a stand-in device) but haven't been run on a real
-machine yet (see [Platform support](#platform-support)).
+Marbble is in alpha. It is developed and tested on Linux. The macOS build has been run on a real
+Mac, with less testing; the Windows build passes its tests but hasn't been run on a real machine
+yet (see [Platform support](#platform-support)).
 
 **Website, User Guide and developer docs:** <https://marbble.dev/>
 
@@ -72,7 +72,7 @@ machine yet (see [Platform support](#platform-support)).
 - **Projects:** `.marbble` folders, a Project Chooser with built-in and your own templates,
   project alternatives, backups with Revert to, autosave and crash recovery (interrupted
   recordings included), and undo for every edit (100 steps by default).
-- **Interface:** Logic Pro 11's layout, the Mixer, editors and effect panels in separate
+- **Interface:** Logic Pro's layout, the Mixer, editors and effect panels in separate
   windows, five themes, interface scaling from 90 to 200 %, four waveform styles, rebindable key
   commands, Musical Typing, and a click in the tracks area that moves the playhead
   (configurable).
@@ -117,7 +117,7 @@ On NixOS or with Nix, use the flake instead (below).
 
 | | Linux | Windows | macOS |
 |---|---|---|---|
-| Status | Main platform, tested | Early, not yet run on a real machine | Early, not yet run on a real machine |
+| Status | Main platform, tested | Early, not yet run on a real machine | Early, run on a real Mac but less tested |
 | Packages | AppImage, .deb, .rpm from stable releases (x86_64, aarch64); Nix flake | NSIS installer (x64) | .dmg (Apple Silicon, Intel) |
 | Audio drivers | PipeWire, PulseAudio, JACK, ALSA | WASAPI | Core Audio |
 | MIDI input | Yes | Yes | Yes |
@@ -128,10 +128,12 @@ On NixOS or with Nix, use the flake instead (below).
 | Input level check | Yes (PipeWire, PulseAudio) | No | No |
 
 On Windows, VST3 plug-ins still load, play, save their state and can be automated; only their
-own editor window is missing. The Windows and macOS columns say what's built: both build and
-pass the engine tests in CI, and macOS the headless checks on a silent stand-in device, but none
-of it has been tried on real hardware yet (the [Windows](https://github.com/JackMechem/marbble/labels/platform%3A%20windows) and
-[macOS](https://github.com/JackMechem/marbble/labels/platform%3A%20macos) issues list what to try).
+own editor window is missing. Both build and pass the engine tests in CI, and macOS the headless
+checks on a silent stand-in device. The macOS build has been run on a real Mac, where it works but
+uses one processing thread ([#59](https://github.com/JackMechem/marbble/issues/59)); the Windows
+build hasn't been tried on real hardware yet. The
+[Windows](https://github.com/JackMechem/marbble/labels/platform%3A%20windows) and
+[macOS](https://github.com/JackMechem/marbble/labels/platform%3A%20macos) issues list what to try.
 
 ## Build from source
 
@@ -154,14 +156,13 @@ To develop:
 
 ```sh
 nix develop                               # Rust, Node, WebKitGTK, ALSA/JACK/PipeWire
-pnpm install                              # or npm install
-pnpm tauri dev                            # or npm run tauri dev
+npm ci
+npm run tauri dev
 ```
 
-On other Linux distributions, install Rust, Node.js, the Tauri 2 prerequisites
-(`webkit2gtk-4.1`, `gtk3`, `libsoup-3`) and `alsa-lib`, `libpipewire-0.3`, `jack`, `dbus` and
-`libclang`, then run `pnpm install && pnpm tauri dev`. See [DEVELOPING.md](docs/DEVELOPING.md)
-for Windows and macOS, tests and packaging.
+Without Nix, [DEVELOPING.md](docs/DEVELOPING.md#set-up) lists what to install on Debian, Fedora,
+Arch, Windows and macOS, then the same `npm ci` and `npm run tauri dev`. It also covers tests and
+packaging.
 
 ## First steps
 
@@ -175,7 +176,7 @@ for Windows and macOS, tests and packaging.
 
 | Document | For |
 |---|---|
-| [Website](https://marbble.dev/) | The three documents below and the changelog as a searchable site, built from them by [site/](site/) (`cd site && npm ci && npm run build`). |
+| [Website](https://marbble.dev/) | The User Guide, Architecture, Developing, the roadmap, the feature list and the changelog as a searchable site, built from them by [site/](site/) (`cd site && npm ci && npm run build`). |
 | [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Using Marbble: recording, instruments, editing, mixing, exporting, every setting and key command, troubleshooting. |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the code is organised and works: the source tree, threads and real-time rules, the life of an edit and of a block of audio, the project model and its files, plug-ins, MIDI, and the frontend. |
 | [docs/DEVELOPING.md](docs/DEVELOPING.md) | Setting up, building, testing, debugging, the code conventions, common changes, CI and releases. |
@@ -195,8 +196,8 @@ main limitations:
   (`MARBBLE_WAYLAND=1`) is newer and less tried.
 - VST3 only (no CLAP, AU or VST2). On Windows and macOS only the system's default audio driver
   is available (no ASIO).
-- The release builds are unsigned (see [Install](#install)), and the Windows and macOS builds
-  haven't been run on real hardware.
+- The release builds are unsigned (see [Install](#install)). The Windows build hasn't been run
+  on real hardware, and the macOS build has had little hands-on testing.
 - The synth models haven't been tuned by ear or compared with the instruments they follow.
 - Regions stay at fixed times when the tempo changes (Move MIDI Regions with Tempo keeps MIDI
   on its bars).

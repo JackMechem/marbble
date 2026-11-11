@@ -37,7 +37,7 @@ name = "Library pane"
 status = "partial"
 tier = "core"
 logic = "17"
-note = "Lists plug-ins to load, with search; no patches (see Stage 2)."
+note = "Lists plug-ins to load, with search; no patches (see Plug-ins › Library and patches)."
 
 [[feature]]
 section = "Logic Pro basics: the interface"

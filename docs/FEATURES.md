@@ -45,7 +45,7 @@ The main window, zoom, key commands, settings, help and accessibility. 26 of 55 
 - ◐ Control bar: view buttons, transport, LCD, Cycle, Count-in, Metronome, master volume, CPU: Fixed layout; no Customize Control Bar. **Beta.**
 - ◐ LCD display modes: Beats and Time only; no Custom mode or large LCD. **Beta.**
 - ◐ Right inspector strip follows the left strip's output or aux: Always shows Stereo Out. **Beta.**
-- ◐ Library pane: Lists plug-ins to load, with search; no patches (see Stage 2).
+- ◐ Library pane: Lists plug-ins to load, with search; no patches (see Plug-ins › Library and patches).
 - ◐ Project notes: Free-form notes in Project Settings; no Note Pad pane. **Beta.**
 - ○ Track notes **Beta.**
 - ○ Toolbar
@@ -939,7 +939,7 @@ Built-in instruments and effects, samplers, loops, Session Players, Live Loops a
 0 of 9 done.
 
 - ◐ Synthesisers: Alchemy, Retro Synth, ES1, ES2, ES E, ES M, ES P, EFM1, Sculpture, Vocoder (EVOC 20 PolySynth): Marbble Synth; Tre, Sei, Cinque and Uno (analog); Sedici (FM, closest to EFM1 but with six operators); Onda (wavetable, closest to Retro Synth's table mode and Alchemy's simple use).
-- ◐ Sample-based instruments: Sampler, Quick Sampler, Sample Alchemy (engines in Stage 3): Marbble Sampler; no Sample Alchemy.
+- ◐ Sample-based instruments: Sampler, Quick Sampler, Sample Alchemy (their engines are under Sampler, Quick Sampler and Drum Machine Designer): Marbble Sampler; no Sample Alchemy.
 - ○ Granular synthesis, including Alchemy granular sync
 - ○ Keyboards: Studio Piano, Vintage B3 organ, Vintage Electric Piano, Vintage Clav, Vintage Mellotron
 - ○ Orchestral: Studio Strings, Studio Horns
@@ -993,7 +993,7 @@ Built-in instruments and effects, samplers, loops, Session Players, Live Loops a
 - ○ Create your own loops; add a region to the loop library
 - ○ Index and add untagged loops
 - ○ Apple Loops metadata: follow tempo and pitch (Flex Time and Flex Pitch separately, p. 11)
-- ○ Patch, channel strip and plug-in setting libraries (see Stage 2 for the system)
+- ○ Patch, channel strip and plug-in setting libraries (the system is under Plug-ins › Library and patches)
 - ○ Demo projects
 
 ### Session Players and Drummer
@@ -1037,7 +1037,7 @@ Built-in instruments and effects, samplers, loops, Session Players, Live Loops a
 - ○ Stem Splitter: separate vocals, drums, bass and other parts from an audio region or cell
 - ○ Mastering Assistant on the Stereo Out strip
 - ○ Chord ID: detect chords in audio or MIDI regions and add them to the Chord track
-- ○ Session Players' generated performances (Stage 3)
+- ○ Session Players' generated performances (the players themselves are under Session Players and Drummer)
 - ○ Enhanced loop detection: set the file tempo and downbeat on import
 
 ## MIDI and hardware

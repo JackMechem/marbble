@@ -20,7 +20,7 @@ logic = "10"
 
 [[feature]]
 section = "Bundled instruments (Logic Pro Instruments guide)"
-name = "Sample-based instruments: Sampler, Quick Sampler, Sample Alchemy (engines in Stage 3)"
+name = "Sample-based instruments: Sampler, Quick Sampler, Sample Alchemy (their engines are under Sampler, Quick Sampler and Drum Machine Designer)"
 status = "partial"
 tier = "content"
 note = "Marbble Sampler; no Sample Alchemy."
@@ -276,7 +276,7 @@ tier = "content"
 
 [[feature]]
 section = "Sound content and loops"
-name = "Patch, channel strip and plug-in setting libraries (see Stage 2 for the system)"
+name = "Patch, channel strip and plug-in setting libraries (the system is under Plug-ins › Library and patches)"
 status = "missing"
 tier = "content"
 
@@ -478,7 +478,7 @@ logic = "11, 348"
 
 [[feature]]
 section = "Machine-learning tools"
-name = "Session Players' generated performances (Stage 3)"
+name = "Session Players' generated performances (the players themselves are under Session Players and Drummer)"
 status = "missing"
 tier = "content"
 

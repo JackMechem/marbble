@@ -189,7 +189,7 @@ The check is not available with JACK, with direct `hw:` ALSA devices, or on Wind
 
 ![The main window: control bar, Inspector, track headers and the tracks area with arrangement markers](../site/public/screenshots/main-window.png)
 
-The window is laid out like Logic Pro 11:
+The window is laid out like Logic Pro 12:
 
 | Area | Where | Show or hide |
 |---|---|---|

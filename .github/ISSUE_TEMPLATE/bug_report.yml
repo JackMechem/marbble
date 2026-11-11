@@ -28,7 +28,7 @@ body:
     attributes:
       label: Marbble version
       description: Shown in Marbble › About Marbble.
-      placeholder: 0.1.0-alpha.8
+      placeholder: 0.1.0-alpha.14
     validations:
       required: true
   - type: dropdown

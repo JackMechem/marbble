@@ -26,7 +26,7 @@ and `nix build` use the same libraries, and adds cargo, clippy, rustfmt, rust-an
 
 ```sh
 nix develop               # or nix-shell
-pnpm install              # or npm install
+npm ci
 ```
 
 Real-time audio scheduling needs rtkit (`security.rtkit.enable = true;` on NixOS). Flakes only see
@@ -34,27 +34,43 @@ files git tracks, so `git add` new files before `nix build`.
 
 ### Without Nix (Linux)
 
-Install Rust (stable), Node.js 22 or newer, the Tauri 2 prerequisites (`webkit2gtk-4.1`, `gtk3`,
-`libsoup-3`, `librsvg`, `openssl`), and `alsa-lib`, `libpipewire-0.3`, `jack` (libjack2), `dbus`,
-`pkg-config` and `libclang` (bindgen uses it for the PipeWire bindings). Then `pnpm install`.
+Install Rust (stable, through [rustup](https://rustup.rs)) and Node.js 22.18 or newer, then the
+libraries: WebKitGTK 4.1 and GTK 3 for Tauri, ALSA, JACK, PipeWire and D-Bus for audio and MIDI,
+and libclang, which bindgen uses for the PipeWire bindings.
+
+```sh
+# Debian 13, Ubuntu 24.04 or newer
+sudo apt install build-essential pkg-config libclang-dev libwebkit2gtk-4.1-dev librsvg2-dev \
+  libssl-dev libasound2-dev libjack-jackd2-dev libpipewire-0.3-dev libdbus-1-dev
+# Fedora
+sudo dnf install gcc gcc-c++ make pkgconf-pkg-config clang-devel webkit2gtk4.1-devel \
+  librsvg2-devel openssl-devel alsa-lib-devel pipewire-jack-audio-connection-kit-devel \
+  pipewire-devel dbus-devel
+# Arch
+sudo pacman -S --needed base-devel clang webkit2gtk-4.1 librsvg openssl alsa-lib pipewire \
+  pipewire-jack dbus
+```
+
+Then `npm ci`. Real-time audio scheduling needs rtkit.
 
 ### Windows and macOS
 
-Install Rust, Node.js and the Tauri 2 prerequisites for the platform (WebView2 and the MSVC build
-tools on Windows, the Xcode command line tools on macOS). The engine, MIDI, VST3 loading, the
-built-in effects and the UI are cross-platform. Plug-in editor windows exist for Linux (X11) and
-macOS only, and the input level check is Linux-only. CI tests all three platforms, but Windows and
-macOS get far less hands-on testing.
+Install Rust, Node.js 22.18 or newer and the Tauri 2 prerequisites for the platform (WebView2
+and the MSVC build tools on Windows, the Xcode command line tools on macOS), then `npm ci`. The
+engine, MIDI, VST3 loading, the built-in effects and the UI are cross-platform. Plug-in editor
+windows exist for Linux (X11) and macOS only, and the input level check is Linux-only. CI tests all
+three platforms. The macOS build has been run on a real Mac, with little hands-on testing so far;
+the Windows build hasn't been run on a real machine yet
+([#32](https://github.com/JackMechem/marbble/issues/32)).
 
-Both `package-lock.json` and `pnpm-lock.yaml` are kept. The Nix package installs from
-`package-lock.json`, so after changing dependencies with pnpm run
-`npm install --package-lock-only`.
+Use npm: CI and the Nix package install from `package-lock.json`. A `pnpm-lock.yaml` is kept too,
+so pnpm works; after changing dependencies with pnpm, run `npm install --package-lock-only`.
 
 ## Build and run
 
 ```sh
-pnpm tauri dev                              # or npm run tauri dev
-pnpm tauri dev -- -- path/to/Song.marbble   # open a project at launch
+npm run tauri dev                           # build and launch
+npx tauri dev -- -- path/to/Song.marbble    # open a project at launch
 nix run .                                   # build and launch the package
 ```
 
@@ -394,7 +410,7 @@ and a broken link fails the build.
 
 ```sh
 nix build .               # result/bin/marbble, a desktop entry and icons
-pnpm tauri build          # native bundles for this platform (deb, rpm, AppImage, NSIS, dmg…)
+npm run tauri build       # native bundles for this platform (deb, rpm, AppImage, NSIS, dmg…)
 ```
 
 The Nix package (`nix/package.nix`) builds the frontend from `package-lock.json`, vendors the

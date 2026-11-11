@@ -47,7 +47,7 @@ const effects = [
   ["Dynamics", ["Compressor", "Limiter", "Noise Gate", "De-Esser"]],
   ["Space and modulation", ["Reverb", "Delay", "Chorus", "Flanger", "Phaser", "Tremolo"]],
   ["Drive", ["Overdrive", "Distortion"]],
-  ["EQ, utility, metering", ["Linear Phase EQ", "Gain", "Tuner", "Loudness Meter"]],
+  ["EQ, utility, metering", ["Channel EQ", "Linear Phase EQ", "Gain", "Tuner", "Loudness Meter"]],
 ] as const;
 
 const path = [
@@ -94,7 +94,7 @@ const downloads = [
   },
   {
     os: "macOS",
-    status: "Not yet run on a real machine",
+    status: "Run on a real Mac, less tested",
     lit: false,
     rows: [
       [".dmg", "Apple Silicon", "aarch64\\.dmg$"],
@@ -122,13 +122,13 @@ const ticker = [
   ["Marbble", "an open-source digital audio workstation"],
   ["Latest", `v${meta.version}, ${meta.date}`],
   ["Status", "alpha, developed on Linux"],
-  ["Inside", "six synth models, a sampler, sixteen effects, VST3 hosting"],
+  ["Inside", "six synth models, a sampler, seventeen effects, VST3 hosting"],
   ["Engine", "Rust, with a Tauri 2 and React interface"],
   ["Licence", "MIT"],
 ];
 
 const title = "Marbble: an open-source digital audio workstation, written in Rust";
-const description = "A digital audio workstation modelled on Logic Pro's workflow and layout, with six synth models, a sampler, sixteen effects and VST3 hosting. MIT licensed, and in alpha.";
+const description = "A digital audio workstation modelled on Logic Pro's workflow and layout, with six synth models, a sampler, seventeen effects and VST3 hosting. MIT licensed, and in alpha.";
 ---
 <!doctype html>
 <html lang="en">
@@ -259,7 +259,7 @@ const description = "A digital audio workstation modelled on Logic Pro's workflo
           <aside class="alpha" aria-labelledby="alpha-title">
             <h2 id="alpha-title"><span class="led" aria-hidden="true"></span>This is alpha software</h2>
             <ul>
-              <li>It's developed and tested on Linux. The Windows and macOS builds pass their headless checks on a stand-in device, but haven't been run on a real machine.</li>
+              <li>It's developed and tested on Linux. The macOS build has been run on a real Mac, with less testing; the Windows build passes its tests but hasn't been run on a real machine.</li>
               <li>The synth models follow documented behaviour. None has been tuned by ear or compared with the hardware it's modelled on.</li>
               <li>Keep backups of projects that matter.</li>
             </ul>
@@ -400,7 +400,7 @@ const description = "A digital audio workstation modelled on Logic Pro's workflo
 
         <div class="mix-grid">
           <div>
-            <h3 class="sub">Sixteen built-in effects</h3>
+            <h3 class="sub">Seventeen built-in effects</h3>
             <p>In any Audio FX slot, with docked, floating or separate-window panels, presets and automatable parameters. The Compressor has five modelled circuits, and it, the Noise Gate and the De-Esser take a side-chain from any track, pre- or post-fader. <a href={doc("guide", "built-in-effects")}>Effects guide</a></p>
             <div class="slots">
               {
