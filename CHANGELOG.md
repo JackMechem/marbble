@@ -8,6 +8,11 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Fixed
 
+- **No overload as a heavy project opens.** Opening a project with many heavy plug-ins (twelve
+  TONE3000 amp models, say) overloaded once, stopped, before anything played: the extra processing
+  threads only learned of the new tracks a moment after them, so the first buffer played every
+  plug-in on the audio thread alone, three and a half times as long as the buffer. The threads now
+  take the new tracks with their first buffer.
 - **The timeline ends, as in Logic Pro,** 2³¹ samples in (about 12 h 25 min at 48 kHz). Repeat
   Regions on regions spread along the timeline could make a project days long, and its saves and
   undo steps grew with it; now an edit that would put a region past the end is put back, with a

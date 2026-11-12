@@ -522,7 +522,10 @@ inaudible.
   processing order. Float addition isn't associative, so that order is what keeps the bits equal.
 - **The graph.** The session builds a `TaskGraph` (`dsp/graph/`) from the project's routes and
   sends it in `Cmd::Graph` after each edit (`Session::sync_parallel`). The engine checks it against
-  the routes it resolved itself and plays serially until it holds, so a route can't race. The
+  the routes it resolved itself and plays serially until it holds, so a route can't race. A
+  rebuild (a project opened, Reset Audio Engine) swaps the graph in with the strips
+  (`Engine::replace_graph`), with any workers it needs started before the plug-ins load, so a heavy
+  project's first block is already on the pool. The
   graph's tasks are `Project::process_order`, which outputs, sends and side-chain keys decide, so
   an edit that can change that order sends `Cmd::Order` too, a plug-in leaving a keyed slot among
   them; otherwise the engine keeps its old order, which the graph no longer matches.
