@@ -6,6 +6,14 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **Render Ahead uses the whole machine on macOS and Windows.** It started as many threads as
+  Settings › Audio › Processing Threads, which Automatic keeps at one there for now, so a heavy
+  project's tracks couldn't stay ahead and kept falling back to live. Its threads now follow the
+  machine's cores (8 on an M1 Pro, 14 on an 8-core Intel with hyper-threading), whatever
+  Processing Threads says.
+
 ## [0.1.0-alpha.16] - 2026-11-12
 
 ### Added

@@ -32,7 +32,7 @@
 //!   --restarts S        every S seconds, stop, leave it stopped for 5 s (its plug-ins fall
 //!                       asleep), locate back and play again, as someone working on a song does
 //!   --ahead S           Settings › Audio › Render Ahead: tracks that aren't live rendered S
-//!                       seconds ahead (#448), on as many render threads as are processing
+//!                       seconds ahead (#448), on as many render threads as the machine suggests
 //!   --tracks N          instrument tracks (default 32)
 //!   --audio N           audio tracks (default 8)
 //!   --seed N            the project's seed (default 1)

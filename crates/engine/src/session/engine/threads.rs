@@ -181,13 +181,13 @@ impl Session {
         }
     }
 
-    /// Brings render ahead in line with Settings › Audio › Render Ahead and the processing threads,
-    /// and tells the engine which tracks to keep live: the selected track, and those with a plug-in
+    /// Brings render ahead in line with Settings › Audio › Render Ahead, on as many render threads
+    /// as the machine suggests (`render_threads`, whatever Processing Threads says), and tells the engine which tracks to keep live: the selected track, and those with a plug-in
     /// window open, so what's played or turned there is heard at once. From `idle`, so cheap when
     /// nothing changed.
     pub fn sync_ahead(&mut self) {
         let ms = self.audio_config.render_ahead_ms;
-        let want = (ms > 0).then(|| (self.processing_threads().max(1), ms as f64 / 1000.0));
+        let want = (ms > 0).then(|| (setting::render_threads(&self.threads.topology), ms as f64 / 1000.0));
         if want != self.ahead_running {
             self.set_render_ahead(want);
             self.live_sent = [None; crate::dsp::ahead::KEEP_LIVE];
