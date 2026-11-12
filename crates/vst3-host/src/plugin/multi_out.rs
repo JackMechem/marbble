@@ -164,6 +164,12 @@ impl PluginProcessor {
         self.out_fade.falling = None;
     }
 
+    /// The output buses are being switched: blocks must run for the fades and the parking.
+    pub(super) fn switching_outputs(&self) -> bool {
+        let gate = &self._shared.out_gate;
+        self.out_fade.active() || gate.park.load(Ordering::Relaxed) || gate.resume.load(Ordering::Relaxed)
+    }
+
     /// The end of `process`: the fades, and parking when asked.
     pub(super) fn after_block(&mut self, left: &mut [f32], right: &mut [f32], n: usize) {
         let gate = &self._shared.out_gate;

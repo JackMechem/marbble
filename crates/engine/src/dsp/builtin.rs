@@ -228,6 +228,12 @@ impl BuiltinDsp {
         self.shared.tail.store(self.fx.tail_secs().to_bits(), Ordering::Relaxed);
     }
 
+    /// How long its output may go on after its input stops, in frames at `sr`: its tail and
+    /// latency as of the last parameter change.
+    pub(super) fn ring_out(&self, sr: f64) -> u64 {
+        (self.shared.tail_secs() as f64 * sr) as u64 + self.shared.latency() as u64
+    }
+
     pub fn process(&mut self, l: &mut [f32], r: &mut [f32], key: Key, ctx: &FxContext) {
         self.fresh = false;
         self.fx.process(l, r, key, ctx);

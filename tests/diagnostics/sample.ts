@@ -3,7 +3,7 @@
 import type { Diagnostics, TrackDiagnostics } from "../../src/diagnostics/snapshot.ts";
 
 export function track(id: number, name: string, extra: Partial<TrackDiagnostics> = {}): TrackDiagnostics {
-  return { id, name, kind: "audio", off: false, frozen: false, thread: 0, share: 0.1, peak: 0.2, latency: 0, delay: 0, held: false, plugins: [], ...extra };
+  return { id, name, kind: "audio", off: false, frozen: false, thread: 0, share: 0.1, peak: 0.2, latency: 0, delay: 0, held: false, plugins: [], asleep: 0, ...extra };
 }
 
 export function sample(): Diagnostics {

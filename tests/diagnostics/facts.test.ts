@@ -82,7 +82,7 @@ test("a buffer other than the one asked for is marked", () => {
 
 test("track rows say the thread, the share and what's wrong", () => {
   const d = sample();
-  d.tracks.push(track(3, "Pad", { off: true }), track(4, "Synth", { thread: null }), track(5, "Stuck", { held: true, plugins: [{ uid: 1, name: "Slow", instrument: true, bypass: false, builtin: false, latency: null, unresponsive: true }] }));
+  d.tracks.push(track(3, "Pad", { off: true, asleep: 1 }), track(4, "Synth", { thread: null, asleep: 2 }), track(5, "Stuck", { held: true, plugins: [{ uid: 1, name: "Slow", instrument: true, bypass: false, builtin: false, latency: null, unresponsive: true }] }));
   const rows = trackRows(d);
   assert.deepEqual(
     rows.map((r) => [r.name, r.thread, r.share]),
@@ -95,7 +95,8 @@ test("track rows say the thread, the share and what's wrong", () => {
     ],
   );
   assert.equal(rows[1].plugins, "Comp [64]");
-  assert.equal(rows[2].state, "off");
+  assert.equal(rows[2].state, "off", "an off track's plug-ins don't run at all");
+  assert.equal(rows[3].state, "2 plug-ins asleep");
   assert.equal(rows[4].state, "held in a plug-in; not responding: Slow");
   assert.equal(rows[4].level, "alert");
   assert.equal(rows[0].level, undefined);

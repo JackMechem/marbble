@@ -500,8 +500,15 @@ impl Engine {
         for ins in self.master_inserts.iter_mut().flatten().filter(|_| master_fx) {
             if !ins.bypass {
                 let key = key_signal(ins.key.idx.and_then(|i| self.tracks.get(i)).map(|t| &**t), ins.key.pre, None, n);
-                ins.plugin.process_insert(bl, br, key, transport);
-                check_output(&self.status, ins, bl, br);
+                let silent = idle::silent(bl, br, key);
+                if ins.sleeps(silent) {
+                    bl.fill(0.0);
+                    br.fill(0.0);
+                } else {
+                    ins.plugin.process_insert(bl, br, key, transport);
+                    check_output(&self.status, ins, bl, br);
+                    ins.count_quiet(silent, bl, br, self.sample_rate);
+                }
             } else {
                 ins.plugin.pass_edits_aside(transport);
             }

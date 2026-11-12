@@ -77,7 +77,7 @@ fn tone(uid: Id, hz: f32, key: Option<Id>, pre: bool) -> InsertDsp {
     };
     let mut b = BuiltinDsp::new(&info, SR as f32, &[]);
     b.replace_effect_for_tests(Box::new(Tone { phase: uid as f32 * 0.01, hz, start: uid as f32 * 0.01 }));
-    InsertDsp { uid, bypass: false, plugin: Plugin::Builtin(Box::new(b)), key: KeyRoute::new(key, pre) }
+    InsertDsp::new(uid, false, Plugin::Builtin(Box::new(b)), KeyRoute::new(key, pre))
 }
 
 fn strip(id: Id, kind: TrackKind, p: TrackParams, fx: Vec<InsertDsp>) -> Box<TrackDsp> {
@@ -255,13 +255,7 @@ fn a_panicking_strip_silences_its_block_and_only_that() {
     };
     let mut b = BuiltinDsp::new(&info, SR as f32, &[]);
     b.replace_effect_for_tests(Box::new(Bomb(armed.clone())));
-    e.tx.push(Cmd::Insert {
-        track: 3,
-        slot: 1,
-        insert: Some(InsertDsp { uid: 99, bypass: false, plugin: Plugin::Builtin(Box::new(b)), key: KeyRoute::default() }),
-    })
-    .ok()
-    .unwrap();
+    e.tx.push(Cmd::Insert { track: 3, slot: 1, insert: Some(InsertDsp::new(99, false, Plugin::Builtin(Box::new(b)), KeyRoute::default())) }).ok().unwrap();
     e.tx.push(Cmd::Graph(Some(Box::new(g)))).ok().unwrap();
     e.tx.push(Cmd::Workers(Some(Workers::new(PoolOptions { threads: 4, ..Default::default() })))).ok().unwrap();
     e.tx.push(Cmd::ParallelTest(ParallelTest { always: true, renders: false, patient: true })).ok().unwrap();

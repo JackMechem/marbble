@@ -160,6 +160,8 @@ pub struct TrackDiagnostics {
     /// A thread is held up in one of its plug-ins.
     pub held: bool,
     pub plugins: Vec<PluginDiagnostics>,
+    /// Its inserts that slept through its latest block, fed silence.
+    pub asleep: u32,
 }
 
 /// A plug-in in a track's instrument or insert slot.

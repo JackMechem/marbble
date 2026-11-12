@@ -213,7 +213,8 @@ export interface TrackRow {
   peakOf: number;
 }
 
-/** What's notable about a track: off, frozen, held up in a plug-in, plug-ins not responding. */
+/** What's notable about a track: off, frozen, held up in a plug-in, plug-ins not responding or
+ *  asleep (fed silence). */
 function trackState(t: TrackDiagnostics): string {
   const s: string[] = [];
   if (t.held) s.push("held in a plug-in");
@@ -221,6 +222,7 @@ function trackState(t: TrackDiagnostics): string {
   if (dead.length) s.push(`not responding: ${dead.join(", ")}`);
   if (t.off) s.push("off");
   if (t.frozen) s.push("frozen");
+  if (t.asleep && !t.off) s.push(t.asleep === 1 ? "1 plug-in asleep" : `${t.asleep} plug-ins asleep`);
   return s.join("; ");
 }
 

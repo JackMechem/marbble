@@ -46,12 +46,7 @@ fn probe_info(k: usize) -> EffectInfo {
 }
 
 fn probe(k: usize, key: Option<Id>) -> InsertDsp {
-    InsertDsp {
-        uid: 900 + k as Id,
-        bypass: false,
-        plugin: Plugin::Builtin(Box::new(BuiltinDsp::new(&probe_info(k), SR as f32, &[]))),
-        key: KeyRoute::new(key, false),
-    }
+    InsertDsp::new(900 + k as Id, false, Plugin::Builtin(Box::new(BuiltinDsp::new(&probe_info(k), SR as f32, &[]))), KeyRoute::new(key, false))
 }
 
 fn blocks(k: usize) -> usize {

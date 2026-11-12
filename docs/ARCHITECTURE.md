@@ -447,6 +447,12 @@ flowchart TD
   frozen, the aux plays its output's render from its own playback list instead.
 - **Track Off** (`dsp/track_off/`): an off track fades out, then runs nothing; its plug-ins are
   told to stop processing but stay loaded. Back on, it fades in and chases.
+- **Plug-ins fed silence sleep** (`dsp/idle/`): an insert (Stereo Out's too) whose input and key
+  have been silent (below −160 dB) and its output quiet (below −120 dB) for its tail and latency,
+  and at least 2 s, isn't called and puts out silence, until its input or key has signal or edits,
+  automation or a bus switch's fade wait for it, and then runs that block. Decided from the signal alone, so renders
+  match playback; every insert wakes at a reset (renders start with one). Instrument slots don't
+  sleep: a plug-in instrument may play on its own with the transport.
 
 ### Delay compensation
 

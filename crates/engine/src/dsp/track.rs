@@ -91,6 +91,14 @@ pub struct InsertDsp {
     pub plugin: Plugin,
     /// Where its side-chain key comes from.
     pub key: KeyRoute,
+    /// Whether it sleeps, fed silence (see `idle/`).
+    pub(super) idle: idle::Idle,
+}
+
+impl InsertDsp {
+    pub fn new(uid: Id, bypass: bool, plugin: Plugin, key: KeyRoute) -> InsertDsp {
+        InsertDsp { uid, bypass, plugin, key, idle: Default::default() }
+    }
 }
 
 /// An insert's side-chain source (`PluginSlot::sidechain`), for built-in effects and VST3s alike.
