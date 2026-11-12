@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { countersOf } from "../../src/diagnostics/counters.ts";
-import { countsAt, headline, heaviestFirst, overview, threadShares, trackRows, type Fact, type Section } from "../../src/diagnostics/facts.ts";
+import { countsAt, headline, overview, sortRows, threadShares, trackRows, type Fact, type Section } from "../../src/diagnostics/facts.ts";
 import { sample, track } from "./sample.ts";
 
 const quiet = (d = sample()) => countsAt(countersOf(d), null, {}, 0);
@@ -108,10 +108,21 @@ test("held peaks replace the snapshot's, and heaviest first keeps ties in order"
   const rows = trackRows(d, held);
   assert.equal(rows[0].peak, "90.0%");
   assert.equal(rows[0].level, "warn", "over half the buffer");
-  assert.deepEqual(heaviestFirst(rows).map((r) => r.name), ["Drums", "Bass"]);
-  assert.deepEqual(heaviestFirst(trackRows(d)).map((r) => r.name), ["Bass", "Drums"]);
+  assert.deepEqual(sortRows(rows, "peak", true).map((r) => r.name), ["Drums", "Bass"]);
+  assert.deepEqual(sortRows(trackRows(d), "peak", true).map((r) => r.name), ["Bass", "Drums"]);
   d.tracks = [track(1, "A", { peak: 0 }), track(2, "B", { peak: 0 })];
-  assert.deepEqual(heaviestFirst(trackRows(d)).map((r) => r.name), ["A", "B"]);
+  assert.deepEqual(sortRows(trackRows(d), "peak", true).map((r) => r.name), ["A", "B"]);
+});
+
+test("the Tracks table sorts by any column, either way, ties in the project's order", () => {
+  const d = sample();
+  d.tracks = [track(1, "b", { thread: 2, latency: 64 }), track(2, "A", { thread: 0 }), track(3, "c", { thread: null, latency: 64 })];
+  const names = (key: Parameters<typeof sortRows>[1], desc: boolean) => sortRows(trackRows(d), key, desc).map((r) => r.name);
+  assert.deepEqual(names("name", false), ["A", "b", "c"]);
+  assert.deepEqual(names("name", true), ["c", "b", "A"]);
+  assert.deepEqual(names("thread", false), ["c", "A", "b"], "not played first");
+  assert.deepEqual(names("latency", true), ["b", "c", "A"]);
+  assert.deepEqual(names("order", true), ["c", "A", "b"]);
 });
 
 test("threads' shares add up the tracks each played, off tracks aside", () => {

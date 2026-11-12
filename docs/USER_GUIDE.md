@@ -3949,29 +3949,42 @@ A red label alone means a dropout, and playback carries on; a
 ### The Diagnostics window
 
 **Window › Diagnostics** opens a window that shows how Marbble is running, live (four times a
-second), to watch while you test and to attach to a bug report. Values worth a look are amber;
-red ones are going wrong now (a count that rose in the last few seconds, real-time priority
-refused, memory swapped out, the device stopped). Hover over a figure for what it means. Along
-the top are the load, its 99th percentile, late buffers, device gaps, overloads, the threads
-playing and the buffer.
+second), to watch while you test and to attach to a bug report. It's laid out like a system task
+manager: pages down the left, each with its headline (the load, the tracks and how many plug-ins
+are asleep, the log's errors), the window's buttons under them, and along the bottom the load,
+its 99th percentile, late buffers, device gaps, overloads, the threads playing and the buffer.
+Values worth a look are amber; red ones are going wrong now (a count that rose in the last few
+seconds, real-time priority refused, memory swapped out, the device stopped). Hover over a figure
+for what it means. A narrow window keeps only the pages' icons.
 
-- **Overview:** the audio device (driver, devices, the sample rate and buffer size it gave and
+- **Performance:** the engine's load over the last minute, as a task manager draws CPU, with
+  late buffers ticked red along the bottom (the scale grows past 100 % to show how far over a
+  dropout went, with 100 % marked); hover over it to read a moment. Under it the figures: load,
+  99th percentile, late buffers, gaps, overloads, threads, buffer, recent peak, median, worst
+  buffer and memory. Then a graph per thread (Audio is the audio thread, DSP 1 and up the
+  processing threads) of its share of each buffer, as a task manager draws one per core. Then
+  the details: the audio device (driver, devices, the sample rate and buffer size it gave and
   what you asked for, latencies, gaps, device events, stream errors and automatic restarts, and
   on macOS its audio workgroup); the engine's load (average, recent peak, median, 99th
   percentile and worst buffer, late buffers, overloads, engine errors, invalid plug-in output,
   commands to the audio thread and any dropped, recording overruns); the cores and processing
   threads (performance cores, the Processing Threads setting, how many threads play, real time
-  granted or refused, threads stuck in a plug-in, tracks left out) with each thread's share of
-  the latest buffer as a bar; memory (the lock, resident, locked and swapped memory on Linux, the
-  audio files in memory); and MIDI (ports in use, the live MIDI target, the last message).
-- **Tracks:** each track's thread (Audio is the audio thread, DSP 1 and up the processing
-  threads), its share of the latest buffer and its peak over the last two seconds, its plug-ins'
-  latency and its compensation delay, its plug-ins (latency in frames in brackets), and whether
-  it is off, frozen, held up by a plug-in that stopped responding, or has plug-ins asleep (fed
-  silence, they don't run). The sort button puts the
-  heaviest tracks first.
-- **Log:** what Marbble writes to the terminal (warnings, errors and what it did), with a level
-  filter and a search box. It keeps the last 2,000 lines; `RUST_LOG=debug` adds more detail.
+  granted or refused, threads stuck in a plug-in, tracks left out); memory (the lock, resident,
+  locked and swapped memory on Linux, the audio files in memory); and MIDI (ports in use, the
+  live MIDI target, the last message).
+- **Tracks:** like a task manager's list of processes, each track's thread, its share of the
+  latest buffer and its peak over the last two seconds (shaded amber by how much they take), its
+  plug-ins' latency and its compensation delay, its plug-ins (latency in frames in brackets), and
+  whether it is off, frozen, held up by a plug-in that stopped responding, or has plug-ins asleep
+  (fed silence, they don't run). Click a column's heading to sort by it, again for the other
+  way, and a third time for the project's order.
+- **Log:** what you did (each command, with what it changed; a fader drag or any run of one
+  command is one line with a count), menu items, key commands and those a MIDI controller fires,
+  windows coming to the front or closing, and what the engine saw (device gaps, late buffers,
+  overloads, faults, device changes, play and stop, with where the playhead was), among what
+  Marbble writes to the terminal (warnings, errors and what it did). Show all of it, only what
+  you did, or only the log, filter by level and search. It keeps the last 2,000 lines;
+  `RUST_LOG=debug` adds more detail.
 - **Reset** (the arrow) counts late buffers, gaps and the other counts from now, and starts the
   load figures afresh. **Copy Report** (the two sheets) puts everything, the last 300 log lines
   included, on the clipboard as plain text. Values the system doesn't give show as —.

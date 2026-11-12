@@ -36,10 +36,11 @@ fn main() {
     let session = startup::session(&args);
     // Record Everything, if it was on: from here, so it sees the window open.
     if settings::load().diagnostics.record_activity {
-        if let Err(e) = diagnostics::activity::set(true, &session) {
+        if let Err(e) = diagnostics::activity::set(true) {
             log::warn!("{e}");
         }
     }
+    diagnostics::activity::start_watch(session.clone());
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())

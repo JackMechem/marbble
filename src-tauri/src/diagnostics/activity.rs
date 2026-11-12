@@ -1,6 +1,7 @@
-//! The activity log: with Record Everything on (the Diagnostics window, kept in `settings.json` so
-//! it is on from launch), everything that happens goes to a file in `logs/` in the config folder,
-//! a line each, flushed as it goes so a crash loses nothing:
+//! The activity log: what the user does and what the engine's watch sees, always in the log the
+//! Diagnostics window shows (`log_ring.rs`) and, with Record Everything on (the Diagnostics window,
+//! kept in `settings.json` so it is on from launch), with everything else in a file in `logs/` in
+//! the config folder, a line each, flushed as it goes so a crash loses nothing:
 //!
 //! - every command the interface sends the engine, with its arguments ([`command`], hooked into
 //!   Tauri's invoke handler in main.rs), but those the windows send on a timer ([`POLLED`]);
@@ -8,7 +9,8 @@
 //!   ([`note`]; the frontend's through `log_activity`);
 //! - every log line (`logger.rs`);
 //! - what the engine's counters, device, threads and transport did, from [`Session::watch`] four
-//!   times a second: gaps, late buffers, overloads, stream errors, restarts, play and stop.
+//!   times a second from launch ([`start_watch`]): gaps, late buffers, overloads, stream errors,
+//!   restarts, play and stop.
 //!
 //! A thread of its own writes the file, so nothing waits for the disk, and nothing here runs on the
 //! audio thread. A run of one command (a fader drag sends one per move) is one line with a count
@@ -29,9 +31,6 @@ use daw_engine::Session;
 use parking_lot::Mutex;
 use serde::Serialize;
 use tauri::ipc::InvokeBody;
-use tauri::State;
-
-use crate::AppState;
 
 /// A file this big gives way to a new one.
 pub const FILE_BYTES: u64 = 50 << 20;
@@ -78,7 +77,7 @@ struct Entry {
 
 struct Log {
     on: AtomicBool,
-    /// Counts the times it was switched on, so a watcher from an earlier time stops.
+    /// Counts the times it was switched on, so the watch notes how things stand in each new file.
     generation: AtomicU64,
     tx: Mutex<Option<Sender<Entry>>>,
     /// The file being written, which the writer moves on when it fills.
@@ -99,9 +98,16 @@ pub fn is_on() -> bool {
     state().on.load(Ordering::Relaxed)
 }
 
-/// Adds a line, when it's on. Never logs (the logger comes here), and never waits.
+/// Adds a line to the window's log, and to the file when it's on. Never logs (the logger comes
+/// here), and never waits.
 pub fn note(kind: &'static str, text: impl Into<String>) {
-    send(kind, text.into(), None);
+    let text = text.into();
+    crate::diagnostics::logger::ring().push_activity(since_ms(), kind, text.clone());
+    send(kind, text, None);
+}
+
+fn since_ms() -> u64 {
+    crate::diagnostics::logger::since_start().as_millis() as u64
 }
 
 fn send(kind: &'static str, text: String, run: Option<String>) {
@@ -116,7 +122,7 @@ fn send(kind: &'static str, text: String, run: Option<String>) {
 
 /// A command the interface sent (every one goes through here first; see main.rs).
 pub fn command(name: &str, payload: &InvokeBody) {
-    if !is_on() || POLLED.contains(&name) {
+    if POLLED.contains(&name) {
         return;
     }
     let args = match payload {
@@ -124,7 +130,9 @@ pub fn command(name: &str, payload: &InvokeBody) {
         InvokeBody::Json(v) => format!(" {}", cut(v.to_string(), ARGS_CHARS)),
         InvokeBody::Raw(b) => format!(" <{} bytes>", b.len()),
     };
-    send("command", format!("{name}{args}"), Some(name.to_string()));
+    let text = format!("{name}{args}");
+    crate::diagnostics::logger::ring().push_command(since_ms(), name, text.clone());
+    send("command", text, Some(name.to_string()));
 }
 
 /// A log line, from `logger.rs`.
@@ -136,7 +144,7 @@ pub fn log_line(level: log::Level, target: &str, message: &str) {
 
 /// Switches it on or off: from the Diagnostics window, and at launch from the settings. Switching
 /// it on starts a new file.
-pub fn set(on: bool, session: &Arc<Mutex<Session>>) -> Result<(), String> {
+pub fn set(on: bool) -> Result<(), String> {
     let log = state();
     if on == is_on() {
         return Ok(());
@@ -155,29 +163,38 @@ pub fn set(on: bool, session: &Arc<Mutex<Session>>) -> Result<(), String> {
     *log.tx.lock() = Some(tx);
     log.on.store(true, Ordering::Relaxed);
     note("activity", format!("Marbble {} on {} {}, recording everything", env!("CARGO_PKG_VERSION"), std::env::consts::OS, std::env::consts::ARCH));
-    let generation = log.generation.fetch_add(1, Ordering::Relaxed) + 1;
-    let s = session.clone();
-    std::thread::Builder::new().name("activity-watch".into()).spawn(move || watch_loop(&s, generation)).map_err(|e| e.to_string())?;
+    // The watch notes how things stand at the start of the file.
+    log.generation.fetch_add(1, Ordering::Relaxed);
     Ok(())
 }
 
-/// Looks at the session four times a second while it's on, and writes what changed.
-fn watch_loop(session: &Mutex<Session>, generation: u64) {
+/// Starts the watch, for the rest of the app's life: four times a second it looks at the session
+/// and notes what changed, and how things stand at launch and when a recording starts.
+pub fn start_watch(session: Arc<Mutex<Session>>) {
+    let spawned = std::thread::Builder::new().name("activity-watch".into()).spawn(move || watch_loop(&session));
+    if let Err(e) = spawned {
+        log::warn!("no activity watch: {e}");
+    }
+}
+
+fn watch_loop(session: &Mutex<Session>) {
     let mut before: Option<Watch> = None;
-    while is_on() && state().generation.load(Ordering::Relaxed) == generation {
-        let Some(now) = session.try_lock_for(SESSION_WAIT).map(|s| s.watch()) else {
-            std::thread::sleep(WATCH_EVERY);
-            continue;
-        };
-        match &before {
-            Some(b) => {
+    // The recording the state was last noted for.
+    let mut noted = u64::MAX;
+    loop {
+        if let Some(now) = session.try_lock_for(SESSION_WAIT).map(|s| s.watch()) {
+            let generation = state().generation.load(Ordering::Relaxed);
+            if let Some(b) = &before {
                 for (kind, text) in now.changes(b) {
                     note(kind.name(), text);
                 }
             }
-            None => note("device", first_look(&now)),
+            if before.is_none() || (generation != noted && is_on()) {
+                note("device", first_look(&now));
+                noted = generation;
+            }
+            before = Some(now);
         }
-        before = Some(now);
         std::thread::sleep(WATCH_EVERY);
     }
 }
@@ -399,8 +416,8 @@ pub fn activity_log() -> ActivityStatus {
 /// Record Everything, switched in the Diagnostics window: kept in the settings for the next
 /// launch.
 #[tauri::command]
-pub fn set_activity_log(state: State<AppState>, on: bool) -> Result<ActivityStatus, String> {
-    set(on, &state.session)?;
+pub fn set_activity_log(on: bool) -> Result<ActivityStatus, String> {
+    set(on)?;
     let mut all = crate::settings::load();
     all.diagnostics.record_activity = on;
     crate::settings::save(&all);

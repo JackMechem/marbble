@@ -1,20 +1,46 @@
-// The Diagnostics window's Log: Marbble's log as it was written to the terminal, newest at the
-// bottom, with a level filter, a search box and the choice to keep the newest line in view.
+// The Diagnostics window's Log: what you did (commands, menu items, key commands, windows) and what
+// the engine's watch saw (gaps, late buffers, overloads, play and stop), among Marbble's log as it
+// was written to the terminal, newest at the bottom; with a filter for either, a level filter, a
+// search box and the choice to keep the newest line in view.
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { filterLines, levelCounts, LEVELS, shortTarget } from "./logLines";
+import { filterLines, isActivity, levelCounts, LEVELS, shortTarget, type Source } from "./logLines";
 import { sinceLaunch } from "./format";
 import type { LogLevel, LogLine } from "./snapshot";
 import { Select } from "../ui/Form";
 import { Icon } from "../ui/icons";
 
-const LEVEL_NAMES: Record<LogLevel, string> = { error: "Errors", warn: "Warnings and up", info: "Info and up", debug: "Debug and up", trace: "Everything" };
+const LEVEL_NAMES: Record<LogLevel, string> = { error: "Errors", warn: "Warnings and up", info: "Info and up", debug: "Debug and up", trace: "Every level" };
+const SOURCES: [Source, string][] = [
+  ["all", "Everything"],
+  ["activity", "What you did"],
+  ["log", "The log"],
+];
+const SOURCE_KEY = "marbble.diagnostics.logSource";
+
+function savedSource(): Source {
+  try {
+    const s = localStorage.getItem(SOURCE_KEY);
+    return SOURCES.some(([id]) => id === s) ? (s as Source) : "all";
+  } catch {
+    return "all";
+  }
+}
 
 export function LogTab({ lines }: { lines: LogLine[] }) {
   const [level, setLevel] = useState<LogLevel>("trace");
+  const [source, setSource] = useState<Source>(savedSource);
   const [query, setQuery] = useState("");
   const [follow, setFollow] = useState(true);
   const list = useRef<HTMLDivElement>(null);
-  const shown = filterLines(lines, level, query);
+  const shown = filterLines(lines, level, query, source);
+  const chooseSource = (s: Source) => {
+    setSource(s);
+    try {
+      localStorage.setItem(SOURCE_KEY, s);
+    } catch {
+      // Remembering the filter is a nicety.
+    }
+  };
   const counts = levelCounts(lines);
 
   // Keep the newest line in view while following.
@@ -35,6 +61,7 @@ export function LogTab({ lines }: { lines: LogLine[] }) {
   return (
     <div className="diag-log">
       <div className="diag-toolbar">
+        <Select value={source} options={SOURCES} onChange={chooseSource} width={130} title="What you did (commands, menus, keys, windows) and what the engine saw (gaps, late buffers, play and stop), Marbble's log, or both" />
         <Select value={level} options={LEVELS.map((l) => [l, LEVEL_NAMES[l]])} onChange={setLevel} width={150} title="Show lines at this level and more severe" />
         <input className="search diag-search" placeholder="Search the log" aria-label="Search the log" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.stopPropagation()} />
         <button type="button" className={"diag-btn" + (follow ? " on" : "")} aria-pressed={follow} title="Keep the newest line in view" aria-label="Follow the newest line" onClick={() => setFollow(!follow)}>
@@ -49,7 +76,7 @@ export function LogTab({ lines }: { lines: LogLine[] }) {
       <div className="diag-log-lines" ref={list} role="log" aria-live="off">
         {shown.length === 0 ? <div className="diag-empty">{lines.length ? "No lines match." : "Nothing logged yet."}</div> : null}
         {shown.map((l) => (
-          <div key={l.seq} className={`diag-line ${l.level}`}>
+          <div key={l.seq} className={`diag-line ${l.level}${isActivity(l) ? " activity" : ""}`}>
             <span className="diag-line-time">{sinceLaunch(l.ms)}</span>
             <span className="diag-line-level">{l.level}</span>
             <span className="diag-line-target" title={l.target}>

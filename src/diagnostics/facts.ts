@@ -208,9 +208,12 @@ export interface TrackRow {
   plugins: string;
   state: string;
   level?: Level;
-  /** The latest share and the peak as numbers, for bars and sorting. */
+  /** The latest share and the peak as numbers, for bars and sorting, and the rest that sort. */
   shareOf: number;
   peakOf: number;
+  threadOf: number;
+  latencyOf: number;
+  delayOf: number;
 }
 
 /** What's notable about a track: off, frozen, held up in a plug-in, plug-ins not responding or
@@ -250,16 +253,44 @@ export function trackRows(d: Diagnostics, held?: HeldPeaks): TrackRow[] {
       level,
       shareOf: t.thread === null || t.off ? 0 : t.share,
       peakOf: t.thread === null || t.off ? 0 : t.peak,
+      threadOf: t.thread === null || t.off ? -1 : t.thread,
+      latencyOf: t.latency,
+      delayOf: t.delay,
     };
   });
 }
 
-/** The rows with the heaviest (by peak, then latest share) first, keeping the project's order
- *  among equals. */
-export function heaviestFirst(rows: TrackRow[]): TrackRow[] {
+/** What the Tracks table can sort by, as a task manager sorts its processes. */
+export type SortKey = "order" | "name" | "kind" | "thread" | "share" | "peak" | "latency" | "delay";
+
+/** The rows sorted by `key`, largest or last first when `desc`, keeping the project's order among
+ *  equals. By peak, the latest share breaks ties. */
+export function sortRows(rows: TrackRow[], key: SortKey, desc: boolean): TrackRow[] {
+  const value = (r: TrackRow): number | string => {
+    switch (key) {
+      case "name":
+        return r.name.toLowerCase();
+      case "kind":
+        return r.kind;
+      case "thread":
+        return r.threadOf;
+      case "share":
+        return r.shareOf;
+      case "peak":
+        return r.peakOf;
+      case "latency":
+        return r.latencyOf;
+      case "delay":
+        return r.delayOf;
+      default:
+        return 0;
+    }
+  };
+  const cmp = (a: number | string, b: number | string) => (a < b ? -1 : a > b ? 1 : 0);
+  const sign = desc ? -1 : 1;
   return rows
     .map((r, i) => ({ r, i }))
-    .sort((a, b) => b.r.peakOf - a.r.peakOf || b.r.shareOf - a.r.shareOf || a.i - b.i)
+    .sort((a, b) => sign * cmp(value(a.r), value(b.r)) || (key === "peak" ? sign * cmp(a.r.shareOf, b.r.shareOf) : 0) || (key === "order" && desc ? b.i - a.i : a.i - b.i))
     .map(({ r }) => r);
 }
 
