@@ -314,8 +314,8 @@ fn a_render_thread_held_in_a_strip_never_holds_up_the_callback() {
     drop(threads);
 }
 
-/// Takes most of a buffer on the callback's side, as a heavy plug-in played live does; quick on a
-/// render thread.
+/// Takes most of a buffer on the callback's side, as a heavy plug-in played live does (spinning:
+/// a sleep overshoots by milliseconds on some systems); quick on a render thread.
 struct Heavy;
 
 impl Effect for Heavy {
@@ -325,7 +325,10 @@ impl Effect for Heavy {
     }
     fn process(&mut self, _: &mut [f32], _: &mut [f32], _: Key, _: &FxContext) {
         if !std::thread::current().name().is_some_and(|n| n.starts_with("marbble-ahead")) {
-            std::thread::sleep(std::time::Duration::from_millis(14));
+            let until = std::time::Instant::now() + std::time::Duration::from_millis(14);
+            while std::time::Instant::now() < until {
+                std::hint::spin_loop();
+            }
         }
     }
     fn reset(&mut self) {}
@@ -338,15 +341,16 @@ fn a_strip_that_takes_most_of_the_buffer_live_still_goes_ahead() {
     let info = EffectInfo { id: "test:heavy", name: "Heavy", category: "Utility", params: &[], meters: &[], sidechain: false, new: |_| Box::new(Heavy) };
     let mut r = rig();
     let threads = AheadThreads::start(1, r.status.clone());
-    r.tx.push(Cmd::Ahead(Some(threads.shared()), 0.05)).ok().unwrap();
+    r.tx.push(Cmd::Ahead(Some(threads.shared()), 0.2)).ok().unwrap();
     let mut t = TrackDsp::new(1, TrackKind::Audio, params(0.5), Arc::default());
     t.set_regions(sine());
     t.set_insert(0, Some(InsertDsp::new(101, false, Plugin::Builtin(Box::new(BuiltinDsp::new(&info, SR as f32, &[]))), KeyRoute::default())));
     t.prepare_ahead();
     r.tx.push(Cmd::AddTrack(Box::new(t), usize::MAX)).ok().unwrap();
     r.tx.push(Cmd::Play { from: 0 }).ok().unwrap();
-    // 1024 frames: 21 ms a buffer, 14 of them in the plug-in while it plays live.
-    let mut buf = vec![0.0f32; MAX_BLOCK * 2];
+    // Four blocks of 1024 frames a callback: 85 ms a buffer, 56 of them in the plug-in while it
+    // plays live, two thirds, with room either side of 60 % and 90 % for a busy machine.
+    let mut buf = vec![0.0f32; 4 * MAX_BLOCK * 2];
     let lent = |r: &crate::dsp::tests::Rig| r.engine.tracks.first().and_then(|t| t.ahead.as_ref()).is_some_and(|a| a.lent());
     let mut k = 0;
     while !lent(&r) && k < 40 {
