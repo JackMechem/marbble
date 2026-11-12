@@ -9,7 +9,7 @@
 //! time, so a plain load and store keeps the peak; the session's read may lose one peak to a block
 //! that lands between its read and its reset, which a few reads a second make up for.
 
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
 /// No thread has played the strip yet.
 const NO_THREAD: u32 = u32::MAX;
@@ -25,11 +25,19 @@ pub struct StripLoad {
     peak: AtomicU32,
     /// Inserts asleep in the latest block (see `idle/`).
     asleep: AtomicU32,
+    /// Its source is rendered ahead (see `ahead/`).
+    ahead: AtomicBool,
 }
 
 impl Default for StripLoad {
     fn default() -> Self {
-        StripLoad { thread: AtomicU32::new(NO_THREAD), share: AtomicU32::new(0), peak: AtomicU32::new(0), asleep: AtomicU32::new(0) }
+        StripLoad {
+            thread: AtomicU32::new(NO_THREAD),
+            share: AtomicU32::new(0),
+            peak: AtomicU32::new(0),
+            asleep: AtomicU32::new(0),
+            ahead: AtomicBool::new(false),
+        }
     }
 }
 
@@ -44,6 +52,8 @@ pub struct StripLoadReading {
     pub peak: f32,
     /// Its inserts asleep in the latest block.
     pub asleep: u32,
+    /// Its source is rendered ahead.
+    pub ahead: bool,
 }
 
 impl StripLoad {
@@ -63,6 +73,11 @@ impl StripLoad {
         self.asleep.store(n, Ordering::Relaxed);
     }
 
+    /// On the audio thread: the strip's source went ahead, or came back.
+    pub(crate) fn ahead(&self, on: bool) {
+        self.ahead.store(on, Ordering::Relaxed);
+    }
+
     /// For the session: the latest block, and the worst since the last call, which starts afresh.
     pub fn take(&self) -> StripLoadReading {
         let thread = self.thread.load(Ordering::Relaxed);
@@ -71,6 +86,7 @@ impl StripLoad {
             share: f32::from_bits(self.share.load(Ordering::Relaxed)),
             peak: f32::from_bits(self.peak.swap(0, Ordering::Relaxed)),
             asleep: self.asleep.load(Ordering::Relaxed),
+            ahead: self.ahead.load(Ordering::Relaxed),
         }
     }
 }

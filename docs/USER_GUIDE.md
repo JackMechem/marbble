@@ -161,6 +161,15 @@ click outside) drops them. The delay compensation options on the same tab apply 
   for now. On Linux and macOS the extra threads get real-time priority, as the audio thread does
   (not yet on Windows). A thread the system refuses real-time priority (on Linux, rtkit not running or its
   limits reached) is left out, and a note under the setting says so.
+- **Render Ahead.** Off, 100, 200 or 500 ms. On, tracks you aren't playing or editing are
+  rendered that far ahead of the playhead on threads of their own, and the audio thread only
+  mixes them, so a heavy project (amp models, big synths) doesn't drop out when one buffer runs
+  slow. What you hear is exactly what you'd hear with it off. The selected track, tracks with a
+  plug-in window open, record-enabled and monitored tracks, and tracks keyed by a side-chain
+  always play live, so what you play or turn there is heard at once. An edit to a track rendered
+  ahead (a region, a plug-in, its automation) brings it back live from that moment; a reverb or
+  delay on it may jump a little as it does. At 96 kHz and above the lead is at most a quarter of a
+  second. Off by default for now.
 - **Reset Audio Engine** closes and reopens the devices, for example after replugging an
   interface.
 - **When a device changes or goes away**, audio restarts by itself and a message says on which
@@ -3459,6 +3468,7 @@ what it found; with the launch check off, that is the only time Marbble contacts
 | Sample Rate | Rates both devices support (44.1 to 192 kHz) | 48 kHz |
 | I/O Buffer Size | 32, 64, 128, 256, 512, 1024, 2048 samples | 256 |
 | Processing Threads | Automatic, 1 up to the number of hardware threads (at most 16) | Automatic |
+| Render Ahead | Off, 100, 200, 500 ms | Off |
 | Monitoring | Hear record-enabled tracks without pressing I | Off |
 | Recording Delay | -500 to 500 ms, added to the measured latency | 0 |
 | Memory (Linux) | Lock audio memory: keep Marbble's memory in RAM, so the audio doesn't drop out when the system swaps (see [Dropouts when memory runs short](#dropouts-when-memory-runs-short)) | On |
@@ -3975,8 +3985,8 @@ for what it means. A narrow window keeps only the pages' icons.
 - **Tracks:** like a task manager's list of processes, each track's thread, its share of the
   latest buffer and its peak over the last two seconds (shaded amber by how much they take), its
   plug-ins' latency and its compensation delay, its plug-ins (latency in frames in brackets), and
-  whether it is off, frozen, held up by a plug-in that stopped responding, or has plug-ins asleep
-  (fed silence, they don't run). Click a column's heading to sort by it, again for the other
+  whether it is off, frozen, held up by a plug-in that stopped responding, rendered ahead
+  (Settings › Audio › Render Ahead), or has plug-ins asleep (fed silence, they don't run). Click a column's heading to sort by it, again for the other
   way, and a third time for the project's order.
 - **Log:** what you did (each command, with what it changed; a fader drag or any run of one
   command is one line with a count), menu items, key commands and those a MIDI controller fires,

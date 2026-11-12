@@ -138,6 +138,7 @@ impl Session {
         }
         self.send(Cmd::AutoMonitor(self.audio_config.auto_monitor));
         self.sync_parallel();
+        self.sync_ahead();
     }
 
     /// Locks the process's memory in RAM, or lets it go, as Settings › Audio › Lock audio memory says

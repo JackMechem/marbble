@@ -85,6 +85,14 @@ function InputLevelCheck() {
  *  doesn't lose them; dropped when it closes (see SettingsDialog). */
 let audioDraft: AudioConfig | null = null;
 
+/** Settings › Audio › Render Ahead's choices, in ms. */
+const RENDER_AHEAD: [number, string][] = [
+  [0, "Off"],
+  [100, "100 ms"],
+  [200, "200 ms"],
+  [500, "500 ms"],
+];
+
 export function AudioPane({ close }: { close: () => void }) {
   const audio = useStore((s) => s.snap?.audio);
   const project = useStore((s) => s.snap?.project);
@@ -190,6 +198,13 @@ export function AudioPane({ close }: { close: () => void }) {
             <span className="warn">{threadNote(threads)}</span>
           </>
         )}
+        <label>Render Ahead:</label>
+        <Select value={cfg.render_ahead_ms ?? 0} options={RENDER_AHEAD} onChange={(ms) => setCfg({ ...cfg, render_ahead_ms: ms })} />
+        <span />
+        <span className="form-note">
+          Plays tracks you aren't playing or editing from audio rendered this far ahead, so a heavy project doesn't drop out when one buffer runs slow. The selected
+          track, tracks with a plug-in window open, and record-enabled or monitored tracks always play live.
+        </span>
         <label>Monitoring:</label>
         <label className="check">
           <input type="checkbox" checked={cfg.auto_monitor} onChange={(e) => setCfg({ ...cfg, auto_monitor: e.target.checked })} />

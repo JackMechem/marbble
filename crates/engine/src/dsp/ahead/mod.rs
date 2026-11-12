@@ -42,6 +42,8 @@ use super::*;
 
 /// The most strips lent at once.
 pub const MAX_LENT: usize = 256;
+/// The most tracks kept live: the selected track and those with a plug-in window open.
+pub const KEEP_LIVE: usize = 16;
 /// What a strip's ring holds, in frames: a lead of 0.5 s at 48 kHz, with room for a block over.
 const RING_FRAMES: usize = 24_000 + 2 * MAX_BLOCK;
 /// How many blocks a ring holds, whatever their size: a lead at the shortest buffer, cut at cycle
@@ -464,6 +466,7 @@ impl TrackDsp {
             }
         }
         ctl.ring.clear();
+        self.load.ahead(false);
         // SAFETY: home, and no render thread names it: the shell is the callback's.
         trade(self, unsafe { &mut *ctl.shell.get() });
     }
@@ -496,6 +499,7 @@ impl TrackDsp {
         ctl.entry.store(entry, Ordering::Relaxed);
         ctl.state.store(LENT, Ordering::SeqCst);
         shared.table[entry].store(ptr, Ordering::SeqCst);
+        self.load.ahead(true);
         true
     }
 }
@@ -530,6 +534,8 @@ pub(crate) struct Ahead {
     pub(super) lead_secs: f64,
     /// Frames in the last callback, which a strip is lent for only while they stay the same.
     pub(super) last_frames: usize,
+    /// Tracks that play live whatever (`Cmd::KeepLive`).
+    pub(super) keep_live: [Option<Id>; KEEP_LIVE],
 }
 
 /// For a lent strip in a block: its rendered block for `cx.pos` into `t.l` and `t.r`, waiting for
@@ -621,6 +627,12 @@ impl Engine {
                     self.reclaim_track(*id);
                 }
             }
+            // A track to keep live comes back now; the others may go ahead again.
+            Cmd::KeepLive(ids) => {
+                for id in ids.iter().flatten() {
+                    self.reclaim_track(*id);
+                }
+            }
             Cmd::RemoveTrack(id)
             | Cmd::Regions(id, _)
             | Cmd::Automation(id, _)
@@ -653,7 +665,7 @@ impl Engine {
             let lead = ((self.ahead.lead_secs * self.sample_rate) as usize).min(RING_FRAMES - MAX_BLOCK);
             let base = TransportInfo { playing: true, recording: false, sample_rate: self.sample_rate, cycle: self.transport().cycle, ..Default::default() };
             let course = Course::new(self.pos, frames, self.cycle);
-            let (midi_target, analyzer) = (self.midi_target, self.analyzer_target);
+            let (midi_target, analyzer, keep_live) = (self.midi_target, self.analyzer_target, self.ahead.keep_live);
             for ti in 0..self.tracks.len() {
                 let t = &self.tracks[ti];
                 if t.ahead.as_ref().is_none_or(|a| a.lent() || a.lost()) {
@@ -661,7 +673,7 @@ impl Engine {
                 }
                 // An aux on one of its instrument's outputs reads the instrument as it plays.
                 let fed = self.tracks.iter().any(|a| a.feed.source == Some(ti));
-                if !eligible(t, midi_target, analyzer, fed) {
+                if keep_live.contains(&Some(t.id)) || !eligible(t, midi_target, analyzer, fed) {
                     continue;
                 }
                 let from = LendFrom {

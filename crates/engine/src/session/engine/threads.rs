@@ -160,6 +160,7 @@ impl Session {
     /// playhead on `threads` render threads; None plays every track live. Off by default while it's
     /// being built; checks and measurements switch it on.
     pub fn set_render_ahead(&mut self, ahead: Option<(usize, f64)>) {
+        self.ahead_running = ahead;
         match ahead {
             Some((threads, lead_secs)) => {
                 let fresh = self.ahead.is_none();
@@ -177,6 +178,32 @@ impl Session {
                 self.send(Cmd::Ahead(None, 0.0));
                 self.ahead = None;
             }
+        }
+    }
+
+    /// Brings render ahead in line with Settings › Audio › Render Ahead and the processing threads,
+    /// and tells the engine which tracks to keep live: the selected track, and those with a plug-in
+    /// window open, so what's played or turned there is heard at once. From `idle`, so cheap when
+    /// nothing changed.
+    pub fn sync_ahead(&mut self) {
+        let ms = self.audio_config.render_ahead_ms;
+        let want = (ms > 0).then(|| (self.processing_threads().max(1), ms as f64 / 1000.0));
+        if want != self.ahead_running {
+            self.set_render_ahead(want);
+            self.live_sent = [None; crate::dsp::ahead::KEEP_LIVE];
+        }
+        if self.ahead.is_none() {
+            return;
+        }
+        let mut live = [None; crate::dsp::ahead::KEEP_LIVE];
+        let editors = self.controllers.iter().filter(|(_, c)| c.editor_open()).filter_map(|(&uid, _)| self.track_of_plugin(uid));
+        for (slot, id) in live.iter_mut().zip(self.selected.into_iter().chain(editors)) {
+            *slot = Some(id);
+        }
+        live.sort_unstable();
+        if live != self.live_sent {
+            self.live_sent = live;
+            self.send(Cmd::KeepLive(live));
         }
     }
 

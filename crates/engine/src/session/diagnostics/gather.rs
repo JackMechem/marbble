@@ -73,6 +73,7 @@ impl Session {
             overload_ms: (overloads > 0).then(|| f32::from_bits(s.overload_secs.load(Ordering::Relaxed)) * 1000.0),
             overload_track: (overloads > 0 && track != 0).then(|| self.track_name(track)),
             engine_errors: s.engine_errors.load(Ordering::Relaxed),
+            ahead_misses: s.ahead_misses.load(Ordering::Relaxed),
             bad_audio: s.bad_audio.load(Ordering::Relaxed),
             cmds_sent: self.cmds_sent,
             cmds_done: s.cmds_done.load(Ordering::Relaxed),
@@ -147,6 +148,7 @@ impl Session {
                     held: held.iter().any(|h| h.track == t.id),
                     plugins,
                     asleep: load.asleep,
+                    ahead: load.ahead,
                 }
             })
             .collect()

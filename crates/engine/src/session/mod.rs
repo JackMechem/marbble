@@ -198,8 +198,11 @@ pub struct Session {
     rec_midi: takes::midi_capture::RecordedMidi,
     recorder: Recorder,
     controllers: HashMap<Id, PluginController>,
-    /// Render ahead's threads, while it's on (`set_render_ahead`).
+    /// Render ahead's threads, while it's on (`set_render_ahead`), with how many there are and the
+    /// lead, and the tracks last kept live (`sync_ahead`).
     ahead: Option<crate::dsp::ahead::AheadThreads>,
+    ahead_running: Option<(usize, f64)>,
+    live_sent: [Option<Id>; crate::dsp::ahead::KEEP_LIVE],
     meters: HashMap<Id, Arc<Meter>>,
     pub plugins: Vec<PluginDescriptor>,
     pub selected: Option<Id>,
@@ -417,6 +420,8 @@ impl Session {
             sampler: Default::default(),
             controllers: HashMap::new(),
             ahead: None,
+            ahead_running: None,
+            live_sent: [None; crate::dsp::ahead::KEEP_LIVE],
             meters: HashMap::new(),
             plugins,
             selected: None,

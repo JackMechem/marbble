@@ -41,6 +41,8 @@ export interface AudioConfig {
   processing_threads: number;
   /** Lock audio memory (Linux): keep Marbble's memory in RAM so the audio never waits on swap. */
   lock_memory: boolean;
+  /** Render Ahead: how far ahead, in ms, tracks that aren't played live are rendered; 0 is Off. */
+  render_ahead_ms: number;
 }
 
 export interface InputLevel {

@@ -456,7 +456,8 @@ flowchart TD
 
 ### Render ahead
 
-`dsp/ahead/` (#448, off by default while it's built): tracks that aren't played live have their
+`dsp/ahead/` (#448; Settings › Audio › Render Ahead, `AudioConfig::render_ahead_ms`, off by
+default for now): tracks that aren't played live have their
 source rendered on render threads up to a lead (about 200 ms) ahead of the playhead, and the
 callback's mix plays the block for its position, so a slow block is absorbed by what's rendered.
 
@@ -472,6 +473,9 @@ callback's mix plays the block for its position, so a slow block is absorbed by 
   would. A command that changes a strip's source, or moves the playhead, takes it back first
   (`reclaim_for`); its blocks go and it plays live from the playhead. A block not ready in half a
   block's time, or marked for another position, does the same.
+- The session (`sync_ahead`, from `idle`) starts render threads as the setting and the processing
+  threads say, and keeps live the selected track and tracks with a plug-in window open
+  (`Cmd::KeepLive`).
 - Lent strips are a table of pointers; a render thread names the strip it looks at as its hazard,
   and taking a strip back waits until none does, so a shell is never traded or freed under it.
 

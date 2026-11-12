@@ -76,6 +76,7 @@ export interface LoadDiagnostics {
   overload_ms: number | null;
   overload_track: string | null;
   engine_errors: number;
+  ahead_misses: number;
   bad_audio: number;
   cmds_sent: number;
   cmds_done: number;
@@ -129,6 +130,8 @@ export interface TrackDiagnostics {
   plugins: PluginDiagnostics[];
   /** Its inserts that slept through its latest block, fed silence. */
   asleep: number;
+  /** Its source is rendered ahead. */
+  ahead: boolean;
 }
 
 export interface PluginDiagnostics {
