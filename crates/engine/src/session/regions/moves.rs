@@ -81,7 +81,7 @@ mod tests {
 
     fn midi(s: &mut Session, track: Id, start: i64) -> Id {
         let id = s.project.alloc_id();
-        let content = RegionContent::Midi { notes: vec![Note { start: 0, length: 100, pitch: 60, velocity: 100, muted: false }], cc: Vec::new() };
+        let content = RegionContent::midi(vec![Note { start: 0, length: 100, pitch: 60, velocity: 100, muted: false }], Vec::new());
         s.project.track_mut(track).unwrap().regions.push(Region {
             id,
             name: "M".into(),

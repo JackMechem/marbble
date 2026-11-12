@@ -156,7 +156,7 @@ fn main() {
     let beat = s.project.samples_per_beat().round() as i64;
     let mid = s.create_midi_region(inst, 0, beat).unwrap();
     if let Some(r) = s.project.track_mut(inst).unwrap().regions.iter_mut().find(|r| r.id == mid) {
-        r.content = RegionContent::Midi { cc: Vec::new(), notes: vec![Note { start: 0, length: beat / 2, pitch: 60, velocity: 110, muted: false }] };
+        r.content = RegionContent::midi(vec![Note { start: 0, length: beat / 2, pitch: 60, velocity: 110, muted: false }], Vec::new());
     }
     s.set_region_loop(mid, None); // pushes the edited notes
     s.update_track(a, daw_engine::session::TrackPatch { mute: Some(true), ..Default::default() });

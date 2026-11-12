@@ -102,7 +102,7 @@ fn project(e: &mut Rig) -> TaskGraph {
         strip(7, TrackKind::Aux, params(None, &[]), vec![tone(70, 610.0, None, false)]),
     ];
     let ids = tracks.iter().map(|t| t.id).collect();
-    e.engine.replace_graph(SR, tracks, (0..INSERT_SLOTS).map(|_| None).collect());
+    e.engine.replace_graph(SR, tracks, (0..INSERT_SLOTS).map(|_| None).collect(), None);
     let edges = [(1, 5), (2, 5), (1, 6), (1, 7), (2, 6), (3, 7), (4, 6), (5, 7), (1, 4), (2, 4)];
     TaskGraph::new(ids, &edges, |_| true).unwrap()
 }
@@ -828,7 +828,7 @@ fn a_strip_notes_the_thread_that_played_it() {
         strip(on_worker, TrackKind::Audio, params(None, &[]), vec![tone(964, 290.0, None, false)]),
     ];
     let loads: Vec<Arc<StripLoad>> = tracks.iter().map(|t| t.load.clone()).collect();
-    e.engine.replace_graph(SR, tracks, (0..INSERT_SLOTS).map(|_| None).collect());
+    e.engine.replace_graph(SR, tracks, (0..INSERT_SLOTS).map(|_| None).collect(), None);
     e.tx.push(Cmd::Graph(Some(Box::new(TaskGraph::new(vec![on_caller, on_worker], &[], |_| true).unwrap())))).ok().unwrap();
     e.tx.push(Cmd::Workers(Some(Workers::new(PoolOptions { threads: 2, ..Default::default() })))).ok().unwrap();
     e.tx.push(Cmd::ParallelTest(ParallelTest { always: true, renders: false, patient: true })).ok().unwrap();

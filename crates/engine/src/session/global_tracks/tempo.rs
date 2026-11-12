@@ -104,12 +104,12 @@ fn follow_tempo(r: &mut Region, to: &dyn Fn(i64) -> i64) -> bool {
     let rs = r.start;
     let RegionContent::Midi { notes, cc } = &mut r.content else { return false };
     let start = to(rs);
-    for n in notes.iter_mut() {
+    for n in Arc::make_mut(notes) {
         let (a, b) = (to(rs + n.start), to(rs + n.start + n.length));
         n.start = a - start;
         n.length = (b - a).max(1);
     }
-    for c in cc.iter_mut() {
+    for c in Arc::make_mut(cc) {
         c.start = to(rs + c.start) - start;
     }
     r.length = (to(rs + r.length) - start).max(1);

@@ -365,8 +365,10 @@ sequenceDiagram
 ### Undo
 
 `Session::checkpoint` (`session/undo.rs`) pushes a full clone of the `Project` before an edit and
-clears redo. Clones are cheap where it matters: plug-in states are `Arc<str>`, shared between
-steps.
+clears redo. Clones are cheap where it matters: plug-in states are `Arc<str>`, and a MIDI region's
+(or take's) notes and controllers an `Arc<Vec<…>>`, shared between steps. An edit to them goes
+through `Arc::make_mut`, which copies only the list it changes, so a step holds what its edit
+changed rather than every note in the project.
 
 - **Merging:** an edit with the same key as the top step within 1.5 s makes no new step. Keys look
   like `track:<id>:volume`, `send:<id>:<slot>`, `fxparam:<uid>:<id>`.
@@ -522,9 +524,16 @@ inaudible.
   processing order. Float addition isn't associative, so that order is what keeps the bits equal.
 - **The graph.** The session builds a `TaskGraph` (`dsp/graph/`) from the project's routes and
   sends it in `Cmd::Graph` after each edit (`Session::sync_parallel`). The engine checks it against
+<<<<<<< HEAD
   the routes it resolved itself, so a route can't race. In the blocks between an edit's commands
   and its graph, when it doesn't hold, the engine builds one from those routes in a room the
   workers bring (`GraphRoom`, allocated off the audio thread), and plays serially only if it can't. The
+=======
+  the routes it resolved itself and plays serially until it holds, so a route can't race. A
+  rebuild (a project opened, Reset Audio Engine) swaps the graph in with the strips
+  (`Engine::replace_graph`), with any workers it needs started before the plug-ins load, so a heavy
+  project's first block is already on the pool. The
+>>>>>>> origin/fix/436-undo-notes
   graph's tasks are `Project::process_order`, which outputs, sends and side-chain keys decide, so
   an edit that can change that order sends `Cmd::Order` too, a plug-in leaving a keyed slot among
   them; otherwise the engine keeps its old order, which the graph no longer matches.

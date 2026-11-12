@@ -710,7 +710,7 @@ fn edit(s: &mut Session, g: &mut Rng, w: &World, o: &Opts) -> (String, bool) {
                 if let Some(id) = g.pick(&midi) {
                     let r = s.project.tracks.iter().flat_map(|t| t.regions.iter()).find(|r| r.id == id).unwrap().clone();
                     let RegionContent::Midi { notes, cc } = &r.content else { unreachable!() };
-                    let mut notes = notes.clone();
+                    let mut notes = notes.to_vec();
                     match g.below(3) {
                         0 => notes.push(Note {
                             start: g.range(0, r.length),
@@ -730,7 +730,7 @@ fn edit(s: &mut Session, g: &mut Rng, w: &World, o: &Opts) -> (String, bool) {
                             }
                         }
                     }
-                    s.set_midi_content(vec![MidiContent { region: id, notes, cc: cc.clone(), start: None, length: None }]);
+                    s.set_midi_content(vec![MidiContent { region: id, notes, cc: cc.to_vec(), start: None, length: None }]);
                 }
             }
             49 => {

@@ -1,6 +1,8 @@
 //! The edits of a take folder, on its model types: its takes, its comps and their sections, as
 //! Quick Swipe Comping and the take commands change them. Everything here is in take time.
 
+use std::sync::Arc;
+
 use crate::model::{CcEvent, Comp, CompSegment, Id, Note, Take, TakeFolder};
 
 impl Take {
@@ -360,12 +362,13 @@ impl TakeFolder {
     pub fn store_midi(&mut self, take: Id, offset: i64, len: i64, notes: &[Note], cc: &[CcEvent]) {
         let Some(t) = self.take_mut(take) else { return };
         let inside = |p: i64| p >= offset && p < offset + len;
-        t.notes.retain(|n| !inside(n.start));
-        t.notes.extend(notes.iter().map(|n| Note { start: n.start + offset, ..*n }));
-        t.notes.sort_by_key(|n| n.start);
-        t.cc.retain(|c| !inside(c.start));
-        t.cc.extend(cc.iter().map(|c| CcEvent { start: c.start + offset, ..*c }));
-        t.cc.sort_by_key(|c| c.start);
+        let (take_notes, take_cc) = (Arc::make_mut(&mut t.notes), Arc::make_mut(&mut t.cc));
+        take_notes.retain(|n| !inside(n.start));
+        take_notes.extend(notes.iter().map(|n| Note { start: n.start + offset, ..*n }));
+        take_notes.sort_by_key(|n| n.start);
+        take_cc.retain(|c| !inside(c.start));
+        take_cc.extend(cc.iter().map(|c| CcEvent { start: c.start + offset, ..*c }));
+        take_cc.sort_by_key(|c| c.start);
     }
 
     /// Moves every take and comp by `delta` frames of take time, and a MIDI folder's offset
@@ -374,8 +377,8 @@ impl TakeFolder {
         for t in &mut self.takes {
             t.start += delta;
             t.end += delta;
-            t.notes.iter_mut().for_each(|n| n.start += delta);
-            t.cc.iter_mut().for_each(|c| c.start += delta);
+            Arc::make_mut(&mut t.notes).iter_mut().for_each(|n| n.start += delta);
+            Arc::make_mut(&mut t.cc).iter_mut().for_each(|c| c.start += delta);
         }
         for s in self.comp.iter_mut().chain(self.comps.iter_mut().flat_map(|c| c.comp.iter_mut())) {
             s.start += delta;
