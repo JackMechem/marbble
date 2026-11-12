@@ -6,6 +6,14 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **No overload as a heavy project opens.** Opening a project with many heavy plug-ins (twelve
+  TONE3000 amp models, say) overloaded once, stopped, before anything played: the extra processing
+  threads only learned of the new tracks a moment after them, so the first buffer played every
+  plug-in on the audio thread alone, three and a half times as long as the buffer. The threads now
+  take the new tracks with their first buffer.
+
 ## [0.1.0-alpha.16] - 2026-11-12
 
 ### Added

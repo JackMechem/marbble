@@ -322,6 +322,13 @@ impl Session {
         }
         let old_controllers = std::mem::take(&mut self.controllers);
         self.fx.clear();
+        // The task graph goes in with the strips, so that their first block can already use the
+        // pool: sent after the swap (`sync_parallel`), it would come a block or more late, and a
+        // heavy project's block played serially overloads (#468). Planned before the plug-ins
+        // load, so that any workers it starts are up by then.
+        self.graph_dirty = false;
+        let graph = self.plan_parallel();
+        self.threads.graph.clone_from(&graph);
         let tracks: Vec<Track> = snapshot.tracks.clone();
         let mut built: Vec<Box<TrackDsp>> = tracks.iter().map(|t| self.build_track(t)).collect();
         // The engine plays tracks in this order; routes only point forwards.
@@ -333,9 +340,8 @@ impl Session {
         }
         let sr = self.project.sample_rate as f64;
         // The one lock outside an offline render: a swap, with the old graph dropped after.
-        let old = self.engine.lock().replace_graph(sr, built, master);
+        let old = self.engine.lock().replace_graph(sr, built, master, graph.map(Box::new));
         self.engine_rate = sr;
-        self.graph_dirty = true;
         drop(old);
         drop(old_controllers);
         // Another project (or the same one reloaded): its strips start without clips.
