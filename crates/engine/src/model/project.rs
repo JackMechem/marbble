@@ -154,6 +154,10 @@ pub struct Project {
     pub snap_zero_crossings: bool,
 }
 
+/// How far the timeline reaches, in frames: no edit may put a region past it. Logic Pro's limit,
+/// 2³¹ samples: about 13½ hours at 44.1 kHz, 12½ at 48 kHz, 6 at 96 kHz.
+pub const MAX_PROJECT_LENGTH: i64 = 1 << 31;
+
 impl Project {
     pub fn new(name: &str, sample_rate: u32) -> Project {
         Project {
@@ -199,6 +203,11 @@ impl Project {
     /// the undo history of an earlier session may have needed.
     pub fn clips_in_use(&self) -> HashSet<Id> {
         self.tracks.iter().flat_map(|t| t.clips()).collect()
+    }
+
+    /// Where the last region stops sounding, loops included (0 with no regions).
+    pub fn regions_end(&self) -> i64 {
+        self.tracks.iter().flat_map(|t| &t.regions).map(Region::end).max().unwrap_or(0)
     }
 
     /// A new id. Ids are never reused within a project.

@@ -14,6 +14,10 @@ All notable changes to Marbble are recorded here. The format follows
   routing. With twelve TONE3000 amp models playing (Render Ahead off), that buffer took three and
   a half times its length and playback stopped. The threads now carry on with the new routing at
   once.
+- **The timeline ends, as in Logic Pro,** 2³¹ samples in (about 12 h 25 min at 48 kHz). Repeat
+  Regions on regions spread along the timeline could make a project days long, and its saves and
+  undo steps grew with it; now an edit that would put a region past the end is put back, with a
+  message, and the Loop switch loops the last region no further than the end.
 
 ## [0.1.0-alpha.16] - 2026-11-12
 

@@ -1051,6 +1051,10 @@ The pointer changes over a region's hot zones:
   take folders are cut where asked. The setting is saved with the project and isn't an undo
   step.
 - Regions on a frozen track can be selected but not changed.
+- The timeline ends where Logic Pro's does, 2³¹ samples in: about 12 h 25 min at 48 kHz (13 h
+  31 min at 44.1 kHz, 6 h 12 min at 96 kHz). An edit that would put a region past it (a move, a
+  resize, a paste, a loop or Repeat Regions) is put back and says why; the Loop switch loops the
+  last region no further than the end.
 
 ### Drag modes
 

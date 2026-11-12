@@ -3,6 +3,7 @@
 //! overlap mode: Replace (the setting, and the control bar's button) clears the recorded range,
 //! Merge keeps what was there, and a new region is made otherwise.
 //! usage: midi_replace_check <scratch dir>
+use std::sync::atomic::Ordering;
 use std::time::{Duration, Instant};
 
 use daw_engine::audio_io::AudioConfig;
@@ -11,27 +12,51 @@ use daw_engine::prefs::MidiOverlap;
 use daw_engine::session::{MidiContent, TrackPatch};
 use daw_engine::Session;
 
+#[path = "common/transport.rs"]
+mod transport;
+
 /// Set by any failed check: the example then exits with status 1, so scripts notice.
 static FAILED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 fn check(name: &str, ok: bool) {
-    FAILED.fetch_or(!ok, std::sync::atomic::Ordering::Relaxed);
+    FAILED.fetch_or(!ok, Ordering::Relaxed);
     println!("{} {name}", if ok { "PASS" } else { "FAIL" });
 }
 
 const MOD: CcKind = CcKind::Controller(1);
 
-/// Waits until the playhead is in `lo..hi`, polling as the null device races along.
+/// What the transport was doing, for a failure: where, whether it played and recorded, and how
+/// many overloads the engine has counted (the check never ticks, so none stops it).
+fn transport_state(s: &Session) -> String {
+    format!(
+        "at {}, playing: {}, recording: {}, overloads: {}",
+        s.position(),
+        s.is_playing(),
+        s.status.recording.load(Ordering::Relaxed),
+        s.status.overloads.load(Ordering::Relaxed)
+    )
+}
+
+/// Waits until the playhead is in `lo..hi`, or panics saying why it wasn't: the transport never
+/// started, stopped, or didn't get there in a minute. The null device runs hundreds of times
+/// faster than real time, a bar in a few milliseconds, and a busy machine can leave this thread
+/// waiting for longer than that: a window is only sure to be seen if a cycle brings it round
+/// again, or if it reaches to the end of the timeline.
 fn wait_for(s: &Session, lo: i64, hi: i64) {
-    let deadline = Instant::now() + Duration::from_secs(60);
-    while Instant::now() < deadline {
+    let begun = Instant::now();
+    let mut started = false;
+    loop {
         let p = s.position();
         if p >= lo && p < hi {
             return;
         }
+        let playing = s.is_playing();
+        assert!(!started || playing, "the transport stopped before {lo}..{hi} ({})", transport_state(s));
+        started |= playing;
+        assert!(started || begun.elapsed() < Duration::from_secs(10), "the transport didn't start in 10 s ({})", transport_state(s));
+        assert!(begun.elapsed() < Duration::from_secs(60), "the playhead didn't reach {lo}..{hi} in a minute ({})", transport_state(s));
         std::thread::sleep(Duration::from_micros(200));
     }
-    panic!("the playhead never reached {lo}..{hi}");
 }
 
 /// Records, playing note 72 (and the mod wheel at 33) once the playhead is inside `play`, and
@@ -47,8 +72,7 @@ fn record(s: &mut Session, play: (i64, i64), stop_after: Option<i64>) {
     if let Some(at) = stop_after {
         wait_for(s, at, i64::MAX);
     }
-    s.stop();
-    std::thread::sleep(Duration::from_millis(60));
+    transport::stop(s);
 }
 
 fn midi_regions(s: &Session, track: Id) -> Vec<Region> {
@@ -144,12 +168,14 @@ fn main() {
     s.set_cycle(false, bar, 2 * bar);
     s.locate(2 * bar);
     std::thread::sleep(Duration::from_millis(30));
-    record(&mut s, (2 * bar + beat, 3 * bar), Some(3 * bar + beat + beat / 2));
+    // Anywhere from the second beat on: with no cycle, a window that ends could go by unseen.
+    record(&mut s, (2 * bar + beat, i64::MAX), Some(3 * bar + beat + beat / 2));
     let (notes, _) = content(&s, inst);
     let kept_before = notes.iter().filter(|n| n.pitch == 60 && n.start < 2 * bar).count();
     let gone = !notes.iter().any(|n| n.pitch == 60 && n.start >= 2 * bar && n.start <= 3 * bar + beat);
     check(&format!("notes before the record start stay ({kept_before})"), kept_before == 8);
-    check("notes from the record start to the stop are replaced", gone && notes.iter().filter(|n| ours(n)).count() == 1);
+    check("notes from the record start to the stop are replaced", gone);
+    check("the played note is after the record start", notes.iter().filter(|n| ours(n)).count() == 1 && notes.iter().any(|n| ours(n) && n.start >= 2 * bar));
 
-    std::process::exit(FAILED.load(std::sync::atomic::Ordering::Relaxed) as i32);
+    std::process::exit(FAILED.load(Ordering::Relaxed) as i32);
 }
