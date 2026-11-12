@@ -209,6 +209,12 @@ impl Engine {
         self.pdc.low_latency = false;
         self.set_effects_offline(true);
         self.reset_effects();
+        // Every plug-in awake (see `idle/`), so each render starts the same. Live, a locate leaves
+        // them asleep: waking them all at once only makes a heavy block.
+        let slots = self.tracks.iter_mut().flat_map(|t| t.inserts.iter_mut()).chain(self.master_inserts.iter_mut());
+        for ins in slots.flatten() {
+            ins.wake_up();
+        }
         self.silence_instruments();
         // As when playback starts: plug-in automation is sent afresh (a plug-in may have been
         // moved by hand since), and controllers and notes held over `from` are chased.

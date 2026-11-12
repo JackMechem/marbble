@@ -43,6 +43,12 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Fixed
 
+- **No more overload as you locate, play or select a track in a heavy project.** With its
+  plug-ins asleep, or its tracks rendered ahead, a project left the audio thread nearly idle, so
+  the extra processing threads stood down; when the work came back at once (eleven amp models on
+  a locate or Play), one buffer took several times its length on the audio thread alone and
+  playback stopped. The threads now stay ready for what can come back, a locate leaves sleeping
+  plug-ins asleep, and selecting a track takes only it out of render ahead.
 - **A crash on JACK as the device closed.** Closing the device (a new buffer size or device,
   Reset Audio Engine, quitting) while the audio callback ran could abort the app ("terminate called
   without an active exception", "exception not rethrown"): JACK stops its thread wherever it is.

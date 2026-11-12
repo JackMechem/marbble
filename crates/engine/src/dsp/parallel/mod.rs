@@ -339,15 +339,18 @@ impl Parallel {
         self.graph.as_ref().is_some_and(|g| covers(g, tracks))
     }
 
-    /// Takes in a callback's load: `now` is its own, `average` the smoothed one. It goes back to
-    /// playing alone once the load, with the workers helping, says that even alone it would stay
-    /// under `ENGAGE_LOAD`: `threads` threads can't have done more than that many times the work.
-    pub fn weigh(&mut self, now: f32, average: f32) {
+    /// Takes in a callback's load: `now` is its own, `average` the smoothed one, and `standby` what
+    /// could come back in one block (plug-ins asleep, sources rendered ahead; see
+    /// `Engine::standby_load`). It goes back to playing alone once the load, with the workers
+    /// helping, says that even alone it would stay under `ENGAGE_LOAD` (`threads` threads can't
+    /// have done more than that many times the work), and so would the work on standby were it to
+    /// come back at once.
+    pub fn weigh(&mut self, now: f32, average: f32, standby: f32) {
         if self.engaged {
             let threads = self.workers.as_ref().map_or(1, |w| w.playing()) as f32;
-            self.engaged = average * threads >= ENGAGE_LOAD;
+            self.engaged = average * threads + standby >= ENGAGE_LOAD;
         } else {
-            self.engaged = now >= ENGAGE_LOAD;
+            self.engaged = now + standby >= ENGAGE_LOAD;
         }
     }
 

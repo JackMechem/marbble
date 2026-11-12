@@ -633,6 +633,17 @@ impl Engine {
                     self.reclaim_track(*id);
                 }
             }
+            // Only the tracks live MIDI or the analyzer moves between.
+            Cmd::MidiTarget(new) => {
+                for id in [self.midi_target, *new].into_iter().flatten() {
+                    self.reclaim_track(id);
+                }
+            }
+            Cmd::Analyzer(new) => {
+                for (id, _) in [self.analyzer_target, *new].into_iter().flatten() {
+                    self.reclaim_track(id);
+                }
+            }
             Cmd::RemoveTrack(id)
             | Cmd::Regions(id, _)
             | Cmd::Automation(id, _)
