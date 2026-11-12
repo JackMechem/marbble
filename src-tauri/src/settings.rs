@@ -23,6 +23,16 @@ pub struct Settings {
     pub ui: UiPrefs,
     #[serde(default)]
     pub plugins: PluginPrefs,
+    #[serde(default)]
+    pub diagnostics: DiagnosticsPrefs,
+}
+
+/// The Diagnostics window's settings.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct DiagnosticsPrefs {
+    /// Record Everything: the activity log (`diagnostics/activity.rs`), from launch.
+    pub record_activity: bool,
 }
 
 /// What Marbble shows at launch when no project was given on the command line.
@@ -134,7 +144,7 @@ fn parse(text: &str) -> Option<Settings> {
         v.get(k).cloned().and_then(|x| serde_json::from_value(x).ok()).unwrap_or_default()
     }
     let ui = v.get("ui").cloned().and_then(|x| serde_json::from_value(x).ok()).unwrap_or_else(UiPrefs::earlier);
-    Some(Settings { audio: section(&v, "audio"), prefs: section(&v, "prefs"), ui, plugins: section(&v, "plugins") })
+    Some(Settings { audio: section(&v, "audio"), prefs: section(&v, "prefs"), ui, plugins: section(&v, "plugins"), diagnostics: section(&v, "diagnostics") })
 }
 
 pub fn save(s: &Settings) {

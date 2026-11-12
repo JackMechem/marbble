@@ -129,7 +129,7 @@ commands.rs         Snapshot and the wrappers every command shares (edit, try_ed
 commands/           the commands, one file per area (tracks, regions, plugins, project…)
 menu/               the native menu bar: spec.rs (the bar as data), mod.rs (build, handle), GTK and macOS keys
 windows.rs          detached panel windows and routing menu items to them
-diagnostics/        the Diagnostics window, the command it polls, and the log kept in memory for it
+diagnostics/        the Diagnostics window, the command it polls, the log kept in memory for it, and Record Everything
 settings.rs         settings.json
 recent.rs           recent projects
 schemas.rs          the GSettings schema GTK's file chooser needs
@@ -216,6 +216,7 @@ CI, releases and the website's deploy.
 | **`midi-out`** | `midi/output.rs` | Sends the feedback and surface messages `idle` hands it. | Touch the session. |
 | **Async commands** | Tauri's runtime | Renders (bounce, export, Bounce in Place, Freeze), plug-in rescans, waveforms, device lists, folder listings, the Diagnostics window's snapshots (which wait at most 5 ms for the session and skip a refresh rather than wait longer). Renders hold the session and engine locks throughout; edits they make go back to the main thread with `run_on_main_thread`. | Touch plug-in controllers. |
 | **Autosave writer** | `src-tauri/src/timers.rs` | Writes a job serialized on the main thread to disk, atomically. | |
+| **`activity-log`, `activity-watch`** | `src-tauri/src/diagnostics/activity.rs` | While Record Everything is on: one writes the activity log's lines to its file, the other looks at the session four times a second (`Session::watch`) and sends what changed. | Wait for the session more than 10 ms. |
 | **Scan child process** | `library/plugin_db.rs` | `marbble --scan-vst3 <bundle>` loads one bundle in a child process, so a crashing plug-in can't take the app down. | |
 
 On macOS the idle timer is a `CFRunLoopTimer` on the main run loop in its common modes, so it
@@ -297,6 +298,11 @@ The rest of the window's figures are the `EngineStatus` atomics the tick reads a
 assembles the snapshot without the engine's lock (`session/diagnostics/`). Logging stays off the
 audio thread: the app's logger keeps each line in a small ring behind its own lock as well as
 writing it to stderr (`src-tauri/src/diagnostics/`), and nothing the audio thread runs logs.
+The window's Record Everything (`src-tauri/src/diagnostics/activity.rs`) writes each command on
+its way into Tauri's invoke handler (main.rs `logged`), menu items, key commands, window focus, log
+lines, and what `Session::watch` (`session/diagnostics/watch.rs`) says changed four times a second,
+to a file in `logs/`, through a channel to a thread of its own; it reads the same atomics as the
+window, under a session lock it waits at most 10 ms for.
 
 **Habits inside the engine.** Gains glide through a 5 ms one-pole (`smooth`), so fader moves,
 mutes and sends don't click; a render snaps them first so it doesn't depend on what played before.

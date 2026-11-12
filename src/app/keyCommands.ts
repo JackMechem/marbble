@@ -29,6 +29,7 @@ import { keyboardFocus } from "../keyboard/focusRing";
 import { leavesKeyToFocus } from "../keyboard/keyNav";
 import { keepsKeys, midiCommandWhileTyping, textFieldMenu, typingInField } from "../keyboard/textKeys";
 import { handleMenu } from "./menuCommands";
+import { noteActivity } from "../diagnostics/activity";
 
 function selectedTrack() {
   const s = getState().snap;
@@ -178,7 +179,10 @@ export function onKey(e: KeyboardEvent) {
   const run = id ? KEY_ACTIONS[id] : undefined;
   if (!run) return;
   e.preventDefault();
-  if (id && runsOnKey(id, e.repeat)) run();
+  if (id && runsOnKey(id, e.repeat)) {
+    noteActivity("key", id);
+    run();
+  }
 }
 
 /**
@@ -198,6 +202,7 @@ export function runMidiCommand(id: string) {
     if (where !== "run") return;
   }
   if (getState().dialog || sheetBlocks(id)) return;
+  noteActivity("midi", id);
   if (menu) handleMenu(id);
   else if (!runStepInputCommand(id, false)) KEY_ACTIONS[id]?.();
 }

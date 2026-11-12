@@ -6,6 +6,13 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Record Everything, in the Diagnostics window.** Writes everything to a file as it happens:
+  what you do (every edit, menu item and key command), every audio gap, late buffer, overload and
+  device change with where the playhead was, and the log. It stays on from launch to launch until
+  switched off, so a crash is recorded up to the end, ready to attach to a bug report.
+
 ### Fixed
 
 - **Switching outputs a few times in a row no longer stops audio from following.** The automatic

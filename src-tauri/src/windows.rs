@@ -127,8 +127,14 @@ pub fn route_menu<R: Runtime>(app: &AppHandle<R>, id: String) {
 /// front gets the keys its menu bar should show (menu/).
 pub fn on_window_event<R: Runtime>(window: &Window<R>, event: &WindowEvent) {
     match event {
-        WindowEvent::Focused(true) => crate::menu::window_menu::on_window_focused(window),
-        WindowEvent::Destroyed => crate::menu::window_menu::on_window_destroyed(window),
+        WindowEvent::Focused(true) => {
+            crate::diagnostics::activity::note("window", format!("{} in front", window.label()));
+            crate::menu::window_menu::on_window_focused(window)
+        }
+        WindowEvent::Destroyed => {
+            crate::diagnostics::activity::note("window", format!("{} closed", window.label()));
+            crate::menu::window_menu::on_window_destroyed(window)
+        }
         _ => {}
     }
     if window.label() == "main" && matches!(event, WindowEvent::Destroyed) {

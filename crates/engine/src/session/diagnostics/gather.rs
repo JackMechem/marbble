@@ -26,7 +26,7 @@ impl Session {
         self.status.block_loads.clear();
     }
 
-    fn audio_diagnostics(&self) -> AudioDiagnostics {
+    pub(super) fn audio_diagnostics(&self) -> AudioDiagnostics {
         let st = &self.audio_status;
         let (device_events, stream_errors) = self.device_events_seen;
         let io = self.io_thread();
@@ -56,7 +56,7 @@ impl Session {
         }
     }
 
-    fn load_diagnostics(&self) -> LoadDiagnostics {
+    pub(super) fn load_diagnostics(&self) -> LoadDiagnostics {
         let s = &self.status;
         let loads = s.block_loads.read();
         let overloads = s.overloads.load(Ordering::Relaxed);
@@ -84,7 +84,7 @@ impl Session {
         }
     }
 
-    fn thread_diagnostics(&self) -> ThreadDiagnostics {
+    pub(super) fn thread_diagnostics(&self) -> ThreadDiagnostics {
         let topo = &self.threads.topology;
         let pool = self.threads.health.as_ref().map(|h| {
             let r = h.report();

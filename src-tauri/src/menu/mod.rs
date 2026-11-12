@@ -221,6 +221,7 @@ pub fn install<R: Runtime>(app: &App<R>) -> tauri::Result<()> {
     mac_keys::observe_menu_tracking(app.handle());
     app.on_menu_event(|app, ev| {
         let id = ev.id().0.clone();
+        crate::diagnostics::activity::note("menu", id.clone());
         if id == "quit" {
             return quit(app);
         }

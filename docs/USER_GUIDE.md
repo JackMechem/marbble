@@ -3967,6 +3967,16 @@ playing and the buffer.
 - **Reset** (the arrow) counts late buffers, gaps and the other counts from now, and starts the
   load figures afresh. **Copy Report** (the two sheets) puts everything, the last 300 log lines
   included, on the clipboard as plain text. Values the system doesn't give show as —.
+- **Record Everything** (the dot, red while it records) writes everything to a file as it
+  happens: each command you give (every edit, with what it changed; a fader drag or any run of
+  one command is one line with a count), menu items, key commands and those a MIDI controller
+  fires, windows coming to the front or closing; every device gap, late buffer, overload, engine
+  error, silenced plug-in output, dropped command, recording overrun, stream error, device change
+  and automatic restart, with where the playhead was; play, record and stop; and every log line.
+  It stays on from one launch to the next until you switch it off, so a session that ends in a
+  crash is recorded up to the end. The folder button opens the files: `logs/` in Marbble's
+  settings folder, one per launch (a new one past 50 MB), times in UTC and in seconds since
+  Marbble started. The oldest go once they pass 200 MB in all. Attach the file to a bug report.
 
 Watching costs the audio thread only a few stored numbers per track per buffer. The window closes
 with the main window.
