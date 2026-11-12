@@ -48,7 +48,10 @@ export async function saveProject(as = false) {
     await act("save_project", { path: null });
     return;
   }
-  const path = await save({ title: "Save Project", defaultPath: snap.path.replace(/\.(marbble|fermata)$/, "") + ".marbble" });
+  // The name without its extension: the project's folder often exists already (an autosave, or
+  // Save As), and a folder given as the default opens the dialog inside it, with no name. Saving
+  // adds `.marbble`.
+  const path = await save({ title: "Save Project", defaultPath: snap.path.replace(/\.(marbble|fermata)$/, "") });
   if (path) await act("save_project", { path });
 }
 

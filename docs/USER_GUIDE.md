@@ -3291,8 +3291,9 @@ Opens at launch (by default) and from **File › New…** (Ctrl+N) and **File �
 ### Open, save and close
 
 - **File › Open…** (Ctrl+O): choose a `.marbble` folder. **Save** (Ctrl+S) and **Save As…**
-  (Shift+Ctrl+S). Save As to a new folder copies the audio files that were in the old project
-  folder.
+  (Shift+Ctrl+S). Save As opens in the folder that holds the project, with its name filled in;
+  the name you give becomes a `.marbble` folder. Save As to a new folder copies the audio files
+  that were in the old project folder.
 - You're asked before unsaved changes are discarded (when quitting, opening or creating
   another project), unless you turn that off in Settings › General. **Don't Save** also
   deletes the autosave.
