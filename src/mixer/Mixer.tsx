@@ -2,7 +2,7 @@
 // widths and filters, the VCA strips and Stereo Out. The Inspector shows strips through the same
 // rows (rowsFor, useStripFit). mixer/ holds the channel strip and its parts (slots, sends, VCAs,
 // meters, latency) with the rules behind them: routing, strip settings, slot rows and widths.
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
 import { SEND_SLOTS, type Project, type Track } from "../engine/project";
 import { Icon } from "../ui/icons";
 import { setState, useStore } from "../state/store";
@@ -60,7 +60,10 @@ export function useStripFit() {
   const ref = useRef<HTMLDivElement>(null);
   const shown = useRef<SlotRows>({ inserts: 1, sends: 1 });
   const atBottom = useRef(true);
-  const [room, setRoom] = useState<{ viewH: number; fixedH: number; faderMin: number } | null>(null);
+  // Kept out of state: a resize renders the strips again only when the rows that fit change.
+  const room = useRef<{ viewH: number; fixedH: number; faderMin: number } | null>(null);
+  const wanted = useRef<SlotRows | null>(null);
+  const [, refit] = useReducer((n: number) => n + 1, 0);
   const measure = () => {
     const el = ref.current;
     // The strip with the most above and below its fader (the least fader) sets the room, so no
@@ -78,7 +81,10 @@ export function useStripFit() {
     // strip's spare height, and the slot boxes are SLOT_ROW_H a row.
     const fixedH = strip.offsetHeight - fader.offsetHeight + faderMin - (shown.current.inserts + shown.current.sends) * SLOT_ROW_H;
     const next = { viewH: el.clientHeight - brackets, fixedH, faderMin };
-    setRoom((r) => (r && r.viewH === next.viewH && Math.abs(r.fixedH - next.fixedH) < 1 && r.faderMin === next.faderMin ? r : next));
+    const first = !room.current;
+    room.current = next;
+    const fit = wanted.current && fitStripRows(wanted.current, next.viewH, next.fixedH, next.faderMin);
+    if (first || (fit && (fit.inserts !== shown.current.inserts || fit.sends !== shown.current.sends))) refit();
     if (atBottom.current) el.scrollTop = el.scrollHeight;
   };
   useLayoutEffect(measure);
@@ -99,7 +105,11 @@ export function useStripFit() {
       const el = e.currentTarget;
       atBottom.current = el.scrollTop + el.clientHeight >= el.scrollHeight - 2;
     },
-    rows: (wanted: SlotRows) => (shown.current = room ? fitStripRows(wanted, room.viewH, room.fixedH, room.faderMin) : wanted),
+    rows: (want: SlotRows) => {
+      wanted.current = want;
+      const r = room.current;
+      return (shown.current = r ? fitStripRows(want, r.viewH, r.fixedH, r.faderMin) : want);
+    },
   };
 }
 

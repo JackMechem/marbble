@@ -56,6 +56,9 @@ All notable changes to Marbble are recorded here. The format follows
   the processing threads look stuck in a plug-in. Now one deadline covers every track, a late track
   plays silence for that buffer instead of holding up the rest, and tracks go ahead only once
   playback runs on time.
+- **Resizing the Mixer is smooth in a big project.** Dragging the divider above it rendered the
+  whole window, every strip twice, on each move; now only the faders and meters follow the new
+  height.
 - **Diagnostics' sidebar:** the selected page's marker is a straight bar, no longer curved by the
   rounded corners, and a count of one says "1 error" rather than "1 errors".
 - **No more overload as you locate, play or select a track in a heavy project.** With its

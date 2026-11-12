@@ -30,7 +30,7 @@ import { loadFxList } from "../plugins/fxHost";
 import { MusicalTyping } from "../editors/noteInput/MusicalTyping";
 import { runStepInputCommand, StepInput } from "../editors/noteInput/StepInput";
 import { MenuHost } from "../ui/Menu";
-import { loadPaneSizes, Splitter } from "./Splitter";
+import { loadPaneSizes, paneVars, Splitter } from "./Splitter";
 import { Mixer } from "../mixer/Mixer";
 import { Inspector } from "../inspector/Inspector";
 import { Library } from "../browser/Library";
@@ -167,7 +167,6 @@ export default function App() {
   const groupSheet = useStore((s) => s.groupSheet);
   const showMarkerList = useStore((s) => s.showMarkerList);
   const showControllerAssignments = useStore((s) => s.showControllerAssignments);
-  const panes = useStore((s) => s.paneSizes);
   useEffect(loadPaneSizes, []);
   // The bottom section's room: the centre column less what the Tracks area keeps.
   const centerRef = useRef<HTMLDivElement>(null);
@@ -185,19 +184,7 @@ export default function App() {
   return (
     <div className="app">
       <ControlBar />
-      <div
-        className="main"
-        style={
-          {
-            "--library-w": `${panes.library}px`,
-            "--inspector-w": `${panes.inspector}px`,
-            "--browser-w": `${panes.browser}px`,
-            "--mixer-h": `${panes.mixer}px`,
-            "--editor-h": `${panes.editor}px`,
-            "--fx-h": `${panes.fx}px`,
-          } as React.CSSProperties
-        }
-      >
+      <div className="main" ref={paneVars}>
         {s.showLibrary && <Library />}
         {s.showLibrary && <Splitter pane="library" dir="x" sign={1} />}
         {s.showInspector && <Inspector />}
