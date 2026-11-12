@@ -1,11 +1,13 @@
-// Settings › Appearance: the theme (each shown as a small preview), the interface size and the
-// waveform style.
+// Settings › Appearance: the theme (each shown as a small preview), the interface size, the
+// waveform style and where the CPU meter shows.
 import { useStore } from "../../state/store";
 import { mix } from "../../theme/canvasTheme";
 import { applyTheme, THEMES, type Theme } from "../../theme/themes";
 import { applyUiScale, UI_SCALES } from "../../ui/uiScale";
 import { applyWaveStyle, WAVE_STYLES } from "../../tracks/regions/waveform";
-import { Foot } from "./parts";
+import { Foot, setUi } from "./parts";
+import { useMeterPlace } from "../../app/cpuMeter/CpuMeter";
+import type { MeterPlace } from "../../app/cpuMeter/cpuMeterModel";
 import { fmt } from "../../keyboard/keymap";
 
 function ThemePreview({ t }: { t: Theme }) {
@@ -46,6 +48,11 @@ export function AppearancePane({ close }: { close: () => void }) {
   const current = useStore((s) => s.themeId);
   const scale = useStore((s) => s.uiScale);
   const waveStyle = useStore((s) => s.waveStyle);
+  const meter = useMeterPlace();
+  const places: [MeterPlace, string][] = [
+    ["status_line", "Status Line"],
+    ["control_bar", "Control Bar"],
+  ];
   return (
     <>
       <div className="pref-section">
@@ -69,6 +76,21 @@ export function AppearancePane({ close }: { close: () => void }) {
           ))}
         </div>
         <div className="pref-hint">{WAVE_STYLES.find((s) => s.id === waveStyle)?.description}.</div>
+      </div>
+      <div className="pref-section">
+        <div className="pref-title">CPU Meter</div>
+        <div className="segmented">
+          {places.map(([id, name]) => (
+            <button key={id} className={id === meter ? "on" : ""} aria-pressed={id === meter} onClick={() => setUi({ cpu_meter: id })}>
+              {name}
+            </button>
+          ))}
+        </div>
+        <div className="pref-hint">
+          {meter === "status_line"
+            ? "At the bottom of the window, beside the memory Marbble is using and the threads playing tracks."
+            : "At the top, after the master volume, as in Logic Pro. The status line still shows memory and threads."}
+        </div>
       </div>
       <div className="pref-title">Theme</div>
       <div className="theme-grid">

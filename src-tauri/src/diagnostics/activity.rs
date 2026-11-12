@@ -48,7 +48,8 @@ const RUN_LONGEST: Duration = Duration::from_secs(5);
 
 /// Commands the interface sends by itself rather than for something the user did: on a timer (the
 /// Diagnostics window's refresh, the lists in Settings › Audio and MIDI, the sampler's recording
-/// level, this log's own), or to follow what changed (the menu bar's state, waveforms to draw).
+/// level, the status line's memory figure, this log's own), or to follow what changed (the menu
+/// bar's state, waveforms to draw).
 pub const POLLED: &[&str] = &[
     "diagnostics",
     "activity_log",
@@ -63,6 +64,7 @@ pub const POLLED: &[&str] = &[
     "set_project_menus",
     "clip_waveform",
     "project_files",
+    "resident_memory",
 ];
 
 /// A line on its way to the file: when, in UTC and since launch, and for a command, its name, as a

@@ -1,7 +1,7 @@
-// Unit tests for src/app/controlBar/cpuMeter.ts: the CPU meter's level, peak and tooltip.
+// Unit tests for src/app/cpuMeter/cpuMeterModel.ts: the CPU meter's level, peak, tooltip and place.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { cpuLevel, cpuPercent, cpuTitle, shownPeak } from "../../../src/app/controlBar/cpuMeter.ts";
+import { cpuLevel, cpuPercent, cpuTitle, meterPlace, shownPeak } from "../../../src/app/cpuMeter/cpuMeterModel.ts";
 
 test("the peak never shows under the average", () => {
   assert.equal(shownPeak(0.2, 0.9), 0.9);
@@ -16,6 +16,9 @@ test("the tooltip gives the average and the peak", () => {
 
 test("late blocks are counted, and only mentioned when there are some", () => {
   assert.doesNotMatch(cpuTitle(0.1, 0.1, 0, 1), /Click to clear/);
+  // With none to clear, a click opens Diagnostics.
+  assert.match(cpuTitle(0.1, 0.1, 0, 1), /Click for the Diagnostics window\./);
+  assert.doesNotMatch(cpuTitle(0.1, 0.1, 2, 1), /Diagnostics/);
   assert.match(cpuTitle(0.1, 0.1, 1, 1), /1 block over 100%\. Click to clear\./);
   assert.match(cpuTitle(0.1, 0.1, 3, 1), /3 blocks over 100%\. Click to clear\./);
 });
@@ -37,4 +40,12 @@ test("the bar turns amber past half and red past 80%", () => {
   assert.equal(cpuLevel(0.51), "mid");
   assert.equal(cpuLevel(0.8), "mid");
   assert.equal(cpuLevel(0.81), "high");
+});
+
+test("the meter is in the status line unless the setting says the control bar", () => {
+  assert.equal(meterPlace("control_bar"), "control_bar");
+  assert.equal(meterPlace("status_line"), "status_line");
+  assert.equal(meterPlace(undefined), "status_line");
+  assert.equal(meterPlace(null), "status_line");
+  assert.equal(meterPlace("somewhere"), "status_line");
 });
