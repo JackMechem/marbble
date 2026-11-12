@@ -61,11 +61,15 @@ const IDLE_NAP: Duration = Duration::from_millis(2);
 /// The most blocks in a row a strip plays silent while its render thread catches up; then it's
 /// taken back and plays live.
 const MAX_SHORT: u8 = 2;
-/// How much of a callback's time the strips wait for their render threads, from its start.
-pub(super) const WAIT_SHARE: f64 = 0.5;
+/// How much of a callback's time the strips wait for their render threads, from its start. One
+/// deadline for all of them, so the waits overlap (on the pool, and serially once it has passed)
+/// and leave the rest of the callback the remaining quarter.
+pub(super) const WAIT_SHARE: f64 = 0.75;
 /// The most of its time a callback may have taken for strips to be lent at its end: the rest, and
-/// the next one's wait, is the render threads' time for their first blocks.
-const LEND_SHARE: f64 = 0.6;
+/// the next one's wait, is the render threads' time for their first blocks (from 0.9, 0.85 of a
+/// buffer: 18 ms at 1024 frames for a TONE3000's 8–12). Much less, and a project whose live strips
+/// take most of the buffer would never go ahead.
+const LEND_SHARE: f64 = 0.9;
 /// Callbacks in a row on time, without a miss, before strips are lent again.
 const CALM: u32 = 4;
 

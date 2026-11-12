@@ -475,8 +475,8 @@ callback's mix plays the block for its position, so a slow block is absorbed by 
   would. A command that changes a strip's source, or moves the playhead, takes it back first
   (`reclaim_for`); its blocks go and it plays live from the playhead. A block marked for another
   position does the same.
-- A block not ready: lent strips wait until one deadline for the whole callback (half the buffer
-  from its start), never for a render thread to come out of a strip. If no render thread is on the
+- A block not ready: lent strips wait until one deadline for the whole callback (`WAIT_SHARE`,
+  three quarters of the buffer from its start), never for a render thread to come out of a strip. If no render thread is on the
   strip it's taken back and plays live; if one is, the strip plays silence for that block and the
   late block is let go when it comes, and after `MAX_SHORT` such blocks the render thread starts
   no more of it (`come_back`) and it comes back once it's out. Strips are lent only after `CALM`
