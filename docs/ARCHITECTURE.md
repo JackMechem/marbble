@@ -365,8 +365,10 @@ sequenceDiagram
 ### Undo
 
 `Session::checkpoint` (`session/undo.rs`) pushes a full clone of the `Project` before an edit and
-clears redo. Clones are cheap where it matters: plug-in states are `Arc<str>`, shared between
-steps.
+clears redo. Clones are cheap where it matters: plug-in states are `Arc<str>`, and a MIDI region's
+(or take's) notes and controllers an `Arc<Vec<…>>`, shared between steps. An edit to them goes
+through `Arc::make_mut`, which copies only the list it changes, so a step holds what its edit
+changed rather than every note in the project.
 
 - **Merging:** an edit with the same key as the top step within 1.5 s makes no new step. Keys look
   like `track:<id>:volume`, `send:<id>:<slot>`, `fxparam:<uid>:<id>`.

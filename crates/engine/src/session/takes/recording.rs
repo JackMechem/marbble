@@ -111,8 +111,6 @@ impl Session {
                 start: a,
                 end: b,
                 gain_db: 0.0,
-                notes: Vec::new(),
-                cc: Vec::new(),
                 pass: Some((recording, k as u32)),
                 ..Default::default()
             });
@@ -258,18 +256,9 @@ fn timeline_takes(r: &Region) -> Vec<Take> {
             let to_tt = offset - r.start;
             f.takes.iter().map(|t| Take { start: t.start - to_tt, end: t.end - to_tt, offset: t.offset + to_tt, ..t.clone() }).collect()
         }
-        None => vec![Take {
-            id: 0,
-            name: r.name.clone(),
-            clip,
-            offset: offset - r.start,
-            start: r.start,
-            end: r.start + r.length,
-            gain_db,
-            notes: Vec::new(),
-            cc: Vec::new(),
-            ..Default::default()
-        }],
+        None => {
+            vec![Take { id: 0, name: r.name.clone(), clip, offset: offset - r.start, start: r.start, end: r.start + r.length, gain_db, ..Default::default() }]
+        }
     }
 }
 
@@ -357,8 +346,8 @@ impl Session {
         let add = |f: &mut TakeFolder, id: Id, at: i64, len: i64, notes: &[Note], cc: &[CcEvent]| {
             let name = format!("Take {}", f.takes.len() + 1);
             let tt = at + to_tt;
-            let notes = notes.iter().map(|n| Note { start: n.start + tt, ..*n }).collect();
-            let cc = cc.iter().map(|c| CcEvent { start: c.start + tt, ..*c }).collect();
+            let notes = Arc::new(notes.iter().map(|n| Note { start: n.start + tt, ..*n }).collect());
+            let cc = Arc::new(cc.iter().map(|c| CcEvent { start: c.start + tt, ..*c }).collect());
             f.takes.push(Take { id, name, clip: 0, offset: 0, start: tt, end: tt + len, gain_db: 0.0, notes, cc, ..Default::default() });
         };
         for r in &packed {

@@ -1,5 +1,7 @@
 //! Regions, loops and real copies.
 
+use std::sync::Arc;
+
 use super::*;
 
 fn audio(start: i64, length: i64, loop_end: Option<i64>) -> Region {
@@ -57,7 +59,7 @@ fn real_copies_match_the_loop() {
 
     let notes =
         vec![Note { start: 0, length: 10, pitch: 60, velocity: 100, muted: false }, Note { start: 60, length: 10, pitch: 62, velocity: 100, muted: false }];
-    let m = Region { content: RegionContent::Midi { notes, cc: Vec::new() }, ..audio(0, 100, Some(250)) };
+    let m = Region { content: RegionContent::midi(notes, Vec::new()), ..audio(0, 100, Some(250)) };
     let counts: Vec<usize> = m
         .real_copies()
         .iter()
@@ -85,4 +87,24 @@ fn old_projects_load_without_loops_or_hidden_tracks() {
     let t: Track = serde_json::from_str(&json.replacen('{', "{\"off\":true,", 1)).unwrap();
     assert!(t.off);
     assert!(serde_json::to_string(&t).unwrap().contains("\"off\":true"));
+}
+
+/// A MIDI region's notes and controllers, and a take's, are shared in memory but written and
+/// read as the plain lists they always were; an audio take still leaves them out.
+#[test]
+fn midi_content_is_saved_as_plain_lists() {
+    let json = r#"{"type":"midi","notes":[{"start":5,"length":10,"pitch":60,"velocity":100,"muted":false}],"cc":[{"start":0,"kind":{"type":"pitch_bend"},"value":8192}]}"#;
+    let content: RegionContent = serde_json::from_str(json).unwrap();
+    assert_eq!(serde_json::to_string(&content).unwrap(), json);
+    let RegionContent::Midi { notes, cc } = &content else { panic!("not MIDI") };
+    assert_eq!((notes[0].start, cc[0].value), (5, 8192));
+
+    let take = Take { id: 1, name: "Take 1".into(), ..Default::default() };
+    let saved = serde_json::to_value(&take).unwrap();
+    assert!(saved.get("notes").is_none() && saved.get("cc").is_none());
+    let midi = Take { notes: Arc::new(vec![Note { start: 3, length: 4, pitch: 64, velocity: 80, muted: true }]), ..take };
+    let saved = serde_json::to_value(&midi).unwrap();
+    assert_eq!(saved["notes"][0]["pitch"], 64);
+    let read: Take = serde_json::from_value(saved).unwrap();
+    assert_eq!(read.notes[0].start, 3);
 }

@@ -86,10 +86,11 @@ pub(crate) fn sub_region(r: &Region, a: i64, b: i64, id: Id) -> Region {
             *fade_out = (*fade_out).min(length - *fade_in);
         }
         RegionContent::Midi { notes, cc } => {
+            let notes = Arc::make_mut(notes);
             notes.retain(|n| n.start >= cut && n.start < cut + length);
             notes.iter_mut().for_each(|n| n.start -= cut);
             // Controllers start from the values in effect at the cut.
-            *cc = crate::edit::midi_content::cc_from(cc, cut).into_iter().filter(|c| c.start < length).collect();
+            *cc = Arc::new(crate::edit::midi_content::cc_from(cc, cut).into_iter().filter(|c| c.start < length).collect());
         }
     }
     // Each piece of a MIDI take folder is a folder over its part of the takes.

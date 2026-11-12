@@ -154,7 +154,7 @@ fn main() {
         takes: None,
         params: Default::default(),
         pattern: None,
-        content: RegionContent::Midi { notes, cc: Vec::new() },
+        content: RegionContent::midi(notes, Vec::new()),
     };
     s.paste_regions(&[(inst, midi)], 0);
     s.update_track(a, TrackPatch { mute: Some(true), ..Default::default() });

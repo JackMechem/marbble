@@ -43,7 +43,7 @@ fn max_diff(a: &[f32], b: &[f32]) -> f32 {
 fn notes(s: &Session, id: Id) -> Vec<Note> {
     let r = s.project.tracks.iter().flat_map(|t| t.regions.iter()).find(|r| r.id == id).unwrap();
     let RegionContent::Midi { notes, .. } = &r.content else { panic!("not MIDI") };
-    notes.clone()
+    notes.to_vec()
 }
 
 fn set(s: &mut Session, ids: &[Id], patch: RegionParamsPatch) {
