@@ -82,6 +82,7 @@ impl Engine {
     pub fn process_io(&mut self, frames: usize, in_ch: usize, io: &mut impl BlockIo) {
         let started = Instant::now();
         let _ftz = crate::dsp::denormals::NoDenormals::new();
+        self.ahead.until = (frames > 0).then(|| started + std::time::Duration::from_secs_f64(frames as f64 / self.sample_rate * ahead::WAIT_SHARE));
 
         // A block was given up on and a strip still isn't done: the strips and everything the
         // block reads belong to the threads playing it, commands wait, and the output is silent.
@@ -151,7 +152,7 @@ impl Engine {
         if frames > 0 {
             self.measure_load(started, frames);
         }
-        self.lend_ahead(frames);
+        self.lend_ahead(frames, started);
     }
 
     /// The MIDI played live since the last callback, for this one's first sub-block.
@@ -408,6 +409,7 @@ impl Engine {
             analyzer_target: self.analyzer_target,
             wait: self.offline || self.parallel.test.patient,
             ahead: self.ahead.shared.as_deref(),
+            ahead_until: self.ahead.until,
         };
         let mut end = BlockEnd::Played;
         if self.parallel.wanted(self.offline, &self.tracks) {

@@ -473,8 +473,15 @@ callback's mix plays the block for its position, so a slow block is absorbed by 
 - Render threads follow the playhead's path (`Course`: the callback's frames cut at `MAX_BLOCK`
   and the cycle's end) and mark each block with its position, so what plays is exactly what live
   would. A command that changes a strip's source, or moves the playhead, takes it back first
-  (`reclaim_for`); its blocks go and it plays live from the playhead. A block not ready in half a
-  block's time, or marked for another position, does the same.
+  (`reclaim_for`); its blocks go and it plays live from the playhead. A block marked for another
+  position does the same.
+- A block not ready: lent strips wait until one deadline for the whole callback (half the buffer
+  from its start), never for a render thread to come out of a strip. If no render thread is on the
+  strip it's taken back and plays live; if one is, the strip plays silence for that block and the
+  late block is let go when it comes, and after `MAX_SHORT` such blocks the render thread starts
+  no more of it (`come_back`) and it comes back once it's out. Strips are lent only after `CALM`
+  callbacks in a row on time without a miss, at the end of one that used at most `LEND_SHARE` of
+  its time, so a strip's first block has the time it needs (#466).
 - The session (`sync_ahead`, from `idle`) starts render threads as the setting and the processing
   threads say, and keeps live the selected track and tracks with a plug-in window open
   (`Cmd::KeepLive`).

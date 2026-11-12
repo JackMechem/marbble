@@ -5,7 +5,7 @@
 use super::*;
 use crate::dsp::tests::rig;
 use crate::fx::{Effect, EffectInfo, FxContext, Key};
-use std::sync::atomic::AtomicU64;
+use std::sync::atomic::{AtomicBool, AtomicU64};
 
 const SR: f64 = 48000.0;
 /// Frames per callback: not a divisor of the cycle, so wraps cut blocks.
@@ -237,5 +237,79 @@ fn a_track_kept_live_comes_back_at_once_and_stays_until_let_go() {
     assert!(lent(&r, 0), "let go, it goes ahead again");
     r.tx.push(Cmd::Stop).ok().unwrap();
     play(&mut r, 2);
+    drop(threads);
+}
+
+/// Holds the render threads in its block while `HOLD` is set, as a plug-in that's slow or hung
+/// would; on the callback's thread it passes the audio on.
+struct Holder;
+static HOLD: AtomicBool = AtomicBool::new(false);
+
+impl Effect for Holder {
+    fn set_param(&mut self, _: u32, _: f32) {}
+    fn param(&self, _: u32) -> f32 {
+        0.0
+    }
+    fn process(&mut self, _: &mut [f32], _: &mut [f32], _: Key, _: &FxContext) {
+        if std::thread::current().name().is_some_and(|n| n.starts_with("marbble-ahead")) {
+            while HOLD.load(Ordering::SeqCst) {
+                std::thread::sleep(std::time::Duration::from_millis(1));
+            }
+        }
+    }
+    fn reset(&mut self) {}
+}
+
+#[test]
+fn a_render_thread_held_in_a_strip_never_holds_up_the_callback() {
+    // On a miss the callback used to wait half a block per strip, then for the render thread to
+    // come out of the strip (up to half a second), then play the block again live (#466). Now the
+    // strip plays silence while its render thread is in it, and comes back once it's out.
+    let info = EffectInfo { id: "test:holder", name: "Holder", category: "Utility", params: &[], meters: &[], sidechain: false, new: |_| Box::new(Holder) };
+    let mut r = rig();
+    let threads = AheadThreads::start(1, r.status.clone());
+    r.tx.push(Cmd::Ahead(Some(threads.shared()), 0.05)).ok().unwrap();
+    let mut t = TrackDsp::new(1, TrackKind::Audio, params(0.5), Arc::default());
+    t.set_regions(sine());
+    t.set_insert(0, Some(InsertDsp::new(101, false, Plugin::Builtin(Box::new(BuiltinDsp::new(&info, SR as f32, &[]))), KeyRoute::default())));
+    t.prepare_ahead();
+    r.tx.push(Cmd::AddTrack(Box::new(t), usize::MAX)).ok().unwrap();
+    r.tx.push(Cmd::Play { from: 0 }).ok().unwrap();
+    // A buffer of 1024 frames: 21 ms to make each in.
+    let mut buf = vec![0.0f32; MAX_BLOCK * 2];
+    let lent = |r: &crate::dsp::tests::Rig| r.engine.tracks.first().and_then(|t| t.ahead.as_ref()).as_ref().is_some_and(|a| a.lent());
+    let lost = |r: &crate::dsp::tests::Rig| r.engine.tracks.first().and_then(|t| t.ahead.as_ref()).as_ref().is_some_and(|a| a.lost());
+    let mut k = 0;
+    while !lent(&r) && k < 200 {
+        r.engine.process(&[], 0, &mut buf, 2);
+        k += 1;
+    }
+    assert!(lent(&r), "it went ahead");
+
+    HOLD.store(true, Ordering::SeqCst);
+    let mut slowest = std::time::Duration::ZERO;
+    let mut silent = 0;
+    for _ in 0..12 {
+        let at = std::time::Instant::now();
+        r.engine.process(&[], 0, &mut buf, 2);
+        slowest = slowest.max(at.elapsed());
+        silent += buf.iter().all(|s| *s == 0.0) as usize;
+    }
+    // Half a buffer's wait at most, with room for a loaded machine; not the half second it was.
+    assert!(slowest < std::time::Duration::from_millis(100), "a callback took {slowest:?}");
+    assert!(silent > 0, "the strip played silence while its render thread was held");
+    assert!(r.status.ahead_misses.load(Ordering::Relaxed) > 0);
+    assert!(lent(&r) && !lost(&r), "it waits for its render thread without being given up");
+
+    HOLD.store(false, Ordering::SeqCst);
+    // Callbacks a buffer apart, as a device makes them: the render thread comes out meanwhile.
+    for _ in 0..4 {
+        std::thread::sleep(std::time::Duration::from_millis(20));
+        r.engine.process(&[], 0, &mut buf, 2);
+    }
+    assert!(!lost(&r));
+    assert!(buf.iter().any(|s| s.abs() > 0.01), "it plays again");
+    r.tx.push(Cmd::Stop).ok().unwrap();
+    r.engine.process(&[], 0, &mut buf, 2);
     drop(threads);
 }

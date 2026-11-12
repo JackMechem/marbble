@@ -9,7 +9,12 @@
 //! the mix of the strip it owns, the render thread the source in the shell. Whatever changes a
 //! strip's source (an edit, a locate, Stop) reclaims it first: the rendered blocks go, and it plays
 //! live from the playhead, its plug-ins as far ahead as they had rendered (a reverb may jump a
-//! little). It goes ahead again at the end of a callback, when it's still eligible ([`eligible`]).
+//! little). It goes ahead again at the end of a callback, when it's still eligible ([`eligible`])
+//! and the callbacks are calm ([`Engine::lend_ahead`]).
+//!
+//! **Misses.** The callback never waits on a render thread past its deadline, and never plays a
+//! block again that a render thread is making ([`take_block`]): a strip whose block is late plays
+//! silence for it rather than holding up every track.
 //!
 //! **Positions.** The render thread follows the path the playhead will take ([`Course`]): the
 //! callback's frames, split at [`MAX_BLOCK`] and at the cycle's end, as `process_io` splits them,
@@ -53,6 +58,16 @@ const RING_BLOCKS: usize = 512;
 const RECLAIM_WAIT: Duration = Duration::from_millis(500);
 /// How long a render thread with nothing to do sleeps before looking again, if nobody wakes it.
 const IDLE_NAP: Duration = Duration::from_millis(2);
+/// The most blocks in a row a strip plays silent while its render thread catches up; then it's
+/// taken back and plays live.
+const MAX_SHORT: u8 = 2;
+/// How much of a callback's time the strips wait for their render threads, from its start.
+pub(super) const WAIT_SHARE: f64 = 0.5;
+/// The most of its time a callback may have taken for strips to be lent at its end: the rest, and
+/// the next one's wait, is the render threads' time for their first blocks.
+const LEND_SHARE: f64 = 0.6;
+/// Callbacks in a row on time, without a miss, before strips are lent again.
+const CALM: u32 = 4;
 
 const HOME: u8 = 0;
 const LENT: u8 = 1;
@@ -125,6 +140,10 @@ pub struct AheadCtl {
     state: AtomicU8,
     /// A render thread is rendering it.
     busy: AtomicBool,
+    /// Blocks in a row it played silent, its render thread still on them (the callback's).
+    short: AtomicU8,
+    /// The callback wants it back: render threads start no more blocks of it.
+    come_back: AtomicBool,
     /// Its entry in the table while lent.
     entry: AtomicUsize,
     /// The render thread's while lent, the callback's while home.
@@ -153,6 +172,8 @@ impl AheadCtl {
             ring: FrameRing::new(RING_FRAMES, RING_BLOCKS),
             state: AtomicU8::new(HOME),
             busy: AtomicBool::new(false),
+            short: AtomicU8::new(0),
+            come_back: AtomicBool::new(false),
             entry: AtomicUsize::new(usize::MAX),
             shell: UnsafeCell::new(shell),
             lending: UnsafeCell::new(lending),
@@ -276,8 +297,9 @@ fn render_loop(shared: &AheadShared, k: usize) {
             if entry.load(Ordering::SeqCst) == ctl {
                 // SAFETY: named as this thread's hazard while in the table, so not freed.
                 let c = unsafe { &*ctl };
-                if c.lent() && c.busy.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst).is_ok() {
-                    if c.lent() {
+                let wanted = |c: &AheadCtl| c.lent() && !c.come_back.load(Ordering::SeqCst);
+                if wanted(c) && c.busy.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst).is_ok() {
+                    if wanted(c) {
                         rendered |= render_block(c, &mut sc, &shared.status);
                     }
                     c.busy.store(false, Ordering::SeqCst);
@@ -333,6 +355,7 @@ fn render_block(c: &AheadCtl, sc: &mut Scratch, status: &EngineStatus) -> bool {
         analyzer_target: None,
         wait: false,
         ahead: None,
+        ahead_until: None,
     };
     shell.instrument_ran = false;
     let played = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
@@ -466,6 +489,8 @@ impl TrackDsp {
             }
         }
         ctl.ring.clear();
+        ctl.short.store(0, Ordering::Relaxed);
+        ctl.come_back.store(false, Ordering::SeqCst);
         self.load.ahead(false);
         // SAFETY: home, and no render thread names it: the shell is the callback's.
         trade(self, unsafe { &mut *ctl.shell.get() });
@@ -496,6 +521,8 @@ impl TrackDsp {
             };
         }
         ctl.ring.clear();
+        ctl.short.store(0, Ordering::Relaxed);
+        ctl.come_back.store(false, Ordering::SeqCst);
         ctl.entry.store(entry, Ordering::Relaxed);
         ctl.state.store(LENT, Ordering::SeqCst);
         shared.table[entry].store(ptr, Ordering::SeqCst);
@@ -536,11 +563,22 @@ pub(crate) struct Ahead {
     pub(super) last_frames: usize,
     /// Tracks that play live whatever (`Cmd::KeepLive`).
     pub(super) keep_live: [Option<Id>; KEEP_LIVE],
+    /// Until when this callback's lent strips wait for their blocks.
+    pub(super) until: Option<Instant>,
+    /// Callbacks in a row on time and without a miss (see [`CALM`]).
+    calm: u32,
+    /// `EngineStatus::ahead_misses` as the last callback ended.
+    misses: u32,
 }
 
 /// For a lent strip in a block: its rendered block for `cx.pos` into `t.l` and `t.r`, waiting for
-/// its render thread up to half the block's length (forever, for a check that must not depend on
-/// time). Not there by then, the strip is taken back and plays live.
+/// its render thread until the callback's deadline (`BlockCtx::ahead_until`; forever, for a check
+/// that must not depend on time). The callback never waits longer, nor for a render thread to come
+/// out of the strip, nor plays a block again that its render thread is still making:
+/// - Not there, and no render thread in the strip: it's taken back and plays live.
+/// - Not there, and its render thread on it: it plays silence for this block and stays ahead; the
+///   late block is let go when it comes. After [`MAX_SHORT`] blocks in a row, the render thread is
+///   told to start no more (`come_back`), and the strip comes back once it's out.
 pub(super) fn take_block(t: &mut TrackDsp, cx: &BlockCtx<'_>, shared: Option<&AheadShared>) -> Took {
     let Some(ctl) = t.ahead.clone() else { return Took::Reclaimed };
     if ctl.lost() {
@@ -548,17 +586,34 @@ pub(super) fn take_block(t: &mut TrackDsp, cx: &BlockCtx<'_>, shared: Option<&Ah
     }
     let n = cx.n;
     let start = Instant::now();
-    // Half the block: past that, playing it live may still be in time.
-    let budget = Duration::from_secs_f64(n as f64 / cx.sr / 2.0);
+    // Without the callback's deadline (a block played alone), half the block.
+    let until = cx.ahead_until.unwrap_or_else(|| start + Duration::from_secs_f64(n as f64 / cx.sr / 2.0));
+    let short = ctl.short.load(Ordering::Relaxed);
+    let silent = |t: &mut TrackDsp| {
+        t.l[..n].fill(0.0);
+        t.r[..n].fill(0.0);
+        Took::Block
+    };
     loop {
+        if ctl.come_back.load(Ordering::SeqCst) {
+            if ctl.busy.load(Ordering::SeqCst) {
+                return silent(t);
+            }
+            break;
+        }
         match ctl.ring.head() {
             Some(Mark { pos, n: len }) if pos == cx.pos && len == n => {
                 ctl.ring.pop(&mut t.l[..n], &mut t.r[..n]);
+                ctl.short.store(0, Ordering::Relaxed);
                 return Took::Block;
+            }
+            // Late, for where the playhead was when it played silence.
+            Some(Mark { pos, n: len }) if short > 0 && pos + len as i64 <= cx.pos && len <= t.l.len() => {
+                ctl.ring.pop(&mut t.l[..len], &mut t.r[..len]);
             }
             // For another position: the playhead went elsewhere.
             Some(_) => break,
-            None if cx.wait || start.elapsed() < budget => {
+            None if cx.wait || Instant::now() < until => {
                 std::hint::spin_loop();
                 if start.elapsed() > Duration::from_micros(100) {
                     std::thread::sleep(Duration::from_micros(50));
@@ -566,7 +621,14 @@ pub(super) fn take_block(t: &mut TrackDsp, cx: &BlockCtx<'_>, shared: Option<&Ah
             }
             None => {
                 cx.status.ahead_misses.fetch_add(1, Ordering::Relaxed);
-                break;
+                if !ctl.busy.load(Ordering::SeqCst) {
+                    break;
+                }
+                ctl.short.store(short.saturating_add(1), Ordering::Relaxed);
+                if short + 1 >= MAX_SHORT {
+                    ctl.come_back.store(true, Ordering::SeqCst);
+                }
+                return silent(t);
             }
         }
     }
@@ -664,15 +726,28 @@ impl Engine {
         }
     }
 
-    /// At the end of a callback of `frames` frames: lends every strip that may go ahead, its next
-    /// block where the next callback starts, and wakes the render threads.
-    pub(super) fn lend_ahead(&mut self, frames: usize) {
+    /// At the end of a callback of `frames` frames, `started` then: lends every strip that may go
+    /// ahead, its next block where the next callback starts, and wakes the render threads.
+    ///
+    /// Only once [`CALM`] callbacks in a row were on time without a miss, and only from one that
+    /// left time to spare ([`LEND_SHARE`]): a strip is lent with nothing rendered, and its first
+    /// block must be ready by the next callback's deadline. Lent sooner, it misses, and every miss
+    /// makes the callback that much later.
+    pub(super) fn lend_ahead(&mut self, frames: usize, started: Instant) {
         let Some(shared) = self.ahead.shared.clone() else { return };
         let steady = frames == self.ahead.last_frames;
         self.ahead.last_frames = frames;
+        // A check that plays flat out (`ParallelTest::patient`) goes by its blocks, not the clock.
+        let patient = self.parallel.test.patient;
+        let budget = frames as f64 / self.sample_rate;
+        let spent = started.elapsed().as_secs_f64();
+        let misses = self.status.ahead_misses.load(Ordering::Relaxed);
+        let missed = std::mem::replace(&mut self.ahead.misses, misses) != misses;
+        self.ahead.calm = if missed || (!patient && spent > budget) { 0 } else { self.ahead.calm.saturating_add(1) };
+        let room = patient || spent <= budget * LEND_SHARE;
         let going =
             self.playing && !self.recording && !self.draining && self.stopping.is_none() && !self.offline && self.isolate.is_none() && self.shedding == 0;
-        if going && steady && frames > 0 {
+        if going && steady && frames > 0 && room && self.ahead.calm >= CALM {
             let lead = ((self.ahead.lead_secs * self.sample_rate) as usize).min(RING_FRAMES - MAX_BLOCK);
             let base = TransportInfo { playing: true, recording: false, sample_rate: self.sample_rate, cycle: self.transport().cycle, ..Default::default() };
             let course = Course::new(self.pos, frames, self.cycle);
