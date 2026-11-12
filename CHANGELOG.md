@@ -6,6 +6,13 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **Less memory and quicker edits in projects with many MIDI notes.** Every undo step used to hold
+  its own copy of every note and controller in the project. Regions an edit leaves alone are now
+  shared, so 100 undo steps in a project of 150,000 notes take 26 MB instead of 432 MB, and a note
+  edit takes 0.08 ms instead of 1.6 ms.
+
 ### Fixed
 
 - **Render Ahead uses the whole machine on macOS and Windows.** It started as many threads as
