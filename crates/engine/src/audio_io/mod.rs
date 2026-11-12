@@ -215,6 +215,8 @@ where
                 }
             }
             last = Some((ts.callback, length));
+            // Not cancelled in a plug-in: dropped after the engine is let go (see `NoCancel`).
+            let _no_cancel = threads::NoCancel::new();
             match engine.try_lock() {
                 Some(mut e) => cb.play(Some(&mut e), data, out_ch),
                 None => cb.play(None, data, out_ch),
