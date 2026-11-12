@@ -15,6 +15,8 @@
 //! Arrangement move or a section edit starts partway into the pattern (`Pattern::offset`), so it
 //! plays on from where it was cut.
 
+use std::sync::Arc;
+
 use serde::{Deserialize, Serialize};
 
 use crate::model::tempo::TempoMap;
@@ -256,7 +258,7 @@ impl Pattern {
 pub fn realize(r: &Region, map: &TempoMap) -> Region {
     let mut out = r.clone();
     if let (Some(p), RegionContent::Midi { notes, .. }) = (out.pattern.take(), &mut out.content) {
-        *notes = p.notes(r.start, r.length, map);
+        *notes = Arc::new(p.notes(r.start, r.length, map));
     }
     out
 }

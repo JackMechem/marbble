@@ -206,7 +206,7 @@ impl Session {
                     let (notes, cc) = folder.midi_window(t.id, folder.offset, r.length);
                     let id = self.project.alloc_id();
                     let take =
-                        Region { id, name: t.name.clone(), muted: true, content: RegionContent::Midi { notes, cc }, takes: None, loop_end: None, ..r.clone() };
+                        Region { id, name: t.name.clone(), muted: true, content: RegionContent::midi(notes, cc), takes: None, loop_end: None, ..r.clone() };
                     out.push((t.name.clone(), Some(take)));
                 }
             }
@@ -305,18 +305,7 @@ impl Session {
             let RegionContent::Audio { clip, offset, gain_db, .. } = r.content else { continue };
             let at = r.start - fs;
             let id = self.project.alloc_id();
-            folder.takes.push(Take {
-                id,
-                name: r.name.clone(),
-                clip,
-                offset: offset - at,
-                start: at,
-                end: at + r.length,
-                gain_db,
-                notes: Vec::new(),
-                cc: Vec::new(),
-                ..Default::default()
-            });
+            folder.takes.push(Take { id, name: r.name.clone(), clip, offset: offset - at, start: at, end: at + r.length, gain_db, ..Default::default() });
         }
         folder.default_comp();
         let newest = picked.last().unwrap();

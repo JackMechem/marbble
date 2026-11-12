@@ -1,6 +1,8 @@
 //! The saved form of a take folder: takes, comps and comp segments. The comping logic that works on
 //! them is in `crate::edit::takes`.
 
+use std::sync::Arc;
+
 use super::*;
 
 /// A take folder, Logic's container for the passes of a cycle recording.
@@ -43,6 +45,10 @@ fn is_zero_i64(v: &i64) -> bool {
     *v == 0
 }
 
+fn is_empty<T>(v: &Arc<Vec<T>>) -> bool {
+    v.is_empty()
+}
+
 /// A saved comp of a take folder: its name and which take is heard where.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Comp {
@@ -64,10 +70,11 @@ pub struct Take {
     #[serde(default)]
     pub gain_db: f32,
     /// A MIDI take's notes and controller events, in take time (an audio take has none).
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub notes: Vec<Note>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub cc: Vec<CcEvent>,
+    /// Shared like a MIDI region's (see [`RegionContent::Midi`]).
+    #[serde(default, skip_serializing_if = "is_empty")]
+    pub notes: Arc<Vec<Note>>,
+    #[serde(default, skip_serializing_if = "is_empty")]
+    pub cc: Arc<Vec<CcEvent>>,
     /// The recording the take came from and which of its cycle passes it is (from 0). Every
     /// track recorded at once gets its takes with the same, so grouped folders can match
     /// their takes pass by pass. None: packed by hand, or recorded before this was kept.

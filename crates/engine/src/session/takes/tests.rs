@@ -43,7 +43,7 @@ fn midi_recordings_become_take_folders() {
     assert_eq!(notes_of(&s, folder), vec![62]);
     // Edits to the content belong to the take heard.
     if let RegionContent::Midi { notes, .. } = &mut s.region_mut(folder).unwrap().content {
-        notes[0].pitch = 70;
+        Arc::make_mut(notes)[0].pitch = 70;
     }
     s.select_take(folder, ids[0]);
     s.select_take(folder, ids[1]);

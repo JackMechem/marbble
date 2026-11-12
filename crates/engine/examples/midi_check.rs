@@ -29,7 +29,7 @@ fn midi(s: &Session, id: u64) -> (i64, i64, Vec<Note>, Vec<CcEvent>) {
         for r in &t.regions {
             if r.id == id {
                 if let RegionContent::Midi { notes, cc } = &r.content {
-                    return (r.start, r.length, notes.clone(), cc.clone());
+                    return (r.start, r.length, notes.to_vec(), cc.to_vec());
                 }
             }
         }

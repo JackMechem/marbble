@@ -182,3 +182,46 @@ fn reopening_the_device_keeps_the_queue_and_its_count() {
     s.wait_for_engine();
     assert_eq!(engine_volume(&s), volume_gain(-9.0));
 }
+
+/// A track added to a project on the pool doesn't send its next block to the callback alone until
+/// the session's graph follows: the engine builds one of its own at once. With twelve amp models
+/// playing, that block overloaded (#475).
+#[test]
+fn a_track_added_on_the_pool_keeps_the_next_block_there() {
+    let mut s = session();
+    s.audio = None;
+    s.audio_config.processing_threads = 2;
+    for _ in 0..2 {
+        let t = s.add_track(TrackKind::Audio, InputSel::None, None, None).unwrap();
+        s.set_plugin(t, 0, "builtin:compressor").unwrap();
+    }
+    s.sync_parallel();
+    assert!(s.engine.lock().task_graph_fits(), "the session's graph");
+    // The engine has the new strip before the session's next graph.
+    s.add_track(TrackKind::Audio, InputSel::None, None, None).unwrap();
+    let before = s.status.parallel_blocks.load(Ordering::Relaxed);
+    let mut out = vec![0.0f32; 256 * 2];
+    s.engine.lock().process(&[], 0, &mut out, 2);
+    assert_eq!(s.status.parallel_blocks.load(Ordering::Relaxed), before + 1, "the block is pooled");
+}
+
+/// A project opened (or otherwise rebuilt) plays its first block on the pool: the task graph, and
+/// the workers it wants, go in with the new strips. Left to the next `idle`, they came a block or
+/// more late, and a heavy project's first block, every plug-in played on the callback alone,
+/// overloaded (#468).
+#[test]
+fn a_rebuilt_project_plays_its_first_block_on_the_pool() {
+    let mut s = session();
+    s.audio = None;
+    s.audio_config.processing_threads = 2;
+    // Two strips with plug-ins that can play at once, as yet unknown to the pool.
+    for _ in 0..2 {
+        let t = s.add_track(TrackKind::Audio, InputSel::None, None, None).unwrap();
+        s.set_plugin(t, 0, "builtin:compressor").unwrap();
+    }
+    s.rebuild_graph();
+    let before = s.status.parallel_blocks.load(Ordering::Relaxed);
+    let mut out = vec![0.0f32; 256 * 2];
+    s.engine.lock().process(&[], 0, &mut out, 2);
+    assert_eq!(s.status.parallel_blocks.load(Ordering::Relaxed), before + 1, "the first block is pooled");
+}

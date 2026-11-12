@@ -201,7 +201,7 @@ fn midi_region(start: i64, length: i64, notes: Vec<Note>, p: RegionParams) -> Re
         length,
         muted: false,
         color: None,
-        content: RegionContent::Midi { notes, cc: vec![CcEvent { start: 0, kind: CcKind::Controller(7), value: 100 }] },
+        content: RegionContent::midi(notes, vec![CcEvent { start: 0, kind: CcKind::Controller(7), value: 100 }]),
         loop_end: None,
         takes: None,
         params: p,

@@ -1,6 +1,8 @@
 //! MIDI take folders: their content is a copy of the take they play, written back to the take and
 //! read from it as edits go (see `TakeFolder`).
 
+use std::sync::Arc;
+
 use crate::model::{Region, RegionContent};
 
 /// Writes a MIDI take folder's content back into the take it plays (see [`TakeFolder`]), before
@@ -23,7 +25,8 @@ pub fn load_midi_take(r: &mut Region) {
         f.store_comp();
     }
     if let Some(t) = f.midi_take() {
-        (*notes, *cc) = f.midi_window(t, f.offset, r.length);
+        let (n, c) = f.midi_window(t, f.offset, r.length);
+        (*notes, *cc) = (Arc::new(n), Arc::new(c));
     }
 }
 

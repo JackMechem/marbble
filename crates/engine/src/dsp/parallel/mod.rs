@@ -50,7 +50,7 @@
 use std::cell::UnsafeCell;
 use std::time::Duration;
 
-use super::graph::{TaskGraph, MAX_TASKS};
+use super::graph::{GraphRoom, TaskGraph, MAX_TASKS};
 use super::pool::{Call, Health, Job, Pool, PoolOptions};
 use super::*;
 
@@ -145,6 +145,10 @@ pub struct Workers {
     fresh: Vec<(usize, usize, Id)>,
     /// Workers these replaced while their threads still held strips (`Parallel::set_workers`).
     older: Option<Box<Workers>>,
+    /// Where the engine builds a graph of its own when the session's doesn't hold (`Parallel::own`).
+    room: GraphRoom,
+    /// A thread was left in a plug-in in a block on that graph, so it never changes again.
+    room_held: bool,
 }
 
 // SAFETY: the raw pointers only point into what the engine owns, and are only used while a block is
@@ -168,6 +172,8 @@ impl Workers {
             held: Vec::with_capacity(threads),
             fresh: Vec::with_capacity(threads),
             older: None,
+            room: GraphRoom::default(),
+            room_held: false,
         })
     }
 
@@ -214,6 +220,7 @@ impl Drop for Workers {
             std::mem::forget(std::mem::take(&mut self.busy));
             std::mem::forget(std::mem::take(&mut self.jobs));
             std::mem::forget(std::mem::take(&mut self.tracks));
+            std::mem::forget(std::mem::take(&mut self.room));
         }
     }
 }
@@ -281,6 +288,9 @@ pub(super) struct Parallel {
     give_up: Duration,
     /// The load is high enough to be worth the workers.
     engaged: bool,
+    /// The graph doesn't hold, and the blocks play on one the engine built from its own routes in
+    /// the workers' room (`build_own`) until the session's next one does.
+    pub(super) own: bool,
     pub test: ParallelTest,
     /// Threads in the last block, for the meter's tooltip.
     last_threads: u32,
@@ -308,6 +318,8 @@ impl Parallel {
     /// The old workers, to be freed elsewhere. Not while a thread of theirs still holds a strip:
     /// they're kept until it lets go, so that its track can come back (`take_released`).
     pub fn set_workers(&mut self, w: Option<Box<Workers>>) -> Option<Box<Workers>> {
+        // A graph of the engine's own is in the old workers' room.
+        self.stale = true;
         let mut old = std::mem::replace(&mut self.workers, w)?;
         if old.held.is_empty() {
             return Some(old);
@@ -324,11 +336,13 @@ impl Parallel {
         if self.workers.as_ref().is_none_or(|w| !w.pool.has_workers()) {
             return false;
         }
-        let Some(g) = &self.graph else { return false };
         if self.stale {
             self.stale = false;
-            self.covered = covers(g, tracks);
+            self.covered = self.graph.as_deref().is_some_and(|g| covers(g, tracks));
+            self.own = !self.covered && self.build_own(tracks);
+            self.covered |= self.own;
         }
+        let Some(g) = self.graph() else { return false };
         if !self.covered {
             return false;
         }
@@ -338,6 +352,39 @@ impl Parallel {
         self.test.always || (self.engaged && g.heavy_width() >= 2)
     }
 
+    /// Builds a graph from the routes the engine resolved, in the workers' room: what [`covers`]
+    /// asks for and no more, so it holds for `tracks` by construction. False if it can't be (the
+    /// room is held, too many strips).
+    fn build_own(&mut self, tracks: &[Box<TrackDsp>]) -> bool {
+        let Some(w) = self.workers.as_deref_mut().filter(|w| !w.room_held) else { return false };
+        let edges = |i: usize, add: &mut dyn FnMut(usize, usize)| {
+            let t = &tracks[i];
+            for j in t.out_idx.into_iter().chain(t.send_idx.iter().flatten().copied()) {
+                add(i, j);
+            }
+            for s in t.feed.source.into_iter().chain(t.inserts.iter().flatten().filter_map(|ins| ins.key.idx)) {
+                add(s, i);
+            }
+        };
+        let heavy = |i: usize| {
+            let t = &tracks[i];
+            !t.dormant && (t.instrument.is_some() || t.inserts.iter().any(Option::is_some))
+        };
+        let built = w.room.refill(tracks.len(), |i| tracks[i].id, edges, heavy);
+        debug_assert!(!built || covers(w.room.graph(), tracks));
+        built
+    }
+
+    /// The graph blocks on the pool play: the session's, or one of the engine's own.
+    fn graph(&self) -> Option<&TaskGraph> {
+        if self.own {
+            self.workers.as_deref().map(|w| w.room.graph())
+        } else {
+            self.graph.as_deref()
+        }
+    }
+
+    /// Whether the session's graph holds for `tracks`.
     pub fn fits(&self, tracks: &[Box<TrackDsp>]) -> bool {
         self.graph.as_ref().is_some_and(|g| covers(g, tracks))
     }
@@ -383,7 +430,7 @@ impl Parallel {
         if w.fresh.is_empty() {
             return false;
         }
-        let graph = self.graph.as_deref().expect("the block ran on a graph");
+        let graph = if self.own { w.room.graph() } else { self.graph.as_deref().expect("the block ran on a graph") };
         let (_, first, uid) = w.fresh[0];
         for (thread, task, uid) in w.fresh.drain(..) {
             // Every worker left has a spare, made for it.
@@ -434,7 +481,8 @@ impl Parallel {
     /// ready of the block without running it (`Pool::pass_over`), never waiting. True once the
     /// block is over. Calls no plug-in, from the callback or from `Engine::settle`.
     pub fn press_on(&mut self) -> bool {
-        let (Some(w), Some(graph)) = (self.workers.as_deref_mut(), self.graph.as_deref()) else { return true };
+        let Some(w) = self.workers.as_deref_mut() else { return true };
+        let Some(graph) = (if self.own { Some(w.room.graph()) } else { self.graph.as_deref() }) else { return true };
         let fresh = &mut w.fresh;
         let left = w.pool.abandon(graph, self.give_up * 3 / 4, |thread, task, uid| {
             if fresh.len() < fresh.capacity() {
@@ -444,7 +492,11 @@ impl Parallel {
         if left > 0 {
             w.job_at += 1;
             debug_assert!(w.job_at < w.jobs.len(), "a job per time a worker is left");
-            self.graph_held = true;
+            if self.own {
+                w.room_held = true;
+            } else {
+                self.graph_held = true;
+            }
         }
         // The block is silent whatever happens, and a strip that misses it is like one in a block
         // shed for an overload. The workers still playing run what they take, and what the job
@@ -464,7 +516,7 @@ impl Parallel {
     /// until `open_block_over`, the caller must not touch any of it, and sets `stalled` to say so.
     pub fn run(&mut self, tracks: &mut [Box<TrackDsp>], cx: &BlockCtx<'_>) -> Outcome {
         let w = self.workers.as_deref_mut().expect("wanted() saw workers");
-        let graph = self.graph.as_deref().expect("wanted() saw a graph");
+        let graph = if self.own { w.room.graph() } else { self.graph.as_deref().expect("wanted() saw a graph") };
         // Folders' automation is read now, while nothing is writing: a subtrack doesn't wait for
         // its folder, which runs (doing next to nothing) at the same time.
         for ti in 0..tracks.len() {
@@ -508,7 +560,11 @@ impl Parallel {
                 // It's still in this job and may be in the graph, which must stay.
                 w.job_at += 1;
                 debug_assert!(w.job_at < w.jobs.len(), "a job per worker left");
-                self.graph_held = true;
+                if self.own {
+                    w.room_held = true;
+                } else {
+                    self.graph_held = true;
+                }
                 // The block is silent: the rest is only counted out (`press_on` says why), and a worker
                 // held up anywhere else must still be demoted before the kernel's limit
                 // (`GIVE_UP_SECS`).

@@ -309,6 +309,12 @@ impl Engine {
         self.parallel.stalled
     }
 
+    /// Whether blocks on the pool play on a graph the engine built itself.
+    #[cfg(test)]
+    pub(crate) fn parallel_own_for_tests(&self) -> bool {
+        self.parallel.own
+    }
+
     /// Applies every command queued, in order, and counts them done.
     fn take_commands(&mut self) {
         // Without a deadline, a command waits for its strips' render threads; with one, it waits

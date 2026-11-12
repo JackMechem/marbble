@@ -132,7 +132,7 @@ fn main() {
         length: 4 * bar,
         muted: false,
         color: None,
-        content: RegionContent::Midi { notes, cc: Vec::new() },
+        content: RegionContent::midi(notes, Vec::new()),
         loop_end: None,
         takes: None,
         params: Default::default(),

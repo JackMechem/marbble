@@ -3,6 +3,8 @@
 //!
 //! All of this is saved. New fields go at the end of the struct with `#[serde(default)]`.
 
+use std::sync::Arc;
+
 use super::*;
 
 /// A MIDI note, in frames from its region's start.
@@ -104,12 +106,21 @@ pub enum RegionContent {
         #[serde(default, skip_serializing_if = "FadeShape::is_default")]
         fade_shape: FadeShape,
     },
+    /// The notes and controllers are shared, as undo steps and UI snapshots clone the project:
+    /// an edit copies only the region it changes (`Arc::make_mut`). Written as plain lists.
     Midi {
-        notes: Vec<Note>,
+        notes: Arc<Vec<Note>>,
         /// Controller events, sorted by start.
         #[serde(default)]
-        cc: Vec<CcEvent>,
+        cc: Arc<Vec<CcEvent>>,
     },
+}
+
+impl RegionContent {
+    /// MIDI content of these notes and controllers.
+    pub fn midi(notes: Vec<Note>, cc: Vec<CcEvent>) -> RegionContent {
+        RegionContent::Midi { notes: Arc::new(notes), cc: Arc::new(cc) }
+    }
 }
 
 /// A stretch of content on a track's timeline: frames, as everything saved is. Its loop extends it past
@@ -159,7 +170,7 @@ impl Region {
             length,
             muted: false,
             color: None,
-            content: RegionContent::Midi { notes, cc },
+            content: RegionContent::midi(notes, cc),
             loop_end: None,
             takes: None,
             params: Default::default(),
@@ -227,8 +238,8 @@ impl Region {
                         *fade_out = if k == last { fo } else { 0 };
                     }
                     RegionContent::Midi { notes, cc } if k > 0 => {
-                        notes.retain(|n| n.start < length);
-                        cc.retain(|c| c.start < length);
+                        Arc::make_mut(notes).retain(|n| n.start < length);
+                        Arc::make_mut(cc).retain(|c| c.start < length);
                     }
                     _ => {}
                 }
