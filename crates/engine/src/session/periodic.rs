@@ -16,6 +16,7 @@ impl Session {
         self.mark_unresponsive();
         let reopened = self.device_idle();
         self.sync_parallel();
+        self.sync_ahead();
         let before = self.open_editors().len();
         self.resync_engine();
         let mut latency_changed = false;

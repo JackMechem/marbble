@@ -95,6 +95,10 @@ pub struct AudioConfig {
     /// audio never waits for a page the system swapped out ([`crate::audio_io::memlock`]).
     #[serde(default = "crate::audio_io::memlock::default_setting")]
     pub lock_memory: bool,
+    /// Settings › Audio › Render Ahead: how far ahead, in ms, the source of tracks that aren't
+    /// played live is rendered ([`crate::dsp::ahead`]); 0 is Off.
+    #[serde(default)]
+    pub render_ahead_ms: u32,
 }
 
 impl Default for AudioConfig {
@@ -110,6 +114,7 @@ impl Default for AudioConfig {
             recording_delay_ms: 0.0,
             processing_threads: crate::audio_io::threads::default_setting(),
             lock_memory: crate::audio_io::memlock::default_setting(),
+            render_ahead_ms: 0,
         }
     }
 }

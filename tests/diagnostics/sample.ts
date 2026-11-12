@@ -3,7 +3,7 @@
 import type { Diagnostics, TrackDiagnostics } from "../../src/diagnostics/snapshot.ts";
 
 export function track(id: number, name: string, extra: Partial<TrackDiagnostics> = {}): TrackDiagnostics {
-  return { id, name, kind: "audio", off: false, frozen: false, thread: 0, share: 0.1, peak: 0.2, latency: 0, delay: 0, held: false, plugins: [], asleep: 0, ...extra };
+  return { id, name, kind: "audio", off: false, frozen: false, thread: 0, share: 0.1, peak: 0.2, latency: 0, delay: 0, held: false, plugins: [], asleep: 0, ahead: false, ...extra };
 }
 
 export function sample(): Diagnostics {
@@ -44,6 +44,7 @@ export function sample(): Diagnostics {
       overload_ms: null,
       overload_track: null,
       engine_errors: 0,
+      ahead_misses: 0,
       bad_audio: 0,
       cmds_sent: 40,
       cmds_done: 40,

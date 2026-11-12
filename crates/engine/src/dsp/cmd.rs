@@ -75,6 +75,9 @@ pub enum Cmd {
     Workers(Option<Box<Workers>>),
     /// Render ahead's threads and lead in seconds (None: every strip plays live). See `ahead/`.
     Ahead(Option<Arc<ahead::AheadShared>>, f64),
+    /// The tracks that play live whatever render ahead's on: the selected track, and those with a
+    /// plug-in window open (see `ahead/`).
+    KeepLive([Option<Id>; ahead::KEEP_LIVE]),
     /// What tracks need to go ahead (`TrackDsp::prepare_ahead`), made on the session's thread.
     AheadCtls(Vec<(Id, Arc<ahead::AheadCtl>)>),
     /// Which strips wait for which, for the workers. None drops it.

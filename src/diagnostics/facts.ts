@@ -97,6 +97,7 @@ export function loadFacts(d: Diagnostics, c: Counts): Section {
       counted("Late buffers", c, "late_blocks", "Buffers that took longer than their own audio: each is a dropout."),
       counted("Overloads", c, "overloads", "Times callbacks ran late for 60 ms in a row and the engine played silence for a moment.", `${c.now.overloads}${overload}`),
       counted("Engine errors", c, "engine_errors", "Buffers silenced because processing panicked."),
+      counted("Not ready ahead", c, "ahead_misses", "Blocks render ahead hadn't rendered in time: their track was taken back and played live."),
       counted("Bad plug-in output", c, "bad_audio", "Buffers in which a plug-in put out NaNs or a runaway level."),
       { label: "Commands sent / done", value: `${num(l.cmds_sent)} / ${num(l.cmds_done)}`, hint: "Edits sent to the audio thread, and those it has applied." },
       counted("Commands dropped", c, "cmds_dropped", "Commands given up on because the audio thread took none for a second."),
@@ -225,6 +226,7 @@ function trackState(t: TrackDiagnostics): string {
   if (dead.length) s.push(`not responding: ${dead.join(", ")}`);
   if (t.off) s.push("off");
   if (t.frozen) s.push("frozen");
+  if (t.ahead && !t.off) s.push("rendered ahead");
   if (t.asleep && !t.off) s.push(t.asleep === 1 ? "1 plug-in asleep" : `${t.asleep} plug-ins asleep`);
   return s.join("; ");
 }

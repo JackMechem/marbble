@@ -8,6 +8,7 @@ export interface Counters {
   late_blocks: number;
   overloads: number;
   engine_errors: number;
+  ahead_misses: number;
   bad_audio: number;
   cmds_dropped: number;
   overruns: number;
@@ -26,6 +27,7 @@ export function countersOf(d: Diagnostics): Counters {
     late_blocks: l.late_blocks,
     overloads: l.overloads,
     engine_errors: l.engine_errors,
+    ahead_misses: l.ahead_misses,
     bad_audio: l.bad_audio,
     cmds_dropped: l.cmds_dropped,
     overruns: l.overruns,

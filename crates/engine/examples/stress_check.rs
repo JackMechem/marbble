@@ -29,8 +29,8 @@
 //!                       then unused
 //!   --from S            where to play from, in seconds (default 0)
 //!   --stopped           measure with the transport stopped, as when the project sits open
-//!   --ahead S           render tracks that aren't live S seconds ahead (#448), on as many render
-//!                       threads as Automatic has
+//!   --ahead S           Settings › Audio › Render Ahead: tracks that aren't live rendered S
+//!                       seconds ahead (#448), on as many render threads as are processing
 //!   --tracks N          instrument tracks (default 32)
 //!   --audio N           audio tracks (default 8)
 //!   --seed N            the project's seed (default 1)
@@ -505,7 +505,9 @@ fn main() {
     let output = if o.null { Some(NULL_OUTPUT.to_string()) } else { o.output.clone() };
     let host = if o.null { Some("ALSA".to_string()) } else { o.host.clone() };
     let buffer = o.buffers[0];
-    let cfg = AudioConfig { host, output, input: None, input_enabled: false, buffer_size: buffer, processing_threads: 1, ..Default::default() };
+    let render_ahead_ms = o.ahead.map_or(0, |s| (s * 1000.0).round() as u32);
+    let cfg =
+        AudioConfig { host, output, input: None, input_enabled: false, buffer_size: buffer, processing_threads: 1, render_ahead_ms, ..Default::default() };
     // A saved project may use any plug-in the app has scanned.
     let plugins = if o.project.is_some() { daw_engine::library::plugin_db::load_cache().unwrap_or_default() } else { Vec::new() };
     let mut s = Session::new(cfg, plugins);
@@ -526,9 +528,6 @@ fn main() {
     };
     // What Settings › Processing Threads › Automatic is here, as the app works it out.
     let automatic = s.thread_choices().automatic;
-    if let Some(lead) = o.ahead {
-        s.set_render_ahead(Some((automatic as usize, lead)));
-    }
     let settings = o.threads.clone().unwrap_or_else(|| (1..=automatic.max(2)).chain([AUTOMATIC]).collect());
     let topo = Topology::detect();
     let device = s.audio_status.output_name.clone().unwrap_or_default();

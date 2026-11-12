@@ -311,6 +311,7 @@ impl Engine {
                     self.discard(Garbage::Ahead(old));
                 }
             }
+            Cmd::KeepLive(ids) => self.ahead.keep_live = ids,
             Cmd::AheadCtls(ctls) => {
                 // Shared, not moved out: the list goes back to the session, which drops what no
                 // strip took.
