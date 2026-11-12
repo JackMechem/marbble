@@ -273,6 +273,11 @@ pub struct TrackDsp {
     pub(super) outs: Outlets,
     /// How long the strip's last block took, in seconds.
     pub(super) spent: f32,
+    /// Some of its inserts slept through its last block (see `idle/`).
+    pub(super) napping: bool,
+    /// Its share of a block, smoothed, when its plug-ins last all ran here: what it adds back when
+    /// they wake or it comes back from render ahead (see `Parallel::weigh`).
+    pub(super) awake_share: f32,
     /// What its folder does to it this block, read before the pool started.
     pub(super) fold_now: auto::FoldState,
     /// It sits out every block: its plug-in stopped responding on a worker, and this is the stand-in
@@ -338,6 +343,8 @@ impl TrackDsp {
             feed: Default::default(),
             outs: Outlets::new(),
             spent: 0.0,
+            napping: false,
+            awake_share: 0.0,
             fold_now: Default::default(),
             left_out: false,
             stand_in: false,

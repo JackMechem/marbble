@@ -29,6 +29,8 @@
 //!                       then unused
 //!   --from S            where to play from, in seconds (default 0)
 //!   --stopped           measure with the transport stopped, as when the project sits open
+//!   --restarts S        every S seconds, stop, leave it stopped for 5 s (its plug-ins fall
+//!                       asleep), locate back and play again, as someone working on a song does
 //!   --ahead S           render tracks that aren't live S seconds ahead (#448), on as many render
 //!                       threads as Automatic has
 //!   --tracks N          instrument tracks (default 32)
@@ -80,6 +82,7 @@ struct Opts {
     project: Option<PathBuf>,
     from: f64,
     stopped: bool,
+    restarts: Option<f64>,
     ahead: Option<f64>,
     tracks: usize,
     audio: usize,
@@ -131,6 +134,7 @@ fn parse() -> Opts {
         project: None,
         from: 0.0,
         stopped: false,
+        restarts: None,
         ahead: None,
         tracks: 32,
         audio: 8,
@@ -159,6 +163,7 @@ fn parse() -> Opts {
             "--project" => o.project = Some(val().into()),
             "--from" => o.from = num(val()),
             "--stopped" => o.stopped = true,
+            "--restarts" => o.restarts = Some(num(val())),
             "--ahead" => o.ahead = Some(num(val())),
             "--tracks" => o.tracks = num(val()) as usize,
             "--audio" => o.audio = num(val()) as usize,
@@ -394,7 +399,22 @@ fn measure(s: &mut Session, o: &Opts, buffer: u32, setting: u32) -> Run {
     play_for(s, o.warmup, o.stopped);
     let before = Counters::read(&st);
     st.block_loads.clear();
-    play_for(s, o.seconds, o.stopped);
+    match o.restarts {
+        Some(every) => {
+            let from = (o.from * s.sample_rate()) as i64;
+            let end = Instant::now() + Duration::from_secs_f64(o.seconds);
+            while Instant::now() < end {
+                play_for(s, every.min(o.seconds), false);
+                s.stop();
+                transport::wait_for(s, false);
+                play_for(s, 5.0, true);
+                s.locate(from);
+                s.play();
+                transport::wait_for(s, true);
+            }
+        }
+        None => play_for(s, o.seconds, o.stopped),
+    }
     let loads = st.block_loads.read();
     let after = Counters::read(&st);
     let health = s.threads_health_for_checks();

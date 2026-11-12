@@ -575,6 +575,7 @@ fn run_inserts<R: Routes>(cx: &BlockCtx<'_>, t: &mut TrackDsp, sc: &mut Scratch,
         }
     }
     t.load.asleep(asleep);
+    t.napping = asleep > 0;
     true
 }
 

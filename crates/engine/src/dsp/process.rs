@@ -214,7 +214,8 @@ impl Engine {
         let l = (spent / budget) as f32;
         self.load = self.load * 0.9 + l * 0.1;
         self.status.cpu_load.store(self.load.to_bits(), Ordering::Relaxed);
-        self.parallel.weigh(l, self.load);
+        let standby = self.standby_load(frames);
+        self.parallel.weigh(l, self.load, standby);
         // A render is meant to run flat out, so it isn't a late block.
         if !self.offline {
             self.note_block_load(l, budget);
@@ -232,6 +233,23 @@ impl Engine {
             let slowest = self.tracks.iter().max_by(|a, b| a.spent.total_cmp(&b.spent)).map_or(0, |t| t.id);
             self.report_overload(spent as f32, slowest, false, false);
         }
+    }
+
+    /// The share of a block that could come back at once: what the strips whose plug-ins are asleep,
+    /// or whose source is rendered ahead, took when they last played whole here. Each strip that
+    /// played whole this callback updates its own.
+    fn standby_load(&mut self, frames: usize) -> f32 {
+        let budget = (frames as f64 / self.sample_rate) as f32;
+        let mut standby = 0.0;
+        for t in &mut self.tracks {
+            let away = t.ahead.as_ref().is_some_and(|a| a.lent());
+            if away || t.napping {
+                standby += t.awake_share;
+            } else if budget > 0.0 && !t.left_out && !t.dormant {
+                t.awake_share = t.awake_share * 0.9 + t.spent / budget * 0.1;
+            }
+        }
+        standby
     }
 
     /// Takes in a block that used `load` of its `budget` seconds, for the peak meter and the count

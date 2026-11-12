@@ -212,14 +212,27 @@ fn a_route_the_graph_lacks_goes_serial_at_once_and_a_new_graph_brings_it_back() 
 #[test]
 fn a_light_project_stays_on_the_callback_until_the_load_climbs() {
     let mut p = Parallel::default();
-    p.weigh(0.05, 0.05);
+    p.weigh(0.05, 0.05, 0.0);
     assert!(!p.engaged);
-    p.weigh(0.2, 0.06);
+    p.weigh(0.2, 0.06, 0.0);
     assert!(p.engaged, "one heavy block is enough");
-    p.weigh(0.01, 0.2);
+    p.weigh(0.01, 0.2, 0.0);
     assert!(p.engaged, "the average is still up");
-    p.weigh(0.01, 0.1);
+    p.weigh(0.01, 0.1, 0.0);
     assert!(!p.engaged, "no workers: under the mark means under it");
+}
+
+#[test]
+fn work_that_could_come_back_at_once_keeps_the_pool_engaged() {
+    // Plug-ins asleep or rendered ahead leave the callback light, but they can all come back in one
+    // block (a locate, Play): what they took then keeps the pool ready (#454).
+    let mut p = Parallel::default();
+    p.weigh(0.01, 0.01, 0.5);
+    assert!(p.engaged, "light now, heavy on standby");
+    p.weigh(0.01, 0.01, 0.5);
+    assert!(p.engaged, "and it stays so");
+    p.weigh(0.01, 0.01, 0.05);
+    assert!(!p.engaged, "little on standby: alone again");
 }
 
 /// A panic in a strip, once it's told to, on whichever thread has it.
