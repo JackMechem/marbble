@@ -440,6 +440,17 @@ fn callbacks(r: &mut crate::dsp::tests::Rig, buf: &mut [f32], k: usize, at: i64)
     (slowest, (at..at + (k * MAX_BLOCK) as i64).contains(&r.engine.pos))
 }
 
+/// Waits (up to two seconds) until a render thread is in every lent strip's block: a fixed sleep
+/// isn't enough on a slow runner, where the render thread may not have started it yet.
+fn until_rendering(r: &crate::dsp::tests::Rig) {
+    let until = std::time::Instant::now() + std::time::Duration::from_secs(2);
+    let busy = |r: &crate::dsp::tests::Rig| r.engine.tracks.iter().filter_map(|t| t.ahead.as_ref()).all(|a| a.busy.load(Ordering::SeqCst));
+    while !busy(r) && std::time::Instant::now() < until {
+        std::thread::sleep(std::time::Duration::from_millis(1));
+    }
+    assert!(busy(r), "the render threads went into the strips' blocks");
+}
+
 #[test]
 fn a_locate_never_waits_for_the_render_threads() {
     // A command that changed lent strips waited on the audio thread for each one's render thread
@@ -453,7 +464,7 @@ fn a_locate_never_waits_for_the_render_threads() {
     let _release = Release(&SLOW);
     SLOW.store(true, Ordering::SeqCst);
     r.engine.process(&[], 0, &mut buf, 2);
-    std::thread::sleep(std::time::Duration::from_millis(5));
+    until_rendering(&r);
 
     let to = 200_000;
     r.tx.push(Cmd::Locate(to)).ok().unwrap();
@@ -479,7 +490,7 @@ fn a_command_for_a_strip_whose_render_thread_hangs_gives_it_up_without_holding_t
     let _release = Release(&HUNG);
     HUNG.store(true, Ordering::SeqCst);
     r.engine.process(&[], 0, &mut buf, 2);
-    std::thread::sleep(std::time::Duration::from_millis(5));
+    until_rendering(&r);
 
     let to = 100_000;
     r.tx.push(Cmd::Locate(to)).ok().unwrap();
@@ -519,7 +530,7 @@ fn a_command_waiting_for_its_strips_when_a_render_starts_is_applied_before_it() 
     let _release = Release(&SLOW_RENDER);
     SLOW_RENDER.store(true, Ordering::SeqCst);
     r.engine.process(&[], 0, &mut buf, 2);
-    std::thread::sleep(std::time::Duration::from_millis(5));
+    until_rendering(&r);
 
     let to = 200_000;
     for cmd in [Cmd::Locate(to), Cmd::Metronome { on: true, count_in: false }, Cmd::Stop] {
