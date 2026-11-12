@@ -57,7 +57,7 @@ pub fn create_midi_region(state: State<AppState>, track: Id, start: i64, length:
             }
             e.to_string()
         })?];
-        s.frozen_guard().map_err(|e| e.to_string())?;
+        s.edit_guard().map_err(|e| e.to_string())?;
         Ok(Made { snapshot: snapshot(s), ids })
     })
 }
@@ -144,7 +144,8 @@ pub fn import_audio_files(state: State<AppState>, paths: Vec<String>, track: Opt
     with(&state, |s| {
         let paths: Vec<PathBuf> = paths.into_iter().map(PathBuf::from).collect();
         s.checkpoint(if paths.len() > 1 { "Import Audio Files" } else { "Import Audio" }, None, false);
-        let errors = s.import_audio_files(&paths, track, start, index);
+        let mut errors = s.import_audio_files(&paths, track, start, index);
+        errors.extend(s.edit_guard().err().map(|e| e.to_string()));
         ImportResult { snapshot: snapshot(s), errors }
     })
 }

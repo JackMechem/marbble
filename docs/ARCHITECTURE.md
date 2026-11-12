@@ -328,7 +328,7 @@ sequenceDiagram
   C->>S: drag_move_regions(moves)
   S->>S: update Project, rebuild the track's playback list
   S->>E: Cmd::Regions(track, new list)
-  C->>S: frozen_guard()
+  C->>S: edit_guard()
   C-->>API: Snapshot
   API->>API: setState({ snap }), or a toast on error
   E-->>S: Garbage::Regions(old), dropped in idle
@@ -345,7 +345,7 @@ sequenceDiagram
   | Wrapper | Undo step | Returns |
   |---|---|---|
   | `snap`, `try_snap` | no | `Snapshot` (or `Result`) |
-  | `edit`, `try_edit` | yes | `Snapshot` (or `Result`), `refused` set when a frozen track was protected |
+  | `edit`, `try_edit` | yes | `Snapshot` (or `Result`), `refused` set when `edit_guard` put the edit back |
   | `edit_made` | yes | `Made`: the snapshot and the new ids |
 
   `key` merges a burst of edits (a fader drag, typing) into one step; `plugins` captures plug-in
@@ -379,8 +379,11 @@ changed rather than every note in the project.
 - Clips are never unloaded by undo, so redo can bring their regions back.
 - Edits in a VST3's own editor become steps of their own, carrying the plug-in state to load
   (`session/plugins/editor_undo/`).
-- `frozen_guard`, after every checkpointed edit, puts back anything that changed a frozen track's
-  regions or plug-ins, and drops the step if nothing else changed.
+- `edit_guard`, after every checkpointed edit, runs `frozen_guard`, which puts back anything that
+  changed a frozen track's regions or plug-ins and drops the step if nothing else changed, and
+  `timeline_guard`, which puts back an edit that took a region past the end of the timeline
+  (`MAX_PROJECT_LENGTH`, 2³¹ samples as in Logic Pro), or further past it than it was, and drops
+  its step.
 - Opening or creating a project clears the history.
 
 **The rule:** anything new sent to the engine must also be resent by `restore` (undo), and built by
@@ -521,7 +524,10 @@ inaudible.
   processing order. Float addition isn't associative, so that order is what keeps the bits equal.
 - **The graph.** The session builds a `TaskGraph` (`dsp/graph/`) from the project's routes and
   sends it in `Cmd::Graph` after each edit (`Session::sync_parallel`). The engine checks it against
-  the routes it resolved itself and plays serially until it holds, so a route can't race. The
+  the routes it resolved itself and plays serially until it holds, so a route can't race. A
+  rebuild (a project opened, Reset Audio Engine) swaps the graph in with the strips
+  (`Engine::replace_graph`), with any workers it needs started before the plug-ins load, so a heavy
+  project's first block is already on the pool. The
   graph's tasks are `Project::process_order`, which outputs, sends and side-chain keys decide, so
   an edit that can change that order sends `Cmd::Order` too, a plug-in leaving a keyed slot among
   them; otherwise the engine keeps its old order, which the graph no longer matches.

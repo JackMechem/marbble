@@ -113,10 +113,21 @@ impl Session {
         if !std::mem::take(&mut self.graph_dirty) {
             return;
         }
+        let graph = self.plan_parallel();
+        if graph != self.threads.graph {
+            self.threads.graph.clone_from(&graph);
+            self.send(Cmd::Graph(graph.map(Box::new)));
+        }
+    }
+
+    /// The task graph of the project as it stands, with the workers started or stopped to suit it
+    /// and the setting: what `sync_parallel` sends the engine, and what `rebuild_graph` swaps in
+    /// with the strips it builds.
+    pub(crate) fn plan_parallel(&mut self) -> Option<TaskGraph> {
         let threads = self.processing_threads();
         if threads <= 1 {
             self.stop_workers();
-            return;
+            return None;
         }
         let graph = match TaskGraph::of_project(&self.project) {
             Ok(g) => Some(g),
@@ -127,10 +138,6 @@ impl Session {
         };
         // Not for a project with nothing to gain, so a light session never has the threads at all.
         let worth = self.threads.test != ParallelTest::default() || graph.as_ref().is_some_and(|g| g.heavy_width() >= 2);
-        if graph != self.threads.graph {
-            self.threads.graph.clone_from(&graph);
-            self.send(Cmd::Graph(graph.map(Box::new)));
-        }
         let realtime = self.audio_status.running && self.audio_config.output.as_deref() != Some(audio_io::NULL_OUTPUT);
         let wanted = (threads, realtime);
         if worth && !self.threads.forced && (self.threads.running != Some(wanted) || self.threads.renew) {
@@ -144,15 +151,13 @@ impl Session {
             self.threads.running = Some(wanted);
             self.started_workers(opts);
         }
+        graph
     }
 
     fn stop_workers(&mut self) {
         if self.threads.running.take().is_some() {
             self.threads.health = None;
             self.send(Cmd::Workers(None));
-        }
-        if self.threads.graph.take().is_some() {
-            self.send(Cmd::Graph(None));
         }
     }
 
