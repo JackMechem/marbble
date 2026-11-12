@@ -43,6 +43,7 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Fixed
 
+- **No horizontal scroll bar in Settings on macOS.**
 - **No more overload as you locate, play or select a track in a heavy project.** With its
   plug-ins asleep, or its tracks rendered ahead, a project left the audio thread nearly idle, so
   the extra processing threads stood down; when the work came back at once (eleven amp models on

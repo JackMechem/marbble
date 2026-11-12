@@ -10,8 +10,11 @@
   padding: 6px 6px 5px;
 }
 
+/* Never sideways: overflow-y alone makes overflow-x auto, and macOS then shows a bar for a pixel
+   too wide. The padding keeps focus rings in. */
 .settings-body {
   max-height: calc(100vh - 190px);
+  overflow-x: hidden;
   overflow-y: auto;
   margin: 0 -8px;
   padding: 0 8px;
@@ -35,7 +38,7 @@
 
 .pref-grid {
   display: grid;
-  grid-template-columns: 130px 1fr;
+  grid-template-columns: 130px minmax(0, 1fr);
   align-items: start;
   gap: 9px 10px;
 }
@@ -61,6 +64,7 @@
 
 .pref-cell .select {
   width: 320px;
+  max-width: 100%;
 }
 
 .pref-cell .row-inline .select {
