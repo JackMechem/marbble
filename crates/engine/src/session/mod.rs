@@ -248,8 +248,10 @@ pub struct Session {
     /// seen (see `audio_io/watch.rs` and `session/engine/device.rs`).
     device_watch: audio_io::watch::Watch,
     device_events_seen: (u32, u32),
-    /// Times tracks were left out already reported (see `session/engine/left_out.rs`).
+    /// Times tracks were left out already reported, and the newest strip held then (its
+    /// `HeldStrip::token`; see `session/engine/left_out.rs`).
     left_events_seen: u32,
+    left_token_seen: u64,
     /// Some plug-in controller is marked as not to be called (see `session/engine/left_out.rs`).
     marked_unresponsive: bool,
     /// Strips left in plug-ins that `EngineStatus::held` couldn't list, already logged.
@@ -443,6 +445,7 @@ impl Session {
             device_watch: Default::default(),
             device_events_seen: (0, 0),
             left_events_seen: 0,
+            left_token_seen: 0,
             marked_unresponsive: false,
             held_unlisted_seen: 0,
             bad_audio_at: Instant::now() - Duration::from_secs(60),

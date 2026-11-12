@@ -3992,7 +3992,7 @@ When a plug-in on one of the extra processing threads (Settings › Audio › Pr
 doesn't return from its work for a tenth of a second, Marbble leaves it there and, after a moment
 of silence, plays on without it. The plug-in's track and anything it feeds (an aux it sends to,
 the summing stack it plays through, a track it keys a side-chain for) stay silent, and a message
-names the plug-in and the track. Playback carries on, but a recording stops, as the take would
+names the plug-in and the track (each of them, when several stop at once). Playback carries on, but a recording stops, as the take would
 have a gap.
 
 If the plug-in responds again, the track comes back by itself with the plug-in loaded afresh,

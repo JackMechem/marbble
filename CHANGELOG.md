@@ -20,6 +20,9 @@ All notable changes to Marbble are recorded here. The format follows
   plug-in with a side-chain key, or loading another in its slot, left the engine playing the
   tracks in the old order, so with more than one processing thread every buffer was played on
   one thread until the next routing change.
+- **Every plug-in that stops responding is named.** When several stopped at once (as every
+  instance of one plug-in can), only one got a message, and the other tracks sat out without a
+  word until they came back.
 
 ## [0.1.0-alpha.15] - 2026-11-11
 
