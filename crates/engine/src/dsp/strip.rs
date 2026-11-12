@@ -1,5 +1,5 @@
-//! One strip's work for one block ([`run_strip`]): regions or instrument, Channel EQ, inserts,
-//! automation, fader, sends and output. The serial loop and the worker threads run this same code;
+//! One strip's work for one block ([`run_strip`]): its source (regions or instrument, Channel EQ,
+//! inserts, their automation) and its mix (fader, sends, output, their automation). The serial loop and the worker threads run this same code;
 //! [`Routes`] says how the strip reaches other strips.
 //!
 //! Runs on the audio thread, or on one of the pool's real-time workers: it must not allocate.
@@ -21,8 +21,10 @@ pub(super) enum BlockEnd {
 /// `routes` saying how the strip reaches other strips (see [`Routes`]).
 ///
 /// In order: the strip's source (an audio track's regions and input, an instrument's MIDI and
-/// instrument, a bus's input), its inserts, then the pre-fader sends, the fader and output, and the
-/// post-fader sends. A strip left in a plug-in that didn't return (`Routes::leave`) stops at once.
+/// instrument, a bus's input) and its inserts ([`play_source`]), then its mix: the pre-fader sends,
+/// the fader and output, and the post-fader sends ([`mix`]). The two go by a [`Plan`] worked out
+/// first, so the source can be played apart from the mix. A strip left in a plug-in that didn't
+/// return (`Routes::leave`) stops at once.
 pub(super) fn run_strip<R: Routes>(cx: &BlockCtx<'_>, ti: usize, t: &mut TrackDsp, sc: &mut Scratch, routes: &mut R) {
     let n = cx.n;
     t.instrument_ran = false;
@@ -60,12 +62,39 @@ pub(super) fn run_strip<R: Routes>(cx: &BlockCtx<'_>, ti: usize, t: &mut TrackDs
     if t.dormant {
         t.wake(if cx.snap_gains { 0 } else { track_off::resume_frames(cx.sr) });
     }
+    let plan = plan_block(cx, t, routes, role, off);
+    if play_source(cx, t, sc, routes, &plan) {
+        mix(cx, ti, t, sc, routes, plan);
+    }
+}
+
+/// What a strip's block goes by, worked out before it plays: the strip's source and its mix each
+/// take what they need from it, so either can run apart from the other.
+pub(super) struct Plan {
+    role: Option<Role>,
+    /// Switched off, fading out through its fader.
+    off: bool,
+    /// The track an isolated render captures.
+    tap: bool,
+    /// Its Channel EQ and plug-ins run (an isolated render may leave the tap track's out).
+    fx: bool,
+    /// The track's settings; the mix applies its folder's and its own mix automation.
+    p: TrackParams,
+    /// Recording, or monitored in Low Latency Mode: no delay compensation.
+    live: bool,
+    /// The plug-ins Low Latency Mode leaves out.
+    ll_skip: u16,
+    /// Where on the timeline its plug-ins hear, and its fader is.
+    fx_at: i64,
+    mix_at: i64,
+    /// The transport as its plug-ins hear it.
+    transport: TransportInfo,
+}
+
+fn plan_block<R: Routes>(cx: &BlockCtx<'_>, t: &TrackDsp, routes: &R, role: Option<Role>, off: bool) -> Plan {
     let tap = role == Some(Role::Tap);
     let fx = !tap || cx.iso.map(|i| i.effects).unwrap_or(true);
-    t.l[..n].fill(0.0);
-    t.r[..n].fill(0.0);
-    t.midi.clear();
-    let mut p = t.params;
+    let p = t.params;
     let pdc = t.pdc;
     // A live track (recording, or monitored in Low Latency Mode) skips its delay
     // compensation, so the performer isn't kept waiting (see session/engine/pdc.rs). An aux on an
@@ -83,30 +112,50 @@ pub(super) fn run_strip<R: Routes>(cx: &BlockCtx<'_>, ti: usize, t: &mut TrackDs
     // `output_time` late: automation and the plug-ins' transport follow the audio.
     let fx_at = cx.pos - pdc.input_time as i64;
     let mix_at = cx.pos - pdc.output_time as i64;
-    // A folder's lanes are read where this strip's fader is, like its own.
-    if let Some(j) = t.fold_idx.filter(|&j| j > ti) {
-        auto::apply_fold(&mut p, routes.fold(t.fold_now, j, mix_at, cx.playing));
-    }
     let transport = if pdc.input_time > 0 { transport_at(cx.tempo, &cx.transport, fx_at) } else { cx.transport };
+    Plan { role, off, tap, fx, p, live, ll_skip, fx_at, mix_at, transport }
+}
+
+/// The strip's source: an audio track's regions and input, an instrument's MIDI and instrument,
+/// or a bus's input, then its inserts, with their automation, leaving what it plays before its
+/// fader in `t.l` and `t.r`. False if there's no mix to follow: a folder, or a strip left in a
+/// plug-in that didn't return.
+fn play_source<R: Routes>(cx: &BlockCtx<'_>, t: &mut TrackDsp, sc: &mut Scratch, routes: &mut R, plan: &Plan) -> bool {
+    let n = cx.n;
+    t.l[..n].fill(0.0);
+    t.r[..n].fill(0.0);
+    t.midi.clear();
     // Write mode plays the live values, which are being recorded over the lanes.
     if cx.playing && matches!(t.auto_mode, AutoMode::Read | AutoMode::Touch | AutoMode::Latch) {
-        read_automation(t, &mut p, fx_at, mix_at, n);
+        read_plugin_automation(t, plan.fx_at, n);
     }
-
     match t.kind {
         // A folder only shapes its subtracks' settings (worked out by the session).
-        TrackKind::Folder => return,
-        TrackKind::Summing | TrackKind::Aux => take_bus_input(cx, t, sc, routes, &p, live),
-        TrackKind::Audio => play_audio_track(cx, t, &p),
+        TrackKind::Folder => return false,
+        TrackKind::Summing | TrackKind::Aux => take_bus_input(cx, t, sc, routes, &plan.p, plan.live),
+        TrackKind::Audio => play_audio_track(cx, t, &plan.p),
         TrackKind::Instrument => {
-            if !play_instrument(cx, t, routes, &transport, ll_skip) {
-                return;
+            if !play_instrument(cx, t, routes, &plan.transport, plan.ll_skip) {
+                return false;
             }
         }
     }
     track_off::fade_in(&mut t.resume_left, track_off::resume_frames(cx.sr), &mut t.l[..n], &mut t.r[..n]);
-    if fx && !run_inserts(cx, t, sc, routes, &transport, ll_skip) {
-        return;
+    !plan.fx || run_inserts(cx, t, sc, routes, &plan.transport, plan.ll_skip)
+}
+
+/// The strip's mix, from what its source left in `t.l` and `t.r`: its folder's and its own mix
+/// automation, the delay compensation, the pre-fader sends, the fader and output, and the
+/// post-fader sends.
+fn mix<R: Routes>(cx: &BlockCtx<'_>, ti: usize, t: &mut TrackDsp, sc: &mut Scratch, routes: &mut R, plan: Plan) {
+    let n = cx.n;
+    let mut p = plan.p;
+    // A folder's lanes are read where this strip's fader is, like its own.
+    if let Some(j) = t.fold_idx.filter(|&j| j > ti) {
+        auto::apply_fold(&mut p, routes.fold(t.fold_now, j, plan.mix_at, cx.playing));
+    }
+    if cx.playing && matches!(t.auto_mode, AutoMode::Read | AutoMode::Touch | AutoMode::Latch) {
+        read_mix_automation(t, &mut p, plan.mix_at);
     }
     // The delay line keeps the post-plug-in signal; the output and the sends read it
     // at their own delays (none while live), gliding to a new delay (see `pdc.rs`).
@@ -115,14 +164,15 @@ pub(super) fn run_strip<R: Routes>(cx: &BlockCtx<'_>, ti: usize, t: &mut TrackDs
         d.write(&t.l[..n], &t.r[..n]);
     }
 
-    let audible = !off
+    let role = plan.role;
+    let audible = !plan.off
         && match role {
             Some(Role::Member { heard }) => heard,
             Some(Role::Key) => !p.mute,
             Some(_) => true,
             None => !p.mute && (!cx.any_solo || p.solo),
         };
-    let mix = Mixing { ti, role, p, audible, live, tap };
+    let mix = Mixing { ti, role, p, audible, live: plan.live, tap: plan.tap };
     send_pre_fader(cx, &mix, t, sc, routes);
     let out_tap = fader_and_output(cx, &mix, t, sc, routes);
     send_post_fader(cx, &mix, t, sc, routes, out_tap);
@@ -166,17 +216,42 @@ fn pdc_fade(sr: f64) -> u32 {
     (pdc::FADE_SECS * sr) as u32
 }
 
-/// Automation overrides the fader, pan, mute and send levels in `p`, and drives plug-in
-/// parameters. Plug-in lanes are read where the plug-ins hear the timeline (`fx_at`), the rest
-/// where the fader is (`mix_at`). A parameter being touched is left to the hand on it.
-fn read_automation(t: &mut TrackDsp, p: &mut TrackParams, fx_at: i64, mix_at: i64, n: usize) {
+/// Automation drives plug-in parameters, read where the plug-ins hear the timeline (`fx_at`). A
+/// parameter being touched is left to the hand on it.
+fn read_plugin_automation(t: &mut TrackDsp, fx_at: i64, n: usize) {
     for (k, lane) in t.automation.iter().enumerate() {
+        let AutoTarget::Plugin { uid, param } = lane.target else { continue };
         if t.touched.contains(&Some(lane.target)) {
             continue;
         }
-        let at = if matches!(lane.target, AutoTarget::Plugin { .. }) { fx_at } else { mix_at };
-        let last = at + n as i64 - 1;
-        let Some(v) = value_at(&lane.points, at) else { continue };
+        let Some(v) = value_at(&lane.points, fx_at) else { continue };
+        // Two points per block: the plug-in ramps between them.
+        let v1 = value_at(&lane.points, fx_at + n as i64 - 1).unwrap_or(v);
+        let sent = t.auto_sent.get(k).copied().unwrap_or(f32::NAN);
+        if v == sent && v1 == sent {
+            continue;
+        }
+        let slot = t.inserts.iter_mut().flatten().chain(t.instrument.iter_mut()).find(|i| i.uid == uid);
+        if let Some(ins) = slot {
+            ins.plugin.set_param(param, 0, v as f64);
+            if v1 != v {
+                ins.plugin.set_param(param, n as i32 - 1, v1 as f64);
+            }
+        }
+        if let Some(s) = t.auto_sent.get_mut(k) {
+            *s = v1;
+        }
+    }
+}
+
+/// Automation overrides the fader, pan, mute and send levels in `p`, read where the fader is
+/// (`mix_at`). A parameter being touched is left to the hand on it.
+fn read_mix_automation(t: &TrackDsp, p: &mut TrackParams, mix_at: i64) {
+    for lane in t.automation.iter() {
+        if matches!(lane.target, AutoTarget::Plugin { .. }) || t.touched.contains(&Some(lane.target)) {
+            continue;
+        }
+        let Some(v) = value_at(&lane.points, mix_at) else { continue };
         match lane.target {
             AutoTarget::Volume => p.volume = volume_gain(v) * p.stack_gain,
             AutoTarget::Pan => p.pan = v,
@@ -189,24 +264,7 @@ fn read_automation(t: &mut TrackDsp, p: &mut TrackParams, fx_at: i64, mix_at: i6
                     }
                 }
             }
-            AutoTarget::Plugin { uid, param } => {
-                // Two points per block: the plug-in ramps between them.
-                let v1 = value_at(&lane.points, last).unwrap_or(v);
-                let sent = t.auto_sent.get(k).copied().unwrap_or(f32::NAN);
-                if v == sent && v1 == sent {
-                    continue;
-                }
-                let slot = t.inserts.iter_mut().flatten().chain(t.instrument.iter_mut()).find(|i| i.uid == uid);
-                if let Some(ins) = slot {
-                    ins.plugin.set_param(param, 0, v as f64);
-                    if v1 != v {
-                        ins.plugin.set_param(param, n as i32 - 1, v1 as f64);
-                    }
-                }
-                if let Some(s) = t.auto_sent.get_mut(k) {
-                    *s = v1;
-                }
-            }
+            AutoTarget::Plugin { .. } => {}
         }
     }
 }
