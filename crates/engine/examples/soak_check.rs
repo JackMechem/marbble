@@ -21,7 +21,8 @@
 //! points into its lane; such a run can't be replayed.
 //! With `tracks`, the large mode: first duplicating tracks (one undo step each) up to that many,
 //! which must render the same twice; the edits then duplicate no further, and a reopened project
-//! must render the same twice too. A few hundred tracks take minutes per render (#112).
+//! must render the same twice too. A few hundred tracks take minutes per render (#112). Without
+//! it, the edits duplicate up to 512 tracks.
 //! To find the edit that broke a save and reopen, set SOAK_REOPEN_EVERY=1 (and
 //! SOAK_REOPEN_FROM=<edit> to start checking there). When undoing them all doesn't give the
 //! first document back, it names the edit whose undo went wrong; SOAK_DUMP=1 also writes the
@@ -31,6 +32,7 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::PathBuf;
 
 use daw_engine::audio_io::AudioConfig;
+use daw_engine::dsp::graph::{GraphError, TaskGraph};
 use daw_engine::dsp::ParallelTest;
 use daw_engine::edit::arrange_cmds::SectionEdit;
 use daw_engine::edit::fades::DragMode;
@@ -295,6 +297,10 @@ fn tracks_of(s: &Session, f: impl Fn(&daw_engine::model::Track) -> bool) -> Vec<
 /// multiplies its length, so unchecked a few hundred edits made a project days long, whose
 /// pattern regions joined into hundreds of thousands of notes and filled the memory (#434).
 const REPEAT_UP_TO: i64 = 16 * LEN;
+
+/// How many tracks Duplicate Tracks may make, outside the large mode. Each duplication can double
+/// a selection, so a long run grew thousands of tracks and filled the memory undoing them (#486).
+const TRACKS_UP_TO: usize = 512;
 
 /// Where the last copy would end if `ids` were repeated `times` times.
 fn repeat_end(s: &Session, ids: &[Id], times: usize) -> i64 {
@@ -701,9 +707,7 @@ fn edit(s: &mut Session, g: &mut Rng, w: &World, o: &Opts) -> (String, bool) {
             }
             47 => {
                 let mut ids = some(g, &leaves);
-                if let Some(max) = o.max_tracks {
-                    ids.truncate(max.saturating_sub(tracks.len()));
-                }
+                ids.truncate(o.max_tracks.unwrap_or(TRACKS_UP_TO).saturating_sub(tracks.len()));
                 s.duplicate_tracks(&ids, g.chance(60));
             }
             48 => {
@@ -949,8 +953,11 @@ fn main() {
         if i % 7 == 0 {
             s.idle();
         }
-        // The session's graph must keep describing what the engine does, or it plays serially for good.
-        if threads > 1 && !s.pool_usable_for_checks() {
+        // The session's graph must keep describing what the engine does, or it plays serially for
+        // good. A project too big for a graph plays serially anyway (Duplicate Tracks grows a long
+        // run's past it).
+        let fits = !matches!(TaskGraph::of_project(&s.project), Err(GraphError::TooBig(_)));
+        if threads > 1 && fits && !s.pool_usable_for_checks() {
             check(&format!("after edit {i} ({name}) the task graph fits the engine's routes"), false);
             broken = Some(i);
             break;
