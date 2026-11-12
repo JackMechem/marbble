@@ -43,6 +43,8 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Fixed
 
+- **Diagnostics' sidebar:** the selected page's marker is a straight bar, no longer curved by the
+  rounded corners, and a count of one says "1 error" rather than "1 errors".
 - **No more overload as you locate, play or select a track in a heavy project.** With its
   plug-ins asleep, or its tracks rendered ahead, a project left the audio thread nearly idle, so
   the extra processing threads stood down; when the work came back at once (eleven amp models on
