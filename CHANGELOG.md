@@ -15,6 +15,12 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Changed
 
+- **Render Ahead, in Settings › Audio.** Tracks you aren't playing or editing can be rendered up to
+  half a second ahead of the playhead on threads of their own, with the audio thread only mixing
+  them, so a slow buffer no longer drops out: twelve TONE3000 guitars that kept the audio thread
+  at 60 % leave it at 1 %. What you hear is exactly what you'd hear with it off. The selected
+  track, tracks with a plug-in window open and record-enabled tracks play live. Off by default
+  for now; the Diagnostics window shows which tracks are rendered ahead.
 - **The Diagnostics window looks like a task manager.** Pages down the left (Performance, Tracks,
   Log) with the figures that matter along the bottom. Performance draws the engine's load over
   the last minute, with late buffers marked, and a graph per processing thread, as a task manager

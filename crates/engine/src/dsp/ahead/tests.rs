@@ -202,3 +202,40 @@ fn removing_a_lent_track_while_playing_is_safe() {
     while r.garbage.pop().is_ok() {}
     drop(threads);
 }
+
+#[test]
+fn a_track_kept_live_comes_back_at_once_and_stays_until_let_go() {
+    let mut r = rig();
+    let threads = AheadThreads::start(2, r.status.clone());
+    r.tx.push(Cmd::Ahead(Some(threads.shared()), 0.1)).ok().unwrap();
+    for id in 1..=2 {
+        let mut t = TrackDsp::new(id, TrackKind::Audio, params(0.5), Arc::default());
+        t.set_regions(sine());
+        t.set_insert(0, Some(counter(100 + id)));
+        t.prepare_ahead();
+        r.tx.push(Cmd::AddTrack(Box::new(t), usize::MAX)).ok().unwrap();
+    }
+    r.tx.push(Cmd::Play { from: 0 }).ok().unwrap();
+    let mut buf = vec![0.0f32; FRAMES * 2];
+    let mut play = |r: &mut crate::dsp::tests::Rig, k: usize| {
+        for _ in 0..k {
+            r.engine.process(&[], 0, &mut buf, 2);
+        }
+    };
+    let lent = |r: &crate::dsp::tests::Rig, i: usize| r.engine.tracks[i].ahead.as_ref().is_some_and(|a| a.lent());
+    play(&mut r, 10);
+    assert!(lent(&r, 0) && lent(&r, 1));
+    let mut keep = [None; KEEP_LIVE];
+    keep[0] = Some(1);
+    r.tx.push(Cmd::KeepLive(keep)).ok().unwrap();
+    play(&mut r, 1);
+    assert!(!lent(&r, 0) && lent(&r, 1), "the selected track came back, the other stayed ahead");
+    play(&mut r, 20);
+    assert!(!lent(&r, 0), "and it stays live");
+    r.tx.push(Cmd::KeepLive([None; KEEP_LIVE])).ok().unwrap();
+    play(&mut r, 2);
+    assert!(lent(&r, 0), "let go, it goes ahead again");
+    r.tx.push(Cmd::Stop).ok().unwrap();
+    play(&mut r, 2);
+    drop(threads);
+}

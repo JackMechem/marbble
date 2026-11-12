@@ -178,6 +178,10 @@ impl Watch {
         if errors > 0 {
             out.push((WatchKind::Gap, format!("engine error{} (a block silenced after a panic), {when}", times(errors))));
         }
+        let missed = grew(p.ahead_misses as u64, l.ahead_misses as u64);
+        if missed > 0 {
+            out.push((WatchKind::Gap, format!("block{} not rendered ahead in time, played live, {when}", times(missed))));
+        }
         let bad = grew(p.bad_audio as u64, l.bad_audio as u64);
         if bad > 0 {
             out.push((WatchKind::Gap, format!("plug-in output silenced{} (NaN or a runaway level), {when}", times(bad))));

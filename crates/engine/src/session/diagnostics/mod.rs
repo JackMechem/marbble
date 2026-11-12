@@ -90,6 +90,8 @@ pub struct LoadDiagnostics {
     pub overload_track: Option<String>,
     /// Blocks silenced after a panic, and blocks a plug-in put out NaNs or a runaway level in.
     pub engine_errors: u32,
+    /// Blocks render ahead hadn't rendered in time, whose track played live.
+    pub ahead_misses: u32,
     pub bad_audio: u32,
     pub cmds_sent: u64,
     pub cmds_done: u64,
@@ -162,6 +164,8 @@ pub struct TrackDiagnostics {
     pub plugins: Vec<PluginDiagnostics>,
     /// Its inserts that slept through its latest block, fed silence.
     pub asleep: u32,
+    /// Its source is rendered ahead (Settings › Audio › Render Ahead).
+    pub ahead: bool,
 }
 
 /// A plug-in in a track's instrument or insert slot.
