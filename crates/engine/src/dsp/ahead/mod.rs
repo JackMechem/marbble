@@ -644,9 +644,14 @@ pub(super) fn take_block(t: &mut TrackDsp, cx: &BlockCtx<'_>, shared: Option<&Ah
             }
             // For another position: the playhead went elsewhere.
             Some(_) => break,
-            // Being taken back, and no render thread in it: no more blocks are coming. One that is
+            // Being taken back, and no render thread in it: no more blocks are coming, once one
+            // that pushed this block before it came out has been looked for again. One still in it
             // may be making this block, which is waited for as any other.
-            None if ctl.come_back.load(Ordering::SeqCst) && !ctl.busy.load(Ordering::SeqCst) => break,
+            None if ctl.come_back.load(Ordering::SeqCst) && !ctl.busy.load(Ordering::SeqCst) => {
+                if ctl.ring.head().is_none() {
+                    break;
+                }
+            }
             // Recalled for falling behind: silence until its render thread is out, without waiting.
             None if ctl.come_back.load(Ordering::SeqCst) && short >= MAX_SHORT => return silent(t),
             None if cx.wait || Instant::now() < until => {

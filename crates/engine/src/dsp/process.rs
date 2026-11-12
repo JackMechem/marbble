@@ -287,7 +287,7 @@ impl Engine {
     /// For checks, after applying what's queued: whether the task graph holds for the routes.
     #[doc(hidden)]
     pub fn task_graph_fits(&mut self) -> bool {
-        self.process(&[], 0, &mut [], 0);
+        self.apply_queued();
         self.parallel.fits(&self.tracks)
     }
 
@@ -347,7 +347,21 @@ impl Engine {
     pub(crate) fn take_queued(&mut self) {
         self.settle();
         self.take_commands();
-        // One waiting for its strips to come home goes in once they have (or are given up on).
+        self.take_held();
+    }
+
+    /// Off the audio thread (no device, before a render, a check): what a callback of no frames
+    /// does, and a command waiting for its strips to come home (`Ahead::held`) goes in too, so
+    /// what follows hears every edit sent. Left held, a render would apply it partway through, and
+    /// put back what it changed as the render ends.
+    pub(crate) fn apply_queued(&mut self) {
+        self.process(&[], 0, &mut [], 0);
+        self.take_held();
+    }
+
+    /// Waits, off the audio thread, for a held command's strips to come home (or be given up on)
+    /// and applies it and what came after it.
+    fn take_held(&mut self) {
         while self.ahead.held.is_some() {
             std::thread::sleep(std::time::Duration::from_micros(100));
             self.take_commands();

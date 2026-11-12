@@ -166,7 +166,7 @@ impl Engine {
     fn prepare_render(&mut self) -> Saved {
         self.settle();
         // Apply edits that are still queued, so the render hears the latest settings.
-        self.process(&[], 0, &mut [], 0);
+        self.apply_queued();
         // A Stop still draining live is over: the render's own drain comes at its end.
         self.finish_stop();
         // So is shedding after a live overload (a large project that the device's callbacks

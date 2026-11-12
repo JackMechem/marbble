@@ -371,9 +371,9 @@ fn a_strip_that_takes_most_of_the_buffer_live_still_goes_ahead() {
     drop(threads);
 }
 
-/// Takes `SLOW_FOR` a block on a render thread while `SLOW` is set, as a heavy plug-in on a loaded
-/// machine does; nothing on the callback's thread.
-struct Slow;
+/// Takes `SLOW_FOR` a block on a render thread while its flag is set, as a heavy plug-in on a
+/// loaded machine does; nothing on the callback's thread. Each test slows with a flag of its own.
+struct Slow(&'static AtomicBool);
 static SLOW: AtomicBool = AtomicBool::new(false);
 const SLOW_FOR: std::time::Duration = std::time::Duration::from_millis(40);
 
@@ -383,7 +383,7 @@ impl Effect for Slow {
         0.0
     }
     fn process(&mut self, _: &mut [f32], _: &mut [f32], _: Key, _: &FxContext) {
-        if SLOW.load(Ordering::SeqCst) && std::thread::current().name().is_some_and(|n| n.starts_with("marbble-ahead")) {
+        if self.0.load(Ordering::SeqCst) && std::thread::current().name().is_some_and(|n| n.starts_with("marbble-ahead")) {
             std::thread::sleep(SLOW_FOR);
         }
     }
@@ -446,7 +446,7 @@ fn a_locate_never_waits_for_the_render_threads() {
     // to come out, one after another: a locate with four strips mid-render held the callback for
     // a render or more (#471). Now it takes them all out and applies once they're home.
     static INFO: EffectInfo =
-        EffectInfo { id: "test:slow", name: "Slow", category: "Utility", params: &[], meters: &[], sidechain: false, new: |_| Box::new(Slow) };
+        EffectInfo { id: "test:slow", name: "Slow", category: "Utility", params: &[], meters: &[], sidechain: false, new: |_| Box::new(Slow(&SLOW)) };
     let (mut r, threads, mut buf) = lent_rig(&INFO, 4, 0.2);
     // Rings full, then every render thread in a slow block.
     std::thread::sleep(std::time::Duration::from_millis(30));
@@ -495,5 +495,41 @@ fn a_command_for_a_strip_whose_render_thread_hangs_gives_it_up_without_holding_t
     HUNG.store(false, Ordering::SeqCst);
     r.tx.push(Cmd::Stop).ok().unwrap();
     r.engine.process(&[], 0, &mut buf, 2);
+    drop(threads);
+}
+
+static SLOW_RENDER: AtomicBool = AtomicBool::new(false);
+
+#[test]
+fn a_command_waiting_for_its_strips_when_a_render_starts_is_applied_before_it() {
+    // A locate waiting for its strips' render threads was applied partway through the render
+    // that followed, and undone as it ended (#471 review): the bounce played from elsewhere, and
+    // the playhead, Stop and the metronome were lost for live play.
+    static INFO: EffectInfo = EffectInfo {
+        id: "test:slow-render",
+        name: "Slow",
+        category: "Utility",
+        params: &[],
+        meters: &[],
+        sidechain: false,
+        new: |_| Box::new(Slow(&SLOW_RENDER)),
+    };
+    let (mut r, threads, mut buf) = lent_rig(&INFO, 4, 0.2);
+    std::thread::sleep(std::time::Duration::from_millis(30));
+    let _release = Release(&SLOW_RENDER);
+    SLOW_RENDER.store(true, Ordering::SeqCst);
+    r.engine.process(&[], 0, &mut buf, 2);
+    std::thread::sleep(std::time::Duration::from_millis(5));
+
+    let to = 200_000;
+    for cmd in [Cmd::Locate(to), Cmd::Metronome { on: true, count_in: false }, Cmd::Stop] {
+        r.tx.push(cmd).ok().unwrap();
+    }
+    let first = r.engine.render(0, 4800, 0, None, &mut |_| {});
+    SLOW_RENDER.store(false, Ordering::SeqCst);
+    assert_eq!((r.engine.pos, r.engine.playing, r.engine.metronome), (to, false, true), "as commanded before the render");
+    let again = r.engine.render(0, 4800, 0, None, &mut |_| {});
+    assert!(first[0].iter().any(|s| s.abs() > 0.01));
+    assert_eq!(first_difference(&first[0], &again[0]), None, "the render played what a clean one does");
     drop(threads);
 }
