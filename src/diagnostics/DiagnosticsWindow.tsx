@@ -17,7 +17,7 @@ import type { Diagnostics, DiagnosticsSnapshot, LogLine } from "./snapshot";
 import { PerformanceTab } from "./PerformanceTab";
 import { TracksTab } from "./TracksTab";
 import { addSample, type Sample } from "./history";
-import { pct } from "./format";
+import { pct, plural } from "./format";
 import { LogTab } from "./LogTab";
 import { FactChip } from "./FactViews";
 import { copyText } from "./copyText";
@@ -59,7 +59,7 @@ function tabNote(tab: Tab, engine: Diagnostics | null, log: LogLine[]): { text: 
   }
   const errors = log.filter((l) => l.level === "error").length;
   const warnings = log.filter((l) => l.level === "warn").length;
-  return errors ? { text: `${errors} errors`, level: "alert" } : warnings ? { text: `${warnings} warnings`, level: "warn" } : { text: `${log.length} lines` };
+  return errors ? { text: plural(errors, "error"), level: "alert" } : warnings ? { text: plural(warnings, "warning"), level: "warn" } : { text: plural(log.length, "line") };
 }
 
 /** Menu bar items come here while this window is in front: a focused search field takes its

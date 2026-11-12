@@ -4,7 +4,7 @@
 // search box and the choice to keep the newest line in view.
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { filterLines, isActivity, levelCounts, LEVELS, shortTarget, type Source } from "./logLines";
-import { sinceLaunch } from "./format";
+import { plural, sinceLaunch } from "./format";
 import type { LogLevel, LogLine } from "./snapshot";
 import { Select } from "../ui/Form";
 import { Icon } from "../ui/icons";
@@ -68,9 +68,9 @@ export function LogTab({ lines }: { lines: LogLine[] }) {
           <Icon.follow />
         </button>
         <span className="diag-note">
-          {shown.length === lines.length ? `${lines.length} lines` : `${shown.length} of ${lines.length} lines`}
-          {counts.error ? <span className="diag-count alert">{counts.error} errors</span> : null}
-          {counts.warn ? <span className="diag-count warn">{counts.warn} warnings</span> : null}
+          {shown.length === lines.length ? plural(lines.length, "line") : `${shown.length} of ${plural(lines.length, "line")}`}
+          {counts.error ? <span className="diag-count alert">{plural(counts.error, "error")}</span> : null}
+          {counts.warn ? <span className="diag-count warn">{plural(counts.warn, "warning")}</span> : null}
         </span>
       </div>
       <div className="diag-log-lines" ref={list} role="log" aria-live="off">
