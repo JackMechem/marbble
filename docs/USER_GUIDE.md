@@ -1555,8 +1555,9 @@ plug-ins unloaded, so a heavy track stops using CPU.
   file of its own, and each aux plays its output's file while the instrument is frozen, through
   its own plug-ins, fader and sends, which stay live.
 - Freeze files are in the project's `Freeze Files/` folder. Unfreezing doesn't delete a track's
-  file at once, since the saved project, a backup or Undo may still need it: saving or closing
-  the project deletes the freeze files none of them uses any more.
+  file at once, since the saved project, a backup or Undo may still need it. Saving or closing
+  the project deletes it once none of them uses it any more (if a project document in the
+  folder can't be read, nothing is deleted). Marbble never deletes anything else in the folder.
 
 ### Turning tracks off
 

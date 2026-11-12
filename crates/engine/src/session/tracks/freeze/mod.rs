@@ -12,8 +12,8 @@
 //! An instrument whose extra outputs feed auxes has those outputs rendered too, and its auxes play
 //! them while it is frozen (`outputs.rs`).
 //!
-//! Unfreezing keeps the freeze files: saving and closing the project delete those nothing needs
-//! any more (`files.rs`).
+//! Unfreezing keeps the freeze files: saving and closing the project delete them once nothing
+//! needs them any more (`files.rs`).
 
 mod files;
 mod outputs;
@@ -36,6 +36,17 @@ pub struct FreezeRender {
     clip: Clip,
     /// Its extra outputs' renders, one per aux on them.
     outputs: Vec<OutputRender>,
+    /// The project it was rendered in (`Session::opened`).
+    opened: u64,
+}
+
+impl FreezeRender {
+    /// Deletes the render's files, which nothing plays.
+    fn delete(&self) {
+        for p in std::iter::once(&self.path).chain(self.outputs.iter().map(|o| &o.path)) {
+            let _ = std::fs::remove_file(p);
+        }
+    }
 }
 
 impl Session {
@@ -115,7 +126,7 @@ impl Session {
             crate::audio_file::decode::write_wav(&path, sr as u32, &audio)?;
             let clip = Clip::from_channels(path.clone(), sr as u32, audio);
             let outputs = self.render_outputs(&auxes, (from, to, tail), &mut |j, f| progress((k as f64 + (1.0 + j as f64 + f) / parts) / n))?;
-            out.push(FreezeRender { track: id, start: from, clip, path, outputs });
+            out.push(FreezeRender { track: id, start: from, clip, path, outputs, opened: self.opened });
         }
         Ok(out)
     }
@@ -130,11 +141,18 @@ impl Session {
     /// Freeze, step two: each track plays its render and unloads its plug-ins, keeping their
     /// settings for unfreezing. Record an undo step first, capturing plug-ins.
     pub fn place_freeze(&mut self, renders: Vec<FreezeRender>) -> Result<()> {
-        for r in renders {
+        // Rendered in a project closed since: its track ids mean other tracks here.
+        if renders.iter().any(|r| r.opened != self.opened) {
+            renders.iter().for_each(FreezeRender::delete);
+            return Err(anyhow!("The project was closed while its tracks were freezing."));
+        }
+        for mut r in renders {
             let Some(t) = self.project.track(r.track).filter(|t| t.frozen.is_none()).cloned() else {
-                let _ = std::fs::remove_file(&r.path);
+                r.delete();
                 continue;
             };
+            r.path = self.adopt_render(r.path, &t.name)?;
+            r.clip.path = r.path.clone();
             let states: Vec<(Id, Arc<str>)> = t
                 .inserts
                 .iter()
@@ -153,10 +171,8 @@ impl Session {
             tm.armed = false;
             self.unload_plugins(&t);
             self.push_regions(r.track);
-            self.place_outputs(r.outputs, r.start);
+            self.place_outputs(r.outputs, r.start)?;
         }
-        // A save between the render and here took the files for unused (`files.rs`).
-        self.ensure_freeze_files();
         // Arming changed, and the frozen tracks' latency went with their plug-ins.
         self.push_all_params();
         self.update_midi_target();
@@ -173,7 +189,7 @@ impl Session {
 
     /// Loads a frozen track's plug-ins again (with the settings they had). Its freeze file leaves
     /// the project but stays on disk, for the saved project and Undo, until a save or close finds
-    /// nothing needs it (`files.rs`).
+    /// nothing needs it any more (`files.rs`).
     pub fn unfreeze_track(&mut self, id: Id) -> Result<()> {
         let t = self.project.track(id).ok_or_else(|| anyhow!("no such track"))?;
         let f = t.frozen.ok_or_else(|| anyhow!("{} isn't frozen", t.name))?;
@@ -189,9 +205,12 @@ impl Session {
     }
 
     /// Takes a freeze file's clip out of the project. The audio stays in memory and the file on
-    /// disk, so undo can bring the freeze back.
+    /// disk, so undo can bring the freeze back; the file is deleted once nothing needs it.
     fn forget_freeze_file(&mut self, clip: Id) {
-        self.project.clips.retain(|c| c.id != clip);
+        if let Some(i) = self.project.clips.iter().position(|c| c.id == clip) {
+            let c = self.project.clips.remove(i);
+            self.note_unused_freeze_file(self.clip_path(&c.path));
+        }
     }
 
     /// Unloads a track's plug-ins from the engine (and their controllers and editors).
@@ -325,5 +344,7 @@ fn keep_ringing(audio: &mut [Vec<f32>], keep: usize) {
     audio.iter_mut().for_each(|c| c.truncate(last.min(len)));
 }
 
+#[cfg(test)]
+mod files_tests;
 #[cfg(test)]
 mod tests;

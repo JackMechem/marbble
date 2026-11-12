@@ -29,7 +29,7 @@ use crate::session::{Session, AUDIO_DIR, AUTOSAVE_FILE, PROJECT_FILE};
 /// The previous project.json, kept by every save.
 pub const BACKUP_FILE: &str = "project.json.bak";
 const JOURNAL_PREFIX: &str = "recording-";
-const JOURNAL_SUFFIX: &str = ".journal.json";
+pub(crate) const JOURNAL_SUFFIX: &str = ".journal.json";
 
 /// Writes `bytes` to `path` so that a crash leaves either the old file or the new one, never
 /// a mix: into a temporary file next to it, then renamed over it. `durable` also syncs the

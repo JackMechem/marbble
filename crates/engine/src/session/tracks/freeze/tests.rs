@@ -58,7 +58,7 @@ fn a_region_moved_off_a_frozen_track_isnt_doubled() {
 
 /// An instrument track with a note to freeze, and an aux that says it's on the instrument's output
 /// 3 (Marbble Synth has none, so it renders silence there).
-fn instrument_with_output_aux(s: &mut Session) -> (Id, Id) {
+pub(super) fn instrument_with_output_aux(s: &mut Session) -> (Id, Id) {
     let inst = s.add_track(TrackKind::Instrument, InputSel::None, None, None).unwrap();
     let region = s.create_midi_region(inst, 0, 4800).unwrap();
     let note = Note { start: 0, length: 2400, pitch: 60, velocity: 100, muted: false };
@@ -69,7 +69,7 @@ fn instrument_with_output_aux(s: &mut Session) -> (Id, Id) {
     (inst, aux)
 }
 
-fn file_of(s: &Session, f: Option<FreezeInfo>) -> Option<PathBuf> {
+pub(super) fn file_of(s: &Session, f: Option<FreezeInfo>) -> Option<PathBuf> {
     let clip = s.project.clips.iter().find(|c| Some(c.id) == f.map(|f| f.clip))?;
     Some(s.dir.join(&clip.path))
 }
@@ -148,96 +148,5 @@ fn an_aux_plays_its_frozen_output_through_its_own_strip() {
     assert!(off_by(&aux_alone(&mut s)[0], &sine) < 1e-6, "the instrument's mute doesn't reach it, as live");
     s.update_track(inst, TrackPatch { mute: Some(false), off: Some(true), ..Default::default() });
     assert!(aux_alone(&mut s)[0].iter().all(|x| *x == 0.0), "its Off switch does");
-    let _ = std::fs::remove_dir_all(&scratch);
-}
-
-/// An instrument track with a note, frozen, as a project saved with backups off (a save keeps the
-/// version it replaces as project.json.bak).
-fn frozen_project(tag: &str) -> (Session, PathBuf, Id, PathBuf) {
-    let (mut s, scratch) = scratch_session(tag);
-    s.prefs.general.backups = 0;
-    let (inst, _) = instrument_with_output_aux(&mut s);
-    s.checkpoint("Freeze Track", None, true);
-    s.freeze_tracks(&[inst], &mut |_| {}).unwrap();
-    let file = file_of(&s, s.project.track(inst).unwrap().frozen).unwrap();
-    s.save(None).unwrap();
-    (s, scratch, inst, file)
-}
-
-/// Whether `track` plays what it plays live: its freeze file when frozen.
-fn sounds(s: &mut Session, track: Id) -> bool {
-    let iso = s.isolate_track(track, true, true);
-    s.render(0, 4800, 0, Some(iso), &mut |_| {}).unwrap()[0].iter().any(|x| x.abs() > 1e-4)
-}
-
-#[test]
-fn closing_an_unsaved_unfreeze_keeps_the_saved_projects_freeze_file() {
-    let (mut s, scratch, inst, file) = frozen_project("freeze-files-close");
-    s.checkpoint("Unfreeze Track", None, true);
-    s.unfreeze_track(inst).unwrap();
-    let dir = s.dir.clone();
-    s.new_project();
-    assert!(file.is_file(), "the saved project still plays it");
-    s.open(&dir).unwrap();
-    assert!(s.is_frozen(inst));
-    assert!(sounds(&mut s, inst), "reopened, the frozen track plays its file");
-    let _ = std::fs::remove_dir_all(&scratch);
-}
-
-#[test]
-fn unfreeze_undo_redo_keeps_the_file_while_undo_needs_it() {
-    let (mut s, scratch, inst, file) = frozen_project("freeze-files-redo");
-    s.checkpoint("Unfreeze Track", None, true);
-    s.unfreeze_track(inst).unwrap();
-    s.save(None).unwrap();
-    assert!(file.is_file(), "saved unfrozen, the file stays: Undo can freeze the track again");
-    s.undo();
-    assert!(s.is_frozen(inst) && sounds(&mut s, inst), "undone, the track plays its freeze file");
-    s.redo();
-    s.save(None).unwrap();
-    assert!(file.is_file(), "redone, Undo needs it still");
-    // Saved again after an edit, neither project.json nor its .bak names it.
-    s.update_track(inst, TrackPatch { name: Some("Lead".into()), ..Default::default() });
-    s.save(None).unwrap();
-    assert!(file.is_file(), "Undo needs it still");
-    let dir = s.dir.clone();
-    s.new_project();
-    assert!(!file.exists(), "closing ends Undo, and nothing else needs it");
-    s.open(&dir).unwrap();
-    assert!(!s.is_frozen(inst) && sounds(&mut s, inst), "the project plays live");
-    let _ = std::fs::remove_dir_all(&scratch);
-}
-
-#[test]
-fn an_undone_freeze_leaves_no_file_behind() {
-    let (mut s, scratch) = scratch_session("freeze-files-undo");
-    let (inst, _) = instrument_with_output_aux(&mut s);
-    s.save(None).unwrap();
-    s.checkpoint("Freeze Track", None, true);
-    s.freeze_tracks(&[inst], &mut |_| {}).unwrap();
-    let file = file_of(&s, s.project.track(inst).unwrap().frozen).unwrap();
-    s.undo();
-    s.save(None).unwrap();
-    assert!(file.is_file(), "Redo can still freeze the track");
-    s.redo();
-    assert!(s.is_frozen(inst) && sounds(&mut s, inst), "redone, it plays its freeze file");
-    s.undo();
-    // A new edit ends Redo.
-    s.checkpoint("Track Name", None, false);
-    s.update_track(inst, TrackPatch { name: Some("Lead".into()), ..Default::default() });
-    s.save(None).unwrap();
-    assert!(!file.exists(), "nothing can bring the freeze back, so saving deletes the file");
-    let _ = std::fs::remove_dir_all(&scratch);
-}
-
-#[test]
-fn a_freeze_file_nothing_names_goes_when_the_project_is_saved() {
-    let (mut s, scratch, inst, file) = frozen_project("freeze-files-stray");
-    // Left by an earlier version, which deleted nothing on Undo.
-    let stray = s.dir.join("Freeze Files/Old Freeze.wav");
-    std::fs::copy(&file, &stray).unwrap();
-    s.save(None).unwrap();
-    assert!(!stray.exists());
-    assert!(file.is_file() && s.is_frozen(inst), "the file the project plays stays");
     let _ = std::fs::remove_dir_all(&scratch);
 }

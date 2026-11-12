@@ -10,7 +10,7 @@ use super::*;
 /// The render of one aux's output, written to disk and waiting to be placed.
 pub(super) struct OutputRender {
     aux: Id,
-    path: PathBuf,
+    pub(super) path: PathBuf,
     clip: Clip,
 }
 
@@ -35,16 +35,19 @@ impl Session {
     }
 
     /// Each aux plays its output's render, which starts at `start` as the instrument's does.
-    pub(super) fn place_outputs(&mut self, renders: Vec<OutputRender>, start: i64) {
-        for r in renders {
-            if self.project.track(r.aux).is_none() {
+    pub(super) fn place_outputs(&mut self, renders: Vec<OutputRender>, start: i64) -> Result<()> {
+        for mut r in renders {
+            let Some(name) = self.project.track(r.aux).map(|a| a.name.clone()) else {
                 let _ = std::fs::remove_file(&r.path);
                 continue;
-            }
+            };
+            r.path = self.adopt_render(r.path, &name)?;
+            r.clip.path = r.path.clone();
             let clip = self.add_clip(&r.path, r.clip);
             self.project.track_mut(r.aux).unwrap().frozen_output = Some(FreezeInfo { clip, start });
             self.push_regions(r.aux);
         }
+        Ok(())
     }
 
     /// The auxes on `track`'s extra outputs go back to the live outputs; their renders leave the

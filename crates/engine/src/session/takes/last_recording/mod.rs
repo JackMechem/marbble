@@ -8,7 +8,6 @@
 //! need them ([`Session::purge_discarded`]).
 
 use crate::edit::takes::recording::TAKE_COLORS;
-use crate::session::project::files::{docs_name, project_docs};
 use crate::session::*;
 
 /// What a recording made, for Discard Last Recording and the rating keys.
@@ -258,19 +257,16 @@ impl Session {
     }
 
     /// Deletes the files of discarded recordings that nothing can need any more: not the
-    /// project, an undo or redo step, nor a document in the project folder (project.json, its
-    /// autosave, the backups or another alternative). `closing`: the project is being closed,
-    /// so its undo history is going and only the documents on disk count; files they still
-    /// name are kept for good.
+    /// project, an undo or redo step, nor a document in the project folder
+    /// ([`Session::named_files`]). `closing`: the project is being closed, so its undo history is
+    /// going and only the documents on disk count; files they still name are kept for good.
     pub(crate) fn purge_discarded(&mut self, closing: bool) {
         if self.discarded.is_empty() {
             return;
         }
-        let docs = project_docs(&self.dir);
+        let named = self.named_files(closing);
         for (clip, path) in std::mem::take(&mut self.discarded) {
-            let listed = |p: &Project| p.clips.iter().any(|c| c.id == clip);
-            let undoable = !closing && (listed(&self.project) || self.undo_stack.iter().chain(&self.redo_stack).any(|e| listed(&e.project)));
-            if undoable || docs_name(&docs, &self.dir, &path) {
+            if named.as_ref().is_none_or(|n| n.names(&path)) {
                 if !closing {
                     self.discarded.push((clip, path));
                 }

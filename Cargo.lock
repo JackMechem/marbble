@@ -813,6 +813,7 @@ dependencies = [
  "cpal",
  "flacenc",
  "hound",
+ "icu_normalizer",
  "libc",
  "log",
  "mach2 0.6.0",
