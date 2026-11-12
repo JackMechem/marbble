@@ -1,7 +1,7 @@
 // Draggable dividers between panes. Sizes live in the store and are remembered per machine;
 // their limits and arithmetic are in paneSizes.ts.
 import { clampPane, PANE_DEFAULTS, parsePaneSizes, type PaneKey } from "./paneSizes";
-import { getState, setState, useStore } from "../state/store";
+import { getState, setState, subscribeState, useStore } from "../state/store";
 
 const KEY = "marbble.paneSizes";
 
@@ -21,6 +21,26 @@ function save() {
   } catch {
     // Not critical: sizes fall back to the defaults next time.
   }
+}
+
+/** The CSS variables the panes are laid out by. */
+const PANE_VARS = { library: "--library-w", inspector: "--inspector-w", browser: "--browser-w", mixer: "--mixer-h", editor: "--editor-h", fx: "--fx-h" } as const;
+
+/**
+ * A ref callback that keeps the pane sizes on its element as CSS variables, straight from the
+ * store, so dragging a divider lays the window out again without rendering it.
+ */
+export function paneVars(el: HTMLElement | null) {
+  if (!el) return;
+  let last: unknown = null;
+  const apply = () => {
+    const sizes = getState().paneSizes;
+    if (sizes === last) return;
+    last = sizes;
+    for (const [k, name] of Object.entries(PANE_VARS)) el.style.setProperty(name, `${sizes[k as keyof typeof PANE_VARS]}px`);
+  };
+  apply();
+  return subscribeState(apply);
 }
 
 /** Sets a pane's size within its limits and within `max`, the room there is for it. */

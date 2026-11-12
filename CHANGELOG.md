@@ -43,6 +43,9 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Fixed
 
+- **Resizing the Mixer is smooth in a big project.** Dragging the divider above it rendered the
+  whole window, every strip twice, on each move; now only the faders and meters follow the new
+  height.
 - **No more overload as you locate, play or select a track in a heavy project.** With its
   plug-ins asleep, or its tracks rendered ahead, a project left the audio thread nearly idle, so
   the extra processing threads stood down; when the work came back at once (eleven amp models on
