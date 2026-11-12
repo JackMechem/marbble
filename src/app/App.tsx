@@ -57,7 +57,7 @@ import { checkUpdatesAtLaunch } from "./updates/updates";
 import { UpdateNotice } from "./updates/UpdateNotice";
 import { runMidiCommand, onKey, KEY_ACTIONS } from "./keyCommands";
 import { handleMenu } from "./menuCommands";
-import { StatusLine } from "./StatusLine";
+import { StatusLine } from "./statusLine/StatusLine";
 import { Toast } from "./Toast";
 
 /** Remembers track heights, the Mixer's strip widths and the global tracks shown, per project

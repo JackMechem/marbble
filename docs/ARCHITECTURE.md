@@ -92,7 +92,7 @@ prefs.rs            Settings and Project Settings types
 fx/                 built-in effects and their registry
 instrument/         built-in instruments and their registry, one folder per model
 synth_dsp/          oscillators, filters, envelopes, LFOs, voice allocation, resampling
-audio_io/           the duplex device stream, device lists, restarts on device changes, the recorder, memory locking, thread counts
+audio_io/           the duplex device stream, device lists, restarts on device changes, the recorder, memory locking and use, thread counts
 audio_file/         reading (decode/), writing (encode/), clips in memory, WAV repair
 midi/               MIDI input and output ports, Standard MIDI Files
 control/            controller assignments, feedback messages, the Mackie Control and HUI protocols
@@ -141,11 +141,13 @@ crash.rs            a last autosave when the app panics
 
 ```text
 main.tsx            every window's entry point: renders App, or a detached panel's window
-app/                the main window's shell: layout and launch, key and menu commands, status line
-  controlBar/         the control bar, its CPU meter and transport commands
+app/                the main window's shell: layout and launch, key and menu commands
+  controlBar/         the control bar and transport commands
+  cpuMeter/           the CPU meter, shown in the status line or the control bar
   detach/             detached panel windows: runtime, pure model, panel kinds and their registry,
                       remembered geometry, the window's root
   menuBar/            keeping the native menu bar in step, one name per command
+  statusLine/         the status line: devices, MIDI, and the meter, memory and threads
   updates/            the update check and its notice
 engine/             the UI's side of the engine: the document's types, Snapshot and Tick, commands
 state/              the global UI store with the tick channel, and the display-frame loop
@@ -827,6 +829,8 @@ copies, strip settings and templates.
   needs a reset as before. The null device never reports anything.
 - **Memory locking** (`memlock.rs`): on Linux, with an unlimited `RLIMIT_MEMLOCK`, the app locks
   its pages as they are first touched, so the audio thread never waits for a swapped-out page.
+- **Resident size** (`resident.rs`): the RAM the process holds, on Linux, macOS and Windows, for
+  the status line (polled every two seconds through `resident_memory`) and the Diagnostics window.
 - **Without a device**, `send` runs the engine inline, and ALSA's `null` device runs as fast as the
   CPU allows; the headless checks rely on both.
 

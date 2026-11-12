@@ -15,6 +15,12 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Changed
 
+- **The CPU meter is in the status line,** at the bottom of the window, beside the memory Marbble
+  is using, the threads playing tracks and, in red, how many buffers ran late since you last
+  cleared it. Hover over a figure for what it means; click one to open the Diagnostics window.
+  Settings › Appearance › CPU Meter puts the meter back in the control bar, where it now keeps
+  its width as the figure changes, so the buttons beside it no longer shift. The Diagnostics
+  window shows memory on macOS and Windows too.
 - **Render Ahead, in Settings › Audio.** Tracks you aren't playing or editing can be rendered up to
   half a second ahead of the playhead on threads of their own, with the audio thread only mixing
   them, so a slow buffer no longer drops out: twelve TONE3000 guitars that kept the audio thread

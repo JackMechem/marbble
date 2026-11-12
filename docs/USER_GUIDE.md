@@ -256,8 +256,8 @@ From left to right:
   the key command Replace Mode has no key at first), **Count-in** (Shift+K), Metronome (K).
   They are icons (Count-in's is four beats and a play arrow); hover over one for its name and
   key.
-- **Master volume** slider and the **CPU** meter with the load as a percentage. See
-  [the CPU meter](#the-cpu-meter).
+- **Master volume** slider, and the **CPU** meter if Settings › Appearance › **CPU Meter** puts
+  it here (by default it's in the [status line](#status-line)). See [the CPU meter](#the-cpu-meter).
 - **Musical Typing** (Ctrl+K), **List Editors** (D, the Event List) and **Browsers** (F) buttons.
 
 ### Tracks area
@@ -393,7 +393,17 @@ by the selected track's channel strip and the Stereo Out strip.
 ### Status line
 
 The project name ("Edited" when there are unsaved changes), the plug-in delay compensation
-status, the audio devices, and the number of MIDI inputs.
+status, the audio devices, and the number of MIDI inputs. At the right end:
+
+- the **CPU** meter (unless Settings › Appearance puts it in the control bar), see
+  [the CPU meter](#the-cpu-meter); before it, in red, how many blocks ran late since you last
+  cleared it ("3 late"; click to clear);
+- the **memory** Marbble has in RAM ("2.8 GB"), plug-ins and decoded audio included, updated
+  every two seconds;
+- the **threads** playing tracks right now.
+
+Hover over a figure for what it means; click one to open the
+[Diagnostics window](#the-diagnostics-window).
 
 ### The menu bar
 
@@ -3555,6 +3565,7 @@ Tracks, Editing, Windows, Control Surfaces and Step Input.
 | Interface Size | 90%, 100%, 110%, 125%, 150%, 175%, 200% (also View › Larger / Smaller Interface, Ctrl+= / Ctrl+-, Ctrl+0 for actual size) | 100% |
 | Waveforms | Smooth (the true shape; individual cycles when zoomed in), Mirrored (loudness mirrored around the centre), Rectified (loudness rising from the bottom), Blocks (bar per bucket) | Smooth |
 | Theme | Studio, Flat, Midnight, Light, High Contrast (also View › Theme) | Studio |
+| CPU Meter | Status Line (at the bottom, beside memory and threads), Control Bar (at the top, after the master volume, as in Logic Pro) | Status Line |
 
 The whole window scales and stays sharp. With Light the system's menu bar and title bar take
 their light look, with the other themes their dark one; on Linux the menu bar also takes the
@@ -3845,7 +3856,7 @@ muted one records silence (see [The input level check](#the-input-level-check-li
 ### Crackles, clicks or dropouts
 
 - Raise the **I/O Buffer Size** in Settings › Audio (256 or 512 samples), then Apply Changes.
-- Watch the [CPU meter](#the-cpu-meter) in the control bar, its peak tick above all; freeze heavy
+- Watch the [CPU meter](#the-cpu-meter), its peak tick above all; freeze heavy
   tracks (snowflake button).
 - Leave **Processing Threads** on Automatic. If dropouts started with a change to it, set it to 1
   in Settings › Audio to see whether it makes a difference.
@@ -3937,8 +3948,10 @@ Set **Recording Delay** in Settings › Audio. See [Latency compensation](#laten
 
 ### The CPU meter
 
-The **CPU** meter in the control bar shows the audio load: how much of each buffer's time
-Marbble takes to finish it, however many [threads](#choosing-a-driver-and-devices) work on it.
+The **CPU** meter in the [status line](#status-line) (or the control bar, with Settings ›
+Appearance › **CPU Meter** set to Control Bar) shows the audio load: how much of each buffer's
+time Marbble takes to finish it, however many [threads](#choosing-a-driver-and-devices) work on
+it.
 It is not your system monitor's CPU figure, which is shared across all cores (one audio thread
 at 80% on a 24-thread machine reads about 3% there). A block that takes longer than the buffer
 arrives too late and drops out. More threads lower the load, down to what the slowest single
@@ -3950,8 +3963,10 @@ the meter for the numbers and how many threads are playing.
 - **The thin tick** is the worst single block lately. It stays for two seconds, then falls. A
   low bar with a high tick means the load comes in bursts, so an average alone looks fine while
   single blocks come close to the limit.
-- **The red CPU label** means at least one block went over 100% since you last clicked the
-  meter, so you probably heard a dropout. The tooltip counts them; click the meter to clear it.
+- **The red CPU label** (in the status line, the whole meter) means at least one block went
+  over 100% since you last cleared the meter, so you probably heard a dropout. The tooltip
+  counts them, as does the status line; click the meter to clear it. With nothing to clear, a
+  click opens the [Diagnostics window](#the-diagnostics-window).
 
 A red label alone means a dropout, and playback carries on; a
 ["System overload"](#system-overload-and-playback-stops) stops playback too.
@@ -3979,9 +3994,9 @@ for what it means. A narrow window keeps only the pages' icons.
   percentile and worst buffer, late buffers, overloads, engine errors, invalid plug-in output,
   commands to the audio thread and any dropped, recording overruns); the cores and processing
   threads (performance cores, the Processing Threads setting, how many threads play, real time
-  granted or refused, threads stuck in a plug-in, tracks left out); memory (the lock, resident,
-  locked and swapped memory on Linux, the audio files in memory); and MIDI (ports in use, the
-  live MIDI target, the last message).
+  granted or refused, threads stuck in a plug-in, tracks left out); memory (what's resident; the
+  lock, locked and swapped memory on Linux; the audio files in memory); and MIDI (ports in use,
+  the live MIDI target, the last message).
 - **Tracks:** like a task manager's list of processes, each track's thread, its share of the
   latest buffer and its peak over the last two seconds (shaded amber by how much they take), its
   plug-ins' latency and its compensation delay, its plug-ins (latency in frames in brackets), and

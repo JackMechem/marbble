@@ -1,4 +1,4 @@
-/* The control bar: view buttons, transport, LCD, mode buttons, CPU meter. */
+/* The control bar: view buttons, transport, LCD, mode buttons (the CPU meter is cpu-meter.css). */
 /* ---- control bar -------------------------------------------------------------------------- */
 
 .control-bar {
@@ -239,81 +239,6 @@
   display: flex;
   align-items: center;
 }
-
-.cpu {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  color: var(--faint);
-}
-
-/* "CPU" and the average load, over the bar. */
-.cpu-label {
-  display: flex;
-  justify-content: space-between;
-  gap: 4px;
-}
-
-.cpu-pct {
-  color: var(--dim);
-  font-variant-numeric: tabular-nums;
-}
-
-.cpu-bar {
-  position: relative;
-  width: 48px;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--slider-track);
-  overflow: hidden;
-}
-
-.cpu-bar div {
-  height: 100%;
-}
-
-.cpu-fill.low {
-  background: var(--slider-fill);
-}
-
-.cpu-fill.mid {
-  background: var(--warn);
-}
-
-.cpu-fill.high {
-  background: var(--red);
-}
-
-/* The worst recent block. Its right edge marks the value, so it stays on the bar at 100% and off
-   it at 0. --text, which shows on every theme's track. */
-.cpu-peak {
-  position: absolute;
-  top: 0;
-  width: 1px;
-  transform: translateX(-100%);
-  background: var(--text);
-}
-
-/* A block ran late since the last click: red like a strip's clip indicator, until clicked. */
-.cpu.over {
-  cursor: pointer;
-}
-
-/* The shadow widens the red past the text without widening the meter. */
-.cpu.over .cpu-label {
-  border-radius: 2px;
-  background: var(--red);
-  box-shadow: 0 0 0 2px var(--red);
-  color: var(--red-ink);
-}
-
-.cpu.over .cpu-pct {
-  color: inherit;
-}
-
 
 /* The view buttons folded into one, for a narrow bar (below). */
 .cb-more {

@@ -356,6 +356,7 @@ fn main() {
             diagnostics::activity::set_activity_log,
             diagnostics::activity::log_activity,
             diagnostics::activity::show_activity_logs,
+            diagnostics::resident_memory,
         ]))
         .run(tauri::generate_context!())
         .expect("error while running Marbble");

@@ -24,6 +24,7 @@ pub mod coreaudio;
 pub mod devices;
 pub mod memlock;
 pub mod recorder;
+pub mod resident;
 #[cfg(target_os = "linux")]
 pub mod system_volume;
 #[cfg(target_os = "macos")]
