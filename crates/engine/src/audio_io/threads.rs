@@ -144,50 +144,6 @@ pub(crate) fn keep_to(cpus: &[usize]) -> std::io::Result<()> {
     Ok(())
 }
 
-/// While alive, the calling thread can't be cancelled: a cancellation that comes meanwhile waits
-/// until it's dropped (#446). JACK's client library cancels its process thread, asynchronously,
-/// wherever it is, when it shuts the client down; in a plug-in, the unwinding that follows meets
-/// the plug-in's C++, which aborts the process. The audio callback holds one while it's in the
-/// engine, so a cancellation lands in JACK's own code, as JACK means it to. No system call and no
-/// allocation, so fit for the audio thread. Linux only, where JACK does this.
-pub(crate) struct NoCancel {
-    #[cfg(target_os = "linux")]
-    was: libc::c_int,
-}
-
-#[cfg(target_os = "linux")]
-mod cancel {
-    // glibc's and musl's values; the libc crate has no binding for Linux.
-    pub const DISABLE: libc::c_int = 1;
-    extern "C" {
-        pub fn pthread_setcancelstate(state: libc::c_int, oldstate: *mut libc::c_int) -> libc::c_int;
-    }
-}
-
-impl NoCancel {
-    pub(crate) fn new() -> NoCancel {
-        #[cfg(target_os = "linux")]
-        {
-            let mut was = 0;
-            // SAFETY: about this thread only.
-            unsafe { cancel::pthread_setcancelstate(cancel::DISABLE, &mut was) };
-            NoCancel { was }
-        }
-        #[cfg(not(target_os = "linux"))]
-        NoCancel {}
-    }
-}
-
-impl Drop for NoCancel {
-    fn drop(&mut self) {
-        // SAFETY: about this thread only. A cancellation that came meanwhile acts from here.
-        #[cfg(target_os = "linux")]
-        unsafe {
-            cancel::pthread_setcancelstate(self.was, std::ptr::null_mut())
-        };
-    }
-}
-
 /// Parses a kernel CPU list such as "0-15,18".
 fn parse_cpus(s: &str) -> Vec<usize> {
     let mut out = Vec::new();
@@ -270,42 +226,6 @@ pub fn choices(t: &Topology, suggested: Option<u32>) -> ThreadChoices {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// A thread cancelled while it holds a `NoCancel` finishes what it was doing first, and is
-    /// cancelled once it lets go (#446).
-    #[cfg(target_os = "linux")]
-    #[test]
-    fn a_cancellation_waits_until_the_thread_lets_go() {
-        use std::sync::atomic::{AtomicBool, Ordering};
-        use std::time::Duration;
-        static INSIDE: AtomicBool = AtomicBool::new(false);
-        static DONE: AtomicBool = AtomicBool::new(false);
-        extern "C" fn run(_: *mut libc::c_void) -> *mut libc::c_void {
-            {
-                let _held = NoCancel::new();
-                INSIDE.store(true, Ordering::SeqCst);
-                // A cancellation point, where it would act at once.
-                std::thread::sleep(Duration::from_millis(100));
-                DONE.store(true, Ordering::SeqCst);
-            }
-            loop {
-                std::thread::sleep(Duration::from_millis(5));
-            }
-        }
-        unsafe {
-            let mut t: libc::pthread_t = std::mem::zeroed();
-            assert_eq!(libc::pthread_create(&mut t, std::ptr::null(), run, std::ptr::null_mut()), 0);
-            while !INSIDE.load(Ordering::SeqCst) {
-                std::thread::sleep(Duration::from_millis(1));
-            }
-            assert_eq!(libc::pthread_cancel(t), 0);
-            let mut out = std::ptr::null_mut();
-            assert_eq!(libc::pthread_join(t, &mut out), 0);
-            assert!(DONE.load(Ordering::SeqCst), "cancelled inside");
-            // PTHREAD_CANCELED, which the libc crate has no name for.
-            assert_eq!(out as usize, usize::MAX, "and cancelled after");
-        }
-    }
 
     #[test]
     fn cpu_lists_parse() {

@@ -16,7 +16,7 @@ use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 
 use crate::dsp::{Engine, EngineStatus};
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 pub mod callback;
 #[cfg(target_os = "macos")]
@@ -141,6 +141,21 @@ pub struct AudioStatus {
 }
 
 /// The running streams. They live on the `audio-io` thread; dropping this stops them and joins it.
+/// Closing the device: the callback, told to, plays silence alone and counts the callbacks it did
+/// so (#446, #450). Closed while the callback runs, a driver may cancel the callback's thread: JACK's
+/// client does, asynchronously, and the unwinding that follows aborts the process, in a plug-in's
+/// C++ or in the `catch_unwind` the `jack` crate puts round the callback. A quiet callback is over
+/// in a moment, so the close finds the driver's thread waiting between callbacks, where JACK means
+/// to cancel it.
+#[derive(Default)]
+struct Closing {
+    on: AtomicBool,
+    quiet: AtomicU64,
+}
+
+/// The longest closing the device waits for a quiet callback.
+const QUIET_WAIT: Duration = Duration::from_millis(200);
+
 pub struct AudioIo {
     stop: Option<std::sync::mpsc::Sender<()>>,
     thread: Option<JoinHandle<()>>,
@@ -181,6 +196,7 @@ fn build_output<T>(
     fast_cpus: Vec<usize>,
     probe: Arc<IoThreadProbe>,
     events: Arc<DeviceEvents>,
+    closing: Arc<Closing>,
 ) -> Result<cpal::Stream>
 where
     T: SizedSample + FromSample<f32>,
@@ -194,6 +210,11 @@ where
     let stream = d.build_output_stream::<T, _, _>(
         cfg,
         move |data: &mut [T], info: &cpal::OutputCallbackInfo| {
+            if closing.on.load(Ordering::Acquire) {
+                data.fill(T::EQUILIBRIUM);
+                closing.quiet.fetch_add(1, Ordering::Release);
+                return;
+            }
             // The callback's thread is the driver's (cpal's, PipeWire's or JACK's), so it's placed
             // from inside. Refused, it plays wherever the system puts it, as it did before.
             if !placed {
@@ -215,8 +236,6 @@ where
                 }
             }
             last = Some((ts.callback, length));
-            // Not cancelled in a plug-in: dropped after the engine is let go (see `NoCancel`).
-            let _no_cancel = threads::NoCancel::new();
             match engine.try_lock() {
                 Some(mut e) => cb.play(Some(&mut e), data, out_ch),
                 None => cb.play(None, data, out_ch),
@@ -330,6 +349,7 @@ pub fn start(engine: Arc<Mutex<Engine>>, cfg: &AudioConfig) -> (Option<AudioIo>,
     let cfg = cfg.clone();
     let events = Arc::new(DeviceEvents::default());
     let ev = events.clone();
+    let closing = Arc::new(Closing::default());
     let thread = std::thread::Builder::new()
         .name("audio-io".into())
         .spawn(move || {
@@ -376,7 +396,7 @@ pub fn start(engine: Arc<Mutex<Engine>>, cfg: &AudioConfig) -> (Option<AudioIo>,
                 let fast = threads::Topology::detect().fast;
                 let probe = Arc::new(IoThreadProbe::default());
                 let out =
-                    by_format!(out_fmt, build_output, &out_dev, out_cfg, engine.clone(), in_rx, in_ch, status_arc.clone(), fast, probe.clone(), ev.clone())?;
+                    by_format!(out_fmt, build_output, &out_dev, out_cfg, engine.clone(), in_rx, in_ch, status_arc.clone(), fast, probe.clone(), ev.clone(), closing.clone())?;
                 if let Some(s) = &in_stream {
                     s.play()?;
                 }
@@ -404,6 +424,14 @@ pub fn start(engine: Arc<Mutex<Engine>>, cfg: &AudioConfig) -> (Option<AudioIo>,
                     status.running = true;
                     let _ = res_tx.send((status, io_thread));
                     let _ = stop_rx.recv();
+                    // Quiet callbacks only, from one that has been quiet, before the streams close
+                    // (see `Closing`).
+                    let quiet = closing.quiet.load(Ordering::Acquire);
+                    closing.on.store(true, Ordering::Release);
+                    let since = std::time::Instant::now();
+                    while closing.quiet.load(Ordering::Acquire) == quiet && since.elapsed() < QUIET_WAIT {
+                        std::thread::sleep(Duration::from_millis(1));
+                    }
                     drop(streams);
                 }
                 Err(e) => {
