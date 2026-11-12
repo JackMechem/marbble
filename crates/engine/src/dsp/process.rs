@@ -246,7 +246,9 @@ impl Engine {
             if away || t.napping {
                 standby += t.awake_share;
             } else if budget > 0.0 && !t.left_out && !t.dormant {
-                t.awake_share = t.awake_share * 0.9 + t.spent / budget * 0.1;
+                let share = t.spent / budget;
+                // Unmeasured, so taken whole rather than smoothed up from nothing.
+                t.awake_share = if t.awake_share == 0.0 { share } else { t.awake_share * 0.9 + share * 0.1 };
             }
         }
         standby
