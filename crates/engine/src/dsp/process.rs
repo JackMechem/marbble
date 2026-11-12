@@ -151,6 +151,7 @@ impl Engine {
         if frames > 0 {
             self.measure_load(started, frames);
         }
+        self.lend_ahead(frames);
     }
 
     /// The MIDI played live since the last callback, for this one's first sub-block.
@@ -172,7 +173,7 @@ impl Engine {
             self.pos += n as i64;
             if looping && self.pos >= cycle_end {
                 self.pos = cycle_start;
-                self.flush_all_notes();
+                self.flush_home_notes();
                 // MIDI cycle recording: where one pass ends (a take each, if so set).
                 if self.recording && self.midi_rec.push((cycle_start, crate::edit::takes::recording::PASS_MARK)).is_err() {
                     self.status.midi_rec_lost.fetch_add(1, Ordering::Relaxed);
@@ -386,6 +387,7 @@ impl Engine {
             chase: self.chase,
             analyzer_target: self.analyzer_target,
             wait: self.offline || self.parallel.test.patient,
+            ahead: self.ahead.shared.as_deref(),
         };
         let mut end = BlockEnd::Played;
         if self.parallel.wanted(self.offline, &self.tracks) {

@@ -211,6 +211,10 @@ pub struct TrackDsp {
     pub(super) inserts: Vec<Option<InsertDsp>>,
     pub(super) instrument: Option<InsertDsp>,
     pub(super) gains: (f32, f32),
+    /// What the strip's source played this block (`play_source`), before its fader.
+    pub(super) src_l: Vec<f32>,
+    pub(super) src_r: Vec<f32>,
+    /// The strip's signal through its mix, from the source's.
     pub(super) l: Vec<f32>,
     pub(super) r: Vec<f32>,
     /// What subtracks sent this block, for summing stacks.
@@ -279,6 +283,8 @@ pub struct TrackDsp {
     /// strip it stands in for.
     pub(super) stand_in: bool,
     pub(super) held_token: u64,
+    /// Its render-ahead control and shell, for audio and instrument tracks (see `ahead/`).
+    pub(super) ahead: Option<Arc<ahead::AheadCtl>>,
     /// Which thread played it and its share of the block, for the Diagnostics window. The session
     /// gives the strips it builds the one it keeps for the track (`Session::build_track`).
     pub load: Arc<StripLoad>,
@@ -295,6 +301,8 @@ impl TrackDsp {
             inserts: (0..INSERT_SLOTS).map(|_| None).collect(),
             instrument: None,
             gains: (0.0, 0.0),
+            src_l: vec![0.0; MAX_BLOCK],
+            src_r: vec![0.0; MAX_BLOCK],
             l: vec![0.0; MAX_BLOCK],
             r: vec![0.0; MAX_BLOCK],
             sum_l: vec![0.0; MAX_BLOCK],
@@ -334,6 +342,7 @@ impl TrackDsp {
             left_out: false,
             stand_in: false,
             held_token: 0,
+            ahead: None,
             load: Arc::default(),
         }
     }

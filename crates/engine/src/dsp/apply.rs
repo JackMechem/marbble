@@ -80,6 +80,7 @@ impl Engine {
     /// time and around offline renders, so nothing from before rings into what plays next. Every
     /// insert wakes (see `idle/`), so each render starts the same.
     pub(super) fn reset_effects(&mut self) {
+        self.reclaim_all();
         let slots = self.tracks.iter_mut().flat_map(|t| t.inserts.iter_mut()).chain(self.master_inserts.iter_mut());
         for ins in slots.flatten() {
             ins.wake_up();
@@ -107,6 +108,7 @@ impl Engine {
     /// with this, so one render's tail never reaches the next). VST3 instruments get note-offs
     /// from `flush_all_notes`, as before.
     pub(super) fn silence_instruments(&mut self) {
+        self.reclaim_all();
         for t in &mut self.tracks {
             if let Some(InsertDsp { plugin: Plugin::Instrument(i), .. }) = &mut t.instrument {
                 i.reset();
@@ -121,9 +123,18 @@ impl Engine {
     }
 
     pub(super) fn flush_all_notes(&mut self) {
+        self.reclaim_all();
+        self.flush_home_notes();
+    }
+
+    /// `flush_all_notes` for the strips the callback plays the source of: at the cycle's wrap,
+    /// a render thread flushes a lent strip's as its own course wraps (see `ahead/`).
+    pub(super) fn flush_home_notes(&mut self) {
         for t in &mut self.tracks {
-            t.flush_notes = true;
-            t.chase_cc = true;
+            if !t.ahead.as_ref().is_some_and(|a| a.lent()) {
+                t.flush_notes = true;
+                t.chase_cc = true;
+            }
         }
     }
 
@@ -142,6 +153,7 @@ impl Engine {
     }
 
     pub(super) fn chase_all_cc(&mut self) {
+        self.reclaim_all();
         for t in &mut self.tracks {
             t.chase_cc = true;
         }
@@ -150,6 +162,7 @@ impl Engine {
     /// After a jump in time, plug-in automation is resent even where the value didn't change,
     /// since the plug-in may have been moved by hand in between.
     pub(super) fn resend_automation(&mut self) {
+        self.reclaim_all();
         for t in &mut self.tracks {
             t.auto_sent = [f32::NAN; MAX_AUTO_SENT];
         }
@@ -181,6 +194,7 @@ impl Engine {
     /// Takes one command in. Arms of more than a few lines call the methods below, which follow
     /// in the same order.
     pub(super) fn apply(&mut self, cmd: Cmd) {
+        self.reclaim_for(&cmd);
         match cmd {
             Cmd::Play { from } => self.start_transport(from, false),
             Cmd::Record { from, punch } => {
@@ -290,6 +304,25 @@ impl Engine {
             }
             Cmd::VstGate { track, uid, gate } => self.set_vst_gate(track, uid, gate),
             Cmd::Chase { notes, controllers } => self.chase = (notes, controllers),
+            Cmd::Ahead(shared, lead) => {
+                self.reclaim_all();
+                self.ahead.lead_secs = lead;
+                if let Some(old) = std::mem::replace(&mut self.ahead.shared, shared) {
+                    self.discard(Garbage::Ahead(old));
+                }
+            }
+            Cmd::AheadCtls(ctls) => {
+                // Shared, not moved out: the list goes back to the session, which drops what no
+                // strip took.
+                for (id, ctl) in &ctls {
+                    if let Some(t) = self.track_mut(*id) {
+                        if t.ahead.is_none() {
+                            t.ahead = Some(ctl.clone());
+                        }
+                    }
+                }
+                self.discard(Garbage::AheadCtls(ctls));
+            }
             Cmd::Workers(w) => {
                 // Strips their threads have let go of go back first, for the session to bring back.
                 self.release_held();

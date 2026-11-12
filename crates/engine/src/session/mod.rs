@@ -198,6 +198,8 @@ pub struct Session {
     rec_midi: takes::midi_capture::RecordedMidi,
     recorder: Recorder,
     controllers: HashMap<Id, PluginController>,
+    /// Render ahead's threads, while it's on (`set_render_ahead`).
+    ahead: Option<crate::dsp::ahead::AheadThreads>,
     meters: HashMap<Id, Arc<Meter>>,
     pub plugins: Vec<PluginDescriptor>,
     pub selected: Option<Id>,
@@ -414,6 +416,7 @@ impl Session {
             recorder: Recorder::new(),
             sampler: Default::default(),
             controllers: HashMap::new(),
+            ahead: None,
             meters: HashMap::new(),
             plugins,
             selected: None,

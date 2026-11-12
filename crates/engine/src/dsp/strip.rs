@@ -63,7 +63,22 @@ pub(super) fn run_strip<R: Routes>(cx: &BlockCtx<'_>, ti: usize, t: &mut TrackDs
         t.wake(if cx.snap_gains { 0 } else { track_off::resume_frames(cx.sr) });
     }
     let plan = plan_block(cx, t, routes, role, off);
+    // Its source is rendered ahead: its mix plays the block for the playhead.
+    if t.ahead.as_ref().is_some_and(|a| a.lent() || a.lost()) {
+        match ahead::take_block(t, cx, cx.ahead) {
+            ahead::Took::Block => return mix(cx, ti, t, sc, routes, plan),
+            ahead::Took::Lost => {
+                t.l[..n].fill(0.0);
+                t.r[..n].fill(0.0);
+                return mix(cx, ti, t, sc, routes, plan);
+            }
+            // Taken back: it plays live.
+            ahead::Took::Reclaimed => {}
+        }
+    }
     if play_source(cx, t, sc, routes, &plan) {
+        t.l[..n].copy_from_slice(&t.src_l[..n]);
+        t.r[..n].copy_from_slice(&t.src_r[..n]);
         mix(cx, ti, t, sc, routes, plan);
     }
 }
@@ -91,7 +106,7 @@ pub(super) struct Plan {
     transport: TransportInfo,
 }
 
-fn plan_block<R: Routes>(cx: &BlockCtx<'_>, t: &TrackDsp, routes: &R, role: Option<Role>, off: bool) -> Plan {
+pub(super) fn plan_block<R: Routes>(cx: &BlockCtx<'_>, t: &TrackDsp, routes: &R, role: Option<Role>, off: bool) -> Plan {
     let tap = role == Some(Role::Tap);
     let fx = !tap || cx.iso.map(|i| i.effects).unwrap_or(true);
     let p = t.params;
@@ -120,10 +135,10 @@ fn plan_block<R: Routes>(cx: &BlockCtx<'_>, t: &TrackDsp, routes: &R, role: Opti
 /// or a bus's input, then its inserts, with their automation, leaving what it plays before its
 /// fader in `t.l` and `t.r`. False if there's no mix to follow: a folder, or a strip left in a
 /// plug-in that didn't return.
-fn play_source<R: Routes>(cx: &BlockCtx<'_>, t: &mut TrackDsp, sc: &mut Scratch, routes: &mut R, plan: &Plan) -> bool {
+pub(super) fn play_source<R: Routes>(cx: &BlockCtx<'_>, t: &mut TrackDsp, sc: &mut Scratch, routes: &mut R, plan: &Plan) -> bool {
     let n = cx.n;
-    t.l[..n].fill(0.0);
-    t.r[..n].fill(0.0);
+    t.src_l[..n].fill(0.0);
+    t.src_r[..n].fill(0.0);
     t.midi.clear();
     // Write mode plays the live values, which are being recorded over the lanes.
     if cx.playing && matches!(t.auto_mode, AutoMode::Read | AutoMode::Touch | AutoMode::Latch) {
@@ -140,11 +155,11 @@ fn play_source<R: Routes>(cx: &BlockCtx<'_>, t: &mut TrackDsp, sc: &mut Scratch,
             }
         }
     }
-    track_off::fade_in(&mut t.resume_left, track_off::resume_frames(cx.sr), &mut t.l[..n], &mut t.r[..n]);
+    track_off::fade_in(&mut t.resume_left, track_off::resume_frames(cx.sr), &mut t.src_l[..n], &mut t.src_r[..n]);
     !plan.fx || run_inserts(cx, t, sc, routes, &plan.transport, plan.ll_skip)
 }
 
-/// The strip's mix, from what its source left in `t.l` and `t.r`: its folder's and its own mix
+/// The strip's mix, from what its source played, in `t.l` and `t.r`: its folder's and its own mix
 /// automation, the delay compensation, the pre-fader sends, the fader and output, and the
 /// post-fader sends.
 fn mix<R: Routes>(cx: &BlockCtx<'_>, ti: usize, t: &mut TrackDsp, sc: &mut Scratch, routes: &mut R, plan: Plan) {
@@ -274,7 +289,7 @@ fn read_mix_automation(t: &TrackDsp, p: &mut TrackParams, mix_at: i64) {
 /// instrument is frozen played from the render in the aux's own playback list.
 fn take_bus_input<R: Routes>(cx: &BlockCtx<'_>, t: &mut TrackDsp, sc: &mut Scratch, routes: &mut R, p: &TrackParams, live: bool) {
     let n = cx.n;
-    let (l, r) = (&mut t.l[..n], &mut t.r[..n]);
+    let (l, r) = (&mut t.src_l[..n], &mut t.src_r[..n]);
     routes.inputs((&mut t.sum_l[..n], &mut t.sum_r[..n]), l, r);
     if let Some(o) = p.instrument_output {
         let delay = if live { 0 } else { t.pdc.feed };
@@ -292,7 +307,7 @@ fn take_bus_input<R: Routes>(cx: &BlockCtx<'_>, t: &mut TrackDsp, sc: &mut Scrat
 /// being recorded.
 fn play_audio_track(cx: &BlockCtx<'_>, t: &mut TrackDsp, p: &TrackParams) {
     let (n, pos) = (cx.n, cx.pos);
-    let (l, r) = (&mut t.l[..n], &mut t.r[..n]);
+    let (l, r) = (&mut t.src_l[..n], &mut t.src_r[..n]);
     // A track being recorded is silent, or with Autopunch only inside the range.
     let quiet = match (cx.recording && p.armed, cx.punch_range) {
         (false, _) => (0, 0),
@@ -383,7 +398,7 @@ fn play_instrument<R: Routes>(cx: &BlockCtx<'_>, t: &mut TrackDsp, routes: &mut 
     }
     t.midi.sort_by_key(|m| m.offset);
 
-    let (l, r) = (&mut t.l[..cx.n], &mut t.r[..cx.n]);
+    let (l, r) = (&mut t.src_l[..cx.n], &mut t.src_r[..cx.n]);
     if let Some(ins) = &mut t.instrument {
         routes.enter(ins.uid);
         let ran = !ins.bypass && ll_skip & INSTRUMENT_BIT == 0;
@@ -519,7 +534,7 @@ fn region_midi(cx: &BlockCtx<'_>, t: &mut TrackDsp) {
 /// if the strip was left in one.
 fn run_inserts<R: Routes>(cx: &BlockCtx<'_>, t: &mut TrackDsp, sc: &mut Scratch, routes: &mut R, transport: &TransportInfo, ll_skip: u16) -> bool {
     let n = cx.n;
-    let (l, r) = (&mut t.l[..n], &mut t.r[..n]);
+    let (l, r) = (&mut t.src_l[..n], &mut t.src_r[..n]);
     let mut asleep = 0;
     for (k, slot) in t.inserts.iter_mut().enumerate() {
         let Some(ins) = slot else { continue };

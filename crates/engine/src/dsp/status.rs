@@ -58,6 +58,9 @@ pub struct EngineStatus {
     /// Blocks in which `Engine::process` panicked; the audio callback silenced them (see
     /// `audio_io::build_output`).
     pub engine_errors: AtomicU32,
+    /// Blocks a render thread hadn't rendered ahead in time, whose strip was taken back and played
+    /// live (see `dsp/ahead/`).
+    pub ahead_misses: AtomicU32,
     /// Measured device latencies (µs) and how many input frames sit in the duplex ring.
     pub input_latency_us: AtomicU64,
     pub output_latency_us: AtomicU64,
@@ -117,6 +120,7 @@ impl Default for EngineStatus {
             overruns: AtomicU32::new(0),
             midi_rec_lost: AtomicU32::new(0),
             engine_errors: AtomicU32::new(0),
+            ahead_misses: AtomicU32::new(0),
             input_latency_us: AtomicU64::new(0),
             output_latency_us: AtomicU64::new(0),
             ring_frames: AtomicU64::new(0),

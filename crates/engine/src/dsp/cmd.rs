@@ -73,6 +73,10 @@ pub enum Cmd {
     Chase { notes: bool, controllers: bool },
     /// The threads that play strips (None: the callback plays them alone).
     Workers(Option<Box<Workers>>),
+    /// Render ahead's threads and lead in seconds (None: every strip plays live). See `ahead/`.
+    Ahead(Option<Arc<ahead::AheadShared>>, f64),
+    /// What tracks need to go ahead (`TrackDsp::prepare_ahead`), made on the session's thread.
+    AheadCtls(Vec<(Id, Arc<ahead::AheadCtl>)>),
     /// Which strips wait for which, for the workers. None drops it.
     Graph(Option<Box<TaskGraph>>),
     /// Makes checks go through the pool (see [`ParallelTest`]).
@@ -97,6 +101,8 @@ pub enum Garbage {
     Delay(Box<DelayLine>),
     Tempo(Arc<TempoMap>),
     Workers(Box<Workers>),
+    Ahead(Arc<ahead::AheadShared>),
+    AheadCtls(Vec<(Id, Arc<ahead::AheadCtl>)>),
     Graph(Box<TaskGraph>),
     /// What an instrument's new data replaced. Its notes may still be reading it, so the session
     /// keeps hold of it until they're done (`Session::sampler_idle`).
