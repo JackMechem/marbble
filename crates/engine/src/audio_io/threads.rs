@@ -5,8 +5,13 @@
 //! pace with real-time workers (`parallel_bench` measures the same way): wide projects (24
 //! CHOWTapeModels, 16 Dragonfly reverbs, 12 tape models in three summing stacks) ran close to the
 //! thread count faster, down to a fifth of the one-thread block time at 8 threads. Going from 6 to 8
-//! threads helped them another 10 to 25 % and a five-track project not at all, and would leave no
-//! performance core for anything else, so Automatic stops at 6. Keeping workers to the performance
+//! threads helped them another 10 to 25 % and a five-track project not at all, so Automatic first
+//! stopped at 6. Neural amp models gain far more, hyperthreads included (#440): the owner's project
+//! of twelve TONE3000 guitars at 512 frames (`stress_check --project` on a dummy JACK server) had
+//! every block late at 6 threads (p50 113 %), 771 of 1773 at 8, none at 10 (66 %), and played at
+//! 60 % from 12 threads up to 16, one guitar's own time being the floor. A worker only wakes when a
+//! task is ready for it (`dsp/pool/`), so threads a project can't use cost it nothing: on Linux,
+//! Automatic fills every hardware thread of the performance cores but one core's. Keeping workers to the performance
 //! cores took 24 CHOWTapeModels at 128 frames from a mean of 340 µs to 270 µs, and five TONE3000s'
 //! 99th percentile from 1510 µs to about 900 µs; the scheduler places real-time threads without
 //! regard to a core's speed. A light project stays on the callback (`ENGAGE_LOAD` in
@@ -40,9 +45,8 @@
 
 /// The setting's value for Automatic.
 pub const AUTOMATIC: u32 = 0;
-/// The most Automatic ever picks. Past this a project of the sizes measured gained nothing, and
-/// every thread is another that can be late.
-pub const AUTOMATIC_MAX: usize = 6;
+/// The most Automatic ever picks: as far as has been measured (#440).
+pub const AUTOMATIC_MAX: usize = 16;
 /// The most the setting offers.
 pub const MANUAL_MAX: usize = 16;
 
@@ -62,6 +66,9 @@ pub struct Topology {
     /// The logical CPUs of those cores, on a machine with two kinds of core. Empty on a uniform
     /// machine, where it can't be told, and on macOS (which has no affinity).
     pub fast: Vec<usize>,
+    /// Hardware threads of those cores (both of a hyper-threaded core's), which Automatic fills on
+    /// Linux. 0 where it isn't counted (macOS, Windows).
+    pub fast_threads: usize,
     /// Physical cores of a slower kind (efficiency cores) that the rest of the system can run on, so
     /// that Automatic needn't leave a fast core free for it. Counted on macOS only, where that was
     /// measured; 0 elsewhere.
@@ -111,7 +118,7 @@ fn detect_macos(logical: usize, perf0: Option<usize>, perf1: Option<usize>, phys
         Some(p) => (p, perf1.unwrap_or(0)),
         None => (physical.unwrap_or(logical), 0),
     };
-    Topology { logical, fast_cores: fast.min(logical).max(1), fast: Vec::new(), others }
+    Topology { logical, fast_cores: fast.min(logical).max(1), fast: Vec::new(), fast_threads: 0, others }
 }
 
 /// Keeps the calling thread to `cpus` (empty: leaves it where it is). Real-time threads aren't
@@ -160,16 +167,21 @@ fn detect_linux(logical: usize, p_cores: Option<String>, online: Option<String>,
     let among = if fast.is_empty() { &all } else { &fast };
     // A core counts once, however many hardware threads it has: its first sibling stands for it.
     let cores = among.iter().filter(|&&c| sibling(c).and_then(|l| parse_cpus(&l).first().copied()).is_none_or(|first| first == c)).count();
-    Topology { logical, fast_cores: cores.max(1), fast, others: 0 }
+    Topology { logical, fast_cores: cores.max(1), fast_threads: among.len().min(logical), fast, others: 0 }
 }
 
-/// What Automatic picks: one thread per fast core, less one left for everything else the machine
-/// and the plug-ins' own threads do unless efficiency cores take that ([`Topology::others`]), no
-/// more than the audio device's workgroup suggests (`suggested`, `IoThread::suggested_threads` on
-/// macOS), and at most [`AUTOMATIC_MAX`]. A machine with a core or two plays serially.
+/// What Automatic picks. On Linux, every hardware thread of the fast cores but one core's, left for
+/// the interface and the plug-ins' own threads. On macOS, one thread per fast core, less one unless
+/// efficiency cores take everything else ([`Topology::others`]), and no more than the audio
+/// device's workgroup suggests (`suggested`, `IoThread::suggested_threads`). At most
+/// [`AUTOMATIC_MAX`]; a machine with a core or two plays serially.
 pub fn automatic(t: &Topology, suggested: Option<u32>) -> usize {
-    let spare = usize::from(t.others == 0);
-    let n = t.fast_cores.min(t.logical).saturating_sub(spare);
+    let n = if t.fast_threads > 0 {
+        let per_core = (t.fast_threads / t.fast_cores.max(1)).max(1);
+        t.fast_threads.saturating_sub(per_core)
+    } else {
+        t.fast_cores.min(t.logical).saturating_sub(usize::from(t.others == 0))
+    };
     n.min(suggested.map_or(usize::MAX, |s| s as usize)).clamp(1, AUTOMATIC_MAX)
 }
 
@@ -232,14 +244,20 @@ mod tests {
         let t = detect_linux(24, Some("0-15\n".into()), Some("0-23\n".into()), &hybrid_siblings);
         assert_eq!(t.fast_cores, 8);
         assert_eq!(t.fast, (0..16).collect::<Vec<_>>());
-        assert_eq!(automatic(&t, None), 6);
+        // Both hardware threads of every performance core but one (#440).
+        assert_eq!(t.fast_threads, 16);
+        assert_eq!(automatic(&t, None), 14);
     }
 
     #[test]
     fn a_uniform_machine_counts_its_physical_cores() {
         let t = detect_linux(8, None, Some("0-7".into()), &|c| Some(format!("{},{}", c & !1, c | 1)));
-        assert_eq!(t.fast_cores, 4);
-        assert_eq!(automatic(&t, None), 3);
+        assert_eq!((t.fast_cores, t.fast_threads), (4, 8));
+        assert_eq!(automatic(&t, None), 6);
+        // Without hyperthreads, one core is left all the same.
+        let t = detect_linux(8, None, Some("0-7".into()), &|c| Some(c.to_string()));
+        assert_eq!((t.fast_cores, t.fast_threads), (8, 8));
+        assert_eq!(automatic(&t, None), 7);
     }
 
     #[test]
@@ -250,10 +268,10 @@ mod tests {
         assert_eq!((t.fast_cores, t.others, t.fast.len()), (4, 4, 0));
         assert_eq!(automatic(&t, None), 4);
         assert_eq!(automatic(&t, Some(4)), 4);
-        // M1 Pro / Max: eight and two, to Automatic's limit.
+        // M1 Pro / Max: eight and two.
         let t = detect_macos(10, Some(8), Some(2), Some(10));
         assert_eq!((t.fast_cores, t.others), (8, 2));
-        assert_eq!(automatic(&t, None), AUTOMATIC_MAX);
+        assert_eq!(automatic(&t, None), 8);
     }
 
     #[test]
@@ -283,12 +301,16 @@ mod tests {
         for (logical, cores) in [(1, 1), (2, 1), (2, 2)] {
             let t = Topology { logical, fast_cores: cores, ..Default::default() };
             assert_eq!(automatic(&t, None), 1, "{logical} logical, {cores} cores");
+            let t = Topology { logical, fast_cores: cores, fast_threads: logical, ..Default::default() };
+            assert_eq!(automatic(&t, None), 1, "{logical} logical, {cores} cores, Linux");
         }
     }
 
     #[test]
     fn automatic_is_bounded_on_a_big_machine() {
         let t = Topology { logical: 128, fast_cores: 64, ..Default::default() };
+        assert_eq!(automatic(&t, None), AUTOMATIC_MAX);
+        let t = Topology { logical: 128, fast_cores: 64, fast_threads: 128, ..Default::default() };
         assert_eq!(automatic(&t, None), AUTOMATIC_MAX);
         assert_eq!(resolve(1, &t, None), 1);
         assert_eq!(resolve(AUTOMATIC, &t, None), AUTOMATIC_MAX);
@@ -298,8 +320,8 @@ mod tests {
 
     #[test]
     fn the_setting_offers_what_the_machine_has() {
-        let c = choices(&Topology { logical: 24, fast_cores: 8, ..Default::default() }, None);
-        assert_eq!((c.automatic, c.max), (6, 16));
+        let c = choices(&Topology { logical: 24, fast_cores: 8, fast_threads: 16, ..Default::default() }, None);
+        assert_eq!((c.automatic, c.max), (14, 16));
         let c = choices(&Topology { logical: 2, fast_cores: 1, ..Default::default() }, None);
         assert_eq!((c.automatic, c.max), (1, 2));
     }

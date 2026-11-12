@@ -16,9 +16,9 @@ pub(super) fn touch_stack() {
 }
 
 /// Real-time priority, the way the system gives it to the audio callback, so a worker and the
-/// callback preempt each other evenly: on Linux as cpal gets it (rtkit over D-Bus, at
-/// `audio_thread_priority`'s priority), on macOS a Mach time-constraint policy for one buffer
-/// ([`macos::promote`]). False if it was asked for and refused: a worker at normal priority beside
+/// callback preempt each other evenly: on Linux as cpal gets it (rtkit's policy and
+/// `audio_thread_priority`'s priority; see [`promote_directly`] for how), on macOS a Mach
+/// time-constraint policy for one buffer ([`macos::promote`]). False if it was asked for and refused: a worker at normal priority beside
 /// a real-time callback can be late whenever the system is busy, so it plays nothing, and the pool
 /// plays on with the workers that were granted it (or the caller alone). Not asked for (the null
 /// device), or elsewhere (Windows), where it isn't tried yet, any worker is fit.
@@ -38,7 +38,7 @@ pub(super) fn promote(sh: &Shared, index: usize, opts: &PoolOptions) -> bool {
         #[cfg(target_os = "linux")]
         let granted = {
             crate::audio_io::survive_slow_blocks();
-            audio_thread_priority::promote_current_thread_to_real_time(frames, rate).map(drop).map_err(|e| e.to_string())
+            promote_directly().or_else(|_| audio_thread_priority::promote_current_thread_to_real_time(frames, rate).map(drop).map_err(|e| e.to_string()))
         };
         #[cfg(target_os = "macos")]
         let granted = macos::promote(frames, rate, opts.io_thread.policy);
@@ -96,6 +96,27 @@ pub(super) fn os_thread() -> u32 {
     let id = 0;
     id
 }
+
+/// Real-time priority as rtkit gives it (round-robin at priority 10, not inherited by a fork),
+/// asked of the kernel itself, which allows it where the user's RLIMIT_RTPRIO does: an audio
+/// group's limits, as JACK and PipeWire use them. rtkit allows a user only so many real-time
+/// threads at once (25 by default, PipeWire's among them), and a pool of 14 set up twice in a row
+/// was refused half its workers (#440). Elsewhere rtkit is asked, as before.
+#[cfg(target_os = "linux")]
+fn promote_directly() -> std::io::Result<()> {
+    let param = libc::sched_param { sched_priority: RTKIT_PRIORITY };
+    // SAFETY: a plain system call about this thread, with a valid parameter.
+    if unsafe { libc::sched_setscheduler(0, libc::SCHED_RR | SCHED_RESET_ON_FORK, &param) } == 0 {
+        Ok(())
+    } else {
+        Err(std::io::Error::last_os_error())
+    }
+}
+
+/// The priority `audio_thread_priority` asks rtkit for (its `RT_PRIO_DEFAULT`), which the audio
+/// callback gets.
+#[cfg(target_os = "linux")]
+const RTKIT_PRIORITY: libc::c_int = 10;
 
 /// Not in `libc` (rust-lang/libc#1511).
 #[cfg(target_os = "linux")]

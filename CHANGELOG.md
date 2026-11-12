@@ -13,6 +13,14 @@ All notable changes to Marbble are recorded here. The format follows
   device change with where the playhead was, and the log. It stays on from launch to launch until
   switched off, so a crash is recorded up to the end, ready to attach to a bug report.
 
+### Changed
+
+- **Processing Threads › Automatic uses far more of the machine on Linux.** It stopped at 6
+  threads; it now uses every hardware thread of the performance cores but one core's (14 on an
+  8-core Intel with hyper-threading). Heavy plug-ins such as neural amp models gain most: twelve
+  TONE3000 guitars at 512 samples overloaded on every buffer at 6 threads and play at 60 % load
+  now. A light project still uses only the threads it needs.
+
 ### Fixed
 
 - **Faders, knobs and level sliders follow the mouse smoothly again.** In a big project they
