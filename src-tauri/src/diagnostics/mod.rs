@@ -1,8 +1,10 @@
 //! The Diagnostics window's side of the app: the window (`window.rs`), the logger that keeps the
-//! log in memory for it (`logger.rs`, `log_ring.rs`), and the command it polls a few times a second
+//! log in memory for it (`logger.rs`, `log_ring.rs`), its Record Everything (`activity.rs`, the
+//! activity log written to files), and the command it polls a few times a second
 //! for a [`DiagnosticsSnapshot`]: the session's `Diagnostics` (crates/engine/src/session/diagnostics/),
 //! the log lines it hasn't seen and what Marbble is running on. The window is src/diagnostics/.
 
+pub mod activity;
 mod log_ring;
 pub mod logger;
 pub mod window;

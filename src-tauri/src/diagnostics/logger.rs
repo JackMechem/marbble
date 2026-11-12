@@ -1,5 +1,6 @@
 //! The app's logger: env_logger to stderr as before (`RUST_LOG`, info by default), with every line
-//! it lets through also kept in the [`LogRing`] the Diagnostics window reads. Installed once, at
+//! it lets through also kept in the [`LogRing`] the Diagnostics window reads, and written to the
+//! activity log while that records (`activity.rs`). Installed once, at
 //! startup (`startup::prepare_environment`).
 
 use std::sync::OnceLock;
@@ -19,6 +20,11 @@ fn started() -> Instant {
     *STARTED.get_or_init(Instant::now)
 }
 
+/// How long Marbble has run (from the logger's start, the first thing it does).
+pub fn since_start() -> std::time::Duration {
+    started().elapsed()
+}
+
 struct Tee {
     stderr: env_logger::Logger,
 }
@@ -33,7 +39,9 @@ impl log::Log for Tee {
             return;
         }
         self.stderr.log(record);
-        ring().push(started().elapsed().as_millis() as u64, record.level(), record.target(), record.args().to_string());
+        let message = record.args().to_string();
+        super::activity::log_line(record.level(), record.target(), &message);
+        ring().push(started().elapsed().as_millis() as u64, record.level(), record.target(), message);
     }
 
     fn flush(&self) {

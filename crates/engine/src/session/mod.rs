@@ -14,7 +14,7 @@
 //! - `tracks/`, `mixer/`, `plugins/`: the track list, the channel strips, and their slots.
 //! - `regions/`, `midi/`, `takes/`, `global_tracks/`, `automation/`: what the tracks hold.
 //! - `control/`: controller assignments, feedback and control surfaces.
-//! - `diagnostics/`: the snapshot the Diagnostics window shows.
+//! - `diagnostics/`: the snapshot the Diagnostics window shows, and what its activity log watches.
 //! - `tests/`: tests across areas.
 //!
 //! Pure logic those call is in `crate::edit` and the other root modules, where it can be tested
@@ -64,7 +64,8 @@ mod tracks;
 pub use control::controllers::{controller_label, AssignmentPatch, AssignmentRow};
 pub use control::surface::SurfaceStatus;
 pub use diagnostics::{
-    AudioDiagnostics, Diagnostics, LoadDiagnostics, MemoryDiagnostics, MidiDiagnostics, PluginDiagnostics, PoolDiagnostics, ThreadDiagnostics, TrackDiagnostics,
+    AudioDiagnostics, Diagnostics, LoadDiagnostics, MemoryDiagnostics, MidiDiagnostics, PluginDiagnostics, PoolDiagnostics, ThreadDiagnostics,
+    TrackDiagnostics, Watch, WatchKind,
 };
 pub use engine::pdc::{PdcReport, StripLatency};
 pub use midi::content::MidiContent;

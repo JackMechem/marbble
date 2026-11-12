@@ -17,6 +17,7 @@ import { TracksTab } from "./TracksTab";
 import { LogTab } from "./LogTab";
 import { FactChip } from "./FactViews";
 import { copyText } from "./copyText";
+import type { ActivityStatus } from "./activity";
 import { holdPeaks, type HeldPeaks } from "./peaks";
 import { Icon } from "../ui/icons";
 import { MenuHost } from "../ui/Menu";
@@ -82,6 +83,8 @@ export function DiagnosticsWindow() {
   const [now, setNow] = useState(() => performance.now());
   const [tab, setTab] = useState<Tab>(savedTab);
   const [copied, setCopied] = useState(false);
+  const [activity, setActivity] = useState<ActivityStatus | null>(null);
+  const [activityError, setActivityError] = useState<string | null>(null);
   const logRef = useRef<LogLine[]>([]);
   const prevCounters = useRef<Counters | null>(null);
   useFollowTheme();
@@ -127,6 +130,27 @@ export function DiagnosticsWindow() {
     };
   }, []);
 
+  useEffect(() => {
+    invoke<ActivityStatus>("activity_log").then(setActivity).catch(() => {});
+  }, []);
+
+  const toggleRecording = useCallback(async () => {
+    try {
+      setActivity(await invoke<ActivityStatus>("set_activity_log", { on: !activity?.on }));
+      setActivityError(null);
+    } catch (e) {
+      // Couldn't start a file there.
+      setActivityError(String(e));
+      invoke<ActivityStatus>("activity_log").then(setActivity).catch(() => {});
+    }
+  }, [activity]);
+
+  const recordTitle = activityError
+    ? activityError
+    : activity?.on
+      ? `Recording everything to ${activity.file ?? activity.folder}. Click to stop`
+      : "Record everything: what you do, every audio gap and the log, to a file, from now and from each launch";
+
   const counts = useMemo(() => (engine ? countsAt(countersOf(engine), base?.counters ?? null, rises, now) : null), [engine, base, rises, now]);
 
   const reset = useCallback(() => {
@@ -158,6 +182,12 @@ export function DiagnosticsWindow() {
       <header className="diag-bar">
         <div className="diag-headline">{engine && counts ? headline(engine, counts).map((f) => <FactChip key={f.label} fact={f} />) : <span className="diag-waiting">Waiting for the engine…</span>}</div>
         <div className="diag-actions">
+          <button type="button" className={"diag-btn" + (activity?.on ? " rec" : "")} title={recordTitle} aria-label="Record everything" aria-pressed={activity?.on ?? false} onClick={toggleRecording} disabled={!activity}>
+            <Icon.record />
+          </button>
+          <button type="button" className="diag-btn" title={activity ? `Show the recorded files (${activity.folder})` : "Show the recorded files"} aria-label="Show recorded files" onClick={() => invoke("show_activity_logs").catch(() => {})}>
+            <Icon.folder />
+          </button>
           <button type="button" className="diag-btn" title={base ? `Counting since ${base.at}. Start the counts and load figures afresh` : "Start the counts and load figures afresh"} aria-label="Reset counts" onClick={reset} disabled={!engine}>
             <Icon.reset />
           </button>

@@ -82,3 +82,36 @@ fn the_window_reads_the_snapshot_by_these_names() {
     // Linux has /proc; elsewhere the figure is unknown, not 0.
     assert_eq!(v["memory"]["resident_kb"].is_null(), !cfg!(target_os = "linux"));
 }
+
+/// The activity log's lines: a counter that grew says by how much and where the playhead was, one
+/// that went down (a reopened device) counts all of it, and the transport and the device say when
+/// they start and stop.
+#[test]
+fn a_watch_says_what_changed_since_the_last() {
+    let s = session();
+    let before = s.watch();
+    let mut now = before.clone();
+    assert!(now.changes(&before).is_empty(), "nothing changed");
+    now.audio.device_gaps += 2;
+    now.load.late_blocks += 1;
+    now.load.overloads += 1;
+    now.load.overload_ms = Some(23.0);
+    now.load.overload_track = Some("Bass".into());
+    now.playing = true;
+    now.pos = now.audio.sample_rate.max(1) as i64 * 12;
+    let lines = now.changes(&before);
+    let text = |k: WatchKind| lines.iter().filter(|(kind, _)| *kind == k).map(|(_, t)| t.clone()).collect::<Vec<_>>();
+    let gaps = text(WatchKind::Gap);
+    assert_eq!(gaps.len(), 3, "{lines:?}");
+    assert!(gaps[0].starts_with("device gap ×2") && gaps[0].contains("playing at 0:12.000"), "{}", gaps[0]);
+    assert!(gaps[1].starts_with("late buffer ("), "one late buffer, no count: {}", gaps[1]);
+    assert!(gaps[2].contains("a buffer took 23.0 ms, \"Bass\" took longest"), "{}", gaps[2]);
+    assert_eq!(text(WatchKind::Transport), [format!("playing from 0:12.000 ({})", now.pos)]);
+    // A reopened device counts afresh: 1 after 2 is one new gap.
+    let mut reopened = now.clone();
+    reopened.audio.device_gaps = 1;
+    reopened.playing = false;
+    let lines = reopened.changes(&now);
+    assert!(lines.iter().any(|(k, t)| *k == WatchKind::Gap && t.starts_with("device gap (")), "{lines:?}");
+    assert!(lines.iter().any(|(k, t)| *k == WatchKind::Transport && t.starts_with("stopped at 0:12.000")), "{lines:?}");
+}

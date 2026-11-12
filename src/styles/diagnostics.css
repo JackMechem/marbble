@@ -104,6 +104,11 @@
   color: var(--green);
 }
 
+/* Record Everything while it records. */
+.diag-btn.rec {
+  color: var(--red);
+}
+
 .diag-tabs {
   flex: none;
   display: flex;

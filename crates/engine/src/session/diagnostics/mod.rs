@@ -5,11 +5,15 @@
 //! This file holds the snapshot's types; `gather.rs` fills them from the session, reading only
 //! what the session keeps and what the audio thread left in atomics (`EngineStatus`, each strip's
 //! `StripLoad`), so taking one never touches the engine's lock. The app adds its log and sends it
-//! (`src-tauri/src/diagnostics/`); the window is `src/diagnostics/`.
+//! (`src-tauri/src/diagnostics/`); the window is `src/diagnostics/`. `watch.rs` is what the
+//! window's activity log looks at, and the lines it writes for what changed.
 
 mod gather;
 #[cfg(test)]
 mod tests;
+mod watch;
+
+pub use watch::{Watch, WatchKind};
 
 use serde::Serialize;
 

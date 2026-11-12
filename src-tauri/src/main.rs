@@ -1,7 +1,8 @@
 //! The application: what runs before the window opens (`startup.rs`, the `--scan-vst3` child mode
 //! among it), the window's setup with the timers that drive the session (`timers.rs`), and the
-//! list of commands registered with Tauri. The commands themselves are in `commands/` (the
-//! Diagnostics window's in `diagnostics/`), and `Session` in the engine crate does the work.
+//! list of commands registered with Tauri, each passing the activity log on its way in. The
+//! commands themselves are in `commands/` (the Diagnostics window's in `diagnostics/`), and
+//! `Session` in the engine crate does the work.
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
@@ -33,6 +34,12 @@ fn main() {
     startup::scan_child_if_asked(&args);
     startup::prepare_environment();
     let session = startup::session(&args);
+    // Record Everything, if it was on: from here, so it sees the window open.
+    if settings::load().diagnostics.record_activity {
+        if let Err(e) = diagnostics::activity::set(true, &session) {
+            log::warn!("{e}");
+        }
+    }
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -56,7 +63,7 @@ fn main() {
             }
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![
+        .invoke_handler(logged(tauri::generate_handler![
             commands::get_state,
             commands::list_plugins,
             commands::rescan_plugins,
@@ -344,7 +351,21 @@ fn main() {
             diagnostics::window::open_diagnostics_window,
             diagnostics::diagnostics,
             diagnostics::reset_diagnostics,
-        ])
+            diagnostics::activity::activity_log,
+            diagnostics::activity::set_activity_log,
+            diagnostics::activity::log_activity,
+            diagnostics::activity::show_activity_logs,
+        ]))
         .run(tauri::generate_context!())
         .expect("error while running Marbble");
+}
+
+/// The commands, each written to the activity log on its way in (diagnostics/activity.rs).
+fn logged<R: tauri::Runtime>(
+    handler: impl Fn(tauri::ipc::Invoke<R>) -> bool + Send + Sync + 'static,
+) -> impl Fn(tauri::ipc::Invoke<R>) -> bool + Send + Sync + 'static {
+    move |invoke| {
+        diagnostics::activity::command(invoke.message.command(), invoke.message.payload());
+        handler(invoke)
+    }
 }
