@@ -79,6 +79,9 @@ pub struct UiPrefs {
     pub update_channel: Option<String>,
     /// Settings › General: ask GitHub at launch whether a newer version is out on the channel.
     pub check_updates: bool,
+    /// Settings › Appearance: where the CPU meter shows: "status_line" (at the bottom, beside the
+    /// memory figure) or "control_bar" (at the top, as in Logic Pro).
+    pub cpu_meter: String,
 }
 
 impl Default for UiPrefs {
@@ -97,6 +100,7 @@ impl Default for UiPrefs {
             fx_panels: "floating".into(),
             update_channel: None,
             check_updates: true,
+            cpu_meter: "status_line".into(),
         }
     }
 }
@@ -186,6 +190,7 @@ mod tests {
         assert_eq!(s.ui.fx_panels, "floating");
         assert_eq!(s.ui.update_channel, None);
         assert!(s.ui.check_updates);
+        assert_eq!(s.ui.cpu_meter, "status_line");
         assert_eq!(s.audio.sample_rate, AudioConfig::default().sample_rate);
     }
 
@@ -211,6 +216,7 @@ mod tests {
         s.prefs.general.autosave_minutes = 7;
         s.ui.update_channel = Some("stable".into());
         s.ui.check_updates = false;
+        s.ui.cpu_meter = "control_bar".into();
         let back = parse(&serde_json::to_string(&s).unwrap()).unwrap();
         assert_eq!(back.ui, s.ui);
         assert_eq!(back.plugins, s.plugins);

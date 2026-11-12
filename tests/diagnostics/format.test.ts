@@ -1,7 +1,7 @@
 // Unit tests for src/diagnostics/format.ts: how the Diagnostics window writes its figures.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { asked, bytes, DASH, frames, kb, list, ms, num, pct, sinceLaunch, threadName, yesNo } from "../../src/diagnostics/format.ts";
+import { asked, bytes, DASH, frames, kb, list, ms, num, pct, plural, sinceLaunch, threadName, yesNo } from "../../src/diagnostics/format.ts";
 
 test("unknown values are a dash, not 0", () => {
   for (const f of [pct, ms, num, kb, bytes, threadName]) assert.equal(f(null), DASH);
@@ -38,4 +38,10 @@ test("what was given says what was asked when they differ", () => {
   assert.equal(asked(256, 256), "256");
   assert.equal(asked(512, 256), "512 (asked 256)");
   assert.equal(asked(0, 256), `${DASH} (asked 256)`);
+});
+
+test("one of a thing is singular", () => {
+  assert.equal(plural(1, "error"), "1 error");
+  assert.equal(plural(0, "error"), "0 errors");
+  assert.equal(plural(2, "warning"), "2 warnings");
 });

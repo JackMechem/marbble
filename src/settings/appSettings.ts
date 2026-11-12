@@ -11,6 +11,7 @@ import { tempoMap } from "../lib/tempo";
 import type { SurfaceConfig } from "../controllers/surfaces";
 import type { UpdateChannel } from "../app/updates/updateCheck";
 import type { WheelScrolls } from "../ui/wheel";
+import type { MeterPlace } from "../app/cpuMeter/cpuMeterModel";
 
 export type AudioOverlap = "on_top" | "new_track" | "replace" | "take_folders";
 export type MidiOverlap = "new_region" | "merge" | "replace" | "take_folders";
@@ -85,6 +86,8 @@ export interface UiPrefs {
   update_channel?: UpdateChannel | null;
   /** Settings › General: check for updates at launch (updates.ts). */
   check_updates?: boolean;
+  /** Settings › Appearance: where the CPU meter shows (cpuMeterModel.ts `meterPlace`). */
+  cpu_meter?: MeterPlace;
 }
 
 export interface PluginPrefs {

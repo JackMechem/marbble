@@ -3,7 +3,7 @@
 // (a count that rose in the last few seconds, real time refused, memory swapped out). The Overview
 // tab draws these and the copied report prints them, so both say the same.
 import { risingAt, since, type Counter, type Counters, type Rises } from "./counters.ts";
-import { asked, bytes, DASH, frames, kb, list, ms, num, pct, threadName } from "./format.ts";
+import { asked, bytes, DASH, frames, kb, list, ms, num, pct, plural, threadName } from "./format.ts";
 import type { HeldPeaks } from "./peaks.ts";
 import type { Diagnostics, TrackDiagnostics } from "./snapshot.ts";
 import { memoryLockNote } from "../settings/panes/memoryLock.ts";
@@ -45,8 +45,6 @@ function counted(label: string, c: Counts, key: Counter, hint: string, value?: s
 function load(label: string, v: number, hint: string): Fact {
   return { label, value: pct(v), level: v > 1 ? "alert" : v > 0.7 ? "warn" : undefined, hint };
 }
-
-const plural = (n: number, one: string, many = one + "s") => `${n} ${n === 1 ? one : many}`;
 
 export function audioFacts(d: Diagnostics, c: Counts): Section {
   const a = d.audio;

@@ -186,8 +186,9 @@ pub struct PluginDiagnostics {
 #[derive(Debug, Clone, Serialize)]
 pub struct MemoryDiagnostics {
     pub lock: MemoryLock,
-    /// In kB, from `/proc/self/status` (Linux); None where the system doesn't say.
+    /// In kB (`audio_io::resident`); None where the system doesn't say.
     pub resident_kb: Option<u64>,
+    /// These three in kB, from `/proc/self/status`: Linux only.
     pub locked_kb: Option<u64>,
     pub swapped_kb: Option<u64>,
     pub mapped_kb: Option<u64>,

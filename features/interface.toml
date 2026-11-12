@@ -12,7 +12,7 @@ tier = "core"
 beta = true
 logic = "87"
 issue = 322
-note = "Fixed layout; no Customize Control Bar."
+note = "Fixed layout, but for the CPU meter, which Settings › Appearance puts here or in the status line; no Customize Control Bar."
 
 [[feature]]
 section = "Logic Pro basics: the interface"

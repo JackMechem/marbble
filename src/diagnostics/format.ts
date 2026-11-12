@@ -57,6 +57,9 @@ export function sinceLaunch(msTotal: number): string {
 }
 
 /** "Yes" or "No", or a dash for unknown. */
+/** `1 error`, `2 errors`. */
+export const plural = (n: number, one: string, many = one + "s") => `${n} ${n === 1 ? one : many}`;
+
 export function yesNo(v: boolean | null | undefined): string {
   return v === true ? "Yes" : v === false ? "No" : DASH;
 }

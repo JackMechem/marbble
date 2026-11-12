@@ -1,10 +1,11 @@
-// The control bar: view buttons, transport, LCD, mode buttons, master volume and the CPU meter.
+// The control bar: view buttons, transport, LCD, mode buttons, master volume and, if Settings ›
+// Appearance puts it here, the CPU meter (cpuMeter/).
 // Short of room it gives way around the transport and the LCD (control-bar.css).
 import { useEffect, useRef, useState } from "react";
 import { act } from "../../engine/commands";
 import { Icon } from "../../ui/icons";
 import { getState, onTick, setState, useStore } from "../../state/store";
-import { cpuLevel, cpuPercent, cpuTitle, shownPeak } from "./cpuMeter";
+import { CpuMeter, useAudioLoad, useMeterPlace } from "../cpuMeter/CpuMeter";
 import { framePos, onFrame } from "../../state/frameLoop";
 import { formatTime, toBbt } from "../../lib/time";
 import { fmtBpm, tempoMap } from "../../lib/tempo";
@@ -217,31 +218,9 @@ function TransportButtons() {
   );
 }
 
-function CpuMeter() {
-  const [cpu, setCpu] = useState(0);
-  const [blockPeak, setBlockPeak] = useState(0);
-  const [lateBlocks, setLateBlocks] = useState(0);
-  const [threads, setThreads] = useState(1);
-  const [cleared, setCleared] = useState(0);
-  useEffect(() => onTick((t) => {
-    setCpu((c) => (Math.abs(c - t.cpu) > 0.01 ? t.cpu : c));
-    setBlockPeak((p) => (Math.abs(p - t.cpu_peak) > 0.01 ? t.cpu_peak : p));
-    setLateBlocks(t.late_blocks);
-    setThreads(t.threads);
-  }), []);
-  const peak = shownPeak(cpu, blockPeak);
-  const late = lateBlocks - cleared;
-  return (
-    <div className={"cpu" + (late > 0 ? " over" : "")} title={cpuTitle(cpu, peak, late, threads)} onClick={() => setCleared(lateBlocks)}>
-      <span className="cpu-label">
-        CPU <span className="cpu-pct">{cpuPercent(cpu)}</span>
-      </span>
-      <div className="cpu-bar">
-        <div className={"cpu-fill " + cpuLevel(cpu)} style={{ width: `${Math.min(100, cpu * 100)}%` }} />
-        <div className="cpu-peak" style={{ left: `${Math.min(100, peak * 100)}%` }} />
-      </div>
-    </div>
-  );
+/** The CPU meter, when Settings › Appearance puts it here rather than in the status line. */
+function BarMeter() {
+  return <CpuMeter load={useAudioLoad()} />;
 }
 
 export function ControlBar() {
@@ -257,6 +236,7 @@ export function ControlBar() {
   const masterDb = useStore((s) => s.snap?.project.master.volume_db ?? 0);
   const showTyping = useStore((s) => s.showTyping);
   const replace = useSettings((s) => s.prefs.recording.replace ?? false);
+  const meterPlace = useMeterPlace();
   const s = { showLibrary, showInspector, showBrowser, bottom };
   const p = { cycle: { enabled: cycleOn }, count_in: countIn, metronome, master: { volume_db: masterDb } };
   return (
@@ -306,7 +286,7 @@ export function ControlBar() {
         <div className="cb-master" title="Master volume">
           <HSlider db={p?.master.volume_db ?? 0} onChange={(db) => act("set_master_volume", { db })} width="var(--cb-master-w, 92px)" label="Master volume" />
         </div>
-        <CpuMeter />
+        {meterPlace === "control_bar" && <BarMeter />}
       </div>
 
       <div className="cb-group right">

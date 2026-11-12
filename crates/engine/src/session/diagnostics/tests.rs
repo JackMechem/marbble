@@ -79,8 +79,11 @@ fn the_window_reads_the_snapshot_by_these_names() {
     let t = &v["tracks"][0];
     assert_eq!(t["kind"], "audio");
     assert!(t.get("thread").is_some() && t.get("share").is_some() && t["plugins"].is_array());
-    // Linux has /proc; elsewhere the figure is unknown, not 0.
-    assert_eq!(v["memory"]["resident_kb"].is_null(), !cfg!(target_os = "linux"));
+    // Linux, macOS and Windows each give the resident size; elsewhere it is unknown, not 0.
+    let known = cfg!(any(target_os = "linux", target_os = "macos", target_os = "windows"));
+    assert_eq!(v["memory"]["resident_kb"].is_null(), !known);
+    // The rest of /proc/self/status is Linux's alone.
+    assert_eq!(v["memory"]["swapped_kb"].is_null(), !cfg!(target_os = "linux"));
 }
 
 /// The activity log's lines: a counter that grew says by how much and where the playhead was, one

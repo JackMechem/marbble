@@ -1,0 +1,122 @@
+/* The CPU meter (app/cpuMeter/): label and figure over the bar in the control bar, one line in the
+   status line (.inline). */
+.cpu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--faint);
+}
+
+/* "CPU" and the average load, over the bar. */
+.cpu-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+/* Wide enough for "999%", so the meter keeps its width as the digits change and nothing beside it
+   moves. The 2 px is the letter spacing. */
+.cpu-pct {
+  min-width: calc(5ch + 2px);
+  text-align: right;
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+}
+
+/* As wide as the label over it. */
+.cpu-bar {
+  position: relative;
+  min-width: 48px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--slider-track);
+  overflow: hidden;
+}
+
+.cpu-bar div {
+  height: 100%;
+}
+
+.cpu-fill.low {
+  background: var(--slider-fill);
+}
+
+.cpu-fill.mid {
+  background: var(--warn);
+}
+
+.cpu-fill.high {
+  background: var(--red);
+}
+
+/* The worst recent block. Its right edge marks the value, so it stays on the bar at 100% and off
+   it at 0. --text, which shows on every theme's track. */
+.cpu-peak {
+  position: absolute;
+  top: 0;
+  width: 1px;
+  transform: translateX(-100%);
+  background: var(--text);
+}
+
+/* A block ran late since the last clear: red like a strip's clip indicator, until clicked. */
+.cpu.over {
+  cursor: pointer;
+}
+
+/* The shadow widens the red past the text without widening the meter. */
+.cpu.over .cpu-label {
+  border-radius: 2px;
+  background: var(--red);
+  box-shadow: 0 0 0 2px var(--red);
+  color: var(--red-ink);
+}
+
+.cpu.over .cpu-pct {
+  color: inherit;
+}
+
+/* ---- in the status line ------------------------------------------------------------------- */
+
+/* "CPU", the bar, then the figure, in the status line's own type; the label's box steps aside so
+   its two parts can sit either side of the bar. The full height is the hit area. */
+.cpu.inline {
+  flex-direction: row;
+  align-items: center;
+  align-self: stretch;
+  gap: 6px;
+  padding: 0 6px;
+  font-size: var(--fs-sm);
+  font-weight: inherit;
+  letter-spacing: normal;
+}
+
+.cpu.inline .cpu-label {
+  display: contents;
+}
+
+.cpu.inline .cpu-bar {
+  order: 1;
+  min-width: 0;
+  width: 40px;
+}
+
+.cpu.inline .cpu-pct {
+  order: 2;
+  min-width: 5ch;
+  text-align: left;
+}
+
+.cpu.inline:hover {
+  color: var(--dim);
+}
+
+/* Late blocks: the whole meter goes red, as the label does in the control bar. */
+.cpu.inline.over {
+  border-radius: var(--radius);
+  background: var(--red);
+  color: var(--red-ink);
+}
