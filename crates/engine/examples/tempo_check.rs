@@ -63,7 +63,7 @@ fn midi_notes(s: &Session, id: u64) -> (i64, Vec<Note>) {
         for r in &t.regions {
             if r.id == id {
                 if let RegionContent::Midi { notes, .. } = &r.content {
-                    return (r.start, notes.clone());
+                    return (r.start, notes.to_vec());
                 }
             }
         }

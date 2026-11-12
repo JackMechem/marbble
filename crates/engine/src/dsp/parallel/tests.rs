@@ -102,7 +102,7 @@ fn project(e: &mut Rig) -> TaskGraph {
         strip(7, TrackKind::Aux, params(None, &[]), vec![tone(70, 610.0, None, false)]),
     ];
     let ids = tracks.iter().map(|t| t.id).collect();
-    e.engine.replace_graph(SR, tracks, (0..INSERT_SLOTS).map(|_| None).collect());
+    e.engine.replace_graph(SR, tracks, (0..INSERT_SLOTS).map(|_| None).collect(), None);
     let edges = [(1, 5), (2, 5), (1, 6), (1, 7), (2, 6), (3, 7), (4, 6), (5, 7), (1, 4), (2, 4)];
     TaskGraph::new(ids, &edges, |_| true).unwrap()
 }
@@ -166,14 +166,27 @@ fn a_render_after_a_new_send_does_not_depend_on_how_long_it_played_live_first() 
     assert!(renders[0].iter().zip(&renders[1]).all(|(a, b)| bits(a) == bits(b)), "the sends start at their levels");
 }
 
+/// The serial loop's output for `project`, after `cmds` and `blocks` blocks.
+fn serial_after(cmds: impl Fn() -> Vec<Cmd>, blocks: usize) -> Vec<f32> {
+    let mut e = rig();
+    project(&mut e);
+    for c in cmds() {
+        e.tx.push(c).ok().unwrap();
+    }
+    play(&mut e, blocks)
+}
+
+/// Without a graph that holds, the engine builds one from its own routes and stays on the pool,
+/// playing what the serial loop plays bit for bit (#475).
 #[test]
-fn without_a_graph_that_fits_it_plays_serially() {
+fn without_a_graph_that_fits_the_engine_builds_one_and_plays_as_the_serial_loop() {
+    let serial = serial_after(Vec::new, 20);
     let mut e = rig();
     project(&mut e);
     e.tx.push(Cmd::Workers(Some(Workers::new(PoolOptions { threads: 4, ..Default::default() })))).ok().unwrap();
     e.tx.push(Cmd::ParallelTest(ParallelTest { always: true, renders: false, patient: true })).ok().unwrap();
-    play(&mut e, 2);
-    assert_eq!(e.status.parallel_blocks.load(Ordering::Relaxed), 0, "no graph");
+    assert!(bits(&play(&mut e, 20)) == bits(&serial), "no graph");
+    assert_eq!(e.status.parallel_blocks.load(Ordering::Relaxed), 20, "no graph, on the pool");
     // One missing route of each kind.
     for missing in [(1, 5), (1, 7), (2, 6), (1, 4), (2, 4)] {
         let mut r = rig();
@@ -184,29 +197,48 @@ fn without_a_graph_that_fits_it_plays_serially() {
         r.tx.push(Cmd::Graph(Some(Box::new(TaskGraph::new(ids, &edges, |_| true).unwrap())))).ok().unwrap();
         r.tx.push(Cmd::Workers(Some(Workers::new(PoolOptions { threads: 4, ..Default::default() })))).ok().unwrap();
         r.tx.push(Cmd::ParallelTest(ParallelTest { always: true, renders: false, patient: true })).ok().unwrap();
-        play(&mut r, 2);
-        assert_eq!(r.status.parallel_blocks.load(Ordering::Relaxed), 0, "without the route {missing:?}");
+        assert!(bits(&play(&mut r, 20)) == bits(&serial), "without the route {missing:?}");
+        assert_eq!(r.status.parallel_blocks.load(Ordering::Relaxed), 20, "without the route {missing:?}, on the pool");
     }
 }
 
+/// Plays 2 blocks, then has track 3 start sending to aux 6, plays 2 more, then takes `graph` (if
+/// any) and plays 1 more.
+fn send_midway(e: &mut Rig, graph: Option<TaskGraph>) -> Vec<f32> {
+    let mut out = play(e, 2);
+    e.tx.push(Cmd::Params(3, params(None, &[(7, 0.6, true), (6, 0.5, false)]))).ok().unwrap();
+    let mut next = vec![0.0f32; BLOCK * 2];
+    for k in 0..3 {
+        if k == 2 {
+            if let Some(g) = &graph {
+                e.tx.push(Cmd::Graph(Some(Box::new(g.clone())))).ok().unwrap();
+            }
+        }
+        e.engine.process(&[], 0, &mut next, 2);
+        out.extend_from_slice(&next);
+    }
+    out
+}
+
+/// A route the session's graph lacks doesn't send the blocks to the callback alone until its next
+/// graph: the engine's own takes over at once, and the session's when it comes (#475).
 #[test]
-fn a_route_the_graph_lacks_goes_serial_at_once_and_a_new_graph_brings_it_back() {
+fn a_route_the_graph_lacks_stays_on_the_pool_until_a_new_graph_comes() {
+    let ids = vec![1, 2, 3, 4, 5, 6, 7];
+    let edges = [(1, 5), (2, 5), (1, 6), (1, 7), (2, 6), (3, 7), (4, 6), (5, 7), (1, 4), (2, 4), (3, 6)];
+    let next = TaskGraph::new(ids, &edges, |_| true).unwrap();
+    let mut s = rig();
+    project(&mut s);
+    let serial = send_midway(&mut s, None);
     let mut e = rig();
     let g = project(&mut e);
     e.tx.push(Cmd::Graph(Some(Box::new(g)))).ok().unwrap();
     e.tx.push(Cmd::Workers(Some(Workers::new(PoolOptions { threads: 4, ..Default::default() })))).ok().unwrap();
     e.tx.push(Cmd::ParallelTest(ParallelTest { always: true, renders: false, patient: true })).ok().unwrap();
-    play(&mut e, 2);
-    assert_eq!(e.status.parallel_blocks.load(Ordering::Relaxed), 2);
-    // Track 3 starts sending to aux 6.
-    e.tx.push(Cmd::Params(3, params(None, &[(7, 0.6, true), (6, 0.5, false)]))).ok().unwrap();
-    play(&mut e, 2);
-    assert_eq!(e.status.parallel_blocks.load(Ordering::Relaxed), 2, "those two blocks played serially");
-    let ids = vec![1, 2, 3, 4, 5, 6, 7];
-    let edges = [(1, 5), (2, 5), (1, 6), (1, 7), (2, 6), (3, 7), (4, 6), (5, 7), (1, 4), (2, 4), (3, 6)];
-    e.tx.push(Cmd::Graph(Some(Box::new(TaskGraph::new(ids, &edges, |_| true).unwrap())))).ok().unwrap();
-    play(&mut e, 2);
-    assert_eq!(e.status.parallel_blocks.load(Ordering::Relaxed), 4);
+    let out = send_midway(&mut e, Some(next));
+    assert_eq!(e.status.parallel_blocks.load(Ordering::Relaxed), 5, "every block on the pool, the two before the new graph too");
+    assert!(!e.engine.parallel_own_for_tests(), "on the session's graph again");
+    assert!(bits(&out) == bits(&serial), "as the serial loop plays it");
 }
 
 #[test]
@@ -796,7 +828,7 @@ fn a_strip_notes_the_thread_that_played_it() {
         strip(on_worker, TrackKind::Audio, params(None, &[]), vec![tone(964, 290.0, None, false)]),
     ];
     let loads: Vec<Arc<StripLoad>> = tracks.iter().map(|t| t.load.clone()).collect();
-    e.engine.replace_graph(SR, tracks, (0..INSERT_SLOTS).map(|_| None).collect());
+    e.engine.replace_graph(SR, tracks, (0..INSERT_SLOTS).map(|_| None).collect(), None);
     e.tx.push(Cmd::Graph(Some(Box::new(TaskGraph::new(vec![on_caller, on_worker], &[], |_| true).unwrap())))).ok().unwrap();
     e.tx.push(Cmd::Workers(Some(Workers::new(PoolOptions { threads: 2, ..Default::default() })))).ok().unwrap();
     e.tx.push(Cmd::ParallelTest(ParallelTest { always: true, renders: false, patient: true })).ok().unwrap();

@@ -2,6 +2,8 @@
 //! to and from MIDI regions, and the notes `regions_dsp` plays for them. The pattern maths is
 //! in [`crate::edit::pattern`].
 
+use std::sync::Arc;
+
 use anyhow::{anyhow, Result};
 
 use crate::edit::pattern::{self, Pattern, PatternRow};
@@ -92,7 +94,7 @@ impl Session {
             }
             let RegionContent::Midi { notes, .. } = &mut r.content else { return };
             r.pattern = Some(pattern::from_notes(notes, r.start, r.length, &map));
-            notes.clear();
+            *notes = Arc::default();
         });
         self.dirty = true;
     }

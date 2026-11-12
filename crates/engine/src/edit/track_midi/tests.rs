@@ -36,7 +36,7 @@ fn midi_region(start: i64, length: i64, notes: Vec<Note>) -> Region {
         length,
         muted: false,
         color: None,
-        content: RegionContent::Midi { notes, cc: Vec::new() },
+        content: RegionContent::midi(notes, Vec::new()),
         loop_end: None,
         params: Default::default(),
         pattern: None,

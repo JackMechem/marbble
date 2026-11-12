@@ -14,7 +14,7 @@ fn session_with_two_tracks() -> (Session, Id, Id, Id) {
     let a = s.add_track(TrackKind::Instrument, InputSel::Mono(0), None, None).unwrap();
     let b = s.add_track(TrackKind::Instrument, InputSel::Mono(0), None, None).unwrap();
     let id = s.project.alloc_id();
-    let content = RegionContent::Midi { notes: Vec::new(), cc: Vec::new() };
+    let content = RegionContent::midi(Vec::new(), Vec::new());
     s.project.track_mut(a).unwrap().regions.push(Region {
         id,
         name: "M".into(),

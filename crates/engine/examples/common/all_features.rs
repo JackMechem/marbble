@@ -4,6 +4,7 @@
 #![allow(dead_code)]
 
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use daw_engine::edit::pattern::{Pattern, PatternRow, Step};
 use daw_engine::edit::region_params::RegionParams;
@@ -155,8 +156,7 @@ pub fn base(s: &mut Session, dir: &Path) -> World {
         start: 0,
         end: 2 * BAR,
         gain_db: 0.0,
-        notes: vec![note(0, q, pitch, 100), note(2 * q, q, pitch + 4, 100), note(BAR + q, q, pitch + 7, 100)],
-        cc: Vec::new(),
+        notes: Arc::new(vec![note(0, q, pitch, 100), note(2 * q, q, pitch + 4, 100), note(BAR + q, q, pitch + 7, 100)]),
         ..Default::default()
     };
     let mut folder = TakeFolder::new();
@@ -170,7 +170,7 @@ pub fn base(s: &mut Session, dir: &Path) -> World {
         length: 2 * BAR,
         muted: false,
         color: None,
-        content: RegionContent::Midi { notes: heard, cc: Vec::new() },
+        content: RegionContent::Midi { notes: heard, cc: Default::default() },
         loop_end: None,
         takes: Some(folder),
         params: RegionParams::default(),

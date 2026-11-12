@@ -8,10 +8,14 @@
 //! summed in, so the sums come out bit for bit as the serial loop's do.
 //!
 //! The graph is only a claim about what the engine does. `Engine` checks it against the routes it
-//! resolved itself (`parallel::covers`) before trusting it, and plays serially whenever it
-//! doesn't hold, as in the blocks between an edit's commands and its new graph.
+//! resolved itself (`parallel::covers`) before trusting it. Whenever it doesn't hold, as in the
+//! blocks between an edit's commands and its new graph, the engine builds one from those routes in
+//! a [`GraphRoom`], and plays serially only if that can't be done.
 
 use crate::model::{Id, Project};
+
+mod room;
+pub use room::GraphRoom;
 
 /// The most tasks a graph can have; a larger project just plays serially.
 pub const MAX_TASKS: usize = 1024;
