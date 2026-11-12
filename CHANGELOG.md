@@ -37,10 +37,11 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Fixed
 
-- **A rare crash on JACK under heavy load.** When JACK shut Marbble's client down while the audio
-  callback was inside a plug-in (seen at the end of overloaded runs with twelve TONE3000s), the
-  plug-in was cut off mid-buffer and the app aborted ("terminate called without an active
-  exception"). The callback now finishes the buffer first.
+- **A crash on JACK as the device closed.** Closing the device (a new buffer size or device,
+  Reset Audio Engine, quitting) while the audio callback ran could abort the app ("terminate called
+  without an active exception", "exception not rethrown"): JACK stops its thread wherever it is.
+  The callback now plays silence alone for a moment before the device closes, so JACK finds it
+  waiting between buffers.
 - **Faders, knobs and level sliders follow the mouse smoothly again.** In a big project they
   jittered while dragged, pulled back towards the old value between moves. A drag now carries on
   from where the control was grabbed, whatever the engine answers in between.
