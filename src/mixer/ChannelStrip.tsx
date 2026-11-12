@@ -7,7 +7,7 @@ import { Icon } from "../ui/icons";
 import { onTick, peakHold, STEREO_OUT_METER, useStore } from "../state/store";
 import { formatDb } from "../lib/decibels";
 import { inputLabel } from "../engine/project";
-import { Fader, GrMeter, Knob, Meter } from "../ui/Controls";
+import { Fader, GrMeter, Knob, Meter, type MeterSource, type TouchProps } from "../ui/Controls";
 import { EqThumb } from "./EqThumb";
 import { automatable, outputTrack, VOLUME } from "../tracks/automation/params";
 import { useAutomation } from "../tracks/automation/useAutomation";
@@ -71,20 +71,37 @@ function usePeakHold(key: Id): number {
 }
 
 /**
+ * The fader and meters, which take whatever height the strip has left, like Logic's. They're
+ * their own component so that a new height (the Mixer resized) renders only them.
+ */
+function StripFader({ db, onChange, vca, touch, meter, dynamics }: { db: number; onChange: (db: number) => void; vca?: number; touch: TouchProps; meter: MeterSource | null; dynamics: boolean }) {
+  const box = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState(160);
+  useLayoutEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => setHeight(Math.max(60, Math.floor(e.contentRect.height))));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return (
+    <div className="strip-fader" ref={box}>
+      <Fader db={db} onChange={onChange} height={height} vca={vca} {...touch} />
+      {meter ? (
+        <div className="strip-meters">
+          <Meter source={meter} height={height} width={METER_W} />
+          {dynamics && <GrMeter source={meter} height={height} />}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/**
  * Logic-style channel strip. `track` is null for the Stereo Out strip. `rows` are the insert and
  * send rows shared by the strips beside it (stripRows.ts); without them it sizes to its own.
  */
 export function ChannelStrip({ track, selected, rows }: { track: Track | null; selected?: boolean; rows?: SlotRows }) {
-  // The fader takes whatever height is left, like Logic's strips.
-  const faderBox = useRef<HTMLDivElement>(null);
-  const [faderHeight, setFaderHeight] = useState(160);
-  useLayoutEffect(() => {
-    const el = faderBox.current;
-    if (!el) return;
-    const ro = new ResizeObserver(([e]) => setFaderHeight(Math.max(60, Math.floor(e.contentRect.height))));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
   const master = useStore((s) => s.snap?.project.master);
   const inputs = useStore((s) => s.snap?.audio.input_channels ?? 2);
   const isMaster = track === null;
@@ -309,15 +326,14 @@ export function ChannelStrip({ track, selected, rows }: { track: Track | null; s
         </span>
       </div>
 
-      <div className="strip-fader" ref={faderBox}>
-        <Fader db={autoVolume} onChange={setVolume} height={faderHeight} vca={vca} {...(isMaster ? {} : volumeTouch)} />
-        {folder ? null : (
-          <div className="strip-meters">
-            <Meter source={isMaster ? { kind: "master" } : { kind: "track", id }} height={faderHeight} width={METER_W} />
-            {dynamics && <GrMeter source={isMaster ? { kind: "master" } : { kind: "track", id }} height={faderHeight} />}
-          </div>
-        )}
-      </div>
+      <StripFader
+        db={autoVolume}
+        onChange={setVolume}
+        vca={vca}
+        touch={isMaster ? {} : volumeTouch}
+        meter={folder ? null : isMaster ? { kind: "master" } : { kind: "track", id }}
+        dynamics={dynamics}
+      />
 
       {!isMaster ? (
         <div className="strip-buttons">

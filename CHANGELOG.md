@@ -50,6 +50,9 @@ All notable changes to Marbble are recorded here. The format follows
 ### Fixed
 
 - **No horizontal scroll bar in Settings on macOS.**
+- **Resizing the Mixer is smooth in a big project.** Dragging the divider above it rendered the
+  whole window, every strip twice, on each move; now only the faders and meters follow the new
+  height.
 - **Diagnostics' sidebar:** the selected page's marker is a straight bar, no longer curved by the
   rounded corners, and a count of one says "1 error" rather than "1 errors".
 - **No more overload as you locate, play or select a track in a heavy project.** With its
