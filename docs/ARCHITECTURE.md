@@ -487,9 +487,10 @@ callback's mix plays the block for its position, so a slow block is absorbed by 
   no more of it (`come_back`) and it comes back once it's out. Strips are lent only after `CALM`
   callbacks in a row on time without a miss, at the end of one that used at most `LEND_SHARE` of
   its time, so a strip's first block has the time it needs (#466).
-- The session (`sync_ahead`, from `idle`) starts render threads as the setting and the processing
-  threads say, and keeps live the selected track and tracks with a plug-in window open
-  (`Cmd::KeepLive`).
+- The session (`sync_ahead`, from `idle`) starts render threads as the setting says, as many as
+  the machine suggests (`audio_io::threads::render_threads`: Automatic's count without the
+  device workgroup's limit, whatever Processing Threads says, #469), and keeps live the selected
+  track and tracks with a plug-in window open (`Cmd::KeepLive`).
 - Lent strips are a table of pointers; a render thread names the strip it looks at as its hazard,
   and taking a strip back waits until none does, so a shell is never traded or freed under it.
 
