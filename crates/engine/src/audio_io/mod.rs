@@ -395,8 +395,20 @@ pub fn start(engine: Arc<Mutex<Engine>>, cfg: &AudioConfig) -> (Option<AudioIo>,
                 };
                 let fast = threads::Topology::detect().fast;
                 let probe = Arc::new(IoThreadProbe::default());
-                let out =
-                    by_format!(out_fmt, build_output, &out_dev, out_cfg, engine.clone(), in_rx, in_ch, status_arc.clone(), fast, probe.clone(), ev.clone(), closing.clone())?;
+                let out = by_format!(
+                    out_fmt,
+                    build_output,
+                    &out_dev,
+                    out_cfg,
+                    engine.clone(),
+                    in_rx,
+                    in_ch,
+                    status_arc.clone(),
+                    fast,
+                    probe.clone(),
+                    ev.clone(),
+                    closing.clone()
+                )?;
                 if let Some(s) = &in_stream {
                     s.play()?;
                 }
