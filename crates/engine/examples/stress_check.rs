@@ -29,6 +29,8 @@
 //!                       then unused
 //!   --from S            where to play from, in seconds (default 0)
 //!   --stopped           measure with the transport stopped, as when the project sits open
+//!   --ahead S           render tracks that aren't live S seconds ahead (#448), on as many render
+//!                       threads as Automatic has
 //!   --tracks N          instrument tracks (default 32)
 //!   --audio N           audio tracks (default 8)
 //!   --seed N            the project's seed (default 1)
@@ -78,6 +80,7 @@ struct Opts {
     project: Option<PathBuf>,
     from: f64,
     stopped: bool,
+    ahead: Option<f64>,
     tracks: usize,
     audio: usize,
     seed: u64,
@@ -128,6 +131,7 @@ fn parse() -> Opts {
         project: None,
         from: 0.0,
         stopped: false,
+        ahead: None,
         tracks: 32,
         audio: 8,
         seed: 1,
@@ -155,6 +159,7 @@ fn parse() -> Opts {
             "--project" => o.project = Some(val().into()),
             "--from" => o.from = num(val()),
             "--stopped" => o.stopped = true,
+            "--ahead" => o.ahead = Some(num(val())),
             "--tracks" => o.tracks = num(val()) as usize,
             "--audio" => o.audio = num(val()) as usize,
             "--seed" => o.seed = num(val()) as u64,
@@ -521,6 +526,9 @@ fn main() {
     };
     // What Settings › Processing Threads › Automatic is here, as the app works it out.
     let automatic = s.thread_choices().automatic;
+    if let Some(lead) = o.ahead {
+        s.set_render_ahead(Some((automatic as usize, lead)));
+    }
     let settings = o.threads.clone().unwrap_or_else(|| (1..=automatic.max(2)).chain([AUTOMATIC]).collect());
     let topo = Topology::detect();
     let device = s.audio_status.output_name.clone().unwrap_or_default();
@@ -531,6 +539,10 @@ fn main() {
         None => format!("{} instrument + {} audio tracks (seed {})", o.tracks, o.audio, o.seed),
     };
     let what = if o.stopped { format!("{what}, stopped") } else { what };
+    let what = match o.ahead {
+        Some(lead) => format!("{what}, rendering {:.0} ms ahead", lead * 1000.0),
+        None => what,
+    };
     println!(
         "{what}, {:.0} s each after {:.0} s warm-up, on {} ({}, {} Hz); {cores}",
         o.seconds, o.warmup, device, s.audio_status.host, s.audio_status.sample_rate
@@ -573,6 +585,9 @@ fn main() {
         });
         std::fs::write(path, serde_json::to_string_pretty(&doc).unwrap() + "\n").unwrap();
         println!("wrote {}", path.display());
+    }
+    if o.ahead.is_some() {
+        println!("blocks not rendered ahead in time: {}", s.status.ahead_misses.load(Ordering::Relaxed));
     }
     drop(s);
     if made {

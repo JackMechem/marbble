@@ -156,6 +156,30 @@ impl Session {
         }
     }
 
+    /// Render ahead (#448): the source of tracks that aren't live rendered `lead_secs` ahead of the
+    /// playhead on `threads` render threads; None plays every track live. Off by default while it's
+    /// being built; checks and measurements switch it on.
+    pub fn set_render_ahead(&mut self, ahead: Option<(usize, f64)>) {
+        match ahead {
+            Some((threads, lead_secs)) => {
+                let fresh = self.ahead.is_none();
+                let t = crate::dsp::ahead::AheadThreads::start(threads, self.status.clone());
+                self.send(Cmd::Ahead(Some(t.shared()), lead_secs));
+                // The old threads end once the engine has let go of them: a strip they hold is
+                // taken back as the engine gets the new ones.
+                self.ahead = Some(t);
+                if fresh {
+                    let ctls: Vec<_> = self.project.tracks.iter().filter_map(|t| crate::dsp::ahead::ctl_for(t.kind).map(|c| (t.id, c))).collect();
+                    self.send(Cmd::AheadCtls(ctls));
+                }
+            }
+            None => {
+                self.send(Cmd::Ahead(None, 0.0));
+                self.ahead = None;
+            }
+        }
+    }
+
     /// For measurements: starts workers exactly as given (real time on the null device, say).
     #[doc(hidden)]
     pub fn start_workers_for_checks(&mut self, opts: PoolOptions) {

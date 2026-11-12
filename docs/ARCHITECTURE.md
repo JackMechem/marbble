@@ -454,6 +454,27 @@ flowchart TD
   match playback; every insert wakes at a reset (renders start with one). Instrument slots don't
   sleep: a plug-in instrument may play on its own with the transport.
 
+### Render ahead
+
+`dsp/ahead/` (#448, off by default while it's built): tracks that aren't played live have their
+source rendered on render threads up to a lead (about 200 ms) ahead of the playhead, and the
+callback's mix plays the block for its position, so a slow block is absorbed by what's rendered.
+
+- `run_strip` is a `Plan`, the strip's source (`play_source`: regions or MIDI and instrument,
+  Channel EQ and inserts, plug-in automation) and its mix (`mix`: folder and mix automation, the
+  delay line, sends, fader, output). The source writes `src_l`/`src_r`; the mix starts from `l`/`r`.
+- A strip that goes ahead (*lent*, at the end of a callback, while playing and eligible: audio or
+  instrument, not armed, monitored, the live-MIDI or analyzer target, keyed or feeding auxes)
+  trades its source's state into its shell, a spare `TrackDsp` only render threads touch; taking
+  it back trades it back, so the two threads never share a strip.
+- Render threads follow the playhead's path (`Course`: the callback's frames cut at `MAX_BLOCK`
+  and the cycle's end) and mark each block with its position, so what plays is exactly what live
+  would. A command that changes a strip's source, or moves the playhead, takes it back first
+  (`reclaim_for`); its blocks go and it plays live from the playhead. A block not ready in half a
+  block's time, or marked for another position, does the same.
+- Lent strips are a table of pointers; a render thread names the strip it looks at as its hazard,
+  and taking a strip back waits until none does, so a shell is never traded or freed under it.
+
 ### Delay compensation
 
 The solver is `session/engine/pdc.rs`, the delay lines `dsp/pdc.rs`.

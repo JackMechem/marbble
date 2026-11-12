@@ -56,6 +56,8 @@ pub(crate) struct BlockCtx<'a> {
     pub(super) analyzer_target: Option<(Id, Id)>,
     /// Wait for every strip however long it takes, as an offline render can.
     pub(super) wait: bool,
+    /// Render ahead's threads, while it's on (see `ahead/`).
+    pub(super) ahead: Option<&'a ahead::AheadShared>,
 }
 
 /// Where a strip's output goes.

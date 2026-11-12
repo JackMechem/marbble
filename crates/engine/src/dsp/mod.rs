@@ -5,7 +5,7 @@
 //! This file holds [`Engine`] and how it's made. A block runs through `process.rs`, which plays each
 //! strip with `strip.rs` (on the worker pool through `parallel/` and `pool/`, when `graph/` has a
 //! graph); `apply.rs` handles commands; `track.rs` holds a strip's state and `block.rs` what a block
-//! shares; `live_keys.rs` plays live input through a track's MIDI settings; `idle/` sleeps plug-ins fed silence; `strip_load.rs` notes which thread played each strip, for the Diagnostics window. `offline.rs` renders without a device. `crate::session` is the other side of every message.
+//! shares; `live_keys.rs` plays live input through a track's MIDI settings; `idle/` sleeps plug-ins fed silence; `ahead/` renders the source of tracks that aren't live ahead of the playhead; `strip_load.rs` notes which thread played each strip, for the Diagnostics window. `offline.rs` renders without a device. `crate::session` is the other side of every message.
 
 use std::sync::atomic::{AtomicBool, AtomicI64, AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
@@ -21,6 +21,7 @@ use crate::model::tempo::{GridPoint, TempoMap};
 use crate::model::{AutoMode, CcEvent, CcKind, Id, InputSel, InstrumentOutput, Note, TrackKind, CC_KINDS, INSERT_SLOTS, MASTER_ID, SEND_SLOTS};
 use crate::prefs::{ClickSettings, ClickSound};
 
+pub mod ahead;
 mod apply;
 mod block;
 mod denormals;
@@ -115,6 +116,8 @@ pub struct Engine {
     /// many callbacks are left to skip after an overload.
     behind_secs: f64,
     shedding: u32,
+    /// Render ahead (`ahead/`).
+    ahead: ahead::Ahead,
     /// An offline render is running: it may take as long as it needs.
     offline: bool,
     /// Set while an offline render plays only some tracks (see `offline.rs`).
@@ -195,6 +198,7 @@ impl Engine {
             block_load: BlockLoad::default(),
             behind_secs: 0.0,
             shedding: 0,
+            ahead: Default::default(),
             offline: false,
             isolate: None,
             snap_gains: false,
@@ -221,6 +225,7 @@ impl Engine {
         master_inserts: Vec<Option<InsertDsp>>,
     ) -> (Vec<Box<TrackDsp>>, Vec<Option<InsertDsp>>) {
         self.take_queued();
+        self.reclaim_all();
         // New strips throughout: none sits out, and what threads still hold is no track's.
         self.status.release_all();
         self.sample_rate = sample_rate;
