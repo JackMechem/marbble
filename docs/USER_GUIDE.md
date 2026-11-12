@@ -156,7 +156,8 @@ click outside) drops them. The delay compensation options on the same tab apply 
   on the audio thread, to rule threads out if you suspect them. The output is identical whatever
   you choose, and a change applies without restarting audio. Bounces and other renders always
   use one thread. Automatic uses up to one thread per performance core on macOS (four on an M1)
-  and one fewer than the performance cores on Linux, at most 6; on Windows it stays on one thread
+  and on Linux every hardware thread of the performance cores but one core's (14 on an 8-core
+  Intel with hyper-threading), at most 16; on Windows it stays on one thread
   for now. On Linux and macOS the extra threads get real-time priority, as the audio thread does
   (not yet on Windows). A thread the system refuses real-time priority (on Linux, rtkit not running or its
   limits reached) is left out, and a note under the setting says so.

@@ -493,10 +493,12 @@ inaudible.
   thread, nor is its editor: its window still resizes, on Linux and macOS, but the view isn't told
   (`Editor::set_quiet`; on both it hears the window's size once the plug-in is back).
 - **When it engages:** two strips with plug-ins can overlap and the load has reached 15 % of the
-  buffer. Automatic is the performance cores less one on Linux, at most 6; workers keep to
-  performance cores, as the callback does. On macOS it is one per performance core
+  buffer. Automatic on Linux is every hardware thread of the performance cores but one core's (14
+  on an 8-core hyper-threaded Intel), at most 16; a worker wakes only when a task is ready for it,
+  so threads a project can't use cost it nothing (`audio_io/threads.rs` has the measurements).
+  Workers keep to performance cores, as the callback does. On macOS it is one per performance core
   (`hw.perflevel0.physicalcpu`; the efficiency cores run everything else) or the physical cores
-  less one on an Intel Mac, at most 6 and no more than the device's workgroup suggests
+  less one on an Intel Mac, at most 16 and no more than the device's workgroup suggests
   (`os_workgroup_max_parallel_threads`): 4 on an M1. macOS has no affinity, so there the workers
   reach the performance cores through their policy and the workgroup. Workers get real-time
   priority as the callback does: through rtkit on Linux, and on macOS a Mach time-constraint

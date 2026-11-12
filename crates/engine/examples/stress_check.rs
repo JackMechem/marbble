@@ -22,6 +22,12 @@
 //! usage: stress_check [options] [scratch dir]
 //!   --null              play on the null device (silent, no clock: as fast as the CPU allows),
 //!                       as CI does; the loads are then only a rough guide
+//!   --host NAME         the audio host, as in Settings › Audio (default: the app's default)
+//!   --output NAME       the output device (default: the host's default)
+//!   --project PATH      play this saved project (a .marbble folder) instead of generating one,
+//!                       with the plug-ins the app has scanned; --tracks, --audio and --seed are
+//!                       then unused
+//!   --from S            where to play from, in seconds (default 0)
 //!   --tracks N          instrument tracks (default 32)
 //!   --audio N           audio tracks (default 8)
 //!   --seed N            the project's seed (default 1)
@@ -66,6 +72,10 @@ const BARS: i64 = 8;
 
 struct Opts {
     null: bool,
+    host: Option<String>,
+    output: Option<String>,
+    project: Option<PathBuf>,
+    from: f64,
     tracks: usize,
     audio: usize,
     seed: u64,
@@ -111,6 +121,10 @@ fn thread_list(v: &str) -> Vec<u32> {
 fn parse() -> Opts {
     let mut o = Opts {
         null: false,
+        host: None,
+        output: None,
+        project: None,
+        from: 0.0,
         tracks: 32,
         audio: 8,
         seed: 1,
@@ -133,6 +147,10 @@ fn parse() -> Opts {
         let num = |v: String| v.parse::<f64>().unwrap_or_else(|_| usage(&format!("not a number: {v}")));
         match a.as_str() {
             "--null" => o.null = true,
+            "--host" => o.host = Some(val()),
+            "--output" => o.output = Some(val()),
+            "--project" => o.project = Some(val().into()),
+            "--from" => o.from = num(val()),
             "--tracks" => o.tracks = num(val()) as usize,
             "--audio" => o.audio = num(val()) as usize,
             "--seed" => o.seed = num(val()) as u64,
@@ -359,7 +377,7 @@ fn measure(s: &mut Session, o: &Opts, buffer: u32, setting: u32) -> Run {
     let threads = s.processing_threads() as u32;
     s.idle();
     let st = s.status.clone();
-    s.locate(0);
+    s.locate((o.from * s.sample_rate()) as i64);
     s.play();
     transport::wait_for(s, true);
     play_for(s, o.warmup);
@@ -473,17 +491,28 @@ fn main() {
     std::fs::create_dir_all(&scratch).unwrap();
 
     // Never an input: playback only, so no microphone prompt and no duplex ring.
-    let output = o.null.then(|| NULL_OUTPUT.to_string());
-    let host = o.null.then(|| "ALSA".to_string());
+    let output = if o.null { Some(NULL_OUTPUT.to_string()) } else { o.output.clone() };
+    let host = if o.null { Some("ALSA".to_string()) } else { o.host.clone() };
     let buffer = o.buffers[0];
     let cfg = AudioConfig { host, output, input: None, input_enabled: false, buffer_size: buffer, processing_threads: 1, ..Default::default() };
-    let mut s = Session::new(cfg, Vec::new());
+    // A saved project may use any plug-in the app has scanned.
+    let plugins = if o.project.is_some() { daw_engine::library::plugin_db::load_cache().unwrap_or_default() } else { Vec::new() };
+    let mut s = Session::new(cfg, plugins);
     if !s.audio_status.running {
         eprintln!("stress_check: the audio device didn't start: {:?}", s.audio_status.error);
         std::process::exit(2);
     }
     assert!(s.audio_status.input_name.is_none(), "opened an input");
-    let length = build(&mut s, &o, &scratch);
+    let length = match &o.project {
+        Some(path) => {
+            if let Err(e) = s.open(path) {
+                eprintln!("stress_check: couldn't open {}: {e}", path.display());
+                std::process::exit(2);
+            }
+            s.project_end()
+        }
+        None => build(&mut s, &o, &scratch),
+    };
     // What Settings › Processing Threads › Automatic is here, as the app works it out.
     let automatic = s.thread_choices().automatic;
     let settings = o.threads.clone().unwrap_or_else(|| (1..=automatic.max(2)).chain([AUTOMATIC]).collect());
@@ -491,9 +520,13 @@ fn main() {
     let device = s.audio_status.output_name.clone().unwrap_or_default();
     let cores = if topo.fast.is_empty() { format!("{} CPUs", topo.logical) } else { format!("{} CPUs, {} performance cores", topo.logical, topo.fast_cores) };
     let cores = format!("{cores}; Automatic: {automatic}");
+    let what = match &o.project {
+        Some(p) => format!("{} ({} tracks) from {:.0} s", p.display(), s.project.tracks.len(), o.from),
+        None => format!("{} instrument + {} audio tracks (seed {})", o.tracks, o.audio, o.seed),
+    };
     println!(
-        "{} instrument + {} audio tracks (seed {}), {:.0} s each after {:.0} s warm-up, on {} ({}, {} Hz); {cores}",
-        o.tracks, o.audio, o.seed, o.seconds, o.warmup, device, s.audio_status.host, s.audio_status.sample_rate
+        "{what}, {:.0} s each after {:.0} s warm-up, on {} ({}, {} Hz); {cores}",
+        o.seconds, o.warmup, device, s.audio_status.host, s.audio_status.sample_rate
     );
     if o.null {
         println!("(the null device has no clock: blocks run back to back, so a load over 100 % is no dropout)");
@@ -522,7 +555,10 @@ fn main() {
             "host": s.audio_status.host,
             "sample_rate": s.audio_status.sample_rate,
             "null": o.null,
-            "project": { "instrument_tracks": o.tracks, "audio_tracks": o.audio, "seed": o.seed, "length": length },
+            "project": match &o.project {
+                Some(p) => json!({ "path": p, "tracks": s.project.tracks.len(), "from": o.from, "length": length }),
+                None => json!({ "instrument_tracks": o.tracks, "audio_tracks": o.audio, "seed": o.seed, "length": length }),
+            },
             "seconds": o.seconds,
             "warmup": o.warmup,
             "machine": { "os": std::env::consts::OS, "arch": std::env::consts::ARCH, "logical_cpus": topo.logical, "performance_cores": topo.fast_cores, "automatic_threads": automatic },
