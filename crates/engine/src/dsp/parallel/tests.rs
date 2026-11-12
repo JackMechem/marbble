@@ -235,6 +235,16 @@ fn work_that_could_come_back_at_once_keeps_the_pool_engaged() {
     assert!(!p.engaged, "little on standby: alone again");
 }
 
+#[test]
+fn a_new_graph_starts_engaged_until_a_block_says_otherwise() {
+    // Nothing is measured yet, and a heavy project's first block alone overloads (#456).
+    let mut p = Parallel::default();
+    p.set_graph(Some(Box::new(TaskGraph::new(vec![1, 2], &[], |_| true).unwrap())));
+    assert!(p.engaged, "unknown work: ready for it");
+    p.weigh(0.01, 0.001, 0.0);
+    assert!(!p.engaged, "a light block stands it down");
+}
+
 /// A panic in a strip, once it's told to, on whichever thread has it.
 struct Bomb(Arc<std::sync::atomic::AtomicBool>);
 

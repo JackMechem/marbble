@@ -21,6 +21,14 @@
   color: var(--red);
 }
 
+/* The devices give way first when the window is narrow. */
+.status-line .status-audio {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .toast {
   position: fixed;
   left: 50%;
@@ -55,4 +63,35 @@
 
 .update-notice > span {
   margin-right: 6px;
+}
+
+/* ---- performance figures (app/statusLine/PerformanceStats.tsx) ----------------------------- */
+
+/* At the right end, full height so each figure is a big target, and never squeezed. */
+.status-stats {
+  display: flex;
+  align-self: stretch;
+  flex-shrink: 0;
+  gap: 4px;
+}
+
+.status-stat {
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.status-stat:hover {
+  color: var(--dim);
+}
+
+.status-stat.late {
+  color: var(--red);
+}
+
+/* Room for "12.3 GB", so the figures to its left stay put as it changes. */
+.status-stat.memory {
+  justify-content: flex-end;
+  min-width: calc(7ch + 12px);
 }

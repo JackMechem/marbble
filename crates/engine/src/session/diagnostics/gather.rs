@@ -5,6 +5,7 @@
 
 use super::*;
 use crate::audio_io::memlock::ProcessMemory;
+use crate::audio_io::resident::resident_bytes;
 use crate::session::*;
 
 impl Session {
@@ -160,7 +161,7 @@ impl Session {
         let clip_bytes = self.clips.values().map(|c| c.channels.iter().map(|ch| ch.len() as u64 * 4).sum::<u64>()).sum();
         MemoryDiagnostics {
             lock: self.memory_lock.clone(),
-            resident_kb: field(|m| m.resident_kb),
+            resident_kb: resident_bytes().map(|b| b / 1024),
             locked_kb: field(|m| m.locked_kb),
             swapped_kb: field(|m| m.swapped_kb),
             mapped_kb: field(|m| m.mapped_kb),

@@ -291,8 +291,11 @@ impl Parallel {
         self.stale = true;
     }
 
+    /// A new graph starts engaged: what its strips cost is unknown until a block has measured it,
+    /// and a heavy project's first block played alone would overload (#456).
     pub fn set_graph(&mut self, g: Option<Box<TaskGraph>>) -> Option<Box<TaskGraph>> {
         self.stale = true;
+        self.engaged = true;
         let old = std::mem::replace(&mut self.graph, g);
         if std::mem::take(&mut self.graph_held) {
             // Leaked, which allocates and frees nothing.

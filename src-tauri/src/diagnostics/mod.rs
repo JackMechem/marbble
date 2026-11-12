@@ -2,7 +2,8 @@
 //! log in memory for it (`logger.rs`, `log_ring.rs`), its Record Everything (`activity.rs`, the
 //! activity log written to files), and the command it polls a few times a second
 //! for a [`DiagnosticsSnapshot`]: the session's `Diagnostics` (crates/engine/src/session/diagnostics/),
-//! the log lines it hasn't seen and what Marbble is running on. The window is src/diagnostics/.
+//! the log lines it hasn't seen and what Marbble is running on. The window is src/diagnostics/. The
+//! status line polls [`resident_memory`].
 
 pub mod activity;
 mod log_ring;
@@ -56,4 +57,12 @@ pub async fn reset_diagnostics(state: State<'_, AppState>) -> Result<(), String>
         s.reset_load_statistics();
     }
     Ok(())
+}
+
+/// The memory Marbble holds in RAM, in bytes, for the status line, which asks every two seconds;
+/// None where the system doesn't say. Async, so a busy main thread doesn't hold it up; it needs no
+/// session lock.
+#[tauri::command]
+pub async fn resident_memory() -> Option<u64> {
+    daw_engine::audio_io::resident::resident_bytes()
 }

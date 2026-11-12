@@ -33,6 +33,7 @@
 }
 
 .diag-page {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -52,7 +53,18 @@
 .diag-page.on {
   color: var(--text);
   background: var(--panel-2);
-  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+/* A straight bar clear of the rounded corners. */
+.diag-page.on::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: var(--accent);
 }
 
 .diag-page-icon {

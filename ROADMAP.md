@@ -45,7 +45,7 @@ What's left for beta, by area (◐ partial, ○ missing):
 
 **Interface and settings**
 
-- ◐ Control bar: view buttons, transport, LCD, Cycle, Count-in, Metronome, master volume, CPU ([#322](https://github.com/JackMechem/marbble/issues/322)): Fixed layout; no Customize Control Bar.
+- ◐ Control bar: view buttons, transport, LCD, Cycle, Count-in, Metronome, master volume, CPU ([#322](https://github.com/JackMechem/marbble/issues/322)): Fixed layout, but for the CPU meter, which Settings › Appearance puts here or in the status line; no Customize Control Bar.
 - ◐ LCD display modes ([#323](https://github.com/JackMechem/marbble/issues/323)): Beats and Time only; no Custom mode or large LCD.
 - ◐ Right inspector strip follows the left strip's output or aux ([#324](https://github.com/JackMechem/marbble/issues/324)): Always shows Stereo Out.
 - ◐ Project notes ([#325](https://github.com/JackMechem/marbble/issues/325)): Free-form notes in Project Settings; no Note Pad pane.
