@@ -8,6 +8,7 @@
 //! need them ([`Session::purge_discarded`]).
 
 use crate::edit::takes::recording::TAKE_COLORS;
+use crate::session::project::files::{docs_name, project_docs};
 use crate::session::*;
 
 /// What a recording made, for Discard Last Recording and the rating keys.
@@ -54,28 +55,6 @@ fn audio_clip(r: &Region) -> Option<Id> {
 
 fn same_regions(a: &[Region], b: &[Region]) -> bool {
     serde_json::to_value(a).ok() == serde_json::to_value(b).ok()
-}
-
-/// The project documents in `dir` that can name a file: project.json and its autosave and
-/// backup, the backups (Backups/) and the other project alternatives (Alternatives/).
-fn project_docs(dir: &Path) -> Vec<String> {
-    fn json_in(dir: &Path, depth: usize, out: &mut Vec<String>) {
-        let Ok(entries) = std::fs::read_dir(dir) else { return };
-        for e in entries.flatten() {
-            let p = e.path();
-            if p.is_dir() && depth > 0 {
-                json_in(&p, depth - 1, out);
-            } else if p.extension().is_some_and(|x| x == "json" || x == "bak") {
-                out.extend(std::fs::read_to_string(&p).ok());
-            }
-        }
-    }
-    let mut out = Vec::new();
-    json_in(dir, 0, &mut out);
-    for sub in [crate::session::project::backups::BACKUPS_DIR, crate::session::project::alternatives::ALTERNATIVES_DIR] {
-        json_in(&dir.join(sub), 2, &mut out);
-    }
-    out
 }
 
 impl Session {
@@ -291,9 +270,7 @@ impl Session {
         for (clip, path) in std::mem::take(&mut self.discarded) {
             let listed = |p: &Project| p.clips.iter().any(|c| c.id == clip);
             let undoable = !closing && (listed(&self.project) || self.undo_stack.iter().chain(&self.redo_stack).any(|e| listed(&e.project)));
-            let rel = path.strip_prefix(&self.dir).unwrap_or(&path).to_string_lossy().to_string();
-            let quoted = serde_json::to_string(&rel).unwrap_or_default();
-            if undoable || docs.iter().any(|d| d.contains(&quoted)) {
+            if undoable || docs_name(&docs, &self.dir, &path) {
                 if !closing {
                     self.discarded.push((clip, path));
                 }

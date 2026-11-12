@@ -8,6 +8,10 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Fixed
 
+- **Unfreezing a track no longer deletes the freeze file the saved project plays.** Unfreezing
+  and then closing without saving left the saved project's frozen track silent. Freeze files now
+  stay until a save or close finds that nothing (the project, a backup, Undo or Redo) uses them,
+  and the files left behind by undoing a Freeze or redoing an Unfreeze are deleted then too.
 - **The timeline ends, as in Logic Pro,** 2³¹ samples in (about 12 h 25 min at 48 kHz). Repeat
   Regions on regions spread along the timeline could make a project days long, and its saves and
   undo steps grew with it; now an edit that would put a region past the end is put back, with a

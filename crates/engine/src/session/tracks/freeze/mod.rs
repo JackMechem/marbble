@@ -11,7 +11,11 @@
 //!
 //! An instrument whose extra outputs feed auxes has those outputs rendered too, and its auxes play
 //! them while it is frozen (`outputs.rs`).
+//!
+//! Unfreezing keeps the freeze files: saving and closing the project delete those nothing needs
+//! any more (`files.rs`).
 
+mod files;
 mod outputs;
 
 use crate::session::*;
@@ -151,6 +155,8 @@ impl Session {
             self.push_regions(r.track);
             self.place_outputs(r.outputs, r.start);
         }
+        // A save between the render and here took the files for unused (`files.rs`).
+        self.ensure_freeze_files();
         // Arming changed, and the frozen tracks' latency went with their plug-ins.
         self.push_all_params();
         self.update_midi_target();
@@ -165,13 +171,14 @@ impl Session {
         self.place_freeze(renders)
     }
 
-    /// Loads a frozen track's plug-ins again (with the settings they had) and deletes its
-    /// freeze file. The clip stays in memory, so undo can freeze the track again.
+    /// Loads a frozen track's plug-ins again (with the settings they had). Its freeze file leaves
+    /// the project but stays on disk, for the saved project and Undo, until a save or close finds
+    /// nothing needs it (`files.rs`).
     pub fn unfreeze_track(&mut self, id: Id) -> Result<()> {
         let t = self.project.track(id).ok_or_else(|| anyhow!("no such track"))?;
         let f = t.frozen.ok_or_else(|| anyhow!("{} isn't frozen", t.name))?;
         self.project.track_mut(id).unwrap().frozen = None;
-        self.delete_freeze_file(f.clip);
+        self.forget_freeze_file(f.clip);
         let t = self.project.track(id).unwrap().clone();
         self.load_plugins(&t);
         self.push_regions(id);
@@ -181,14 +188,10 @@ impl Session {
         Ok(())
     }
 
-    /// Forgets a freeze file's clip and deletes the file. The audio stays in memory, so undo can
-    /// bring the freeze back (`ensure_freeze_files`).
-    fn delete_freeze_file(&mut self, clip: Id) {
-        if let Some(i) = self.project.clips.iter().position(|c| c.id == clip) {
-            let c = self.project.clips.remove(i);
-            let path = if Path::new(&c.path).is_absolute() { PathBuf::from(&c.path) } else { self.dir.join(&c.path) };
-            let _ = std::fs::remove_file(path);
-        }
+    /// Takes a freeze file's clip out of the project. The audio stays in memory and the file on
+    /// disk, so undo can bring the freeze back.
+    fn forget_freeze_file(&mut self, clip: Id) {
+        self.project.clips.retain(|c| c.id != clip);
     }
 
     /// Unloads a track's plug-ins from the engine (and their controllers and editors).
@@ -253,12 +256,13 @@ impl Session {
         true
     }
 
-    /// Writes back any freeze file that is missing on disk (unfreezing deletes it; undo can
-    /// bring the freeze back) from the copy still in memory.
+    /// Writes back any freeze file of a frozen track that is missing on disk from the copy still
+    /// in memory: after Save As, say, which copies only the files the project plays, undo can
+    /// bring back a freeze whose file stayed in the old folder.
     pub(crate) fn ensure_freeze_files(&self) {
         for f in self.project.tracks.iter().flat_map(|t| t.frozen.into_iter().chain(t.frozen_output)) {
             let (Some(c), Some(r)) = (self.clips.get(&f.clip), self.project.clips.iter().find(|c| c.id == f.clip)) else { continue };
-            let path = if Path::new(&r.path).is_absolute() { PathBuf::from(&r.path) } else { self.dir.join(&r.path) };
+            let path = self.clip_path(&r.path);
             if !path.exists() {
                 if let Err(e) = crate::audio_file::decode::write_wav(&path, c.sample_rate, &c.channels) {
                     log::error!("rewriting freeze file {}: {e}", path.display());

@@ -3,7 +3,7 @@
 //! plug-ins and fader), into a freeze file of its own. While the instrument is frozen each aux
 //! plays its output's render (`Track::frozen_output`) in place of the plug-in's bus, which is gone
 //! with the plug-in, so the mix sounds the same; the aux's plug-ins, fader and sends stay live.
-//! Unfreezing gives the auxes back the live outputs and deletes the renders.
+//! Unfreezing gives the auxes back the live outputs; their renders go as the instrument's does.
 
 use super::*;
 
@@ -47,11 +47,12 @@ impl Session {
         }
     }
 
-    /// The auxes on `track`'s extra outputs go back to the live outputs; their renders are deleted.
+    /// The auxes on `track`'s extra outputs go back to the live outputs; their renders leave the
+    /// project.
     pub(super) fn unfreeze_outputs(&mut self, track: Id) {
         for aux in self.output_auxes(track) {
             let Some(f) = self.project.track_mut(aux).and_then(|a| a.frozen_output.take()) else { continue };
-            self.delete_freeze_file(f.clip);
+            self.forget_freeze_file(f.clip);
             self.push_regions(aux);
         }
     }

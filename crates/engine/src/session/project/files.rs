@@ -18,6 +18,7 @@ impl Session {
         self.sampler_record_cancel();
         self.send(Cmd::Stop);
         self.close_recordings();
+        self.sweep_freeze_files(true);
         self.mark_unresponsive();
         self.controllers.clear();
         self.vst_watches.clear();
@@ -101,9 +102,11 @@ impl Session {
         self.dir = target.clone();
         self.saved = true;
         self.dirty = false;
-        // Discarded recordings the saved project (and its undo history) no longer needs go now.
+        // Discarded recordings and freeze files the saved project (and its undo history) no
+        // longer needs go now.
         if in_place {
             self.purge_discarded(false);
+            self.sweep_freeze_files(false);
         }
         Ok(target)
     }
@@ -132,6 +135,7 @@ impl Session {
         self.sampler_record_cancel();
         self.send(Cmd::Stop);
         self.close_recordings();
+        self.sweep_freeze_files(true);
         // Instance ids restart in every project, so old controllers must not leak state into
         // the new one.
         self.mark_unresponsive();
@@ -178,4 +182,33 @@ impl Session {
         self.sampler_warn_missing();
         Ok(())
     }
+}
+
+/// The project documents in `dir` that can name a file: project.json and its autosave and
+/// backup, the backups (Backups/) and the other project alternatives (Alternatives/).
+pub(crate) fn project_docs(dir: &Path) -> Vec<String> {
+    fn json_in(dir: &Path, depth: usize, out: &mut Vec<String>) {
+        let Ok(entries) = std::fs::read_dir(dir) else { return };
+        for e in entries.flatten() {
+            let p = e.path();
+            if p.is_dir() && depth > 0 {
+                json_in(&p, depth - 1, out);
+            } else if p.extension().is_some_and(|x| x == "json" || x == "bak") {
+                out.extend(std::fs::read_to_string(&p).ok());
+            }
+        }
+    }
+    let mut out = Vec::new();
+    json_in(dir, 0, &mut out);
+    for sub in [crate::session::project::backups::BACKUPS_DIR, crate::session::project::alternatives::ALTERNATIVES_DIR] {
+        json_in(&dir.join(sub), 2, &mut out);
+    }
+    out
+}
+
+/// Whether any of `docs` (from [`project_docs`]) names the file at `path` in the project `dir`.
+pub(crate) fn docs_name(docs: &[String], dir: &Path, path: &Path) -> bool {
+    let rel = path.strip_prefix(dir).unwrap_or(path).to_string_lossy().to_string();
+    let quoted = serde_json::to_string(&rel).unwrap_or_default();
+    docs.iter().any(|d| d.contains(&quoted))
 }

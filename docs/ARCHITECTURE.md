@@ -644,7 +644,9 @@ the plug-ins are unloaded from the engine with their state kept, and edits to th
 and plug-ins are refused (`check_unfrozen` before, `frozen_guard` after). An aux on a frozen
 instrument's extra output has the render of that output in `Track::frozen_output`, and plays it in
 place of the unloaded plug-in's bus (`session/tracks/freeze/outputs.rs`). Freeze files live in
-`Freeze Files/`.
+`Freeze Files/`. Unfreezing takes the file's clip out of the project but leaves the file, which the
+saved project or an undo step may still play; saving and closing sweep the folder, deleting the
+files no clip of the project, its undo history or a document on disk names (`freeze/files.rs`).
 
 **Track MIDI settings.** An instrument track's `midi_settings` (the Track inspector's Transpose,
 Velocity, Key and Velocity Limits and Delay; `edit/track_midi/`) change what it plays, never its
