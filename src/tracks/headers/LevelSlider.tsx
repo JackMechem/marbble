@@ -33,8 +33,8 @@ export function LevelSlider({
   label?: string;
 } & TouchProps) {
   const { groove, thumb, height } = levelSliderSize(tier);
+  // Where the drag has got to, from where it was grabbed (see useDrag).
   const pos = useRef(dbToFader(db));
-  pos.current = dbToFader(db);
   const travel = Math.max(1, width - thumb);
   const start = useDrag((d, fine) => {
     pos.current = Math.min(1, Math.max(0, pos.current + d / travel / (fine ? 6 : 1)));
@@ -58,6 +58,7 @@ export function LevelSlider({
           onChange(0);
           return;
         }
+        pos.current = dbToFader(db);
         onTouchStart?.();
         start(e, "x");
       }}

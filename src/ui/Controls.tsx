@@ -12,7 +12,10 @@ import { keyValue, SLIDER_KEYS, sliderAria } from "../keyboard/sliderKeys";
 import { PAN_STEPS, panSteps, panText } from "../mixer/panText";
 import { dragWith } from "./pointerDrag";
 
-/** Shared vertical/horizontal drag helper. Shift gives fine control, like Logic. */
+/** Shared vertical/horizontal drag helper. Shift gives fine control, like Logic.
+ *  A control adds the movements to the position it had when grabbed, not to the value it's
+ *  given while dragged: each move is a round trip to the engine, and a render before the answer
+ *  would pull the drag back to the older value (#438). */
 export function useDrag(onDelta: (d: number, fine: boolean) => void, onEnd?: () => void) {
   return (e: React.MouseEvent, axis: "x" | "y") => {
     e.preventDefault();
@@ -64,8 +67,8 @@ const dbText = (db: number) => (db <= -96 ? "minus infinity dB" : `${formatDb(db
 /** A channel fader. `vca` is the offset (dB) of the VCA the strip is assigned to: an outline
  *  cap marks where the strip really plays, as in Logic. */
 export function Fader({ db, onChange, height = 180, onTouchStart, onTouchEnd, vca, label = "Volume" }: { db: number; onChange: (db: number) => void; height?: number; vca?: number; label?: string } & TouchProps) {
+  // Where the drag has got to, from where it was grabbed.
   const pos = useRef(dbToFader(db));
-  pos.current = dbToFader(db);
   const travel = height - 18;
   const start = useDrag((d, fine) => {
     pos.current = Math.min(1, Math.max(0, pos.current + d / travel / (fine ? 6 : 1)));
@@ -79,6 +82,7 @@ export function Fader({ db, onChange, height = 180, onTouchStart, onTouchEnd, vc
       {...sliderAria({ label, text: dbText(db), min: -96, max: 6, now: db })}
       onKeyDown={sliderKeyDown(dbToFader(db), db, faderDb, onChange, { onTouchStart, onTouchEnd })}
       onMouseDown={(e) => {
+        pos.current = dbToFader(db);
         onTouchStart?.();
         start(e, "y");
       }}
@@ -95,8 +99,8 @@ export function Fader({ db, onChange, height = 180, onTouchStart, onTouchEnd, vc
 
 /** A pan knob, -1..1 in 64 steps either side (panText.ts). */
 export function Knob({ value, onChange, size = 26, onTouchStart, onTouchEnd, label = "Pan" }: { value: number; onChange: (v: number) => void; size?: number; label?: string } & TouchProps) {
+  // Where the drag has got to, from where it was grabbed.
   const v = useRef(value);
-  v.current = value;
   const start = useDrag((d, fine) => {
     v.current = Math.min(1, Math.max(-1, v.current + d / (fine ? 600 : 120)));
     onChange(Math.round(v.current * PAN_STEPS) / PAN_STEPS);
@@ -116,6 +120,7 @@ export function Knob({ value, onChange, size = 26, onTouchStart, onTouchEnd, lab
       {...sliderAria({ label, text: panText(value), min: -PAN_STEPS, max: PAN_STEPS, now: panSteps(value) })}
       onKeyDown={sliderKeyDown((value + 1) / 2, value, (p) => Math.round((p * 2 - 1) * PAN_STEPS) / PAN_STEPS, onChange, { onTouchStart, onTouchEnd })}
       onMouseDown={(e) => {
+        v.current = value;
         onTouchStart?.();
         start(e, "y");
       }}
@@ -143,8 +148,8 @@ export function Knob({ value, onChange, size = 26, onTouchStart, onTouchEnd, lab
 /** A horizontal volume slider. `width` can be a CSS length (a variable a bar's stylesheet sets
  *  for its width); a drag follows the width it's drawn at. */
 export function HSlider({ db, onChange, width = 90, onTouchStart, onTouchEnd, label = "Volume" }: { db: number; onChange: (db: number) => void; width?: number | string; label?: string } & TouchProps) {
+  // Where the drag has got to, from where it was grabbed.
   const pos = useRef(dbToFader(db));
-  pos.current = dbToFader(db);
   const box = useRef<HTMLDivElement>(null);
   const start = useDrag((d, fine) => {
     const w = box.current?.offsetWidth || (typeof width === "number" ? width : 90);
@@ -161,6 +166,7 @@ export function HSlider({ db, onChange, width = 90, onTouchStart, onTouchEnd, la
       onKeyDown={sliderKeyDown(dbToFader(db), db, faderDb, onChange, { onTouchStart, onTouchEnd })}
       onMouseDown={(e) => {
         e.stopPropagation();
+        pos.current = dbToFader(db);
         onTouchStart?.();
         start(e, "x");
       }}
