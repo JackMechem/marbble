@@ -272,7 +272,7 @@ impl Session {
             self.controllers.insert(slot.uid, ctrl);
             Plugin::Vst(Box::new(proc))
         };
-        Ok(InsertDsp { uid: slot.uid, bypass: slot.bypass, plugin, key: KeyRoute::new(slot.sidechain, slot.sidechain_pre) })
+        Ok(InsertDsp::new(slot.uid, slot.bypass, plugin, KeyRoute::new(slot.sidechain, slot.sidechain_pre)))
     }
 
     pub(crate) fn build_track(&mut self, t: &Track) -> Box<TrackDsp> {

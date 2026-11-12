@@ -457,11 +457,12 @@ fn region_midi(cx: &BlockCtx<'_>, t: &mut TrackDsp) {
     }
 }
 
-/// The strip's inserts in slot order, each with its side-chain key. False if the strip was left
-/// in one.
+/// The strip's inserts in slot order, each with its side-chain key, or asleep (see `idle/`). False
+/// if the strip was left in one.
 fn run_inserts<R: Routes>(cx: &BlockCtx<'_>, t: &mut TrackDsp, sc: &mut Scratch, routes: &mut R, transport: &TransportInfo, ll_skip: u16) -> bool {
     let n = cx.n;
     let (l, r) = (&mut t.l[..n], &mut t.r[..n]);
+    let mut asleep = 0;
     for (k, slot) in t.inserts.iter_mut().enumerate() {
         let Some(ins) = slot else { continue };
         let ran = !ins.bypass && ll_skip & (1 << k) == 0;
@@ -476,22 +477,31 @@ fn run_inserts<R: Routes>(cx: &BlockCtx<'_>, t: &mut TrackDsp, sc: &mut Scratch,
             }
             None => None,
         };
-        routes.enter(ins.uid);
-        if ran {
-            ins.plugin.process_insert(l, r, key, transport);
+        let silent = ran && idle::silent(l, r, key);
+        if ran && ins.sleeps(silent) {
+            l.fill(0.0);
+            r.fill(0.0);
+            asleep += 1;
         } else {
-            ins.plugin.pass_edits_aside(transport);
-        }
-        if !routes.leave() {
-            return false;
-        }
-        if ran {
-            check_output(cx.status, ins, l, r);
+            routes.enter(ins.uid);
+            if ran {
+                ins.plugin.process_insert(l, r, key, transport);
+            } else {
+                ins.plugin.pass_edits_aside(transport);
+            }
+            if !routes.leave() {
+                return false;
+            }
+            if ran {
+                check_output(cx.status, ins, l, r);
+                ins.count_quiet(silent, l, r, cx.sr);
+            }
         }
         if cx.analyzer_target == Some((t.id, ins.uid)) {
             routes.analyze(&mut t.outs, Some((&*l, &*r)), n);
         }
     }
+    t.load.asleep(asleep);
     true
 }
 

@@ -656,7 +656,7 @@ pub fn tar_for_checks(uid: Id, sample_rate: f32, hold: Arc<AtomicBool>) -> Inser
     };
     let mut b = BuiltinDsp::new(&info, sample_rate, &[]);
     b.replace_effect_for_tests(Box::new(Tar(hold)));
-    InsertDsp { uid, bypass: false, plugin: Plugin::Builtin(Box::new(b)), key: KeyRoute::default() }
+    InsertDsp::new(uid, false, Plugin::Builtin(Box::new(b)), KeyRoute::default())
 }
 
 /// Whether `g` allows for every way the engine's strips read each other, as `resolve_routes` left

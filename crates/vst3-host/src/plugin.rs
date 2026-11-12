@@ -240,6 +240,8 @@ pub struct PluginProcessor {
     /// The silent block `pass_edits` runs.
     edit_l: Vec<f32>,
     edit_r: Vec<f32>,
+    /// See `ring_out`.
+    ring_out: u32,
 }
 
 unsafe impl Send for PluginProcessor {}

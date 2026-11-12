@@ -106,6 +106,19 @@ impl PluginProcessor {
         !self.edits_rx.is_empty()
     }
 
+    /// Something waits for the next `process`: edits, automation, or a fade as its side-chain
+    /// input or output buses are switched. A host that skips blocks the plug-in can do without
+    /// must run this one.
+    pub fn wants_to_run(&self) -> bool {
+        self.has_edits() || !self.queued.is_empty() || matches!(self.gate, Gate::Closing(_) | Gate::Opening { .. }) || self.switching_outputs()
+    }
+
+    /// How long its output may go on after its input stops, in frames: the tail and latency it
+    /// reported when loaded, or `u32::MAX` for a tail that never ends.
+    pub fn ring_out(&self) -> u32 {
+        self.ring_out
+    }
+
     /// Gives a plug-in the engine isn't running (bypassed, say) the edits made in its editor, in
     /// a short block of silence that goes nowhere: its state must have them, for saving and
     /// for undo, and they mustn't wait in the ring until it runs again.

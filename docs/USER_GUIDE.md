@@ -3839,6 +3839,11 @@ muted one records silence (see [The input level check](#the-input-level-check-li
   tracks (snowflake button).
 - Leave **Processing Threads** on Automatic. If dropouts started with a change to it, set it to 1
   in Settings › Audio to see whether it makes a difference.
+- Plug-ins fed silence sleep on their own: once a plug-in's input has been silent, and its output
+  quiet, for 2 seconds (or its reported tail, if longer), it stops running until sound reaches it,
+  so a stopped project, or a track between its regions, costs next to nothing. A plug-in that makes
+  sound of its own, and any instrument, keeps running. Turn heavy tracks you aren't using **off**
+  to free the rest.
 - Make sure real-time scheduling is available: on Linux, rtkit must be running
   (`security.rtkit.enable = true;` on NixOS). PipeWire's own quantum can also be raised.
 - Use **PipeWire** as the driver on Linux. Direct ALSA (`hw:`) devices lock the interface for
@@ -3962,7 +3967,8 @@ playing and the buffer.
 - **Tracks:** each track's thread (Audio is the audio thread, DSP 1 and up the processing
   threads), its share of the latest buffer and its peak over the last two seconds, its plug-ins'
   latency and its compensation delay, its plug-ins (latency in frames in brackets), and whether
-  it is off, frozen or held up by a plug-in that stopped responding. The sort button puts the
+  it is off, frozen, held up by a plug-in that stopped responding, or has plug-ins asleep (fed
+  silence, they don't run). The sort button puts the
   heaviest tracks first.
 - **Log:** what Marbble writes to the terminal (warnings, errors and what it did), with a level
   filter and a search box. It keeps the last 2,000 lines; `RUST_LOG=debug` adds more detail.

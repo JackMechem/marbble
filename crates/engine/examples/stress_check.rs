@@ -28,6 +28,7 @@
 //!                       with the plug-ins the app has scanned; --tracks, --audio and --seed are
 //!                       then unused
 //!   --from S            where to play from, in seconds (default 0)
+//!   --stopped           measure with the transport stopped, as when the project sits open
 //!   --tracks N          instrument tracks (default 32)
 //!   --audio N           audio tracks (default 8)
 //!   --seed N            the project's seed (default 1)
@@ -76,6 +77,7 @@ struct Opts {
     output: Option<String>,
     project: Option<PathBuf>,
     from: f64,
+    stopped: bool,
     tracks: usize,
     audio: usize,
     seed: u64,
@@ -125,6 +127,7 @@ fn parse() -> Opts {
         output: None,
         project: None,
         from: 0.0,
+        stopped: false,
         tracks: 32,
         audio: 8,
         seed: 1,
@@ -151,6 +154,7 @@ fn parse() -> Opts {
             "--output" => o.output = Some(val()),
             "--project" => o.project = Some(val().into()),
             "--from" => o.from = num(val()),
+            "--stopped" => o.stopped = true,
             "--tracks" => o.tracks = num(val()) as usize,
             "--audio" => o.audio = num(val()) as usize,
             "--seed" => o.seed = num(val()) as u64,
@@ -341,8 +345,8 @@ impl Run {
 }
 
 /// Plays for `secs` as the app does: `idle` every 20 ms, a tick every 100 ms (which stops the
-/// transport on an overload), and playing again whenever it stopped.
-fn play_for(s: &mut Session, secs: f64) {
+/// transport on an overload), and playing again whenever it stopped, unless `stopped`.
+fn play_for(s: &mut Session, secs: f64, stopped: bool) {
     let end = Instant::now() + Duration::from_secs_f64(secs);
     let mut ticked = Instant::now();
     while Instant::now() < end {
@@ -352,7 +356,7 @@ fn play_for(s: &mut Session, secs: f64) {
             s.tick();
             ticked = Instant::now();
         }
-        if !s.is_playing() {
+        if !stopped && !s.is_playing() {
             transport::wait_for(s, false);
             s.play();
             transport::wait_for(s, true);
@@ -378,12 +382,14 @@ fn measure(s: &mut Session, o: &Opts, buffer: u32, setting: u32) -> Run {
     s.idle();
     let st = s.status.clone();
     s.locate((o.from * s.sample_rate()) as i64);
-    s.play();
-    transport::wait_for(s, true);
-    play_for(s, o.warmup);
+    if !o.stopped {
+        s.play();
+        transport::wait_for(s, true);
+    }
+    play_for(s, o.warmup, o.stopped);
     let before = Counters::read(&st);
     st.block_loads.clear();
-    play_for(s, o.seconds);
+    play_for(s, o.seconds, o.stopped);
     let loads = st.block_loads.read();
     let after = Counters::read(&st);
     let health = s.threads_health_for_checks();
@@ -524,6 +530,7 @@ fn main() {
         Some(p) => format!("{} ({} tracks) from {:.0} s", p.display(), s.project.tracks.len(), o.from),
         None => format!("{} instrument + {} audio tracks (seed {})", o.tracks, o.audio, o.seed),
     };
+    let what = if o.stopped { format!("{what}, stopped") } else { what };
     println!(
         "{what}, {:.0} s each after {:.0} s warm-up, on {} ({}, {} Hz); {cores}",
         o.seconds, o.warmup, device, s.audio_status.host, s.audio_status.sample_rate

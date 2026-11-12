@@ -125,6 +125,8 @@ export interface TrackDiagnostics {
   delay: number;
   held: boolean;
   plugins: PluginDiagnostics[];
+  /** Its inserts that slept through its latest block, fed silence. */
+  asleep: number;
 }
 
 export interface PluginDiagnostics {

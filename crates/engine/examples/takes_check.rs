@@ -241,10 +241,14 @@ fn main() {
 
     // ---- cycle recording: three passes make a take folder ----------------------------------
     // The null device runs flat out, far faster than the recorder drains its rings, so give
-    // the engine work to do (busy Channel EQs) until it runs nearer real time.
+    // the engine work to do (busy Channel EQs) until it runs nearer real time. They play the
+    // tone, looped, as plug-ins fed silence sleep; muted, they're still run but not heard.
     let ballast: Vec<Id> = (0..BALLAST).map(|_| s.add_track(TrackKind::Audio, InputSel::None, None, None).unwrap()).collect();
     for &t in &ballast {
         use daw_engine::fx::channel_eq::{gain, ID};
+        let id = s.import_audio(std::path::Path::new(&tone), t, 0).unwrap();
+        s.set_region_loop(id, Some(1000 * bar));
+        s.update_track(t, TrackPatch { mute: Some(true), ..Default::default() });
         s.set_plugin(t, 0, ID).unwrap();
         for band in 1..7 {
             s.set_builtin_param(t, 0, gain(band), 3.0).unwrap();

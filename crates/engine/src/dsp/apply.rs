@@ -77,10 +77,12 @@ impl Engine {
     }
 
     /// Clears every built-in effect's state (envelopes, delay lines, tails), after a jump in
-    /// time and around offline renders, so nothing from before rings into what plays next.
+    /// time and around offline renders, so nothing from before rings into what plays next. Every
+    /// insert wakes (see `idle/`), so each render starts the same.
     pub(super) fn reset_effects(&mut self) {
         let slots = self.tracks.iter_mut().flat_map(|t| t.inserts.iter_mut()).chain(self.master_inserts.iter_mut());
         for ins in slots.flatten() {
+            ins.wake_up();
             if let Plugin::Builtin(b) = &mut ins.plugin {
                 b.reset();
             }

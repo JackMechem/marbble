@@ -146,6 +146,7 @@ impl Session {
                     delay: strip.map_or(0, |s| s.delay),
                     held: held.iter().any(|h| h.track == t.id),
                     plugins,
+                    asleep: load.asleep,
                 }
             })
             .collect()

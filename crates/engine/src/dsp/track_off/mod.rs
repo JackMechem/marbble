@@ -103,6 +103,7 @@ impl TrackDsp {
         self.send_gains = [0.0; SEND_SLOTS];
         for ins in self.inserts.iter_mut().flatten().chain(self.instrument.iter_mut()) {
             ins.plugin.sleep();
+            ins.wake_up();
         }
         if let Some(d) = &mut self.delay {
             d.clear();

@@ -1,4 +1,5 @@
-//! Which thread played a strip and how much of its block it took, for the Diagnostics window
+//! Which thread played a strip, how much of its block it took and how many of its plug-ins slept
+//! through it, for the Diagnostics window
 //! (`session/engine/diagnostics.rs`). One per strip, shared with the session as its `Meter` is, and
 //! made off the audio thread when the strip is built (`Session::build_track`).
 //!
@@ -22,11 +23,13 @@ pub struct StripLoad {
     share: AtomicU32,
     /// The worst since the session last read it, as f32 bits.
     peak: AtomicU32,
+    /// Inserts asleep in the latest block (see `idle/`).
+    asleep: AtomicU32,
 }
 
 impl Default for StripLoad {
     fn default() -> Self {
-        StripLoad { thread: AtomicU32::new(NO_THREAD), share: AtomicU32::new(0), peak: AtomicU32::new(0) }
+        StripLoad { thread: AtomicU32::new(NO_THREAD), share: AtomicU32::new(0), peak: AtomicU32::new(0), asleep: AtomicU32::new(0) }
     }
 }
 
@@ -39,6 +42,8 @@ pub struct StripLoadReading {
     pub share: f32,
     /// The worst share since the last read.
     pub peak: f32,
+    /// Its inserts asleep in the latest block.
+    pub asleep: u32,
 }
 
 impl StripLoad {
@@ -53,6 +58,11 @@ impl StripLoad {
         }
     }
 
+    /// On the thread that played the strip: `n` of its inserts slept through the block.
+    pub(crate) fn asleep(&self, n: u32) {
+        self.asleep.store(n, Ordering::Relaxed);
+    }
+
     /// For the session: the latest block, and the worst since the last call, which starts afresh.
     pub fn take(&self) -> StripLoadReading {
         let thread = self.thread.load(Ordering::Relaxed);
@@ -60,6 +70,7 @@ impl StripLoad {
             thread: (thread != NO_THREAD).then_some(thread),
             share: f32::from_bits(self.share.load(Ordering::Relaxed)),
             peak: f32::from_bits(self.peak.swap(0, Ordering::Relaxed)),
+            asleep: self.asleep.load(Ordering::Relaxed),
         }
     }
 }

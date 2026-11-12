@@ -119,6 +119,7 @@ pub fn instantiate_keyed(desc: &PluginDescriptor, sample_rate: f64, max_block: u
             out_fade: multi_out::OutFade::new(sample_rate),
             edit_l: vec![0.0; EDIT_BLOCK.min(max_block)],
             edit_r: vec![0.0; EDIT_BLOCK.min(max_block)],
+            ring_out: ring_out(&processor),
         };
         let ctrl_half = PluginController {
             desc: desc.clone(),
@@ -271,6 +272,15 @@ unsafe fn activate_buses(
 }
 
 /// Tells the plug-in the sample rate and block size and switches it on.
+/// How long the plug-in's output may go on after its input stops: its tail and its latency, in
+/// frames, or `u32::MAX` for a tail that never ends.
+unsafe fn ring_out(processor: &ComPtr<IAudioProcessor>) -> u32 {
+    match processor.getTailSamples() {
+        u32::MAX => u32::MAX,
+        tail => tail.saturating_add(processor.getLatencySamples()),
+    }
+}
+
 unsafe fn start_processing(desc: &PluginDescriptor, component: &ComPtr<IComponent>, processor: &ComPtr<IAudioProcessor>, sample_rate: f64, max_block: usize) {
     let mut setup = ProcessSetup {
         processMode: ProcessModes_::kRealtime as i32,
