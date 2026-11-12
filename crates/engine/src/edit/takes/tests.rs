@@ -1,5 +1,7 @@
 //! Take folder edits, comp pieces and cutting recordings into takes.
 
+use std::sync::Arc;
+
 use super::{midi::*, pieces::*, recording::*};
 use crate::model::*;
 
@@ -15,8 +17,6 @@ fn folder(takes: &[(Id, i64, i64)]) -> TakeFolder {
                 start,
                 end,
                 gain_db: 0.0,
-                notes: Vec::new(),
-                cc: Vec::new(),
                 ..Default::default()
             })
             .collect(),
@@ -201,8 +201,7 @@ fn midi_takes_window_and_store() {
         start: 0,
         end: 1000,
         gain_db: 0.0,
-        notes: vec![note(50, 60), note(500, 62)],
-        cc: Vec::new(),
+        notes: Arc::new(vec![note(50, 60), note(500, 62)]),
         ..Default::default()
     });
     f.takes.push(Take {
@@ -213,8 +212,7 @@ fn midi_takes_window_and_store() {
         start: 0,
         end: 1000,
         gain_db: 0.0,
-        notes: vec![note(300, 72)],
-        cc: Vec::new(),
+        notes: Arc::new(vec![note(300, 72)]),
         ..Default::default()
     });
     assert_eq!(f.midi_take(), Some(2), "the newest without a comp");
@@ -234,7 +232,7 @@ fn midi_takes_window_and_store() {
         length: 1000,
         muted: false,
         color: None,
-        content: RegionContent::Midi { notes: Vec::new(), cc: Vec::new() },
+        content: RegionContent::midi(Vec::new(), Vec::new()),
         loop_end: None,
         takes: Some(f),
         params: Default::default(),

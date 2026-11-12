@@ -13,6 +13,29 @@ All notable changes to Marbble are recorded here. The format follows
   project's tracks couldn't stay ahead and kept falling back to live. Its threads now follow the
   machine's cores (8 on an M1 Pro, 14 on an 8-core Intel with hyper-threading), whatever
   Processing Threads says.
+### Changed
+
+- **Less memory and quicker edits in projects with many MIDI notes.** Every undo step used to hold
+  its own copy of every note and controller in the project. Regions an edit leaves alone are now
+  shared, so 100 undo steps in a project of 150,000 notes take 26 MB instead of 432 MB, and a note
+  edit takes 0.08 ms instead of 1.6 ms.
+### Fixed
+
+- **No overload when you add a track to a heavy project.** Adding, removing or reordering
+  tracks, or changing an output, a send or a side chain, played the next buffer or two with every
+  plug-in on the audio thread alone, until the extra processing threads were told about the new
+  routing. With twelve TONE3000 amp models playing (Render Ahead off), that buffer took three and
+  a half times its length and playback stopped. The threads now carry on with the new routing at
+  once.
+- **No overload as a heavy project opens.** Opening a project with many heavy plug-ins (twelve
+  TONE3000 amp models, say) overloaded once, stopped, before anything played: the extra processing
+  threads only learned of the new tracks a moment after them, so the first buffer played every
+  plug-in on the audio thread alone, three and a half times as long as the buffer. The threads now
+  take the new tracks with their first buffer.
+- **The timeline ends, as in Logic Pro,** 2³¹ samples in (about 12 h 25 min at 48 kHz). Repeat
+  Regions on regions spread along the timeline could make a project days long, and its saves and
+  undo steps grew with it; now an edit that would put a region past the end is put back, with a
+  message, and the Loop switch loops the last region no further than the end.
 
 ## [0.1.0-alpha.16] - 2026-11-12
 

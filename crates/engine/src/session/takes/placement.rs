@@ -90,6 +90,7 @@ impl Session {
         let new_start = r.start.min(start);
         let new_end = (r.start + r.length).max(end);
         let RegionContent::Midi { notes: existing, cc: existing_cc } = &mut r.content else { return false };
+        let (existing, existing_cc) = (Arc::make_mut(existing), Arc::make_mut(existing_cc));
         let shift_old = r.start - new_start;
         for n in existing.iter_mut() {
             n.start += shift_old;
@@ -120,7 +121,7 @@ impl Session {
             if rs >= hi || re <= lo {
                 return true;
             }
-            crate::edit::midi_content::erase_range(notes, cc, lo - rs, hi - rs, re - rs);
+            crate::edit::midi_content::erase_range(Arc::make_mut(notes), Arc::make_mut(cc), lo - rs, hi - rs, re - rs);
             let emptied = notes.is_empty() && cc.is_empty() && rs >= lo && re <= hi;
             !emptied
         });
@@ -188,7 +189,7 @@ mod tests {
             length: 1000,
             muted: false,
             color: None,
-            content: RegionContent::Midi { notes: vec![note(0)], cc: Vec::new() },
+            content: RegionContent::midi(vec![note(0)], Vec::new()),
             loop_end: None,
             takes: None,
             params: Default::default(),
@@ -216,7 +217,7 @@ mod tests {
             length,
             muted: false,
             color: None,
-            content: RegionContent::Midi { notes, cc },
+            content: RegionContent::midi(notes, cc),
             loop_end: None,
             takes: None,
             params: Default::default(),
@@ -240,7 +241,7 @@ mod tests {
         let RegionContent::Midi { notes, cc } = &regs[0].content else { unreachable!() };
         assert_eq!(notes.iter().map(|n| (n.start, n.pitch)).collect::<Vec<_>>(), vec![(0, 60)]);
         // The region ends inside the range: the mod change there is just gone.
-        assert_eq!(cc, &vec![modw(0, 5)]);
+        assert_eq!(**cc, vec![modw(0, 5)]);
         // Nothing on the track there: no region to merge into.
         assert!(!s.replace_midi_take(t, (9000, 9500), 9000, 10000, &take, &[]));
     }

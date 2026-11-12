@@ -53,6 +53,14 @@ impl Session {
         }
     }
 
+    /// The checks a command runs straight after an edit recorded with [`Session::checkpoint`]:
+    /// frozen tracks stay as they are, and no region goes past the end of the timeline. A refused
+    /// edit is put back and says why.
+    pub fn edit_guard(&mut self) -> Result<()> {
+        self.frozen_guard()?;
+        self.timeline_guard()
+    }
+
     pub fn undo_label(&self) -> Option<String> {
         self.undo_stack.last().map(|e| e.label.clone())
     }

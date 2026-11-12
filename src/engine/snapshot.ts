@@ -41,7 +41,7 @@ export interface Snapshot {
   redo: string | null;
   /** Plug-in latency and delay compensation. */
   pdc?: PdcReport;
-  /** Why the edit was refused and put back (it touched a frozen track). */
+  /** Why the edit was refused and put back (it touched a frozen track, or went past the end of the timeline). */
   refused?: string | null;
   /** Something the command did went wrong without failing it (an inserted plug-in's window didn't open). */
   warning?: string | null;

@@ -56,7 +56,7 @@ fn write(path: &Path, ch: &[f32]) {
 fn notes_of(s: &Session, t: Id) -> (i64, Vec<Note>) {
     let r = &s.project.track(t).unwrap().regions[0];
     match &r.content {
-        RegionContent::Midi { notes, .. } => (r.start, notes.clone()),
+        RegionContent::Midi { notes, .. } => (r.start, notes.to_vec()),
         _ => panic!("not MIDI"),
     }
 }

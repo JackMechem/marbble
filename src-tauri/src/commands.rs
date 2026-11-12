@@ -69,7 +69,8 @@ pub struct Snapshot {
     redo: Option<String>,
     /// Plug-in latency per strip and the total compensation.
     pdc: PdcReport,
-    /// Why the edit was refused and undone (it touched a frozen track).
+    /// Why the edit was refused and undone (it touched a frozen track, or went past the end of the
+    /// timeline).
     refused: Option<String>,
     /// Something the command did went wrong without failing it (the editor of a plug-in just
     /// inserted didn't open); shown as a toast.
@@ -114,7 +115,7 @@ fn with<T>(state: &State<AppState>, f: impl FnOnce(&mut Session) -> T) -> T {
     let mut s = state.session.lock();
     let out = f(&mut s);
     // Routes an edit changed get their task graph now, not at the next idle: until then the engine
-    // plays those blocks on one thread (see `Session::sync_parallel`).
+    // plays on one it builds itself (see `Session::sync_parallel`).
     s.sync_parallel();
     out
 }
@@ -131,8 +132,9 @@ fn edit(state: &State<AppState>, label: &str, key: Option<String>, plugins: bool
     with(state, |s| {
         s.checkpoint(label, key, plugins);
         f(s);
-        // Frozen tracks' regions and plug-ins can't change; such an edit is put back.
-        let refused = s.frozen_guard().err().map(|e| e.to_string());
+        // Frozen tracks' regions and plug-ins can't change, nor can a region go past the end of
+        // the timeline: such an edit is put back.
+        let refused = s.edit_guard().err().map(|e| e.to_string());
         Snapshot { refused, ..snapshot(s) }
     })
 }
@@ -147,7 +149,7 @@ fn try_edit(state: &State<AppState>, label: &str, key: Option<String>, plugins: 
             }
             return Err(e);
         }
-        s.frozen_guard()
+        s.edit_guard()
     })
 }
 
@@ -173,7 +175,7 @@ fn edit_made(state: &State<AppState>, label: &str, plugins: bool, f: impl FnOnce
             s.abandon_checkpoint();
             e.to_string()
         })?;
-        s.frozen_guard().map_err(|e| e.to_string())?;
+        s.edit_guard().map_err(|e| e.to_string())?;
         Ok(Made { snapshot: snapshot(s), ids })
     })
 }

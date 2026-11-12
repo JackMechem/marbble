@@ -21,19 +21,7 @@ fn folder(s: &mut Session, track: Id, start: i64, passes: &[Option<(Id, u32)>]) 
     let mut f = TakeFolder::new();
     for (k, &pass) in passes.iter().enumerate() {
         let id = s.project.alloc_id();
-        f.takes.push(Take {
-            id,
-            name: format!("Take {}", k + 1),
-            clip: 0,
-            offset: 0,
-            start: 0,
-            end: LEN,
-            gain_db: 0.0,
-            notes: Vec::new(),
-            cc: Vec::new(),
-            pass,
-            ..Default::default()
-        });
+        f.takes.push(Take { id, name: format!("Take {}", k + 1), clip: 0, offset: 0, start: 0, end: LEN, gain_db: 0.0, pass, ..Default::default() });
     }
     f.default_comp();
     let takes = f.takes.iter().map(|t| t.id).collect();

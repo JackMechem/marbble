@@ -59,7 +59,7 @@ impl Session {
             // A MIDI take folder keeps its takes whole: it shows the take's notes in its new span.
             crate::edit::takes::midi::retrim_midi_folder(r, start.max(0), length);
         } else if let RegionContent::Midi { notes, cc } = &mut r.content {
-            crate::edit::midi_content::trim_front(notes, cc, delta);
+            crate::edit::midi_content::trim_front(Arc::make_mut(notes), Arc::make_mut(cc), delta);
         }
         r.start = start.max(0);
         r.length = length;
@@ -143,7 +143,7 @@ impl Session {
                 (RegionContent::Audio { offset, .. }, _) => *offset += cut,
                 (RegionContent::Midi { notes, cc }, RegionContent::Midi { notes: left, cc: left_cc }) => {
                     let ((ln, lc), (rn, rc)) = crate::edit::midi_content::split(notes, cc, cut);
-                    (*left, *left_cc, *notes, *cc) = (ln, lc, rn, rc);
+                    (*left, *left_cc, *notes, *cc) = (Arc::new(ln), Arc::new(lc), Arc::new(rn), Arc::new(rc));
                     // The right half of a MIDI take folder starts later in its takes.
                     if let Some(f) = &mut right.takes {
                         f.offset += cut;
@@ -202,7 +202,8 @@ impl Session {
     }
 
     /// Logic's Loop switch. On, each region loops up to the next region on its track, or for
-    /// four times its length when nothing follows it; off removes the loop.
+    /// four times its length (no further than the end of the timeline) when nothing follows it;
+    /// off removes the loop.
     pub fn set_regions_looped(&mut self, ids: &[Id], on: bool) {
         let mut ends = Vec::new();
         for &id in ids {
@@ -211,7 +212,8 @@ impl Session {
             let r = &t.regions[idx];
             let own = r.start + r.length;
             let next = t.regions.iter().filter(|o| o.id != id && o.start >= own).map(|o| o.start).min();
-            ends.push((id, on.then(|| next.unwrap_or(r.start + 4 * r.length))));
+            let last = (r.start + 4 * r.length).min(MAX_PROJECT_LENGTH.max(own));
+            ends.push((id, on.then(|| next.unwrap_or(last))));
         }
         for (id, end) in ends {
             self.set_region_loop(id, end);
@@ -354,7 +356,7 @@ impl Session {
     pub fn transpose_regions(&mut self, ids: &[Id], semitones: i32) {
         self.edit_regions(ids, |r, _| {
             if let RegionContent::Midi { notes, .. } = &mut r.content {
-                for n in notes.iter_mut() {
+                for n in Arc::make_mut(notes) {
                     n.pitch = (n.pitch as i32 + semitones).clamp(0, 127) as u8;
                 }
             }
@@ -378,6 +380,7 @@ impl Session {
         self.edit_regions(ids, |r, _| {
             let rs = r.start;
             if let RegionContent::Midi { notes, .. } = &mut r.content {
+                let notes = Arc::make_mut(notes);
                 for n in notes.iter_mut() {
                     let at = (rs + n.start) as f64;
                     let q = map.sample_at(map.snap_q(map.beats_at(at), step)).round() as i64;
@@ -503,7 +506,7 @@ impl Session {
                     _ => None,
                 });
                 let (notes, cc) = crate::edit::midi_content::join(parts);
-                RegionContent::Midi { notes, cc }
+                RegionContent::midi(notes, cc)
             } else {
                 let ch = picked.iter().map(|r| self.region_channels(r)).max().unwrap_or(1).max(1);
                 let mix = self.mix_regions(t, &picked, lo, hi, ch);

@@ -150,3 +150,50 @@ fn frozen_and_off_tracks_are_not_heavy() {
     b.off = true;
     assert_eq!(TaskGraph::of_project(&project(vec![a.clone(), b.clone()])).unwrap().heavy_width(), 1);
 }
+
+/// A graph refilled in place is the one `TaskGraph::new` builds from the same edges, repeated
+/// edges and all, and the room never grows: the audio thread does this.
+#[test]
+fn a_graph_refilled_in_place_is_the_one_built_whole() {
+    let mut room = GraphRoom::default();
+    let caps = |r: &GraphRoom| (r.graph.ids.capacity(), r.graph.deps.capacity(), r.graph.succs.capacity(), r.graph.dep_at.capacity(), r.graph.roots.capacity());
+    let before = caps(&room);
+    let mut seed = 7u64;
+    let mut rand = move |m: usize| {
+        seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        (seed >> 33) as usize % m
+    };
+    for round in 0..200 {
+        let n = 1 + rand(if round == 0 { MAX_TASKS } else { 60 });
+        // Each strip's edges, as the engine's routes give them: forwards, sometimes twice.
+        let edges: Vec<Vec<(usize, usize)>> = (0..n)
+            .map(|i| {
+                (0..rand(5))
+                    .filter_map(|_| match rand(2) {
+                        0 if i + 1 < n => Some((i, i + 1 + rand(n - i - 1))),
+                        1 if i > 0 => Some((rand(i), i)),
+                        _ => None,
+                    })
+                    .collect()
+            })
+            .collect();
+        let ids: Vec<Id> = (0..n).map(|i| 1000 + i as Id * 3).collect();
+        let heavy = |i: usize| i % 3 != 1;
+        assert!(room.refill(n, |i| ids[i], |i, add| edges[i].iter().for_each(|&(a, b)| add(a, b)), heavy));
+        let whole: Vec<(Id, Id)> = edges.iter().flatten().map(|&(a, b)| (ids[a], ids[b])).collect();
+        let built = TaskGraph::new(ids.clone(), &whole, |id| heavy(((id - 1000) / 3) as usize)).unwrap();
+        assert_eq!(room.graph(), &built, "round {round}, {n} tasks");
+    }
+    assert_eq!(caps(&room), before, "nothing was allocated");
+}
+
+#[test]
+fn a_graph_that_cannot_be_refilled_says_so() {
+    let mut room = GraphRoom::default();
+    // Each strip makes the one edge here, which is the same edge twice over.
+    assert!(!room.refill(2, |i| i as Id, |_, add| add(1, 0), |_| true), "backwards");
+    assert!(!room.refill(2, |i| i as Id, |_, add| add(0, 5), |_| true), "past the end");
+    assert!(!room.refill(MAX_TASKS + 1, |i| i as Id, |_, _| {}, |_| true), "too many");
+    assert!(room.refill(2, |i| i as Id, |_, add| add(0, 1), |_| true));
+    assert_eq!(room.graph().deps(1), [0]);
+}
