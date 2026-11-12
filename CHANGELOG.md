@@ -15,6 +15,14 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Changed
 
+- **The Diagnostics window looks like a task manager.** Pages down the left (Performance, Tracks,
+  Log) with the figures that matter along the bottom. Performance draws the engine's load over
+  the last minute, with late buffers marked, and a graph per processing thread, as a task manager
+  draws one per core. The Tracks table sorts by any column and shades each track's load.
+- **The Diagnostics window's Log shows what you do.** Every edit, menu item, key command and
+  window, and every device gap, late buffer, overload and play or stop with where the playhead
+  was, among the log, whether or not Record Everything is on. Show all of it, only what you did,
+  or only the log.
 - **Plug-ins fed silence sleep.** A plug-in costs as much fed silence as fed audio, so a stopped
   project went on using the CPU as if it played: twelve TONE3000 amps held the engine at 60 %
   with nothing playing. Now a plug-in whose input has been silent, and whose own output quiet,

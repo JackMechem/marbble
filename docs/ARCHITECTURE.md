@@ -216,7 +216,7 @@ CI, releases and the website's deploy.
 | **`midi-out`** | `midi/output.rs` | Sends the feedback and surface messages `idle` hands it. | Touch the session. |
 | **Async commands** | Tauri's runtime | Renders (bounce, export, Bounce in Place, Freeze), plug-in rescans, waveforms, device lists, folder listings, the Diagnostics window's snapshots (which wait at most 5 ms for the session and skip a refresh rather than wait longer). Renders hold the session and engine locks throughout; edits they make go back to the main thread with `run_on_main_thread`. | Touch plug-in controllers. |
 | **Autosave writer** | `src-tauri/src/timers.rs` | Writes a job serialized on the main thread to disk, atomically. | |
-| **`activity-log`, `activity-watch`** | `src-tauri/src/diagnostics/activity.rs` | While Record Everything is on: one writes the activity log's lines to its file, the other looks at the session four times a second (`Session::watch`) and sends what changed. | Wait for the session more than 10 ms. |
+| **`activity-log`, `activity-watch`** | `src-tauri/src/diagnostics/activity.rs` | The watch, from launch, looks at the session four times a second (`Session::watch`) and notes what changed in the Diagnostics window's log; while Record Everything is on, the other writes the activity log's lines to its file. | Wait for the session more than 10 ms. |
 | **Scan child process** | `library/plugin_db.rs` | `marbble --scan-vst3 <bundle>` loads one bundle in a child process, so a crashing plug-in can't take the app down. | |
 
 On macOS the idle timer is a `CFRunLoopTimer` on the main run loop in its common modes, so it

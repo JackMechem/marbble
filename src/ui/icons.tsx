@@ -223,6 +223,25 @@ export const Icon = {
       <path d="M2.5 4h11M2.5 8h7.5M2.5 12h4" />
     </S>
   ),
+  /** A load over time, as a task manager draws one: a line climbing and falling in a frame. */
+  graph: () => (
+    <S>
+      <rect x="2" y="2.5" width="12" height="11" rx="1.5" />
+      <path d="M3.5 10.5 6 7.5l2 2 2.5-4 2 2.5" />
+    </S>
+  ),
+  /** A list of rows, for a table of tracks. */
+  rows: () => (
+    <S>
+      <path d="M2.5 4h11M2.5 8h11M2.5 12h11M5.5 2.5v11" />
+    </S>
+  ),
+  /** Lines of text, for a log. */
+  lines: () => (
+    <S>
+      <path d="M2.5 3.5h11M2.5 6.5h8M2.5 9.5h11M2.5 12.5h6" />
+    </S>
+  ),
   /** Keep the newest in view: an arrow down to a line. */
   follow: () => (
     <S>

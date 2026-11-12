@@ -22,6 +22,8 @@ export interface LogLine {
   level: LogLevel;
   target: string;
   message: string;
+  /** A run of one command: the line comes again with this as it grows. */
+  run?: number;
 }
 
 export type LogLevel = "error" | "warn" | "info" | "debug" | "trace";

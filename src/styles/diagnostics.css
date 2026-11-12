@@ -1,91 +1,117 @@
-/* The Diagnostics window (src/diagnostics/): a bar of headline figures, tabs, and the Overview's
-   cards, the Tracks table or the Log. Marked values: .warn in the theme's warning colour, .alert in
-   red. */
+/* The Diagnostics window (src/diagnostics/), laid out as a system task manager: a sidebar of pages
+   and the window's actions, the page (Performance's graphs and figures, the Tracks table, the Log),
+   and the headline figures in a status bar. Marked values: .warn in the theme's warning colour,
+   .alert in red. */
 /* ==== Diagnostics window (diagnostics) ==== */
 
 .diag {
   height: 100%;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
   background: var(--bg);
   color: var(--text);
 }
 
-/* The headline figures and the window's actions. */
-.diag-bar {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 12px;
-  background: var(--cb-bg);
-  border-bottom: 1px solid var(--cb-edge);
-}
+/* ---- The sidebar ---- */
 
-.diag-headline {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.diag-waiting {
-  color: var(--dim);
-}
-
-.diag-chip {
+.diag-side {
   display: flex;
   flex-direction: column;
-  min-width: 58px;
-  padding: 3px 9px 4px;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 0;
+  padding: 8px;
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+}
+
+.diag-pages {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.diag-page {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 10px;
   border-radius: var(--radius);
-  background: var(--lcd-bg);
-  box-shadow: var(--lcd-shadow);
+  color: var(--dim);
+  text-align: left;
 }
 
-.diag-chip-label {
-  color: var(--lcd-label);
-  font-size: var(--fs-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+.diag-page:hover {
+  color: var(--text);
+  background: var(--panel-2);
 }
 
-.diag-chip-value {
-  color: var(--lcd-text);
-  font-size: var(--fs-lg);
-  font-weight: 600;
+.diag-page.on {
+  color: var(--text);
+  background: var(--panel-2);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.diag-page-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+}
+
+.diag-page.on .diag-page-icon {
+  color: var(--accent);
+}
+
+.diag-page-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.diag-page-name {
+  font-size: var(--fs-md);
+}
+
+.diag-page-note {
+  color: var(--faint);
+  font-size: var(--fs-sm);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.diag-chip.warn .diag-chip-value {
+.diag-page-note.warn {
   color: var(--warn);
 }
 
-.diag-chip.alert {
-  box-shadow: var(--lcd-shadow), inset 0 0 0 1px var(--red);
-}
-
-.diag-chip.alert .diag-chip-value {
+.diag-page-note.alert {
   color: var(--red);
 }
 
 .diag-actions {
-  flex: none;
-  display: flex;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
 }
 
 /* An icon button with a generous hit area. */
 .diag-btn {
-  width: 32px;
-  height: 28px;
+  width: 100%;
+  min-width: 32px;
+  height: 30px;
   display: grid;
   place-items: center;
   border-radius: var(--radius);
   background: var(--btn);
   color: var(--btn-text);
   box-shadow: var(--btn-shadow);
+}
+
+.diag-toolbar .diag-btn {
+  width: 32px;
 }
 
 .diag-btn:hover:not(:disabled) {
@@ -109,46 +135,257 @@
   color: var(--red);
 }
 
-.diag-tabs {
-  flex: none;
-  display: flex;
-  gap: 2px;
-  padding: 6px 12px 0;
-  background: var(--panel);
-  border-bottom: 1px solid var(--line);
+/* A narrow window keeps only the sidebar's icons. */
+@media (max-width: 620px) {
+  .diag {
+    grid-template-columns: 56px minmax(0, 1fr);
+  }
+
+  .diag-page {
+    justify-content: center;
+    padding: 6px;
+  }
+
+  .diag-page-text {
+    display: none;
+  }
+
+  .diag-actions {
+    grid-template-columns: 1fr;
+  }
 }
 
-.diag-tab {
+.diag-body {
+  min-height: 0;
+  overflow: auto;
+}
+
+/* ---- The status bar of headline figures ---- */
+
+.diag-status {
+  grid-column: 1 / -1;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  min-height: 28px;
-  padding: 4px 14px;
-  border-radius: var(--radius) var(--radius) 0 0;
+  gap: 4px 6px;
+  padding: 5px 10px;
+  background: var(--cb-bg);
+  border-top: 1px solid var(--cb-edge);
+}
+
+.diag-waiting {
   color: var(--dim);
-  font-size: var(--fs-md);
 }
 
-.diag-tab:hover {
-  color: var(--text);
-  background: var(--panel-2);
+.diag-chip {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 2px 9px;
+  border-radius: var(--radius);
+  background: var(--lcd-bg);
+  box-shadow: var(--lcd-shadow);
 }
 
-.diag-tab.on {
-  color: var(--text);
-  background: var(--bg);
-  box-shadow: inset 0 2px 0 var(--accent);
+.diag-chip-label {
+  color: var(--lcd-label);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
-.diag-tab-count {
+.diag-chip-value {
+  color: var(--lcd-text);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.diag-chip.warn .diag-chip-value {
+  color: var(--warn);
+}
+
+.diag-chip.alert {
+  box-shadow: var(--lcd-shadow), inset 0 0 0 1px var(--red);
+}
+
+.diag-chip.alert .diag-chip-value {
+  color: var(--red);
+}
+
+/* ---- Performance ---- */
+
+.diag-perf {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 12px 14px 16px;
+}
+
+.diag-perf-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-bottom: 8px;
+}
+
+.diag-perf-head h2 {
+  margin: 0;
+  font-size: var(--fs-lg);
+  font-weight: 600;
+}
+
+.diag-perf-sub {
   color: var(--faint);
   font-size: var(--fs-sm);
 }
 
-.diag-body {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: auto;
+/* A load over the last minute (LoadGraph.tsx). */
+.diag-graph {
+  position: relative;
+  height: 56px;
+  border-radius: 4px;
+  background: var(--readout);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.diag-graph.big {
+  height: 200px;
+}
+
+.diag-graph svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.diag-graph-grid {
+  stroke: var(--line);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+/* 100 %, once the scale has grown past it: above is a dropout. */
+.diag-graph-grid.limit {
+  stroke: var(--red);
+  stroke-dasharray: 4 3;
+}
+
+.diag-graph-area {
+  fill: var(--accent-soft);
+}
+
+.diag-graph-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.diag-graph-late {
+  stroke: var(--red);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.diag-graph-cursor {
+  stroke: var(--text);
+  stroke-opacity: 0.5;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.diag-graph-top {
+  position: absolute;
+  top: 3px;
+  left: 6px;
+  color: var(--faint);
+  font-size: var(--fs-xs);
+  pointer-events: none;
+}
+
+.diag-graph-tip {
+  position: absolute;
+  top: 4px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* The figures under the load graph, as a task manager lists them under its CPU graph. */
+.diag-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: 10px 14px;
+  margin-top: 12px;
+}
+
+.diag-stat {
+  display: flex;
+  flex-direction: column;
+  padding-left: 9px;
+  border-left: 2px solid var(--line);
+}
+
+.diag-stat-label {
+  color: var(--dim);
+  font-size: var(--fs-sm);
+}
+
+.diag-stat-value {
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.diag-stat.warn {
+  border-left-color: var(--warn);
+}
+
+.diag-stat.warn .diag-stat-value {
+  color: var(--warn);
+}
+
+.diag-stat.alert {
+  border-left-color: var(--red);
+}
+
+.diag-stat.alert .diag-stat-value {
+  color: var(--red);
+}
+
+/* A graph per thread, as a task manager draws one per core. */
+.diag-thread-graphs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 10px;
+}
+
+.diag-thread-graph-head {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 3px;
+  color: var(--dim);
+  font-size: var(--fs-sm);
+}
+
+.diag-thread-graph-value {
+  color: var(--text);
+}
+
+.diag-thread-graph.warn .diag-thread-graph-value {
+  color: var(--warn);
+}
+
+.diag-thread-graph.alert .diag-thread-graph-value {
+  color: var(--red);
 }
 
 .diag-empty {
@@ -162,14 +399,13 @@
   font-size: var(--fs-sm);
 }
 
-/* ---- Overview ---- */
+/* ---- Performance: the details under the graphs ---- */
 
 .diag-overview {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   align-items: start;
   gap: 12px;
-  padding: 12px;
 }
 
 .diag-card {
@@ -232,78 +468,42 @@
   font-weight: 600;
 }
 
-/* The threads' shares of the latest buffer, under Threads and cores. */
-.diag-threads {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-top: 10px;
-  padding-top: 8px;
-  border-top: 1px solid var(--line);
-}
-
-.diag-thread {
-  display: grid;
-  grid-template-columns: 52px 1fr 52px;
-  align-items: center;
-  gap: 8px;
-}
-
-.diag-thread-name {
-  color: var(--dim);
-}
-
-.diag-thread-value {
-  text-align: right;
-}
-
-.diag-thread.warn .diag-thread-value {
-  color: var(--warn);
-}
-
-.diag-thread.alert .diag-thread-value {
-  color: var(--red);
-}
-
-.diag-bar-track {
-  position: relative;
-  display: block;
-  height: 8px;
-  border-radius: 3px;
-  background: var(--fader-track);
-  overflow: hidden;
-}
-
-.diag-bar-peak,
-.diag-bar-fill {
-  position: absolute;
-  inset: 0 auto 0 0;
-}
-
-.diag-bar-peak {
-  background: var(--accent-soft);
-}
-
-.diag-bar-fill {
-  background: var(--accent);
-}
-
-.diag-thread.warn .diag-bar-fill,
-.diag-table tr.warn .diag-bar-fill {
-  background: var(--warn);
-}
-
-.diag-thread.alert .diag-bar-fill,
-.diag-table tr.alert .diag-bar-fill {
-  background: var(--red);
-}
-
 /* ---- Tracks and Log ---- */
 
-.diag-tracks {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
+/* A column's heading sorts by it. */
+.diag-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-height: 24px;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  background: none;
+}
+
+.diag-sort:hover,
+.diag-sort.sorted {
+  color: var(--text);
+}
+
+.diag-sort-mark {
+  width: 8px;
+  color: var(--accent);
+}
+
+.diag-table th.num .diag-sort {
+  justify-content: flex-end;
+}
+
+/* A share or peak, shaded by how much of the buffer it takes, as a task manager shades CPU. */
+.diag-table td.diag-heat {
+  background: color-mix(in srgb, var(--warn) var(--heat), transparent);
+}
+
+.diag-table td.diag-heat.alert {
+  color: var(--red);
+  font-weight: 600;
 }
 
 .diag-toolbar {
@@ -317,9 +517,6 @@
 }
 
 .diag-table-wrap {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: auto;
   padding: 0 12px 12px;
 }
 
@@ -367,11 +564,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   color: var(--dim);
-}
-
-.diag-load-col {
-  width: 120px;
-  min-width: 80px;
 }
 
 .diag-table tr.warn {
@@ -474,4 +666,9 @@
 .diag-line.debug .diag-line-message,
 .diag-line.trace .diag-line-message {
   color: var(--dim);
+}
+
+/* What you did and what the engine's watch saw, among the log. */
+.diag-line.activity .diag-line-target {
+  color: var(--accent);
 }

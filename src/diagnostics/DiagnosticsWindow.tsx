@@ -1,8 +1,10 @@
-// The Diagnostics window (Window › Diagnostics; main.tsx renders this in the `diagnostics` window):
-// how the device, the engine, its threads and the tracks are doing, live, with Marbble's log. It
+// The Diagnostics window (Window › Diagnostics; main.tsx renders this in the `diagnostics` window),
+// laid out as a system task manager: a sidebar of pages (Performance, Tracks, Log) with the
+// window's actions, the page, and the headline figures in a status bar. It shows how the device,
+// the engine, its threads and the tracks are doing, live, with what you did and Marbble's log. It
 // asks the app for a snapshot four times a second while open (src-tauri/src/diagnostics/), keeps
-// the log lines it was sent, and counts what went wrong from its last reset. The figures are
-// worded in facts.ts, the copied report in report.ts.
+// the log lines it was sent and the last minute for the graphs (history.ts), and counts what went
+// wrong from its last reset. The figures are worded in facts.ts, the copied report in report.ts.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { emitTo } from "@tauri-apps/api/event";
@@ -12,8 +14,10 @@ import { countsAt, headline } from "./facts";
 import { addLines, lastSeq } from "./logLines";
 import { buildReport } from "./report";
 import type { Diagnostics, DiagnosticsSnapshot, LogLine } from "./snapshot";
-import { OverviewTab } from "./OverviewTab";
+import { PerformanceTab } from "./PerformanceTab";
 import { TracksTab } from "./TracksTab";
+import { addSample, type Sample } from "./history";
+import { pct } from "./format";
 import { LogTab } from "./LogTab";
 import { FactChip } from "./FactViews";
 import { copyText } from "./copyText";
@@ -29,9 +33,9 @@ import { textFieldMenu } from "../keyboard/textKeys";
 /** How often the window asks for a snapshot. */
 const POLL_MS = 250;
 const TABS = [
-  ["overview", "Overview"],
-  ["tracks", "Tracks"],
-  ["log", "Log"],
+  ["performance", "Performance", Icon.graph],
+  ["tracks", "Tracks", Icon.rows],
+  ["log", "Log", Icon.lines],
 ] as const;
 type Tab = (typeof TABS)[number][0];
 const TAB_KEY = "marbble.diagnostics.tab";
@@ -39,10 +43,23 @@ const TAB_KEY = "marbble.diagnostics.tab";
 function savedTab(): Tab {
   try {
     const t = localStorage.getItem(TAB_KEY);
-    return TABS.some(([id]) => id === t) ? (t as Tab) : "overview";
+    return TABS.some(([id]) => id === t) ? (t as Tab) : "performance";
   } catch {
-    return "overview";
+    return "performance";
   }
+}
+
+/** What a page's entry in the sidebar says under its name. */
+function tabNote(tab: Tab, engine: Diagnostics | null, log: LogLine[]): { text: string; level?: "warn" | "alert" } | null {
+  if (tab === "performance") return engine ? { text: `Load ${pct(engine.load.cpu)}`, level: engine.load.cpu > 1 ? "alert" : engine.load.cpu > 0.7 ? "warn" : undefined } : null;
+  if (tab === "tracks") {
+    if (!engine) return null;
+    const asleep = engine.tracks.reduce((n, t) => n + (t.off ? 0 : t.asleep), 0);
+    return { text: `${engine.tracks.length} tracks${asleep ? ` · ${asleep} asleep` : ""}` };
+  }
+  const errors = log.filter((l) => l.level === "error").length;
+  const warnings = log.filter((l) => l.level === "warn").length;
+  return errors ? { text: `${errors} errors`, level: "alert" } : warnings ? { text: `${warnings} warnings`, level: "warn" } : { text: `${log.length} lines` };
 }
 
 /** Menu bar items come here while this window is in front: a focused search field takes its
@@ -77,6 +94,7 @@ export function DiagnosticsWindow() {
   const [about, setAbout] = useState({ version: "", os: "", arch: "" });
   const [engine, setEngine] = useState<Diagnostics | null>(null);
   const [held, setHeld] = useState<HeldPeaks>(() => new Map());
+  const [history, setHistory] = useState<Sample[]>([]);
   const [log, setLog] = useState<LogLine[]>([]);
   const [base, setBase] = useState<{ counters: Counters; at: string } | null>(null);
   const [rises, setRises] = useState<Rises>({});
@@ -113,7 +131,9 @@ export function DiagnosticsWindow() {
           prevCounters.current = c;
           const tracks = s.engine.tracks;
           setHeld((h) => holdPeaks(h, tracks, at));
-          setEngine(s.engine);
+          const e = s.engine;
+          setHistory((h) => addSample(h, e, at));
+          setEngine(e);
         }
         setNow(at);
       } catch {
@@ -179,8 +199,23 @@ export function DiagnosticsWindow() {
 
   return (
     <div className="diag">
-      <header className="diag-bar">
-        <div className="diag-headline">{engine && counts ? headline(engine, counts).map((f) => <FactChip key={f.label} fact={f} />) : <span className="diag-waiting">Waiting for the engine…</span>}</div>
+      <aside className="diag-side">
+        <nav className="diag-pages" role="tablist" aria-label="Diagnostics" aria-orientation="vertical">
+          {TABS.map(([id, label, Glyph]) => {
+            const note = tabNote(id, engine, log);
+            return (
+              <button key={id} type="button" role="tab" aria-selected={tab === id} className={"diag-page" + (tab === id ? " on" : "")} onClick={() => choose(id)}>
+                <span className="diag-page-icon">
+                  <Glyph />
+                </span>
+                <span className="diag-page-text">
+                  <span className="diag-page-name">{label}</span>
+                  {note ? <span className={"diag-page-note" + (note.level ? ` ${note.level}` : "")}>{note.text}</span> : null}
+                </span>
+              </button>
+            );
+          })}
+        </nav>
         <div className="diag-actions">
           <button type="button" className={"diag-btn" + (activity?.on ? " rec" : "")} title={recordTitle} aria-label="Record everything" aria-pressed={activity?.on ?? false} onClick={toggleRecording} disabled={!activity}>
             <Icon.record />
@@ -195,21 +230,14 @@ export function DiagnosticsWindow() {
             <Icon.copy />
           </button>
         </div>
-      </header>
-      <nav className="diag-tabs" role="tablist" aria-label="Diagnostics">
-        {TABS.map(([id, label]) => (
-          <button key={id} type="button" role="tab" aria-selected={tab === id} className={"diag-tab" + (tab === id ? " on" : "")} onClick={() => choose(id)}>
-            {label}
-            {id === "tracks" && engine ? <span className="diag-tab-count">{engine.tracks.length}</span> : null}
-          </button>
-        ))}
-      </nav>
+      </aside>
       <main className="diag-body" role="tabpanel">
         {!engine && tab !== "log" ? <div className="diag-empty">Waiting for the engine…</div> : null}
-        {engine && counts && tab === "overview" ? <OverviewTab d={engine} counts={counts} /> : null}
+        {engine && counts && tab === "performance" ? <PerformanceTab d={engine} counts={counts} history={history} now={now} /> : null}
         {engine && tab === "tracks" ? <TracksTab d={engine} held={held} /> : null}
         {tab === "log" ? <LogTab lines={log} /> : null}
       </main>
+      <footer className="diag-status">{engine && counts ? headline(engine, counts).map((f) => <FactChip key={f.label} fact={f} />) : <span className="diag-waiting">Waiting for the engine…</span>}</footer>
       <MenuHost />
     </div>
   );
