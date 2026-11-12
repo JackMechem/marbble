@@ -44,7 +44,7 @@ fn session(hits: &[(usize, f32)]) -> (Session, Id, Id) {
 fn midi(s: &Session, t: Id) -> (Region, Vec<Note>) {
     let r = s.project.track(t).unwrap().regions[0].clone();
     let RegionContent::Midi { notes, .. } = &r.content else { panic!("not MIDI") };
-    let n = notes.clone();
+    let n = notes.to_vec();
     (r, n)
 }
 
@@ -122,18 +122,7 @@ fn a_take_folder_is_read_through_its_comp() {
     let clip2 = s.add_clip(&path, Clip::from_channels(path.clone(), RATE as u32, vec![buf]));
     let r = s.project.track_mut(t).unwrap().regions.iter_mut().find(|r| r.id == id).unwrap();
     let RegionContent::Audio { clip, .. } = r.content else { panic!() };
-    let take = |id, clip| crate::model::Take {
-        id,
-        name: String::new(),
-        clip,
-        offset: 0,
-        start: 0,
-        end: RATE * 3,
-        gain_db: 0.0,
-        notes: Vec::new(),
-        cc: Vec::new(),
-        ..Default::default()
-    };
+    let take = |id, clip| crate::model::Take { id, name: String::new(), clip, offset: 0, start: 0, end: RATE * 3, gain_db: 0.0, ..Default::default() };
     r.takes = Some(TakeFolder {
         takes: vec![take(901, clip), take(902, clip2)],
         comp: vec![CompSegment { start: 0, end: 40000, take: 901 }, CompSegment { start: 40000, end: RATE * 3, take: 902 }],

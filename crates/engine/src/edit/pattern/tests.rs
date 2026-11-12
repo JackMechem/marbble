@@ -190,7 +190,7 @@ fn realize_and_from_notes_round_trip() {
         length: 16 * S16,
         muted: false,
         color: None,
-        content: RegionContent::Midi { notes: Vec::new(), cc: Vec::new() },
+        content: RegionContent::midi(Vec::new(), Vec::new()),
         loop_end: None,
         takes: None,
         params: Default::default(),

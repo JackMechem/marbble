@@ -10,6 +10,8 @@
 //! lengths, delay shifts everything in time, then transpose, dynamics and velocity change the
 //! notes themselves.
 
+use std::sync::Arc;
+
 use serde::{Deserialize, Serialize};
 
 use crate::model::tempo::TempoMap;
@@ -321,8 +323,8 @@ pub fn bake(r: &Region, map: &TempoMap) -> Region {
             }
             new_cc.sort_by_key(|c| c.start);
             kept.sort_by_key(|n| (n.start, n.pitch));
-            *notes = kept;
-            *cc = new_cc;
+            *notes = Arc::new(kept);
+            *cc = Arc::new(new_cc);
             out.start = r.start - lead;
             out.length = length;
         }

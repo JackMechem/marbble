@@ -132,7 +132,7 @@ impl Session {
                         }
                         let mut n: Vec<Note> = notes.iter().filter(|n| !n.muted).copied().collect();
                         n.sort_by_key(|n| n.start);
-                        let mut c = cc.clone();
+                        let mut c = cc.to_vec();
                         c.sort_by_key(|c| c.start);
                         // Every pass shares one note list and one controller list.
                         let (n, c) = (Arc::new(n), Arc::new(c));

@@ -109,8 +109,7 @@ impl Session {
             let RegionContent::Midi { notes, cc } = &mut r.content else { continue };
             let (mut n, mut c) = (e.notes, e.cc);
             crate::edit::midi_content::normalize(&mut n, &mut c);
-            *notes = n;
-            *cc = c;
+            (*notes, *cc) = (Arc::new(n), Arc::new(c));
             if let Some(s) = e.start {
                 r.start = s.max(0);
             }

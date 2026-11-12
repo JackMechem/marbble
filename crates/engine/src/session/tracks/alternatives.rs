@@ -137,7 +137,7 @@ mod tests {
             length: 100,
             muted: false,
             color: None,
-            content: RegionContent::Midi { notes: Vec::new(), cc: Vec::new() },
+            content: RegionContent::midi(Vec::new(), Vec::new()),
             loop_end: None,
             takes: None,
             params: Default::default(),
