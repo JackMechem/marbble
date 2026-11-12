@@ -234,7 +234,6 @@ impl Drop for Workers {
             std::mem::forget(std::mem::take(&mut self.busy));
             std::mem::forget(std::mem::take(&mut self.jobs));
             std::mem::forget(std::mem::take(&mut self.tracks));
-            std::mem::forget(std::mem::take(&mut self.room));
         }
         // Otherwise it's leaked in its box, which a job and the pool point into.
         if self.room_free() {
