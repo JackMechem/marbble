@@ -6,6 +6,15 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **No overload when you add a track to a heavy project.** Adding, removing or reordering
+  tracks, or changing an output, a send or a side chain, played the next buffer or two with every
+  plug-in on the audio thread alone, until the extra processing threads were told about the new
+  routing. With twelve TONE3000 amp models playing (Render Ahead off), that buffer took three and
+  a half times its length and playback stopped. The threads now carry on with the new routing at
+  once.
+
 ## [0.1.0-alpha.16] - 2026-11-12
 
 ### Added

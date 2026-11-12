@@ -519,7 +519,9 @@ inaudible.
   processing order. Float addition isn't associative, so that order is what keeps the bits equal.
 - **The graph.** The session builds a `TaskGraph` (`dsp/graph/`) from the project's routes and
   sends it in `Cmd::Graph` after each edit (`Session::sync_parallel`). The engine checks it against
-  the routes it resolved itself and plays serially until it holds, so a route can't race. The
+  the routes it resolved itself, so a route can't race. In the blocks between an edit's commands
+  and its graph, when it doesn't hold, the engine builds one from those routes in a room the
+  workers bring (`GraphRoom`, allocated off the audio thread), and plays serially only if it can't. The
   graph's tasks are `Project::process_order`, which outputs, sends and side-chain keys decide, so
   an edit that can change that order sends `Cmd::Order` too, a plug-in leaving a keyed slot among
   them; otherwise the engine keeps its old order, which the graph no longer matches.
