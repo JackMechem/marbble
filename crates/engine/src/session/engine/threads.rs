@@ -107,7 +107,8 @@ impl Session {
     /// Allocates and may start or stop threads, as the audio thread never does; the engine takes
     /// the results between two blocks and sends back what it replaced, to be dropped in `idle`. Until
     /// a new graph reaches it, the engine notices that the old one doesn't fit the routes and plays
-    /// the affected blocks serially, so this only needs to come soon after the edit.
+    /// on a graph it builds from them itself (`dsp::graph::GraphRoom`), so this only needs to come
+    /// soon after the edit.
     pub fn sync_parallel(&mut self) {
         self.log_threads_left_out();
         if !std::mem::take(&mut self.graph_dirty) {

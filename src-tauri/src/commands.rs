@@ -115,7 +115,7 @@ fn with<T>(state: &State<AppState>, f: impl FnOnce(&mut Session) -> T) -> T {
     let mut s = state.session.lock();
     let out = f(&mut s);
     // Routes an edit changed get their task graph now, not at the next idle: until then the engine
-    // plays those blocks on one thread (see `Session::sync_parallel`).
+    // plays on one it builds itself (see `Session::sync_parallel`).
     s.sync_parallel();
     out
 }

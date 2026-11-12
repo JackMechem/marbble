@@ -14,6 +14,12 @@ All notable changes to Marbble are recorded here. The format follows
   edit takes 0.08 ms instead of 1.6 ms.
 ### Fixed
 
+- **No overload when you add a track to a heavy project.** Adding, removing or reordering
+  tracks, or changing an output, a send or a side chain, played the next buffer or two with every
+  plug-in on the audio thread alone, until the extra processing threads were told about the new
+  routing. With twelve TONE3000 amp models playing (Render Ahead off), that buffer took three and
+  a half times its length and playback stopped. The threads now carry on with the new routing at
+  once.
 - **No overload as a heavy project opens.** Opening a project with many heavy plug-ins (twelve
   TONE3000 amp models, say) overloaded once, stopped, before anything played: the extra processing
   threads only learned of the new tracks a moment after them, so the first buffer played every
