@@ -6,6 +6,8 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0-alpha.16] - 2026-11-12
+
 ### Added
 
 - **Record Everything, in the Diagnostics window.** Writes everything to a file as it happens:
@@ -68,10 +70,10 @@ All notable changes to Marbble are recorded here. The format follows
   a locate or Play), one buffer took several times its length on the audio thread alone and
   playback stopped. The threads now stay ready for what can come back, a locate leaves sleeping
   plug-ins asleep, and selecting a track takes only it out of render ahead.
-- **No overload just after opening a heavy project.** Until a buffer had been measured, the
+- **Fewer overloads just after opening a heavy project.** Until a buffer had been measured, the
   extra processing threads stood down, so the first buffer played every plug-in on the audio
   thread alone. They're now ready from the start and stand down once a buffer shows they aren't
-  needed.
+  needed. A very heavy project can still overload once as it opens (#468).
 - **A crash on JACK as the device closed.** Closing the device (a new buffer size or device,
   Reset Audio Engine, quitting) while the audio callback ran could abort the app ("terminate called
   without an active exception", "exception not rethrown"): JACK stops its thread wherever it is.
@@ -1437,7 +1439,8 @@ The first prerelease. Everything below is new.
 - The `takes_check` headless check "autopunch trims the take" fails about one run in five,
   from the null audio device's timing.
 
-[Unreleased]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.15...HEAD
+[Unreleased]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.16...HEAD
+[0.1.0-alpha.16]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.15...v0.1.0-alpha.16
 [0.1.0-alpha.15]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.14...v0.1.0-alpha.15
 [0.1.0-alpha.14]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.13...v0.1.0-alpha.14
 [0.1.0-alpha.13]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.12...v0.1.0-alpha.13
