@@ -15,6 +15,9 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Fixed
 
+- **Faders, knobs and level sliders follow the mouse smoothly again.** In a big project they
+  jittered while dragged, pulled back towards the old value between moves. A drag now carries on
+  from where the control was grabbed, whatever the engine answers in between.
 - **Switching outputs a few times in a row no longer stops audio from following.** The automatic
   restart when the output changes gave up after three restarts in 30 seconds, even ones that
   worked, and then stayed on the old device's settings until Reset Audio Engine. Now only

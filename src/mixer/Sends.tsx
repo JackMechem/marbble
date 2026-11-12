@@ -18,15 +18,16 @@ import { dragWith } from "../ui/pointerDrag";
 /** A small unipolar level knob, on the fader's taper. Shift-drag adjusts finely; double-click
  *  is 0 dB. */
 function SendKnob({ db, pre, onChange, onDrag }: { db: number; pre: boolean; onChange: (db: number) => void; onDrag: (on: boolean) => void }) {
-  // The unrounded knob position. A drag adds to it rather than to the rounded dB it reports,
-  // so slow movements still add up.
+  // The unrounded knob position, from where it was grabbed. A drag adds to it rather than to
+  // the rounded dB it reports, so slow movements still add up, nor to the dB it's given while
+  // dragged, which lags a round trip behind (#438).
   const pos = useRef(dbToFader(db));
-  pos.current = dbToFader(db);
   const size = 16;
   const r = size / 2 - 2;
   const start = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
+    pos.current = dbToFader(db);
     let last = e.clientY;
     onDrag(true);
     const move = (ev: MouseEvent) => {
