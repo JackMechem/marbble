@@ -291,6 +291,18 @@ fn tracks_of(s: &Session, f: impl Fn(&daw_engine::model::Track) -> bool) -> Vec<
     s.project.tracks.iter().filter(|t| f(t)).map(|t| t.id).collect()
 }
 
+/// How far Repeat Regions may put copies. Repeating regions spread along the timeline
+/// multiplies its length, so unchecked a few hundred edits made a project days long, whose
+/// pattern regions joined into hundreds of thousands of notes and filled the memory (#434).
+const REPEAT_UP_TO: i64 = 16 * LEN;
+
+/// Where the last copy would end if `ids` were repeated `times` times.
+fn repeat_end(s: &Session, ids: &[Id], times: usize) -> i64 {
+    let rs: Vec<_> = s.project.tracks.iter().flat_map(|t| t.regions.iter()).filter(|r| ids.contains(&r.id)).collect();
+    let (Some(lo), Some(hi)) = (rs.iter().map(|r| r.start).min(), rs.iter().map(|r| r.end()).max()) else { return 0 };
+    hi + (hi - lo) * times as i64
+}
+
 fn random_points(g: &mut Rng, lo: f32, hi: f32) -> Vec<daw_engine::model::AutoPoint> {
     let n = 1 + g.below(5);
     let mut pos: Vec<i64> = (0..n).map(|_| g.range(0, LEN)).collect();
@@ -351,7 +363,10 @@ fn edit(s: &mut Session, g: &mut Rng, w: &World, o: &Opts) -> (String, bool) {
             }
             6 => {
                 let ids = some(g, &all.iter().map(|x| x.1).collect::<Vec<_>>());
-                s.repeat_regions(&ids, 1 + g.below(2));
+                let times = 1 + g.below(2);
+                if repeat_end(s, &ids, times) <= REPEAT_UP_TO {
+                    s.repeat_regions(&ids, times);
+                }
             }
             7 => s.set_region_gains(&[(region, -12.0 + 18.0 * g.unit())]),
             8 => s.set_region_fades(&[region], Some(g.range(0, 20_000)), Some(g.range(0, 20_000))),
