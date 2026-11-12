@@ -202,7 +202,8 @@ impl Session {
     }
 
     /// Logic's Loop switch. On, each region loops up to the next region on its track, or for
-    /// four times its length when nothing follows it; off removes the loop.
+    /// four times its length (no further than the end of the timeline) when nothing follows it;
+    /// off removes the loop.
     pub fn set_regions_looped(&mut self, ids: &[Id], on: bool) {
         let mut ends = Vec::new();
         for &id in ids {
@@ -211,7 +212,8 @@ impl Session {
             let r = &t.regions[idx];
             let own = r.start + r.length;
             let next = t.regions.iter().filter(|o| o.id != id && o.start >= own).map(|o| o.start).min();
-            ends.push((id, on.then(|| next.unwrap_or(r.start + 4 * r.length))));
+            let last = (r.start + 4 * r.length).min(MAX_PROJECT_LENGTH.max(own));
+            ends.push((id, on.then(|| next.unwrap_or(last))));
         }
         for (id, end) in ends {
             self.set_region_loop(id, end);
