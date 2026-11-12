@@ -58,6 +58,8 @@ pub(crate) struct BlockCtx<'a> {
     pub(super) wait: bool,
     /// Render ahead's threads, while it's on (see `ahead/`).
     pub(super) ahead: Option<&'a ahead::AheadShared>,
+    /// Until when lent strips wait for their blocks: one deadline for the whole callback.
+    pub(super) ahead_until: Option<std::time::Instant>,
 }
 
 /// Where a strip's output goes.

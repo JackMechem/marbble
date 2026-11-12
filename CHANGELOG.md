@@ -49,6 +49,13 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Fixed
 
+- **Render ahead no longer overloads on Play, on a locate, or when its threads fall behind.** A
+  track whose block wasn't rendered in time held the audio thread for half a buffer, then waited
+  for the render thread to finish and played the block again live, and the tracks went straight
+  back ahead to miss again: two or three buffers later playback stopped, and the waits could make
+  the processing threads look stuck in a plug-in. Now one deadline covers every track, a late track
+  plays silence for that buffer instead of holding up the rest, and tracks go ahead only once
+  playback runs on time.
 - **No horizontal scroll bar in Settings on macOS.**
 - **Resizing the Mixer is smooth in a big project.** Dragging the divider above it rendered the
   whole window, every strip twice, on each move; now only the faders and meters follow the new
