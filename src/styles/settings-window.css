@@ -79,7 +79,7 @@
 
 .settings-grid {
   display: grid;
-  grid-template-columns: 120px 1fr;
+  grid-template-columns: 120px minmax(0, 1fr);
   align-items: center;
   gap: 9px 10px;
 }
@@ -91,6 +91,7 @@
 
 .settings-grid .select {
   width: 300px;
+  max-width: 100%;
 }
 
 .row-inline {
