@@ -26,15 +26,6 @@ All notable changes to Marbble are recorded here. The format follows
   clicking about in the ruler of a project with twelve amp models on a busy machine held buffers
   for up to 190 ms and overloaded. Now the change waits for those renders instead (it lands a few
   milliseconds later), and the audio never does.
-
-### Changed
-
-- **Less memory and quicker edits in projects with many MIDI notes.** Every undo step used to hold
-  its own copy of every note and controller in the project. Regions an edit leaves alone are now
-  shared, so 100 undo steps in a project of 150,000 notes take 26 MB instead of 432 MB, and a note
-  edit takes 0.08 ms instead of 1.6 ms.
-### Fixed
-
 - **No overload when you add a track to a heavy project.** Adding, removing or reordering
   tracks, or changing an output, a send or a side chain, played the next buffer or two with every
   plug-in on the audio thread alone, until the extra processing threads were told about the new
