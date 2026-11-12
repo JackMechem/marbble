@@ -9,7 +9,7 @@ use crate::model::{INSERT_SLOTS, SEND_SLOTS};
 
 /// The most edges one strip can make: its output, its sends, the instrument output it is fed
 /// from, and a side-chain key per insert.
-const EDGES_PER_TASK: usize = 2 + SEND_SLOTS + INSERT_SLOTS;
+pub(super) const EDGES_PER_TASK: usize = 2 + SEND_SLOTS + INSERT_SLOTS;
 
 /// A [`TaskGraph`] with the room to be rebuilt in place, and what building it needs.
 pub struct GraphRoom {

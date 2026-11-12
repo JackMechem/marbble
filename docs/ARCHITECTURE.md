@@ -526,7 +526,8 @@ inaudible.
   sends it in `Cmd::Graph` after each edit (`Session::sync_parallel`). The engine checks it against
   the routes it resolved itself, so a route can't race. In the blocks between an edit's commands
   and its graph, when it doesn't hold, the engine builds one from those routes in a room the
-  workers bring (`GraphRoom`, allocated off the audio thread), and plays serially only if it can't.
+  workers bring (`GraphRoom`, allocated off the audio thread), and plays serially only if it can't:
+  a thread left in a plug-in in a block on that graph holds the room until it's back out.
   A rebuild (a project opened, Reset Audio Engine) swaps the graph in with the strips
   (`Engine::replace_graph`), with any workers it needs started before the plug-ins load, so a heavy
   project's first block is already on the pool. The
