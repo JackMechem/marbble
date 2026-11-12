@@ -13,6 +13,12 @@ All notable changes to Marbble are recorded here. The format follows
   project's tracks couldn't stay ahead and kept falling back to live. Its threads now follow the
   machine's cores (8 on an M1 Pro, 14 on an 8-core Intel with hyper-threading), whatever
   Processing Threads says.
+- **Render Ahead no longer makes a buffer late when you locate or edit while playing.** Moving
+  the playhead, or changing a track rendered ahead (a plug-in setting, a region, its
+  automation), waited on the audio thread for each track's render to finish, one after another:
+  clicking about in the ruler of a project with twelve amp models on a busy machine held buffers
+  for up to 190 ms and overloaded. Now the change waits for those renders instead (it lands a few
+  milliseconds later), and the audio never does.
 
 ## [0.1.0-alpha.16] - 2026-11-12
 

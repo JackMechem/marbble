@@ -12,6 +12,16 @@
 //! little). It goes ahead again at the end of a callback, when it's still eligible ([`eligible`])
 //! and the callbacks are calm ([`Engine::lend_ahead`]).
 //!
+//! **Reclaiming never waits** on the audio thread (#471). It takes the strip out of the render
+//! threads' table, and trades back once no render thread is in it; until then the strip plays what
+//! was rendered. A command that changes strips ([`Engine::reclaim_for`]) takes all of them out in
+//! one pass, and if a render thread is still in one, the command waits for a later callback (with
+//! those after it, and no strip is lent meanwhile) rather than the callback for the render thread:
+//! it applies a render's time later, as the strips come home together, or after [`RECLAIM_WAIT`]
+//! if a render thread is stuck in a plug-in, which loses that strip. Off the audio thread, or where
+//! nothing may depend on time (a render, a check that plays flat out), reclaiming waits instead
+//! ([`Engine::until_home`]).
+//!
 //! **Misses.** The callback never waits on a render thread past its deadline, and never plays a
 //! block again that a render thread is making ([`take_block`]): a strip whose block is late plays
 //! silence for it rather than holding up every track.
@@ -24,9 +34,10 @@
 //!
 //! **Lifetimes.** Lent strips are entries in a table the render threads scan. A render thread
 //! posts the strip it's looking at as its hazard before it touches it; reclaiming takes the entry
-//! out, then waits until no hazard names the strip, so its shell and ring are never freed or traded
-//! under a render thread. A render thread that doesn't come back (a plug-in that never returns)
-//! leaves the strip lost: it plays silence, and its control is never freed.
+//! out, and trades back only once no hazard names the strip, so its shell and ring are never freed
+//! or traded under a render thread. A render thread that doesn't come out within [`RECLAIM_WAIT`]
+//! (a plug-in that never returns) leaves the strip lost: it plays silence, and its control is never
+//! freed.
 //!
 //! The audio path's rules hold on the callback's side: no allocation, no lock. Render threads have
 //! a lead to spare and no deadline of their own, so they run at normal priority.
@@ -54,8 +65,9 @@ const RING_FRAMES: usize = 24_000 + 2 * MAX_BLOCK;
 /// How many blocks a ring holds, whatever their size: a lead at the shortest buffer, cut at cycle
 /// ends.
 const RING_BLOCKS: usize = 512;
-/// The longest reclaiming waits for a render thread to come out of a strip.
-const RECLAIM_WAIT: Duration = Duration::from_millis(500);
+/// The longest a strip is waited for to come home (by a command, over callbacks); past that, the
+/// render thread still in it is taken to be stuck in a plug-in, and the strip is lost.
+pub(super) const RECLAIM_WAIT: Duration = Duration::from_millis(500);
 /// How long a render thread with nothing to do sleeps before looking again, if nobody wakes it.
 const IDLE_NAP: Duration = Duration::from_millis(2);
 /// The most blocks in a row a strip plays silent while its render thread catches up; then it's
@@ -148,7 +160,7 @@ pub struct AheadCtl {
     short: AtomicU8,
     /// The callback wants it back: render threads start no more blocks of it.
     come_back: AtomicBool,
-    /// Its entry in the table while lent.
+    /// Its entry in the table while lent and in it.
     entry: AtomicUsize,
     /// The render thread's while lent, the callback's while home.
     shell: UnsafeCell<Box<TrackDsp>>,
@@ -466,38 +478,37 @@ impl TrackDsp {
         }
     }
 
-    /// Takes the strip back if it's lent: its rendered blocks go, and its source is the callback's
-    /// again. Waits for a render thread in it, up to [`RECLAIM_WAIT`]; past that, the strip is lost.
-    pub(super) fn reclaim(&mut self, shared: Option<&AheadShared>) {
-        let (Some(shared), Some(ctl)) = (shared, self.ahead.as_ref()) else { return };
-        let ctl = ctl.clone();
-        if ctl.state.compare_exchange(LENT, HOME, Ordering::SeqCst, Ordering::SeqCst).is_err() {
-            return;
+    /// Takes the strip back if it's lent, without waiting: out of the render threads' table (they
+    /// start no more blocks of it) and, once no render thread is in it, its rendered blocks go and
+    /// its source is the callback's again. True once it's home (or lost, or wasn't lent); false
+    /// while a render thread is still in it, when it plays what was rendered meanwhile. With
+    /// `give_up`, a render thread still in it is taken to be stuck in a plug-in: the strip is lost.
+    pub(super) fn reclaim(&mut self, shared: Option<&AheadShared>, give_up: bool) -> bool {
+        let (Some(shared), Some(ctl)) = (shared, self.ahead.as_ref()) else { return true };
+        if !ctl.lent() {
+            return true;
         }
-        let ptr = Arc::as_ptr(&ctl);
-        if let Some(e) = shared.table.get(ctl.entry.load(Ordering::Relaxed)) {
-            e.store(std::ptr::null_mut(), Ordering::SeqCst);
-        }
-        let start = Instant::now();
-        while shared.named(ptr) || ctl.busy.load(Ordering::SeqCst) {
-            if start.elapsed() > RECLAIM_WAIT {
-                // A render thread is in one of its plug-ins and doesn't come out: the strip plays
-                // silence from now on, and its control outlives it, as that thread may yet return.
+        recall(ctl, shared);
+        if shared.named(Arc::as_ptr(ctl)) || ctl.busy.load(Ordering::SeqCst) {
+            if give_up {
+                // It plays silence from now on, and its control outlives it, as that thread may
+                // yet return.
                 ctl.state.store(LOST, Ordering::SeqCst);
                 std::mem::forget(ctl.clone());
-                return;
             }
-            std::hint::spin_loop();
-            if start.elapsed() > Duration::from_micros(200) {
-                std::thread::sleep(Duration::from_micros(50));
-            }
+            return give_up;
         }
+        let ctl = ctl.clone();
+        ctl.state.store(HOME, Ordering::SeqCst);
         ctl.ring.clear();
         ctl.short.store(0, Ordering::Relaxed);
         ctl.come_back.store(false, Ordering::SeqCst);
         self.load.ahead(false);
-        // SAFETY: home, and no render thread names it: the shell is the callback's.
+        // SAFETY: out of the table, and no render thread names it: none can come in again (one
+        // that read its entry before it was taken out finds it gone once its hazard is up), so the
+        // shell is the callback's.
         trade(self, unsafe { &mut *ctl.shell.get() });
+        true
     }
 
     /// Lends the strip to the render threads, its next block at `course`. False if the table is
@@ -532,6 +543,24 @@ impl TrackDsp {
         shared.table[entry].store(ptr, Ordering::SeqCst);
         self.load.ahead(true);
         true
+    }
+}
+
+/// Tells the render threads to start no more blocks of a lent strip, and takes it out of their
+/// table. Doesn't wait for one that's in it.
+fn recall(ctl: &Arc<AheadCtl>, shared: &AheadShared) {
+    ctl.come_back.store(true, Ordering::SeqCst);
+    if let Some(e) = shared.table.get(ctl.entry.swap(usize::MAX, Ordering::Relaxed)) {
+        e.store(std::ptr::null_mut(), Ordering::SeqCst);
+    }
+}
+
+/// One turn of waiting for a render thread, where waiting is allowed: a spin for the first 200 µs,
+/// then naps.
+fn pause(since: Instant) {
+    std::hint::spin_loop();
+    if since.elapsed() > Duration::from_micros(200) {
+        std::thread::sleep(Duration::from_micros(50));
     }
 }
 
@@ -573,6 +602,8 @@ pub(crate) struct Ahead {
     calm: u32,
     /// `EngineStatus::ahead_misses` as the last callback ended.
     misses: u32,
+    /// A command waiting for the strips it changes to come home, since when (see the module docs).
+    pub(super) held: Option<(Cmd, Instant)>,
 }
 
 /// For a lent strip in a block: its rendered block for `cx.pos` into `t.l` and `t.r`, waiting for
@@ -581,8 +612,10 @@ pub(crate) struct Ahead {
 /// out of the strip, nor plays a block again that its render thread is still making:
 /// - Not there, and no render thread in the strip: it's taken back and plays live.
 /// - Not there, and its render thread on it: it plays silence for this block and stays ahead; the
-///   late block is let go when it comes. After [`MAX_SHORT`] blocks in a row, the render thread is
-///   told to start no more (`come_back`), and the strip comes back once it's out.
+///   late block is let go when it comes. After [`MAX_SHORT`] blocks in a row, it's recalled (its
+///   render thread starts no more), and comes back once the render thread is out.
+/// - Being taken back by a command, with nothing rendered for here: it comes back once no render
+///   thread is in it; until then, as above.
 pub(super) fn take_block(t: &mut TrackDsp, cx: &BlockCtx<'_>, shared: Option<&AheadShared>) -> Took {
     let Some(ctl) = t.ahead.clone() else { return Took::Reclaimed };
     if ctl.lost() {
@@ -599,12 +632,6 @@ pub(super) fn take_block(t: &mut TrackDsp, cx: &BlockCtx<'_>, shared: Option<&Ah
         Took::Block
     };
     loop {
-        if ctl.come_back.load(Ordering::SeqCst) {
-            if ctl.busy.load(Ordering::SeqCst) {
-                return silent(t);
-            }
-            break;
-        }
         match ctl.ring.head() {
             Some(Mark { pos, n: len }) if pos == cx.pos && len == n => {
                 ctl.ring.pop(&mut t.l[..n], &mut t.r[..n]);
@@ -617,6 +644,11 @@ pub(super) fn take_block(t: &mut TrackDsp, cx: &BlockCtx<'_>, shared: Option<&Ah
             }
             // For another position: the playhead went elsewhere.
             Some(_) => break,
+            // Being taken back, and no render thread in it: no more blocks are coming. One that is
+            // may be making this block, which is waited for as any other.
+            None if ctl.come_back.load(Ordering::SeqCst) && !ctl.busy.load(Ordering::SeqCst) => break,
+            // Recalled for falling behind: silence until its render thread is out, without waiting.
+            None if ctl.come_back.load(Ordering::SeqCst) && short >= MAX_SHORT => return silent(t),
             None if cx.wait || Instant::now() < until => {
                 std::hint::spin_loop();
                 if start.elapsed() > Duration::from_micros(100) {
@@ -630,13 +662,23 @@ pub(super) fn take_block(t: &mut TrackDsp, cx: &BlockCtx<'_>, shared: Option<&Ah
                 }
                 ctl.short.store(short.saturating_add(1), Ordering::Relaxed);
                 if short + 1 >= MAX_SHORT {
-                    ctl.come_back.store(true, Ordering::SeqCst);
+                    if let Some(shared) = shared {
+                        recall(&ctl, shared);
+                    }
                 }
                 return silent(t);
             }
         }
     }
-    t.reclaim(shared);
+    // A check that must not depend on time waits for the render thread to come out.
+    let since = Instant::now();
+    while !t.reclaim(shared, cx.wait && since.elapsed() > RECLAIM_WAIT) {
+        if !cx.wait {
+            cx.status.ahead_misses.fetch_add(1, Ordering::Relaxed);
+            return silent(t);
+        }
+        pause(since);
+    }
     if ctl.lost() {
         Took::Lost
     } else {
@@ -645,28 +687,48 @@ pub(super) fn take_block(t: &mut TrackDsp, cx: &BlockCtx<'_>, shared: Option<&Ah
 }
 
 impl Engine {
-    /// Takes every lent strip back (a locate, Stop, a new tempo or cycle, a render).
-    pub(super) fn reclaim_all(&mut self) {
+    /// Takes every lent strip back without waiting (see [`TrackDsp::reclaim`]): true once all of
+    /// them are home.
+    pub(super) fn recall_all(&mut self, give_up: bool) -> bool {
         let shared = self.ahead.shared.clone();
+        let mut home = true;
         for t in &mut self.tracks {
-            t.reclaim(shared.as_deref());
+            home &= t.reclaim(shared.as_deref(), give_up);
+        }
+        home
+    }
+
+    /// Takes every lent strip back (a locate, Stop, a new tempo or cycle, a render), waiting for
+    /// their render threads to come out (see [`Engine::until_home`]). On the audio thread only
+    /// where they're home already, in a command [`Engine::reclaim_for`] has let through.
+    pub(super) fn reclaim_all(&mut self) {
+        self.until_home(|e, give_up| e.recall_all(give_up));
+    }
+
+    /// Tries `reclaim` until the strips it takes back are home, giving up on those whose render
+    /// thread is still in them after [`RECLAIM_WAIT`]. For off the audio thread, or where nothing
+    /// may depend on time (a render, a check that plays flat out). The waits overlap: every strip
+    /// is out of the table from the first try, so the longest render in one is the wait.
+    pub(super) fn until_home(&mut self, mut reclaim: impl FnMut(&mut Engine, bool) -> bool) {
+        let since = Instant::now();
+        while !reclaim(self, since.elapsed() > RECLAIM_WAIT) {
+            pause(since);
         }
     }
 
-    /// Takes a strip back.
-    pub(super) fn reclaim_track(&mut self, id: Id) {
+    /// Takes a strip back without waiting.
+    fn reclaim_track(&mut self, id: Id, give_up: bool) -> bool {
         let shared = self.ahead.shared.clone();
-        if let Some(t) = self.tracks.iter_mut().find(|t| t.id == id) {
-            t.reclaim(shared.as_deref());
-        }
+        self.tracks.iter_mut().find(|t| t.id == id).is_none_or(|t| t.reclaim(shared.as_deref(), give_up))
     }
 
-    /// Takes back what a command is about to change: the strip it names, or everything when it
-    /// moves the playhead or changes what every strip goes by. Fader, pan, mute and sends leave a
-    /// strip ahead.
-    pub(super) fn reclaim_for(&mut self, cmd: &Cmd) {
+    /// Takes back what a command is about to change, without waiting: the strip it names, or
+    /// everything when it moves the playhead or changes what every strip goes by. Fader, pan, mute
+    /// and sends leave a strip ahead. True once they're all home, when the command may apply;
+    /// `give_up` as for [`TrackDsp::reclaim`].
+    pub(super) fn reclaim_for(&mut self, cmd: &Cmd, give_up: bool) -> bool {
         if self.ahead.shared.is_none() {
-            return;
+            return true;
         }
         match cmd {
             Cmd::MasterVolume(_)
@@ -678,7 +740,7 @@ impl Engine {
             | Cmd::ParallelTest(_)
             | Cmd::InputTap { .. }
             | Cmd::AddTrack(..)
-            | Cmd::Order(_) => {}
+            | Cmd::Order(_) => true,
             Cmd::Params(id, p) => {
                 let changed = self.tracks.iter().find(|t| t.id == *id).is_some_and(|t| {
                     let q = &t.params;
@@ -689,27 +751,13 @@ impl Engine {
                         || q.instrument_output != p.instrument_output
                         || q.midi != p.midi
                 });
-                if changed {
-                    self.reclaim_track(*id);
-                }
+                !changed || self.reclaim_track(*id, give_up)
             }
             // A track to keep live comes back now; the others may go ahead again.
-            Cmd::KeepLive(ids) => {
-                for id in ids.iter().flatten() {
-                    self.reclaim_track(*id);
-                }
-            }
+            Cmd::KeepLive(ids) => ids.iter().flatten().fold(true, |home, id| self.reclaim_track(*id, give_up) & home),
             // Only the tracks live MIDI or the analyzer moves between.
-            Cmd::MidiTarget(new) => {
-                for id in [self.midi_target, *new].into_iter().flatten() {
-                    self.reclaim_track(id);
-                }
-            }
-            Cmd::Analyzer(new) => {
-                for (id, _) in [self.analyzer_target, *new].into_iter().flatten() {
-                    self.reclaim_track(id);
-                }
-            }
+            Cmd::MidiTarget(new) => [self.midi_target, *new].into_iter().flatten().fold(true, |home, id| self.reclaim_track(id, give_up) & home),
+            Cmd::Analyzer(new) => [self.analyzer_target, *new].into_iter().flatten().fold(true, |home, (id, _)| self.reclaim_track(id, give_up) & home),
             Cmd::RemoveTrack(id)
             | Cmd::Regions(id, _)
             | Cmd::Automation(id, _)
@@ -725,8 +773,8 @@ impl Engine {
             | Cmd::FxParam { track: id, .. }
             | Cmd::Sidechain { track: id, .. }
             | Cmd::SidechainPre { track: id, .. }
-            | Cmd::VstGate { track: id, .. } => self.reclaim_track(*id),
-            _ => self.reclaim_all(),
+            | Cmd::VstGate { track: id, .. } => self.reclaim_track(*id, give_up),
+            _ => self.recall_all(give_up),
         }
     }
 
@@ -749,8 +797,15 @@ impl Engine {
         let missed = std::mem::replace(&mut self.ahead.misses, misses) != misses;
         self.ahead.calm = if missed || (!patient && spent > budget) { 0 } else { self.ahead.calm.saturating_add(1) };
         let room = patient || spent <= budget * LEND_SHARE;
-        let going =
-            self.playing && !self.recording && !self.draining && self.stopping.is_none() && !self.offline && self.isolate.is_none() && self.shedding == 0;
+        // Nor while a command waits for strips to come home: lent again, they'd keep it waiting.
+        let going = self.playing
+            && !self.recording
+            && !self.draining
+            && self.stopping.is_none()
+            && !self.offline
+            && self.isolate.is_none()
+            && self.shedding == 0
+            && self.ahead.held.is_none();
         if going && steady && frames > 0 && room && self.ahead.calm >= CALM {
             let lead = ((self.ahead.lead_secs * self.sample_rate) as usize).min(RING_FRAMES - MAX_BLOCK);
             let base = TransportInfo { playing: true, recording: false, sample_rate: self.sample_rate, cycle: self.transport().cycle, ..Default::default() };
