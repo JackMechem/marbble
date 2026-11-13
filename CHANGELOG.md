@@ -15,6 +15,11 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Fixed
 
+- **Marbble Synth renders the same every time with the mod wheel up.** Its vibrato LFO ran on
+  from live playing into bounces, freezes and exports, and the mod wheel and expression played live
+  before a render stayed set in it, so two renders of the same project could differ. A render now
+  starts it as a new instance would: vibrato from the start of its cycle, wheel and expression at
+  rest until the project sets them. Live playing sounds as before.
 - **Render Ahead uses the whole machine on macOS and Windows.** It started as many threads as
   Settings › Audio › Processing Threads, which Automatic keeps at one there for now, so a heavy
   project's tracks couldn't stay ahead and kept falling back to live. Its threads now follow the
