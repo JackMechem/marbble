@@ -20,12 +20,18 @@ All notable changes to Marbble are recorded here. The format follows
   project's tracks couldn't stay ahead and kept falling back to live. Its threads now follow the
   machine's cores (8 on an M1 Pro, 14 on an 8-core Intel with hyper-threading), whatever
   Processing Threads says.
+- **Render Ahead no longer makes a buffer late when you locate or edit while playing.** Moving
+  the playhead, or changing a track rendered ahead (a plug-in setting, a region, its
+  automation), waited on the audio thread for each track's render to finish, one after another:
+  clicking about in the ruler of a project with twelve amp models on a busy machine held buffers
+  for up to 190 ms and overloaded. Now the change waits for those renders instead (it lands a few
+  milliseconds later), and the audio never does.
 - **No overload when you add a track to a heavy project.** Adding, removing or reordering
   tracks, or changing an output, a send or a side chain, played the next buffer or two with every
   plug-in on the audio thread alone, until the extra processing threads were told about the new
   routing. With twelve TONE3000 amp models playing (Render Ahead off), that buffer took three and
   a half times its length and playback stopped. The threads now carry on with the new routing at
-  once.
+  once, after a plug-in that stopped responding for a while too.
 - **No overload as a heavy project opens.** Opening a project with many heavy plug-ins (twelve
   TONE3000 amp models, say) overloaded once, stopped, before anything played: the extra processing
   threads only learned of the new tracks a moment after them, so the first buffer played every

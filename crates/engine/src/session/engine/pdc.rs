@@ -285,7 +285,7 @@ impl Session {
     /// block the device plays), and a latency they changed, such as a lookahead, is in the
     /// delay compensation the render plays with.
     pub(crate) fn settle_latency(&mut self) {
-        self.engine.lock().process(&[], 0, &mut [], 0);
+        self.engine.lock().apply_queued();
         let deadline = Instant::now() + Duration::from_millis(50);
         while self.audio.is_some() && Instant::now() < deadline && self.controllers.values().any(|c| c.edits_pending()) {
             std::thread::sleep(Duration::from_millis(1));

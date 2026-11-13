@@ -22,7 +22,7 @@ impl Session {
         }
         if self.audio.is_none() {
             // No device is running, so drain the queue here to keep the graph current.
-            self.engine.lock().process(&[], 0, &mut [], 0);
+            self.engine.lock().apply_queued();
         }
     }
 
@@ -36,7 +36,7 @@ impl Session {
         let deadline = Instant::now() + SEND_WAIT;
         while !self.engine_resync {
             if self.audio.is_none() {
-                self.engine.lock().process(&[], 0, &mut [], 0);
+                self.engine.lock().apply_queued();
             }
             while let Ok(g) = self.garbage_rx.pop() {
                 self.sampler_garbage(g);
@@ -80,7 +80,9 @@ impl Session {
     }
 
     /// Whether the engine has taken every command sent. Once it has, holding the engine's lock
-    /// means it has applied them too, as it applies what it takes before letting go.
+    /// means it has applied them too, as it applies what it takes before letting go, but for one
+    /// waiting for strips rendered ahead to come home (`Ahead::held`), which `Engine::apply_queued`
+    /// and `Engine::take_queued` (before a graph is replaced) apply first.
     fn cmd_queue_empty(&self) -> bool {
         self.cmd_tx.slots() == self.cmd_tx.buffer().capacity()
     }
