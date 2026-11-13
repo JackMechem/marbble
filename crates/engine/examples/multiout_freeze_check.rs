@@ -174,13 +174,12 @@ fn main() {
     check(&format!("reopened, it is still frozen and sounds the same (max diff {d:.2e})"), d < 1e-6 && reopened.plugin_instances() == 0);
     drop(reopened);
 
-    // Unfreeze, and undo that. The files are looked at straight away: loading the sampler again
-    // (issue #37) undoes the unfreeze, which writes them back, and the redo leaves them there.
+    // Unfreeze, and undo that. Unfreezing leaves the files for Undo and the saved project (#479).
     let files = freeze_files(&s, inst, auxes);
     s.checkpoint("Unfreeze Track", None, true);
     s.unfreeze_track(inst).unwrap();
-    let left: Vec<&PathBuf> = files.iter().flatten().filter(|f| f.exists()).collect();
-    check(&format!("unfreezing deletes every freeze file (still there: {left:?})"), left.is_empty());
+    let gone: Vec<&PathBuf> = files.iter().flatten().filter(|f| !f.exists()).collect();
+    check(&format!("unfreezing keeps every freeze file for Undo (gone: {gone:?})"), gone.is_empty());
     let still: Vec<Id> = auxes.into_iter().filter(|a| s.project.track(*a).unwrap().frozen_output.is_some()).collect();
     check(&format!("unfreezing gives the auxes their live outputs back (still on a render: {still:?})"), still.is_empty());
     let back = plays_again(&mut s, inst, &mut |s| {
@@ -192,7 +191,7 @@ fn main() {
     check(&format!("unfrozen, it plays live (max diff {d:.2e})"), d < SAME);
     s.undo();
     let d = diff(&frozen, &mix(&mut s));
-    check(&format!("undoing the unfreeze writes the files back (max diff {d:.2e})"), d < 1e-6 && all_there(&freeze_files(&s, inst, auxes)));
+    check(&format!("undoing the unfreeze plays the files again (max diff {d:.2e})"), d < 1e-6 && all_there(&freeze_files(&s, inst, auxes)));
     s.redo();
     plays_again(&mut s, inst, &mut |s| {
         s.undo();

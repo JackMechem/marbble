@@ -236,6 +236,12 @@ pub struct Session {
     last_recording: Option<takes::last_recording::LastRecording>,
     /// Files of discarded recordings, deleted once nothing can need them.
     discarded: Vec<(Id, PathBuf)>,
+    /// Freeze files the project stopped playing, deleted once nothing can need them
+    /// (`tracks/freeze/files.rs`).
+    unused_freeze_files: Vec<PathBuf>,
+    /// Counts the projects this session has had (New and Open each start one), so a freeze
+    /// rendered in one isn't placed in the next.
+    opened: u64,
     /// The engine's sample rate, kept here so reading it needn't lock the engine (see
     /// `engine`: the audio callback only try_locks it, and loses its block when that fails).
     /// Set where the graph is replaced, in `rebuild_graph`.
@@ -445,6 +451,8 @@ impl Session {
             rec_rating: None,
             last_recording: None,
             discarded: Vec::new(),
+            unused_freeze_files: Vec::new(),
+            opened: 0,
             engine_rate,
             warning: None,
             engine_errors_seen: 0,

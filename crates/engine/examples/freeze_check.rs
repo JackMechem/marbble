@@ -1,6 +1,7 @@
 //! Checks Track Freeze against the engine (silent ALSA null output): a frozen instrument track
 //! with a latent plug-in sounds as it did live, its plug-ins are unloaded, edits are refused,
-//! and undo, redo, unfreeze and reopening bring the right state back.
+//! and undo, redo, unfreeze and reopening bring the right state back, with the freeze files the
+//! saved project and Undo need.
 //! usage: freeze_check <audio file> <scratch dir>
 use std::path::{Path, PathBuf};
 use std::time::Instant;
@@ -142,12 +143,12 @@ fn main() {
     let (unfrozen, _) = mix(&mut s, len);
     let d = diff(&live, &unfrozen);
     ok &= check(
-        &format!("unfreeze deletes the file, reloads the plug-in and plays live (max diff {d:.2e})"),
-        !file.exists() && s.plugin_instances() == 1 && d < 1e-3,
+        &format!("unfreeze reloads the plug-in and plays live, keeping the file for Undo (max diff {d:.2e})"),
+        file.exists() && s.plugin_instances() == 1 && d < 1e-3,
     );
     s.undo();
     ok &= check(
-        "undoing the unfreeze brings the freeze file back",
+        "undoing the unfreeze plays the freeze file again",
         file.exists() && s.plugin_instances() == 0 && s.project.track(inst).unwrap().frozen.is_some(),
     );
 
@@ -159,6 +160,16 @@ fn main() {
     ok &= check(
         &format!("a reopened project is still frozen (max diff {:.2e}, {} loaded)", diff(&frozen, &reopened), s.plugin_instances()),
         s.project.track(inst).map(|t| t.frozen.is_some()).unwrap_or(false) && s.plugin_instances() == 0 && diff(&frozen, &reopened) < 1e-6,
+    );
+    // Unfrozen and closed without saving, the saved project is still frozen, with its file.
+    s.checkpoint("Unfreeze Track", None, true);
+    s.unfreeze_track(inst).unwrap();
+    s.new_project();
+    s.open(&dir).unwrap();
+    let (kept, _) = mix(&mut s, len);
+    ok &= check(
+        &format!("closing an unsaved unfreeze keeps the saved project's freeze file (max diff {:.2e})", diff(&frozen, &kept)),
+        s.project.track(inst).map(|t| t.frozen.is_some()).unwrap_or(false) && s.plugin_instances() == 0 && diff(&frozen, &kept) < 1e-6,
     );
     s.checkpoint("Unfreeze Track", None, true);
     s.unfreeze_track(inst).unwrap();
