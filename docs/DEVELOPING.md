@@ -211,7 +211,9 @@ it too.
   The options are at the top of the file. The script runs it briefly on the null device
   (`--null`), only to see that it runs: with no clock there, its loads mean little.
 - **Tools:** `test_tone`, `demo_project`, `showcase_project` (the website's screenshots), `hosts`
-  (audio devices), `input_level`, `smoke` (records from the real default input).
+  (audio devices), `input_level`, `smoke` (records from the real default input), `ahead_probe`
+  (plays a saved project with Render Ahead on through scripted locates and stops, prints overloads
+  and misses for each step and writes a trace from `dsp/probe.rs`; usage at the top of the file).
 - `crates/vst3-host/examples/`: `probe` scans and runs installed plug-ins; `editor` opens one
   plug-in's editor; `editor_load` measures what opening one costs the thread playing it;
   `lsp_sampler_loads` counts the samples LSP's Multi-Sampler loses. `scripts/editor-scale-check.sh` checks on a private Xvfb display that editors

@@ -22,6 +22,7 @@ use crate::model::{AutoMode, CcEvent, CcKind, Id, InputSel, InstrumentOutput, No
 use crate::prefs::{ClickSettings, ClickSound};
 
 pub mod ahead;
+pub mod probe;
 mod apply;
 mod block;
 mod denormals;
