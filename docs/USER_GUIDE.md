@@ -3368,7 +3368,8 @@ edit or mix without a copy of the whole project.
 Each save keeps the version it replaces as a backup, separately for each alternative, up to
 Settings › General › Backups (10 by default; 0 keeps only the last one, as
 `project.json.bak`). **File › Revert to** lists them by when they were saved ("Today 14:32",
-"Yesterday 09:10", then the date), newest first. Choosing one asks, then loads it; the
+"Yesterday 09:10", then the date), newest first, with the seconds for backups saved in the
+same minute ("Today 14:32:05"). Choosing one asks, then loads it; the
 project as it was (unsaved changes included) becomes a backup itself, so reverting to it
 undoes the revert.
 
