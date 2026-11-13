@@ -19,6 +19,20 @@ All notable changes to Marbble are recorded here. The format follows
   whose plug-in stopped responding is given up on and plays silence, but its render thread kept
   reading the old tempo map, which a tempo change then freed: had the plug-in come back, Marbble
   could crash or misbehave. The track now keeps the map it was rendering with.
+- **Unfreezing a track no longer deletes the freeze file the saved project plays.** Unfreezing
+  and then closing without saving left the saved project's frozen track silent. A freeze file
+  Marbble stops playing (the track unfrozen, or the Freeze undone) is now deleted only when the
+  project is saved or closed and nothing names it any more: not the project, Undo or Redo, nor any
+  document in the project folder (the saved project, its autosave, backups or alternatives).
+  Before, undoing a Freeze or redoing an Unfreeze left its files behind for good. Nothing else in
+  Freeze Files is ever deleted.
+- **Freezing while the project is saved under a new name** keeps the freeze in the new project's
+  folder, so the copy no longer plays a file from the old one; and a freeze still rendering when
+  another project is opened is dropped instead of landing in that project.
+- **A discarded recording is no longer deleted from a project saved before the discard.** Discard
+  Last Recording, then Save As, then closing deleted the take from the old project's folder,
+  though the old project still played it. Only files in the project's own folder that nothing
+  names are deleted now, and the check reads every document in the folder as a project.
 - **Render Ahead uses the whole machine on macOS and Windows.** It started as many threads as
   Settings › Audio › Processing Threads, which Automatic keeps at one there for now, so a heavy
   project's tracks couldn't stay ahead and kept falling back to live. Its threads now follow the

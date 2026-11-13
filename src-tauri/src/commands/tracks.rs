@@ -229,7 +229,7 @@ pub fn freeze_tracks(app: tauri::AppHandle, state: State<AppState>, ids: Vec<Id>
     rx.recv().map_err(|e| e.to_string())?
 }
 
-/// Unfreezes tracks: their plug-ins load again and the freeze files are deleted.
+/// Unfreezes tracks: their plug-ins load again and their freeze files leave the project.
 #[tauri::command]
 pub fn unfreeze_tracks(state: State<AppState>, ids: Vec<Id>) -> R<Snapshot> {
     try_edit(&state, if ids.len() > 1 { "Unfreeze Tracks" } else { "Unfreeze Track" }, None, true, |s| ids.iter().try_for_each(|&id| s.unfreeze_track(id)))

@@ -56,28 +56,6 @@ fn same_regions(a: &[Region], b: &[Region]) -> bool {
     serde_json::to_value(a).ok() == serde_json::to_value(b).ok()
 }
 
-/// The project documents in `dir` that can name a file: project.json and its autosave and
-/// backup, the backups (Backups/) and the other project alternatives (Alternatives/).
-fn project_docs(dir: &Path) -> Vec<String> {
-    fn json_in(dir: &Path, depth: usize, out: &mut Vec<String>) {
-        let Ok(entries) = std::fs::read_dir(dir) else { return };
-        for e in entries.flatten() {
-            let p = e.path();
-            if p.is_dir() && depth > 0 {
-                json_in(&p, depth - 1, out);
-            } else if p.extension().is_some_and(|x| x == "json" || x == "bak") {
-                out.extend(std::fs::read_to_string(&p).ok());
-            }
-        }
-    }
-    let mut out = Vec::new();
-    json_in(dir, 0, &mut out);
-    for sub in [crate::session::project::backups::BACKUPS_DIR, crate::session::project::alternatives::ALTERNATIVES_DIR] {
-        json_in(&dir.join(sub), 2, &mut out);
-    }
-    out
-}
-
 impl Session {
     /// After `place_recording` has placed a recording on the `touched` tracks (`before`: the
     /// regions of the tracks it recorded to, as they were, and the `clips` and `midi` it made):
@@ -278,22 +256,21 @@ impl Session {
         changed
     }
 
-    /// Deletes the files of discarded recordings that nothing can need any more: not the
-    /// project, an undo or redo step, nor a document in the project folder (project.json, its
-    /// autosave, the backups or another alternative). `closing`: the project is being closed,
-    /// so its undo history is going and only the documents on disk count; files they still
-    /// name are kept for good.
+    /// Deletes the files of discarded recordings in the project folder that nothing can need any
+    /// more: not the project, an undo or redo step, nor a document in the project folder
+    /// ([`Session::named_files`]). `closing`: the project is being closed, so its undo history is
+    /// going and only the documents on disk count; files they still name are kept for good.
     pub(crate) fn purge_discarded(&mut self, closing: bool) {
         if self.discarded.is_empty() {
             return;
         }
-        let docs = project_docs(&self.dir);
+        let named = self.named_files(closing);
         for (clip, path) in std::mem::take(&mut self.discarded) {
-            let listed = |p: &Project| p.clips.iter().any(|c| c.id == clip);
-            let undoable = !closing && (listed(&self.project) || self.undo_stack.iter().chain(&self.redo_stack).any(|e| listed(&e.project)));
-            let rel = path.strip_prefix(&self.dir).unwrap_or(&path).to_string_lossy().to_string();
-            let quoted = serde_json::to_string(&rel).unwrap_or_default();
-            if undoable || docs.iter().any(|d| d.contains(&quoted)) {
+            // Only files in this project's folder: one elsewhere may be another project's too.
+            if !path.starts_with(&self.dir) {
+                continue;
+            }
+            if named.as_ref().is_none_or(|n| n.names(&path)) {
                 if !closing {
                     self.discarded.push((clip, path));
                 }
