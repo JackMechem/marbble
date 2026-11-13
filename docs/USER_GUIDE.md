@@ -166,9 +166,11 @@ click outside) drops them. The delay compensation options on the same tab apply 
   mixes them, so a heavy project (amp models, big synths) doesn't drop out when one buffer runs
   slow. What you hear is exactly what you'd hear with it off. The selected track, tracks with a
   plug-in window open, record-enabled and monitored tracks, and tracks keyed by a side-chain
-  always play live, so what you play or turn there is heard at once. An edit to a track rendered
-  ahead (a region, a plug-in, its automation) brings it back live from that moment; a reverb or
-  delay on it may jump a little as it does. At 96 kHz and above the lead is at most a quarter of a
+  always play live, so what you play or turn there is heard at once. Selecting a track or opening
+  its plug-in window while playing is seamless: it plays out what was already rendered (the lead
+  at most) and goes on live from exactly there; a key you play on it meanwhile is heard at once.
+  An edit to a track rendered ahead (a region, a plug-in, its automation) brings it back live from
+  that moment; a reverb or delay on it may jump a little as it does. At 96 kHz and above the lead is at most a quarter of a
   second. Off by default for now.
 - **Reset Audio Engine** closes and reopens the devices, for example after replugging an
   interface.

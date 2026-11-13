@@ -110,8 +110,9 @@ pub(crate) struct Rig {
     pub(crate) status: Arc<EngineStatus>,
     /// What the engine hands back to be dropped.
     pub(super) garbage: rtrb::Consumer<Garbage>,
+    /// Live MIDI, as from a keyboard.
+    pub(crate) live_midi: rtrb::Producer<[u8; 3]>,
     // The other rings' far ends, held open for the rig's life.
-    _live_midi: rtrb::Producer<[u8; 3]>,
     _recorded_midi: rtrb::Consumer<(i64, [u8; 3])>,
     _analyzer: rtrb::Consumer<f32>,
 }
@@ -124,12 +125,12 @@ pub(crate) fn rig() -> Rig {
 pub(super) fn rig_at(sample_rate: f64) -> Rig {
     let (tx, rx) = rtrb::RingBuffer::new(256);
     let (gtx, garbage) = rtrb::RingBuffer::new(256);
-    let (_live_midi, live_rx) = rtrb::RingBuffer::new(16);
+    let (live_midi, live_rx) = rtrb::RingBuffer::new(16);
     let (rec_tx, _recorded_midi) = rtrb::RingBuffer::new(16);
     let (an_tx, _analyzer) = rtrb::RingBuffer::new(1 << 16);
     let status = Arc::new(EngineStatus::default());
     let engine = Engine::new(sample_rate, rx, gtx, status.clone(), live_rx, rec_tx, an_tx);
-    Rig { engine, tx, status, garbage, _live_midi, _recorded_midi, _analyzer }
+    Rig { engine, tx, status, garbage, live_midi, _recorded_midi, _analyzer }
 }
 
 /// Plays one second (two bars at 480 BPM) with the metronome on and returns the peak level

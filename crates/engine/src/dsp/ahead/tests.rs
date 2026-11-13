@@ -1,6 +1,6 @@
 //! Render ahead plays exactly what playing live does: the same blocks at the same positions,
-//! through cycle wraps, locates and fader moves; an edit is heard in the block it comes in; and the
-//! render threads really render.
+//! through cycle wraps, locates and fader moves, and as a selected track drains into live play; an
+//! edit is heard in the block it comes in; and the render threads really render.
 
 use super::*;
 use crate::dsp::tests::rig;
@@ -40,6 +40,23 @@ impl Effect for Counter {
 fn counter(uid: Id) -> InsertDsp {
     let info =
         EffectInfo { id: "test:counter", name: "Counter", category: "Utility", params: &[], meters: &[], sidechain: false, new: |_| Box::new(Counter(0)) };
+    InsertDsp::new(uid, false, Plugin::Builtin(Box::new(BuiltinDsp::new(&info, SR as f32, &[]))), KeyRoute::default())
+}
+
+/// An instrument that plays nothing, whatever it's sent.
+struct Silent;
+
+impl Effect for Silent {
+    fn set_param(&mut self, _: u32, _: f32) {}
+    fn param(&self, _: u32) -> f32 {
+        0.0
+    }
+    fn process(&mut self, _: &mut [f32], _: &mut [f32], _: Key, _: &FxContext) {}
+    fn reset(&mut self) {}
+}
+
+fn silent_instrument(uid: Id) -> InsertDsp {
+    let info = EffectInfo { id: "test:silent", name: "Silent", category: "Utility", params: &[], meters: &[], sidechain: false, new: |_| Box::new(Silent) };
     InsertDsp::new(uid, false, Plugin::Builtin(Box::new(BuiltinDsp::new(&info, SR as f32, &[]))), KeyRoute::default())
 }
 
@@ -91,11 +108,24 @@ enum Event {
     Locate(i64),
     Fader(Id, f32),
     Bypass(Id, Id, bool),
+    /// The track selected (or none).
+    KeepLive(Option<Id>),
+    MidiTarget(Option<Id>),
+    /// A key played live.
+    Note(u8),
+    /// A pause before the callback, in which the render threads fill the rings.
+    Pause,
 }
 
 /// Plays `callbacks` callbacks of three tracks, each with a counter, with a cycle, sending each
 /// event before its callback, render ahead on or off. The output's left channel.
 fn run(ahead: bool, callbacks: usize, events: &[(usize, Event)]) -> Vec<f32> {
+    run_watching(ahead, callbacks, events, |_, _| {})
+}
+
+/// `run`, showing `watch` the rig after each callback. Track 3 is an instrument track playing the
+/// sine as a freeze file, its instrument silent.
+fn run_watching(ahead: bool, callbacks: usize, events: &[(usize, Event)], mut watch: impl FnMut(usize, &crate::dsp::tests::Rig)) -> Vec<f32> {
     let mut r = rig();
     let _threads = ahead.then(|| {
         let t = AheadThreads::start(2, r.status.clone());
@@ -104,9 +134,13 @@ fn run(ahead: bool, callbacks: usize, events: &[(usize, Event)]) -> Vec<f32> {
     });
     r.tx.push(Cmd::ParallelTest(crate::dsp::ParallelTest { patient: true, ..Default::default() })).ok().unwrap();
     for id in 1..=3 {
-        let mut t = TrackDsp::new(id, TrackKind::Audio, params(0.5), Arc::default());
+        let kind = if id == 3 { TrackKind::Instrument } else { TrackKind::Audio };
+        let mut t = TrackDsp::new(id, kind, params(0.5), Arc::default());
         t.set_regions(sine());
         t.set_insert(0, Some(counter(100 + id)));
+        if kind == TrackKind::Instrument {
+            t.set_instrument(Some(silent_instrument(200 + id)));
+        }
         t.prepare_ahead();
         r.tx.push(Cmd::AddTrack(Box::new(t), usize::MAX)).ok().unwrap();
     }
@@ -121,13 +155,38 @@ fn run(ahead: bool, callbacks: usize, events: &[(usize, Event)]) -> Vec<f32> {
                 Event::Locate(p) => Cmd::Locate(p),
                 Event::Fader(id, v) => Cmd::Params(id, params(v)),
                 Event::Bypass(track, uid, bypass) => Cmd::Bypass { track, uid, bypass },
+                Event::KeepLive(id) => {
+                    let mut keep = [None; KEEP_LIVE];
+                    keep[0] = id;
+                    Cmd::KeepLive(keep)
+                }
+                Event::MidiTarget(id) => Cmd::MidiTarget(id),
+                Event::Note(key) => {
+                    r.live_midi.push([0x90, key, 100]).ok().unwrap();
+                    continue;
+                }
+                Event::Pause => {
+                    std::thread::sleep(std::time::Duration::from_millis(30));
+                    continue;
+                }
             };
             r.tx.push(cmd).ok().unwrap();
         }
         r.engine.process(&[], 0, &mut buf, 2);
         out.extend(buf.chunks(2).map(|f| f[0]));
+        watch(k, &r);
     }
     out
+}
+
+/// Whether track `id` is lent (draining counts).
+fn lent_now(r: &crate::dsp::tests::Rig, id: Id) -> bool {
+    r.engine.tracks.iter().find(|t| t.id == id).and_then(|t| t.ahead.as_ref()).is_some_and(|a| a.lent())
+}
+
+/// For `run_watching`: after which callbacks track `id` was lent.
+fn lent_at(id: Id, seen: &mut Vec<bool>) -> impl FnMut(usize, &crate::dsp::tests::Rig) + '_ {
+    move |_, r| seen.push(lent_now(r, id))
 }
 
 fn first_difference(a: &[f32], b: &[f32]) -> Option<usize> {
@@ -163,6 +222,82 @@ fn an_edit_is_heard_in_the_block_it_comes_in() {
     assert_eq!(first_difference(&live[..at * FRAMES], &ahead[..at * FRAMES]), None);
     // With every counter bypassed, both play the sines alone: the same from the edit on.
     assert_eq!(first_difference(&live[at * FRAMES..], &ahead[at * FRAMES..]), None);
+}
+
+/// The rings hold a lead (0.1 s): this many callbacks, and a few for the render threads.
+const DRAIN: usize = 4800 / FRAMES + 4;
+
+#[test]
+fn selecting_a_lent_track_drains_it_into_live_play_exactly() {
+    // Selecting a track took it back at once: its rendered blocks went, and it played on live
+    // from plug-ins up to the lead ahead, so a tail or an envelope jumped (#499). Now it plays out
+    // what was rendered and goes on live from exactly there: the counters run on unbroken.
+    let events = [(100, Event::Pause), (100, Event::KeepLive(Some(2))), (180, Event::KeepLive(None)), (250, Event::Pause), (250, Event::KeepLive(Some(1)))];
+    let live = run(false, 330, &events);
+    let mut seen = Vec::new();
+    let ahead = run_watching(true, 330, &events, lent_at(2, &mut seen));
+    assert_eq!(first_difference(&live, &ahead), None);
+    assert!(seen[99] && seen[100], "it was ahead, and drains rather than coming back at once");
+    assert!(seen[100 + DRAIN..180].iter().all(|l| !l), "drained, it plays live while selected");
+    assert!(seen[320], "let go, it went ahead again");
+}
+
+#[test]
+fn an_edit_during_a_drain_takes_the_strip_back_as_before() {
+    let events = [(100, Event::Pause), (100, Event::KeepLive(Some(2))), (103, Event::Bypass(2, 102, true))];
+    let live = run(false, 160, &events);
+    let mut seen = Vec::new();
+    let ahead = run_watching(true, 160, &events, lent_at(2, &mut seen));
+    // With its counter bypassed, the strip plays the sine alone, the same either way.
+    assert_eq!(first_difference(&live, &ahead), None);
+    assert!(seen[102] && !seen[103], "draining, then taken back by the edit in its block");
+}
+
+#[test]
+fn a_locate_during_a_drain_plays_as_live() {
+    let events = [(100, Event::Pause), (100, Event::KeepLive(Some(2))), (104, Event::Locate(30_000))];
+    let live = run(false, 200, &events);
+    let mut seen = Vec::new();
+    let ahead = run_watching(true, 200, &events, lent_at(2, &mut seen));
+    assert_eq!(first_difference(&live, &ahead), None);
+    assert!(seen[103] && seen[104..].iter().all(|l| !l), "taken back by the locate, and kept live");
+}
+
+#[test]
+fn a_track_let_go_and_selected_again_mid_drain_plays_as_live() {
+    let events = [
+        (100, Event::Pause),
+        (100, Event::KeepLive(Some(2))),
+        (102, Event::KeepLive(None)),
+        (104, Event::KeepLive(Some(2))),
+        (106, Event::KeepLive(Some(1))),
+        (200, Event::Pause),
+        (200, Event::KeepLive(None)),
+    ];
+    let live = run(false, 260, &events);
+    let mut seen = Vec::new();
+    let ahead = run_watching(true, 260, &events, lent_at(2, &mut seen));
+    assert_eq!(first_difference(&live, &ahead), None);
+    assert!(seen[106], "still draining: let go mid-drain, it isn't lent again until it's home");
+}
+
+#[test]
+fn live_midi_ends_the_drain_of_its_target_at_once() {
+    // Selecting an instrument track makes it the live-MIDI target too: it drains as well, and a
+    // key played meanwhile is heard in the block it comes in, live.
+    let at = 104;
+    let events = [(100, Event::Pause), (100, Event::MidiTarget(Some(3))), (100, Event::KeepLive(Some(3))), (at, Event::Note(60))];
+    let mut held = false;
+    let live = run_watching(false, 140, &events, |k, r| held |= k == at && r.engine.tracks[2].live_held[60]);
+    assert!(held, "live, the key is held on the target");
+    let mut seen = Vec::new();
+    let ahead = run_watching(true, 140, &events, |k, r| {
+        seen.push(lent_now(r, 3));
+        held &= k != at || r.engine.tracks[2].live_held[60];
+    });
+    assert!(held, "the key was played on the strip, live, in the block it came in");
+    assert!(seen[at - 1] && !seen[at], "draining until the key");
+    assert_eq!(first_difference(&live[..at * FRAMES], &ahead[..at * FRAMES]), None, "as live until then");
 }
 
 #[test]
@@ -204,7 +339,7 @@ fn removing_a_lent_track_while_playing_is_safe() {
 }
 
 #[test]
-fn a_track_kept_live_comes_back_at_once_and_stays_until_let_go() {
+fn a_track_kept_live_comes_back_and_stays_until_let_go() {
     let mut r = rig();
     let threads = AheadThreads::start(2, r.status.clone());
     r.tx.push(Cmd::Ahead(Some(threads.shared()), 0.1)).ok().unwrap();
@@ -228,11 +363,10 @@ fn a_track_kept_live_comes_back_at_once_and_stays_until_let_go() {
     let mut keep = [None; KEEP_LIVE];
     keep[0] = Some(1);
     r.tx.push(Cmd::KeepLive(keep)).ok().unwrap();
-    // At once, or a callback later if a render thread was in it then (#471).
-    play(&mut r, 1);
-    for _ in 0..4 {
+    // Once what was rendered has played (#499): a lead at most.
+    for _ in 0..2 * DRAIN {
         if lent(&r, 0) {
-            std::thread::sleep(std::time::Duration::from_millis(5));
+            std::thread::sleep(std::time::Duration::from_millis(1));
             play(&mut r, 1);
         }
     }
