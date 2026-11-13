@@ -425,7 +425,7 @@ fn play_instrument<R: Routes>(cx: &BlockCtx<'_>, t: &mut TrackDsp, routes: &mut 
 /// Note-offs for every note the regions left sounding (`flush_notes`: after a stop, a jump or an
 /// edit), the sustain pedal up and the pitch bend centred if a controller was sent, and a
 /// built-in instrument's own notes ended.
-fn end_sounding_notes(t: &mut TrackDsp) {
+pub(super) fn end_sounding_notes(t: &mut TrackDsp) {
     for pitch in 0..128 {
         if t.sounding[pitch] {
             t.midi.push(MidiEvent { offset: 0, data: [0x80, pitch as u8, 0] });
