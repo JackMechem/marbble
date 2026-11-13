@@ -94,7 +94,7 @@ impl Engine {
             }
             self.parallel.stalled = false;
             self.leave_out();
-            self.flush_all_notes();
+            self.flush_notes_now();
         }
         self.release_held();
 
@@ -196,7 +196,7 @@ impl Engine {
         let track = self.parallel.stuck_track().unwrap_or(0);
         if left_out {
             self.leave_out();
-            self.flush_all_notes();
+            self.flush_notes_now();
         } else {
             self.parallel.stalled = true;
         }
@@ -230,7 +230,7 @@ impl Engine {
         if self.behind_secs > OVERLOAD_SECS {
             self.behind_secs = 0.0;
             self.shedding = (SHED_SECS / budget).ceil() as u32;
-            self.flush_all_notes();
+            self.flush_notes_now();
             let slowest = self.tracks.iter().max_by(|a, b| a.spent.total_cmp(&b.spent)).map_or(0, |t| t.id);
             self.report_overload(spent as f32, slowest, false, false);
         }
@@ -287,7 +287,7 @@ impl Engine {
     /// For checks, after applying what's queued: whether the task graph holds for the routes.
     #[doc(hidden)]
     pub fn task_graph_fits(&mut self) -> bool {
-        self.process(&[], 0, &mut [], 0);
+        self.apply_queued();
         self.parallel.fits(&self.tracks)
     }
 
@@ -317,8 +317,24 @@ impl Engine {
 
     /// Applies every command queued, in order, and counts them done.
     fn take_commands(&mut self) {
+        // Without a deadline, a command waits for its strips' render threads; with one, it waits
+        // for a later callback instead (see `ahead/`).
+        let patient = self.offline || self.parallel.test.patient;
         let mut applied = 0;
-        while let Ok(cmd) = self.cmd_rx.pop() {
+        loop {
+            let (cmd, since) = match self.ahead.held.take() {
+                Some((cmd, since)) => (cmd, Some(since)),
+                None => match self.cmd_rx.pop() {
+                    Ok(cmd) => (cmd, None),
+                    Err(_) => break,
+                },
+            };
+            if patient {
+                self.until_home(|e, give_up| e.reclaim_for(&cmd, give_up));
+            } else if !self.reclaim_for(&cmd, since.is_some_and(|s| s.elapsed() > ahead::RECLAIM_WAIT)) {
+                self.ahead.held = Some((cmd, since.unwrap_or_else(Instant::now)));
+                break;
+            }
             self.apply(cmd);
             applied += 1;
         }
@@ -337,6 +353,25 @@ impl Engine {
     pub(crate) fn take_queued(&mut self) {
         self.settle();
         self.take_commands();
+        self.take_held();
+    }
+
+    /// Off the audio thread (no device, before a render, a check): what a callback of no frames
+    /// does, and a command waiting for its strips to come home (`Ahead::held`) goes in too, so
+    /// what follows hears every edit sent. Left held, a render would apply it partway through, and
+    /// put back what it changed as the render ends.
+    pub(crate) fn apply_queued(&mut self) {
+        self.process(&[], 0, &mut [], 0);
+        self.take_held();
+    }
+
+    /// Waits, off the audio thread, for a held command's strips to come home (or be given up on)
+    /// and applies it and what came after it.
+    fn take_held(&mut self) {
+        while self.ahead.held.is_some() {
+            std::thread::sleep(std::time::Duration::from_micros(100));
+            self.take_commands();
+        }
     }
 
     /// Waits for a block given up on to end (never on the audio thread), so that what it was using

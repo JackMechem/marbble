@@ -11,15 +11,36 @@ function dayStart(ms: number): number {
 }
 
 /** A backup's label in File › Revert to, in local time: "Today 14:32", "Yesterday 09:10",
- *  else "27 Oct 2026 14:32" (as Logic lists them, with the time, since a day can have many). */
-export function backupLabel(ms: number, now: number = Date.now()): string {
+ *  else "27 Oct 2026 14:32" (as Logic lists them, with the time, since a day can have many).
+ *  `seconds` adds them: "Today 14:32:05". */
+export function backupLabel(ms: number, now: number = Date.now(), seconds = false): string {
   const d = new Date(ms);
-  const time = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const time = `${pad(d.getHours())}:${pad(d.getMinutes())}${seconds ? `:${pad(d.getSeconds())}` : ""}`;
   // Calendar days, not 24-hour spans (and robust to a daylight-saving change in between).
   const days = Math.round((dayStart(now) - dayStart(ms)) / 86_400_000);
   if (days === 0) return `Today ${time}`;
   if (days === 1) return `Yesterday ${time}`;
   return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()} ${time}`;
+}
+
+/** The labels of a list of backups, one per time and in the same order, told apart: backups
+ *  saved in the same minute get the seconds, and any still alike are numbered by age
+ *  ("Today 14:32:05 (2)" is the newer). */
+export function backupLabels(times: number[], now: number = Date.now()): string[] {
+  const count = (labels: string[]) => labels.reduce((m, l) => m.set(l, (m.get(l) ?? 0) + 1), new Map<string, number>());
+  const minutes = times.map((t) => backupLabel(t, now));
+  const byMinute = count(minutes);
+  const labels = times.map((t, i) => (byMinute.get(minutes[i])! > 1 ? backupLabel(t, now, true) : minutes[i]));
+  const alike = count(labels);
+  const oldestFirst = times.map((_, i) => i).sort((a, b) => times[a] - times[b]);
+  const seen = new Map<string, number>();
+  for (const i of oldestFirst) {
+    if (alike.get(labels[i])! < 2) continue;
+    const n = (seen.get(labels[i]) ?? 0) + 1;
+    seen.set(labels[i], n);
+    if (n > 1) labels[i] = `${labels[i]} (${n})`;
+  }
+  return labels;
 }
 
 /** Why `name` can't name an alternative or template (also a folder or file name), or null. */

@@ -242,6 +242,8 @@ pub struct PluginProcessor {
     edit_r: Vec<f32>,
     /// See `ring_out`.
     ring_out: u32,
+    /// The plug-in's name, for messages.
+    name: String,
 }
 
 unsafe impl Send for PluginProcessor {}

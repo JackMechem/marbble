@@ -479,7 +479,10 @@ callback's mix plays the block for its position, so a slow block is absorbed by 
   and the cycle's end) and mark each block with its position, so what plays is exactly what live
   would. A command that changes a strip's source, or moves the playhead, takes it back first
   (`reclaim_for`); its blocks go and it plays live from the playhead. A block marked for another
-  position does the same.
+  position does the same. Taking back never waits on the audio thread (#471): the strips go out
+  of the render threads' table together, each trades back once no render thread is in it, and a
+  command whose strips aren't all home yet waits for a later callback (`Ahead::held`, with the
+  commands after it, and nothing is lent meanwhile), so it lands a render's time late at most.
 - A block not ready: lent strips wait until one deadline for the whole callback (`WAIT_SHARE`,
   three quarters of the buffer from its start), never for a render thread to come out of a strip. If no render thread is on the
   strip it's taken back and plays live; if one is, the strip plays silence for that block and the
@@ -491,6 +494,13 @@ callback's mix plays the block for its position, so a slow block is absorbed by 
   the machine suggests (`audio_io::threads::render_threads`: Automatic's count without the
   device workgroup's limit, whatever Processing Threads says, #469), and keeps live the selected
   track and tracks with a plug-in window open (`Cmd::KeepLive`).
+- A strip wanted live with its source unchanged (`Cmd::KeepLive`, and the tracks a
+  `Cmd::MidiTarget` moves live MIDI between) is drained rather than reclaimed (#499): out of the
+  table, it plays its ring on and trades back once that's empty and no render thread is in it, its
+  source exactly where the playhead is, so selecting a track is bit-identical to having played it
+  live. Anything that would reclaim it meanwhile still does. Live MIDI for a draining target ends
+  the drain in its block, so the note is heard at once; a new target is set only once no render
+  thread is in the strip, so that can't wait.
 - Render threads run at real-time priority below the audio threads' (round-robin 1; the callback
   and the pool's workers are at 10), asked of the kernel only, never of rtkit, whose few real-time
   threads are the pool's (`dsp/ahead/thread_setup.rs`, #500). At normal priority a busy machine
@@ -501,7 +511,12 @@ callback's mix plays the block for its position, so a slow block is absorbed by 
   plug-in), which takes its priority back once it's out and has slept. Refused it, and on macOS
   and Windows, they run at normal priority.
 - Lent strips are a table of pointers; a render thread names the strip it looks at as its hazard,
-  and taking a strip back waits until none does, so a shell is never traded or freed under it.
+  and a strip taken out of the table trades back only once none does, so a shell is never traded
+  or freed under it. One whose render thread doesn't come out within `RECLAIM_WAIT` (a hung
+  plug-in) is lost: it plays silence, and the command goes through. A lost strip is never freed,
+  nor anything its render thread may read if it returns: its shell owns the source's state, and a
+  lent strip holds a count on the tempo map it was lent with, so a new map doesn't free the old
+  one under it (#485).
 
 ### Delay compensation
 
@@ -586,9 +601,16 @@ What each piece of a block's state is, and which thread may touch it, is listed 
 held, faster than real time. It saves the transport, turns off cycle, click, live MIDI and Low
 Latency Mode, clears the delay lines, starts like playback (automation sent, notes and controllers
 chased), plays the range, then the compensation still in the lines, then the tail with the
-transport stopped, drops the leading latency and restores everything. Built-in effects are told
-they're offline, so background work (the Linear Phase EQ's filter design) lands at the same point
-every time.
+transport stopped, drops the leading latency and restores everything. It starts and ends with
+nothing ringing: built-in instruments and effects are reset, the delay lines cleared at the end
+too, and each VST3 it plays (`dsp/tails/`) is fed silence, its notes ended, until its outputs
+have been quiet for its reported tail and latency (kept between 0.1 and 2 s; most report none),
+or have stopped falling below −30 dB (a noise floor such as tape hiss), for 10 s at most. All the
+plug-ins together get 1 s, before the render and again after it; past that the rest are left
+ringing, with a warning in the log. `setProcessing` and `setActive` don't reliably clear a plug-in's voices or tail
+(LSP's Multi-Sampler, Dragonfly's reverbs), and reloading costs time and, in LSP's sampler,
+sometimes samples (#37). Built-in effects are told they're offline, so background work (the
+Linear Phase EQ's filter design) lands at the same point every time.
 
 `Isolate` renders one track (with what feeds it) before Stereo Out instead of the whole mix, for
 Export All Tracks, Export Region, Bounce in Place and Freeze; tracks keying it play but aren't

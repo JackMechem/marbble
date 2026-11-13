@@ -49,12 +49,11 @@ impl BasicSynth {
         }
     }
 
-    /// Stops every voice at once, release tails included, and lets go of the pedal and bend:
-    /// for offline renders, which must not start with the previous render's tail.
+    /// Back to how a new instance starts: every voice stops, release tails included, the
+    /// controllers go to rest and the vibrato LFO to the start of its cycle. Offline renders start
+    /// with this, so they repeat exactly whatever was played live before them.
     pub fn silence(&mut self) {
-        self.voices = [Voice::default(); VOICES];
-        self.sustain = false;
-        self.bend = 1.0;
+        *self = BasicSynth::new(self.sr);
     }
 
     fn handle(&mut self, data: [u8; 3]) {

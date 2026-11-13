@@ -1,6 +1,6 @@
 //! Render ahead plays exactly what playing live does: the same blocks at the same positions,
-//! through cycle wraps, locates and fader moves; an edit is heard in the block it comes in; and the
-//! render threads really render.
+//! through cycle wraps, locates and fader moves, and as a selected track drains into live play; an
+//! edit is heard in the block it comes in; and the render threads really render.
 
 use super::*;
 use crate::dsp::tests::rig;
@@ -40,6 +40,23 @@ impl Effect for Counter {
 fn counter(uid: Id) -> InsertDsp {
     let info =
         EffectInfo { id: "test:counter", name: "Counter", category: "Utility", params: &[], meters: &[], sidechain: false, new: |_| Box::new(Counter(0)) };
+    InsertDsp::new(uid, false, Plugin::Builtin(Box::new(BuiltinDsp::new(&info, SR as f32, &[]))), KeyRoute::default())
+}
+
+/// An instrument that plays nothing, whatever it's sent.
+struct Silent;
+
+impl Effect for Silent {
+    fn set_param(&mut self, _: u32, _: f32) {}
+    fn param(&self, _: u32) -> f32 {
+        0.0
+    }
+    fn process(&mut self, _: &mut [f32], _: &mut [f32], _: Key, _: &FxContext) {}
+    fn reset(&mut self) {}
+}
+
+fn silent_instrument(uid: Id) -> InsertDsp {
+    let info = EffectInfo { id: "test:silent", name: "Silent", category: "Utility", params: &[], meters: &[], sidechain: false, new: |_| Box::new(Silent) };
     InsertDsp::new(uid, false, Plugin::Builtin(Box::new(BuiltinDsp::new(&info, SR as f32, &[]))), KeyRoute::default())
 }
 
@@ -91,11 +108,24 @@ enum Event {
     Locate(i64),
     Fader(Id, f32),
     Bypass(Id, Id, bool),
+    /// The track selected (or none).
+    KeepLive(Option<Id>),
+    MidiTarget(Option<Id>),
+    /// A key played live.
+    Note(u8),
+    /// A pause before the callback, in which the render threads fill the rings.
+    Pause,
 }
 
 /// Plays `callbacks` callbacks of three tracks, each with a counter, with a cycle, sending each
 /// event before its callback, render ahead on or off. The output's left channel.
 fn run(ahead: bool, callbacks: usize, events: &[(usize, Event)]) -> Vec<f32> {
+    run_watching(ahead, callbacks, events, |_, _| {})
+}
+
+/// `run`, showing `watch` the rig after each callback. Track 3 is an instrument track playing the
+/// sine as a freeze file, its instrument silent.
+fn run_watching(ahead: bool, callbacks: usize, events: &[(usize, Event)], mut watch: impl FnMut(usize, &crate::dsp::tests::Rig)) -> Vec<f32> {
     let mut r = rig();
     let _threads = ahead.then(|| {
         let t = AheadThreads::start(2, r.status.clone());
@@ -104,9 +134,13 @@ fn run(ahead: bool, callbacks: usize, events: &[(usize, Event)]) -> Vec<f32> {
     });
     r.tx.push(Cmd::ParallelTest(crate::dsp::ParallelTest { patient: true, ..Default::default() })).ok().unwrap();
     for id in 1..=3 {
-        let mut t = TrackDsp::new(id, TrackKind::Audio, params(0.5), Arc::default());
+        let kind = if id == 3 { TrackKind::Instrument } else { TrackKind::Audio };
+        let mut t = TrackDsp::new(id, kind, params(0.5), Arc::default());
         t.set_regions(sine());
         t.set_insert(0, Some(counter(100 + id)));
+        if kind == TrackKind::Instrument {
+            t.set_instrument(Some(silent_instrument(200 + id)));
+        }
         t.prepare_ahead();
         r.tx.push(Cmd::AddTrack(Box::new(t), usize::MAX)).ok().unwrap();
     }
@@ -121,13 +155,38 @@ fn run(ahead: bool, callbacks: usize, events: &[(usize, Event)]) -> Vec<f32> {
                 Event::Locate(p) => Cmd::Locate(p),
                 Event::Fader(id, v) => Cmd::Params(id, params(v)),
                 Event::Bypass(track, uid, bypass) => Cmd::Bypass { track, uid, bypass },
+                Event::KeepLive(id) => {
+                    let mut keep = [None; KEEP_LIVE];
+                    keep[0] = id;
+                    Cmd::KeepLive(keep)
+                }
+                Event::MidiTarget(id) => Cmd::MidiTarget(id),
+                Event::Note(key) => {
+                    r.live_midi.push([0x90, key, 100]).ok().unwrap();
+                    continue;
+                }
+                Event::Pause => {
+                    std::thread::sleep(std::time::Duration::from_millis(30));
+                    continue;
+                }
             };
             r.tx.push(cmd).ok().unwrap();
         }
         r.engine.process(&[], 0, &mut buf, 2);
         out.extend(buf.chunks(2).map(|f| f[0]));
+        watch(k, &r);
     }
     out
+}
+
+/// Whether track `id` is lent (draining counts).
+fn lent_now(r: &crate::dsp::tests::Rig, id: Id) -> bool {
+    r.engine.tracks.iter().find(|t| t.id == id).and_then(|t| t.ahead.as_ref()).is_some_and(|a| a.lent())
+}
+
+/// For `run_watching`: after which callbacks track `id` was lent.
+fn lent_at(id: Id, seen: &mut Vec<bool>) -> impl FnMut(usize, &crate::dsp::tests::Rig) + '_ {
+    move |_, r| seen.push(lent_now(r, id))
 }
 
 fn first_difference(a: &[f32], b: &[f32]) -> Option<usize> {
@@ -163,6 +222,82 @@ fn an_edit_is_heard_in_the_block_it_comes_in() {
     assert_eq!(first_difference(&live[..at * FRAMES], &ahead[..at * FRAMES]), None);
     // With every counter bypassed, both play the sines alone: the same from the edit on.
     assert_eq!(first_difference(&live[at * FRAMES..], &ahead[at * FRAMES..]), None);
+}
+
+/// The rings hold a lead (0.1 s): this many callbacks, and a few for the render threads.
+const DRAIN: usize = 4800 / FRAMES + 4;
+
+#[test]
+fn selecting_a_lent_track_drains_it_into_live_play_exactly() {
+    // Selecting a track took it back at once: its rendered blocks went, and it played on live
+    // from plug-ins up to the lead ahead, so a tail or an envelope jumped (#499). Now it plays out
+    // what was rendered and goes on live from exactly there: the counters run on unbroken.
+    let events = [(100, Event::Pause), (100, Event::KeepLive(Some(2))), (180, Event::KeepLive(None)), (250, Event::Pause), (250, Event::KeepLive(Some(1)))];
+    let live = run(false, 330, &events);
+    let mut seen = Vec::new();
+    let ahead = run_watching(true, 330, &events, lent_at(2, &mut seen));
+    assert_eq!(first_difference(&live, &ahead), None);
+    assert!(seen[99] && seen[100], "it was ahead, and drains rather than coming back at once");
+    assert!(seen[100 + DRAIN..180].iter().all(|l| !l), "drained, it plays live while selected");
+    assert!(seen[320], "let go, it went ahead again");
+}
+
+#[test]
+fn an_edit_during_a_drain_takes_the_strip_back_as_before() {
+    let events = [(100, Event::Pause), (100, Event::KeepLive(Some(2))), (103, Event::Bypass(2, 102, true))];
+    let live = run(false, 160, &events);
+    let mut seen = Vec::new();
+    let ahead = run_watching(true, 160, &events, lent_at(2, &mut seen));
+    // With its counter bypassed, the strip plays the sine alone, the same either way.
+    assert_eq!(first_difference(&live, &ahead), None);
+    assert!(seen[102] && !seen[103], "draining, then taken back by the edit in its block");
+}
+
+#[test]
+fn a_locate_during_a_drain_plays_as_live() {
+    let events = [(100, Event::Pause), (100, Event::KeepLive(Some(2))), (104, Event::Locate(30_000))];
+    let live = run(false, 200, &events);
+    let mut seen = Vec::new();
+    let ahead = run_watching(true, 200, &events, lent_at(2, &mut seen));
+    assert_eq!(first_difference(&live, &ahead), None);
+    assert!(seen[103] && seen[104..].iter().all(|l| !l), "taken back by the locate, and kept live");
+}
+
+#[test]
+fn a_track_let_go_and_selected_again_mid_drain_plays_as_live() {
+    let events = [
+        (100, Event::Pause),
+        (100, Event::KeepLive(Some(2))),
+        (102, Event::KeepLive(None)),
+        (104, Event::KeepLive(Some(2))),
+        (106, Event::KeepLive(Some(1))),
+        (200, Event::Pause),
+        (200, Event::KeepLive(None)),
+    ];
+    let live = run(false, 260, &events);
+    let mut seen = Vec::new();
+    let ahead = run_watching(true, 260, &events, lent_at(2, &mut seen));
+    assert_eq!(first_difference(&live, &ahead), None);
+    assert!(seen[106], "still draining: let go mid-drain, it isn't lent again until it's home");
+}
+
+#[test]
+fn live_midi_ends_the_drain_of_its_target_at_once() {
+    // Selecting an instrument track makes it the live-MIDI target too: it drains as well, and a
+    // key played meanwhile is heard in the block it comes in, live.
+    let at = 104;
+    let events = [(100, Event::Pause), (100, Event::MidiTarget(Some(3))), (100, Event::KeepLive(Some(3))), (at, Event::Note(60))];
+    let mut held = false;
+    let live = run_watching(false, 140, &events, |k, r| held |= k == at && r.engine.tracks[2].live_held[60]);
+    assert!(held, "live, the key is held on the target");
+    let mut seen = Vec::new();
+    let ahead = run_watching(true, 140, &events, |k, r| {
+        seen.push(lent_now(r, 3));
+        held &= k != at || r.engine.tracks[2].live_held[60];
+    });
+    assert!(held, "the key was played on the strip, live, in the block it came in");
+    assert!(seen[at - 1] && !seen[at], "draining until the key");
+    assert_eq!(first_difference(&live[..at * FRAMES], &ahead[..at * FRAMES]), None, "as live until then");
 }
 
 #[test]
@@ -204,7 +339,7 @@ fn removing_a_lent_track_while_playing_is_safe() {
 }
 
 #[test]
-fn a_track_kept_live_comes_back_at_once_and_stays_until_let_go() {
+fn a_track_kept_live_comes_back_and_stays_until_let_go() {
     let mut r = rig();
     let threads = AheadThreads::start(2, r.status.clone());
     r.tx.push(Cmd::Ahead(Some(threads.shared()), 0.1)).ok().unwrap();
@@ -228,7 +363,13 @@ fn a_track_kept_live_comes_back_at_once_and_stays_until_let_go() {
     let mut keep = [None; KEEP_LIVE];
     keep[0] = Some(1);
     r.tx.push(Cmd::KeepLive(keep)).ok().unwrap();
-    play(&mut r, 1);
+    // Once what was rendered has played (#499): a lead at most.
+    for _ in 0..2 * DRAIN {
+        if lent(&r, 0) {
+            std::thread::sleep(std::time::Duration::from_millis(1));
+            play(&mut r, 1);
+        }
+    }
     assert!(!lent(&r, 0) && lent(&r, 1), "the selected track came back, the other stayed ahead");
     play(&mut r, 20);
     assert!(!lent(&r, 0), "and it stays live");
@@ -240,9 +381,9 @@ fn a_track_kept_live_comes_back_at_once_and_stays_until_let_go() {
     drop(threads);
 }
 
-/// Holds the render threads in its block while `HOLD` is set, as a plug-in that's slow or hung
-/// would; on the callback's thread it passes the audio on.
-struct Holder;
+/// Holds the render threads in its block while its flag is set, as a plug-in that's slow or hung
+/// would; on the callback's thread it passes the audio on. Each test holds with a flag of its own.
+struct Holder(&'static AtomicBool);
 static HOLD: AtomicBool = AtomicBool::new(false);
 
 impl Effect for Holder {
@@ -252,7 +393,7 @@ impl Effect for Holder {
     }
     fn process(&mut self, _: &mut [f32], _: &mut [f32], _: Key, _: &FxContext) {
         if std::thread::current().name().is_some_and(|n| n.starts_with("marbble-ahead")) {
-            while HOLD.load(Ordering::SeqCst) {
+            while self.0.load(Ordering::SeqCst) {
                 std::thread::sleep(std::time::Duration::from_millis(1));
             }
         }
@@ -265,7 +406,8 @@ fn a_render_thread_held_in_a_strip_never_holds_up_the_callback() {
     // On a miss the callback used to wait half a block per strip, then for the render thread to
     // come out of the strip (up to half a second), then play the block again live (#466). Now the
     // strip plays silence while its render thread is in it, and comes back once it's out.
-    let info = EffectInfo { id: "test:holder", name: "Holder", category: "Utility", params: &[], meters: &[], sidechain: false, new: |_| Box::new(Holder) };
+    let info =
+        EffectInfo { id: "test:holder", name: "Holder", category: "Utility", params: &[], meters: &[], sidechain: false, new: |_| Box::new(Holder(&HOLD)) };
     let mut r = rig();
     let threads = AheadThreads::start(1, r.status.clone());
     r.tx.push(Cmd::Ahead(Some(threads.shared()), 0.05)).ok().unwrap();
@@ -360,5 +502,234 @@ fn a_strip_that_takes_most_of_the_buffer_live_still_goes_ahead() {
     assert!(lent(&r), "a strip taking two thirds of the buffer live went ahead");
     r.tx.push(Cmd::Stop).ok().unwrap();
     r.engine.process(&[], 0, &mut buf, 2);
+    drop(threads);
+}
+
+/// Takes `SLOW_FOR` a block on a render thread while its flag is set, as a heavy plug-in on a
+/// loaded machine does; nothing on the callback's thread. Each test slows with a flag of its own.
+struct Slow(&'static AtomicBool);
+static SLOW: AtomicBool = AtomicBool::new(false);
+const SLOW_FOR: std::time::Duration = std::time::Duration::from_millis(40);
+
+impl Effect for Slow {
+    fn set_param(&mut self, _: u32, _: f32) {}
+    fn param(&self, _: u32) -> f32 {
+        0.0
+    }
+    fn process(&mut self, _: &mut [f32], _: &mut [f32], _: Key, _: &FxContext) {
+        if self.0.load(Ordering::SeqCst) && std::thread::current().name().is_some_and(|n| n.starts_with("marbble-ahead")) {
+            std::thread::sleep(SLOW_FOR);
+        }
+    }
+    fn reset(&mut self) {}
+}
+
+/// A rig playing `tracks` audio tracks of a sine through `info`'s effect, rendered ahead on as many
+/// render threads, `lead` seconds ahead, 1024 frames a callback, until every strip is lent.
+fn lent_rig(info: &'static EffectInfo, tracks: Id, lead: f64) -> (crate::dsp::tests::Rig, AheadThreads, Vec<f32>) {
+    let mut r = rig();
+    let threads = AheadThreads::start(tracks as usize, r.status.clone());
+    r.tx.push(Cmd::Ahead(Some(threads.shared()), lead)).ok().unwrap();
+    for id in 1..=tracks {
+        let mut t = TrackDsp::new(id, TrackKind::Audio, params(0.5), Arc::default());
+        t.set_regions(sine());
+        t.set_insert(0, Some(InsertDsp::new(100 + id, false, Plugin::Builtin(Box::new(BuiltinDsp::new(info, SR as f32, &[]))), KeyRoute::default())));
+        t.prepare_ahead();
+        r.tx.push(Cmd::AddTrack(Box::new(t), usize::MAX)).ok().unwrap();
+    }
+    r.tx.push(Cmd::Play { from: 0 }).ok().unwrap();
+    let mut buf = vec![0.0f32; MAX_BLOCK * 2];
+    let mut k = 0;
+    while !all_lent(&r) && k < 200 {
+        r.engine.process(&[], 0, &mut buf, 2);
+        k += 1;
+    }
+    assert!(all_lent(&r), "they went ahead");
+    (r, threads, buf)
+}
+
+/// Lets go of a flag as a test ends, passed or not, before its render threads are joined.
+struct Release(&'static AtomicBool);
+
+impl Drop for Release {
+    fn drop(&mut self) {
+        self.0.store(false, Ordering::SeqCst);
+    }
+}
+
+fn all_lent(r: &crate::dsp::tests::Rig) -> bool {
+    !r.engine.tracks.is_empty() && r.engine.tracks.iter().all(|t| t.ahead.as_ref().is_some_and(|a| a.lent()))
+}
+
+/// The longest of `k` callbacks, a buffer apart as a device makes them, and whether the playhead
+/// was at `at` (or up to `k` buffers past it) by the end.
+fn callbacks(r: &mut crate::dsp::tests::Rig, buf: &mut [f32], k: usize, at: i64) -> (std::time::Duration, bool) {
+    let mut slowest = std::time::Duration::ZERO;
+    for _ in 0..k {
+        let t = std::time::Instant::now();
+        r.engine.process(&[], 0, buf, 2);
+        slowest = slowest.max(t.elapsed());
+        std::thread::sleep(std::time::Duration::from_millis(21));
+    }
+    (slowest, (at..at + (k * MAX_BLOCK) as i64).contains(&r.engine.pos))
+}
+
+/// Waits (up to two seconds) until a render thread is in every lent strip's block: a fixed sleep
+/// isn't enough on a slow runner, where the render thread may not have started it yet.
+fn until_rendering(r: &crate::dsp::tests::Rig) {
+    let until = std::time::Instant::now() + std::time::Duration::from_secs(2);
+    let busy = |r: &crate::dsp::tests::Rig| r.engine.tracks.iter().filter_map(|t| t.ahead.as_ref()).all(|a| a.busy.load(Ordering::SeqCst));
+    while !busy(r) && std::time::Instant::now() < until {
+        std::thread::sleep(std::time::Duration::from_millis(1));
+    }
+    assert!(busy(r), "the render threads went into the strips' blocks");
+}
+
+#[test]
+fn a_locate_never_waits_for_the_render_threads() {
+    // A command that changed lent strips waited on the audio thread for each one's render thread
+    // to come out, one after another: a locate with four strips mid-render held the callback for
+    // a render or more (#471). Now it takes them all out and applies once they're home.
+    static INFO: EffectInfo =
+        EffectInfo { id: "test:slow", name: "Slow", category: "Utility", params: &[], meters: &[], sidechain: false, new: |_| Box::new(Slow(&SLOW)) };
+    let (mut r, threads, mut buf) = lent_rig(&INFO, 4, 0.2);
+    // Rings full, then every render thread in a slow block.
+    std::thread::sleep(std::time::Duration::from_millis(30));
+    let _release = Release(&SLOW);
+    SLOW.store(true, Ordering::SeqCst);
+    r.engine.process(&[], 0, &mut buf, 2);
+    until_rendering(&r);
+
+    let to = 200_000;
+    r.tx.push(Cmd::Locate(to)).ok().unwrap();
+    let (slowest, located) = callbacks(&mut r, &mut buf, 6, to);
+    SLOW.store(false, Ordering::SeqCst);
+    // Well under one slow render, with room for a loaded machine.
+    assert!(slowest < SLOW_FOR / 2, "a callback took {slowest:?}");
+    assert!(located, "the locate applied once the render threads were out: at {}", r.engine.pos);
+    assert!(r.engine.tracks.iter().all(|t| t.ahead.as_ref().is_some_and(|a| !a.lost())));
+    r.tx.push(Cmd::Stop).ok().unwrap();
+    r.engine.process(&[], 0, &mut buf, 2);
+    drop(threads);
+}
+
+static HUNG: AtomicBool = AtomicBool::new(false);
+
+#[test]
+fn a_command_for_a_strip_whose_render_thread_hangs_gives_it_up_without_holding_the_callback() {
+    // It used to wait half a second on the audio thread, then lose the strip.
+    static INFO: EffectInfo =
+        EffectInfo { id: "test:hung", name: "Hung", category: "Utility", params: &[], meters: &[], sidechain: false, new: |_| Box::new(Holder(&HUNG)) };
+    let (mut r, threads, mut buf) = lent_rig(&INFO, 1, 0.05);
+    let _release = Release(&HUNG);
+    HUNG.store(true, Ordering::SeqCst);
+    r.engine.process(&[], 0, &mut buf, 2);
+    until_rendering(&r);
+
+    let to = 100_000;
+    r.tx.push(Cmd::Locate(to)).ok().unwrap();
+    let started = std::time::Instant::now();
+    // Callbacks a buffer apart for half the give-up time (by the clock: sleeps overshoot on some
+    // runners, and ten of them could pass it).
+    let mut slowest = std::time::Duration::ZERO;
+    while started.elapsed() < RECLAIM_WAIT / 2 {
+        let (s, _) = callbacks(&mut r, &mut buf, 1, to);
+        slowest = slowest.max(s);
+        // Played on from near the start, the playhead is far short of the locate's position.
+        assert!(r.engine.pos < to || started.elapsed() >= RECLAIM_WAIT, "the locate waits for the strip meanwhile");
+    }
+    let (s, located) = callbacks(&mut r, &mut buf, 30, to);
+    let slowest = slowest.max(s);
+    assert!(started.elapsed() > RECLAIM_WAIT);
+    assert!(slowest < std::time::Duration::from_millis(50), "a callback took {slowest:?}");
+    assert!(located, "given up on, the strip let the locate through: at {}", r.engine.pos);
+    assert!(r.engine.tracks[0].ahead.as_ref().is_some_and(|a| a.lost()), "the strip is lost");
+    HUNG.store(false, Ordering::SeqCst);
+    r.tx.push(Cmd::Stop).ok().unwrap();
+    r.engine.process(&[], 0, &mut buf, 2);
+    drop(threads);
+}
+
+static HUNG_TEMPO: AtomicBool = AtomicBool::new(false);
+
+#[test]
+fn a_strip_lost_across_a_tempo_change_keeps_the_map_its_render_thread_reads() {
+    // A new tempo map replaced the old one, which went out with the garbage, while a strip lost to
+    // a hung plug-in had its render thread still in it: once out, that thread read the freed map
+    // for the rest of its block (#485).
+    static INFO: EffectInfo = EffectInfo {
+        id: "test:hung-tempo",
+        name: "Hung",
+        category: "Utility",
+        params: &[],
+        meters: &[],
+        sidechain: false,
+        new: |_| Box::new(Holder(&HUNG_TEMPO)),
+    };
+    let (mut r, threads, mut buf) = lent_rig(&INFO, 1, 0.05);
+    let _release = Release(&HUNG_TEMPO);
+    HUNG_TEMPO.store(true, Ordering::SeqCst);
+    r.engine.process(&[], 0, &mut buf, 2);
+    until_rendering(&r);
+
+    let old = Arc::downgrade(&r.engine.tempo);
+    r.tx.push(Cmd::Tempo(Arc::new(TempoMap::constant(SR, 90.0, 4, 4)))).ok().unwrap();
+    let lost = |r: &crate::dsp::tests::Rig| r.engine.tracks[0].ahead.as_ref().is_some_and(|a| a.lost());
+    let started = std::time::Instant::now();
+    while !(lost(&r) && r.engine.tempo.bpm_at(0.0) == 90.0) && started.elapsed() < 4 * RECLAIM_WAIT {
+        callbacks(&mut r, &mut buf, 1, 0);
+    }
+    assert!(lost(&r), "the strip is lost");
+    assert_eq!(r.engine.tempo.bpm_at(0.0), 90.0, "the new tempo applied");
+    // What the engine let go of is dropped, as the session's thread does.
+    while r.garbage.pop().is_ok() {}
+    assert!(old.upgrade().is_some(), "the map the render thread was lent with outlives the change");
+
+    // Out of its plug-in, the render thread finishes its block with that map.
+    HUNG_TEMPO.store(false, Ordering::SeqCst);
+    let busy = |r: &crate::dsp::tests::Rig| r.engine.tracks[0].ahead.as_ref().is_some_and(|a| a.busy.load(Ordering::SeqCst));
+    let until = std::time::Instant::now() + std::time::Duration::from_secs(2);
+    while busy(&r) && std::time::Instant::now() < until {
+        std::thread::sleep(std::time::Duration::from_millis(1));
+    }
+    assert!(!busy(&r), "the render thread came out");
+    r.tx.push(Cmd::Stop).ok().unwrap();
+    r.engine.process(&[], 0, &mut buf, 2);
+    drop(threads);
+}
+
+static SLOW_RENDER: AtomicBool = AtomicBool::new(false);
+
+#[test]
+fn a_command_waiting_for_its_strips_when_a_render_starts_is_applied_before_it() {
+    // A locate waiting for its strips' render threads was applied partway through the render
+    // that followed, and undone as it ended (#471 review): the bounce played from elsewhere, and
+    // the playhead, Stop and the metronome were lost for live play.
+    static INFO: EffectInfo = EffectInfo {
+        id: "test:slow-render",
+        name: "Slow",
+        category: "Utility",
+        params: &[],
+        meters: &[],
+        sidechain: false,
+        new: |_| Box::new(Slow(&SLOW_RENDER)),
+    };
+    let (mut r, threads, mut buf) = lent_rig(&INFO, 4, 0.2);
+    std::thread::sleep(std::time::Duration::from_millis(30));
+    let _release = Release(&SLOW_RENDER);
+    SLOW_RENDER.store(true, Ordering::SeqCst);
+    r.engine.process(&[], 0, &mut buf, 2);
+    until_rendering(&r);
+
+    let to = 200_000;
+    for cmd in [Cmd::Locate(to), Cmd::Metronome { on: true, count_in: false }, Cmd::Stop] {
+        r.tx.push(cmd).ok().unwrap();
+    }
+    let first = r.engine.render(0, 4800, 0, None, &mut |_| {});
+    SLOW_RENDER.store(false, Ordering::SeqCst);
+    assert_eq!((r.engine.pos, r.engine.playing, r.engine.metronome), (to, false, true), "as commanded before the render");
+    let again = r.engine.render(0, 4800, 0, None, &mut |_| {});
+    assert!(first[0].iter().any(|s| s.abs() > 0.01));
+    assert_eq!(first_difference(&first[0], &again[0]), None, "the render played what a clean one does");
     drop(threads);
 }

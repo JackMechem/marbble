@@ -1,8 +1,5 @@
 //! Marbble Synth (`crate::instrument::basic::synth::BasicSynth`, untouched) in the instrument registry: no parameters,
 //! no panel. Its id and sound are what every existing project holds, so it stays as it always was.
-//! It renders what it did before this contract existed: `silence` still keeps the mod wheel,
-//! expression and its LFO's phase, for instance, unlike the contract's `reset`, because changing
-//! that would change old projects.
 
 use vst3_host::MidiEvent;
 
@@ -50,6 +47,25 @@ pub fn info() -> InstrumentInfo {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::instrument::test_kit::{assert_repeats, make, render};
+
+    /// Renders with the mod wheel up repeat exactly, whatever was played before them: the
+    /// vibrato's phase, the wheel and expression all start from rest (#39).
+    #[test]
+    fn renders_repeat_with_the_mod_wheel_up() {
+        let wheel_up = [(0usize, [0xB0u8, 1, 127]), (100, [0x90, 60, 100]), (9000, [0x90, 64, 90]), (30000, [0x80, 60, 0]), (40000, [0x80, 64, 0])];
+        let first = assert_repeats(&info(), &[], &wheel_up, 60000);
+        let no_wheel = [(100usize, [0x90u8, 60, 100]), (30000, [0x80, 60, 0])];
+        let fresh = render(make(&info(), 48000.0, 77, &[]).as_mut(), 48000.0, 60000, 512, &no_wheel);
+        let mut t = make(&info(), 48000.0, 77, &[]);
+        // Played live first, for an odd stretch, leaving the wheel up and expression down.
+        render(t.as_mut(), 48000.0, 12345, 256, &[(0, [0xB0, 1, 100]), (10, [0xB0, 11, 40]), (20, [0x90, 67, 80])]);
+        t.reset();
+        assert!(first == render(t.as_mut(), 48000.0, 60000, 512, &wheel_up), "the LFO's phase carried over");
+        render(t.as_mut(), 48000.0, 777, 256, &[(0, [0xB0, 1, 100]), (10, [0xB0, 11, 40])]);
+        t.reset();
+        assert!(fresh == render(t.as_mut(), 48000.0, 60000, 512, &no_wheel), "the wheel or expression carried over");
+    }
 
     /// The registry's Marbble Synth is the old one, sample for sample, through everything the
     /// engine does to it: notes past the 16 voices, bend, wheel, pedal, expression, stops and

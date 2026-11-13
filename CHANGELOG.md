@@ -8,11 +8,17 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Changed
 
+- **Selecting a track while playing with Render Ahead on is seamless.** The track had to play
+  live at once, so what was already rendered for it was thrown away, and its plug-ins went on from
+  where they had rendered to, up to the lead ahead: a reverb or delay tail, a compressor or an
+  LFO could jump the moment you clicked it. It now plays out what was rendered (the lead at most,
+  200 ms by default) and goes on live from exactly there, as if it had never been rendered ahead.
+  The same goes for opening one of its plug-in windows. A key played on it meanwhile ends that at
+  once, so playing it is never delayed.
 - **Render Ahead keeps up on a busy machine (Linux).** Its threads ran at normal priority, so
   other busy programs held them up and tracks played silence for a moment while they caught up:
   hundreds of missed blocks a run in a project of 12 amp models beside 16 busy programs. They now
   get real-time priority below the audio thread's where the system allows it, and missed none.
-
 - **Less memory and quicker edits in projects with many MIDI notes.** Every undo step used to hold
   its own copy of every note and controller in the project. Regions an edit leaves alone are now
   shared, so 100 undo steps in a project of 150,000 notes take 26 MB instead of 432 MB, and a note
@@ -20,6 +26,30 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Fixed
 
+- **No crash when the tempo changes while a plug-in hangs with Render Ahead on.** A track
+  whose plug-in stopped responding is given up on and plays silence, but its render thread kept
+  reading the old tempo map, which a tempo change then freed: had the plug-in come back, Marbble
+  could crash or misbehave. The track now keeps the map it was rendering with.
+- **Bounces, exports and freezes start from silence with plug-ins too.** A plug-in instrument
+  whose voices play on after their note-offs (LSP's Multi-Sampler plays a sample to its end), or
+  a plug-in reverb's tail, rang on through a render: a bounce started soon after Stop could begin
+  with what was still sounding, and playing after a render began with the end of the render. Each
+  plug-in is now played out with silence around a render until it's quiet, or down to its noise
+  floor (tape hiss, say), which adds about a millisecond to a render when nothing rings and at most
+  a second before and after one. Delay compensation no longer carries the end of a render into
+  playback either.
+- **File › Revert to tells apart backups saved in the same minute.** Two saves within a minute
+  gave two items that both read, say, "Today 16:52". Those now show the seconds ("Today
+  16:52:07"); the rest keep the plain time.
+- **Apply Region Parameters and Join keep a MIDI region at or after the project start.** A MIDI
+  region near the start whose Delay or Quantize moved its first notes earlier grew past bar 1 when
+  its parameters were applied or it was joined, leaving a region that started before the project.
+  It now stops at the start; notes moved before it stay there, silent, as they were.
+- **Marbble Synth renders the same every time with the mod wheel up.** Its vibrato LFO ran on
+  from live playing into bounces, freezes and exports, and the mod wheel and expression played live
+  before a render stayed set in it, so two renders of the same project could differ. A render now
+  starts it as a new instance would: vibrato from the start of its cycle, wheel and expression at
+  rest until the project sets them. Live playing sounds as before.
 - **Unfreezing a track no longer deletes the freeze file the saved project plays.** Unfreezing
   and then closing without saving left the saved project's frozen track silent. A freeze file
   Marbble stops playing (the track unfrozen, or the Freeze undone) is now deleted only when the
@@ -39,6 +69,12 @@ All notable changes to Marbble are recorded here. The format follows
   project's tracks couldn't stay ahead and kept falling back to live. Its threads now follow the
   machine's cores (8 on an M1 Pro, 14 on an 8-core Intel with hyper-threading), whatever
   Processing Threads says.
+- **Render Ahead no longer makes a buffer late when you locate or edit while playing.** Moving
+  the playhead, or changing a track rendered ahead (a plug-in setting, a region, its
+  automation), waited on the audio thread for each track's render to finish, one after another:
+  clicking about in the ruler of a project with twelve amp models on a busy machine held buffers
+  for up to 190 ms and overloaded. Now the change waits for those renders instead (it lands a few
+  milliseconds later), and the audio never does.
 - **No overload when you add a track to a heavy project.** Adding, removing or reordering
   tracks, or changing an output, a send or a side chain, played the next buffer or two with every
   plug-in on the audio thread alone, until the extra processing threads were told about the new
