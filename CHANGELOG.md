@@ -31,7 +31,7 @@ All notable changes to Marbble are recorded here. The format follows
   plug-in on the audio thread alone, until the extra processing threads were told about the new
   routing. With twelve TONE3000 amp models playing (Render Ahead off), that buffer took three and
   a half times its length and playback stopped. The threads now carry on with the new routing at
-  once.
+  once, after a plug-in that stopped responding for a while too.
 - **No overload as a heavy project opens.** Opening a project with many heavy plug-ins (twelve
   TONE3000 amp models, say) overloaded once, stopped, before anything played: the extra processing
   threads only learned of the new tracks a moment after them, so the first buffer played every

@@ -48,6 +48,7 @@
 //! `parallel_check` and `soak_check` run clean under ThreadSanitizer (see docs/DEVELOPING.md).
 
 use std::cell::UnsafeCell;
+use std::mem::ManuallyDrop;
 use std::time::Duration;
 
 use super::graph::{GraphRoom, TaskGraph, MAX_TASKS};
@@ -120,8 +121,9 @@ impl Job for StripJob {
 /// The threads and what they use, built off the audio thread and sent in a `Cmd::Workers`.
 ///
 /// A thread left in a plug-in (`Pool::abandon`) keeps hold of its strip, its scratch, its `busy`,
-/// the job and the strip pointers for as long as it's in there, which may be for ever: none of
-/// them is used for anything else or freed until it's gone, and if it never is, they're leaked.
+/// the job and the strip pointers, and the room's graph if the block was on it, for as long as it's
+/// in there, which may be for ever: none of them is used for anything else or freed until it's
+/// gone, and if it never is, they're leaked.
 pub struct Workers {
     pool: Pool,
     /// One per thread.
@@ -146,9 +148,12 @@ pub struct Workers {
     /// Workers these replaced while their threads still held strips (`Parallel::set_workers`).
     older: Option<Box<Workers>>,
     /// Where the engine builds a graph of its own when the session's doesn't hold (`Parallel::own`).
-    room: GraphRoom,
-    /// A thread was left in a plug-in in a block on that graph, so it never changes again.
-    room_held: bool,
+    /// In a box of its own, which the job and the pool point into: it stays put when the workers
+    /// are dropped with a thread still left in a block on it, and is leaked then (`Drop`).
+    room: ManuallyDrop<Box<GraphRoom>>,
+    /// Threads left in a plug-in in a block on the room's graph: it doesn't change until each is
+    /// gone (`room_free`). Never grows: a thread is left once at most.
+    room_holders: Vec<usize>,
 }
 
 // SAFETY: the raw pointers only point into what the engine owns, and are only used while a block is
@@ -172,8 +177,8 @@ impl Workers {
             held: Vec::with_capacity(threads),
             fresh: Vec::with_capacity(threads),
             older: None,
-            room: GraphRoom::default(),
-            room_held: false,
+            room: ManuallyDrop::new(Box::default()),
+            room_holders: Vec::with_capacity(threads),
         })
     }
 
@@ -193,6 +198,15 @@ impl Workers {
     /// How the workers are doing, to be read while the engine has them.
     pub fn health(&self) -> Arc<Health> {
         self.pool.health()
+    }
+
+    /// Whether the room's graph may change: no thread left in a block on it is still out. A thread
+    /// that comes back finds its call left (`Call::leave`), returns from the strip at once and ends,
+    /// so once it's gone it never looks at the graph again.
+    fn room_free(&mut self) -> bool {
+        let pool = &self.pool;
+        self.room_holders.retain(|&thread| !pool.gone(thread));
+        self.room_holders.is_empty()
     }
 
     /// A strip a thread was left in, once the thread has come back out and let go of it.
@@ -220,7 +234,11 @@ impl Drop for Workers {
             std::mem::forget(std::mem::take(&mut self.busy));
             std::mem::forget(std::mem::take(&mut self.jobs));
             std::mem::forget(std::mem::take(&mut self.tracks));
-            std::mem::forget(std::mem::take(&mut self.room));
+        }
+        // Otherwise it's leaked in its box, which a job and the pool point into.
+        if self.room_free() {
+            // SAFETY: dropped only here, once, and no thread can come back to it.
+            unsafe { ManuallyDrop::drop(&mut self.room) };
         }
     }
 }
@@ -337,10 +355,11 @@ impl Parallel {
             return false;
         }
         if self.stale {
-            self.stale = false;
             self.covered = self.graph.as_deref().is_some_and(|g| covers(g, tracks));
             self.own = !self.covered && self.build_own(tracks);
             self.covered |= self.own;
+            // A room held by a thread left in a plug-in may be free by the next block.
+            self.stale = !self.covered && self.workers.as_deref().is_some_and(|w| !w.room_holders.is_empty());
         }
         let Some(g) = self.graph() else { return false };
         if !self.covered {
@@ -353,10 +372,13 @@ impl Parallel {
     }
 
     /// Builds a graph from the routes the engine resolved, in the workers' room: what [`covers`]
-    /// asks for and no more, so it holds for `tracks` by construction. False if it can't be (the
-    /// room is held, too many strips).
+    /// asks for and no more, so it holds for `tracks` by construction. False if it can't be (a
+    /// thread left in a plug-in still holds the room, too many strips).
     fn build_own(&mut self, tracks: &[Box<TrackDsp>]) -> bool {
-        let Some(w) = self.workers.as_deref_mut().filter(|w| !w.room_held) else { return false };
+        let Some(w) = self.workers.as_deref_mut() else { return false };
+        if !w.room_free() {
+            return false;
+        }
         let edges = |i: usize, add: &mut dyn FnMut(usize, usize)| {
             let t = &tracks[i];
             for j in t.out_idx.into_iter().chain(t.send_idx.iter().flatten().copied()) {
@@ -483,20 +505,20 @@ impl Parallel {
     pub fn press_on(&mut self) -> bool {
         let Some(w) = self.workers.as_deref_mut() else { return true };
         let Some(graph) = (if self.own { Some(w.room.graph()) } else { self.graph.as_deref() }) else { return true };
-        let fresh = &mut w.fresh;
+        let (fresh, holders) = (&mut w.fresh, &mut w.room_holders);
+        let own = self.own;
         let left = w.pool.abandon(graph, self.give_up * 3 / 4, |thread, task, uid| {
             if fresh.len() < fresh.capacity() {
                 fresh.push((thread, task, uid));
+            }
+            if own && holders.len() < holders.capacity() {
+                holders.push(thread);
             }
         });
         if left > 0 {
             w.job_at += 1;
             debug_assert!(w.job_at < w.jobs.len(), "a job per time a worker is left");
-            if self.own {
-                w.room_held = true;
-            } else {
-                self.graph_held = true;
-            }
+            self.graph_held |= !own;
         }
         // The block is silent whatever happens, and a strip that misses it is like one in a block
         // shed for an overload. The workers still playing run what they take, and what the job
@@ -550,21 +572,21 @@ impl Parallel {
             // and what that feeds, which sit out later blocks too (`leave_out`).
             let limit = limit.expect("only a limit gives up");
             self.give_up = limit;
-            let fresh = &mut w.fresh;
+            let (fresh, holders) = (&mut w.fresh, &mut w.room_holders);
+            let own = self.own;
             let left = w.pool.abandon(graph, limit * 3 / 4, |thread, task, uid| {
                 if fresh.len() < fresh.capacity() {
                     fresh.push((thread, task, uid));
+                }
+                if own && holders.len() < holders.capacity() {
+                    holders.push(thread);
                 }
             });
             if left > 0 {
                 // It's still in this job and may be in the graph, which must stay.
                 w.job_at += 1;
                 debug_assert!(w.job_at < w.jobs.len(), "a job per worker left");
-                if self.own {
-                    w.room_held = true;
-                } else {
-                    self.graph_held = true;
-                }
+                self.graph_held |= !own;
                 // The block is silent: the rest is only counted out (`press_on` says why), and a worker
                 // held up anywhere else must still be demoted before the kernel's limit
                 // (`GIVE_UP_SECS`).
