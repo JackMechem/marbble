@@ -113,18 +113,25 @@ fn other_files_in_freeze_files_are_never_deleted() {
 
 #[test]
 fn a_document_naming_the_file_another_way_keeps_it() {
-    // With the other separator, as written on Windows.
+    // With the other separator: as written on Windows, read elsewhere, and the other way round.
     let (mut s, scratch, inst, file) = frozen_project("freeze-files-backslash");
-    edit_saved(&s, "\"Freeze Files/", "\"Freeze Files\\\\");
+    let saved = std::fs::read_to_string(s.dir.join("project.json")).unwrap();
+    if saved.contains("\"Freeze Files/") {
+        edit_saved(&s, "\"Freeze Files/", "\"Freeze Files\\\\");
+    } else {
+        edit_saved(&s, "\"Freeze Files\\\\", "\"Freeze Files/");
+    }
     unfreeze(&mut s, inst);
     s.new_project();
-    assert!(file.is_file(), "a Windows-style path names it");
+    assert!(file.is_file(), "a path with the other separator names it");
     let _ = std::fs::remove_dir_all(&scratch);
 
     // By its absolute path.
     let (mut s, scratch, inst, file) = frozen_project("freeze-files-absolute");
-    let absolute = serde_json::to_string(&s.dir.join("Freeze Files/").to_string_lossy()).unwrap();
-    edit_saved(&s, "\"Freeze Files/", absolute.trim_end_matches('"'));
+    let absolute = serde_json::to_string(&s.dir.join("Freeze Files").join("").to_string_lossy()).unwrap();
+    let saved = std::fs::read_to_string(s.dir.join("project.json")).unwrap();
+    let relative = if saved.contains("\"Freeze Files/") { "\"Freeze Files/" } else { "\"Freeze Files\\\\" };
+    edit_saved(&s, relative, absolute.trim_end_matches('"'));
     unfreeze(&mut s, inst);
     s.new_project();
     assert!(file.is_file(), "an absolute path names it");
