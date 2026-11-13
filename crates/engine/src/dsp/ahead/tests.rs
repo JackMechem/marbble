@@ -495,8 +495,15 @@ fn a_command_for_a_strip_whose_render_thread_hangs_gives_it_up_without_holding_t
     let to = 100_000;
     r.tx.push(Cmd::Locate(to)).ok().unwrap();
     let started = std::time::Instant::now();
-    let (slowest, located) = callbacks(&mut r, &mut buf, 10, to);
-    assert!(!located, "the locate waits for the strip meanwhile");
+    // Callbacks a buffer apart for half the give-up time (by the clock: sleeps overshoot on some
+    // runners, and ten of them could pass it).
+    let mut slowest = std::time::Duration::ZERO;
+    while started.elapsed() < RECLAIM_WAIT / 2 {
+        let (s, _) = callbacks(&mut r, &mut buf, 1, to);
+        slowest = slowest.max(s);
+        // Played on from near the start, the playhead is far short of the locate's position.
+        assert!(r.engine.pos < to || started.elapsed() >= RECLAIM_WAIT, "the locate waits for the strip meanwhile");
+    }
     let (s, located) = callbacks(&mut r, &mut buf, 30, to);
     let slowest = slowest.max(s);
     assert!(started.elapsed() > RECLAIM_WAIT);
