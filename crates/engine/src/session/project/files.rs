@@ -108,6 +108,10 @@ impl Session {
         if in_place {
             self.purge_discarded(false);
             self.purge_freeze_files(false);
+        } else {
+            // Those in the old folder are the old project's, which may still name them.
+            self.discarded.retain(|(_, p)| p.starts_with(&target));
+            self.unused_freeze_files.retain(|p| p.starts_with(&target));
         }
         Ok(target)
     }

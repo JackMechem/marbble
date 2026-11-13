@@ -206,3 +206,18 @@ fn a_freeze_rendered_in_a_closed_project_isnt_placed_in_the_next() {
     assert!(std::fs::read_dir(dir.join("Freeze Files")).unwrap().next().is_none(), "its files are gone");
     let _ = std::fs::remove_dir_all(&scratch);
 }
+
+#[test]
+fn unfreeze_then_save_as_keeps_the_old_projects_freeze_file() {
+    let (mut s, scratch, inst, file) = frozen_project("freeze-files-unfreeze-save-as");
+    let p1 = s.dir.clone();
+    unfreeze(&mut s, inst);
+    s.save(Some(scratch.join("Copy.marbble"))).unwrap();
+    s.update_track(inst, TrackPatch { name: Some("Lead".into()), ..Default::default() });
+    s.save(None).unwrap();
+    s.new_project();
+    assert!(file.is_file(), "the old project still names it");
+    s.open(&p1).unwrap();
+    assert!(s.is_frozen(inst) && sounds(&mut s, inst), "and plays it");
+    let _ = std::fs::remove_dir_all(&scratch);
+}

@@ -657,7 +657,8 @@ that leaves a freeze, `note_unfrozen`). Saving and closing delete the noted file
 more (`freeze/files.rs`), as with Discard Last Recording's files: `session/project/file_refs.rs`
 reads every document in the project folder as a project and compares clip paths as files (folders
 resolved, either separator, Unicode normalized, any case), and if a document can't be read, nothing
-is deleted. A freeze carries the project it was rendered in, and a render made before a Save As is
+is deleted. Only files inside the project's folder are ever deleted; a Save As forgets the noted
+files of the old folder. A freeze carries the project it was rendered in, and a render made before a Save As is
 moved into the new folder when it's placed.
 
 **Track MIDI settings.** An instrument track's `midi_settings` (the Track inspector's Transpose,

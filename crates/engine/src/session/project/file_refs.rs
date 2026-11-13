@@ -85,7 +85,8 @@ fn resolve(dir: &Path, path: &str) -> PathBuf {
     let p = path.replace('\\', "/");
     let drive = p.as_bytes().get(1) == Some(&b':') && p.as_bytes().first().is_some_and(u8::is_ascii_alphabetic);
     if p.starts_with('/') || drive || Path::new(&p).is_absolute() {
-        PathBuf::from(p)
+        // As opening a project finds it: in the projects folder's new name.
+        crate::library::old_name::relocated(Path::new(&p)).unwrap_or_else(|| PathBuf::from(p))
     } else {
         dir.join(p)
     }

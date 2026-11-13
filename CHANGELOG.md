@@ -24,6 +24,10 @@ All notable changes to Marbble are recorded here. The format follows
 - **Freezing while the project is saved under a new name** keeps the freeze in the new project's
   folder, so the copy no longer plays a file from the old one; and a freeze still rendering when
   another project is opened is dropped instead of landing in that project.
+- **A discarded recording is no longer deleted from a project saved before the discard.** Discard
+  Last Recording, then Save As, then closing deleted the take from the old project's folder,
+  though the old project still played it. Only files in the project's own folder that nothing
+  names are deleted now, and the check reads every document in the folder as a project.
 - **No overload when you add a track to a heavy project.** Adding, removing or reordering
   tracks, or changing an output, a send or a side chain, played the next buffer or two with every
   plug-in on the audio thread alone, until the extra processing threads were told about the new

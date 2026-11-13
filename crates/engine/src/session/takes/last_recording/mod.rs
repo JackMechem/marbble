@@ -256,8 +256,8 @@ impl Session {
         changed
     }
 
-    /// Deletes the files of discarded recordings that nothing can need any more: not the
-    /// project, an undo or redo step, nor a document in the project folder
+    /// Deletes the files of discarded recordings in the project folder that nothing can need any
+    /// more: not the project, an undo or redo step, nor a document in the project folder
     /// ([`Session::named_files`]). `closing`: the project is being closed, so its undo history is
     /// going and only the documents on disk count; files they still name are kept for good.
     pub(crate) fn purge_discarded(&mut self, closing: bool) {
@@ -266,6 +266,10 @@ impl Session {
         }
         let named = self.named_files(closing);
         for (clip, path) in std::mem::take(&mut self.discarded) {
+            // Only files in this project's folder: one elsewhere may be another project's too.
+            if !path.starts_with(&self.dir) {
+                continue;
+            }
             if named.as_ref().is_none_or(|n| n.names(&path)) {
                 if !closing {
                     self.discarded.push((clip, path));
