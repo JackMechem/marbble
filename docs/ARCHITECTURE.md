@@ -527,7 +527,8 @@ inaudible.
   sends it in `Cmd::Graph` after each edit (`Session::sync_parallel`). The engine checks it against
   the routes it resolved itself, so a route can't race. In the blocks between an edit's commands
   and its graph, when it doesn't hold, the engine builds one from those routes in a room the
-  workers bring (`GraphRoom`, allocated off the audio thread), and plays serially only if it can't.
+  workers bring (`GraphRoom`, allocated off the audio thread), and plays serially only if it can't:
+  a thread left in a plug-in in a block on that graph holds the room until it's back out.
   A rebuild (a project opened, Reset Audio Engine) swaps the graph in with the strips
   (`Engine::replace_graph`), with any workers it needs started before the plug-ins load, so a heavy
   project's first block is already on the pool. The
@@ -659,7 +660,15 @@ the plug-ins are unloaded from the engine with their state kept, and edits to th
 and plug-ins are refused (`check_unfrozen` before, `frozen_guard` after). An aux on a frozen
 instrument's extra output has the render of that output in `Track::frozen_output`, and plays it in
 place of the unloaded plug-in's bus (`session/tracks/freeze/outputs.rs`). Freeze files live in
-`Freeze Files/`.
+`Freeze Files/`. Unfreezing takes the file's clip out of the project but leaves the file, which the
+saved project or an undo step may still play, and notes it (as does an undo, redo or abandoned edit
+that leaves a freeze, `note_unfrozen`). Saving and closing delete the noted files nothing names any
+more (`freeze/files.rs`), as with Discard Last Recording's files: `session/project/file_refs.rs`
+reads every document in the project folder as a project and compares clip paths as files (folders
+resolved, either separator, Unicode normalized, any case), and if a document can't be read, nothing
+is deleted. Only files inside the project's folder are ever deleted; a Save As forgets the noted
+files of the old folder. A freeze carries the project it was rendered in, and a render made before a Save As is
+moved into the new folder when it's placed.
 
 **Track MIDI settings.** An instrument track's `midi_settings` (the Track inspector's Transpose,
 Velocity, Key and Velocity Limits and Delay; `edit/track_midi/`) change what it plays, never its

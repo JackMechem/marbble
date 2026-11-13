@@ -132,6 +132,8 @@ impl Session {
         self.send(Cmd::Order(self.project.process_order()));
         self.push_all_params();
         self.restore_master(&current.master);
+        // Freeze files it no longer plays go once nothing needs them (`tracks/freeze/files.rs`).
+        self.note_unfrozen(&current);
 
         // Recordings and imports made after the snapshot stay loaded, so redo can bring them back.
         if self.selected.map(|id| self.project.track(id).is_none()).unwrap_or(false) {

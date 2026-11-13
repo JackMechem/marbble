@@ -132,8 +132,15 @@ impl Session {
         }
         let graph = match TaskGraph::of_project(&self.project) {
             Ok(g) => Some(g),
-            Err(e @ (GraphError::TooBig(_) | GraphError::Unknown(_) | GraphError::Backwards { .. })) => {
+            Err(e @ GraphError::TooBig(_)) => {
                 log::warn!("playing tracks on one thread: {e}");
+                None
+            }
+            // Workers already running stay, and the engine builds a graph from its own routes
+            // where it can (`dsp::graph::GraphRoom`).
+            Err(e @ (GraphError::Unknown(_) | GraphError::Backwards { .. })) => {
+                let then = if self.threads.running.is_some() { "the engine works one out from its own routes" } else { "playing tracks on one thread" };
+                log::warn!("no task graph for the project ({e}): {then}");
                 None
             }
         };

@@ -1238,8 +1238,9 @@ changing its notes. With one or more regions selected, the Inspector's Region se
   the notes as they are stored.
 - Region menu › **Apply Region Parameters** writes the parameters into the regions and resets
   them, as one undo step: the notes move, change pitch, velocity and length; the region grows
-  to keep notes a delay moved past its edges (a looped region keeps its length, its notes are
-  kept inside it); an audio region moves by its delay. The region plays exactly as before.
+  to keep notes a delay moved past its edges, though never back past the project start (a
+  looped region keeps its length, its notes are kept inside it); an audio region moves by its
+  delay. The region plays exactly as before.
 
 ### Track MIDI settings
 
@@ -1547,14 +1548,17 @@ plug-ins unloaded, so a heavy track stops using CPU.
 - While frozen, the regions and plug-ins can't be changed, and the track can't be
   record-enabled. Its regions are veiled, and edits are refused with a message.
 - **Unfreeze** (the snowflake again, Track › Unfreeze Track, or the track menu) loads the
-  plug-ins back with exactly their settings and deletes the freeze file.
+  plug-ins back with exactly their settings.
 - Freeze and Unfreeze can be undone. Frozen tracks stay frozen when the project is saved and
   reopened. A duplicate of a frozen track is live.
 - An instrument whose extra outputs have auxes (see
   [Multi-output instruments](#multi-output-instruments)) freezes those outputs too, each into a
   file of its own, and each aux plays its output's file while the instrument is frozen, through
   its own plug-ins, fader and sends, which stay live.
-- Freeze files are in the project's `Freeze Files/` folder.
+- Freeze files are in the project's `Freeze Files/` folder. Unfreezing doesn't delete a track's
+  file at once, since the saved project, a backup or Undo may still need it. Saving or closing
+  the project deletes it once none of them uses it any more (if a project document in the
+  folder can't be read, nothing is deleted). Marbble never deletes anything else in the folder.
 
 ### Turning tracks off
 
@@ -3364,7 +3368,8 @@ edit or mix without a copy of the whole project.
 Each save keeps the version it replaces as a backup, separately for each alternative, up to
 Settings › General › Backups (10 by default; 0 keeps only the last one, as
 `project.json.bak`). **File › Revert to** lists them by when they were saved ("Today 14:32",
-"Yesterday 09:10", then the date), newest first. Choosing one asks, then loads it; the
+"Yesterday 09:10", then the date), newest first, with the seconds for backups saved in the
+same minute ("Today 14:32:05"). Choosing one asks, then loads it; the
 project as it was (unsaved changes included) becomes a backup itself, so reverting to it
 undoes the revert.
 

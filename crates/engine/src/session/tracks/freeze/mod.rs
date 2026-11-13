@@ -11,7 +11,11 @@
 //!
 //! An instrument whose extra outputs feed auxes has those outputs rendered too, and its auxes play
 //! them while it is frozen (`outputs.rs`).
+//!
+//! Unfreezing keeps the freeze files: saving and closing the project delete them once nothing
+//! needs them any more (`files.rs`).
 
+mod files;
 mod outputs;
 
 use crate::session::*;
@@ -32,6 +36,17 @@ pub struct FreezeRender {
     clip: Clip,
     /// Its extra outputs' renders, one per aux on them.
     outputs: Vec<OutputRender>,
+    /// The project it was rendered in (`Session::opened`).
+    opened: u64,
+}
+
+impl FreezeRender {
+    /// Deletes the render's files, which nothing plays.
+    fn delete(&self) {
+        for p in std::iter::once(&self.path).chain(self.outputs.iter().map(|o| &o.path)) {
+            let _ = std::fs::remove_file(p);
+        }
+    }
 }
 
 impl Session {
@@ -111,7 +126,7 @@ impl Session {
             crate::audio_file::decode::write_wav(&path, sr as u32, &audio)?;
             let clip = Clip::from_channels(path.clone(), sr as u32, audio);
             let outputs = self.render_outputs(&auxes, (from, to, tail), &mut |j, f| progress((k as f64 + (1.0 + j as f64 + f) / parts) / n))?;
-            out.push(FreezeRender { track: id, start: from, clip, path, outputs });
+            out.push(FreezeRender { track: id, start: from, clip, path, outputs, opened: self.opened });
         }
         Ok(out)
     }
@@ -126,11 +141,18 @@ impl Session {
     /// Freeze, step two: each track plays its render and unloads its plug-ins, keeping their
     /// settings for unfreezing. Record an undo step first, capturing plug-ins.
     pub fn place_freeze(&mut self, renders: Vec<FreezeRender>) -> Result<()> {
-        for r in renders {
+        // Rendered in a project closed since: its track ids mean other tracks here.
+        if renders.iter().any(|r| r.opened != self.opened) {
+            renders.iter().for_each(FreezeRender::delete);
+            return Err(anyhow!("The project was closed while its tracks were freezing."));
+        }
+        for mut r in renders {
             let Some(t) = self.project.track(r.track).filter(|t| t.frozen.is_none()).cloned() else {
-                let _ = std::fs::remove_file(&r.path);
+                r.delete();
                 continue;
             };
+            r.path = self.adopt_render(r.path, &t.name)?;
+            r.clip.path = r.path.clone();
             let states: Vec<(Id, Arc<str>)> = t
                 .inserts
                 .iter()
@@ -149,7 +171,7 @@ impl Session {
             tm.armed = false;
             self.unload_plugins(&t);
             self.push_regions(r.track);
-            self.place_outputs(r.outputs, r.start);
+            self.place_outputs(r.outputs, r.start)?;
         }
         // Arming changed, and the frozen tracks' latency went with their plug-ins.
         self.push_all_params();
@@ -165,13 +187,14 @@ impl Session {
         self.place_freeze(renders)
     }
 
-    /// Loads a frozen track's plug-ins again (with the settings they had) and deletes its
-    /// freeze file. The clip stays in memory, so undo can freeze the track again.
+    /// Loads a frozen track's plug-ins again (with the settings they had). Its freeze file leaves
+    /// the project but stays on disk, for the saved project and Undo, until a save or close finds
+    /// nothing needs it any more (`files.rs`).
     pub fn unfreeze_track(&mut self, id: Id) -> Result<()> {
         let t = self.project.track(id).ok_or_else(|| anyhow!("no such track"))?;
         let f = t.frozen.ok_or_else(|| anyhow!("{} isn't frozen", t.name))?;
         self.project.track_mut(id).unwrap().frozen = None;
-        self.delete_freeze_file(f.clip);
+        self.forget_freeze_file(f.clip);
         let t = self.project.track(id).unwrap().clone();
         self.load_plugins(&t);
         self.push_regions(id);
@@ -181,13 +204,12 @@ impl Session {
         Ok(())
     }
 
-    /// Forgets a freeze file's clip and deletes the file. The audio stays in memory, so undo can
-    /// bring the freeze back (`ensure_freeze_files`).
-    fn delete_freeze_file(&mut self, clip: Id) {
+    /// Takes a freeze file's clip out of the project. The audio stays in memory and the file on
+    /// disk, so undo can bring the freeze back; the file is deleted once nothing needs it.
+    fn forget_freeze_file(&mut self, clip: Id) {
         if let Some(i) = self.project.clips.iter().position(|c| c.id == clip) {
             let c = self.project.clips.remove(i);
-            let path = if Path::new(&c.path).is_absolute() { PathBuf::from(&c.path) } else { self.dir.join(&c.path) };
-            let _ = std::fs::remove_file(path);
+            self.note_unused_freeze_file(self.clip_path(&c.path));
         }
     }
 
@@ -253,12 +275,13 @@ impl Session {
         true
     }
 
-    /// Writes back any freeze file that is missing on disk (unfreezing deletes it; undo can
-    /// bring the freeze back) from the copy still in memory.
+    /// Writes back any freeze file of a frozen track that is missing on disk from the copy still
+    /// in memory: after Save As, say, which copies only the files the project plays, undo can
+    /// bring back a freeze whose file stayed in the old folder.
     pub(crate) fn ensure_freeze_files(&self) {
         for f in self.project.tracks.iter().flat_map(|t| t.frozen.into_iter().chain(t.frozen_output)) {
             let (Some(c), Some(r)) = (self.clips.get(&f.clip), self.project.clips.iter().find(|c| c.id == f.clip)) else { continue };
-            let path = if Path::new(&r.path).is_absolute() { PathBuf::from(&r.path) } else { self.dir.join(&r.path) };
+            let path = self.clip_path(&r.path);
             if !path.exists() {
                 if let Err(e) = crate::audio_file::decode::write_wav(&path, c.sample_rate, &c.channels) {
                     log::error!("rewriting freeze file {}: {e}", path.display());
@@ -321,5 +344,7 @@ fn keep_ringing(audio: &mut [Vec<f32>], keep: usize) {
     audio.iter_mut().for_each(|c| c.truncate(last.min(len)));
 }
 
+#[cfg(test)]
+mod files_tests;
 #[cfg(test)]
 mod tests;

@@ -184,3 +184,25 @@ fn discarded_files_go_once_nothing_needs_them() {
     s.save(None).unwrap();
     assert!(!file.exists() && s.discarded.is_empty());
 }
+
+#[test]
+fn discard_then_save_as_keeps_the_old_projects_take() {
+    let mut s = session("save-as");
+    let t = s.add_track(TrackKind::Audio, InputSel::Mono(0), None, None).unwrap();
+    record_onto(&mut s, 0, 0, 1000, &[t]);
+    let file = s.dir.join(&s.project.clips[0].path);
+    crate::audio_file::decode::write_wav(&file, s.project.sample_rate, &[vec![0.1; 1000]]).unwrap();
+    let p1 = s.save(None).unwrap();
+    s.discard_last_recording().unwrap();
+    let p2 = s.save(Some(p1.with_file_name(format!("marbble-last-rec-save-as-copy-{}.marbble", std::process::id())))).unwrap();
+    s.update_track(t, TrackPatch { name: Some("Vox".into()), ..Default::default() });
+    s.save(None).unwrap();
+    s.new_project();
+    assert!(file.is_file(), "the old project still names it");
+    s.open(&p1).unwrap();
+    let iso = s.isolate_track(t, true, true);
+    assert!(s.render(0, 1000, 0, Some(iso), &mut |_| {}).unwrap()[0].iter().any(|x| x.abs() > 0.01), "and plays it");
+    s.new_project();
+    let _ = std::fs::remove_dir_all(&p1);
+    let _ = std::fs::remove_dir_all(&p2);
+}

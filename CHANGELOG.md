@@ -23,6 +23,32 @@ All notable changes to Marbble are recorded here. The format follows
   floor (tape hiss, say), which adds about a millisecond to a render when nothing rings and at most
   a second before and after one. Delay compensation no longer carries the end of a render into
   playback either.
+- **File › Revert to tells apart backups saved in the same minute.** Two saves within a minute
+  gave two items that both read, say, "Today 16:52". Those now show the seconds ("Today
+  16:52:07"); the rest keep the plain time.
+- **Apply Region Parameters and Join keep a MIDI region at or after the project start.** A MIDI
+  region near the start whose Delay or Quantize moved its first notes earlier grew past bar 1 when
+  its parameters were applied or it was joined, leaving a region that started before the project.
+  It now stops at the start; notes moved before it stay there, silent, as they were.
+- **Marbble Synth renders the same every time with the mod wheel up.** Its vibrato LFO ran on
+  from live playing into bounces, freezes and exports, and the mod wheel and expression played live
+  before a render stayed set in it, so two renders of the same project could differ. A render now
+  starts it as a new instance would: vibrato from the start of its cycle, wheel and expression at
+  rest until the project sets them. Live playing sounds as before.
+- **Unfreezing a track no longer deletes the freeze file the saved project plays.** Unfreezing
+  and then closing without saving left the saved project's frozen track silent. A freeze file
+  Marbble stops playing (the track unfrozen, or the Freeze undone) is now deleted only when the
+  project is saved or closed and nothing names it any more: not the project, Undo or Redo, nor any
+  document in the project folder (the saved project, its autosave, backups or alternatives).
+  Before, undoing a Freeze or redoing an Unfreeze left its files behind for good. Nothing else in
+  Freeze Files is ever deleted.
+- **Freezing while the project is saved under a new name** keeps the freeze in the new project's
+  folder, so the copy no longer plays a file from the old one; and a freeze still rendering when
+  another project is opened is dropped instead of landing in that project.
+- **A discarded recording is no longer deleted from a project saved before the discard.** Discard
+  Last Recording, then Save As, then closing deleted the take from the old project's folder,
+  though the old project still played it. Only files in the project's own folder that nothing
+  names are deleted now, and the check reads every document in the folder as a project.
 - **Render Ahead uses the whole machine on macOS and Windows.** It started as many threads as
   Settings › Audio › Processing Threads, which Automatic keeps at one there for now, so a heavy
   project's tracks couldn't stay ahead and kept falling back to live. Its threads now follow the
@@ -33,7 +59,7 @@ All notable changes to Marbble are recorded here. The format follows
   plug-in on the audio thread alone, until the extra processing threads were told about the new
   routing. With twelve TONE3000 amp models playing (Render Ahead off), that buffer took three and
   a half times its length and playback stopped. The threads now carry on with the new routing at
-  once.
+  once, after a plug-in that stopped responding for a while too.
 - **No overload as a heavy project opens.** Opening a project with many heavy plug-ins (twelve
   TONE3000 amp models, say) overloaded once, stopped, before anything played: the extra processing
   threads only learned of the new tracks a moment after them, so the first buffer played every

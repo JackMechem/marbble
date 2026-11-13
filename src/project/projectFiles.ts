@@ -7,7 +7,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { ask } from "@tauri-apps/plugin-dialog";
 import { type ProjectFiles, type UserTemplate } from "../engine/listings";
 import { act, call } from "../engine/commands";
-import { backupLabel, freeName, nameProblem } from "./alternativesModel";
+import { backupLabels, freeName, nameProblem } from "./alternativesModel";
 import { askName } from "../ui/NameSheet";
 import { saveProject } from "./files";
 import { getSettings } from "../settings/appSettings";
@@ -20,7 +20,7 @@ async function refreshProjectMenus(): Promise<ProjectFiles | null> {
   await call("set_project_menus", {
     alternatives: getState().snap?.saved ? files.alternatives : [],
     active: files.active,
-    backups: files.backups.map((b) => ({ file: b.file, label: backupLabel(b.time) })),
+    backups: backupLabels(files.backups.map((b) => b.time)).map((label, i) => ({ file: files.backups[i].file, label })),
   });
   return files;
 }
@@ -113,10 +113,11 @@ export async function revertToSaved() {
 /** File › Revert to › a backup (`file` as `project_files` lists it). */
 export async function revertToBackup(file: string) {
   const files = await call<ProjectFiles>("project_files");
-  const b = files?.backups.find((x) => x.file === file);
-  if (!b) return showToast("That backup no longer exists", 3000);
+  const i = files?.backups.findIndex((x) => x.file === file) ?? -1;
+  if (!files || i < 0) return showToast("That backup no longer exists", 3000);
+  const label = backupLabels(files.backups.map((b) => b.time))[i];
   const ok = await ask(
-    `Revert to the version saved ${backupLabel(b.time).replace(/^(Today|Yesterday)/, (w) => w.toLowerCase())}? The project as it is now is saved as a backup, so you can revert to it again.`,
+    `Revert to the version saved ${label.replace(/^(Today|Yesterday)/, (w) => w.toLowerCase())}? The project as it is now is saved as a backup, so you can revert to it again.`,
     { title: "Revert to", kind: "warning", okLabel: "Revert", cancelLabel: "Cancel" },
   );
   if (ok && (await act("revert_to_backup", { file }))) replaced();
