@@ -18,6 +18,8 @@ impl Session {
         self.sampler_record_cancel();
         self.send(Cmd::Stop);
         self.close_recordings();
+        self.purge_freeze_files(true);
+        self.opened += 1;
         self.mark_unresponsive();
         self.controllers.clear();
         self.vst_watches.clear();
@@ -101,9 +103,15 @@ impl Session {
         self.dir = target.clone();
         self.saved = true;
         self.dirty = false;
-        // Discarded recordings the saved project (and its undo history) no longer needs go now.
+        // Discarded recordings and freeze files the saved project (and its undo history) no
+        // longer needs go now.
         if in_place {
             self.purge_discarded(false);
+            self.purge_freeze_files(false);
+        } else {
+            // Those in the old folder are the old project's, which may still name them.
+            self.discarded.retain(|(_, p)| p.starts_with(&target));
+            self.unused_freeze_files.retain(|p| p.starts_with(&target));
         }
         Ok(target)
     }
@@ -132,6 +140,8 @@ impl Session {
         self.sampler_record_cancel();
         self.send(Cmd::Stop);
         self.close_recordings();
+        self.purge_freeze_files(true);
+        self.opened += 1;
         // Instance ids restart in every project, so old controllers must not leak state into
         // the new one.
         self.mark_unresponsive();
