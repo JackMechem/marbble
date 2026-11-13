@@ -170,8 +170,10 @@ click outside) drops them. The delay compensation options on the same tab apply 
   its plug-in window while playing is seamless: it plays out what was already rendered (the lead
   at most) and goes on live from exactly there; a key you play on it meanwhile is heard at once.
   An edit to a track rendered ahead (a region, a plug-in, its automation) brings it back live from
-  that moment; a reverb or delay on it may jump a little as it does. At 96 kHz and above the lead is at most a quarter of a
-  second. Off by default for now.
+  that moment; a reverb or delay on it may jump a little as it does. At 96 kHz and above the lead
+  is at most a quarter of a second. On Linux its threads get real-time priority below the audio
+  thread's where the system allows it, so other busy programs don't hold them up. Off by default
+  for now.
 - **Reset Audio Engine** closes and reopens the devices, for example after replugging an
   interface.
 - **When a device changes or goes away**, audio restarts by itself and a message says on which

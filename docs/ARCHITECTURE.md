@@ -501,6 +501,15 @@ callback's mix plays the block for its position, so a slow block is absorbed by 
   live. Anything that would reclaim it meanwhile still does. Live MIDI for a draining target ends
   the drain in its block, so the note is heard at once; a new target is set only once no render
   thread is in the strip, so that can't wait.
+- Render threads run at real-time priority below the audio threads' (round-robin 1; the callback
+  and the pool's workers are at 10), asked of the kernel only, never of rtkit, whose few real-time
+  threads are the pool's (`dsp/ahead/thread_setup.rs`, #500). At normal priority a busy machine
+  starved them: beside 16 busy loops, a project of 12 TONE3000s missed hundreds of blocks a run,
+  and none at real-time priority; nice -10 and keeping them to the performance cores didn't help.
+  RLIMIT_RTTIME kills a real-time thread awake for 200 ms, so a render thread naps before a block
+  once it has been awake 30 ms, and a watchdog thread demotes one awake for 100 ms (in a slow
+  plug-in), which takes its priority back once it's out and has slept. Refused it, and on macOS
+  and Windows, they run at normal priority.
 - Lent strips are a table of pointers; a render thread names the strip it looks at as its hazard,
   and a strip taken out of the table trades back only once none does, so a shell is never traded
   or freed under it. One whose render thread doesn't come out within `RECLAIM_WAIT` (a hung

@@ -15,6 +15,10 @@ All notable changes to Marbble are recorded here. The format follows
   200 ms by default) and goes on live from exactly there, as if it had never been rendered ahead.
   The same goes for opening one of its plug-in windows. A key played on it meanwhile ends that at
   once, so playing it is never delayed.
+- **Render Ahead keeps up on a busy machine (Linux).** Its threads ran at normal priority, so
+  other busy programs held them up and tracks played silence for a moment while they caught up:
+  hundreds of missed blocks a run in a project of 12 amp models beside 16 busy programs. They now
+  get real-time priority below the audio thread's where the system allows it, and missed none.
 - **Less memory and quicker edits in projects with many MIDI notes.** Every undo step used to hold
   its own copy of every note and controller in the project. Regions an edit leaves alone are now
   shared, so 100 undo steps in a project of 150,000 notes take 26 MB instead of 432 MB, and a note

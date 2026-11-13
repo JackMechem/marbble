@@ -35,6 +35,8 @@ mod call;
 use call::{phase, GONE, LEFT};
 pub use call::{Call, Job};
 mod thread_setup;
+#[cfg(target_os = "linux")]
+pub(crate) use thread_setup::SCHED_RESET_ON_FORK;
 use thread_setup::{demote, join_workgroup, os_thread, promote, touch_stack};
 
 use std::cell::{Cell, UnsafeCell};

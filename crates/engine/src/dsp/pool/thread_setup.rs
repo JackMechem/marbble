@@ -120,7 +120,7 @@ const RTKIT_PRIORITY: libc::c_int = 10;
 
 /// Not in `libc` (rust-lang/libc#1511).
 #[cfg(target_os = "linux")]
-pub(super) const SCHED_RESET_ON_FORK: libc::c_int = 0x4000_0000;
+pub(crate) const SCHED_RESET_ON_FORK: libc::c_int = 0x4000_0000;
 
 /// Takes a stuck worker off real-time priority, given its [`os_thread`]. On Linux, RLIMIT_RTTIME
 /// only counts a thread's time under a real-time policy, so the plug-in it's in can run on as long
