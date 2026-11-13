@@ -12,6 +12,16 @@
 //! little). It goes ahead again at the end of a callback, when it's still eligible ([`eligible`])
 //! and the callbacks are calm ([`Engine::lend_ahead`]).
 //!
+//! **Draining** (#499). A strip wanted live with its source unchanged (the selected track, one with
+//! a plug-in window open: `Cmd::KeepLive`; the live-MIDI target) isn't reclaimed but drained: out
+//! of the render threads' table, it plays its ring on, and once that's empty and no render thread
+//! is in it, it comes home with its source exactly where the playhead is ([`take_block`]), as if
+//! it had played live throughout. It takes a lead at most. Whatever would reclaim it meanwhile (an
+//! edit, a locate, Stop, a block missing) still does. Live MIDI for a draining target ends the
+//! drain in the block it comes in, so a note played is heard at once, the plug-ins as far ahead as
+//! they had rendered; to make sure it can, a new target is only set once no render thread is in it.
+//! An edit made in a plug-in's own window reaches it as it next runs: during a drain, as it ends.
+//!
 //! **Reclaiming never waits** on the audio thread (#471). It takes the strip out of the render
 //! threads' table, and trades back once no render thread is in it; until then the strip plays what
 //! was rendered. A command that changes strips ([`Engine::reclaim_for`]) takes all of them out in
@@ -521,6 +531,20 @@ impl TrackDsp {
         true
     }
 
+    /// Takes the strip back without letting go of what was rendered (see the module docs): out of
+    /// the render threads' table, so they start no more blocks of it, while it plays its ring on
+    /// and comes home once that's empty ([`take_block`]). Never waits. True once no render thread
+    /// is in it (or it isn't lent); `give_up` as for [`TrackDsp::reclaim`].
+    pub(super) fn drain(&mut self, shared: Option<&AheadShared>, give_up: bool) -> bool {
+        let (Some(shared), Some(ctl)) = (shared, self.ahead.as_ref()) else { return true };
+        if !ctl.lent() {
+            return true;
+        }
+        recall(ctl, shared);
+        let out = !shared.named(Arc::as_ptr(ctl)) && !ctl.busy.load(Ordering::SeqCst);
+        out || (give_up && self.reclaim(Some(shared), true))
+    }
+
     /// Lends the strip to the render threads, its next block at `course`. False if the table is
     /// full.
     fn lend(&mut self, shared: &AheadShared, course: Course, engine: LendFrom<'_>) -> bool {
@@ -623,8 +647,9 @@ pub(crate) struct Ahead {
 /// - Not there, and its render thread on it: it plays silence for this block and stays ahead; the
 ///   late block is let go when it comes. After [`MAX_SHORT`] blocks in a row, it's recalled (its
 ///   render thread starts no more), and comes back once the render thread is out.
-/// - Being taken back by a command, with nothing rendered for here: it comes back once no render
-///   thread is in it; until then, as above.
+/// - Being taken back by a command or drained, with nothing rendered for here: it comes back once
+///   no render thread is in it; until then, as above.
+/// - Draining as the live-MIDI target, with live MIDI for it: it comes back and plays the MIDI.
 pub(super) fn take_block(t: &mut TrackDsp, cx: &BlockCtx<'_>, shared: Option<&AheadShared>) -> Took {
     let Some(ctl) = t.ahead.clone() else { return Took::Reclaimed };
     if ctl.lost() {
@@ -640,6 +665,10 @@ pub(super) fn take_block(t: &mut TrackDsp, cx: &BlockCtx<'_>, shared: Option<&Ah
         t.r[..n].fill(0.0);
         Took::Block
     };
+    // Live MIDI for it is heard at once, and only live (see the module docs).
+    if cx.midi_target == Some(t.id) && cx.midi_thru && !cx.live.is_empty() {
+        return take_back(t, &ctl, cx, shared);
+    }
     loop {
         match ctl.ring.head() {
             Some(Mark { pos, n: len }) if pos == cx.pos && len == n => {
@@ -684,12 +713,20 @@ pub(super) fn take_block(t: &mut TrackDsp, cx: &BlockCtx<'_>, shared: Option<&Ah
             }
         }
     }
-    // A check that must not depend on time waits for the render thread to come out.
+    take_back(t, &ctl, cx, shared)
+}
+
+/// Takes a lent strip back for [`take_block`], to play live. A check that must not depend on time
+/// waits for its render thread to come out; otherwise, with one still in it, it plays silence for
+/// this block.
+fn take_back(t: &mut TrackDsp, ctl: &AheadCtl, cx: &BlockCtx<'_>, shared: Option<&AheadShared>) -> Took {
     let since = Instant::now();
     while !t.reclaim(shared, cx.wait && since.elapsed() > RECLAIM_WAIT) {
         if !cx.wait {
             cx.status.ahead_misses.fetch_add(1, Ordering::Relaxed);
-            return silent(t);
+            t.l[..cx.n].fill(0.0);
+            t.r[..cx.n].fill(0.0);
+            return Took::Block;
         }
         pause(since);
     }
@@ -736,10 +773,17 @@ impl Engine {
         self.tracks.iter_mut().find(|t| t.id == id).is_none_or(|t| t.reclaim(shared.as_deref(), give_up))
     }
 
+    /// Drains a strip without waiting (see [`TrackDsp::drain`]).
+    fn drain_track(&mut self, id: Id, give_up: bool) -> bool {
+        let shared = self.ahead.shared.clone();
+        self.tracks.iter_mut().find(|t| t.id == id).is_none_or(|t| t.drain(shared.as_deref(), give_up))
+    }
+
     /// Takes back what a command is about to change, without waiting: the strip it names, or
     /// everything when it moves the playhead or changes what every strip goes by. Fader, pan, mute
-    /// and sends leave a strip ahead. True once they're all home, when the command may apply;
-    /// `give_up` as for [`TrackDsp::reclaim`].
+    /// and sends leave a strip ahead; a strip wanted live with its source unchanged is drained.
+    /// True once they're all home (or out of the render threads, for those drained), when the
+    /// command may apply; `give_up` as for [`TrackDsp::reclaim`].
     pub(super) fn reclaim_for(&mut self, cmd: &Cmd, give_up: bool) -> bool {
         if self.ahead.shared.is_none() {
             return true;
@@ -767,10 +811,17 @@ impl Engine {
                 });
                 !changed || self.reclaim_track(*id, give_up)
             }
-            // A track to keep live comes back now; the others may go ahead again.
-            Cmd::KeepLive(ids) => ids.iter().flatten().fold(true, |home, id| self.reclaim_track(*id, give_up) & home),
-            // Only the tracks live MIDI or the analyzer moves between.
-            Cmd::MidiTarget(new) => [self.midi_target, *new].into_iter().flatten().fold(true, |home, id| self.reclaim_track(id, give_up) & home),
+            // A track to keep live drains, at once; the others may go ahead again.
+            Cmd::KeepLive(ids) => {
+                for id in ids.iter().flatten() {
+                    self.drain_track(*id, false);
+                }
+                true
+            }
+            // The tracks live MIDI moves between drain, once no render thread is in them, so that
+            // live MIDI can end the drain the moment it comes.
+            Cmd::MidiTarget(new) => [self.midi_target, *new].into_iter().flatten().fold(true, |home, id| self.drain_track(id, give_up) & home),
+            // Only the tracks the analyzer moves between.
             Cmd::Analyzer(new) => [self.analyzer_target, *new].into_iter().flatten().fold(true, |home, (id, _)| self.reclaim_track(id, give_up) & home),
             Cmd::RemoveTrack(id)
             | Cmd::Regions(id, _)

@@ -494,6 +494,13 @@ callback's mix plays the block for its position, so a slow block is absorbed by 
   the machine suggests (`audio_io::threads::render_threads`: Automatic's count without the
   device workgroup's limit, whatever Processing Threads says, #469), and keeps live the selected
   track and tracks with a plug-in window open (`Cmd::KeepLive`).
+- A strip wanted live with its source unchanged (`Cmd::KeepLive`, and the tracks a
+  `Cmd::MidiTarget` moves live MIDI between) is drained rather than reclaimed (#499): out of the
+  table, it plays its ring on and trades back once that's empty and no render thread is in it, its
+  source exactly where the playhead is, so selecting a track is bit-identical to having played it
+  live. Anything that would reclaim it meanwhile still does. Live MIDI for a draining target ends
+  the drain in its block, so the note is heard at once; a new target is set only once no render
+  thread is in the strip, so that can't wait.
 - Lent strips are a table of pointers; a render thread names the strip it looks at as its hazard,
   and a strip taken out of the table trades back only once none does, so a shell is never traded
   or freed under it. One whose render thread doesn't come out within `RECLAIM_WAIT` (a hung

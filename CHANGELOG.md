@@ -8,6 +8,13 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Changed
 
+- **Selecting a track while playing with Render Ahead on is seamless.** The track had to play
+  live at once, so what was already rendered for it was thrown away, and its plug-ins went on from
+  where they had rendered to, up to the lead ahead: a reverb or delay tail, a compressor or an
+  LFO could jump the moment you clicked it. It now plays out what was rendered (the lead at most,
+  200 ms by default) and goes on live from exactly there, as if it had never been rendered ahead.
+  The same goes for opening one of its plug-in windows. A key played on it meanwhile ends that at
+  once, so playing it is never delayed.
 - **Less memory and quicker edits in projects with many MIDI notes.** Every undo step used to hold
   its own copy of every note and controller in the project. Regions an edit leaves alone are now
   shared, so 100 undo steps in a project of 150,000 notes take 26 MB instead of 432 MB, and a note
