@@ -227,6 +227,34 @@ fn first_diff(a: &[f32], b: &[f32]) -> String {
     }
 }
 
+/// Which frames of two stereo runs differ, and what that points to.
+fn diff_span(a: &[f32], b: &[f32]) -> String {
+    let n = a.len().min(b.len());
+    let differs = |i: &usize| a[*i].to_bits() != b[*i].to_bits();
+    let (Some(first), Some(last)) = ((0..n).find(differs), (0..n).rev().find(differs)) else { return String::new() };
+    let (first, last, frames) = (first / 2, last / 2, n / 2);
+    let why = if last + BAR as usize / 4 < frames {
+        "it ends on its own: a sound left ringing from playing live (see `ring_out`)"
+    } else {
+        "it lasts to the end: state left behind by playing live"
+    };
+    format!("frames {first} to {last} of {frames} differ; {why}")
+}
+
+/// A second of blocks with the transport stopped, so whatever was sounding at the stop rings out
+/// before a run. A render resets the built-in instruments and effects, but a plug-in only gets
+/// note-offs, and LSP's Multi-Sampler plays a sample to its end whatever they say. Left to the
+/// null device, how much of it is still to play when the run starts depends on the machine's
+/// load (#488).
+fn ring_out(s: &Session) {
+    let engine = s.engine_for_checks();
+    let mut guard = engine.lock();
+    let mut out = vec![0.0f32; 512 * 2];
+    for _ in 0..RATE as usize / 512 {
+        guard.process(&[], 0, &mut out, 2);
+    }
+}
+
 fn peak(a: &[f32]) -> f32 {
     a.iter().fold(0.0f32, |m, s| m.max(s.abs()))
 }
@@ -390,12 +418,13 @@ fn main() {
             if name == "serial2" {
                 // What playing live leaves behind mustn't matter: the transport somewhere else, the
                 // automation (a send's level among it) read there, for as long as the null device
-                // gets through in a moment, which is anything from a few blocks to thousands.
+                // gets through in a moment, which is anything from a few blocks to thousands. A sound
+                // still ringing at the stop isn't state left behind: it rings out first.
                 s.locate(BAR + BAR / 3);
                 s.play();
                 std::thread::sleep(std::time::Duration::from_millis(150));
                 s.stop();
-                std::thread::sleep(std::time::Duration::from_millis(60));
+                ring_out(&s);
             }
             return play_live(&mut s, &e, buffer, frames);
         }
@@ -410,6 +439,7 @@ fn main() {
             check("two live serial runs are the same, whatever played live before", same_bits);
             if !same_bits {
                 println!("     {}", first_diff(&twice, &base));
+                println!("     {}", diff_span(&twice, &base));
             }
             // Workers refused real-time priority play nothing; the others play on.
             let (out, pooled, errors) = live(buffer, 4, "refused", 0b101);
