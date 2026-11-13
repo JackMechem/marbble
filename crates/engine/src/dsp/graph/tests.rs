@@ -1,5 +1,6 @@
 //! The task graph: dependencies, refusals, width, and which routes become edges.
 
+use super::room::EDGES_PER_TASK;
 use super::*;
 use crate::model::{AutoMode, InputSel, InstrumentOutput, PluginSlot, Track, TrackKind, TrackSend, INSERT_SLOTS, SEND_SLOTS};
 
@@ -163,20 +164,29 @@ fn a_graph_refilled_in_place_is_the_one_built_whole() {
         seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
         (seed >> 33) as usize % m
     };
-    for round in 0..200 {
-        let n = 1 + rand(if round == 0 { MAX_TASKS } else { 60 });
-        // Each strip's edges, as the engine's routes give them: forwards, sometimes twice.
-        let edges: Vec<Vec<(usize, usize)>> = (0..n)
-            .map(|i| {
-                (0..rand(5))
-                    .filter_map(|_| match rand(2) {
-                        0 if i + 1 < n => Some((i, i + 1 + rand(n - i - 1))),
-                        1 if i > 0 => Some((rand(i), i)),
-                        _ => None,
-                    })
-                    .collect()
-            })
-            .collect();
+    for round in 0..=200 {
+        let n = match round {
+            0 => 1 + rand(MAX_TASKS),
+            200 => MAX_TASKS,
+            _ => 1 + rand(60),
+        };
+        // Each strip's edges, as the engine's routes give them: forwards, sometimes twice. The
+        // last round fills the room.
+        let edges: Vec<Vec<(usize, usize)>> = if round == 200 {
+            full(n)
+        } else {
+            (0..n)
+                .map(|i| {
+                    (0..rand(5))
+                        .filter_map(|_| match rand(2) {
+                            0 if i + 1 < n => Some((i, i + 1 + rand(n - i - 1))),
+                            1 if i > 0 => Some((rand(i), i)),
+                            _ => None,
+                        })
+                        .collect()
+                })
+                .collect()
+        };
         let ids: Vec<Id> = (0..n).map(|i| 1000 + i as Id * 3).collect();
         let heavy = |i: usize| i % 3 != 1;
         assert!(room.refill(n, |i| ids[i], |i, add| edges[i].iter().for_each(|&(a, b)| add(a, b)), heavy));
@@ -187,6 +197,22 @@ fn a_graph_refilled_in_place_is_the_one_built_whole() {
     assert_eq!(caps(&room), before, "nothing was allocated");
 }
 
+/// Every one of `n` strips making as many edges as a strip can, with itself at one end and some
+/// repeated: as many as the room holds.
+fn full(n: usize) -> Vec<Vec<(usize, usize)>> {
+    (0..n)
+        .map(|i| {
+            (0..EDGES_PER_TASK)
+                .map(|k| {
+                    let j = (i * 7 + k * 13 + 1) % n;
+                    let j = if j == i { (i + 1) % n } else { j };
+                    (i.min(j), i.max(j))
+                })
+                .collect()
+        })
+        .collect()
+}
+
 #[test]
 fn a_graph_that_cannot_be_refilled_says_so() {
     let mut room = GraphRoom::default();
@@ -194,6 +220,9 @@ fn a_graph_that_cannot_be_refilled_says_so() {
     assert!(!room.refill(2, |i| i as Id, |_, add| add(1, 0), |_| true), "backwards");
     assert!(!room.refill(2, |i| i as Id, |_, add| add(0, 5), |_| true), "past the end");
     assert!(!room.refill(MAX_TASKS + 1, |i| i as Id, |_, _| {}, |_| true), "too many");
+    let mut over = full(MAX_TASKS);
+    over[0].push((0, 1));
+    assert!(!room.refill(MAX_TASKS, |i| i as Id, |i, add| over[i].iter().for_each(|&(a, b)| add(a, b)), |_| true), "more edges than it has room for");
     assert!(room.refill(2, |i| i as Id, |_, add| add(0, 1), |_| true));
     assert_eq!(room.graph().deps(1), [0]);
 }
