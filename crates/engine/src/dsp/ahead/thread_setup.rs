@@ -38,7 +38,9 @@ const GUARD: Duration = Duration::from_millis(30);
 const GUARD_NAP: Duration = Duration::from_micros(200);
 /// How long a render thread may be awake before the watchdog demotes it: far enough inside
 /// RLIMIT_RTTIME's 200 ms for the watchdog to be late.
+#[cfg(target_os = "linux")]
 const DEMOTE_AFTER: Duration = Duration::from_millis(100);
+#[cfg(target_os = "linux")]
 const WATCH_EVERY: Duration = Duration::from_millis(10);
 /// A park that took at least this long blocked for real (one that finds a wake already waiting
 /// returns in far less).
