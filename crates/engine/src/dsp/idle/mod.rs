@@ -56,6 +56,11 @@ impl InsertDsp {
         }
     }
 
+    /// Whether it sleeps now: its input was silent and its output quiet for as long as it rings.
+    pub(super) fn asleep(&self) -> bool {
+        self.idle.asleep
+    }
+
     /// Awake, with nothing counted: after a reset, or with the track switched off.
     pub(super) fn wake_up(&mut self) {
         self.idle = Idle::default();

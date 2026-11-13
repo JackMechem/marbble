@@ -169,8 +169,9 @@ it too.
 - **Need real plug-ins, so run by hand:** `pdc_check` and `freeze_check` (ZaMaximX2),
   `onoff_vst_check` (ZaMaximX2, TONE3000), and the plug-in parts of `fx_check`,
   `automation_check` and `bounce_check`, which print `SKIP` without them.
-  `vst_sidechain_check`, `multiout_check`, `multiout_freeze_check` and `vst_undo_check` find LSP's
-  plug-ins themselves, so they're in the script and `SKIP` where they aren't installed.
+  `vst_sidechain_check`, `multiout_check`, `multiout_freeze_check`, `vst_tails_check` and
+  `vst_undo_check` find LSP's plug-ins themselves, so they're in the script and `SKIP` where they
+  aren't installed.
 - **Needs a real output device, so run by hand on macOS:** `workgroup_check` plays silence to the
   default output (never an input) on three real-time workers and checks they joined the device's IO
   workgroup, before and after reopening it. It prints `SKIP` without an output device or elsewhere

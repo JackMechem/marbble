@@ -592,9 +592,16 @@ What each piece of a block's state is, and which thread may touch it, is listed 
 held, faster than real time. It saves the transport, turns off cycle, click, live MIDI and Low
 Latency Mode, clears the delay lines, starts like playback (automation sent, notes and controllers
 chased), plays the range, then the compensation still in the lines, then the tail with the
-transport stopped, drops the leading latency and restores everything. Built-in effects are told
-they're offline, so background work (the Linear Phase EQ's filter design) lands at the same point
-every time.
+transport stopped, drops the leading latency and restores everything. It starts and ends with
+nothing ringing: built-in instruments and effects are reset, the delay lines cleared at the end
+too, and each VST3 it plays (`dsp/tails/`) is fed silence, its notes ended, until its outputs
+have been quiet for its reported tail and latency (kept between 0.1 and 2 s; most report none),
+or have stopped falling below −30 dB (a noise floor such as tape hiss), for 10 s at most. All the
+plug-ins together get 1 s, before the render and again after it; past that the rest are left
+ringing, with a warning in the log. `setProcessing` and `setActive` don't reliably clear a plug-in's voices or tail
+(LSP's Multi-Sampler, Dragonfly's reverbs), and reloading costs time and, in LSP's sampler,
+sometimes samples (#37). Built-in effects are told they're offline, so background work (the
+Linear Phase EQ's filter design) lands at the same point every time.
 
 `Isolate` renders one track (with what feeds it) before Stereo Out instead of the whole mix, for
 Export All Tracks, Export Region, Bounce in Place and Freeze; tracks keying it play but aren't
