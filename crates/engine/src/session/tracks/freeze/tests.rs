@@ -58,7 +58,7 @@ fn a_region_moved_off_a_frozen_track_isnt_doubled() {
 
 /// An instrument track with a note to freeze, and an aux that says it's on the instrument's output
 /// 3 (Marbble Synth has none, so it renders silence there).
-fn instrument_with_output_aux(s: &mut Session) -> (Id, Id) {
+pub(super) fn instrument_with_output_aux(s: &mut Session) -> (Id, Id) {
     let inst = s.add_track(TrackKind::Instrument, InputSel::None, None, None).unwrap();
     let region = s.create_midi_region(inst, 0, 4800).unwrap();
     let note = Note { start: 0, length: 2400, pitch: 60, velocity: 100, muted: false };
@@ -69,7 +69,7 @@ fn instrument_with_output_aux(s: &mut Session) -> (Id, Id) {
     (inst, aux)
 }
 
-fn file_of(s: &Session, f: Option<FreezeInfo>) -> Option<PathBuf> {
+pub(super) fn file_of(s: &Session, f: Option<FreezeInfo>) -> Option<PathBuf> {
     let clip = s.project.clips.iter().find(|c| Some(c.id) == f.map(|f| f.clip))?;
     Some(s.dir.join(&clip.path))
 }
@@ -92,13 +92,15 @@ fn an_instruments_output_auxes_freeze_with_it_and_undo_follows() {
     s.checkpoint("Unfreeze Track", None, true);
     s.unfreeze_track(inst).unwrap();
     assert_eq!(s.project.track(aux).unwrap().frozen_output, None, "unfrozen, the aux is on the live output again");
-    assert!(!file.exists(), "and its render is deleted");
+    assert!(file.is_file(), "its render stays on disk for Undo");
 
     s.undo();
     assert_eq!(s.project.track(aux).unwrap().frozen_output, frozen);
-    assert!(file.is_file(), "undoing the unfreeze writes the render back");
     s.undo();
     assert_eq!(s.project.track(aux).unwrap().frozen_output, None, "undoing the freeze puts the live output back");
+    s.clear_history();
+    s.save(None).unwrap();
+    assert!(!file.exists(), "and once nothing can bring the freeze back, saving deletes its render");
     let _ = std::fs::remove_dir_all(&scratch);
 }
 

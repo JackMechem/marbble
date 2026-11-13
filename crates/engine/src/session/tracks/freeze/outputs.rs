@@ -3,14 +3,14 @@
 //! plug-ins and fader), into a freeze file of its own. While the instrument is frozen each aux
 //! plays its output's render (`Track::frozen_output`) in place of the plug-in's bus, which is gone
 //! with the plug-in, so the mix sounds the same; the aux's plug-ins, fader and sends stay live.
-//! Unfreezing gives the auxes back the live outputs and deletes the renders.
+//! Unfreezing gives the auxes back the live outputs; their renders go as the instrument's does.
 
 use super::*;
 
 /// The render of one aux's output, written to disk and waiting to be placed.
 pub(super) struct OutputRender {
     aux: Id,
-    path: PathBuf,
+    pub(super) path: PathBuf,
     clip: Clip,
 }
 
@@ -35,23 +35,27 @@ impl Session {
     }
 
     /// Each aux plays its output's render, which starts at `start` as the instrument's does.
-    pub(super) fn place_outputs(&mut self, renders: Vec<OutputRender>, start: i64) {
-        for r in renders {
-            if self.project.track(r.aux).is_none() {
+    pub(super) fn place_outputs(&mut self, renders: Vec<OutputRender>, start: i64) -> Result<()> {
+        for mut r in renders {
+            let Some(name) = self.project.track(r.aux).map(|a| a.name.clone()) else {
                 let _ = std::fs::remove_file(&r.path);
                 continue;
-            }
+            };
+            r.path = self.adopt_render(r.path, &name)?;
+            r.clip.path = r.path.clone();
             let clip = self.add_clip(&r.path, r.clip);
             self.project.track_mut(r.aux).unwrap().frozen_output = Some(FreezeInfo { clip, start });
             self.push_regions(r.aux);
         }
+        Ok(())
     }
 
-    /// The auxes on `track`'s extra outputs go back to the live outputs; their renders are deleted.
+    /// The auxes on `track`'s extra outputs go back to the live outputs; their renders leave the
+    /// project.
     pub(super) fn unfreeze_outputs(&mut self, track: Id) {
         for aux in self.output_auxes(track) {
             let Some(f) = self.project.track_mut(aux).and_then(|a| a.frozen_output.take()) else { continue };
-            self.delete_freeze_file(f.clip);
+            self.forget_freeze_file(f.clip);
             self.push_regions(aux);
         }
     }

@@ -91,6 +91,16 @@ fn strip(id: Id, kind: TrackKind, p: TrackParams, fx: Vec<InsertDsp>) -> Box<Tra
 /// Sends, an output into an aux, a summing stack, keys taken before and after the fader, a
 /// send with a gain changing under it, and several feeders per bus: order matters everywhere.
 fn project(e: &mut Rig) -> TaskGraph {
+    let tracks = project_tracks();
+    let ids = tracks.iter().map(|t| t.id).collect();
+    e.engine.replace_graph(SR, tracks, (0..INSERT_SLOTS).map(|_| None).collect(), None);
+    TaskGraph::new(ids, &PROJECT_EDGES, |_| true).unwrap()
+}
+
+const PROJECT_EDGES: [(Id, Id); 10] = [(1, 5), (2, 5), (1, 6), (1, 7), (2, 6), (3, 7), (4, 6), (5, 7), (1, 4), (2, 4)];
+
+#[allow(clippy::vec_box)]
+fn project_tracks() -> Vec<Box<TrackDsp>> {
     let keyed = strip(4, TrackKind::Audio, params(None, &[(6, 0.3, false)]), vec![tone(40, 310.0, Some(1), false), tone(41, 390.0, Some(2), true)]);
     let tracks = vec![
         strip(1, TrackKind::Audio, params(Some(5), &[(6, 0.5, true), (7, 0.25, false), (6, 0.125, false)]), vec![tone(10, 110.0, None, false)]),
@@ -101,10 +111,25 @@ fn project(e: &mut Rig) -> TaskGraph {
         strip(6, TrackKind::Aux, params(None, &[]), vec![tone(60, 530.0, None, false)]),
         strip(7, TrackKind::Aux, params(None, &[]), vec![tone(70, 610.0, None, false)]),
     ];
+    tracks
+}
+
+/// `project` with an instrument track ahead of it, playing into stack 5, and an aux on the
+/// instrument's output 1 that plays into aux 7. The aux reads the instrument's strip
+/// (`OutputFeed::pull`), so that is a route of its own, and the only one between the two. (A
+/// built-in instrument has no extra outputs, so the bus itself is silent here:
+/// `multiout_freeze_check` plays a real one.) The ids, and the session's edges.
+fn with_multi_out(e: &mut Rig) -> (Vec<Id>, Vec<(Id, Id)>) {
+    let mut tracks = project_tracks();
+    let mut on_output = params(Some(7), &[]);
+    on_output.instrument_output = Some(InstrumentOutput { track: 8, bus: 1 });
+    tracks.insert(0, strip(8, TrackKind::Instrument, params(Some(5), &[]), vec![tone(80, 670.0, None, false)]));
+    tracks.insert(1, strip(9, TrackKind::Aux, on_output, vec![tone(90, 730.0, None, false)]));
     let ids = tracks.iter().map(|t| t.id).collect();
     e.engine.replace_graph(SR, tracks, (0..INSERT_SLOTS).map(|_| None).collect(), None);
-    let edges = [(1, 5), (2, 5), (1, 6), (1, 7), (2, 6), (3, 7), (4, 6), (5, 7), (1, 4), (2, 4)];
-    TaskGraph::new(ids, &edges, |_| true).unwrap()
+    let mut edges = PROJECT_EDGES.to_vec();
+    edges.extend([(8, 5), (8, 9), (9, 7)]);
+    (ids, edges)
 }
 
 fn play(e: &mut Rig, blocks: usize) -> Vec<f32> {
@@ -199,6 +224,34 @@ fn without_a_graph_that_fits_the_engine_builds_one_and_plays_as_the_serial_loop(
         r.tx.push(Cmd::ParallelTest(ParallelTest { always: true, renders: false, patient: true })).ok().unwrap();
         assert!(bits(&play(&mut r, 20)) == bits(&serial), "without the route {missing:?}");
         assert_eq!(r.status.parallel_blocks.load(Ordering::Relaxed), 20, "without the route {missing:?}, on the pool");
+    }
+}
+
+/// An aux on an instrument's output waits for the instrument in the graph the engine builds, as
+/// in the session's, and plays as the serial loop does: with no graph, and with a graph that lacks
+/// only that route (#482).
+#[test]
+fn the_engines_graph_has_an_aux_wait_for_the_instrument_whose_output_it_is_on() {
+    let mut s = rig();
+    with_multi_out(&mut s);
+    let serial = play(&mut s, 20);
+    assert!(serial.iter().any(|x| x.abs() > 0.01));
+    for missing in [None, Some((8, 9))] {
+        let mut e = rig();
+        let (ids, edges) = with_multi_out(&mut e);
+        if let Some(m) = missing {
+            let edges: Vec<_> = edges.into_iter().filter(|&x| x != m).collect();
+            e.tx.push(Cmd::Graph(Some(Box::new(TaskGraph::new(ids, &edges, |_| true).unwrap())))).ok().unwrap();
+        }
+        e.tx.push(Cmd::Workers(Some(Workers::new(PoolOptions { threads: 4, ..Default::default() })))).ok().unwrap();
+        e.tx.push(Cmd::ParallelTest(ParallelTest { always: true, renders: false, patient: true })).ok().unwrap();
+        let out = play(&mut e, 20);
+        assert_eq!(e.status.parallel_blocks.load(Ordering::Relaxed), 20, "without {missing:?}, on the pool");
+        let p = &e.engine.parallel;
+        assert!(p.own, "without {missing:?}, on the engine's graph");
+        let at = |id: Id| e.engine.tracks.iter().position(|t| t.id == id).unwrap();
+        assert!(p.graph().unwrap().has_dep(at(9), at(8)), "without {missing:?}: the aux waits for the instrument");
+        assert!(bits(&out) == bits(&serial), "without {missing:?}");
     }
 }
 
@@ -336,10 +389,17 @@ fn a_panicking_strip_silences_its_block_and_only_that() {
 
 /// A rig whose track 2 has Tar on worker threads, on a pool of `threads`.
 fn tarred(threads: usize, hold: &Arc<AtomicBool>) -> Rig {
+    tarred_on(threads, hold, true)
+}
+
+/// As `tarred`, on the session's graph, or with none, on the engine's own.
+fn tarred_on(threads: usize, hold: &Arc<AtomicBool>, session_graph: bool) -> Rig {
     let mut e = rig();
     let g = project(&mut e);
     e.tx.push(Cmd::Insert { track: 2, slot: 1, insert: Some(tar_for_checks(99, SR as f32, hold.clone())) }).ok().unwrap();
-    e.tx.push(Cmd::Graph(Some(Box::new(g)))).ok().unwrap();
+    if session_graph {
+        e.tx.push(Cmd::Graph(Some(Box::new(g)))).ok().unwrap();
+    }
     e.tx.push(Cmd::Workers(Some(Workers::new(PoolOptions { threads, ..Default::default() })))).ok().unwrap();
     e.tx.push(Cmd::ParallelTest(ParallelTest { always: true, renders: false, patient: false })).ok().unwrap();
     e
@@ -748,21 +808,68 @@ fn workers_replaced_while_a_thread_is_left_in_a_plug_in_hand_its_strip_back() {
 }
 
 /// The engine goes while workers it replaced still have a thread left in a plug-in: it doesn't
-/// wait for the thread.
+/// wait for the thread. On the session's graph or the engine's own, which the workers keep.
 #[test]
 fn an_engine_with_replaced_workers_still_holding_a_strip_drops_at_once() {
+    for session_graph in [true, false] {
+        let hold = Arc::new(AtomicBool::new(true));
+        let mut e = tarred_on(2, &hold, session_graph);
+        let mut out = vec![0.0f32; BLOCK * 2];
+        until_stuck(&mut e, &mut out);
+        assert_eq!(e.engine.parallel.own, !session_graph);
+        e.tx.push(Cmd::Workers(None)).ok().unwrap();
+        e.engine.process(&[], 0, &mut out, 2);
+        let t = Instant::now();
+        drop(e);
+        assert!(t.elapsed() < Duration::from_secs(5));
+        // Tar returns into what was left behind for it.
+        hold.store(false, Ordering::SeqCst);
+        std::thread::sleep(Duration::from_millis(20));
+    }
+}
+
+/// A thread left in a plug-in in a block on the engine's own graph holds it: edits meanwhile
+/// play serially, as the graph can't change under the thread, and once the thread is out the
+/// engine builds the graph for them and the blocks go back to the pool (#482).
+#[test]
+fn the_engines_graph_comes_back_once_a_thread_left_in_a_block_on_it_is_out() {
     let hold = Arc::new(AtomicBool::new(true));
-    let mut e = tarred(2, &hold);
+    let mut e = tarred_on(4, &hold, false);
     let mut out = vec![0.0f32; BLOCK * 2];
     until_stuck(&mut e, &mut out);
-    e.tx.push(Cmd::Workers(None)).ok().unwrap();
+    assert!(e.engine.parallel.own, "it was on the engine's graph");
+    assert_eq!(e.engine.parallel.workers.as_ref().unwrap().room_holders.len(), 1);
+    // From here on a block running late on a busy machine mustn't be given up on or shed.
+    e.tx.push(Cmd::ParallelTest(ParallelTest { always: true, renders: false, patient: true })).ok().unwrap();
+    let started = Instant::now();
+    while e.engine.shedding > 0 {
+        assert!(started.elapsed().as_secs() < 20);
+        e.engine.process(&[], 0, &mut out, 2);
+    }
+    // Track 3 starts sending to aux 6, which the room's graph lacks, then the send changes level.
+    let pooled = e.status.parallel_blocks.load(Ordering::Relaxed);
+    e.tx.push(Cmd::Params(3, params(None, &[(7, 0.6, true), (6, 0.5, false)]))).ok().unwrap();
+    for _ in 0..3 {
+        e.engine.process(&[], 0, &mut out, 2);
+    }
+    e.tx.push(Cmd::Params(3, params(None, &[(7, 0.5, true), (6, 0.5, false)]))).ok().unwrap();
     e.engine.process(&[], 0, &mut out, 2);
-    let t = Instant::now();
-    drop(e);
-    assert!(t.elapsed() < Duration::from_secs(5));
-    // Tar returns into what was left behind for it.
+    assert_eq!(e.status.parallel_blocks.load(Ordering::Relaxed), pooled, "serial while the room is held");
+    assert!(!e.engine.parallel.own);
+    // Tar returns, and the next block is on a graph with the new send.
     hold.store(false, Ordering::SeqCst);
-    std::thread::sleep(Duration::from_millis(20));
+    let started = Instant::now();
+    while e.status.parallel_blocks.load(Ordering::Relaxed) == pooled {
+        assert!(started.elapsed().as_secs() < 20, "never back on the pool");
+        std::thread::sleep(Duration::from_millis(1));
+        e.engine.process(&[], 0, &mut out, 2);
+    }
+    let p = &e.engine.parallel;
+    assert!(p.own && p.workers.as_ref().unwrap().room_holders.is_empty());
+    let g = p.graph().unwrap();
+    let at = |id: Id| e.engine.tracks.iter().position(|t| t.id == id).unwrap();
+    assert!(g.has_dep(at(6), at(3)), "the new send");
+    assert!(covers(g, &e.engine.tracks));
 }
 
 /// The track comes back from `Cmd::Back` still fed by a plug-in a thread is left in: it sits

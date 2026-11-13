@@ -1548,14 +1548,17 @@ plug-ins unloaded, so a heavy track stops using CPU.
 - While frozen, the regions and plug-ins can't be changed, and the track can't be
   record-enabled. Its regions are veiled, and edits are refused with a message.
 - **Unfreeze** (the snowflake again, Track › Unfreeze Track, or the track menu) loads the
-  plug-ins back with exactly their settings and deletes the freeze file.
+  plug-ins back with exactly their settings.
 - Freeze and Unfreeze can be undone. Frozen tracks stay frozen when the project is saved and
   reopened. A duplicate of a frozen track is live.
 - An instrument whose extra outputs have auxes (see
   [Multi-output instruments](#multi-output-instruments)) freezes those outputs too, each into a
   file of its own, and each aux plays its output's file while the instrument is frozen, through
   its own plug-ins, fader and sends, which stay live.
-- Freeze files are in the project's `Freeze Files/` folder.
+- Freeze files are in the project's `Freeze Files/` folder. Unfreezing doesn't delete a track's
+  file at once, since the saved project, a backup or Undo may still need it. Saving or closing
+  the project deletes it once none of them uses it any more (if a project document in the
+  folder can't be read, nothing is deleted). Marbble never deletes anything else in the folder.
 
 ### Turning tracks off
 
