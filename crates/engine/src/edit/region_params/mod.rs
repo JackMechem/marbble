@@ -273,8 +273,9 @@ pub fn pass(r: &Region, pass_len: i64, map: &TempoMap) -> Option<Pass> {
 /// quantize moved before its start and the end a positive delay moved later, so it plays
 /// exactly as before. A looping region keeps its length (so the loop keeps its period) and its
 /// notes are kept inside it instead. Notes outside the region, which didn't play, stay where
-/// they are on the timeline and are left out if they would now play. An audio region moves by
-/// its delay (losing whatever would fall before the project start).
+/// they are on the timeline and are left out if they would now play. Neither kind starts before
+/// the project start: a MIDI region grows back to 0 at most, and an audio region moves by its
+/// delay, losing whatever would fall before 0.
 pub fn bake(r: &Region, map: &TempoMap) -> Region {
     // A pattern region bakes as the notes its pattern plays.
     if r.pattern.is_some() {
@@ -304,6 +305,9 @@ pub fn bake(r: &Region, map: &TempoMap) -> Region {
                 let early: Vec<CcEvent> = new_cc.iter().zip(cc.iter()).filter(|(_, c)| inside(c.start)).map(|p| *p.0).collect();
                 window(&r.params, &playing, &early, r.start, r.length, map)
             };
+            // Never before the project start: a note moved there stays before the region's
+            // start, where it doesn't play (nothing plays before 0).
+            let lead = lead.min(r.start.max(0));
             let length = r.length + lead + tail;
             let mut kept = Vec::with_capacity(new_notes.len());
             for ((n, old), was) in new_notes.iter_mut().zip(notes.iter()).zip(played) {

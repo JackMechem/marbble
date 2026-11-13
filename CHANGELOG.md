@@ -15,6 +15,10 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Fixed
 
+- **Apply Region Parameters and Join keep a MIDI region at or after the project start.** A MIDI
+  region near the start whose Delay or Quantize moved its first notes earlier grew past bar 1 when
+  its parameters were applied or it was joined, leaving a region that started before the project.
+  It now stops at the start; notes moved before it stay there, silent, as they were.
 - **Render Ahead uses the whole machine on macOS and Windows.** It started as many threads as
   Settings › Audio › Processing Threads, which Automatic keeps at one there for now, so a heavy
   project's tracks couldn't stay ahead and kept falling back to live. Its threads now follow the

@@ -1238,8 +1238,9 @@ changing its notes. With one or more regions selected, the Inspector's Region se
   the notes as they are stored.
 - Region menu › **Apply Region Parameters** writes the parameters into the regions and resets
   them, as one undo step: the notes move, change pitch, velocity and length; the region grows
-  to keep notes a delay moved past its edges (a looped region keeps its length, its notes are
-  kept inside it); an audio region moves by its delay. The region plays exactly as before.
+  to keep notes a delay moved past its edges, though never back past the project start (a
+  looped region keeps its length, its notes are kept inside it); an audio region moves by its
+  delay. The region plays exactly as before.
 
 ### Track MIDI settings
 
