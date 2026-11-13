@@ -19,6 +19,11 @@ All notable changes to Marbble are recorded here. The format follows
   region near the start whose Delay or Quantize moved its first notes earlier grew past bar 1 when
   its parameters were applied or it was joined, leaving a region that started before the project.
   It now stops at the start; notes moved before it stay there, silent, as they were.
+- **Marbble Synth renders the same every time with the mod wheel up.** Its vibrato LFO ran on
+  from live playing into bounces, freezes and exports, and the mod wheel and expression played live
+  before a render stayed set in it, so two renders of the same project could differ. A render now
+  starts it as a new instance would: vibrato from the start of its cycle, wheel and expression at
+  rest until the project sets them. Live playing sounds as before.
 - **Unfreezing a track no longer deletes the freeze file the saved project plays.** Unfreezing
   and then closing without saving left the saved project's frozen track silent. A freeze file
   Marbble stops playing (the track unfrozen, or the Freeze undone) is now deleted only when the
