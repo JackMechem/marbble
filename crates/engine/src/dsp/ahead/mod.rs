@@ -28,12 +28,14 @@
 //! under a render thread. A render thread that doesn't come back (a plug-in that never returns)
 //! leaves the strip lost: it plays silence, and its control is never freed.
 //!
-//! The audio path's rules hold on the callback's side: no allocation, no lock. Render threads have
-//! a lead to spare and no deadline of their own, so they run at normal priority.
+//! The audio path's rules hold on the callback's side: no allocation, no lock. Render threads run
+//! at real-time priority below the audio threads' where the system allows it, so a busy machine
+//! doesn't starve them ([`thread_setup`]).
 
 mod ring;
 #[cfg(test)]
 mod tests;
+mod thread_setup;
 
 pub(crate) use ring::{FrameRing, Mark};
 
@@ -200,6 +202,7 @@ pub struct AheadShared {
     hazards: Box<[AtomicPtr<AheadCtl>]>,
     parked: Box<[AtomicBool]>,
     threads: Box<[OnceLock<Thread>]>,
+    watch: Arc<thread_setup::Watch>,
     stop: AtomicBool,
     status: Arc<EngineStatus>,
 }
@@ -225,6 +228,7 @@ impl AheadShared {
 pub struct AheadThreads {
     shared: Arc<AheadShared>,
     handles: Vec<JoinHandle<()>>,
+    _watchdog: thread_setup::Watchdog,
 }
 
 impl AheadThreads {
@@ -237,6 +241,7 @@ impl AheadThreads {
             hazards: (0..threads).map(|_| null()).collect(),
             parked: (0..threads).map(|_| AtomicBool::new(false)).collect(),
             threads: (0..threads).map(|_| OnceLock::new()).collect(),
+            watch: Arc::new(thread_setup::Watch::new(threads)),
             stop: AtomicBool::new(false),
             status,
         });
@@ -246,7 +251,8 @@ impl AheadThreads {
                 std::thread::Builder::new().name(format!("marbble-ahead-{}", k + 1)).spawn(move || render_loop(&s, k)).ok()
             })
             .collect();
-        AheadThreads { shared, handles }
+        let _watchdog = thread_setup::Watchdog::start(&shared.watch);
+        AheadThreads { shared, handles, _watchdog }
     }
 
     pub fn shared(&self) -> Arc<AheadShared> {
@@ -289,6 +295,7 @@ fn render_loop(shared: &AheadShared, k: usize) {
     let _ = shared.threads[k].set(std::thread::current());
     let _ftz = crate::dsp::denormals::NoDenormals::new();
     let mut sc = Scratch::default();
+    let mut priority = thread_setup::RenderPriority::start(&shared.watch, k);
     while !shared.stop.load(Ordering::SeqCst) {
         let mut rendered = false;
         for entry in shared.table.iter() {
@@ -296,6 +303,7 @@ fn render_loop(shared: &AheadShared, k: usize) {
             if ctl.is_null() {
                 continue;
             }
+            priority.before_block();
             shared.hazards[k].store(ctl, Ordering::SeqCst);
             // Taken out meanwhile: it may be gone.
             if entry.load(Ordering::SeqCst) == ctl {
@@ -313,7 +321,7 @@ fn render_loop(shared: &AheadShared, k: usize) {
         }
         if !rendered {
             shared.parked[k].store(true, Ordering::SeqCst);
-            std::thread::park_timeout(IDLE_NAP);
+            priority.park(IDLE_NAP);
             shared.parked[k].store(false, Ordering::SeqCst);
         }
     }
