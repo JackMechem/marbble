@@ -5,9 +5,12 @@
 //! `setActive` clear nothing in many (LSP's Multi-Sampler plays its sample to the end whatever
 //! the note-offs, a Dragonfly reverb keeps most of its tail), cycling `setActive` costs
 //! milliseconds a plug-in, and some reload on it (LSP's sampler then loses samples now and then,
-//! #37). So each one is fed silence, with its notes ended, until it has been quiet for a while.
-//! A plug-in that's quiet already costs a few blocks. Renders hold the engine lock, so this runs
-//! off the audio thread.
+//! #37). So each one is fed silence, with its notes ended, until it has been quiet for a while,
+//! or its output has stopped falling below −30 dB (a noise floor: tape hiss, an amp model's hum,
+//! a limiter's dither). A plug-in that's quiet already costs a few blocks, and the whole
+//! ring-out has a time limit. Renders hold the engine lock, so this runs off the audio thread.
+
+use std::time::Duration;
 
 use super::*;
 
@@ -17,8 +20,30 @@ const QUIET: f32 = 1e-6;
 /// plug-ins report no tail at all, whatever they ring for.
 const HOLD_SECS: f64 = 0.1;
 const HOLD_MAX_SECS: f64 = 2.0;
-/// The most it is fed, for one that never goes quiet (it hisses, say, or plays a long sample).
+/// The output's peak is compared window by window, once the hold has passed.
+const WINDOW_SECS: f64 = 0.25;
+/// Below −30 dB, an output that falls less than this from window to window, twice running, is a
+/// noise floor (CHOWTapeModel's Degrade hisses at −40 dB), which never goes quiet; a reverb with a
+/// 25 s decay time falls by this much. Louder, it may be a sample playing at a steady level, which
+/// plays on.
+const FLOOR: f32 = 0.0316;
+const FALLING: f32 = 0.933; // −0.6 dB
+/// The most a plug-in is fed, for one that never goes quiet (a long sample, say).
 const LIMIT_SECS: f64 = 10.0;
+/// The longest a ring-out may take, all plug-ins together. A render has two: one before, one after.
+const BUDGET: Duration = Duration::from_secs(1);
+
+/// How a plug-in's ring-out ended.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum End {
+    Quiet,
+    /// A steady noise floor.
+    Floor,
+    /// `LIMIT_SECS` of it.
+    Limit,
+    /// The ring-out's time ran out.
+    OutOfTime,
+}
 
 impl Engine {
     /// Ends the notes of every VST3 instrument the render plays and feeds it and every VST3
@@ -30,22 +55,40 @@ impl Engine {
         let _ftz = super::denormals::NoDenormals::new();
         let t = TransportInfo { playing: false, recording: false, ..self.transport() };
         let secs = |s: f64| (s * self.sample_rate) as u64;
-        let (hold, hold_max, limit) = (secs(HOLD_SECS), secs(HOLD_MAX_SECS), secs(LIMIT_SECS));
-        let run = |p: &mut PluginProcessor, midi: &[MidiEvent], l: &mut [f32], r: &mut [f32]| {
+        let (hold, hold_max) = (secs(HOLD_SECS), secs(HOLD_MAX_SECS));
+        let rule = Rule { window: secs(WINDOW_SECS), limit: secs(LIMIT_SECS) };
+        let started = Instant::now();
+        let out_of_time = || started.elapsed() >= BUDGET;
+        // The plug-ins cut short, and how many more weren't played out at all.
+        let (mut cut, mut skipped) = (Vec::new(), 0);
+        let mut run = |p: &mut PluginProcessor, midi: &[MidiEvent], l: &mut [f32], r: &mut [f32]| {
             let n = p.max_block().min(l.len());
+            if !cut.is_empty() {
+                // Out of time: only the notes' end, so none hangs.
+                if !midi.is_empty() {
+                    l[..n].fill(0.0);
+                    r[..n].fill(0.0);
+                    p.process(&mut l[..n], &mut r[..n], midi, &t);
+                }
+                skipped += 1;
+                return;
+            }
             let hold = (p.ring_out() as u64).clamp(hold, hold_max);
-            ring_out(n, hold, limit, |first| {
+            let end = ring_out(&rule, n, hold, &out_of_time, |first| {
                 l[..n].fill(0.0);
                 r[..n].fill(0.0);
                 p.process(&mut l[..n], &mut r[..n], if first { midi } else { &[] }, &t);
-                (0..).map_while(|bus| if bus == 0 { Some((&l[..n], &r[..n])) } else { p.output_bus(bus, n) }).any(|(a, b)| loud(a) || loud(b))
+                (0..).map_while(|bus| if bus == 0 { Some((&l[..n], &r[..n])) } else { p.output_bus(bus, n) }).fold(0.0, |m, (a, b)| peak(a).max(peak(b)).max(m))
             });
+            if end.1 == End::OutOfTime {
+                cut.push(p.name().to_string());
+            }
         };
         let (mut l, mut r) = (vec![0.0f32; MAX_BLOCK], vec![0.0f32; MAX_BLOCK]);
         let iso = self.isolate.as_deref();
         for track in &mut self.tracks {
-            let skipped = iso.is_some_and(|i| i.role(track.id) == Role::Skip);
-            if skipped || track.params.off || track.dormant || track.left_out {
+            let outside = iso.is_some_and(|i| i.role(track.id) == Role::Skip);
+            if outside || track.params.off || track.dormant || track.left_out {
                 continue;
             }
             if awake_vst(&mut track.instrument, true).is_some() {
@@ -73,6 +116,9 @@ impl Engine {
                 }
             }
         }
+        if !cut.is_empty() {
+            log::warn!("a render's plug-in tails took over {BUDGET:?}: {} still sounding, {skipped} more not played out", cut.join(", "));
+        }
     }
 }
 
@@ -88,22 +134,52 @@ fn awake_vst(slot: &mut Option<InsertDsp>, instrument: bool) -> Option<&mut Plug
     }
 }
 
-/// Some sample of `a` isn't silence (a NaN counts as sound).
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // The test must also catch NaN, so it can't be `>=`.
-fn loud(a: &[f32]) -> bool {
-    a.iter().any(|s| !(s.abs() < QUIET))
+/// The largest sample of `a`, with a NaN as infinitely loud.
+fn peak(a: &[f32]) -> f32 {
+    a.iter().fold(0.0, |m: f32, s| if s.is_nan() { f32::INFINITY } else { m.max(s.abs()) })
+}
+
+/// When a ring-out stops, in frames: see `ring_out`.
+struct Rule {
+    window: u64,
+    limit: u64,
 }
 
 /// Runs `block`, which plays `n` frames of silence (with its notes ended when told it's the
-/// first) and says whether anything sounded, until nothing has for `hold` frames, or for `limit`
-/// frames in all. Returns the frames it ran.
-fn ring_out(n: usize, hold: u64, limit: u64, mut block: impl FnMut(bool) -> bool) -> u64 {
+/// first) and returns its output's peak, until
+/// - nothing has sounded for `hold` frames,
+/// - or, once `hold` frames have run, the peak over two windows running has stayed below `FLOOR`
+///   and not fallen from the window before (a noise floor),
+/// - or `rule.limit` frames have run, or `out_of_time`.
+///
+/// Returns the frames it ran, and why it stopped.
+fn ring_out(rule: &Rule, n: usize, hold: u64, out_of_time: &dyn Fn() -> bool, mut block: impl FnMut(bool) -> f32) -> (u64, End) {
     let (mut ran, mut quiet) = (0u64, 0u64);
-    while quiet < hold && ran < limit {
-        quiet = if block(ran == 0) { 0 } else { quiet + n as u64 };
+    // The peak of the window being played and of the one before, where the next one starts, and
+    // how many windows running have been flat.
+    let (mut now, mut before, mut next, mut flat) = (0.0f32, None::<f32>, rule.window, 0);
+    loop {
+        let p = block(ran == 0);
         ran += n as u64;
+        quiet = if p < QUIET { quiet + n as u64 } else { 0 };
+        now = now.max(p);
+        if quiet >= hold {
+            return (ran, End::Quiet);
+        }
+        if ran >= next {
+            flat = if now < FLOOR && before.is_some_and(|b| now > b * FALLING) { flat + 1 } else { 0 };
+            if ran >= hold && flat >= 2 {
+                return (ran, End::Floor);
+            }
+            (before, now, next) = (Some(now), 0.0, next + rule.window);
+        }
+        if ran >= rule.limit {
+            return (ran, End::Limit);
+        }
+        if out_of_time() {
+            return (ran, End::OutOfTime);
+        }
     }
-    ran
 }
 
 #[cfg(test)]
