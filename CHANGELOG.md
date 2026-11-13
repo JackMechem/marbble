@@ -15,6 +15,10 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Fixed
 
+- **No crash when the tempo changes while a plug-in hangs with Render Ahead on.** A track
+  whose plug-in stopped responding is given up on and plays silence, but its render thread kept
+  reading the old tempo map, which a tempo change then freed: had the plug-in come back, Marbble
+  could crash or misbehave. The track now keeps the map it was rendering with.
 - **Bounces, exports and freezes start from silence with plug-ins too.** A plug-in instrument
   whose voices play on after their note-offs (LSP's Multi-Sampler plays a sample to its end), or
   a plug-in reverb's tail, rang on through a render: a bounce started soon after Stop could begin
@@ -54,6 +58,12 @@ All notable changes to Marbble are recorded here. The format follows
   project's tracks couldn't stay ahead and kept falling back to live. Its threads now follow the
   machine's cores (8 on an M1 Pro, 14 on an 8-core Intel with hyper-threading), whatever
   Processing Threads says.
+- **Render Ahead no longer makes a buffer late when you locate or edit while playing.** Moving
+  the playhead, or changing a track rendered ahead (a plug-in setting, a region, its
+  automation), waited on the audio thread for each track's render to finish, one after another:
+  clicking about in the ruler of a project with twelve amp models on a busy machine held buffers
+  for up to 190 ms and overloaded. Now the change waits for those renders instead (it lands a few
+  milliseconds later), and the audio never does.
 - **No overload when you add a track to a heavy project.** Adding, removing or reordering
   tracks, or changing an output, a send or a side chain, played the next buffer or two with every
   plug-in on the audio thread alone, until the extra processing threads were told about the new

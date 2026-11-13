@@ -125,6 +125,14 @@ impl Engine {
         self.flush_home_notes();
     }
 
+    /// `flush_all_notes` on the audio thread outside a command (an overload, a block given up
+    /// on), which mustn't wait for a render thread: a strip with one still in it keeps its notes
+    /// until it's home, and the Stop that follows an overload ends them.
+    pub(super) fn flush_notes_now(&mut self) {
+        self.recall_all(false);
+        self.flush_home_notes();
+    }
+
     /// `flush_all_notes` for the strips the callback plays the source of: at the cycle's wrap,
     /// a render thread flushes a lent strip's as its own course wraps (see `ahead/`).
     pub(super) fn flush_home_notes(&mut self) {
@@ -189,10 +197,9 @@ impl Engine {
         self.status.recording.store(self.recording, Ordering::Relaxed);
     }
 
-    /// Takes one command in. Arms of more than a few lines call the methods below, which follow
-    /// in the same order.
+    /// Takes one command in, the strips it changes home (`reclaim_for`). Arms of more than a few
+    /// lines call the methods below, which follow in the same order.
     pub(super) fn apply(&mut self, cmd: Cmd) {
-        self.reclaim_for(&cmd);
         match cmd {
             Cmd::Play { from } => self.start_transport(from, false),
             Cmd::Record { from, punch } => {

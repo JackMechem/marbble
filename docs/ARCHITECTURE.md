@@ -479,7 +479,10 @@ callback's mix plays the block for its position, so a slow block is absorbed by 
   and the cycle's end) and mark each block with its position, so what plays is exactly what live
   would. A command that changes a strip's source, or moves the playhead, takes it back first
   (`reclaim_for`); its blocks go and it plays live from the playhead. A block marked for another
-  position does the same.
+  position does the same. Taking back never waits on the audio thread (#471): the strips go out
+  of the render threads' table together, each trades back once no render thread is in it, and a
+  command whose strips aren't all home yet waits for a later callback (`Ahead::held`, with the
+  commands after it, and nothing is lent meanwhile), so it lands a render's time late at most.
 - A block not ready: lent strips wait until one deadline for the whole callback (`WAIT_SHARE`,
   three quarters of the buffer from its start), never for a render thread to come out of a strip. If no render thread is on the
   strip it's taken back and plays live; if one is, the strip plays silence for that block and the
@@ -492,7 +495,12 @@ callback's mix plays the block for its position, so a slow block is absorbed by 
   device workgroup's limit, whatever Processing Threads says, #469), and keeps live the selected
   track and tracks with a plug-in window open (`Cmd::KeepLive`).
 - Lent strips are a table of pointers; a render thread names the strip it looks at as its hazard,
-  and taking a strip back waits until none does, so a shell is never traded or freed under it.
+  and a strip taken out of the table trades back only once none does, so a shell is never traded
+  or freed under it. One whose render thread doesn't come out within `RECLAIM_WAIT` (a hung
+  plug-in) is lost: it plays silence, and the command goes through. A lost strip is never freed,
+  nor anything its render thread may read if it returns: its shell owns the source's state, and a
+  lent strip holds a count on the tempo map it was lent with, so a new map doesn't free the old
+  one under it (#485).
 
 ### Delay compensation
 
