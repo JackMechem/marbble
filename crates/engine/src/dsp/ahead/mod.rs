@@ -37,7 +37,8 @@
 //! out, and trades back only once no hazard names the strip, so its shell and ring are never freed
 //! or traded under a render thread. A render thread that doesn't come out within [`RECLAIM_WAIT`]
 //! (a plug-in that never returns) leaves the strip lost: it plays silence, and its control is never
-//! freed.
+//! freed, nor what that thread may yet read when it returns: the shell's state, which it owns, and
+//! the tempo map it was lent with, which it holds a count on (#485).
 //!
 //! The audio path's rules hold on the callback's side: no allocation, no lock. Render threads have
 //! a lead to spare and no deadline of their own, so they run at normal priority.
@@ -140,7 +141,10 @@ struct Lending {
     course: Course,
     /// The transport, but its position.
     base: TransportInfo,
-    tempo: *const TempoMap,
+    /// The engine's tempo map, held while lent: a strip lost to a render thread stuck in a plug-in
+    /// keeps it for good, as that thread may yet return and read it after a new map has replaced
+    /// it (#485). Let go when the strip comes home, when the engine still holds it.
+    tempo: Option<Arc<TempoMap>>,
     sr: f64,
     chase: (bool, bool),
     low_latency: bool,
@@ -177,7 +181,7 @@ impl AheadCtl {
         let lending = Lending {
             course: Course::new(0, 1, (false, 0, 0)),
             base: TransportInfo::default(),
-            tempo: std::ptr::null(),
+            tempo: None,
             sr: 48_000.0,
             chase: (true, true),
             low_latency: false,
@@ -340,8 +344,7 @@ fn render_block(c: &AheadCtl, sc: &mut Scratch, status: &EngineStatus) -> bool {
     if c.ring.buffered() + n > l.lead {
         return false;
     }
-    // SAFETY: the engine's tempo map, which isn't replaced while anything is lent.
-    let tempo = unsafe { &*l.tempo };
+    let Some(tempo) = l.tempo.as_deref() else { return false };
     let transport = transport_at(tempo, &l.base, pos);
     let cx = BlockCtx {
         n,
@@ -506,8 +509,15 @@ impl TrackDsp {
         self.load.ahead(false);
         // SAFETY: out of the table, and no render thread names it: none can come in again (one
         // that read its entry before it was taken out finds it gone once its hazard is up), so the
-        // shell is the callback's.
-        trade(self, unsafe { &mut *ctl.shell.get() });
+        // shell and the lending are the callback's.
+        let tempo = unsafe {
+            trade(self, &mut *ctl.shell.get());
+            (*ctl.lending.get()).tempo.take()
+        };
+        // A command that replaces the tempo map waits for every lent strip to come home or be
+        // lost, so the engine still holds this one: letting go of it frees nothing.
+        debug_assert!(tempo.as_ref().is_none_or(|t| Arc::strong_count(t) > 1));
+        drop(tempo);
         true
     }
 
@@ -527,7 +537,7 @@ impl TrackDsp {
             *ctl.lending.get() = Lending {
                 course,
                 base: engine.base,
-                tempo: engine.tempo,
+                tempo: Some(engine.tempo.clone()),
                 sr: engine.sr,
                 chase: engine.chase,
                 low_latency: engine.low_latency,
@@ -567,13 +577,12 @@ fn pause(since: Instant) {
 /// What a strip is lent with, from the engine.
 struct LendFrom<'a> {
     base: TransportInfo,
-    tempo: *const TempoMap,
+    tempo: &'a Arc<TempoMap>,
     sr: f64,
     chase: (bool, bool),
     low_latency: bool,
     auto_monitor: bool,
     lead: usize,
-    _engine: std::marker::PhantomData<&'a ()>,
 }
 
 /// What came of looking for a lent strip's block.
@@ -828,13 +837,12 @@ impl Engine {
                 }
                 let from = LendFrom {
                     base,
-                    tempo: Arc::as_ptr(&self.tempo),
+                    tempo: &self.tempo,
                     sr: self.sample_rate,
                     chase: self.chase,
                     low_latency: self.pdc.low_latency,
                     auto_monitor: self.auto_monitor,
                     lead,
-                    _engine: std::marker::PhantomData,
                 };
                 if !self.tracks[ti].lend(&shared, course, from) {
                     break;

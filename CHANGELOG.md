@@ -15,6 +15,10 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Fixed
 
+- **No crash when the tempo changes while a plug-in hangs with Render Ahead on.** A track
+  whose plug-in stopped responding is given up on and plays silence, but its render thread kept
+  reading the old tempo map, which a tempo change then freed: had the plug-in come back, Marbble
+  could crash or misbehave. The track now keeps the map it was rendering with.
 - **Render Ahead uses the whole machine on macOS and Windows.** It started as many threads as
   Settings › Audio › Processing Threads, which Automatic keeps at one there for now, so a heavy
   project's tracks couldn't stay ahead and kept falling back to live. Its threads now follow the

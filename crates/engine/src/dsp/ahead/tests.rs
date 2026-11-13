@@ -516,6 +516,54 @@ fn a_command_for_a_strip_whose_render_thread_hangs_gives_it_up_without_holding_t
     drop(threads);
 }
 
+static HUNG_TEMPO: AtomicBool = AtomicBool::new(false);
+
+#[test]
+fn a_strip_lost_across_a_tempo_change_keeps_the_map_its_render_thread_reads() {
+    // A new tempo map replaced the old one, which went out with the garbage, while a strip lost to
+    // a hung plug-in had its render thread still in it: once out, that thread read the freed map
+    // for the rest of its block (#485).
+    static INFO: EffectInfo = EffectInfo {
+        id: "test:hung-tempo",
+        name: "Hung",
+        category: "Utility",
+        params: &[],
+        meters: &[],
+        sidechain: false,
+        new: |_| Box::new(Holder(&HUNG_TEMPO)),
+    };
+    let (mut r, threads, mut buf) = lent_rig(&INFO, 1, 0.05);
+    let _release = Release(&HUNG_TEMPO);
+    HUNG_TEMPO.store(true, Ordering::SeqCst);
+    r.engine.process(&[], 0, &mut buf, 2);
+    until_rendering(&r);
+
+    let old = Arc::downgrade(&r.engine.tempo);
+    r.tx.push(Cmd::Tempo(Arc::new(TempoMap::constant(SR, 90.0, 4, 4)))).ok().unwrap();
+    let lost = |r: &crate::dsp::tests::Rig| r.engine.tracks[0].ahead.as_ref().is_some_and(|a| a.lost());
+    let started = std::time::Instant::now();
+    while !(lost(&r) && r.engine.tempo.bpm_at(0.0) == 90.0) && started.elapsed() < 4 * RECLAIM_WAIT {
+        callbacks(&mut r, &mut buf, 1, 0);
+    }
+    assert!(lost(&r), "the strip is lost");
+    assert_eq!(r.engine.tempo.bpm_at(0.0), 90.0, "the new tempo applied");
+    // What the engine let go of is dropped, as the session's thread does.
+    while r.garbage.pop().is_ok() {}
+    assert!(old.upgrade().is_some(), "the map the render thread was lent with outlives the change");
+
+    // Out of its plug-in, the render thread finishes its block with that map.
+    HUNG_TEMPO.store(false, Ordering::SeqCst);
+    let busy = |r: &crate::dsp::tests::Rig| r.engine.tracks[0].ahead.as_ref().is_some_and(|a| a.busy.load(Ordering::SeqCst));
+    let until = std::time::Instant::now() + std::time::Duration::from_secs(2);
+    while busy(&r) && std::time::Instant::now() < until {
+        std::thread::sleep(std::time::Duration::from_millis(1));
+    }
+    assert!(!busy(&r), "the render thread came out");
+    r.tx.push(Cmd::Stop).ok().unwrap();
+    r.engine.process(&[], 0, &mut buf, 2);
+    drop(threads);
+}
+
 static SLOW_RENDER: AtomicBool = AtomicBool::new(false);
 
 #[test]

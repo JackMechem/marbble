@@ -497,7 +497,10 @@ callback's mix plays the block for its position, so a slow block is absorbed by 
 - Lent strips are a table of pointers; a render thread names the strip it looks at as its hazard,
   and a strip taken out of the table trades back only once none does, so a shell is never traded
   or freed under it. One whose render thread doesn't come out within `RECLAIM_WAIT` (a hung
-  plug-in) is lost: it plays silence, and the command goes through.
+  plug-in) is lost: it plays silence, and the command goes through. A lost strip is never freed,
+  nor anything its render thread may read if it returns: its shell owns the source's state, and a
+  lent strip holds a count on the tempo map it was lent with, so a new map doesn't free the old
+  one under it (#485).
 
 ### Delay compensation
 
