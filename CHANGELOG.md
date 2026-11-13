@@ -15,6 +15,9 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Fixed
 
+- **File › Revert to tells apart backups saved in the same minute.** Two saves within a minute
+  gave two items that both read, say, "Today 16:52". Those now show the seconds ("Today
+  16:52:07"); the rest keep the plain time.
 - **Unfreezing a track no longer deletes the freeze file the saved project plays.** Unfreezing
   and then closing without saving left the saved project's frozen track silent. A freeze file
   Marbble stops playing (the track unfrozen, or the Freeze undone) is now deleted only when the
