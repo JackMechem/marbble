@@ -1238,8 +1238,9 @@ changing its notes. With one or more regions selected, the Inspector's Region se
   the notes as they are stored.
 - Region menu › **Apply Region Parameters** writes the parameters into the regions and resets
   them, as one undo step: the notes move, change pitch, velocity and length; the region grows
-  to keep notes a delay moved past its edges (a looped region keeps its length, its notes are
-  kept inside it); an audio region moves by its delay. The region plays exactly as before.
+  to keep notes a delay moved past its edges, though never back past the project start (a
+  looped region keeps its length, its notes are kept inside it); an audio region moves by its
+  delay. The region plays exactly as before.
 
 ### Track MIDI settings
 
@@ -3367,7 +3368,8 @@ edit or mix without a copy of the whole project.
 Each save keeps the version it replaces as a backup, separately for each alternative, up to
 Settings › General › Backups (10 by default; 0 keeps only the last one, as
 `project.json.bak`). **File › Revert to** lists them by when they were saved ("Today 14:32",
-"Yesterday 09:10", then the date), newest first. Choosing one asks, then loads it; the
+"Yesterday 09:10", then the date), newest first, with the seconds for backups saved in the
+same minute ("Today 14:32:05"). Choosing one asks, then loads it; the
 project as it was (unsaved changes included) becomes a backup itself, so reverting to it
 undoes the revert.
 
