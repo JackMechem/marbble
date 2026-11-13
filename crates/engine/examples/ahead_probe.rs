@@ -66,7 +66,14 @@ fn keep_playing(s: &mut Session, secs: f64, label: &str) {
         }
     }
     let (o1, m1) = (s.status.overloads.load(Ordering::Relaxed), s.status.ahead_misses.load(Ordering::Relaxed));
-    println!("{:>8.3} {label:<28} load {:>3.0}% overloads +{} misses +{} pos={:.3}s", probe::now_us() as f64 / 1e6, f32::from_bits(s.status.cpu_load.load(Ordering::Relaxed)) * 100.0, o1 - o0, m1 - m0, s.status.pos.load(Ordering::Relaxed) as f64 / SR);
+    println!(
+        "{:>8.3} {label:<28} load {:>3.0}% overloads +{} misses +{} pos={:.3}s",
+        probe::now_us() as f64 / 1e6,
+        f32::from_bits(s.status.cpu_load.load(Ordering::Relaxed)) * 100.0,
+        o1 - o0,
+        m1 - m0,
+        s.status.pos.load(Ordering::Relaxed) as f64 / SR
+    );
 }
 
 fn mark(code: u64) {
@@ -146,7 +153,9 @@ fn main() {
         }
         // Play from a position after being stopped `wait` s, several times.
         "starts" => {
-            for (i, (pos, wait)) in [(244.0, 1.5), (244.0, 8.0), (257.5, 1.5), (257.5, 8.0), (120.0, 8.0), (60.0, 1.5), (257.5, 8.0), (244.0, 8.0)].iter().enumerate() {
+            for (i, (pos, wait)) in
+                [(244.0, 1.5), (244.0, 8.0), (257.5, 1.5), (257.5, 8.0), (120.0, 8.0), (60.0, 1.5), (257.5, 8.0), (244.0, 8.0)].iter().enumerate()
+            {
                 run_for(&mut s, *wait, &format!("stopped {wait} s"));
                 play_from(&mut s, f(*pos), 100 + i as u64);
                 run_for(&mut s, 3.0, &format!("play from {pos} s"));
