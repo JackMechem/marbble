@@ -2,7 +2,7 @@
 //! volume and pan lanes, Off mode, writing in Write and Touch modes, and undo.
 //! usage: automation_check <audio file> <scratch dir> [<plug-in name> <parameter name>]
 //! With a plug-in (from the scanned plug-in cache), also automates one of its parameters.
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use daw_engine::audio_io::AudioConfig;
 use daw_engine::edit::automation::value_at;
@@ -68,6 +68,20 @@ fn wait(s: &mut Session, ms: u64) {
     }
 }
 
+/// Has `idle` write the value being written where the playhead is, and waits (up to a second)
+/// for the playhead to move past that, then returns a position read before it: the lane holds
+/// the value up to there. Without it a move can land where `idle` last wrote, and the lane then
+/// ramps to it from the point before, which on the null device can be seconds of song earlier.
+fn hold(s: &mut Session) -> i64 {
+    let before = s.position();
+    s.idle();
+    let (written, begun) = (s.position(), Instant::now());
+    while s.position() <= written && s.is_playing() && begun.elapsed() < Duration::from_secs(1) {
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    before
+}
+
 fn main() {
     let mut args = std::env::args().skip(1);
     let tone = args.next().expect("audio file");
@@ -113,25 +127,27 @@ fn main() {
     );
     s.clear_automation(a, None);
 
-    // Write: fader moves while playing become a lane, in one undo step.
+    // Write: fader moves while playing become a lane, in one undo step. Each value is read back
+    // halfway between the playhead just after its move and where `hold` saw it still held: the
+    // null device runs the engine far faster than real time, so positions read a moment off from
+    // a move can be far from where it landed.
     s.set_auto_mode(a, AutoMode::Write);
     let undo_before = s.undo_label();
-    let mut marks = Vec::new();
+    let mut holds = Vec::new();
     pass(&mut s, 0, |s| {
         wait(s, 60);
-        s.update_track_linked(a, TrackPatch { volume_db: Some(-20.0), ..Default::default() });
-        marks.push(s.position());
-        wait(s, 80);
-        s.update_track_linked(a, TrackPatch { volume_db: Some(-10.0), ..Default::default() });
-        marks.push(s.position());
-        wait(s, 80);
-        marks.push(s.position());
+        for v in [-20.0, -10.0] {
+            s.update_track_linked(a, TrackPatch { volume_db: Some(v), ..Default::default() });
+            let moved = s.position();
+            wait(s, 80);
+            holds.push((moved, hold(s)));
+        }
     });
     let vol = lane(&s, a, &AutoParam::Volume);
-    println!("written volume lane ({} points): {:?}", vol.len(), vol.iter().take(12).collect::<Vec<_>>());
+    println!("written volume lane ({} points): {:?} (held {holds:?})", vol.len(), vol.iter().take(12).collect::<Vec<_>>());
     let at = |p: i64| value_at(&vol, p).unwrap_or(f32::NAN);
-    let mid1 = (marks[0] + marks[1]) / 2;
-    let mid2 = (marks[1] + marks[2]) / 2;
+    let mid1 = (holds[0].0 + holds[0].1) / 2;
+    let mid2 = (holds[1].0 + holds[1].1) / 2;
     check(
         &format!("Write records the moves ({:.1} dB at start, {:.1} dB, then {:.1} dB)", at(0), at(mid1), at(mid2)),
         vol.len() >= 3 && (at(0) - 0.0).abs() < 0.01 && (at(mid1) + 20.0).abs() < 0.5 && (at(mid2) + 10.0).abs() < 0.5,
@@ -147,33 +163,50 @@ fn main() {
     s.redo();
     check("redo brings it back", lane(&s, a, &AutoParam::Volume).len() == vol.len());
 
-    // Touch: writes while held, then returns to the existing curve.
+    // Touch: writes while held, then returns to the existing curve. Each step is placed by the
+    // playhead read on the side of it that bounds it (as Write's moves are): the touch lands at
+    // or after `pressed`, the move to -30 dB at or before `held.0`, and the release between
+    // `held.1` and `released`.
     s.update_track_linked(a, TrackPatch { volume_db: Some(0.0), ..Default::default() });
     s.set_automation_lane(a, AutoParam::Volume, pts(&[(0, -6.0)]));
     s.set_auto_mode(a, AutoMode::Touch);
-    let mut span = (0, 0);
-    let mut after = 0;
+    let (mut pressed, mut held, mut released, mut after) = (0, (0, 0), 0, 0);
     pass(&mut s, 0, |s| {
         wait(s, 40);
+        pressed = s.position();
         s.automation_touch(a, AutoParam::Volume, true);
         let picked = s.project.track(a).unwrap().volume_db;
         println!("touch picked the fader up at {picked:.1} dB");
-        span.0 = s.position();
         s.update_track_linked(a, TrackPatch { volume_db: Some(-30.0), ..Default::default() });
+        held.0 = s.position();
         wait(s, 80);
-        span.1 = s.position();
+        held.1 = s.position();
         s.automation_touch(a, AutoParam::Volume, false);
+        released = s.position();
         wait(s, 80);
         after = s.position();
     });
     let vol = lane(&s, a, &AutoParam::Volume);
-    println!("touched lane: {vol:?} (held {span:?}, stopped near {after})");
+    println!("touched lane: {vol:?} (pressed at {pressed}, held {held:?}, released by {released}, stopped near {after})");
     let at = |p: i64| value_at(&vol, p).unwrap_or(f32::NAN);
+    // Where the release landed: the end of the written -30 dB stretch.
+    let let_go = vol.iter().rev().find(|p| (p.value + 30.0).abs() < 0.5).map_or(-1, |p| p.pos);
+    let ms = |frames: i64| frames as f64 * 1000.0 / s.project.sample_rate as f64;
     // Touch glides back over 0.2 s.
-    let back = span.1 + s.project.sample_rate as i64 * 3 / 10;
+    let back = released + s.project.sample_rate as i64 * 3 / 10;
     check(
-        &format!("Touch writes while held and returns ({:.1} before, {:.1} held, {:.1} after)", at(span.0 / 2), at((span.0 + span.1) / 2), at(back)),
-        (at(span.0 / 2) + 6.0).abs() < 0.01 && (at((span.0 + span.1) / 2) + 30.0).abs() < 0.5 && (at(back) + 6.0).abs() < 0.01,
+        &format!(
+            "Touch writes while held and returns ({:.1} before, {:.1} held, {:.1} after; let go at {let_go}, {:.2} ms of song after the playhead read before the release, {:.2} ms before the one after)",
+            at(pressed / 2),
+            at((held.0 + held.1) / 2),
+            at(back),
+            ms(let_go - held.1),
+            ms(released - let_go),
+        ),
+        (at(pressed / 2) + 6.0).abs() < 0.01
+            && (at((held.0 + held.1) / 2) + 30.0).abs() < 0.5
+            && (at(back) + 6.0).abs() < 0.01
+            && (held.1..=released).contains(&let_go),
     );
 
     // Lanes survive undo of an unrelated edit, and reach a rebuilt engine through restore().
