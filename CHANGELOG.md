@@ -12,6 +12,7 @@ All notable changes to Marbble are recorded here. The format follows
   its own copy of every note and controller in the project. Regions an edit leaves alone are now
   shared, so 100 undo steps in a project of 150,000 notes take 26 MB instead of 432 MB, and a note
   edit takes 0.08 ms instead of 1.6 ms.
+
 ### Fixed
 
 - **Unfreezing a track no longer deletes the freeze file the saved project plays.** Unfreezing
@@ -28,6 +29,11 @@ All notable changes to Marbble are recorded here. The format follows
   Last Recording, then Save As, then closing deleted the take from the old project's folder,
   though the old project still played it. Only files in the project's own folder that nothing
   names are deleted now, and the check reads every document in the folder as a project.
+- **Render Ahead uses the whole machine on macOS and Windows.** It started as many threads as
+  Settings › Audio › Processing Threads, which Automatic keeps at one there for now, so a heavy
+  project's tracks couldn't stay ahead and kept falling back to live. Its threads now follow the
+  machine's cores (8 on an M1 Pro, 14 on an 8-core Intel with hyper-threading), whatever
+  Processing Threads says.
 - **No overload when you add a track to a heavy project.** Adding, removing or reordering
   tracks, or changing an output, a send or a side chain, played the next buffer or two with every
   plug-in on the audio thread alone, until the extra processing threads were told about the new

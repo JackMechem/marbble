@@ -185,6 +185,18 @@ pub fn automatic(t: &Topology, suggested: Option<u32>) -> usize {
     n.min(suggested.map_or(usize::MAX, |s| s as usize)).clamp(1, AUTOMATIC_MAX)
 }
 
+/// How many render threads render ahead starts (#448, #469), whatever Processing Threads says:
+/// they aren't real time, don't join the device's workgroup, and the callback never waits on them
+/// past its deadline, so only the machine sets their number. As many as Automatic without a
+/// workgroup's limit (every hardware thread of the performance cores but one core's on Linux, the
+/// performance cores on macOS) or, where the cores aren't counted (Windows, which keeps Automatic
+/// on one thread), every logical CPU but one. At most [`AUTOMATIC_MAX`].
+pub fn render_threads(t: &Topology) -> usize {
+    let counted = t.fast_threads > 0 || t.fast_cores > 1;
+    let n = if counted { automatic(t, None) } else { t.logical.saturating_sub(1) };
+    n.clamp(1, AUTOMATIC_MAX)
+}
+
 /// The threads a setting means here, `suggested` as for [`automatic`]. A number is taken at its
 /// word, up to what the setting offers (more threads than cores works, just not well).
 pub fn resolve(setting: u32, t: &Topology, suggested: Option<u32>) -> usize {
@@ -324,5 +336,24 @@ mod tests {
         assert_eq!((c.automatic, c.max), (14, 16));
         let c = choices(&Topology { logical: 2, fast_cores: 1, ..Default::default() }, None);
         assert_eq!((c.automatic, c.max), (1, 2));
+    }
+
+    #[test]
+    fn render_threads_follow_the_machine_not_the_setting() {
+        // Linux, 8 hyper-threaded performance cores and 8 efficiency cores: as Automatic.
+        let t = detect_linux(24, Some("0-15\n".into()), Some("0-23\n".into()), &hybrid_siblings);
+        assert_eq!(render_threads(&t), 14);
+        // An M1, whose workgroup holds Automatic to what it suggests: render threads aren't in it.
+        let t = detect_macos(10, Some(8), Some(2), Some(10));
+        assert_eq!(render_threads(&t), 8);
+        assert_eq!(automatic(&t, Some(3)), 3);
+        // Windows counts nothing and keeps Automatic on one thread: every logical CPU but one.
+        let t = Topology { logical: 12, fast_cores: 1, ..Default::default() };
+        assert_eq!((automatic(&t, None), render_threads(&t)), (1, 11));
+        // Bounded on a big machine, and at least one on a small one.
+        assert_eq!(render_threads(&Topology { logical: 128, fast_cores: 1, ..Default::default() }), AUTOMATIC_MAX);
+        assert_eq!(render_threads(&Topology { logical: 128, fast_cores: 64, fast_threads: 128, ..Default::default() }), AUTOMATIC_MAX);
+        assert_eq!(render_threads(&Topology { logical: 1, fast_cores: 1, ..Default::default() }), 1);
+        assert_eq!(render_threads(&Topology { logical: 2, fast_cores: 2, ..Default::default() }), 1);
     }
 }
