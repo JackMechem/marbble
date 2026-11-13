@@ -281,6 +281,20 @@ fn bake_moves_audio_by_its_delay() {
 }
 
 #[test]
+fn bake_never_starts_a_midi_region_before_the_project_start() {
+    // 10 ms early is 480 samples, more than the region's 100 from the start.
+    let map = map120();
+    let r = midi_region(100, Q, vec![note(0, 1000, 60, 100), note(Q / 2, 100, 62, 100)], params(|p| (p.delay, p.delay_ms) = (-10.0, true)));
+    let b = bake(&r, &map);
+    assert_eq!((b.start, b.end()), (0, r.end()));
+    // What can play, from 0 on, is unchanged; the note moved before 0 stays there.
+    let from_0 = |r: &Region| heard(r, &map).into_iter().filter(|n| n.0 >= 0).collect::<Vec<_>>();
+    assert_eq!(from_0(&b), from_0(&r));
+    let RegionContent::Midi { notes, .. } = &b.content else { unreachable!() };
+    assert_eq!(starts(notes), vec![-380, Q / 2 - 380]);
+}
+
+#[test]
 fn serde_defaults() {
     let p: RegionParams = serde_json::from_str("{\"transpose\": 5}").unwrap();
     assert_eq!(p, params(|p| p.transpose = 5));
