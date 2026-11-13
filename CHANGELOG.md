@@ -15,6 +15,14 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Fixed
 
+- **Bounces, exports and freezes start from silence with plug-ins too.** A plug-in instrument
+  whose voices play on after their note-offs (LSP's Multi-Sampler plays a sample to its end), or
+  a plug-in reverb's tail, rang on through a render: a bounce started soon after Stop could begin
+  with what was still sounding, and playing after a render began with the end of the render. Each
+  plug-in is now played out with silence around a render until it's quiet, or down to its noise
+  floor (tape hiss, say), which adds about a millisecond to a render when nothing rings and at most
+  a second before and after one. Delay compensation no longer carries the end of a render into
+  playback either.
 - **File › Revert to tells apart backups saved in the same minute.** Two saves within a minute
   gave two items that both read, say, "Today 16:52". Those now show the seconds ("Today
   16:52:07"); the rest keep the plain time.

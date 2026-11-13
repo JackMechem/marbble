@@ -209,6 +209,8 @@ impl Engine {
         self.pdc.low_latency = false;
         self.set_effects_offline(true);
         self.reset_effects();
+        // A VST3 plays out what it had left from playing live (before waking: one asleep is quiet).
+        self.ring_out_plugins();
         // Every plug-in awake (see `idle/`), so each render starts the same. Live, a locate leaves
         // them asleep: waking them all at once only makes a heavy block.
         let slots = self.tracks.iter_mut().flat_map(|t| t.inserts.iter_mut()).chain(self.master_inserts.iter_mut());
@@ -220,11 +222,8 @@ impl Engine {
         // moved by hand since), and controllers and notes held over `from` are chased.
         self.resend_automation();
         self.chase_all_cc();
+        self.clear_delay_lines();
         for t in &mut self.tracks {
-            if let Some(d) = &mut t.delay {
-                d.clear();
-            }
-            t.feed.clear();
             // No glide left over from playing live: every render starts the same.
             t.pdc_taps = super::pdc::PdcTaps::at(&t.pdc);
         }
@@ -235,8 +234,10 @@ impl Engine {
     fn finish_render(&mut self, saved: Saved) {
         self.flush_all_notes();
         // Live playback starts clean too, not with the render's ringing tail.
+        self.ring_out_plugins();
         self.reset_effects();
         self.silence_instruments();
+        self.clear_delay_lines();
         self.set_effects_offline(false);
         // What the render played isn't for the meters, nor for the clip indicators they feed.
         for t in &self.tracks {
@@ -260,6 +261,17 @@ impl Engine {
         self.status.playing.store(self.playing, Ordering::Relaxed);
         self.status.recording.store(self.recording, Ordering::Relaxed);
         self.status.cpu_load.store(self.load.to_bits(), Ordering::Relaxed);
+    }
+
+    /// Forgets the audio on its way through delay compensation, on the strips and the
+    /// instruments' extra outputs.
+    fn clear_delay_lines(&mut self) {
+        for t in &mut self.tracks {
+            if let Some(d) = &mut t.delay {
+                d.clear();
+            }
+            t.feed.clear();
+        }
     }
 
     /// Tells every built-in effect whether a render is running (see `Effect::set_offline`).

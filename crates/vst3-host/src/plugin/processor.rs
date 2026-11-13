@@ -11,6 +11,11 @@ impl PluginProcessor {
         self.max_block
     }
 
+    /// The plug-in's name, for messages.
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
     /// Queues a parameter change (normalized value) for the next `process` call, at a sample
     /// offset within that block. Points for one parameter must come in offset order; the
     /// plug-in ramps linearly between them. Never allocates: changes past the queue's

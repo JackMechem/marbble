@@ -120,6 +120,7 @@ pub fn instantiate_keyed(desc: &PluginDescriptor, sample_rate: f64, max_block: u
             edit_l: vec![0.0; EDIT_BLOCK.min(max_block)],
             edit_r: vec![0.0; EDIT_BLOCK.min(max_block)],
             ring_out: ring_out(&processor),
+            name: desc.name.clone(),
         };
         let ctrl_half = PluginController {
             desc: desc.clone(),
