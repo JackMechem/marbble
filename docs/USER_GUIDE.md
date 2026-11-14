@@ -1608,7 +1608,9 @@ those pop-ups) to reopen a group's settings:
   all out), and **Editing (Selection)** (selecting a region selects the regions at the same
   place on the others, Shift-clicking it again deselects them all, and
   their take folders switch and comp together; see
-  [Take folders and comping](#7-take-folders-and-comping)).
+  [Take folders and comping](#7-take-folders-and-comping)), and, off unless you tick them,
+  **Color** (a new track colour for one is the colour for all), **Input Monitoring** (on the
+  audio tracks), **Automation Mode** and **Hide**.
 - **Delete Group** dissolves it. A group nobody is in is removed.
 - **Groups…** (Track › Groups…, the track menu › Group, or a Group slot) lists every group with
   its on/off, colour, name, member count and links side by side, to compare and change them in

@@ -4,7 +4,7 @@ Every feature of Logic Pro, by area, and how far Marbble has it. This page is ge
 `scripts/features.py` from the files in `features/`: change those, in the pull request that
 changes the feature. [ROADMAP.md](../ROADMAP.md) says what beta needs and what's being worked on.
 
-Marbble has **282** of 732 features, and a simpler version of 95 more; 355 are missing. Beta needs 249 of them, and 55 of those are still to do.
+Marbble has **283** of 732 features, and a simpler version of 95 more; 354 are missing. Beta needs 249 of them, and 55 of those are still to do.
 
 ✓ done · ◐ partial: the note says what's missing · ○ missing · **Beta.** needed for beta and not done yet
 
@@ -14,7 +14,7 @@ Marbble has **282** of 732 features, and a simpler version of 95 more; 355 are m
 | [Projects](#projects) | 19 | 3 | 13 | 54% |
 | [Transport and tempo sync](#transport-and-tempo-sync) | 12 | 1 | 15 | 43% |
 | [Recording](#recording) | 37 | 2 | 8 | 79% |
-| [Tracks](#tracks) | 20 | 3 | 11 | 59% |
+| [Tracks](#tracks) | 21 | 3 | 10 | 62% |
 | [Arranging](#arranging) | 61 | 19 | 35 | 53% |
 | [Editors](#editors) | 32 | 12 | 53 | 33% |
 | [Time and pitch](#time-and-pitch) | 0 | 0 | 38 | 0% |
@@ -308,12 +308,13 @@ Recording audio and instruments, takes and comping. 37 of 47 done.
 
 ## Tracks
 
-Creating and organising tracks and their headers. 20 of 34 done.
+Creating and organising tracks and their headers. 21 of 34 done.
 
 ### Work with tracks
 
-12 of 21 done.
+13 of 21 done.
 
+- ✓ Hide tracks through groups
 - ✓ New Tracks dialog: audio and software instrument tracks
 - ✓ Create tracks by dropping audio or MIDI files on the headers or below the tracks
 - ✓ New Track with Same Settings
@@ -334,7 +335,6 @@ Creating and organising tracks and their headers. 20 of 34 done.
 - ○ Rename several tracks at once ([#342](https://github.com/JackMechem/marbble/issues/342)) **Beta.**
 - ○ Sort tracks ([#343](https://github.com/JackMechem/marbble/issues/343)) **Beta.**
 - ○ Automatically zoom the focused track
-- ○ Hide tracks through groups
 
 ### Track header controls
 
@@ -776,7 +776,7 @@ The Mixer, automation, surround and Dolby Atmos. 38 of 89 done.
 - ✓ Multi-output instruments
 - ✓ Clip indicators with reset
 - ◐ VCA faders and VCA groups: VCA strips with level, mute, names, colours and nesting, a VCA slot on each strip and an offset mark on its fader; no VCA automation, VCA solo, or VCAs made from groups.
-- ◐ Groups: Volume, pan, mute, solo, record, selection and editing links, per-group on/off and the Group Clutch, a Group slot on strips and in the inspector, and a Groups window; missing are several groups per strip, automation, send and colour links, and copy/paste of group settings.
+- ◐ Groups: Volume, pan, mute, solo, record, selection and editing links, per-group on/off and the Group Clutch, a Group slot on strips and in the inspector, a Groups window, and colour, input monitoring, automation mode and hide links; missing are several groups per strip, group automation, send links, and copy/paste of group settings.
 - ◐ Narrow and wide strips, long faders, show or hide strip components: Narrow, Normal and Wide strips, and a width of its own for any strip; no long faders, and strip components can't be shown or hidden.
 - ◐ Enter and exit folder stacks in the Mixer: Stacks sit under a bracket and collapse in the Mixer; no entering a folder stack as its own view.
 - ◐ Gain-reduction meter on the strip: For the built-in dynamics effects; VST3s don't report it.

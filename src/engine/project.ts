@@ -214,6 +214,11 @@ export interface Group {
   record: boolean;
   select: boolean;
   editing: boolean;
+  /** Track colour, input monitoring, automation mode and hiding change on every member. */
+  track_color: boolean;
+  monitor: boolean;
+  auto_mode: boolean;
+  hide: boolean;
 }
 
 export interface Project {

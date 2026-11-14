@@ -28,6 +28,10 @@ impl Session {
             record: true,
             select: true,
             editing: true,
+            track_color: false,
+            monitor: false,
+            auto_mode: false,
+            hide: false,
         });
         self.set_track_group(ids, Some(id));
         id
@@ -78,6 +82,19 @@ impl Session {
         self.project.tracks.iter().filter(|t| t.group == Some(g.id) && t.id != id).map(|t| t.id).collect()
     }
 
+    /// `ids` and the members `link` reaches from them, each once.
+    pub(crate) fn with_group_peers(&self, ids: &[Id], link: impl Fn(&Group) -> bool) -> Vec<Id> {
+        let mut out = ids.to_vec();
+        for &id in ids {
+            for p in self.group_peers(id, &link) {
+                if !out.contains(&p) {
+                    out.push(p);
+                }
+            }
+        }
+        out
+    }
+
     /// `update_track` as the user means it: groups pass shared changes on to their other
     /// members (volume and pan as relative moves, the switches as the same state).
     pub fn update_track_linked(&mut self, id: Id, patch: TrackPatch) {
@@ -109,6 +126,12 @@ impl Session {
         }
         if let Some(v) = patch.armed {
             add(self.group_peers(id, |g| g.record), &|p, pt| p.armed = Some(v && !pt.kind.is_stack()));
+        }
+        if let Some(v) = patch.monitor {
+            add(self.group_peers(id, |g| g.monitor), &|p, pt| p.monitor = (pt.kind == TrackKind::Audio).then_some(v));
+        }
+        if let Some(v) = &patch.color {
+            add(self.group_peers(id, |g| g.track_color), &|p, _| p.color = Some(v.clone()));
         }
         // The values before the move, for automation writing.
         let before = |p: &Project, tid: Id, patch: &TrackPatch| {

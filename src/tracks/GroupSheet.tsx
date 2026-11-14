@@ -18,6 +18,10 @@ export const GROUP_LINKS: [GroupLink, string, string, string][] = [
   ["record", "Record Enable", "R", "Record-enabling one enables them all"],
   ["select", "Track Selection", "Sel", "Clicking one track selects them all"],
   ["editing", "Editing (Selection)", "Edit", "Selecting a region selects the regions at the same place on the other tracks"],
+  ["track_color", "Color", "Col", "Changing one track's colour changes them all"],
+  ["monitor", "Input Monitoring", "Mon", "Input monitoring switches together on the audio tracks"],
+  ["auto_mode", "Automation Mode", "Auto", "Choosing one track's automation mode sets them all"],
+  ["hide", "Hide", "Hide", "Hiding or showing one track hides or shows them all"],
 ];
 
 /** Logic's Group Settings: name, colour and what the group's tracks share. */
