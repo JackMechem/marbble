@@ -206,6 +206,8 @@ pub struct Session {
     meters: HashMap<Id, Arc<Meter>>,
     pub plugins: Vec<PluginDescriptor>,
     pub selected: Option<Id>,
+    /// The group clutch is engaged: no group links anything (`tracks/groups/`).
+    pub groups_clutched: bool,
     rec_punch: Option<i64>,
     analyzer_rx: rtrb::Consumer<f32>,
     analyzer_buf: Vec<f32>,
@@ -433,6 +435,7 @@ impl Session {
             meters: HashMap::new(),
             plugins,
             selected: None,
+            groups_clutched: false,
             rec_punch: None,
             analyzer_rx: an_rx,
             analyzer_buf: vec![0.0; crate::fx::channel_eq::filters::FFT_SIZE],

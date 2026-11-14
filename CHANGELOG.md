@@ -6,6 +6,13 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Group Clutch (Shift+G).** As in Logic, it suspends every group at once, so one member's
+  fader, buttons or regions can be changed alone, and brings them back when pressed again; each
+  group's own on/off is kept. Also in the Track menu and the track menu's Group submenu; the group
+  badges show the groups as off while it's engaged.
+
 ### Fixed
 
 - **Grouped tracks and linked regions come out of the selection together.** With Track

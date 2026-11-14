@@ -70,6 +70,7 @@ export const KEY_COMMANDS: KeyCommand[] = [
   { id: "select-next", label: "Select Next Track", group: "Tracks", keys: ["ArrowDown"] },
   { id: "hide-tracks", label: "Hide Current Track and Select Next", group: "Tracks", keys: ["Ctrl+H"] },
   { id: "reset-clips", label: "Reset All Clip Indicators", group: "Tracks", keys: [] },
+  { id: "group-clutch", label: "Toggle Group Clutch", group: "Tracks", keys: ["Shift+G"] },
 
   { id: "copy", label: "Copy Regions", group: "Editing", keys: ["Mod+C"] },
   { id: "cut", label: "Cut Regions", group: "Editing", keys: ["Mod+X"] },

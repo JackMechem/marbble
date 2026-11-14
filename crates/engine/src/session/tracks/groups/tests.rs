@@ -70,3 +70,19 @@ fn switches_pass_the_same_state_to_the_group() {
     assert!(t.mute && t.solo && t.armed);
     assert!(!s.project.track(c).unwrap().mute, "not in the group");
 }
+
+#[test]
+fn the_clutch_suspends_every_group_and_keeps_each_ones_switch() {
+    let mut s = session();
+    let (a, b) = (audio(&mut s), audio(&mut s));
+    let g = s.create_group(&[a, b]);
+    s.set_groups_clutched(true);
+    s.update_track_linked(a, TrackPatch { mute: Some(true), ..Default::default() });
+    volume(&mut s, a, -10.0);
+    assert!(!s.project.track(b).unwrap().mute);
+    assert_eq!(level(&s, b), 0.0);
+    assert!(s.project.group(g).unwrap().enabled, "the group's own switch is left alone");
+    s.set_groups_clutched(false);
+    volume(&mut s, a, -12.0);
+    assert_eq!(level(&s, b), -2.0);
+}

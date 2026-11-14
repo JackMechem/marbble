@@ -237,7 +237,7 @@ note = "Volume, pan, mute, solo, record, selection and editing links, plus an on
 [[feature]]
 section = "Mixing: professional"
 name = "Enable or disable all groups (⇧G)"
-status = "missing"
+status = "done"
 tier = "pro"
 logic = "602"
 

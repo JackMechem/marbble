@@ -3,7 +3,7 @@
 // An editor with the focus takes its own Edit commands first.
 import { act, call } from "../engine/commands";
 import { isBouncing, openBounce } from "../project/bounce/bounce";
-import { bounceInPlace, createStack, deleteTracks, deleteUnusedTracks, duplicateTracks, groupTracks, hideTracks, selectedTracks, switchAll, toggleShowHidden, unhideAllTracks } from "../tracks/trackCommands";
+import { bounceInPlace, createStack, deleteTracks, deleteUnusedTracks, duplicateTracks, groupTracks, toggleGroupClutch, hideTracks, selectedTracks, switchAll, toggleShowHidden, unhideAllTracks } from "../tracks/trackCommands";
 import { convertLoops, copyRegions, cutRegions, duplicate, joinRegions, newPatternRegion, pasteRegions, repeatRegions, selectAllRegions, setLocatorsByRegions, toggleLoop } from "../tracks/regionCommands";
 import { toggleZeroCrossings } from "../tracks/regions/zeroCrossings";
 import { eventListMenu } from "../editors/eventList/keys";
@@ -199,6 +199,9 @@ export function handleMenu(id: string) {
       break;
     case "group":
       groupTracks();
+      break;
+    case "group-clutch":
+      toggleGroupClutch();
       break;
     case "cut":
       if (!marqueeCut()) cutRegions();
