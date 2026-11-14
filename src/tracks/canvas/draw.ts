@@ -237,6 +237,7 @@ export function drawTracks({ canvasRef, live, dragRef, swipeRef, marqueeRef, hov
   // Where dragged audio files will land: the target lane (or a ghost lane for a new track),
   // a line at the snapped position, and a bar/beat tag.
   drawDropTarget(ctx, project, layout, vp, pps, W);
+  if (drag?.guide !== undefined) drawGuide(ctx, drag.guide * pps - vp.left, H);
   drawToolOverlay(ctx, { project, layout, pps, vp, W, H });
   if (marqueeRef.current) drawMarquee(ctx, marqueeRef.current, vp);
   // A hoisted function so `place` above can use it: the other dragged regions follow the
@@ -276,6 +277,12 @@ function drawStackLanes(ctx: CanvasRenderingContext2D, project: Project, layout:
     });
     ctx.restore();
   });
+}
+
+/** The guide line down the area where a moved region's edge snapped to another's (edgeSnap.ts). */
+function drawGuide(ctx: CanvasRenderingContext2D, x: number, H: number) {
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#4c9eff";
+  ctx.fillRect(Math.round(x), 0, 1, H);
 }
 
 /** Where Drum Replacement will put its notes: a line down the audio track's lane at each hit

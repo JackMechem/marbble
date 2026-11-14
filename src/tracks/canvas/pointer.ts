@@ -4,7 +4,7 @@
 import { type Id, type Project, type Track } from "../../engine/project";
 import { type Region, type Take, type TakeFolder } from "../../engine/regions";
 import { act, actMade } from "../../engine/commands";
-import { getState, setState } from "../../state/store";
+import { currentTick, getState, setState } from "../../state/store";
 import { waveCache } from "../regions/waveform";
 import { PEAK_BUCKET } from "../../lib/time";
 import { tempoMap } from "../../lib/tempo";
@@ -32,6 +32,7 @@ import { activeTool, notePointer, pressOnMarquee, toolHover, toolMouseDown, type
 import { regionCrossfades, setCrossfadeDrag } from "../regions/regionDraw";
 import { grabKind as regionGrabKind, type GrabKind, type RegionPress } from "../regions/regionGrab";
 import { editorPaneFor } from "../regions/regionEditor";
+import { EDGE_SNAP_PX, edgeSnap, edgeTargets, movingEdges, regionEdges } from "../regions/edgeSnap";
 import { trimAll, trimDelta, trimLimits, type TrimEdge } from "../regions/regionTrim";
 import { snapToTracksGrid, tracksSnapMode } from "../gridSnap";
 import { dragWith, pastDragThreshold } from "../../ui/pointerDrag";
@@ -80,6 +81,17 @@ function takeRowAt(track: Track, x: number, localY: number, laneH: number, pps: 
     if (take) row = { region: r, take };
   }
   return row;
+}
+
+/** What a move of `sel` (grabbing `grabbed`) snaps: the moved regions' edges from the grabbed
+ *  one's start, and the positions they snap to: the other regions' edges, the playhead when
+ *  stopped and the cycle locators when cycle is on, and for a copy the originals' edges too. */
+function moveSnapEdges(project: Project, grabbed: Region, sel: Id[]) {
+  const own = regionEdges(project.tracks, (id) => sel.includes(id));
+  const tick = currentTick();
+  const marks = [...(tick && !tick.playing ? [tick.pos] : []), ...(project.cycle.enabled ? [project.cycle.start, project.cycle.end] : [])];
+  const others = [...regionEdges(project.tracks, (id) => !sel.includes(id)), ...marks];
+  return { moving: movingEdges(own, grabbed.start), others: edgeTargets(others), withOwn: edgeTargets([...others, ...own]) };
 }
 
 /** The regions a trim of `grabbed`'s edge changes: it and the other selected regions, except on
@@ -226,6 +238,8 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
     const fadeFrom = r.content.type === "audio" ? (kind === "fadeIn" ? r.content.fade_in : r.content.fade_out) : 0;
     // Dragging a crossfade's handle resizes it about its centre.
     const crossfading = kind === "fadeOut" && !!regionCrossfades(r.id)?.out;
+    // A move snaps the selection's edges to other regions' (and, copying, the originals').
+    const snapEdges = kind === "move" ? moveSnapEdges(project, r, sel) : null;
     let moved = false;
 
     const move = (ev: MouseEvent) => {
@@ -242,10 +256,15 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
       const past = kind === "move" ? lanesPast(y, live.current.layout.total, getState().trackHeight) : 0;
       d.dTrack = visibleSteps(live.current.layout, h.ti, indexAt(live.current.layout, y)) + past;
       d.copy = kind === "move" && ev.altKey;
-      if (kind === "move") {
-        d.to = Math.max(0, snap(r.start + d.dx));
-        // With snapping on, the others keep their bars and beats across tempo changes.
-        d.musical = tracksSnapMode(ev) !== "off";
+      if (snapEdges) {
+        const raw = r.start + d.dx;
+        const snapping = tracksSnapMode(ev) !== "off";
+        const edge = snapping ? edgeSnap(raw, snapEdges.moving, d.copy ? snapEdges.withOwn : snapEdges.others, EDGE_SNAP_PX / pps) : null;
+        d.to = edge?.to ?? Math.max(0, snap(raw));
+        d.guide = edge?.at;
+        // Snapped to the grid, the others keep their bars and beats across tempo changes; to an
+        // edge, their distance in time, so the edge lands exactly on it.
+        d.musical = snapping && !edge;
       } else if (kind === "fadeIn" || kind === "fadeOut") {
         const other = r.content.type === "audio" ? (kind === "fadeIn" ? r.content.fade_out : r.content.fade_in) : 0;
         const v = fadeFrom + (kind === "fadeIn" ? d.dx : -d.dx);

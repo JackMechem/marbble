@@ -1019,6 +1019,11 @@ The pointer changes over a region's hot zones:
   as in Logic. Let go to snap to the grid again; the region follows as you press or release the
   keys. Press the keys after you start dragging: on Linux and Windows, Ctrl held at the click
   picks the Command-click tool. Ctrl can be held with Alt for a copy.
+- **Snapping to other regions:** while you move regions, a start or end of any of them that comes
+  within a few pixels of another region's start or end (on any track), the playhead (when
+  stopped) or a cycle locator snaps onto it, ahead of the grid, and a line down the Tracks area
+  shows where. An Alt-drag copy snaps to the originals' edges too, so it can go right after them.
+  Ctrl+Shift, or Snap set to Off, turns it off with the grid.
 - **Trimming a selection:** with several regions selected, dragging one's start or end trims
   the same edge of each by the same amount, audio and MIDI alike, in one undo step. The region
   you drag snaps; the others follow it by as much, each stopping at its own limits (the start

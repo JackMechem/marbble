@@ -220,9 +220,11 @@ note = "At the marquee, by a Pointer click inside it."
 [[feature]]
 section = "Arranging: advanced editing"
 name = "Alignment guides"
-status = "missing"
+status = "partial"
 tier = "pro"
 logic = "290"
+issue = 518
+note = "Moved regions' starts and ends snap to other regions', the stopped playhead and the cycle locators, with a guide line; not for trims, loops or in the editors."
 
 [[feature]]
 section = "Arranging: advanced editing"
