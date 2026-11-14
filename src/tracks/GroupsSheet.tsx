@@ -17,7 +17,7 @@ export function GroupsSheet() {
   const set = (g: Group, patch: Partial<Group>) => updateGroup({ ...g, ...patch });
   const key = keyHint("group-clutch");
   return (
-    <Sheet title="Groups" onClose={close} width={640}>
+    <Sheet title="Groups" onClose={close} width={780}>
       {groups?.length ? (
         <table className="groups-table">
           <thead>

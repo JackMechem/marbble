@@ -7,7 +7,7 @@ import type { Region } from "../engine/regions";
 import { regionEnd } from "./regions/loops.ts";
 
 /** What a group can link, as in its settings (Group's boolean fields). */
-export type GroupLink = "volume" | "pan" | "mute" | "solo" | "record" | "select" | "editing";
+export type GroupLink = "volume" | "pan" | "mute" | "solo" | "record" | "select" | "editing" | "track_color" | "monitor" | "auto_mode" | "hide";
 
 type Members = Pick<Track, "id" | "group">;
 

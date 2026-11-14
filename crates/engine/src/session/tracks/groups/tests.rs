@@ -86,3 +86,32 @@ fn the_clutch_suspends_every_group_and_keeps_each_ones_switch() {
     volume(&mut s, a, -12.0);
     assert_eq!(level(&s, b), -2.0);
 }
+
+#[test]
+fn colour_monitoring_automation_mode_and_hiding_link_when_ticked() {
+    let mut s = session();
+    let (a, b) = (audio(&mut s), audio(&mut s));
+    let inst = s.add_track(TrackKind::Instrument, InputSel::None, None, None).unwrap();
+    let g = s.create_group(&[a, b, inst]);
+    // Off by default, as in older projects.
+    s.update_track_linked(a, TrackPatch { color: Some("#e5483a".into()), ..Default::default() });
+    assert_ne!(s.project.track(b).unwrap().color, "#e5483a");
+    s.update_group(Group { track_color: true, monitor: true, auto_mode: true, hide: true, ..s.project.group(g).unwrap().clone() });
+    s.update_track_linked(a, TrackPatch { color: Some("#4fae4c".into()), monitor: Some(true), ..Default::default() });
+    let (tb, ti) = (s.project.track(b).unwrap(), s.project.track(inst).unwrap());
+    assert_eq!((tb.color.as_str(), ti.color.as_str()), ("#4fae4c", "#4fae4c"));
+    assert!(tb.monitor && !ti.monitor, "monitoring is the audio tracks'");
+    s.set_auto_mode_linked(a, AutoMode::Latch);
+    assert_eq!(s.project.track(inst).unwrap().auto_mode, AutoMode::Latch);
+    s.set_tracks_hidden(&[b], true);
+    assert!(s.project.tracks.iter().all(|t| t.hidden));
+}
+
+#[test]
+fn older_groups_open_without_the_new_links() {
+    let g: Group = serde_json::from_str(
+        r##"{"id":1,"name":"G","color":"#fff","enabled":true,"volume":true,"pan":false,"mute":true,"solo":true,"record":true,"select":true,"editing":true}"##,
+    )
+    .unwrap();
+    assert!(!g.track_color && !g.monitor && !g.auto_mode && !g.hide);
+}

@@ -75,7 +75,7 @@ logic = "132"
 [[feature]]
 section = "Work with tracks"
 name = "Hide tracks through groups"
-status = "missing"
+status = "done"
 tier = "core"
 logic = "147"
 

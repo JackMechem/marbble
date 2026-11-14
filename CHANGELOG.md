@@ -8,6 +8,9 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Added
 
+- **Colour, input monitoring, automation mode and hide links for groups.** Group Settings and the
+  Groups window have four more links, as in Logic: a new colour, input monitoring, the automation
+  mode or hiding on one member goes to them all. They're off in new groups and older projects.
 - **A Group slot on every Mixer strip and in the Track inspector.** As in Logic, it shows the
   track's group in its colour and opens a pop-up to choose another, take the track out, make a
   new group or open the settings. Before, groups could only be assigned from the track menu, and

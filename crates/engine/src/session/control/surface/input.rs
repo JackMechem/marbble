@@ -158,7 +158,7 @@ impl Session {
         let to = mode(now);
         if to != now {
             self.checkpoint("Automation Mode", None, false);
-            self.set_auto_mode(track, to);
+            self.set_auto_mode_linked(track, to);
         }
     }
 
