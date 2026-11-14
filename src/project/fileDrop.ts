@@ -9,6 +9,7 @@ import { type Id } from "../engine/project";
 import { type Snapshot } from "../engine/snapshot";
 import { call } from "../engine/commands";
 import { indexAt, trackLayout, autoLayout } from "../tracks/trackLayout";
+import { timelineLeft } from "../tracks/viewport";
 import { importMidiFiles, isMidiPath } from "./midiFiles";
 import { getState, setState, showToast } from "../state/store";
 import { samplesPerBeat, snapPos } from "../lib/time";
@@ -60,7 +61,7 @@ function resolveDrop(cx: number, cy: number, midi = false): DropTarget | null {
   const ar = arrange?.getBoundingClientRect();
   if (!arrange || !ar || cx < ar.left || cx > ar.right || cy < ar.top || cy > ar.bottom) return null;
   const pps = s.pxPerBeat / samplesPerBeat(project);
-  const x = cx - ar.left + arrange.scrollLeft;
+  const x = cx - ar.left + timelineLeft(arrange);
   const y = cy - ar.top + arrange.scrollTop;
   const sample = Math.max(0, Math.round(snapPos(project, x / pps, s.snapMode, s.pxPerBeat)));
   if (n === 0 || y >= layout.total) return { kind: "new", index: n, sample };

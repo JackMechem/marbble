@@ -408,6 +408,7 @@ impl Engine {
     pub(super) fn process_block(&mut self, input: &[f32], in_ch: usize, n: usize) -> BlockEnd {
         if self.read_inputs(input, in_ch, n) {
             self.feed_input_tap(n);
+            self.feed_tuner_tap(n);
         }
         self.bus_l[..n].fill(0.0);
         self.bus_r[..n].fill(0.0);
@@ -532,6 +533,29 @@ impl Engine {
                     let _ = sink.push(self.inputs[c + 1][i]);
                 }
                 InputSel::None => {}
+            }
+        }
+    }
+
+    /// The tuner's ring gets the input it listens to, summed to mono. What a full ring has no
+    /// room for is dropped: the tuner only wants the latest audio.
+    fn feed_tuner_tap(&mut self, n: usize) {
+        let Some((sel, sink)) = &mut self.tuner_tap else { return };
+        let (a, b) = match *sel {
+            InputSel::Mono(c) => (c as usize % MAX_INPUTS, None),
+            InputSel::Stereo(c) => {
+                let c = c as usize % (MAX_INPUTS - 1);
+                (c, Some(c + 1))
+            }
+            InputSel::None => return,
+        };
+        for i in 0..n {
+            let x = match b {
+                Some(b) => 0.5 * (self.inputs[a][i] + self.inputs[b][i]),
+                None => self.inputs[a][i],
+            };
+            if sink.push(x).is_err() {
+                break;
             }
         }
     }

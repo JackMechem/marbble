@@ -226,7 +226,7 @@ The window is laid out like Logic Pro 12:
 | Control bar | top | always |
 | Library | far left | Y |
 | Inspector | left of the track headers | I |
-| Tracks area | centre | always |
+| Tracks area, or the Mixer in the Mixer view | centre | Ctrl+1 / Ctrl+2 (⌘1 / ⌘2 on macOS), or the view switch |
 | Mixer, Editors, Event List or Step Sequencer | bottom (one at a time) | X (Mixer), E or P (Editors), D (List Editors); the Step Sequencer from its tab or a pattern region |
 | Browser (All Files) | right | F |
 | Status line | bottom edge | always |
@@ -236,11 +236,39 @@ sizes are remembered. The bottom section never takes the whole window: the Track
 its bar, ruler, global tracks, overview and a little of the track list, so the divider stays in
 reach.
 
+### Tracks and Mixer views
+
+The main window has two views, like Logic's main and Mixer windows or Pro Tools' Edit and Mix
+windows. The **Tracks view** is the Tracks area with the bottom section under it. The **Mixer
+view** puts the [Mixer](#12-mixing) in the Tracks area's place, the full height of the window, so
+the faders are as long as they can be and more insert and send slots show. The control bar, the
+Inspector, the Library and the Browser stay.
+
+- **Switch** with the two buttons at the left end of the control bar, **Ctrl+1** (Tracks view)
+  and **Ctrl+2** (Mixer view; again goes back), or **View › Tracks View** and **View › Mixer
+  View**. On macOS the keys are ⌘1 and ⌘2, as Logic's main and Mixer windows.
+- **The bottom section in the Mixer view** shows only the docked effect panels that the Mixer's
+  slots open. The Editors, the Event List, the Step Sequencer and the Mixer pane edit or repeat
+  what the Tracks view shows, so they wait for it: their buttons and keys (X, E, P, D) go back to
+  the Tracks view with that pane showing.
+- **Region edits wait too.** The Mixer view shows no regions, so the key commands and Edit menu
+  items that edit them (Delete, Copy, Paste, nudging, selecting and the rest) do nothing there.
+  Undo, Redo, the transport and the track keys (mute, solo, record enable, selecting a track with
+  ↑ and ↓) work in both views.
+- **Kept between views:** the selection, where each view was scrolled (the Tracks area's ruler
+  and track list, and the Mixer's strips), the Mixer's strip filters, and the pane under the
+  Tracks area. Each project remembers its view on this computer, like track heights, and opens in
+  it.
+- **A detached Mixer** (see [Separate windows](#separate-windows)) is the only Mixer: Ctrl+2 or the
+  Mixer view button brings its window to the front, as X does. Detaching the Mixer from the Mixer
+  view goes back to the Tracks view, and attaching it again returns to the Mixer view.
+
 ### Control bar
 
 From left to right:
 
-- **Library, Inspector, Mixer, Editors** buttons.
+- **Tracks / Mixer view** switch (see [Tracks and Mixer views](#tracks-and-mixer-views)), then
+  the **Library, Inspector, Mixer, Editors** buttons.
 - **Transport:** Rewind (`,`, to the previous bar line), Forward (`.`, to the next bar line),
   Stop, Play (Space), Record (R). Stop while stopped returns to the left locator when Cycle is
   on, otherwise to the start, and the Tracks area and the open editor scroll sideways to show
@@ -253,8 +281,21 @@ From left to right:
     Esc cancels).
   - **Time signature:** click for 2/4, 3/4, 4/4, 5/4, 6/8, 7/8, 9/8 and 12/8.
   - **Key:** click for the major and minor keys.
-  - The **chevron** offers "Beats & Project", "Time" (the position as time) and
-    "Project Settings…".
+  - The **chevron** chooses what the LCD shows, and Marbble remembers the choice:
+    - **Beats & Project** (the default): position, tempo, signature and key, as above.
+    - **Time:** the same with the position as time.
+    - **Tuner:** tunes the selected audio track's input, whether or not the track is armed or
+      monitoring: the note (in Logic's octaves, middle C is C3), a needle across ±50 cents that
+      turns green within 2 cents, the cents and the frequency. A4 is 440 Hz. With no audio track
+      with an input selected, it says to select one. Marbble only listens while the Tuner shows.
+      For a reference other than 440 Hz, or a transposing instrument, use the Tuner plug-in.
+    - **Chord:** names the chord held on MIDI input (every MIDI input, Musical Typing and the
+      on-screen keyboards, which all play the selected instrument track): "Am7", "G/B",
+      "Cmaj7(♯11)", "C6/9", a single note as "C3", and the notes themselves when no chord name
+      fits. The notes held are listed beside it. When the keys come up the last chord stays,
+      dimmed. Roots are spelt with sharps or flats to suit the project's key.
+
+    It also offers "Project Settings…".
 - **Mode buttons:** Cycle (C), **Autopunch** (Ctrl+P, Control+⌘P on macOS), **Replace** (red
   when on: recordings replace what they overlap; see [Overlapping recordings](#recording-audio);
   the key command Replace Mode has no key at first), **Count-in** (Shift+K), Metronome (K).
@@ -272,28 +313,36 @@ From left to right:
   [Tools and the marquee](#tools-and-the-marquee)), the **Snap** pop-up (Smart, Bar, Beat,
   Division, Ticks, Off; Smart follows the zoom), the **Drag** pop-up (see
   [Drag modes](#drag-modes)), the **Height** slider (track height) and the **Zoom** slider.
+  The slider goes up to 400 px a beat; Ctrl+wheel and View › Zoom In go on past it, in to
+  single samples (32 px apart), and the slider then waits at its end. Zoom In, Zoom Out and the
+  slider keep the playhead where it is when Catch is on and it's in view, otherwise the middle
+  of the view; while Catch follows the playhead, every zoom keeps the playhead in place and Catch
+  goes on from there.
 - **Ruler**, from the top:
   - the **cycle strip** (yellow): drag to make a cycle range, drag it or its edges to move or
     resize it, click it to switch Cycle on and off;
   - the **bar numbers**: click or drag to move the playhead. Grab the playhead's head (anywhere
     near it) to drag it from where it is, without it jumping to the pointer; a click on the head
-    leaves it in place;
+    leaves it in place. Zoomed in, beats and finer steps get labels too (5.2, 5.2.3, then
+    5.2.3.121 down to single ticks), with a mark at every sample when they're far enough apart;
+    when no label is in view, the position of the left edge shows at the start;
   - the **Autopunch strip** (red): works like the cycle strip, for the punch range;
   - the **marker lane** (see [Markers](#markers)).
 
   Right-click the cycle strip, the bar numbers or the Autopunch strip for **Move Playhead
   Here** and **Create Marker Here** (at the click, snapped to beats at least), **Cycle** (C),
   **Autopunch**, **Set Locators by Regions** (U) and **Snap**. The marker lane has its own menu.
-- **Track headers:** colour, number, icon, name with the power button
-  ([On/Off](#turning-tracks-off), grey while the track plays) at its end, the M (Mute), S (Solo), R
-  (Record Enable, audio and instrument tracks), I (Input Monitoring, audio tracks) buttons, the
-  Freeze (snowflake) button, a group badge, and a volume slider with the track's level meter in its
-  line. Short tracks put it all on one line (see below). The **+** button above the headers opens
+- **Track headers:** colour, number, icon, name with a group's badge, the Track Alternatives
+  pop-up and the power button ([On/Off](#turning-tracks-off), grey while the track plays) at its
+  end, the M (Mute), S (Solo), R (Record Enable, audio and instrument tracks), I (Input Monitoring,
+  audio tracks) buttons, the Freeze (snowflake) button, and a volume slider with the track's level
+  meter in its line. Short tracks put it all on one line (see below). The **+** button above the headers opens
   New Tracks; the **H** button turns on hide mode. Under them, level with the ruler's marker lane,
   is the **Marker** row. A muted track's regions are drawn grey, as a muted region is; a track that
   is off is dimmed.
 - **Tracks:** regions on lanes. Scroll with the wheel (Shift+wheel or a sideways trackpad swipe
-  scrolls through time); Ctrl+wheel zooms horizontally around the pointer, Alt+wheel changes
+  scrolls through time); Ctrl+wheel zooms horizontally around the pointer (around the playhead
+  while Catch follows it), Alt+wheel changes
   track heights. With a mouse that has only a vertical wheel, set Settings › Editing › Mouse
   Wheel Scrolls to **Horizontally (time)**: the wheel then scrolls through time and Shift+wheel
   scrolls the tracks. Over the track headers the wheel always scrolls the tracks, and over the
@@ -311,7 +360,8 @@ From left to right:
   - Drag the box's left or right edge to zoom: the view shows the time between the edges
     (within the usual zoom limits).
   - The wheel scrolls through time (Shift+wheel scrolls the tracks); Ctrl+wheel zooms around
-    the pointer when it's over the box, otherwise around the middle of the view.
+    the pointer when it's over the box, otherwise around the middle of the view (around the
+    playhead while Catch follows it).
   - View › Show Overview (in the main menu bar or the Tracks area's View menu), or right-click
     the strip, hides it and brings back the scroll bar; the same menu item, or a right-click on
     the scroll bar, shows it again. The choice is remembered.
@@ -340,7 +390,10 @@ Track headers:
 - **Resize** by dragging the header's bottom edge. Alt-drag resizes every track, and
   double-clicking the edge resets the track. Ctrl+Down and Ctrl+Up (or Alt+wheel, or View ›
   Taller / Shorter Tracks, or View › Track Height: Mini, Compact, Small, Medium, Large, Extra
-  Large) change all tracks. Tracks go from 22 to 260 px; heights are remembered per project.
+  Large) change all tracks, and so does the **Height** slider above the tracks, which steps by a
+  factor as they do (the default height sits near its middle). Tracks go from 22 to 260 px;
+  heights are remembered per project. On a tall track the header's name and buttons stay at its
+  top, beside the regions' names, as in Logic.
 - **Short tracks:** from 52 px up the name sits above the buttons. Below that the header is a
   single line with a smaller icon (32 to 51 px), or without the icon and in a smaller size
   (below 32 px). The M, S, R, I and Freeze buttons then move into the **⋯** menu, which lists
@@ -354,7 +407,13 @@ Track headers:
 - **Button columns:** each button has its column, the same on every header, with a gap where a track
   has no such button (an instrument track has no I, an aux no R, I or Freeze). On one-line headers
   the columns are those of the switches that are on somewhere, so one track's M lines up with
-  another's. Regions on short tracks get a slimmer name bar, and on tracks below 32 px a region is a
+  another's. Every header's buttons are the same size and its volume slider the same length,
+  ending at the header's right edge, whatever its indent in a stack or its group. In a narrow
+  header column, buttons that don't fit beside the slider move into the **⋯** menu on every
+  header, from the right (Freeze, then I, R and S), rather than shrinking; on one-line headers the
+  slider gives way to the name and buttons, and is left out when there's no room for it. While a
+  stack is in view every header keeps a slot for its disclosure triangle, so the icons line up and
+  a subtrack's sits one step in from its stack's. Regions on short tracks get a slimmer name bar, and on tracks below 32 px a region is a
   bar of its colour with just its name, centred: no waveform, notes or fades. Its edges still trim
   it. An open take folder's take rows keep showing their takes.
 - **Volume:** drag the slider (Shift for fine), double-click or Alt-click it for 0 dB; its tooltip
@@ -419,7 +478,7 @@ Hover over a figure for what it means; click one to open the
 | Track | New Tracks…, New Aux, Duplicate Track, New Track with Same Settings, New Pattern Region, Bounce in Place…, Freeze Track, Unfreeze Track, Track On, Drum Replacement/Doubling…, Create Folder Stack, Create Summing Stack, Group Selected Tracks, Show Output Track, Hide Track, Unhide All Tracks, Delete Track, Delete Unused Tracks, Track Alternatives › |
 | Record | Play / Stop, Record, Discard Last Recording, Cycle, Autopunch, Metronome, Count-in, Low Latency Mode |
 | Navigate | Create Marker, Delete Marker, Go to Previous Marker, Go to Next Marker, Open Marker List |
-| View | Library, Inspector, Mixer, Editors, List Editors, Browsers, Show Automation, Show Used Automation, Show Global Tracks, Show Overview, Musical Typing, Step Input Keyboard, Show Hidden Tracks, Zoom In, Zoom Out, Larger Interface, Smaller Interface, Actual Size, Theme › |
+| View | Tracks View, Mixer View, Library, Inspector, Mixer, Editors, List Editors, Browsers, Show Automation, Show Used Automation, Show Global Tracks, Show Overview, Musical Typing, Step Input Keyboard, Show Hidden Tracks, Zoom In, Zoom Out, Larger Interface, Smaller Interface, Actual Size, Theme › |
 | Window | Minimize, Mixer in Separate Window, Editor in Separate Window, Event List in Separate Window, [Diagnostics](#the-diagnostics-window), then the open windows (the main window and each [separate window](#separate-windows)): choose one to bring it to the front |
 | Help | Marbble User Guide, Key Commands…, What's New in Marbble, Check for Updates…, Report an Issue…, Marbble Website. Key Commands opens Settings › Key Commands; Check for Updates… asks GitHub whether a newer version is out on your [update channel](#general) and says what it found; the others open this guide, the changelog, a new issue on GitHub and the website in your browser |
 
@@ -532,10 +591,11 @@ Channel EQ's included) can each have a window of their own, for example on a sec
   same, and the Piano Roll's, Audio Track Editor's and Event List's View menus have the item too.
 - **Attach to Main Window:** the same button in the separate window (pop-in), the same menu
   items, or the window's close button. The Mixer, the Editors, the Event List and the
-  Step Sequencer go back to the bottom section; an effect panel opens in the main window as
+  Step Sequencer go back to the bottom section (the Mixer to the Mixer view, if that's where it
+  was last asked for); an effect panel opens in the main window as
   Settings › General › Open Effect Panels says (docked or floating).
 - **One place at a time:** while a panel has its own window, it isn't shown in the main window.
-  X (Mixer), E (Editors), an insert slot or a Channel EQ thumbnail bring its window to the
+  X or Ctrl+2 (Mixer), E (Editors), an insert slot or a Channel EQ thumbnail bring its window to the
   front instead (with Open Effect Panels set to Separate windows, the slot or thumbnail closes
   it).
 - **Effect panels in separate windows by default:** Settings › General › Open Effect Panels ›
@@ -1012,7 +1072,19 @@ The pointer changes over a region's hot zones:
 - Moves, trims and loop ends follow the **Snap** setting (Smart, Bar, Beat, Division, Ticks or
   Off). **Division** is a quarter of a beat, the third number of the position display: a
   sixteenth in 4/4, a thirty-second in 6/8. **Ticks** is 1/240 of a division (960 to a beat).
-  Smart snaps to divisions, beats or bars depending on the zoom. Fades are never snapped.
+  Smart snaps to bars, beats or divisions depending on the zoom, and zoomed in further to the
+  finest step at least 15 px apart: halves and quarters of a division and so on down to a single
+  tick, then to single samples once a tick is over 60 px wide. Fades are never snapped.
+- **Finer or no snapping while dragging:** once a move, trim or loop drag has started, hold
+  **Ctrl** (Control on macOS) to snap to ticks instead, or **Ctrl+Shift** to not snap at all,
+  as in Logic. Let go to snap to the grid again; the region follows as you press or release the
+  keys. Press the keys after you start dragging: on Linux and Windows, Ctrl held at the click
+  picks the Command-click tool. Ctrl can be held with Alt for a copy.
+- **Snapping to other regions:** while you move regions, a start or end of any of them that comes
+  within a few pixels of another region's start or end (on any track), the playhead (when
+  stopped) or a cycle locator snaps onto it, ahead of the grid, and a line down the Tracks area
+  shows where. An Alt-drag copy snaps to the originals' edges too, so it can go right after them.
+  Ctrl+Shift, or Snap set to Off, turns it off with the grid.
 - **Trimming a selection:** with several regions selected, dragging one's start or end trims
   the same edge of each by the same amount, audio and MIDI alike, in one undo step. The region
   you drag snaps; the others follow it by as much, each stopping at its own limits (the start
@@ -1142,7 +1214,9 @@ As in Logic, a looping region repeats its own content from its end up to its **l
   the next region on the track, or for four times the region's length when nothing follows.
   Press L again to turn it off.
 - Point at the top right corner of the region (the pointer becomes a circular arrow) and drag
-  to set where the loop stops; dragging back to the region's end removes the loop.
+  to set where the loop stops; dragging back to the region's end removes the loop. With several
+  regions selected, every selected region's loop end moves by the same amount (a region that
+  wasn't looping starts at its own end), in one undo step; the loop end you drag snaps.
 - Repetitions are drawn lighter, with a notch at each pass. Click a repetition to select the
   region and drag it to move the region (the loop moves along). Trimming changes what repeats
   and keeps the loop end.
@@ -2121,7 +2195,8 @@ tools of Logic's Audio File Editor.
 ### Selecting
 
 - Drag across the waveform to select a time range. It follows the Snap setting (Smart snapping
-  stops at sixteenths, and holding **Alt** while dragging is always free).
+  stops at sixteenths). While dragging, hold **Ctrl** (Control on macOS) to snap to ticks, or
+  **Alt** or **Ctrl+Shift** to not snap; the same keys work when moving and trimming regions.
 - Shift+click or Shift+drag extends the selection from its nearer end.
 - Double-click a region to select all of it. A plain click selects the region under it.
 - Esc deselects.
@@ -2180,7 +2255,8 @@ The editor's own keys apply after you click in it; elsewhere the usual ones do. 
 
 ![The Mixer during playback: inserts, sends, two aux returns, a VCA and the Stereo Out](../site/public/screenshots/mixer.png)
 
-Open the Mixer with X. It shows a channel strip for every track (stacks included), then the auxes,
+Open the Mixer with X, under the Tracks area, or fill the window with it: the
+[Mixer view](#tracks-and-mixer-views) (Ctrl+2, ⌘2 on macOS). It shows a channel strip for every track (stacks included), then the auxes,
 then the [VCA strips](#vca-faders), then Stereo Out. The **Audio**, **Inst** and **Aux** buttons
 show or hide those strips (lit while shown). The **Options** menu has Create New VCA, New Aux, the
 same three filters, Show Hidden Tracks (hidden tracks appear only in hide mode), the strip widths
@@ -3631,6 +3707,8 @@ shown.
 
 | Key | Command |
 |---|---|
+| Ctrl+1 (⌘1) | Show Tracks View |
+| Ctrl+2 (⌘2) | Show/Hide Mixer View |
 | X | Show/Hide Mixer |
 | I | Show/Hide Inspector |
 | Y | Show/Hide Library |

@@ -57,11 +57,17 @@ test("menu/spec.rs is read whole", () => {
   assert.ok(items(bar).some((i) => i.id === "theme:light" && i.check));
 });
 
-test("the one-of-several choices are radio items: View › Theme, one per theme, by its name", () => {
+test("the one-of-several choices are radio items: the main window's views, and View › Theme, one per theme, by its name", () => {
   const radios = [...menuRs.matchAll(/\bradio\("([^"]+)", "([^"]+)"/g)].map((m) => [m[1], m[2]]);
   const themes = [...read("src/theme/themes.ts").matchAll(/\{ id: "([a-z]+)", name: "([^"]+)"/g)].map((m) => [`theme:${m[1]}`, m[2]]);
   assert.equal(themes.length, 5);
-  assert.deepEqual(radios, themes);
+  const views = [
+    ["tracks-view", MENU_LABELS["tracks-view"]],
+    ["mixer-view", MENU_LABELS["mixer-view"]],
+  ];
+  assert.deepEqual(radios, [...views, ...themes]);
+  // Their keys are key commands, shown beside them.
+  for (const [id] of views) assert.ok(keymap.includes(`{ id: "${id}",`), id);
 });
 
 test("the menu bar uses the menus' names", () => {

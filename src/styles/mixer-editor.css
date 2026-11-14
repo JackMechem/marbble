@@ -18,6 +18,14 @@
   height: var(--editor-h, 360px);
 }
 
+/* The Mixer view: the Mixer takes the Tracks area's place and its height, so the faders grow
+   with the window. Docked effect panels under it give way first (it keeps MIXER_VIEW_MIN). */
+.mixer.mixer-full {
+  flex: 1 1 auto;
+  height: auto;
+  border-top: none;
+}
+
 /* The pane's name: a title, set apart from the Options menu beside it. */
 .mixer-title {
   padding: 0 10px 0 2px;
