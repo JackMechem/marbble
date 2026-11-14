@@ -131,6 +131,11 @@ export function Arrange() {
       el.scrollLeft = left;
       if (top !== undefined) el.scrollTop = top;
     });
+    // Back from the Mixer view: scrolled where it was, or where a command asked for meanwhile.
+    const was = viewport();
+    el.scrollLeft = was.left;
+    el.scrollTop = was.top;
+    setViewport({ left: el.scrollLeft, top: el.scrollTop });
     const measure = () => (playheadOrigin.current = playheadRef.current?.parentElement?.getBoundingClientRect().left ?? 0);
     measure();
     const off = onViewport(() => {
@@ -171,26 +176,17 @@ export function Arrange() {
       ro.disconnect();
       off();
       el.removeEventListener("wheel", wheel);
+      // In the Mixer view: a scroll asked for (a track selected with the arrow keys) waits here.
+      registerScroller((left, top) => setViewport(top === undefined ? { left } : { left, top }));
     };
   }, []);
 
-  // Playhead, catch and live recording previews
+  // Live recording previews (the store collects them, in the Mixer view too).
   useEffect(() => {
     let wasRecording = false;
     return onTick((t) => {
       if (!live.current.project) return;
-      for (const p of t.previews) {
-        let take = liveTakes.get(p.track);
-        if (!take || take.start !== p.start) {
-          take = { start: p.start, frames: 0, peaks: [] };
-          liveTakes.set(p.track, take);
-        }
-        take.peaks.length = p.from;
-        take.peaks.push(...p.peaks);
-        take.frames = p.frames;
-      }
       const finished = wasRecording && !t.recording;
-      if (finished) liveTakes.clear();
       wasRecording = t.recording;
       if (finished || t.previews.length || liveTakes.size) requestDraw();
     });

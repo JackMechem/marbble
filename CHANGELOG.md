@@ -24,6 +24,13 @@ All notable changes to Marbble are recorded here. The format follows
 - **Dragging a region's loop handle loops the whole selection.** With several regions selected,
   dragging one's loop handle (its top-right corner) looped only that region. As in Logic, every
   selected region's loop end now moves by the same amount, in one undo step.
+- **A Mixer view.** Besides the Mixer pane under the tracks, the Mixer can now fill the main
+  window in the Tracks area's place, like Logic's Mixer window or Pro Tools' Mix window, with
+  long faders and room for every slot. Switch with the new Tracks / Mixer buttons at the left of
+  the control bar, Ctrl+1 and Ctrl+2 (⌘1 and ⌘2 on macOS) or View › Tracks View and Mixer View.
+  The Inspector and control bar stay; effect panels opened from the Mixer dock under it, and the
+  Editors (E) or the Mixer pane (X) take you back to the Tracks view. Each view keeps its scroll
+  position and each project remembers its view.
 
 ## [0.1.0-alpha.17] - 2026-11-14
 

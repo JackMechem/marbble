@@ -46,6 +46,10 @@ export const KEY_COMMANDS: KeyCommand[] = [
   { id: "next-marker", label: "Go to Next Marker", group: "Navigation", keys: ["Alt+."] },
   { id: "marker-list", label: "Open Marker List", group: "Navigation", keys: ["Mod+Alt+K"] },
 
+  // Logic's ⌘1 and ⌘2 open its main window and its Mixer window; here they switch the main
+  // window between the Tracks and the Mixer view (app/mainView.ts). ⌘2 in the Mixer view goes back.
+  { id: "tracks-view", label: "Show Tracks View", group: "View", keys: ["Mod+1"] },
+  { id: "mixer-view", label: "Show/Hide Mixer View", group: "View", keys: ["Mod+2"] },
   { id: "mixer", label: "Show/Hide Mixer", group: "View", keys: ["X"] },
   { id: "inspector", label: "Show/Hide Inspector", group: "View", keys: ["I"] },
   { id: "library", label: "Show/Hide Library", group: "View", keys: ["Y"] },
