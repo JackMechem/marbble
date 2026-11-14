@@ -30,6 +30,11 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Fixed
 
+- **Grouped tracks and linked regions come out of the selection together.** With Track
+  Selection linked, ⌘/Ctrl-clicking a selected member did nothing (the group put it straight
+  back); it now deselects the group. With Editing linked, Shift-clicking a selected region took
+  out only that region; its linked regions now go with it.
+
 - **Grouped faders keep their offsets.** With Volume or Pan linked, a member that reached the
   end of its range stopped there and lost its offset: pulling a fader to the bottom and back left
   every member at the same level. Members now keep their offsets to the moved track however far

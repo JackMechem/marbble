@@ -8,6 +8,7 @@ import { currentLayout, stepVisible } from "./trackLayout";
 import { openBounceInPlace } from "../project/bounce/bounce";
 import { getState, setState, showToast } from "../state/store";
 import { onTracks } from "./regions/regionSelect";
+import { toggleTrack, withSelectionPeers } from "./groupLinks";
 
 const project = () => getState().snap?.project;
 const tracks = (): Track[] => project()?.tracks ?? [];
@@ -27,14 +28,7 @@ export function selectedTracks(): Id[] {
 /** Adds the members of groups that link selection. */
 function withGroups(ids: Id[]): Id[] {
   const p = project();
-  if (!p) return ids;
-  const out = new Set(ids);
-  for (const id of ids) {
-    const t = p.tracks.find((x) => x.id === id);
-    const g = t?.group != null ? p.groups.find((x) => x.id === t.group) : undefined;
-    if (g?.enabled && g.select) p.tracks.filter((x) => x.group === g.id).forEach((x) => out.add(x.id));
-  }
-  return inOrder([...out]);
+  return p ? withSelectionPeers(p.tracks, p.groups, ids) : ids;
 }
 
 /** A click on a track header: plain selects, ⌘/Ctrl toggles, Shift extends. */
@@ -49,8 +43,8 @@ export function clickTrack(id: Id, e: { shiftKey: boolean; ctrlKey: boolean; met
     const heights = currentLayout().heights;
     sel = all.slice(a, b + 1).filter((x, k) => heights[a + k] > 0 || x === id || x === cur);
   } else if (e.ctrlKey || e.metaKey) {
-    const base = selectedTracks();
-    sel = base.includes(id) ? base.filter((x) => x !== id) : [...base, id];
+    // Taking a grouped track out takes out the members its group selects with it.
+    sel = toggleTrack(tracks(), project()?.groups ?? [], selectedTracks(), id);
     if (!sel.length) sel = [id];
   } else {
     sel = selectedTracks().includes(id) && selectedTracks().length > 1 ? selectedTracks() : [id];

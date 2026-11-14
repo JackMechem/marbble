@@ -7,6 +7,7 @@ import { type Region } from "../engine/regions";
 import { type Snapshot } from "../engine/snapshot";
 import { act, actMade, call } from "../engine/commands";
 import { isLooped, regionEnd } from "./regions/loops";
+import { linkedRegionIds, toggleRegion } from "./groupLinks";
 import { importMidiFiles } from "../project/midiFiles";
 import { currentTick, getState, setState, showToast } from "../state/store";
 import { tempoMap } from "../lib/tempo";
@@ -34,17 +35,11 @@ export const selectedRegions = () => getState().selectedRegions;
  *  group's other tracks. */
 export function linkedRegions(id: Id): Id[] {
   const p = project();
-  const t = trackOf(id);
-  const r = t?.regions.find((x) => x.id === id);
-  const g = t?.group != null ? p?.groups.find((x) => x.id === t.group) : undefined;
-  if (!p || !r || !g?.enabled || !g.editing) return [id];
-  const out = [id];
-  for (const o of p.tracks) {
-    if (o.id === t!.id || o.group !== g.id) continue;
-    for (const x of o.regions) if (x.start < regionEnd(r) && regionEnd(x) > r.start) out.push(x.id);
-  }
-  return out;
+  return p ? linkedRegionIds(p.tracks, p.groups, id) : [id];
 }
+
+/** Shift-click on a region: adds it and its linked regions, or takes them all out. */
+export const toggleLinkedRegions = (sel: Id[], id: Id) => toggleRegion(sel, id, linkedRegions(id));
 
 export function selectRegions(ids: Id[] | null) {
   if (ids) setState({ selectedRegions: ids, focus: "regions" });

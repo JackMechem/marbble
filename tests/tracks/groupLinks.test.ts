@@ -1,7 +1,7 @@
 // Unit tests for src/tracks/groupLinks.ts: which tracks a group's links reach.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { linkedPeers, linkingGroup, touchWrites } from "../../src/tracks/groupLinks.ts";
+import { linkedPeers, linkedRegionIds, linkingGroup, toggleRegion, toggleTrack, touchWrites, withSelectionPeers } from "../../src/tracks/groupLinks.ts";
 import type { AutoMode, Group } from "../../src/engine/project.ts";
 
 const group = (id: number, patch: Partial<Group> = {}): Group => ({ id, name: `Group ${id}`, color: "#fff", enabled: true, volume: true, pan: false, mute: true, solo: true, record: true, select: true, editing: true, ...patch });
@@ -25,4 +25,30 @@ test("holding a control touches when the track or a partner it moves writes", ()
   assert.equal(touchWrites(tracks, groups, 1, { type: "pan" }), false, "pan isn't linked");
   assert.equal(touchWrites(tracks, groups, 2, { type: "pan" }), true, "its own track writes");
   assert.equal(touchWrites(tracks, groups, 4, { type: "volume" }), false);
+});
+
+test("selecting a member selects its group; taking it out takes the group out", () => {
+  const groups = [group(10), group(11, { select: false })];
+  assert.deepEqual(withSelectionPeers(tracks, groups, [2]), [1, 2]);
+  assert.deepEqual(withSelectionPeers(tracks, groups, [4, 3]), [3, 4], "in track order");
+  assert.deepEqual(toggleTrack(tracks, groups, [1, 2, 3], 1), [3], "its partner goes too");
+  assert.deepEqual(toggleTrack(tracks, [group(10, { select: false })], [1, 2, 3], 1), [2, 3], "unless selection isn't linked");
+  assert.deepEqual(toggleTrack(tracks, groups, [3], 1), [3, 1]);
+});
+
+test("a region links the regions overlapping it on the members, and Shift-clicks add and take them out together", () => {
+  const region = (id: number, start: number, length: number) => ({ id, start, length, loop_end: null });
+  const lanes = [
+    { id: 1, group: 10, regions: [region(100, 0, 10)] },
+    { id: 2, group: 10, regions: [region(200, 5, 10), region(201, 10, 5)] },
+    { id: 3, group: null, regions: [region(300, 0, 10)] },
+  ];
+  const groups = [group(10)];
+  assert.deepEqual(linkedRegionIds(lanes, groups, 100), [100, 200], "201 starts where 100 ends");
+  assert.deepEqual(linkedRegionIds(lanes, [group(10, { editing: false })], 100), [100]);
+  assert.deepEqual(linkedRegionIds(lanes, groups, 300), [300]);
+  const linked = linkedRegionIds(lanes, groups, 100);
+  assert.deepEqual(toggleRegion([300], 100, linked), [300, 100, 200]);
+  assert.deepEqual(toggleRegion([300, 100, 200], 100, linked), [300]);
+  assert.deepEqual(toggleRegion([200], 100, linked), [200, 100], "no duplicates");
 });

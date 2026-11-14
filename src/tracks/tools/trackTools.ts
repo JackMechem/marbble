@@ -18,7 +18,7 @@ import { refuseFrozen } from "../freeze";
 import { indexAt, type Layout } from "../trackLayout";
 import { theme } from "../../theme/canvasTheme";
 import { timelineLeft } from "../viewport";
-import { deleteRegions, joinRegions, linkedRegions, pasteRegions, toggleRegionMute } from "../regionCommands";
+import { deleteRegions, joinRegions, linkedRegions, pasteRegions, toggleLinkedRegions, toggleRegionMute } from "../regionCommands";
 import { dragWith, pastDragThreshold } from "../../ui/pointerDrag";
 
 // ---- choosing tools -------------------------------------------------------------------------
@@ -177,7 +177,7 @@ export function toolMouseDown(tool: TrackTool, e: React.MouseEvent, h: ToolHit, 
       // what to join.
       const sel = getState().selectedRegions;
       if (sel.includes(r.id) && sel.length > 1 && !e.shiftKey) joinRegions(sel);
-      else select(e.shiftKey ? (sel.includes(r.id) ? sel.filter((x) => x !== r.id) : [...sel, ...linkedRegions(r.id)]) : linkedRegions(r.id));
+      else select(e.shiftKey ? toggleLinkedRegions(sel, r.id) : linkedRegions(r.id));
       break;
     }
     case "fade":
