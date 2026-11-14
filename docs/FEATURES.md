@@ -4,7 +4,7 @@ Every feature of Logic Pro, by area, and how far Marbble has it. This page is ge
 `scripts/features.py` from the files in `features/`: change those, in the pull request that
 changes the feature. [ROADMAP.md](../ROADMAP.md) says what beta needs and what's being worked on.
 
-Marbble has **281** of 732 features, and a simpler version of 94 more; 357 are missing. Beta needs 249 of them, and 55 of those are still to do.
+Marbble has **281** of 732 features, and a simpler version of 95 more; 356 are missing. Beta needs 249 of them, and 55 of those are still to do.
 
 ✓ done · ◐ partial: the note says what's missing · ○ missing · **Beta.** needed for beta and not done yet
 
@@ -15,7 +15,7 @@ Marbble has **281** of 732 features, and a simpler version of 94 more; 357 are m
 | [Transport and tempo sync](#transport-and-tempo-sync) | 12 | 1 | 15 | 43% |
 | [Recording](#recording) | 37 | 2 | 8 | 79% |
 | [Tracks](#tracks) | 20 | 3 | 11 | 59% |
-| [Arranging](#arranging) | 61 | 18 | 36 | 53% |
+| [Arranging](#arranging) | 61 | 19 | 35 | 53% |
 | [Editors](#editors) | 32 | 12 | 53 | 33% |
 | [Time and pitch](#time-and-pitch) | 0 | 0 | 38 | 0% |
 | [Mixing and automation](#mixing-and-automation) | 37 | 12 | 40 | 42% |
@@ -413,11 +413,11 @@ Editing regions in the Tracks area, fades, region parameters, tools and the glob
 - ✓ Remove Silence (strip silence)
 - ◐ Marquee selection; marquee ruler: Delete, Cut, Copy, Paste, the Pointer click, the section edits and Crop; no marquee ruler, no playback of the marquee range.
 - ◐ Split at the marquee or locators: At the marquee, by a Pointer click inside it.
+- ◐ Alignment guides ([#518](https://github.com/JackMechem/marbble/issues/518)): Moved regions' starts and ends snap to other regions', the stopped playhead and the cycle locators, with a guide line; not for trims, loops or in the editors.
 - ◐ Full snap modes and relative snap: Division and Ticks besides Bar and Beat; no Frames, Quarter Frames or Samples, and no relative snap.
 - ◐ Waveform vertical zoom: In the Audio Track Editor only.
 - ◐ Nudge value in ticks, frames and samples: Samples (1 to 50), and Nudge Left/Right by Sample; no ticks or frames.
 - ◐ Mixdown options for joined audio, with crossfades: Join mixes through the playback path, so crossfades are kept; no options.
-- ○ Alignment guides
 - ○ Horizontal auto zoom
 - ○ Scrubbing
 - ○ Move to recorded position: Regions don't keep their recorded position yet.

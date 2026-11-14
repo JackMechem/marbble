@@ -14,6 +14,10 @@ All notable changes to Marbble are recorded here. The format follows
   you press and release the keys. The Audio Track editor's drags take the same keys. Smart snap
   also gets finer zoomed all the way in, down to a quarter of a division, instead of stopping
   at divisions.
+- **Moved regions snap to the edges of other regions.** As with Logic's alignment guides, a moved
+  region's start or end that comes within a few pixels of another region's start or end (on any
+  track), the stopped playhead or a cycle locator snaps onto it, ahead of the grid, with a guide
+  line drawn there. An Alt-drag copy snaps to the originals too. Ctrl+Shift turns it off.
 - **A Mixer view.** Besides the Mixer pane under the tracks, the Mixer can now fill the main
   window in the Tracks area's place, like Logic's Mixer window or Pro Tools' Mix window, with
   long faders and room for every slot. Switch with the new Tracks / Mixer buttons at the left of
