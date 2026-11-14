@@ -6,6 +6,8 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0-alpha.18] - 2026-11-14
+
 ### Added
 
 - **Pickup bar and first bar number.** A song with a pickup used to need a short signature at bar 1,
@@ -1628,7 +1630,8 @@ The first prerelease. Everything below is new.
 - The `takes_check` headless check "autopunch trims the take" fails about one run in five,
   from the null audio device's timing.
 
-[Unreleased]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.17...HEAD
+[Unreleased]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.18...HEAD
+[0.1.0-alpha.18]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.17...v0.1.0-alpha.18
 [0.1.0-alpha.17]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.16...v0.1.0-alpha.17
 [0.1.0-alpha.16]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.15...v0.1.0-alpha.16
 [0.1.0-alpha.15]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.14...v0.1.0-alpha.15
