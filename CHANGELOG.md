@@ -19,6 +19,8 @@ All notable changes to Marbble are recorded here. The format follows
   track), the stopped playhead or a cycle locator snaps onto it, ahead of the grid, with a guide
   line drawn there. An Alt-drag copy snaps to the originals too. Ctrl+Shift turns it off.
 
+## [0.1.0-alpha.17] - 2026-11-14
+
 ### Changed
 
 - **Selecting a track while playing with Render Ahead on is seamless.** The track had to play
@@ -1541,7 +1543,8 @@ The first prerelease. Everything below is new.
 - The `takes_check` headless check "autopunch trims the take" fails about one run in five,
   from the null audio device's timing.
 
-[Unreleased]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.16...HEAD
+[Unreleased]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.17...HEAD
+[0.1.0-alpha.17]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.16...v0.1.0-alpha.17
 [0.1.0-alpha.16]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.15...v0.1.0-alpha.16
 [0.1.0-alpha.15]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.14...v0.1.0-alpha.15
 [0.1.0-alpha.14]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.13...v0.1.0-alpha.14
