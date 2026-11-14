@@ -8,6 +8,7 @@ import { Icon } from "../ui/icons";
 import { getState, setState, useStore, type Snap, type State } from "../state/store";
 import { SNAP_LABELS } from "./ruler/rulerMenu";
 import { MAX_TRACK_H, MIN_TRACK_H, zoomTracks } from "./trackLayout";
+import { heightToSlider, sliderToHeight } from "./heightSlider";
 import { RULER_H } from "./viewport";
 import { Splitter } from "../app/Splitter";
 import { Arrange } from "./canvas/TracksCanvas";
@@ -254,12 +255,12 @@ export function TracksArea() {
               <input
                 className="zoom vzoom"
                 type="range"
-                min={MIN_TRACK_H}
-                max={MAX_TRACK_H}
-                step={1}
-                value={s.trackHeight}
-                title={`Track height (${fmt("Alt")}-scroll, ${keyHint("shorter-tracks")} / ${keyHint("taller-tracks")})`}
-                onChange={(e) => setState({ trackHeight: parseInt(e.target.value), trackHeights: {} })}
+                min={0}
+                max={1}
+                step={0.001}
+                value={heightToSlider(s.trackHeight, MIN_TRACK_H, MAX_TRACK_H)}
+                title={`Track height: ${s.trackHeight} px (${fmt("Alt")}-scroll, ${keyHint("shorter-tracks")} / ${keyHint("taller-tracks")})`}
+                onChange={(e) => setState({ trackHeight: sliderToHeight(parseFloat(e.target.value), MIN_TRACK_H, MAX_TRACK_H), trackHeights: {} })}
               />
             </>
           )}

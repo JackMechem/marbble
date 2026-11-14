@@ -50,13 +50,7 @@
 }
 
 .track-header.tier-compact .th-buttons .tbtn {
-  width: 22px;
-  height: 19px;
   font-size: var(--fs-sm);
-}
-
-.track-header.tier-compact .th-group {
-  height: 19px;
 }
 
 .track-header.tier-tiny {

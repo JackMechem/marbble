@@ -284,11 +284,11 @@ From left to right:
   Right-click the cycle strip, the bar numbers or the Autopunch strip for **Move Playhead
   Here** and **Create Marker Here** (at the click, snapped to beats at least), **Cycle** (C),
   **Autopunch**, **Set Locators by Regions** (U) and **Snap**. The marker lane has its own menu.
-- **Track headers:** colour, number, icon, name with the power button
-  ([On/Off](#turning-tracks-off), grey while the track plays) at its end, the M (Mute), S (Solo), R
-  (Record Enable, audio and instrument tracks), I (Input Monitoring, audio tracks) buttons, the
-  Freeze (snowflake) button, a group badge, and a volume slider with the track's level meter in its
-  line. Short tracks put it all on one line (see below). The **+** button above the headers opens
+- **Track headers:** colour, number, icon, name with a group's badge, the Track Alternatives
+  pop-up and the power button ([On/Off](#turning-tracks-off), grey while the track plays) at its
+  end, the M (Mute), S (Solo), R (Record Enable, audio and instrument tracks), I (Input Monitoring,
+  audio tracks) buttons, the Freeze (snowflake) button, and a volume slider with the track's level
+  meter in its line. Short tracks put it all on one line (see below). The **+** button above the headers opens
   New Tracks; the **H** button turns on hide mode. Under them, level with the ruler's marker lane,
   is the **Marker** row. A muted track's regions are drawn grey, as a muted region is; a track that
   is off is dimmed.
@@ -340,7 +340,10 @@ Track headers:
 - **Resize** by dragging the header's bottom edge. Alt-drag resizes every track, and
   double-clicking the edge resets the track. Ctrl+Down and Ctrl+Up (or Alt+wheel, or View ›
   Taller / Shorter Tracks, or View › Track Height: Mini, Compact, Small, Medium, Large, Extra
-  Large) change all tracks. Tracks go from 22 to 260 px; heights are remembered per project.
+  Large) change all tracks, and so does the **Height** slider above the tracks, which steps by a
+  factor as they do (the default height sits near its middle). Tracks go from 22 to 260 px;
+  heights are remembered per project. On a tall track the header's name and buttons stay at its
+  top, beside the regions' names, as in Logic.
 - **Short tracks:** from 52 px up the name sits above the buttons. Below that the header is a
   single line with a smaller icon (32 to 51 px), or without the icon and in a smaller size
   (below 32 px). The M, S, R, I and Freeze buttons then move into the **⋯** menu, which lists
@@ -354,7 +357,13 @@ Track headers:
 - **Button columns:** each button has its column, the same on every header, with a gap where a track
   has no such button (an instrument track has no I, an aux no R, I or Freeze). On one-line headers
   the columns are those of the switches that are on somewhere, so one track's M lines up with
-  another's. Regions on short tracks get a slimmer name bar, and on tracks below 32 px a region is a
+  another's. Every header's buttons are the same size and its volume slider the same length,
+  ending at the header's right edge, whatever its indent in a stack or its group. In a narrow
+  header column, buttons that don't fit beside the slider move into the **⋯** menu on every
+  header, from the right (Freeze, then I, R and S), rather than shrinking; on one-line headers the
+  slider gives way to the name and buttons, and is left out when there's no room for it. While a
+  stack is in view every header keeps a slot for its disclosure triangle, so the icons line up and
+  a subtrack's sits one step in from its stack's. Regions on short tracks get a slimmer name bar, and on tracks below 32 px a region is a
   bar of its colour with just its name, centred: no waveform, notes or fades. Its edges still trim
   it. An open take folder's take rows keep showing their takes.
 - **Volume:** drag the slider (Shift for fine), double-click or Alt-click it for 0 dB; its tooltip

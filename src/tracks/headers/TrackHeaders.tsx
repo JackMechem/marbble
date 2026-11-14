@@ -12,9 +12,11 @@ import { OutputTrackHeader, SubLaneHeaders } from "./AutoLaneHeaders";
 import { fmt } from "../../keyboard/keymap";
 import { REORDER_SLOP, reorderIndex } from "./headerGeometry";
 import { headerColumns } from "./headerColumns";
-import { Header, INDENT } from "./TrackHeader";
+import { AUTO_SLIDER_MIN, fitControls, iconLeft, leadWidth, SLIDER_MIN } from "./headerFit";
+import { Header } from "./TrackHeader";
 import { dragWith } from "../../ui/pointerDrag";
-
+import { zoomTracks } from "../trackLayout";
+import { wheelPixels } from "../../ui/wheel";
 
 export function TrackHeaders() {
   const project = useStore((s) => s.snap?.project);
@@ -25,8 +27,17 @@ export function TrackHeaders() {
   const dropTarget = useStore((s) => s.dropTarget);
   const hideMode = useStore((s) => s.showHidden);
   const fileDrop = dropTarget && dropTarget.kind !== "lane" ? dropTarget.index : null;
-  // Button columns from the tracks in view (a collapsed stack's subtracks don't count).
-  const columns = headerColumns(project?.tracks.filter((_, i) => layout.heights[i] > 0) ?? []);
+  const headerW = useStore((s) => s.paneSizes.headers);
+  const automation = useStore((s) => s.showAutomation);
+  // Button columns from the tracks in view (a collapsed stack's subtracks don't count), and what
+  // fits beside the slider on the most indented header, so every header shows the same.
+  const inView = project?.tracks.filter((_, i) => layout.heights[i] > 0) ?? [];
+  const stacks = inView.some((t) => isStack(t.kind));
+  const maxDepth = Math.max(0, ...layout.depth.filter((_, i) => layout.heights[i] > 0));
+  const shared = headerColumns(inView);
+  // The column's border is inside its width.
+  const fit = fitControls(headerW - 1, leadWidth(maxDepth, stacks), shared.full, hideMode ? 1 : 0, automation ? AUTO_SLIDER_MIN : SLIDER_MIN);
+  const columns = { full: fit.columns, compact: shared.compact, more: fit.more };
   const inner = useRef<HTMLDivElement>(null);
   const [drop, setDrop] = useState<number | null>(null);
 
@@ -85,9 +96,10 @@ export function TrackHeaders() {
     <div
       className="headers"
       onWheel={(e) => {
-        // Forward wheel scrolling to the arrange view.
+        // Alt+wheel sizes the tracks, as over the lanes; otherwise the wheel scrolls the tracks.
+        if (e.altKey) return zoomTracks(e.deltaY < 0 ? 1.1 : 1 / 1.1);
         const el = document.querySelector(".arrange-scroll") as HTMLElement | null;
-        if (el) el.scrollTop += e.deltaY;
+        if (el) el.scrollTop += wheelPixels(e, el.clientHeight).dy;
       }}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) setState({ selectedRegions: [] });
@@ -108,17 +120,21 @@ export function TrackHeaders() {
                 selected={selectedSet.has(t.id)}
                 primary={t.id === selected && selectedSet.size > 1}
                 height={layout.heights[i]}
+                takeRows={layout.takeRows[i]}
                 depth={layout.depth[i]}
+                stacks={stacks}
                 group={t.group !== null ? project.groups.find((g) => g.id === t.group) : undefined}
                 hideMode={hideMode}
                 columns={columns}
+                width={headerW - 1}
+                sliderW={fit.sliderW}
                 onReorderStart={startReorder}
               />
-              {layout.autoRows[i] > 0 && <SubLaneHeaders track={t} height={layout.subLane[i]} indent={layout.depth[i] * INDENT} />}
+              {layout.autoRows[i] > 0 && <SubLaneHeaders track={t} height={layout.subLane[i]} indent={iconLeft(leadWidth(layout.depth[i], stacks))} />}
             </Fragment>
           ) : null,
         )}
-        {layout.output && <OutputTrackHeader row={layout.output} />}
+        {layout.output && <OutputTrackHeader row={layout.output} lead={leadWidth(0, stacks)} sliderW={fit.sliderW} />}
         {drop !== null && <div className="reorder-line" style={{ top: (drop < layout.tops.length ? layout.tops[drop] : layout.total) - 1 }} />}
         {fileDrop !== null && (
           <div className="drop-new-track" style={{ top: (fileDrop < layout.tops.length ? layout.tops[fileDrop] : layout.total) - 1 }}>
