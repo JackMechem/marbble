@@ -11,7 +11,7 @@ import { theme } from "../../theme/canvasTheme";
 import { pixelRatio } from "../../ui/uiScale";
 import { playheadStyle } from "../ruler/rulerHead";
 import { useLayout, zoomTracks } from "../trackLayout";
-import { onViewport, registerScroller, setViewport, viewport } from "../viewport";
+import { onViewport, registerScroller, registerZoomer, setScrollOrigin, setViewport, timelineLeft, viewport } from "../viewport";
 import { regionEnd } from "../regions/loops";
 import { automationLeave } from "../automation/canvas";
 import { getSettings } from "../../settings/appSettings";
@@ -28,6 +28,9 @@ import { adjacentRegion, laneKey } from "../../keyboard/keyNav";
 import { linkedRegions } from "../regionCommands";
 import { editorPaneFor } from "../regions/regionEditor";
 import { wheelZoom } from "../zoom";
+import { zoomTime } from "../zoomCommands";
+import { anchoredZoomLeft } from "../zoomAnchor";
+import { clampLeft, nearWindowEnd, windowAt, type ScrollWindow } from "./scrollWindow";
 
 // ---- peaks ----------------------------------------------------------------------------------
 
@@ -42,6 +45,9 @@ function ensurePeaks(project: Project) {
 export function Arrange() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  // The scroller's content, a window onto the timeline when that is too wide (scrollWindow.ts).
+  const spacerRef = useRef<HTMLDivElement>(null);
+  const windowRef = useRef<ScrollWindow>({ origin: 0, width: 0 });
   const playheadRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<Drag | null>(null);
   // A Quick Swipe Comping drag or a comp section edge drag in progress, in take time.
@@ -83,6 +89,43 @@ export function Arrange() {
   // Keep the latest values for the imperative draw routine.
   const live = useRef<TracksLive>({ project, selectedTrack, selectedRegions, pps, layout });
   live.current = { project, selectedTrack, selectedRegions, pps, layout };
+  const contentWRef = useRef(contentW);
+  contentWRef.current = contentW;
+  const lengthRef = useRef(lengthSamples);
+  lengthRef.current = lengthSamples;
+
+  /** Scrolls to timeline px `left` (and `top`), moving the scroll window to show it. */
+  const scrollView = (left: number, top?: number) => {
+    const el = scrollRef.current;
+    const spacer = spacerRef.current;
+    if (!el || !spacer) return;
+    left = clampLeft(left, el.clientWidth, contentWRef.current);
+    const w = windowAt(left, el.clientWidth, contentWRef.current);
+    if (w.width !== windowRef.current.width) spacer.style.width = `${w.width}px`;
+    windowRef.current = w;
+    setScrollOrigin(w.origin);
+    el.scrollLeft = left - w.origin;
+    if (top === undefined) return setViewport({ left });
+    el.scrollTop = top;
+    setViewport({ left, top: el.scrollTop });
+  };
+  // A new timeline width (a longer project) keeps the left edge where it was, as a scroller does.
+  useLayoutEffect(() => scrollView(viewport().left), [contentW]);
+
+  /** Zooms to `pxPerBeat` keeping the time at `x` px into the view (or sample `at`) there. The
+   *  zoom, the timeline's width and the scroll change together, before the next frame draws or
+   *  Catch looks at the playhead; the render that follows finds them already in place. */
+  const zoomView = (pxPerBeat: number, x: number, at?: number) => {
+    const { project, pps } = live.current;
+    if (!project || pps <= 0) return setState({ pxPerBeat });
+    const next = pxPerBeat / samplesPerBeat(project);
+    const left = at === undefined ? anchoredZoomLeft(viewport().left, x, pps, next) : at * next - x;
+    live.current = { ...live.current, pps: next };
+    contentWRef.current = Math.ceil(lengthRef.current * next);
+    setState({ pxPerBeat });
+    scrollView(left);
+    requestDraw();
+  };
 
   const draw = () => drawTracks({ canvasRef, live, dragRef, swipeRef, marqueeRef, hoverRef, positionPlayhead });
   drawRef.current = draw;
@@ -127,17 +170,18 @@ export function Arrange() {
       setViewport({ width: el.clientWidth, height: el.clientHeight });
     });
     ro.observe(el);
-    registerScroller((left, top) => {
-      el.scrollLeft = left;
-      if (top !== undefined) el.scrollTop = top;
-    });
+    registerScroller(scrollView);
+    registerZoomer(zoomView);
+    // Back from the Mixer view: scrolled where it was, or where a command asked for meanwhile.
+    const was = viewport();
+    scrollView(was.left, was.top);
     const measure = () => (playheadOrigin.current = playheadRef.current?.parentElement?.getBoundingClientRect().left ?? 0);
     measure();
     const off = onViewport(() => {
       measure();
       requestDraw();
     });
-    // Ctrl/Cmd + wheel zooms horizontally around the pointer.
+    // Ctrl/Cmd + wheel zooms horizontally around the pointer (the playhead while Catch follows it).
     const wheel = (e: WheelEvent) => {
       if (e.altKey) {
         e.preventDefault();
@@ -155,42 +199,36 @@ export function Arrange() {
         return;
       }
       e.preventDefault();
-      const { project, pps } = live.current;
+      const { project } = live.current;
       if (!project) return;
-      const cx = e.clientX - el.getBoundingClientRect().left;
-      const sample = (el.scrollLeft + cx) / pps;
-      const next = wheelZoom(getState().pxPerBeat, e.deltaY);
-      setState({ pxPerBeat: next });
-      const nextPps = next / samplesPerBeat(project);
-      requestAnimationFrame(() => {
-        el.scrollLeft = Math.max(0, sample * nextPps - cx);
-      });
+      zoomTime(wheelZoom(getState().pxPerBeat, e.deltaY, samplesPerBeat(project)), e.clientX - el.getBoundingClientRect().left);
     };
     el.addEventListener("wheel", wheel, { passive: false });
     return () => {
       ro.disconnect();
       off();
       el.removeEventListener("wheel", wheel);
+      // In the Mixer view: a scroll asked for (a track selected with the arrow keys) waits here.
+      registerScroller((left, top) => setViewport(top === undefined ? { left } : { left, top }));
+      // A zoom (Zoom In's key) waits too, its anchor kept in the stored position.
+      registerZoomer((pxPerBeat, x, at) => {
+        const project = getState().snap?.project;
+        if (project) {
+          const pps = getState().pxPerBeat / samplesPerBeat(project);
+          const next = pxPerBeat / samplesPerBeat(project);
+          setViewport({ left: Math.max(0, at === undefined ? anchoredZoomLeft(viewport().left, x, pps, next) : at * next - x) });
+        }
+        setState({ pxPerBeat });
+      });
     };
   }, []);
 
-  // Playhead, catch and live recording previews
+  // Live recording previews (the store collects them, in the Mixer view too).
   useEffect(() => {
     let wasRecording = false;
     return onTick((t) => {
       if (!live.current.project) return;
-      for (const p of t.previews) {
-        let take = liveTakes.get(p.track);
-        if (!take || take.start !== p.start) {
-          take = { start: p.start, frames: 0, peaks: [] };
-          liveTakes.set(p.track, take);
-        }
-        take.peaks.length = p.from;
-        take.peaks.push(...p.peaks);
-        take.frames = p.frames;
-      }
       const finished = wasRecording && !t.recording;
-      if (finished) liveTakes.clear();
       wasRecording = t.recording;
       if (finished || t.previews.length || liveTakes.size) requestDraw();
     });
@@ -208,9 +246,7 @@ export function Arrange() {
         if (t?.playing && getState().catchPlayhead) {
           const vp = viewport();
           const x = pos * pps - vp.left;
-          const el = scrollRef.current!;
-          if (x > vp.width - 30) el.scrollLeft = pos * pps - 60;
-          else if (x < 0) el.scrollLeft = Math.max(0, pos * pps - 60);
+          if (x > vp.width - 30 || x < 0) scrollView(pos * pps - 60);
         }
       }),
     [],
@@ -222,8 +258,8 @@ export function Arrange() {
     () =>
       onRevealPlayhead((pos) => {
         const el = scrollRef.current!;
-        const left = revealLeft(pos * live.current.pps, el.scrollLeft, el.clientWidth);
-        if (left !== null) el.scrollLeft = left;
+        const left = revealLeft(pos * live.current.pps, timelineLeft(el), el.clientWidth);
+        if (left !== null) scrollView(left);
       }),
     [],
   );
@@ -264,8 +300,8 @@ export function Arrange() {
     if (!r) return;
     setState({ selectedRegions: linkedRegions(r.id), focus: "regions" });
     const el = e.currentTarget;
-    const left = revealLeft(r.start * pps, el.scrollLeft, el.clientWidth);
-    if (left !== null) el.scrollLeft = left;
+    const left = revealLeft(r.start * pps, timelineLeft(el), el.clientWidth);
+    if (left !== null) scrollView(left);
     setSaid(`${r.name || "Region"}, ${track.name}`);
   };
 
@@ -283,7 +319,9 @@ export function Arrange() {
         onKeyDown={onKeyDown}
         onScroll={(e) => {
           const el = e.currentTarget;
-          setViewport({ left: el.scrollLeft, top: el.scrollTop });
+          const left = timelineLeft(el);
+          if (nearWindowEnd(windowRef.current, left, el.clientWidth, contentWRef.current)) scrollView(left, el.scrollTop);
+          else setViewport({ left, top: el.scrollTop });
         }}
         onMouseDown={onMouseDown}
         onMouseMove={onHover}
@@ -293,7 +331,7 @@ export function Arrange() {
         }}
         onContextMenu={onContextMenu}
       >
-        <div style={{ width: contentW, height: contentH }} />
+        <div ref={spacerRef} style={{ height: contentH }} />
       </div>
       <div className="visually-hidden" aria-live="polite">
         {said}

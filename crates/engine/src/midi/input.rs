@@ -16,6 +16,7 @@ use midir::{MidiInput, MidiInputConnection};
 use parking_lot::Mutex;
 use serde::Serialize;
 
+use super::held::HeldNotes;
 use crate::control::controllers::{self, CtlKind};
 use crate::prefs::VelocityCurve;
 
@@ -139,6 +140,8 @@ pub struct MidiIo {
     log: Arc<Mutex<VecDeque<MidiLogEntry>>>,
     epoch: Instant,
     controls: Arc<Controls>,
+    /// The keys held, for the control bar's chord display.
+    held: Arc<HeldNotes>,
 }
 
 impl MidiIo {
@@ -151,12 +154,14 @@ impl MidiIo {
             log: Arc::default(),
             epoch: Instant::now(),
             controls: Arc::default(),
+            held: Arc::default(),
         }
     }
 
     /// Feeds a message in as if it came from a hardware port (on-screen keyboard, Musical
     /// Typing). It follows the same routing and recording path.
     pub fn inject(&self, data: [u8; 3]) {
+        self.held.note(data);
         let _ = self.sink.lock().push(data);
     }
 
@@ -165,7 +170,7 @@ impl MidiIo {
     /// For tests, which have no MIDI hardware.
     pub fn inject_from(&self, port: &str, msg: &[u8]) {
         let key: Arc<str> = Arc::from(controllers::port_key(port));
-        receive(&self.sink, &self.filter, &self.log, self.epoch, &self.controls, port, &key, msg);
+        receive(&self.sink, &self.filter, &self.log, self.epoch, &self.controls, &self.held, port, &key, msg);
     }
 
     /// The controllers whose messages go to the session rather than the instrument.
@@ -237,6 +242,12 @@ impl MidiIo {
         self.filter.fixed.store(fixed, Ordering::Relaxed);
     }
 
+    /// The keys held on every input and the on-screen keyboards, or struck since the last call,
+    /// lowest first.
+    pub fn held_notes(&self) -> Vec<u8> {
+        self.held.take()
+    }
+
     /// The most recent messages from hardware inputs, oldest first.
     pub fn recent(&self) -> Vec<MidiLogEntry> {
         self.log.lock().iter().cloned().collect()
@@ -247,7 +258,12 @@ impl MidiIo {
     pub fn refresh(&mut self) {
         let names = Self::port_names();
         let disabled = &self.disabled;
+        let before = self.connections.len();
         self.connections.retain(|(n, _)| names.contains(n) && !disabled.iter().any(|k| k == controllers::port_key(n)));
+        // A port unplugged or switched off with keys down never sends their note-offs.
+        if self.connections.len() < before {
+            self.held.clear();
+        }
         if !super::system_ports() {
             return;
         }
@@ -265,9 +281,10 @@ impl MidiIo {
             let log = self.log.clone();
             let epoch = self.epoch;
             let controls = self.controls.clone();
+            let held = self.held.clone();
             let port_name = name.clone();
             let key: Arc<str> = Arc::from(controllers::port_key(&name));
-            match input.connect(&port, "marbble-in", move |_, msg, _| receive(&sink, &filter, &log, epoch, &controls, &port_name, &key, msg), ()) {
+            match input.connect(&port, "marbble-in", move |_, msg, _| receive(&sink, &filter, &log, epoch, &controls, &held, &port_name, &key, msg), ()) {
                 Ok(c) => {
                     log::info!("MIDI input connected: {name}");
                     self.connections.push((name, c));
@@ -289,6 +306,7 @@ fn receive(
     log: &Mutex<VecDeque<MidiLogEntry>>,
     epoch: Instant,
     controls: &Controls,
+    held: &HeldNotes,
     port_name: &str,
     key: &Arc<str>,
     msg: &[u8],
@@ -300,10 +318,19 @@ fn receive(
     for (o, i) in d.iter_mut().zip(msg.iter()) {
         *o = *i;
     }
+    // A key comes up in the chord display even when its note-off is taken (an assignment
+    // learnt while it was down), or it would show held for good.
+    let note_off = d[0] & 0xF0 == 0x80 || (d[0] & 0xF0 == 0x90 && d[2] == 0);
+    if note_off {
+        held.note(d);
+    }
     if !controls.take(key, d) {
         if d[0] & 0xF0 == 0x90 && d[2] > 0 {
             let curve = VelocityCurve::from_u8(filter.curve.load(Ordering::Relaxed));
             d[2] = curve.apply(d[2], filter.fixed.load(Ordering::Relaxed));
+        }
+        if !note_off {
+            held.note(d);
         }
         let _ = sink.lock().push(d);
     }
@@ -336,5 +363,22 @@ mod tests {
         io.set_learning(true);
         io.inject_from("Keys 24:0", &[0xA0, 60, 10]);
         assert!(rx.pop().is_err());
+    }
+
+    #[test]
+    fn a_key_whose_note_off_is_taken_still_comes_up_in_the_chord_display() {
+        let (tx, _rx) = rtrb::RingBuffer::new(16);
+        let io = MidiIo::new(tx);
+        io.inject_from("Keys 24:0", &[0x90, 60, 100]);
+        io.inject_from("Keys 24:0", &[0x90, 64, 100]);
+        assert_eq!(io.held_notes(), vec![60, 64]);
+        // Learn Assignment starts with the keys down: their note-offs go to the session.
+        io.set_learning(true);
+        io.inject_from("Keys 24:0", &[0x80, 60, 0]);
+        io.inject_from("Keys 24:0", &[0x90, 64, 0]);
+        assert_eq!(io.held_notes(), Vec::<u8>::new());
+        // A note-on taken by the learn doesn't show.
+        io.inject_from("Keys 24:0", &[0x90, 67, 100]);
+        assert_eq!(io.held_notes(), Vec::<u8>::new());
     }
 }

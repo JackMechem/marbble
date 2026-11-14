@@ -36,7 +36,9 @@ import { EDIT_MENU, layMenu, menuLabel } from "../app/menuBar/menuLabels";
 import { packTakeFolder } from "./takes/takes";
 import { releaseFieldFocus } from "../keyboard/focusRing";
 import { onPress } from "../keyboard/keyNav";
-import { stepZoom } from "./zoom";
+import { sliderToZoom, zoomToSlider } from "./zoom";
+import { zoomTime, zoomTracksStep } from "./zoomCommands";
+import { paneShown, toggleBottom } from "../app/mainView";
 
 /** Logic's Drag pop-up; only Overlap and X-Fade so far. */
 /** In the order of Logic's Drag pop-up. */
@@ -122,7 +124,7 @@ export function viewMenu(): MenuItem[] {
   return [
     { id: "library", label: L("library"), hint: keyHint("library"), checked: s.showLibrary, onClick: () => setState({ showLibrary: !s.showLibrary }) },
     { id: "inspector", label: L("inspector"), hint: keyHint("inspector"), checked: s.showInspector, onClick: () => setState({ showInspector: !s.showInspector }) },
-    { id: "mixer", label: L("mixer"), hint: keyHint("mixer"), checked: s.bottom === "mixer", onClick: () => setState({ bottom: s.bottom === "mixer" ? "none" : "mixer" }) },
+    { id: "mixer", label: L("mixer"), hint: keyHint("mixer"), checked: paneShown(s, "mixer"), onClick: () => setState(toggleBottom(s, "mixer")) },
     { id: "browser", label: L("browser"), hint: keyHint("browser"), checked: s.showBrowser, onClick: () => setState({ showBrowser: !s.showBrowser }) },
     { id: "automation", label: L("automation"), hint: keyHint("automation"), checked: s.showAutomation, onClick: () => setState({ showAutomation: !s.showAutomation }) },
     { id: "used-automation", label: L("used-automation"), hint: keyHint("used-automation"), onClick: showUsedAutomation },
@@ -133,8 +135,8 @@ export function viewMenu(): MenuItem[] {
     { separator: true },
     { id: "show-hidden", label: L("show-hidden"), hint: keyHint("show-hidden"), checked: s.showHidden, onClick: toggleShowHidden },
     { separator: true },
-    { id: "zoom-in", label: L("zoom-in"), hint: keyHint("zoom-in"), onClick: () => setState({ pxPerBeat: stepZoom(s.pxPerBeat, 1) }) },
-    { id: "zoom-out", label: L("zoom-out"), hint: keyHint("zoom-out"), onClick: () => setState({ pxPerBeat: stepZoom(s.pxPerBeat, -1) }) },
+    { id: "zoom-in", label: L("zoom-in"), hint: keyHint("zoom-in"), onClick: () => zoomTracksStep(1) },
+    { id: "zoom-out", label: L("zoom-out"), hint: keyHint("zoom-out"), onClick: () => zoomTracksStep(-1) },
     { separator: true },
     { label: "Taller Tracks", hint: keyHint("taller-tracks"), onClick: () => zoomTracks(1.2) },
     { label: "Shorter Tracks", hint: keyHint("shorter-tracks"), onClick: () => zoomTracks(1 / 1.2) },
@@ -177,7 +179,6 @@ export function TracksArea() {
   const dragMode = useStore((s) => s.snap?.project.drag_mode) ?? "overlap";
   // Menus read the rest of the state when they open.
   const s = { ...getState(), pxPerBeat, catchPlayhead, snapMode, trackHeight };
-  const zoom = Math.log(s.pxPerBeat / 2) / Math.log(200);
   const fit = useBarFit(BAR_STEPS, `${snapMode}|${dragMode}`);
   const gone = fit.has;
   const snapItems = (): MenuItem[] => (Object.keys(SNAP_LABELS) as Snap[]).map((k) => ({ label: SNAP_LABELS[k], checked: s.snapMode === k, onClick: () => setState({ snapMode: k }) }));
@@ -275,9 +276,9 @@ export function TracksArea() {
                 min={0}
                 max={1}
                 step={0.001}
-                value={zoom}
+                value={zoomToSlider(s.pxPerBeat)}
                 title={`Horizontal zoom (${keyHint("zoom-out")} / ${keyHint("zoom-in")})`}
-                onChange={(e) => setState({ pxPerBeat: 2 * Math.pow(200, parseFloat(e.target.value)) })}
+                onChange={(e) => zoomTime(sliderToZoom(parseFloat(e.target.value)))}
               />
             </>
           )}

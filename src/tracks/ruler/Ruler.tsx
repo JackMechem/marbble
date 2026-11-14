@@ -1,6 +1,7 @@
 // The Tracks area's ruler: cycle strip, bar numbers, Autopunch strip and marker lane.
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { act } from "../../engine/commands";
+import type { Project } from "../../engine/project";
 import { getState, setState, useStore } from "../../state/store";
 import { coalesced, framePos, onFrame } from "../../state/frameLoop";
 import { samplesPerBeat, snapPos } from "../../lib/time";
@@ -20,6 +21,8 @@ import { rulerMenu } from "./rulerMenu";
 import { canvasFont } from "../../ui/canvasText";
 import { BARS_H, CYCLE_H, HEAD_W, onPlayheadHead, playheadStyle } from "./rulerHead";
 import { dragWith, pastDragThreshold } from "../../ui/pointerDrag";
+import { fineLabel, TICKS_PER_BEAT } from "../../lib/fineGrid";
+import { LABEL_MIN_PX, rulerScale } from "./rulerScale";
 
 const PUNCH_H = 6;
 const MARKERS_Y = BARS_H + PUNCH_H;
@@ -85,13 +88,18 @@ export function Ruler() {
 
     ctx.font = canvasFont("sm", 500);
     ctx.textBaseline = "alphabetic";
+    const from = Math.max(0, vp.left / pps);
+    const to = (vp.left + W) / pps;
+    // Whether any label is in view; zoomed in far, there may be none.
+    let labelled = false;
     // Bars through the tempo map, so their numbers follow tempo and signature changes.
-    for (const b of map.bars(Math.max(0, vp.left / pps), (vp.left + W) / pps)) {
+    for (const b of map.bars(from, to)) {
       const x = Math.round(b.start * pps - vp.left) + 0.5;
       const barPx = (b.end - b.start) * pps;
       // Skip bar labels when they would collide.
       const every = barPx >= 34 ? 1 : barPx >= 16 ? 2 : barPx >= 8 ? 4 : 8;
       if ((b.bar - 1) % every === 0) {
+        if (x + 3 + ctx.measureText(String(b.bar)).width > 0) labelled = true;
         ctx.fillStyle = theme.rulerTick;
         ctx.fillRect(x, CYCLE_H + 1, 1, BARS_H - CYCLE_H - 2);
         ctx.fillStyle = theme.rulerText;
@@ -107,6 +115,7 @@ export function Ruler() {
         }
       }
     }
+    drawFineSteps(ctx, project, pxPerBeat, pps, vp.left, W, labelled);
     drawMarkers(ctx, project, pps, vp.left, W, MARKERS_Y + 1, movingMarker.current);
 
   };
@@ -400,4 +409,46 @@ export function Ruler() {
       <div className="ruler-playhead" ref={handleRef} style={{ ["--ph" as string]: theme.playhead }} />
     </div>
   );
+}
+
+/**
+ * Zoomed in past bars and beats (rulerScale.ts): labels at beats or finer steps, short marks at
+ * the next steps down, a mark at every sample once they're far apart, and, when no label is in
+ * view (nor a bar number, `labelled`), the position of the left edge.
+ */
+function drawFineSteps(ctx: CanvasRenderingContext2D, project: Project, pxPerBeat: number, pps: number, left: number, W: number, labelled: boolean) {
+  const map = tempoMap(project);
+  const from = Math.max(0, left / pps);
+  const to = (left + W) / pps;
+  const { label, mark, samples } = rulerScale(pxPerBeat, pps);
+  if (mark !== null) {
+    ctx.fillStyle = theme.rulerMinor;
+    for (const g of map.grid(from, to, TICKS_PER_BEAT / mark)) {
+      const tick = g.sub * mark;
+      if (g.sub === 0 || tick % TICKS_PER_BEAT === 0 || (label !== null && tick % label === 0)) continue;
+      ctx.fillRect(Math.round(g.pos * pps - left) + 0.5, BARS_H - 4, 1, 3);
+    }
+  }
+  if (samples) {
+    ctx.fillStyle = theme.rulerMinor;
+    for (let s = Math.ceil(from); s < to; s++) ctx.fillRect(Math.round(s * pps - left), BARS_H - 2, 1, 2);
+  }
+  if (label !== null) {
+    // From a label's width before the left edge, so one cut by the edge still shows its end.
+    for (const g of map.grid(Math.max(0, from - LABEL_MIN_PX / pps), to, TICKS_PER_BEAT / label)) {
+      if (g.sub === 0) continue;
+      const x = Math.round(g.pos * pps - left) + 0.5;
+      ctx.fillStyle = theme.rulerTick;
+      ctx.fillRect(x, BARS_H - 9, 1, 8);
+      const text = fineLabel(g.bar, g.sub * label, label);
+      ctx.fillStyle = theme.rulerText;
+      ctx.fillText(text, x + 3, BARS_H - 6);
+      if (x + 3 + ctx.measureText(text).width > 0) labelled = true;
+    }
+  }
+  if (!labelled) {
+    const at = map.bbtAt(from);
+    ctx.fillStyle = theme.rulerText;
+    ctx.fillText(`${at.bar}.${at.beat}.${at.div}.${at.tick}`, 3, BARS_H - 6);
+  }
 }

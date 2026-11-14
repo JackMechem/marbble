@@ -35,6 +35,7 @@ impl Session {
         // Editors hidden while their plug-in wasn't responding, whose instance is gone now.
         vst3_host::close_stranded_editors();
         self.sampler_idle();
+        self.input_tuner_idle();
         if self.rec_punch.is_some() {
             self.rec_midi.drain();
         }
@@ -133,6 +134,8 @@ impl Session {
             learned: self.take_learned(),
             commands: self.take_ctl_commands(),
             midi_in: self.midi_since_last_tick(),
+            midi_held: self.midi.held_notes(),
+            tuner: self.input_tuner_tick(),
         }
     }
 

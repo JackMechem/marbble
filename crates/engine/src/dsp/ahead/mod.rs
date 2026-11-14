@@ -805,6 +805,7 @@ impl Engine {
             | Cmd::Graph(_)
             | Cmd::ParallelTest(_)
             | Cmd::InputTap { .. }
+            | Cmd::TunerTap { .. }
             | Cmd::AddTrack(..)
             | Cmd::Order(_) => true,
             Cmd::Params(id, p) => {

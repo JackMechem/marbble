@@ -74,3 +74,7 @@ export function bottomPaneSize(bottom: string): "mixer" | "editor" | "fx" | null
   if (bottom === "editor" || bottom === "list" || bottom === "steps") return "editor";
   return null;
 }
+
+/** The least height the Mixer view's Mixer keeps beside the docked effect panels under it: what a
+ *  Mixer pane keeps at the least. */
+export const MIXER_VIEW_MIN = PANE_LIMITS.mixer[0];
