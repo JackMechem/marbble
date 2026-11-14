@@ -26,7 +26,18 @@ export function onViewport(f: (v: Viewport) => void): () => void {
   return () => subs.delete(f);
 }
 
-/** Set by the arrange view so other components can scroll it. */
+/** Where the Tracks area's scroller content starts on the timeline, in px: 0 unless the timeline
+ *  is wider than a browser scrolls (canvas/scrollWindow.ts). Set by the arrange view. */
+let scrollOrigin = 0;
+export function setScrollOrigin(origin: number) {
+  scrollOrigin = origin;
+}
+
+/** The timeline px at the left edge of the Tracks area's scroller `el`, which counts its own
+ *  scrollLeft from the scroll window's origin. */
+export const timelineLeft = (el: HTMLElement) => scrollOrigin + el.scrollLeft;
+
+/** Set by the arrange view so other components can scroll it (to timeline px). */
 export let scrollTo: (left: number, top?: number) => void = () => {};
 export function registerScroller(f: (left: number, top?: number) => void) {
   scrollTo = f;

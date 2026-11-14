@@ -188,7 +188,7 @@ export function Overview() {
         const inView = t * pps >= vp.left && t * pps <= vp.left + vp.width;
         const anchor = inView ? t : (vp.left + vp.width / 2) / pps;
         const cx = anchor * pps - vp.left;
-        const next = wheelZoom(getState().pxPerBeat, e.deltaY);
+        const next = wheelZoom(getState().pxPerBeat, e.deltaY, spb);
         setState({ pxPerBeat: next });
         requestAnimationFrame(() => scrollTo(anchoredLeft(anchor, cx, next / spb)));
         return;

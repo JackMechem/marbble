@@ -11,7 +11,7 @@ import { theme } from "../../theme/canvasTheme";
 import { pixelRatio } from "../../ui/uiScale";
 import { playheadStyle } from "../ruler/rulerHead";
 import { useLayout, zoomTracks } from "../trackLayout";
-import { onViewport, registerScroller, setViewport, viewport } from "../viewport";
+import { onViewport, registerScroller, setScrollOrigin, setViewport, timelineLeft, viewport } from "../viewport";
 import { regionEnd } from "../regions/loops";
 import { automationLeave } from "../automation/canvas";
 import { getSettings } from "../../settings/appSettings";
@@ -28,6 +28,7 @@ import { adjacentRegion, laneKey } from "../../keyboard/keyNav";
 import { linkedRegions } from "../regionCommands";
 import { editorPaneFor } from "../regions/regionEditor";
 import { wheelZoom } from "../zoom";
+import { clampLeft, nearWindowEnd, windowAt, type ScrollWindow } from "./scrollWindow";
 
 // ---- peaks ----------------------------------------------------------------------------------
 
@@ -42,6 +43,9 @@ function ensurePeaks(project: Project) {
 export function Arrange() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  // The scroller's content, a window onto the timeline when that is too wide (scrollWindow.ts).
+  const spacerRef = useRef<HTMLDivElement>(null);
+  const windowRef = useRef<ScrollWindow>({ origin: 0, width: 0 });
   const playheadRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<Drag | null>(null);
   // A Quick Swipe Comping drag or a comp section edge drag in progress, in take time.
@@ -83,6 +87,27 @@ export function Arrange() {
   // Keep the latest values for the imperative draw routine.
   const live = useRef<TracksLive>({ project, selectedTrack, selectedRegions, pps, layout });
   live.current = { project, selectedTrack, selectedRegions, pps, layout };
+  const contentWRef = useRef(contentW);
+  contentWRef.current = contentW;
+
+  /** Scrolls to timeline px `left` (and `top`), moving the scroll window to show it. */
+  const scrollView = (left: number, top?: number) => {
+    const el = scrollRef.current;
+    const spacer = spacerRef.current;
+    if (!el || !spacer) return;
+    left = clampLeft(left, el.clientWidth, contentWRef.current);
+    const w = windowAt(left, el.clientWidth, contentWRef.current);
+    if (w.width !== windowRef.current.width) spacer.style.width = `${w.width}px`;
+    windowRef.current = w;
+    setScrollOrigin(w.origin);
+    el.scrollLeft = left - w.origin;
+    if (top === undefined) return setViewport({ left });
+    el.scrollTop = top;
+    setViewport({ left, top: el.scrollTop });
+  };
+  // A new timeline width (zoom, a longer project) keeps the left edge where it was, as a
+  // scroller does.
+  useLayoutEffect(() => scrollView(viewport().left), [contentW]);
 
   const draw = () => drawTracks({ canvasRef, live, dragRef, swipeRef, marqueeRef, hoverRef, positionPlayhead });
   drawRef.current = draw;
@@ -127,15 +152,10 @@ export function Arrange() {
       setViewport({ width: el.clientWidth, height: el.clientHeight });
     });
     ro.observe(el);
-    registerScroller((left, top) => {
-      el.scrollLeft = left;
-      if (top !== undefined) el.scrollTop = top;
-    });
+    registerScroller(scrollView);
     // Back from the Mixer view: scrolled where it was, or where a command asked for meanwhile.
     const was = viewport();
-    el.scrollLeft = was.left;
-    el.scrollTop = was.top;
-    setViewport({ left: el.scrollLeft, top: el.scrollTop });
+    scrollView(was.left, was.top);
     const measure = () => (playheadOrigin.current = playheadRef.current?.parentElement?.getBoundingClientRect().left ?? 0);
     measure();
     const off = onViewport(() => {
@@ -163,12 +183,12 @@ export function Arrange() {
       const { project, pps } = live.current;
       if (!project) return;
       const cx = e.clientX - el.getBoundingClientRect().left;
-      const sample = (el.scrollLeft + cx) / pps;
-      const next = wheelZoom(getState().pxPerBeat, e.deltaY);
+      const sample = (timelineLeft(el) + cx) / pps;
+      const next = wheelZoom(getState().pxPerBeat, e.deltaY, samplesPerBeat(project));
       setState({ pxPerBeat: next });
       const nextPps = next / samplesPerBeat(project);
       requestAnimationFrame(() => {
-        el.scrollLeft = Math.max(0, sample * nextPps - cx);
+        scrollView(sample * nextPps - cx);
       });
     };
     el.addEventListener("wheel", wheel, { passive: false });
@@ -204,9 +224,7 @@ export function Arrange() {
         if (t?.playing && getState().catchPlayhead) {
           const vp = viewport();
           const x = pos * pps - vp.left;
-          const el = scrollRef.current!;
-          if (x > vp.width - 30) el.scrollLeft = pos * pps - 60;
-          else if (x < 0) el.scrollLeft = Math.max(0, pos * pps - 60);
+          if (x > vp.width - 30 || x < 0) scrollView(pos * pps - 60);
         }
       }),
     [],
@@ -218,8 +236,8 @@ export function Arrange() {
     () =>
       onRevealPlayhead((pos) => {
         const el = scrollRef.current!;
-        const left = revealLeft(pos * live.current.pps, el.scrollLeft, el.clientWidth);
-        if (left !== null) el.scrollLeft = left;
+        const left = revealLeft(pos * live.current.pps, timelineLeft(el), el.clientWidth);
+        if (left !== null) scrollView(left);
       }),
     [],
   );
@@ -260,8 +278,8 @@ export function Arrange() {
     if (!r) return;
     setState({ selectedRegions: linkedRegions(r.id), focus: "regions" });
     const el = e.currentTarget;
-    const left = revealLeft(r.start * pps, el.scrollLeft, el.clientWidth);
-    if (left !== null) el.scrollLeft = left;
+    const left = revealLeft(r.start * pps, timelineLeft(el), el.clientWidth);
+    if (left !== null) scrollView(left);
     setSaid(`${r.name || "Region"}, ${track.name}`);
   };
 
@@ -279,7 +297,9 @@ export function Arrange() {
         onKeyDown={onKeyDown}
         onScroll={(e) => {
           const el = e.currentTarget;
-          setViewport({ left: el.scrollLeft, top: el.scrollTop });
+          const left = timelineLeft(el);
+          if (nearWindowEnd(windowRef.current, left, el.clientWidth, contentWRef.current)) scrollView(left, el.scrollTop);
+          else setViewport({ left, top: el.scrollTop });
         }}
         onMouseDown={onMouseDown}
         onMouseMove={onHover}
@@ -289,7 +309,7 @@ export function Arrange() {
         }}
         onContextMenu={onContextMenu}
       >
-        <div style={{ width: contentW, height: contentH }} />
+        <div ref={spacerRef} style={{ height: contentH }} />
       </div>
       <div className="visually-hidden" aria-live="polite">
         {said}

@@ -212,9 +212,9 @@ CI, releases and the website's deploy.
 | **`marbble-dsp-N`** | `Session::sync_parallel` | Plays strips beside the callback when Processing Threads allows and the project is heavy enough ([Multi-core](#multi-core-processing)). | The same as the callback. |
 | **`audio-io`** | `audio_io::start` | Builds and owns the cpal streams until the device closes. | |
 | **`recorder`** | `audio_io/recorder.rs` | Every 10 ms, drains each armed track's ring into its WAV file, an in-memory copy and the preview peaks. | Touch the engine or the project. |
-| **`ui-tick`** | `src-tauri/src/timers.rs` | Every 33 ms, locks the session, builds a `Tick` (playhead, meters, CPU, recording previews, warnings…) and emits it. | Edit anything. |
+| **`ui-tick`** | `src-tauri/src/timers.rs` | Every 33 ms, locks the session, builds a `Tick` (playhead, meters, CPU, recording previews, warnings…) and emits it. While the LCD's Tuner shows, it runs the pitch detector over the input the engine copied since (`session/input_tuner.rs`). | Edit anything. |
 | **MIDI refresh** | `src-tauri/src/timers.rs` | Every 3 s, connects MIDI devices plugged in since. | |
-| **MIDI input callbacks** | midir, `midi/input.rs` | Route each message: a control surface's port to the session whole, assigned controllers to a queue for `idle`, the rest (after the velocity curve) to the `live_midi` ring the engine reads. | |
+| **MIDI input callbacks** | midir, `midi/input.rs` | Route each message: a control surface's port to the session whole, assigned controllers to a queue for `idle`, the rest (after the velocity curve) to the `live_midi` ring the engine reads, marking the keys held for the LCD's Chord mode (`midi/held.rs`, atomics the tick reads). | |
 | **`midi-out`** | `midi/output.rs` | Sends the feedback and surface messages `idle` hands it. | Touch the session. |
 | **Async commands** | Tauri's runtime | Renders (bounce, export, Bounce in Place, Freeze), plug-in rescans, waveforms, device lists, folder listings, the Diagnostics window's snapshots (which wait at most 5 ms for the session and skip a refresh rather than wait longer). Renders hold the session and engine locks throughout; edits they make go back to the main thread with `run_on_main_thread`. | Touch plug-in controllers. |
 | **Autosave writer** | `src-tauri/src/timers.rs` | Writes a job serialized on the main thread to disk, atomically. | |
@@ -239,7 +239,8 @@ same rules. They must not:
 - **allocate or free.** Buffers are sized up front: `MAX_BLOCK` = 1024 frames, `MAX_INPUTS` = 32,
   512 MIDI events per track per block. A larger device buffer is processed in sub-blocks.
 - **lock, block or wait on another thread.** Communication is through wait-free `rtrb`
-  single-producer rings (commands, garbage, live MIDI, recorded MIDI and audio, the analyzer feed)
+  single-producer rings (commands, garbage, live MIDI, recorded MIDI and audio, the analyzer and
+  tuner feeds)
   and atomics (`EngineStatus`, `Meter`, `FxShared`). Not channels: a `crossbeam_channel` receiver
   can spin while a preempted sender finishes, and at real-time priority that starved the sender
   until the kernel killed the app with SIGXCPU.
@@ -992,7 +993,10 @@ flowchart LR
   in the Mixer and a floating panel's edges, which capture the pointer, and painting steps in the
   Step Sequencer).
 - The tracks' vertical layout is `src/tracks/trackLayout.ts`; the horizontal scroll is shared
-  without React state through `src/tracks/viewport.ts`. Waveforms are fetched once per clip as
+  without React state through `src/tracks/viewport.ts`, in timeline px. Zoomed in to samples the
+  timeline is wider than a browser scrolls, so the scroller shows a window onto it
+  (`src/tracks/canvas/scrollWindow.ts`): read its position with `timelineLeft(el)`, never
+  `el.scrollLeft`, and scroll it with `scrollTo`. Waveforms are fetched once per clip as
   raw min/max bytes and cached (`src/tracks/regions/waveform.ts`).
 
 ### Themes and styles

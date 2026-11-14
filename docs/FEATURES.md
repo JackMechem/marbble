@@ -44,7 +44,7 @@ The main window, zoom, key commands, settings, help and accessibility. 27 of 56 
 - ✓ All Files Browser
 - ✓ Musical Typing window with on-screen keyboard (⌘K)
 - ◐ Control bar: view buttons, transport, LCD, Cycle, Count-in, Metronome, master volume, CPU ([#322](https://github.com/JackMechem/marbble/issues/322)): Fixed layout, but for the CPU meter, which Settings › Appearance puts here or in the status line; no Customize Control Bar. **Beta.**
-- ◐ LCD display modes ([#323](https://github.com/JackMechem/marbble/issues/323)): Beats and Time only; no Custom mode or large LCD. **Beta.**
+- ◐ LCD display modes ([#323](https://github.com/JackMechem/marbble/issues/323)): Beats & Project, Time, Tuner (the selected audio track's input) and Chord (held on MIDI input); no Custom mode or large LCD. **Beta.**
 - ◐ Right inspector strip follows the left strip's output or aux ([#324](https://github.com/JackMechem/marbble/issues/324)): Always shows Stereo Out. **Beta.**
 - ◐ Library pane: Lists plug-ins to load, with search; no patches (see Plug-ins › Library and patches).
 - ◐ Project notes ([#325](https://github.com/JackMechem/marbble/issues/325)): Free-form notes in Project Settings; no Note Pad pane. **Beta.**
