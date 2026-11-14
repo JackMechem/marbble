@@ -289,6 +289,32 @@ fn count_in_uses_the_tempo_at_the_punch() {
 }
 
 #[test]
+fn count_in_starts_on_its_accented_downbeat() {
+    // 110 BPM: a 4/4 bar is 104727.27 samples, so the count-in starts at a rounded 104727
+    // samples before the punch, a fraction after the exact bar line. Its first click is still
+    // the accented "1".
+    let map = || TempoMap::constant(48000.0, 110.0, 4, 4);
+    let punch = 0;
+    let from = punch - (map().samples_per_bar_at(punch as f64)).round() as i64;
+    let clicks = play_clicks(map(), from, Some(punch), (punch - from) as usize + 1000);
+    assert_eq!(clicks.len(), 5, "{clicks:?}");
+    assert!(clicks[0].0 <= 1 && clicks[0].1 > 0.4, "{clicks:?}");
+    assert!(clicks[1..4].iter().all(|c| c.1 < 0.4) && clicks[4].1 > 0.4);
+    // Across tempos and count-in lengths, the first click is the count-in's first bar line.
+    for centi in (4000..=30000).step_by(7) {
+        let bpm = centi as f64 / 100.0;
+        let map = TempoMap::constant(48000.0, bpm, 4, 4);
+        for bars in 1..=2 {
+            let from = punch - (map.samples_per_bar_at(punch as f64) * bars as f64).round() as i64;
+            let c = CountIn::at(&map, punch, 1);
+            let k = c.first_at_or_after(from);
+            assert_eq!(k, -4 * bars, "{bpm} BPM, {bars} bars");
+            assert!(c.downbeat(k) && c.pos(k) >= from && c.pos(k - 1) < from, "{bpm} BPM");
+        }
+    }
+}
+
+#[test]
 fn plugins_get_the_position_in_the_map() {
     use crate::model::tempo::{SigEvent, TempoEvent};
     let map = TempoMap::new(

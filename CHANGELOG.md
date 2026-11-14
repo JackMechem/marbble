@@ -44,6 +44,9 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Fixed
 
+- **The count-in sometimes skipped its first, accented click.** At many tempos (110 BPM at 48 kHz,
+  for one) a count-in started a fraction of a sample after its bar line and sounded "2 3 4"
+  before the punch. It now always starts on the accented "1".
 - **Grouped tracks and linked regions come out of the selection together.** With Track
   Selection linked, ⌘/Ctrl-clicking a selected member did nothing (the group put it straight
   back); it now deselects the group. With Editing linked, Shift-clicking a selected region took
