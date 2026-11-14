@@ -14,7 +14,7 @@ import { openMenu } from "../../ui/Menu";
 import { keepRegionsOn } from "../trackCommands";
 import { linkedRegions } from "../regionCommands";
 import { laneMenu, regionMenu, renameRegion } from "../contextMenus";
-import { isLooped, regionEnd } from "../regions/loops";
+import { isLooped, loopsDragged, regionEnd } from "../regions/loops";
 import { automationHover, automationMenu, automationMouseDown } from "../automation/canvas";
 import { refuseFrozen } from "../freeze";
 import { getSettings } from "../../settings/appSettings";
@@ -94,16 +94,15 @@ function moveSnapEdges(project: Project, grabbed: Region, sel: Id[]) {
   return { moving: movingEdges(own, grabbed.start), others: edgeTargets(others), withOwn: edgeTargets([...others, ...own]) };
 }
 
-/** The regions a trim of `grabbed`'s edge changes: it and the other selected regions, except on
- *  frozen tracks, each with where it is and how far it can go. */
+/** The regions a trim or loop drag on `grabbed` changes: it and the other selected regions,
+ *  except on frozen tracks. */
+function editedWith(project: Project, grabbed: Region, sel: Id[]): Region[] {
+  return project.tracks.flatMap((t) => (t.frozen ? [] : t.regions.filter((x) => x.id === grabbed.id || sel.includes(x.id))));
+}
+
+/** The regions a trim of `grabbed`'s edge changes, each with where it is and how far it can go. */
 function trimmedRegions(project: Project, grabbed: Region, sel: Id[]) {
-  return project.tracks.flatMap((t) =>
-    t.frozen
-      ? []
-      : t.regions
-          .filter((x) => x.id === grabbed.id || sel.includes(x.id))
-          .map((x) => ({ id: x.id, span: { start: x.start, length: x.length }, lim: trimLimits(x, x.content.type === "audio" ? waveCache.get(x.content.clip)?.frames : undefined) })),
-  );
+  return editedWith(project, grabbed, sel).map((x) => ({ id: x.id, span: { start: x.start, length: x.length }, lim: trimLimits(x, x.content.type === "audio" ? waveCache.get(x.content.clip)?.frames : undefined) }));
 }
 
 type Refs = TracksRefs & {
@@ -234,7 +233,10 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
     // A trim moves the same edge of every selected region, as in Logic (frozen tracks' stay).
     const trimEdge: TrimEdge | null = kind === "left" || kind === "right" ? kind : null;
     const trimming = trimEdge ? trimmedRegions(project, r, sel) : [];
-    dragRef.current = { kind, ids: kind === "move" ? sel : trimEdge ? trimming.map((x) => x.id) : [r.id], dx: 0, dTrack: 0, grabbed: r.id };
+    // So does a loop drag, by as much as the grabbed region's loop end moves.
+    const looping = kind === "loop" ? editedWith(project, r, sel) : [];
+    const ids = kind === "move" ? sel : trimEdge ? trimming.map((x) => x.id) : kind === "loop" ? looping.map((x) => x.id) : [r.id];
+    dragRef.current = { kind, ids, dx: 0, dTrack: 0, grabbed: r.id };
     const fadeFrom = r.content.type === "audio" ? (kind === "fadeIn" ? r.content.fade_in : r.content.fade_out) : 0;
     // Dragging a crossfade's handle resizes it about its centre.
     const crossfading = kind === "fadeOut" && !!regionCrossfades(r.id)?.out;
@@ -279,7 +281,7 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
         d.length = own.length;
       } else if (kind === "loop") {
         // Dragging back onto the region's own end turns the loop off.
-        d.loopEnd = Math.max(r.start + r.length, snap(regionEnd(r) + d.dx));
+        d.loops = loopsDragged(looping, snap(regionEnd(r) + d.dx) - regionEnd(r));
       }
       requestDraw();
     };
@@ -299,9 +301,9 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
   const dropRegionDrag = (project: Project, r: Region, kind: GrabKind, d: Drag) => {
     if (kind === "move") {
       dropMove(project, r, d);
-    } else if (d.loopEnd !== undefined) {
-      const end = Math.round(d.loopEnd);
-      act("set_region_loop", { id: r.id, loopEnd: end > r.start + r.length ? end : null });
+    } else if (d.loops) {
+      // One undo step for them all; a loop end back on a region's own end turns its loop off.
+      act("set_region_loops", { loops: [...d.loops] });
     } else if (d.fade !== undefined) {
       act("set_region_fades", { ids: [r.id], fadeIn: kind === "fadeIn" ? d.fade : null, fadeOut: kind === "fadeOut" ? d.fade : null });
     } else if (d.spans?.size) {
