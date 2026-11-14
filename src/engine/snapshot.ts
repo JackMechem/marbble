@@ -132,4 +132,23 @@ export interface Tick {
   commands?: string[];
   /** Messages from hardware MIDI inputs since the last tick (Step Input listens to them). */
   midi_in?: [number, number, number][];
+  /** The keys held on MIDI input (every input and Marbble's keyboards) or struck since the last
+   *  tick, lowest first: the LCD's Chord mode. */
+  midi_held?: number[];
+  /** What the selected audio track's input plays, while the LCD's Tuner mode shows. */
+  tuner?: TunerReading | null;
+}
+
+/** The control bar's tuner (crates/engine/src/session/input_tuner.rs). */
+export interface TunerReading {
+  /** The audio track tuned; null when the selected track isn't an audio track with an input. */
+  track: Id | null;
+  /** Hz, 0 when no pitch is heard. */
+  freq: number;
+  /** The nearest MIDI note, -1 when no pitch is heard. */
+  note: number;
+  /** -50 to 50. */
+  cents: number;
+  /** The input level, dBFS. */
+  level: number;
 }

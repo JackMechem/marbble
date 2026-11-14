@@ -4,7 +4,8 @@ import { emitTo } from "@tauri-apps/api/event";
 import { act, api } from "../engine/commands";
 import { hideTracks, keepRegionsOn, toggleShowHidden } from "../tracks/trackCommands";
 import { copyRegions, cutRegions, deleteRegions, pasteRegions, setLocatorsByRegions, toggleLoop, toggleRegionMute } from "../tracks/regionCommands";
-import { commandForEvent, isMenuCommand } from "../keyboard/keymap";
+import { commandForEvent, isMenuCommand, KEY_COMMANDS } from "../keyboard/keymap";
+import { keyRunsIn } from "./mainView";
 import { runsOnKey } from "../keyboard/keyRepeat";
 import { nudgeSamples, type Nudge } from "../settings/appSettings";
 import { evenNudge, movedStart, nudgeTarget } from "../tracks/regions/musicalMove";
@@ -68,6 +69,8 @@ export const KEY_ACTIONS: Record<string, () => void> = {
   forward: () => transport.nudgeBars(1),
   "catch-playhead": () => setState({ catchPlayhead: !getState().catchPlayhead }),
   "show-playhead": () => transport.showPlayhead(),
+  "tracks-view": () => handleMenu("tracks-view"),
+  "mixer-view": () => handleMenu("mixer-view"),
   mixer: () => handleMenu("mixer"),
   inspector: () => handleMenu("inspector"),
   library: () => handleMenu("library"),
@@ -177,7 +180,7 @@ export function onKey(e: KeyboardEvent) {
   // Shortcuts the native menu owns never reach here; everything else comes from the keymap.
   const id = commandForEvent(e);
   const run = id ? KEY_ACTIONS[id] : undefined;
-  if (!run) return;
+  if (!run || !keyRunsIn(getState().mainView, KEY_COMMANDS.find((c) => c.id === id)?.group)) return;
   e.preventDefault();
   if (id && runsOnKey(id, e.repeat)) {
     noteActivity("key", id);

@@ -464,38 +464,9 @@ impl Effect for Tuner {
 
     fn process(&mut self, l: &mut [f32], r: &mut [f32], _key: Key, _ctx: &FxContext) {
         for (&a, &b) in l.iter().zip(r.iter()) {
-            let x = 0.5 * (a as f64 + b as f64);
-            // One-pole DC blocker at 10 Hz, then the low-pass.
-            let y = x - self.dc_x1 + self.dc_coeff * self.dc_y1;
-            self.dc_x1 = x;
-            self.dc_y1 = y;
-            // The level is measured after the DC blocker: an interface's DC offset alone
-            // mustn't open the gate, or the detector runs on the blocker's decaying output.
-            self.level_ms += self.level_coeff * (y * y - self.level_ms);
-            let [lp1, lp2] = &mut self.lowpass;
-            let y = lp2.run(lp1.run(y));
-            // Far below anything audible (-300 dB); tinier values would square into f32
-            // denormals in the NSDF sums, which are very slow where flush-to-zero is off.
-            let y = if y.abs() < 1e-15 { 0.0 } else { y };
-            self.full.push(y as f32);
-            self.decim_phase += 1;
-            if self.decim_phase == self.decim {
-                self.decim_phase = 0;
-                self.coarse.push(y as f32);
-            }
+            self.take(0.5 * (a as f64 + b as f64));
         }
-        // Keep denormals out of the filter tails after the input goes silent.
-        if self.level_ms < 1e-30 {
-            self.level_ms = 0.0;
-        }
-
-        self.since_analysis += l.len();
-        if self.since_analysis >= self.hop {
-            let elapsed = self.since_analysis;
-            self.since_analysis = 0;
-            let found = if self.level_db() >= self.threshold { self.detect() } else { None };
-            self.track(found, elapsed);
-        }
+        self.end_block(l.len());
 
         if self.mute {
             l.fill(0.0);
@@ -534,6 +505,53 @@ impl Effect for Tuner {
 }
 
 impl Tuner {
+    /// Listens to a block of mono audio without playing it: the control bar's tuner runs the
+    /// detector this way, off the audio thread (`session/input_tuner.rs`).
+    pub fn listen(&mut self, mono: &[f32]) {
+        for &x in mono {
+            self.take(x as f64);
+        }
+        self.end_block(mono.len());
+    }
+
+    /// One sample into the detector's front end.
+    #[inline]
+    fn take(&mut self, x: f64) {
+        // One-pole DC blocker at 10 Hz, then the low-pass.
+        let y = x - self.dc_x1 + self.dc_coeff * self.dc_y1;
+        self.dc_x1 = x;
+        self.dc_y1 = y;
+        // The level is measured after the DC blocker: an interface's DC offset alone
+        // mustn't open the gate, or the detector runs on the blocker's decaying output.
+        self.level_ms += self.level_coeff * (y * y - self.level_ms);
+        let [lp1, lp2] = &mut self.lowpass;
+        let y = lp2.run(lp1.run(y));
+        // Far below anything audible (-300 dB); tinier values would square into f32
+        // denormals in the NSDF sums, which are very slow where flush-to-zero is off.
+        let y = if y.abs() < 1e-15 { 0.0 } else { y };
+        self.full.push(y as f32);
+        self.decim_phase += 1;
+        if self.decim_phase == self.decim {
+            self.decim_phase = 0;
+            self.coarse.push(y as f32);
+        }
+    }
+
+    /// After a block of `n` samples: runs the detector once a hop has gone by.
+    fn end_block(&mut self, n: usize) {
+        // Keep denormals out of the filter tails after the input goes silent.
+        if self.level_ms < 1e-30 {
+            self.level_ms = 0.0;
+        }
+        self.since_analysis += n;
+        if self.since_analysis >= self.hop {
+            let elapsed = self.since_analysis;
+            self.since_analysis = 0;
+            let found = if self.level_db() >= self.threshold { self.detect() } else { None };
+            self.track(found, elapsed);
+        }
+    }
+
     fn level_db(&self) -> f32 {
         if self.level_ms > 0.0 {
             ((10.0 * self.level_ms.log10()) as f32).max(LEVEL_FLOOR)

@@ -150,10 +150,11 @@ pub fn import_audio_files(state: State<AppState>, paths: Vec<String>, track: Opt
     })
 }
 
-/// Drags a region's loop to `loop_end` (None, or the region's own end, turns it off).
+/// Drags the selected regions' loops, each to its own loop end (None, or the region's own end,
+/// turns it off), in one undo step.
 #[tauri::command]
-pub fn set_region_loop(state: State<AppState>, id: Id, loop_end: Option<i64>) -> Snapshot {
-    edit(&state, "Loop Region", None, false, |s| s.set_region_loop(id, loop_end))
+pub fn set_region_loops(state: State<AppState>, loops: Vec<(Id, Option<i64>)>) -> Snapshot {
+    edit(&state, &plural(loops.len(), "Loop Region", "Loop Regions"), None, false, |s| s.set_region_loops(&loops))
 }
 
 /// The Loop switch (L): on loops up to the next region on the track, off removes the loop.

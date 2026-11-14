@@ -3,7 +3,7 @@
 // a track selected with the arrow keys into view).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { timeStripWheel, timeWheel } from "../../src/ui/wheel.ts";
+import { timeStripWheel, timeWheel, wheelPixels } from "../../src/ui/wheel.ts";
 import { onRevealPlayhead, revealLeft, revealPlayhead, revealTop } from "../../src/tracks/viewport.ts";
 import { TRACK_COLOR_NAMES, TRACK_COLORS } from "../../src/tracks/trackColors.ts";
 
@@ -28,6 +28,12 @@ test("a trackpad's sideways swipe still scrolls time", () => {
 test("line and page deltas become pixels", () => {
   assert.deepEqual(timeWheel(wheel(3, 0, false, 1)), { dx: 48, dy: 0 });
   assert.deepEqual(timeWheel(wheel(1, 0, false, 2), 640), { dx: 640, dy: 0 });
+});
+
+test("the wheel over the track headers scrolls the tracks by its distance in pixels", () => {
+  assert.deepEqual(wheelPixels(wheel(100)), { dx: 0, dy: 100 });
+  assert.deepEqual(wheelPixels(wheel(3, 0, false, 1)), { dx: 0, dy: 48 });
+  assert.deepEqual(wheelPixels(wheel(-1, 0, false, 2), 500), { dx: 0, dy: -500 });
 });
 
 test("strips that only scroll in time follow the setting", () => {

@@ -11,7 +11,7 @@ import type { Layout } from "../trackLayout";
 import { getState, setState } from "../../state/store";
 import { mix, theme } from "../../theme/canvasTheme";
 import { snapToTracksGrid } from "../gridSnap";
-import type { Viewport } from "../viewport";
+import { timelineLeft, type Viewport } from "../viewport";
 import { addLane, closeLane, showUsedAutomation } from "./menus";
 import { fromUnit, fromUnitExact, isOutput, laneOf, outputTrack, paramLabel, stripOf, toUnit } from "./params";
 import { formatValue, liveValue, shownParam } from "./values";
@@ -204,7 +204,7 @@ interface Hit {
 
 function hitTest(e: { clientX: number; clientY: number }, v: AutoInput): Hit | null {
   const rect = v.el.getBoundingClientRect();
-  const x = e.clientX - rect.left + v.el.scrollLeft;
+  const x = e.clientX - rect.left + timelineLeft(v.el);
   const y = e.clientY - rect.top + v.el.scrollTop;
   const box = boxAt(boxesOf(v.project, v.layout), y);
   if (!box) return null;
@@ -439,7 +439,7 @@ function addPoint(h: Hit, v: AutoInput) {
 
 function hitPoint(e: MouseEvent, v: AutoInput) {
   const rect = v.el.getBoundingClientRect();
-  return { x: e.clientX - rect.left + v.el.scrollLeft, y: e.clientY - rect.top + v.el.scrollTop };
+  return { x: e.clientX - rect.left + timelineLeft(v.el), y: e.clientY - rect.top + v.el.scrollTop };
 }
 
 /** Pointer moves over the lanes: the value under the pointer (a point's, or the curve's). */

@@ -42,6 +42,7 @@ use crate::midi::input::MidiIo;
 use crate::model::*;
 use crate::prefs::*;
 
+mod input_tuner;
 mod periodic;
 mod transport;
 mod undo;
@@ -68,6 +69,7 @@ pub use diagnostics::{
     TrackDiagnostics, Watch, WatchKind,
 };
 pub use engine::pdc::{PdcReport, StripLatency};
+pub use input_tuner::TunerReading;
 pub use midi::content::MidiContent;
 pub use mixer::meters::PeakHolds;
 pub use mixer::multi_out::{InstrumentOutputs, OutputInfo};
@@ -150,6 +152,11 @@ pub struct Tick {
     pub commands: Vec<String>,
     /// Messages from hardware MIDI inputs since the last tick, oldest first (for Step Input).
     pub midi_in: Vec<[u8; 3]>,
+    /// The keys held on the live MIDI input (every input, Musical Typing and the on-screen
+    /// keyboards) or struck since the last tick, lowest first, for the control bar's chord display.
+    pub midi_held: Vec<u8>,
+    /// What the control bar's tuner hears, while it shows (`input_tuner.rs`).
+    pub tuner: Option<TunerReading>,
 }
 
 /// The latencies the status line and Settings › Audio show.
@@ -316,6 +323,8 @@ pub struct Session {
     /// Which thread played each track's strip and its share of the block, shared with the strips as
     /// `meters` are (see `dsp/strip_load.rs`), for the Diagnostics window.
     strip_loads: HashMap<Id, Arc<StripLoad>>,
+    /// The control bar's tuner, while it shows (`input_tuner.rs`).
+    input_tuner: Option<Box<input_tuner::InputTuner>>,
 }
 
 /// A project snapshot taken before an edit.
@@ -489,6 +498,7 @@ impl Session {
             graph_dirty: true,
             engine_resync: false,
             strip_loads: HashMap::new(),
+            input_tuner: None,
         };
         s.restart_audio();
         s.sync_globals();
