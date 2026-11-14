@@ -98,7 +98,7 @@ export function Ruler() {
       const barPx = (b.end - b.start) * pps;
       // Skip bar labels when they would collide.
       const every = barPx >= 34 ? 1 : barPx >= 16 ? 2 : barPx >= 8 ? 4 : 8;
-      if ((b.bar - 1) % every === 0) {
+      if (map.everyNthBar(b.bar, every)) {
         if (x + 3 + ctx.measureText(String(b.bar)).width > 0) labelled = true;
         ctx.fillStyle = theme.rulerTick;
         ctx.fillRect(x, CYCLE_H + 1, 1, BARS_H - CYCLE_H - 2);

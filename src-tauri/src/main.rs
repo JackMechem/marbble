@@ -219,6 +219,7 @@ fn main() {
             commands::set_signatures,
             commands::set_tempo_at,
             commands::set_signature_at,
+            commands::set_bar_numbering,
             commands::move_midi_with_tempo,
             commands::list_builtin_effects,
             commands::list_builtin_instruments,

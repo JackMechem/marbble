@@ -134,9 +134,8 @@ export async function createMidiRegion(track: Id, pos: number) {
   const p = project();
   if (!p) return;
   const m = tempoMap(p);
-  const bar = m.barAt(pos);
-  const start = Math.round(m.barStart(bar));
-  selectRegions(await actMade("create_midi_region", { track, start, length: Math.round(m.barStart(bar + 1)) - start, key: null }));
+  const [start, length] = m.barSpanAt(pos);
+  selectRegions(await actMade("create_midi_region", { track, start, length, key: null }));
 }
 
 /** Create Pattern Region: a bar-long pattern region at the bar containing `pos`, selected and
@@ -148,11 +147,7 @@ export async function createPatternRegion(track: Id, pos: number, free = false) 
   const m = tempoMap(p);
   let start: number, length: number;
   if (free) [start, length] = freePatternBar(m, p.tracks.find((t) => t.id === track)?.regions ?? [], pos);
-  else {
-    const bar = m.barAt(pos);
-    start = Math.round(m.barStart(bar));
-    length = Math.round(m.barStart(bar + 1)) - start;
-  }
+  else [start, length] = m.barSpanAt(pos);
   // Rows to suit the instrument: drums for a kit, notes for a synth (editors/stepSequencer/model.ts).
   const t = p.tracks.find((x) => x.id === track);
   const rows = t ? templateRows(t, p.key) : null;

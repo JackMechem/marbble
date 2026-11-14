@@ -1,5 +1,5 @@
-// File › Project Settings…: tempo, key and signature, the project's own recording and metronome
-// settings, and its notes.
+// File › Project Settings…: tempo, key and signature, bar numbering (a pickup and the first bar's
+// number), the project's own recording and metronome settings, and its notes.
 import { useEffect, useRef, useState } from "react";
 import { supportedRates, type AudioConfig, type DeviceList } from "../../engine/devices";
 import { act, call } from "../../engine/commands";
@@ -9,6 +9,9 @@ import { Check, NumberField, Select } from "../../ui/Form";
 import { Foot, Row, Section, SheetFrame, TabIcon } from "./parts";
 import { BIT_DEPTHS } from "./RecordingPane";
 import { MetronomeDefaults, MetronomeFields } from "./MetronomePane";
+import { barNumbering, MAX_FIRST_BAR, MIN_FIRST_BAR } from "../../lib/tempo";
+import { pickupLength, pickupQuarters } from "../../lib/pickup";
+import type { Project } from "../../engine/project";
 
 const KEYS = ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
 const SIGNATURES: [number, number][] = [
@@ -75,6 +78,7 @@ function ProjectGeneral() {
           />
         </Row>
       </Section>
+      <BarNumberingSection p={p} />
       <Section title="Audio">
         <Row
           label="Sample Rate:"
@@ -104,6 +108,33 @@ function ProjectGeneral() {
         </Row>
       </Section>
     </>
+  );
+}
+
+/** The pickup, in beats of the first signature and ticks, and the first full bar's number. */
+function BarNumberingSection({ p }: { p: Project }) {
+  const { pickup, firstBar } = barNumbering(p);
+  const { beats, ticks } = pickupLength(pickup, p.sig_den);
+  const set = (pickup: number, firstBar: number) => act("set_bar_numbering", { pickup, firstBar });
+  const setPickup = (b: number, t: number) => set(pickupQuarters(b, t, p.sig_num, p.sig_den), firstBar);
+  const beat = p.sig_den === 8 ? "eighth" : p.sig_den === 2 ? "half" : p.sig_den === 16 ? "sixteenth" : "quarter";
+  return (
+    <Section title="Bars">
+      <Row
+        label="Pickup:"
+        note={`A partial bar from the project's start, numbered ${firstBar - 1}: the last beats (${beat} notes) of a bar before bar ${firstBar}. 0 for none. Regions keep their place in time.`}
+      >
+        <div className="row-inline">
+          <NumberField value={beats} min={0} max={p.sig_num - 1} step={1} onChange={(b) => setPickup(b, ticks)} width={64} title="Beats" />
+          <span className="dim">beats</span>
+          <NumberField value={ticks} min={0} max={959} step={240} resolution={1} onChange={(t) => setPickup(beats, t)} width={72} title="Ticks (960 a beat)" />
+          <span className="dim">ticks</span>
+        </div>
+      </Row>
+      <Row label="First Bar Number:" note="The number of the first full bar. 0 or negative bars are fine.">
+        <NumberField value={firstBar} min={MIN_FIRST_BAR} max={MAX_FIRST_BAR} step={1} onChange={(n) => set(pickup, n)} width={76} />
+      </Row>
+    </Section>
   );
 }
 

@@ -141,9 +141,8 @@ export function listCommands(core: Core) {
    *  lists it. Its id, or null if none was made. */
   const makeRegion = async (track: Id, pr: Project, at: number, key: string): Promise<Id | null> => {
     const m = tempoMap(pr);
-    const bar = m.barAt(at);
-    const start = Math.round(m.barStart(bar));
-    const ids = await actMade("create_midi_region", { track, start, length: Math.round(m.barStart(bar + 1)) - start, key });
+    const [start, length] = m.barSpanAt(at);
+    const ids = await actMade("create_midi_region", { track, start, length, key });
     if (!ids?.length) return null;
     setState({ selectedRegions: ids, focus: "regions" });
     const s = getState();

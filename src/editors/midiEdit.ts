@@ -180,10 +180,12 @@ export type Bars = number | BarLines;
 export const barFloor = (t: number, bar: Bars) => (typeof bar === "number" ? Math.floor(t / bar) * bar : bar.floor(t));
 const barCeil = (t: number, bar: Bars) => (typeof bar === "number" ? Math.ceil(t / bar) * bar : bar.ceil(t));
 
-/** Snaps a time to the grid, counted from the start of its bar (so odd meters line up). */
+/** Snaps a time to the grid, counted from the start of its bar (so odd meters line up), never
+ *  before the timeline's start (a pickup's bar line is before it) when `t` isn't. */
 export function snapTime(t: number, grid: number, bar: Bars): number {
   const b = barFloor(t, bar);
-  return b + Math.round((t - b) / grid) * grid;
+  const at = b + Math.round((t - b) / grid) * grid;
+  return t >= 0 ? Math.max(0, at) : at;
 }
 
 /** Selected notes, or all of them when none are. */

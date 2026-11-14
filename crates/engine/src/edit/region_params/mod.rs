@@ -159,7 +159,8 @@ pub fn quantize_target(at: f64, div: u16, swing: u8, map: &TempoMap) -> f64 {
         target += grid * (swing.min(100) as f64 - 50.0) / 50.0;
     }
     let target = if target >= end || end - q < (q - target).abs() { end } else { target };
-    map.sample_at(target)
+    // Not before the timeline's start (a pickup's bar line is before it).
+    map.sample_at(if q >= 0.0 { target.max(0.0) } else { target })
 }
 
 /// A velocity after dynamics (around 64) and the velocity offset, within 1–127.

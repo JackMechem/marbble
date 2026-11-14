@@ -299,16 +299,15 @@ export function drawRuler(ctx: CanvasRenderingContext2D, v: PrView, g: Grid, s: 
   ctx.font = canvasFont("sm", 500);
   ctx.textBaseline = "alphabetic";
   for (const bar of g.map.bars(Math.max(0, timeAt(v, 0)), timeAt(v, W))) {
-    const b = bar.bar - 1;
     const barPx = (bar.end - bar.start) * v.pps;
     const every = barPx >= 34 ? 1 : barPx >= 16 ? 2 : barPx >= 8 ? 4 : 8;
     const beatPx = barPx / bar.num;
     const x = Math.round(xOf(v, bar.start)) + 0.5;
-    if (b % every === 0) {
+    if (g.map.everyNthBar(bar.bar, every)) {
       ctx.fillStyle = theme.rulerTick;
       ctx.fillRect(x, CYCLE_H + 1, 1, H - CYCLE_H - 6);
       ctx.fillStyle = theme.rulerText;
-      ctx.fillText(String(b + 1), x + 3, H - 8);
+      ctx.fillText(String(bar.bar), x + 3, H - 8);
     }
     if (beatPx >= 10) {
       for (let k = 1; k < bar.num; k++) {
@@ -317,7 +316,7 @@ export function drawRuler(ctx: CanvasRenderingContext2D, v: PrView, g: Grid, s: 
         ctx.fillRect(bx, H - 10, 1, 5);
         if (beatPx >= 48) {
           ctx.font = canvasFont("xs");
-          ctx.fillText(`${b + 1}.${k + 1}`, bx + 3, H - 8);
+          ctx.fillText(`${bar.bar}.${k + 1}`, bx + 3, H - 8);
           ctx.font = canvasFont("sm", 500);
         }
       }

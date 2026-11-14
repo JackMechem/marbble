@@ -92,9 +92,7 @@ impl Session {
         let from = if playing {
             punch
         } else if self.project.count_in {
-            // Whole bars at the tempo and signature in effect at the punch.
-            let bar = self.tempo_map().samples_per_bar_at(punch as f64);
-            punch - (bar * rec.count_in_bars.clamp(1, 4) as f64).round() as i64
+            self.tempo_map().count_in_start(punch, rec.count_in_bars)
         } else {
             // Pre-roll: play a moment of the song first, then drop into record at the playhead.
             punch - (rec.pre_roll_secs.clamp(0.0, 30.0) as f64 * self.sample_rate()).round() as i64
@@ -318,10 +316,11 @@ impl Session {
         midi
     }
 
-    /// From the bar line at or before `lo` to the one at or after `hi` (a bar at least).
+    /// From the bar line at or before `lo` (or the timeline's start, in the pickup) to the one
+    /// at or after `hi` (a bar at least).
     fn whole_bars(&self, lo: i64, hi: i64) -> (i64, i64) {
         let map = self.tempo_map();
-        let start = map.bar_start(map.bar_at(lo as f64)) as i64;
+        let start = (map.bar_start(map.bar_at(lo as f64)) as i64).max(0);
         let hi = hi.max(lo + 1) as f64;
         let last = map.bar_at(hi);
         let end = if map.bar_start(last) >= hi { map.bar_start(last) } else { map.bar_start(last + 1) } as i64;

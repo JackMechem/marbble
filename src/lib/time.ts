@@ -19,10 +19,10 @@ export function toBbt(p: Project, pos: number): Bbt {
   return tempoMap(p).bbtAt(pos);
 }
 
-/** The bar line at or before `pos`. */
+/** The bar line at or before `pos` (the timeline's start, in the pickup). */
 export function barFloor(p: Project, pos: number): number {
   const m = tempoMap(p);
-  return m.barStart(m.barAt(pos));
+  return m.barStartOnTimeline(m.barAt(pos));
 }
 
 /** The bar line `n` bars after the bar holding `pos` (n may be negative). */

@@ -26,14 +26,15 @@ export interface GlobalContent {
   arrangement?: readonly unknown[];
   tempo_map?: readonly unknown[];
   signatures?: readonly { bar: number }[];
+  first_bar?: number;
 }
 
 /** The global tracks with something on them: arrangement sections, a tempo change (more than
- *  the project's one tempo), a signature change after bar 1. */
+ *  the project's one tempo), a signature change after the first bar. */
 export function usedGlobalTracks(p: GlobalContent): GlobalTrackId[] {
   const used: Record<GlobalTrackId, boolean> = {
     arrangement: (p.arrangement?.length ?? 0) > 0,
-    signature: (p.signatures ?? []).some((s) => s.bar > 1),
+    signature: (p.signatures ?? []).some((s) => s.bar > (p.first_bar ?? 1)),
     tempo: (p.tempo_map?.length ?? 0) > 1,
   };
   return GLOBAL_TRACKS.filter((id) => used[id]);

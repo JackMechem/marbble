@@ -242,17 +242,16 @@ export function editorDrawer({ canvasRef, scaleRef, scrollRef, playheadRef, drag
     const every = [1, 2, 4, 8, 16, 32, 64, 128].find((n) => map.samplesPerBarAt(left / pps) * pps * n >= 34) ?? 256;
     ctx.textBaseline = "alphabetic";
     for (const bar of map.bars(Math.max(0, left / pps), (left + W) / pps)) {
-      const b = bar.bar - 1;
       const x = Math.round(bar.start * pps - left) + 0.5;
       const barPx = (bar.end - bar.start) * pps;
       const beatPx = barPx / bar.num;
       const beatX = (k: number) => Math.round(map.sampleAt(bar.startQ + (k * 4) / bar.den) * pps - left + 0.5);
-      if (b % every === 0) {
+      if (map.everyNthBar(bar.bar, every)) {
         ctx.fillStyle = theme.rulerTick;
         ctx.fillRect(x, CYCLE_STRIP + 1, 1, RULER - CYCLE_STRIP - 2);
         ctx.fillStyle = theme.rulerText;
         ctx.font = canvasFont("sm", 500);
-        ctx.fillText(String(b + 1), x + 3, RULER - 5);
+        ctx.fillText(String(bar.bar), x + 3, RULER - 5);
       } else if (barPx >= 4) {
         ctx.fillStyle = theme.rulerMinor;
         ctx.fillRect(x, RULER - 7, 1, 6);
@@ -265,7 +264,7 @@ export function editorDrawer({ canvasRef, scaleRef, scrollRef, playheadRef, drag
         ctx.fillRect(bx, RULER - 5, 1, 4);
         if (beatPx >= 48) {
           ctx.fillStyle = theme.rulerTick;
-          ctx.fillText(`${b + 1}.${k + 1}`, bx + 3, RULER - 5);
+          ctx.fillText(`${bar.bar}.${k + 1}`, bx + 3, RULER - 5);
         }
       }
       if (beatPx >= 48) {

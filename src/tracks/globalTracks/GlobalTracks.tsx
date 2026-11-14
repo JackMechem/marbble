@@ -329,8 +329,8 @@ export function GlobalTracks() {
       setPop({ ...hit, x: e.clientX, y: e.clientY, editing: true });
       return;
     }
-    // A new signature starts at the nearest bar line.
-    const bar = Math.max(1, Math.round(map.barPosition(sampleAt(e.clientX))) + 1);
+    // A new signature starts at the nearest bar line (the first full bar's or later).
+    const bar = Math.max(map.firstBar, Math.round(map.barNumberAt(sampleAt(e.clientX))));
     const [num, den] = map.sigAtBar(bar);
     setPop({ bar, num, den, x: e.clientX, y: e.clientY, editing: false });
   };
@@ -428,7 +428,7 @@ export function GlobalTracks() {
     if (y < live.current.sigH) {
       // Right-click deletes a signature change (the first one is the project's own).
       const s = sigAt(p, x);
-      if (s && s.bar > 1) commitSigs(map.sigs.filter((x) => x.bar !== s.bar));
+      if (s && s.bar > map.firstBar) commitSigs(map.sigs.filter((x) => x.bar !== s.bar));
       return;
     }
     const events = map.events.map((ev) => ({ ...ev }));

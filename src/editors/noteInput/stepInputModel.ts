@@ -237,9 +237,7 @@ export function regionFor(regions: Region[], at: number, map: TempoMap): Region 
 
 /** The bar a new region for a step at `at` covers: [start, length]. */
 export function newRegionSpan(map: TempoMap, at: number): [number, number] {
-  const bar = map.barAt(at);
-  const start = Math.round(map.barStart(bar));
-  return [start, Math.round(map.barStart(bar + 1)) - start];
+  return map.barSpanAt(at);
 }
 
 const same = (a: { start: number; pitch: number }, b: { start: number; pitch: number }) => Math.round(a.start) === Math.round(b.start) && a.pitch === b.pitch;

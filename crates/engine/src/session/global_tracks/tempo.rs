@@ -4,7 +4,7 @@
 //! MIDI. "Move MIDI Regions with Tempo" (`move_midi` below) instead keeps MIDI regions and
 //! their notes on their bars and beats; audio never moves.
 
-use crate::model::tempo::{normalize_sigs, normalize_tempo, SigEvent, TempoEvent, TempoMap};
+use crate::model::tempo::{normalize_sigs, normalize_tempo, SigEvent, TempoEvent, TempoMap, MAX_FIRST_BAR, MIN_FIRST_BAR};
 use crate::session::*;
 
 impl Session {
@@ -35,9 +35,9 @@ impl Session {
         self.sync_globals();
     }
 
-    /// Replaces the Signature track (a change at bar 1 is added when missing).
+    /// Replaces the Signature track (a change at the first full bar is added when missing).
     pub fn set_signatures(&mut self, events: Vec<SigEvent>) {
-        let ev = normalize_sigs(&events, (self.project.sig_num, self.project.sig_den));
+        let ev = normalize_sigs(&events, (self.project.sig_num, self.project.sig_den), self.project.first_bar);
         self.project.sig_num = ev[0].num;
         self.project.sig_den = ev[0].den;
         self.project.signatures = if ev.len() == 1 { Vec::new() } else { ev };
@@ -53,13 +53,30 @@ impl Session {
         self.set_tempo_map(ev, move_midi);
     }
 
-    /// Sets the signature in effect at 1-based `bar` (the LCD's signature menu).
-    pub fn set_signature_at(&mut self, bar: u32, num: u32, den: u32) {
+    /// Sets the signature in effect at `bar` (the LCD's signature menu; the pickup's is the
+    /// first full bar's).
+    pub fn set_signature_at(&mut self, bar: i64, num: u32, den: u32) {
         let mut ev = self.tempo_map().signatures().to_vec();
         let i = ev.iter().rposition(|e| e.bar <= bar).unwrap_or(0);
         ev[i].num = num;
         ev[i].den = den;
         self.set_signatures(ev);
+    }
+
+    /// Sets the pickup (in quarters, at most a bar of the first signature) and the first full
+    /// bar's number (Project Settings). Regions, markers and tempo changes keep their time;
+    /// signature changes keep their bars, renumbered.
+    pub fn set_bar_numbering(&mut self, pickup: f64, first_bar: i64) {
+        let first_bar = first_bar.clamp(MIN_FIRST_BAR, MAX_FIRST_BAR);
+        let shift = first_bar - self.project.first_bar;
+        for s in &mut self.project.signatures {
+            s.bar += shift;
+        }
+        let bar_q = self.project.sig_num as f64 * 4.0 / self.project.sig_den as f64;
+        self.project.pickup = if pickup.is_finite() { pickup.clamp(0.0, bar_q) } else { 0.0 };
+        self.project.first_bar = first_bar;
+        self.dirty = true;
+        self.sync_globals();
     }
 
     /// Moves MIDI regions, notes and controllers so that what sat at a bar and beat under
@@ -92,8 +109,8 @@ impl Session {
     pub fn move_midi_between(&mut self, old: &[TempoEvent], new: &[TempoEvent]) {
         let p = &self.project;
         let sr = p.sample_rate as f64;
-        let a = TempoMap::new(sr, old, &p.signatures, p.tempo, (p.sig_num, p.sig_den));
-        let b = TempoMap::new(sr, new, &p.signatures, p.tempo, (p.sig_num, p.sig_den));
+        let a = TempoMap::numbered(sr, old, &p.signatures, p.tempo, (p.sig_num, p.sig_den), p.bar_numbering());
+        let b = TempoMap::numbered(sr, new, &p.signatures, p.tempo, (p.sig_num, p.sig_den), p.bar_numbering());
         self.move_midi_with_tempo(&a, &b);
     }
 }
@@ -123,6 +140,25 @@ mod tests {
     use super::*;
     use crate::audio_io::AudioConfig;
     use crate::session::MidiContent;
+
+    #[test]
+    fn bar_numbering_renumbers_signatures_and_keeps_time() {
+        let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
+        let mut s = Session::new(cfg, Vec::new());
+        s.set_signatures(vec![SigEvent { bar: 1, num: 4, den: 4 }, SigEvent { bar: 3, num: 3, den: 4 }]);
+        let three = s.tempo_map().bar_start(3);
+        // A quarter pickup, bars from 0: the 3/4 bar is bar 2 and a quarter later.
+        s.set_bar_numbering(1.0, 0);
+        assert_eq!(s.project.signatures, vec![SigEvent { bar: 0, num: 4, den: 4 }, SigEvent { bar: 2, num: 3, den: 4 }]);
+        let map = s.tempo_map();
+        assert_eq!(map.bar_beat_at(0.0).bar, -1);
+        assert!((map.bar_start(2) - three - map.samples_per_quarter_at(0.0)).abs() < 1e-6);
+        // A pickup is at most a bar of the first signature.
+        s.set_bar_numbering(9.0, 0);
+        assert_eq!(s.project.pickup, 4.0);
+        s.set_bar_numbering(0.0, 1);
+        assert_eq!(s.tempo_map().bar_start(3), three);
+    }
 
     #[test]
     fn move_midi_with_tempo_moves_every_track_alternative() {

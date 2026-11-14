@@ -4,14 +4,14 @@ Every feature of Logic Pro, by area, and how far Marbble has it. This page is ge
 `scripts/features.py` from the files in `features/`: change those, in the pull request that
 changes the feature. [ROADMAP.md](../ROADMAP.md) says what beta needs and what's being worked on.
 
-Marbble has **281** of 732 features, and a simpler version of 95 more; 356 are missing. Beta needs 249 of them, and 55 of those are still to do.
+Marbble has **281** of 732 features, and a simpler version of 96 more; 355 are missing. Beta needs 249 of them, and 55 of those are still to do.
 
 ✓ done · ◐ partial: the note says what's missing · ○ missing · **Beta.** needed for beta and not done yet
 
 | Area | Done | Partial | Missing | Share done |
 |---|---:|---:|---:|---:|
 | [Interface and settings](#interface-and-settings) | 27 | 12 | 17 | 48% |
-| [Projects](#projects) | 19 | 3 | 13 | 54% |
+| [Projects](#projects) | 19 | 4 | 12 | 54% |
 | [Transport and tempo sync](#transport-and-tempo-sync) | 12 | 1 | 15 | 43% |
 | [Recording](#recording) | 37 | 2 | 8 | 79% |
 | [Tracks](#tracks) | 20 | 3 | 11 | 59% |
@@ -144,9 +144,9 @@ Opening, saving and managing projects, undo, and exchanging projects with other 
 - ✓ Revert to the last saved version
 - ◐ Project Chooser ([#333](https://github.com/JackMechem/marbble/issues/333)): New, Recent and Open, with four built-in templates and the user's own (My Templates); no demo projects or tutorials. **Beta.**
 - ◐ Save a copy including all assets ([#334](https://github.com/JackMechem/marbble/issues/334)): Save As into a new folder copies every file the project uses into it; no Save a Copy As that leaves the open project as it is. **Beta.**
+- ◐ Project start and end points ([#336](https://github.com/JackMechem/marbble/issues/336)): The project can start before bar 1: Project Settings › Bars sets a pickup and the first bar's number. No end point or ruler markers yet. **Beta.**
 - ○ Open several projects at once and switch between them
 - ○ Delete a project from the chooser ([#335](https://github.com/JackMechem/marbble/issues/335)) **Beta.**
-- ○ Project start and end points ([#336](https://github.com/JackMechem/marbble/issues/336)) **Beta.**
 - ○ Close Project without quitting ([#337](https://github.com/JackMechem/marbble/issues/337)) **Beta.**
 - ○ Project Information window
 
