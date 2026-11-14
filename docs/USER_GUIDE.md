@@ -1524,8 +1524,9 @@ Settings**, which you can reopen by clicking a member's group badge:
   like Logic's group clutch).
 - What the members share: **Volume** and **Pan** (as relative moves: each member keeps its
   offset, even after the move took it to the end of its range and back), **Mute**, **Solo**,
-  **Record Enable**, **Track Selection** (clicking one selects all), and **Editing
-  (Selection)** (selecting a region selects the regions at the same place on the others, and
+  **Record Enable**, **Track Selection** (clicking one selects all; ⌘/Ctrl-clicking one takes them
+  all out), and **Editing (Selection)** (selecting a region selects the regions at the same
+  place on the others, Shift-clicking it again deselects them all, and
   their take folders switch and comp together; see
   [Take folders and comping](#7-take-folders-and-comping)).
 - **Delete Group** dissolves it. A group nobody is in is removed.

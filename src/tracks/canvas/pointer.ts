@@ -12,7 +12,7 @@ import { indexAt, visibleSteps } from "../trackLayout";
 import { viewport } from "../viewport";
 import { openMenu } from "../../ui/Menu";
 import { keepRegionsOn } from "../trackCommands";
-import { linkedRegions } from "../regionCommands";
+import { linkedRegions, toggleLinkedRegions } from "../regionCommands";
 import { laneMenu, regionMenu, renameRegion } from "../contextMenus";
 import { isLooped, regionEnd } from "../regions/loops";
 import { automationHover, automationMenu, automationMouseDown } from "../automation/canvas";
@@ -197,14 +197,14 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
     startRegionDrag(e, h, project, r, sel);
   };
 
-  /** Selects as a press on region `r` does: Shift adds it and its linked regions, or takes it out
-   *  when it's selected; a plain press on an unselected region selects it (and those linked to
+  /** Selects as a press on region `r` does: Shift adds it and its linked regions, or takes them
+   *  out when it's selected; a plain press on an unselected region selects it (and those linked to
    *  it) alone. Returns the selection, or null when Shift took `r` out, which drags nothing. */
   const selectOnPress = (e: React.MouseEvent, r: Region): Id[] | null => {
     let sel = getState().selectedRegions;
     const deselect = e.shiftKey && sel.includes(r.id);
     if (e.shiftKey) {
-      sel = deselect ? sel.filter((i) => i !== r.id) : [...sel, ...linkedRegions(r.id)];
+      sel = toggleLinkedRegions(sel, r.id);
     } else if (!sel.includes(r.id)) {
       sel = linkedRegions(r.id);
     }
