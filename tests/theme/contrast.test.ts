@@ -64,3 +64,14 @@ test("text, dim and faint stay in that order, so the hierarchy still reads", () 
     }
   }
 });
+
+test("the R and I letters read at 3:1 on their button in every theme", () => {
+  const low: string[] = [];
+  for (const [id, t] of Object.entries(themes)) {
+    for (const [letter, fg] of [["R", t["--rec-text"] ?? t["--red"]], ["I", t["--mon-text"] ?? t["--mon"]]]) {
+      const c = contrast(fg, t["--tbtn"]);
+      if (c < 3) low.push(`${id}: ${letter} is ${c.toFixed(2)}:1`);
+    }
+  }
+  assert.deepEqual(low, []);
+});

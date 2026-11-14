@@ -18,6 +18,12 @@ export interface WheelLike {
 /** Pixels per line for wheels that report lines (Firefox-style). */
 const LINE_PX = 16;
 
+/** A wheel event's distances in px, whatever unit it came in (`page` is a page's size in px). */
+export function wheelPixels(e: WheelLike, page = 800): { dx: number; dy: number } {
+  const k = e.deltaMode === 1 ? LINE_PX : e.deltaMode === 2 ? page : 1;
+  return { dx: e.deltaX * k, dy: e.deltaY * k };
+}
+
 /**
  * The scroll distances in px for a wheel event when the wheel scrolls time
  * ("horizontal"). The vertical setting is left to native scrolling and never comes here.
@@ -28,9 +34,7 @@ const LINE_PX = 16;
  * `page` is the size of a page for page-based deltas (the view's width or height).
  */
 export function timeWheel(e: WheelLike, page = 800): { dx: number; dy: number } {
-  const k = e.deltaMode === 1 ? LINE_PX : e.deltaMode === 2 ? page : 1;
-  const x = e.deltaX * k;
-  const y = e.deltaY * k;
+  const { dx: x, dy: y } = wheelPixels(e, page);
   const d = Math.abs(x) > Math.abs(y) ? x : y;
   return e.shiftKey ? { dx: 0, dy: d } : { dx: d, dy: 0 };
 }

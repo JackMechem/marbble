@@ -40,6 +40,8 @@ export const studioCss: Record<string, string> = {
   "--solo": "#f5c542",
   "--solo-ink": "#2b2203",
   "--mon": "#f39a26",
+  // The R letter on an unarmed record button: the red lightened to read on the grey buttons.
+  "--rec-text": "#ff8c82",
   "--mon-ink": "#2b1703",
   "--local-bar": "#2c2c2f",
   "--headers-top": "#313134",

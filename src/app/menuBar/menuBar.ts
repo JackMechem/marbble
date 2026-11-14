@@ -17,6 +17,7 @@ import { THEMES } from "../../theme/themes";
 import { pianoRollHasFocus } from "../../editors/pianoRoll/keys";
 import { eventListHasFocus } from "../../editors/eventList/keys";
 import { editorTakesEdit } from "../../editors/audioEditor/state";
+import { paneShown } from "../mainView";
 
 /** The Edit menu's item ids. */
 const editIds = (shape: MenuShape): string[] => shape.flatMap((s) => (s === "-" ? [] : typeof s === "object" ? editIds(s.items) : [s]));
@@ -50,8 +51,10 @@ function ownStates(): Map<string, ItemState> {
     { id: "metronome", checked: !!p?.metronome },
     { id: "count-in", checked: !!p?.count_in },
     { id: "low-latency", checked: getSettings().prefs.latency.low_latency },
-    { id: "editor", checked: s.bottom === "editor" },
-    { id: "list-editors", checked: s.bottom === "list" },
+    { id: "tracks-view", checked: s.mainView === "tracks" },
+    { id: "mixer-view", checked: s.mainView === "mixer" },
+    { id: "editor", checked: paneShown(s, "editor") },
+    { id: "list-editors", checked: paneShown(s, "list") },
     { id: "detach:mixer", checked: s.detached.includes("mixer") },
     { id: "detach:editor", checked: s.detached.includes("editor") },
     { id: "detach:list", checked: s.detached.includes("list") },
@@ -63,6 +66,9 @@ function ownStates(): Map<string, ItemState> {
   // decide for themselves what applies there.
   if (pianoRollHasFocus() || eventListHasFocus() || editorTakesEdit() || s.detached.includes("editor") || s.detached.includes("list")) {
     st.push(...EDIT_IDS.map((id) => ({ id, enabled: true })));
+  } else if (s.mainView === "mixer") {
+    // The Mixer view shows no regions to edit (mainView.ts `keyRunsIn`).
+    st.push(...EDIT_IDS.map((id) => ({ id, enabled: false })));
   }
   return new Map(st.map((x) => [x.id, x]));
 }

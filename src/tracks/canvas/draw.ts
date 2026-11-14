@@ -6,8 +6,8 @@ import { type Region } from "../../engine/regions";
 import { getState, liveTakes } from "../../state/store";
 import { offTracks } from "../trackOff";
 import { drawWave } from "../regions/waveform";
-import { PEAK_BUCKET, toBbt } from "../../lib/time";
-import { snapToTracksGrid } from "../gridSnap";
+import { PEAK_BUCKET, samplesPerBeat, toBbt } from "../../lib/time";
+import { FINE_MIN_PX, fineStep, TICKS_PER_BEAT } from "../../lib/fineGrid";
 import { forEachGridLine, tempoMap } from "../../lib/tempo";
 import { mix, theme } from "../../theme/canvasTheme";
 import { type Layout } from "../trackLayout";
@@ -87,6 +87,14 @@ export function drawTracks({ canvasRef, live, dragRef, swipeRef, marqueeRef, hov
     ctx.fillStyle = kind === "bar" ? theme.barLine : theme.beatLine;
     ctx.fillRect(kind === "bar" ? Math.round(pos * pps - vp.left) + 0.5 : Math.round(pos * pps - vp.left + 0.5), 0, 1, gridBottom);
   });
+  // Zoomed in further, the finer steps Smart snaps to.
+  const fine = fineStep(pps * samplesPerBeat(project), FINE_MIN_PX);
+  if (fine) {
+    ctx.fillStyle = theme.beatLine;
+    for (const g of tempoMap(project).grid(Math.max(0, vp.left / pps), (vp.left + W) / pps, TICKS_PER_BEAT / fine)) {
+      if ((g.sub * fine) % TICKS_PER_BEAT !== 0) ctx.fillRect(Math.round(g.pos * pps - vp.left + 0.5), 0, 1, gridBottom);
+    }
+  }
   // Cycle range tint, as Logic does when cycle is on.
   if (project.cycle.enabled) {
     const cx = project.cycle.start * pps - vp.left;
@@ -121,14 +129,15 @@ export function drawTracks({ canvasRef, live, dragRef, swipeRef, marqueeRef, hov
     if (drag && !still && drag.ids.includes(r.id)) {
       if (drag.kind === "move") {
         const from = getGrabbedStart();
-        start = movedStart(tempoMap(project), r.start, from, Math.max(0, snapToTracksGrid(project, from + drag.dx)), getState().snapMode !== "off");
+        start = movedStart(tempoMap(project), r.start, from, drag.to ?? from, !!drag.musical);
         if (loop != null) loop += start - r.start;
         lane = newLaneOf.get(i);
         if (lane === undefined) ti = dragTarget(layout, i, drag.dTrack, project.tracks);
       } else if (r.id === drag.grabbed && drag.fade !== undefined && r.content.type === "audio") {
         fades = drag.kind === "fadeIn" ? [drag.fade, r.content.fade_out] : [r.content.fade_in, drag.fade];
-      } else if (r.id === drag.grabbed && drag.loopEnd !== undefined) {
-        loop = drag.loopEnd;
+      } else if (drag.loops?.has(r.id)) {
+        // A loop drag: every selected region's loop end moves with the grabbed one's.
+        loop = drag.loops.get(r.id);
       } else if (drag.spans?.has(r.id)) {
         // A trim: every selected region's edge moves with the grabbed one's.
         const s = drag.spans.get(r.id)!;
@@ -182,7 +191,7 @@ export function drawTracks({ canvasRef, live, dragRef, swipeRef, marqueeRef, hov
   const passes = (r: Region) => (drag?.copy && drag.ids.includes(r.id) ? [true, false] : [false]);
   project.tracks.forEach((t, i) => {
     for (const r of t.regions) for (const still of passes(r)) {
-      if (!isLooped(r) && !(drag?.kind === "loop" && drag.grabbed === r.id)) continue;
+      if (!isLooped(r) && !drag?.loops?.has(r.id)) continue;
       const g = place(r, i, still);
       if (g.gone) continue;
       const x0 = (g.start + g.length) * pps - vp.left;
@@ -238,6 +247,7 @@ export function drawTracks({ canvasRef, live, dragRef, swipeRef, marqueeRef, hov
   // Where dragged audio files will land: the target lane (or a ghost lane for a new track),
   // a line at the snapped position, and a bar/beat tag.
   drawDropTarget(ctx, project, layout, vp, pps, W);
+  if (drag?.guide !== undefined) drawGuide(ctx, drag.guide * pps - vp.left, H);
   drawToolOverlay(ctx, { project, layout, pps, vp, W, H });
   if (marqueeRef.current) drawMarquee(ctx, marqueeRef.current, vp);
   // A hoisted function so `place` above can use it: the other dragged regions follow the
@@ -277,6 +287,12 @@ function drawStackLanes(ctx: CanvasRenderingContext2D, project: Project, layout:
     });
     ctx.restore();
   });
+}
+
+/** The guide line down the area where a moved region's edge snapped to another's (edgeSnap.ts). */
+function drawGuide(ctx: CanvasRenderingContext2D, x: number, H: number) {
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#4c9eff";
+  ctx.fillRect(Math.round(x), 0, 1, H);
 }
 
 /** Where Drum Replacement will put its notes: a line down the audio track's lane at each hit

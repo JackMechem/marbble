@@ -8,14 +8,15 @@ import { framePos, onFrame } from "../../state/frameLoop";
 import { useLayout } from "../trackLayout";
 import { samplesPerBeat } from "../../lib/time";
 import { pixelRatio } from "../../ui/uiScale";
-import { scrollTo, viewport } from "../viewport";
+import { scrollTo, viewport, zoomTo } from "../viewport";
 import { timeWheel } from "../../ui/wheel";
 import { openMenu } from "../../ui/Menu";
-import { OVERVIEW_BAND, anchoredLeft, centreOn, dragScroll, hitBox, overviewSpan, timeToX, visibleBox, xToTime, zoomFromEdge, type BoxPart, type Rect, type StripMap } from "./overviewModel";
+import { OVERVIEW_BAND, centreOn, dragScroll, hitBox, overviewSpan, timeToX, visibleBox, xToTime, zoomFromEdge, type BoxPart, type Rect, type StripMap } from "./overviewModel";
 import { type Geometry, drawStatic, drawOverlay } from "./draw";
 import type { Project } from "../../engine/project";
 import { regionEnd } from "../regions/loops";
 import { wheelZoom } from "../zoom";
+import { zoomTime } from "../zoomCommands";
 import { dragWith } from "../../ui/pointerDrag";
 
 // ---- showing and hiding (View › Show Overview), remembered per machine -----------------------
@@ -179,18 +180,15 @@ export function Overview() {
     const wheel = (e: WheelEvent) => {
       e.preventDefault();
       const g = geometry();
-      const { project, pps, spb } = live.current;
+      const { project, spb } = live.current;
       if (!g || !project) return;
       const vp = viewport();
       if (e.ctrlKey || e.metaKey) {
+        // The zoom shown now, which may be newer than this component's last render.
+        const { pxPerBeat } = getState();
         const x = e.clientX - el.getBoundingClientRect().left;
-        const t = xToTime(x, g.map.span, g.map.width);
-        const inView = t * pps >= vp.left && t * pps <= vp.left + vp.width;
-        const anchor = inView ? t : (vp.left + vp.width / 2) / pps;
-        const cx = anchor * pps - vp.left;
-        const next = wheelZoom(getState().pxPerBeat, e.deltaY);
-        setState({ pxPerBeat: next });
-        requestAnimationFrame(() => scrollTo(anchoredLeft(anchor, cx, next / spb)));
+        const cx = xToTime(x, g.map.span, g.map.width) * (pxPerBeat / spb) - vp.left;
+        zoomTime(wheelZoom(pxPerBeat, e.deltaY, spb), cx >= 0 && cx <= vp.width ? cx : vp.width / 2);
         return;
       }
       const { dx, dy } = timeWheel(e, vp.width);
@@ -243,9 +241,7 @@ export function Overview() {
       if (d.part === "left" || d.part === "right") {
         const t = Math.max(0, xToTime(p.x - d.offset, d.map.span, d.map.width));
         const z = zoomFromEdge(d.part, d.fixed, t, viewport().width, spb);
-        setState({ pxPerBeat: z.pxPerBeat });
-        // Scroll once the Tracks area has re-rendered at the new width.
-        requestAnimationFrame(() => scrollTo((z.start * z.pxPerBeat) / spb));
+        zoomTo(z.pxPerBeat, 0, z.start);
         return;
       }
       const { dLeft, dTop } = dragScroll(p.x - d.x, p.y - d.y, pps, d.map);

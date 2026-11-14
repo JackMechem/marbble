@@ -8,6 +8,7 @@ import { Icon } from "../../ui/icons";
 import { clampHeight, setTrackHeight, type OutputRow } from "../trackLayout";
 import { useStore } from "../../state/store";
 import { headerTier } from "./headerGeometry";
+import { headerBand, iconLeft } from "./headerFit";
 import { AddLaneButton, AutomationControls } from "./AutomationHeader";
 import { LevelSlider } from "./LevelSlider";
 import { openMenuAt } from "../../ui/Menu";
@@ -16,7 +17,7 @@ import { onPress } from "../../keyboard/keyNav";
 import { dragWith } from "../../ui/pointerDrag";
 
 /** The header of one of a track's extra automation lanes: its parameter pop-up, and buttons to
- *  add a lane below or close this one. */
+ *  add a lane below or close this one, from `indent` px in (below the track's icon). */
 function SubLaneHeader({ track, index, param, height, indent }: { track: Track; index: number; param: AutoParam; height: number; indent: number }) {
   return (
     <div className="auto-sublane" style={{ height, paddingLeft: indent }} onMouseDown={(e) => e.stopPropagation()}>
@@ -62,8 +63,9 @@ export function SubLaneHeaders({ track, height, indent }: { track: Track; height
 }
 
 /** The Output track's header (Track › Show Output Track): Stereo Out's volume and, with
- *  automation shown, its lanes. It has no regions. */
-export function OutputTrackHeader({ row }: { row: OutputRow }) {
+ *  automation shown, its lanes. It has no regions. `lead` and `sliderW` are the tracks'
+ *  (headerFit.ts), so its icon and slider line up with theirs. */
+export function OutputTrackHeader({ row, lead, sliderW }: { row: OutputRow; lead: number; sliderW: number }) {
   const project = useStore((s) => s.snap?.project);
   const automation = useStore((s) => s.showAutomation);
   const strip = project ? outputTrack(project) : null;
@@ -74,7 +76,7 @@ export function OutputTrackHeader({ row }: { row: OutputRow }) {
   const name = <LinesText className="th-name" text="Stereo Out" max={1} title="Stereo Out" />;
   const volumeCell = (
     <div className="th-volume">
-      <LevelSlider db={volume} onChange={(db) => act("set_master_volume", { db })} width={88} tier={tier} track={null} label="Stereo Out volume" {...touch} />
+      <LevelSlider db={volume} onChange={(db) => act("set_master_volume", { db })} width={sliderW} tier={tier} track={null} label="Stereo Out volume" {...touch} />
     </div>
   );
   const startResize = (e: React.MouseEvent) => {
@@ -91,9 +93,10 @@ export function OutputTrackHeader({ row }: { row: OutputRow }) {
   };
   return (
     <div className="output-track" style={{ top: row.top }}>
-      <div className={`track-header output-header tier-${tier}`} style={{ height: row.height }}>
+      <div className={`track-header output-header tier-${tier}`} style={{ height: row.height, paddingBottom: row.height - headerBand(row.height, tier, 1, false) }}>
         <div className="th-color" style={{ background: strip.color }} />
         <div className="th-num" />
+        {lead > 0 && <div className="th-lead" style={{ width: lead }} />}
         {tier !== "tiny" && (
           <div className="th-icon" title="Stereo Out">
             <Icon.waveform />
@@ -124,7 +127,7 @@ export function OutputTrackHeader({ row }: { row: OutputRow }) {
           }}
         />
       </div>
-      {automation && row.autoRows > 0 && <SubLaneHeaders track={strip} height={row.subLane} indent={0} />}
+      {automation && row.autoRows > 0 && <SubLaneHeaders track={strip} height={row.subLane} indent={iconLeft(lead)} />}
     </div>
   );
 }

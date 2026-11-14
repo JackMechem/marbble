@@ -51,6 +51,8 @@ test("Light's record and monitor letters don't stay in Studio", () => {
   applyTheme("light", false);
   assert.ok(props.has("--rec-text") && props.has("--mon-text"), "Light sets them");
   applyTheme("studio", false);
-  assert.ok(!props.has("--rec-text") && !props.has("--mon-text"));
+  // Studio has a lighter R letter of its own, and no I letter colour.
+  assert.equal(props.get("--rec-text"), THEMES[0].css["--rec-text"]);
+  assert.ok(!props.has("--mon-text"));
   assert.deepEqual(staleThemeKeys("light"), []);
 });

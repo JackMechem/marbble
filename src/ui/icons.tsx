@@ -36,6 +36,24 @@ export const Icon = {
       <rect x="10.6" y="9.8" width="2.8" height="2" rx=".5" fill="currentColor" stroke="none" />
     </S>
   ),
+  /** The Tracks view: a window of lanes with regions on them. */
+  tracksView: () => (
+    <S>
+      <rect x="1.8" y="2.5" width="12.4" height="11" rx="1.6" />
+      <rect x="4" y="5.2" width="5" height="2" rx=".6" fill="currentColor" stroke="none" />
+      <rect x="7" y="8.8" width="5" height="2" rx=".6" fill="currentColor" stroke="none" />
+    </S>
+  ),
+  /** The Mixer view: a window filled with faders. */
+  mixerView: () => (
+    <S>
+      <rect x="1.8" y="2.5" width="12.4" height="11" rx="1.6" />
+      <path d="M5.5 5v6M8 5v6M10.5 5v6" strokeWidth={1.1} />
+      <rect x="4.4" y="8" width="2.2" height="1.6" rx=".4" fill="currentColor" stroke="none" />
+      <rect x="6.9" y="5.6" width="2.2" height="1.6" rx=".4" fill="currentColor" stroke="none" />
+      <rect x="9.4" y="8.8" width="2.2" height="1.6" rx=".4" fill="currentColor" stroke="none" />
+    </S>
+  ),
   editors: () => (
     <S>
       <circle cx="4.5" cy="11.5" r="2" />

@@ -17,6 +17,7 @@ import { regionEnd } from "../regions/loops";
 import { refuseFrozen } from "../freeze";
 import { indexAt, type Layout } from "../trackLayout";
 import { theme } from "../../theme/canvasTheme";
+import { timelineLeft } from "../viewport";
 import { deleteRegions, joinRegions, linkedRegions, pasteRegions, toggleLinkedRegions, toggleRegionMute } from "../regionCommands";
 import { dragWith, pastDragThreshold } from "../../ui/pointerDrag";
 
@@ -106,7 +107,7 @@ export interface ToolView {
 
 const snapped = (p: Project, v: number) => Math.max(0, Math.round(snapToTracksGrid(p, v)));
 
-const contentX = (ev: MouseEvent, el: HTMLElement) => ev.clientX - el.getBoundingClientRect().left + el.scrollLeft;
+const contentX = (ev: MouseEvent, el: HTMLElement) => ev.clientX - el.getBoundingClientRect().left + timelineLeft(el);
 const contentY = (ev: MouseEvent, el: HTMLElement) => ev.clientY - el.getBoundingClientRect().top + el.scrollTop;
 
 /** Runs `move` for every mouse move once the pointer has gone far enough for a drag, as region
