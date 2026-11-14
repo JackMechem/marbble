@@ -1,4 +1,5 @@
-// The Mixer, the bottom section's channel strips: track stacks as brackets over their strips, strip
+// The Mixer, the bottom section's channel strips (or the whole centre column in the Mixer view,
+// app/mainView.ts, or a window of its own): track stacks as brackets over their strips, strip
 // widths and filters, the VCA strips and Stereo Out. The Inspector shows strips through the same
 // rows (rowsFor, useStripFit). mixer/ holds the channel strip and its parts (slots, sends, VCAs,
 // meters, latency) with the rules behind them: routing, strip settings, slot rows and widths.
@@ -35,6 +36,7 @@ import {
   type StripSize,
 } from "./mixerLayout";
 import { onPress } from "../keyboard/keyNav";
+import { MIXER_VIEW_MIN } from "../app/paneSizes";
 
 /** The insert and send rows shared by `tracks`' strips and Stereo Out's. */
 export function rowsFor(project: Project, tracks: Track[]): SlotRows {
@@ -165,21 +167,34 @@ function StripCell({ k, width, onDrag, children }: { k: string; width: number; o
   );
 }
 
+/** The strips shown, kept while the Mixer is closed or moves between the pane and the Mixer view. */
+let lastFilter: Record<StripKind, boolean> = { audio: true, instrument: true, aux: true };
+
+/** How far the pane's and the Mixer view's strips were scrolled sideways, each kept while it's
+ *  closed, so switching views comes back to the same strips. */
+const lastScroll = { pane: 0, full: 0 };
+
 /** What the Mixer's bar gives way with, in order (barFit.ts): the strip widths, then the strip
  *  filters, which its Options menu has too. */
 const MIXER_BAR_STEPS = ["tight", "widths", "filters"] as const;
 
-export function Mixer() {
+/** The Mixer; `full` when it fills the centre column (the Mixer view) rather than the bottom
+ *  section. */
+export function Mixer({ full = false }: { full?: boolean }) {
   const project = useStore((s) => s.snap?.project);
   const selected = useStore((s) => s.snap?.selected);
-  const [filter, setFilter] = useState<Record<StripKind, boolean>>({ audio: true, instrument: true, aux: true });
-  const flip = (k: StripKind) => setFilter((f) => ({ ...f, [k]: !f[k] }));
+  const [filter, setFilter] = useState(lastFilter);
+  const flip = (k: StripKind) => setFilter((f) => (lastFilter = { ...f, [k]: !f[k] }));
   const showHidden = useStore((s) => s.showHidden);
   const view = useStore((s) => s.mixerView);
   const [drag, setDrag] = useState<{ key: string; w: number } | null>(null);
   const vcas = useVcas();
   const fit = useStripFit();
   const barFit = useBarFit(MIXER_BAR_STEPS);
+  const place = full ? "full" : "pane";
+  useLayoutEffect(() => {
+    if (fit.ref.current) fit.ref.current.scrollLeft = lastScroll[place];
+  }, [fit.ref, place]);
   if (!project) return null;
   const shown = project.tracks.filter((t) => (t.hidden ? showHidden : true) && (t.kind === "audio" || t.kind === "instrument" || t.kind === "aux" ? filter[t.kind] : true));
   // Auxes come after the tracks, as in Logic's mixer.
@@ -228,7 +243,7 @@ export function Mixer() {
     );
   };
   return (
-    <div className="mixer">
+    <div className={"mixer" + (full ? " mixer-full" : "")} style={full ? { minHeight: MIXER_VIEW_MIN } : undefined}>
       <div ref={barFit.ref} className={"local-bar fit-bar mixer-bar" + barFit.className}>
         <span className="local-title mixer-title">Mixer</span>
         <div className="local-menus">
@@ -280,7 +295,14 @@ export function Mixer() {
           <DetachButton panel="mixer" />
         </div>
       </div>
-      <div className="mixer-strips" ref={fit.ref} onScroll={fit.onScroll}>
+      <div
+        className="mixer-strips"
+        ref={fit.ref}
+        onScroll={(e) => {
+          fit.onScroll(e);
+          lastScroll[place] = e.currentTarget.scrollLeft;
+        }}
+      >
         <div className="mixer-row" style={{ "--bracket-rows": bracketRows(entries) } as React.CSSProperties}>
           {entries.map(entry)}
           {/* VCA strips come after the auxes, before Stereo Out, as in Logic. */}

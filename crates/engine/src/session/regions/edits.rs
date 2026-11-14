@@ -193,7 +193,15 @@ impl Session {
     /// Loops a region up to `loop_end` (a timeline sample), or stops it looping when that is
     /// None or doesn't reach past the region's end (dragging the loop back to the region).
     pub fn set_region_loop(&mut self, id: Id, loop_end: Option<i64>) {
-        self.edit_regions(&[id], |r, _| {
+        self.set_region_loops(&[(id, loop_end)]);
+    }
+
+    /// Loops each listed region up to its own loop end, as `set_region_loop` does: dragging one
+    /// selected region's loop drags every selected region's, in one edit.
+    pub fn set_region_loops(&mut self, loops: &[(Id, Option<i64>)]) {
+        let ids: Vec<Id> = loops.iter().map(|l| l.0).collect();
+        self.edit_regions(&ids, |r, _| {
+            let Some(&(_, loop_end)) = loops.iter().find(|l| l.0 == r.id) else { return };
             r.loop_end = loop_end;
             if !r.is_looped() {
                 r.loop_end = None;
@@ -537,5 +545,31 @@ impl Session {
         }
         self.dirty = true;
         Ok(made)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::session::tests::scratch_session;
+    use crate::session::*;
+
+    #[test]
+    fn loops_are_set_per_region_in_one_undo_step() {
+        let (mut s, _) = scratch_session("region-loops");
+        let bar = s.project.samples_per_bar().round() as i64;
+        let t = s.add_track(TrackKind::Instrument, InputSel::None, None, None).unwrap();
+        let a = s.create_midi_region(t, 0, bar).unwrap();
+        let b = s.create_midi_region(t, 8 * bar, 2 * bar).unwrap();
+        let before = s.undo_label();
+        s.checkpoint("Loop Regions", None, false);
+        // b's loop end doesn't reach past its own end: it stops looping.
+        s.set_region_loops(&[(a, Some(3 * bar)), (b, Some(9 * bar))]);
+        let loop_end = |s: &Session, id: Id| s.region(id).unwrap().loop_end;
+        assert_eq!((loop_end(&s, a), loop_end(&s, b)), (Some(3 * bar), None));
+        s.set_region_loops(&[(b, Some(12 * bar))]);
+        assert_eq!(loop_end(&s, b), Some(12 * bar));
+        s.undo();
+        assert_eq!(s.undo_label(), before);
+        assert_eq!((loop_end(&s, a), loop_end(&s, b)), (None, None));
     }
 }

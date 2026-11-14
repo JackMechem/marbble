@@ -131,14 +131,9 @@ export function zoomFromEdge(
   samplesPerBeat: number,
 ): { pxPerBeat: number; start: number } {
   const span = Math.max(1, edge === "left" ? fixed - dragged : dragged - fixed);
-  const pxPerBeat = clampZoom((viewWidth / span) * samplesPerBeat);
+  const pxPerBeat = clampZoom((viewWidth / span) * samplesPerBeat, samplesPerBeat);
   const shown = (viewWidth / pxPerBeat) * samplesPerBeat;
   return { pxPerBeat, start: Math.max(0, edge === "left" ? fixed - shown : fixed) };
-}
-
-/** The scroll that keeps sample `anchor` at `cx` px from the view's left edge at `pps`. */
-export function anchoredLeft(anchor: number, cx: number, pps: number): number {
-  return Math.max(0, anchor * pps - cx);
 }
 
 export type BoxPart = "left" | "right" | "inside" | "outside";

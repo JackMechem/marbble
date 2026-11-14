@@ -35,9 +35,14 @@ const ownBottom =
     return { bottom: pane, ...(docked.length ? { fxDock: { ...s.fxDock, floating: [...s.fxDock.floating, ...docked], active: null } } : {}) };
   };
 
-registerPanelKind(
-  "mixer",
-  bottomPanel("mixer", {
+/**
+ * The Mixer: the bottom section's pane, and in the main window the Mixer view too. Detached from
+ * either, the main window shows the Tracks view (the bottom section keeps what was there before),
+ * and attached again it goes back where it was last asked for: the Mixer view while the Mixer
+ * view's key or button brought its window to the front, otherwise the pane.
+ */
+function mixerPanel(): PanelKind {
+  const pane = bottomPanel("mixer", {
     title: (_, s) => `Mixer — ${projectName(s)}`,
     render: () => (
       <>
@@ -47,8 +52,20 @@ registerPanelKind(
     ),
     size: { w: 1100, h: 560 },
     own: ownBottom("mixer"),
-  }),
-);
+  });
+  let backTo: "pane" | "view" = "pane";
+  return {
+    ...pane,
+    shown: (arg, s) => pane.shown(arg, s) || s.mainView === "mixer",
+    hide: (arg, s) => {
+      backTo = s.mainView === "mixer" ? "view" : "pane";
+      return { ...(pane.shown(arg, s) ? pane.hide(arg, s) : {}), ...(s.mainView === "mixer" ? { mainView: "tracks" as const } : {}) };
+    },
+    show: (arg, s) => (backTo === "view" ? { mainView: "mixer" } : pane.show(arg, s)),
+  };
+}
+
+registerPanelKind("mixer", mixerPanel());
 
 /** What the editor edits, found the way EditorPane.tsx finds it. */
 function editorTitle(s: State): string {

@@ -1,8 +1,9 @@
 // The main window: the control bar, the side panes, the Tracks area with the bottom section under
-// it, the status line, and the sheets and floating panels over them. At launch it loads the project
-// and settings and wires up the engine's events, the keys (keyCommands.ts) and the menu bar
-// (menuCommands.ts). app/ holds this shell: its commands, the control bar, pane sizes, the native
-// menu bar, the update check and the detached panel windows.
+// it (or in its place the Mixer: the Mixer view, mainView.ts), the status line, and the sheets and
+// floating panels over them. At launch it loads the project and settings and wires up the engine's
+// events, the keys (keyCommands.ts) and the menu bar (menuCommands.ts). app/ holds this shell: its
+// commands, the control bar, pane sizes, the native menu bar, the update check and the detached
+// panel windows.
 import { useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { type Snapshot, type Tick } from "../engine/snapshot";
@@ -37,11 +38,12 @@ import { Inspector } from "../inspector/Inspector";
 import { Library } from "../browser/Library";
 import { Browser } from "../browser/Browser";
 import { TracksArea, tracksAreaMinOf } from "../tracks/TracksArea";
-import { bottomMax, bottomPaneSize } from "./paneSizes";
+import { bottomMax, bottomPaneSize, MIXER_VIEW_MIN } from "./paneSizes";
+import { bottomIn } from "./mainView";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { confirmDiscard } from "../project/files";
 import { getState, pushTick, setState, showToast, useStore } from "../state/store";
-import { loadGlobalView, loadHeights, loadMixerView, saveHeights, saveMixerView } from "../tracks/trackLayout";
+import { loadGlobalView, loadHeights, loadMainView, loadMixerView, saveHeights, saveMainView, saveMixerView } from "../tracks/trackLayout";
 import { installNativeDrop } from "../project/fileDrop";
 import { MarkerList } from "../tracks/markers/MarkerList";
 import { installDetach, receiveSnapshot } from "./detach/detach";
@@ -61,19 +63,21 @@ import { handleMenu } from "./menuCommands";
 import { StatusLine } from "./statusLine/StatusLine";
 import { Toast } from "./Toast";
 
-/** Remembers track heights, the Mixer's strip widths and the global tracks shown, per project
- *  folder. */
+/** Remembers track heights, the Mixer's strip widths, the global tracks shown and the main
+ *  window's view, per project folder. */
 function useHeightPersistence() {
   const path = useStore((s) => s.snap?.path);
   const base = useStore((s) => s.trackHeight);
   const heights = useStore((s) => s.trackHeights);
   const output = useStore((s) => s.showOutput);
   const mixerView = useStore((s) => s.mixerView);
+  const mainView = useStore((s) => s.mainView);
   const [loaded, setLoaded] = useState<string | null>(null);
   useEffect(() => {
     if (path && path !== loaded) {
       loadHeights(path);
       loadMixerView(path);
+      loadMainView(path);
       loadGlobalView(path);
       setLoaded(path);
     }
@@ -84,6 +88,9 @@ function useHeightPersistence() {
   useEffect(() => {
     if (path && path === loaded) saveMixerView(path);
   }, [path, loaded, mixerView]);
+  useEffect(() => {
+    if (path && path === loaded) saveMainView(path);
+  }, [path, loaded, mainView]);
 }
 
 /** At launch: the session's state and the settings, then what Settings › General says to open
@@ -157,7 +164,8 @@ export default function App() {
     showLibrary: useStore((s) => s.showLibrary),
     showInspector: useStore((s) => s.showInspector),
     showBrowser: useStore((s) => s.showBrowser),
-    bottom: useStore((s) => s.bottom),
+    mixerView: useStore((s) => s.mainView === "mixer"),
+    bottom: useStore((s) => bottomIn(s.mainView, s.bottom)),
     dialog: useStore((s) => s.dialog),
   };
   useHeightPersistence();
@@ -169,9 +177,11 @@ export default function App() {
   const showMarkerList = useStore((s) => s.showMarkerList);
   const showControllerAssignments = useStore((s) => s.showControllerAssignments);
   useEffect(loadPaneSizes, []);
-  // The bottom section's room: the centre column less what the Tracks area keeps.
+  // The bottom section's room: the centre column less what the Tracks area (or the Mixer view's
+  // Mixer) keeps.
   const centerRef = useRef<HTMLDivElement>(null);
-  const bottomRoom = () => (centerRef.current ? bottomMax(centerRef.current.clientHeight, tracksAreaMinOf(getState())) : Infinity);
+  const keeps = () => (getState().mainView === "mixer" ? MIXER_VIEW_MIN : tracksAreaMinOf(getState()));
+  const bottomRoom = () => (centerRef.current ? bottomMax(centerRef.current.clientHeight, keeps()) : Infinity);
   const bottomSize = bottomPaneSize(s.bottom);
   useEffect(() => {
     void startUp();
@@ -191,7 +201,7 @@ export default function App() {
         {s.showInspector && <Inspector />}
         {s.showInspector && <Splitter pane="inspector" dir="x" sign={1} />}
         <div className="center" ref={centerRef}>
-          <TracksArea />
+          {s.mixerView ? <Mixer full /> : <TracksArea />}
           {bottomSize && <Splitter pane={bottomSize} dir="y" sign={-1} room={bottomRoom} />}
           {s.bottom === "mixer" && <Mixer />}
           {s.bottom === "editor" && <Editor />}

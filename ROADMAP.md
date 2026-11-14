@@ -46,12 +46,12 @@ What's left for beta, by area (◐ partial, ○ missing):
 **Interface and settings**
 
 - ◐ Control bar: view buttons, transport, LCD, Cycle, Count-in, Metronome, master volume, CPU ([#322](https://github.com/JackMechem/marbble/issues/322)): Fixed layout, but for the CPU meter, which Settings › Appearance puts here or in the status line; no Customize Control Bar.
-- ◐ LCD display modes ([#323](https://github.com/JackMechem/marbble/issues/323)): Beats and Time only; no Custom mode or large LCD.
+- ◐ LCD display modes ([#323](https://github.com/JackMechem/marbble/issues/323)): Beats & Project, Time, Tuner (the selected audio track's input) and Chord (held on MIDI input); no Custom mode or large LCD.
 - ◐ Right inspector strip follows the left strip's output or aux ([#324](https://github.com/JackMechem/marbble/issues/324)): Always shows Stereo Out.
 - ◐ Project notes ([#325](https://github.com/JackMechem/marbble/issues/325)): Free-form notes in Project Settings; no Note Pad pane.
 - ○ Track notes ([#325](https://github.com/JackMechem/marbble/issues/325))
 - ◐ Zoom to fit selection or all content (Z) ([#326](https://github.com/JackMechem/marbble/issues/326)): In the Piano Roll and Audio Track Editor; not in the Tracks area.
-- ◐ Open, close and focus windows ([#327](https://github.com/JackMechem/marbble/issues/327)): The Window menu brings any open window to the front or minimises it, and the Mixer, Editors, Event List, Step Sequencer and effect panels open in windows of their own; no second main window.
+- ◐ Open, close and focus windows ([#327](https://github.com/JackMechem/marbble/issues/327)): The Window menu brings any open window to the front or minimises it, ⌘1 and ⌘2 switch the main window between the Tracks and Mixer views, and the Mixer, Editors, Event List, Step Sequencer and effect panels open in windows of their own; no second main window.
 - ◐ Customisable keys ([#328](https://github.com/JackMechem/marbble/issues/328)): Window keys only; menu shortcuts are fixed.
 - ○ Save, import and choose key command sets ([#329](https://github.com/JackMechem/marbble/issues/329))
 - ◐ Project Settings ([#330](https://github.com/JackMechem/marbble/issues/330)): Tempo, signature, key, sample rate, bit depth, metronome and notes; most of Logic's project panes are missing.

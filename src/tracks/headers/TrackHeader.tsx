@@ -1,10 +1,11 @@
 // One track's header: its icon, name, switches (M, S, R, I, On/Off, freeze…), volume and automation
-// controls, laid out for its height, with the group badge and the drag that reorders it.
+// controls, laid out for its height and the column's width (headerFit.ts), with the group badge and
+// the drag that reorders it.
 import { useState, type ReactNode } from "react";
 import { canRecord, isStack, type Group, type Track } from "../../engine/project";
 import { api } from "../../engine/commands";
 import { Icon } from "../../ui/icons";
-import { getState, setState, useStore } from "../../state/store";
+import { setState, useStore } from "../../state/store";
 import { clampHeight, setTrackHeight } from "../trackLayout";
 import { clickTrack, selectedTracks, setHidden, toggleCollapsed } from "../trackCommands";
 import { trackMenu } from "../contextMenus";
@@ -14,11 +15,11 @@ import { paramMenu } from "../automation/menus";
 import { useAutomation } from "../automation/useAutomation";
 import { AutoModeButton, AutomationControls } from "./AutomationHeader";
 import { canFreeze, toggleFreeze } from "../freeze";
-import { takeRowsHeight } from "../takes/takes";
 import { fmt, keyHint } from "../../keyboard/keymap";
 import { withKey } from "../../keyboard/keyFormat";
 import { dragsTrack, headerTier, nameLines } from "./headerGeometry";
 import type { SwitchId } from "./headerColumns";
+import { headerBand, leadWidth, oneLineSliderW } from "./headerFit";
 import { LinesText } from "../../ui/PathText";
 import { isTrackOff, powerTitle } from "../trackOff";
 import { LevelSlider } from "./LevelSlider";
@@ -29,7 +30,6 @@ import { openTrackIconPicker } from "../icons/TrackIconPicker";
 import { onPress } from "../../keyboard/keyNav";
 import { dragWith } from "../../ui/pointerDrag";
 
-export const INDENT = 12;
 /** Smallest full header with room for the automation controls on a line of their own. */
 const AUTO_ROW_H = 76;
 
@@ -85,43 +85,66 @@ export function Header({
   selected,
   primary,
   height,
+  takeRows,
   depth,
+  stacks,
   group,
   hideMode,
   columns,
+  width,
+  sliderW,
   onReorderStart,
 }: {
   track: Track;
   index: number;
   selected: boolean;
   primary: boolean;
+  /** The header's height, with its open take folder's rows (`takeRows` of it). */
   height: number;
+  takeRows: number;
   depth: number;
+  /** A stack is in view: keep a slot for the disclosure triangle (headerFit.ts). */
+  stacks: boolean;
   group: Group | undefined;
   /** Hide mode (H) is on: show the H button. */
   hideMode: boolean;
-  /** The button columns every header in view shares (headerColumns.ts). */
-  columns: { full: SwitchId[]; compact: SwitchId[] };
+  /** The button columns every header in view shares (headerColumns.ts, headerFit.ts); `more`
+   *  when some are left out of full headers for want of room, in the "⋯" menu. */
+  columns: { full: SwitchId[]; compact: SwitchId[]; more: boolean };
+  /** The header column's width inside its border. */
+  width: number;
+  /** The volume slider's length, the same on every full header (headerFit.ts). */
+  sliderW: number;
   /** `click` runs when the press ends without dragging. */
   onReorderStart: (e: React.MouseEvent, index: number, click?: () => void) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const stack = isStack(track.kind);
   const [volume, volumeTouch] = useAutomation(track, VOLUME, track.volume_db);
+  // The track's own height: its take rows are below it, not part of its header's layout.
+  const own = height - takeRows;
   // Short headers put everything on one line and move the buttons into a "⋯" menu.
-  const tier = headerTier(height);
+  const tier = headerTier(own);
   const full = tier === "full";
   // The automation controls take a third line on tall tracks. On shorter ones they take the
   // volume slider's place, so M, S, R and I stay in the header.
   const automation = useStore((s) => s.showAutomation) && automatable(track);
-  const autoRow = full && automation && height >= AUTO_ROW_H;
+  const autoRow = full && automation && own >= AUTO_ROW_H;
   const autoInVolume = full && automation && !autoRow;
-  const sliderW = Math.max(56, 88 - depth * INDENT);
+  const lead = leadWidth(depth, stacks);
   // A full header puts the slider on the buttons' line, so the name above has the header's whole
   // width up to the slider's end; on two lines when the height has room. (The automation controls
   // that stand in for the slider on short full headers are two lines tall, so they keep a column.)
   const sliderInRow = full && !autoInVolume;
-  const lines = full ? nameLines(height, autoRow) : 1;
+  const lines = full ? nameLines(own, autoRow) : 1;
+  // Centred in a band at the top, so a tall track's header keeps its contents by the regions.
+  const band = headerBand(own, tier, lines, autoRow);
+  // The "⋯" menu: always on one-line headers, and on full ones that have no room for every button.
+  const more = !full || columns.more;
+  // A one-line header's slider gives way to its name, badge and buttons when the column is narrow.
+  const volumeW = full
+    ? sliderW
+    : oneLineSliderW(width, lead, tier, { buttons: columns.compact.length + (hideMode ? 1 : 0) + 1, badge: !!group, alts: showsTrackAlts(track), autoMode: automation }, sliderW);
   const allTracks = useStore((s) => s.snap?.project.tracks) ?? [];
   const off = isTrackOff(allTracks, track);
   // "On" here means lit, which for this button is the track being off. Its menu entry reads the
@@ -179,7 +202,7 @@ export function Header({
     e.preventDefault();
     const startY = e.clientY;
     // Open take folders add rows below the lane; the track's own height is what's resized.
-    const startH = height - takeRowsHeight(track, getState().openFolders);
+    const startH = own;
     const all = e.altKey;
     const move = (ev: MouseEvent) => {
       const h = clampHeight(startH + ev.clientY - startY);
@@ -203,8 +226,6 @@ export function Header({
       {/* Short headers keep only the switches that are on, so a muted, soloed, armed or
           frozen track still shows it; the rest are in the "⋯" menu. */}
       {(full ? columns.full : columns.compact).map(column)}
-      {group && <GroupBadge group={group} onClick={() => setState({ groupSheet: group.id })} />}
-      {showsTrackAlts(track) && <TrackAltButton track={track} />}
       {hideMode && (
         <button
           className={"tbtn hide" + (track.hidden ? " on" : "")}
@@ -220,7 +241,7 @@ export function Header({
         </button>
       )}
       {!full && automation && <AutoModeButton track={track} compact />}
-      {!full && (
+      {more && (
         <button
           className="tbtn th-more"
           title="On/Off, Mute, Solo, Record and more"
@@ -243,7 +264,7 @@ export function Header({
         <LevelSlider
           db={volume}
           onChange={(db) => api.updateTrack(track.id, { volume_db: db })}
-          width={sliderW}
+          width={volumeW}
           tier={tier}
           track={track.kind === "folder" ? null : track.id}
           label={track.kind === "folder" ? "Folder volume (moves every subtrack)" : "Volume"}
@@ -255,7 +276,7 @@ export function Header({
   return (
     <div
       className={`track-header tier-${tier}` + (selected ? " selected" : "") + (primary ? " primary" : "") + (stack ? " stack" : "") + (track.hidden ? " is-hidden" : "") + (track.frozen ? " frozen" : "") + (off ? " is-off" : "")}
-      style={{ height }}
+      style={{ height, paddingBottom: height - band }}
       onMouseDown={(e) => {
         if (e.button !== 0) return;
         // A press anywhere that isn't a control can drag the track, as in Logic; without moving
@@ -269,19 +290,22 @@ export function Header({
       <div className="th-num" title="Drag to reorder">
         {index + 1}
       </div>
-      {depth > 0 && <div className="th-indent" style={{ width: depth * INDENT }} />}
-      {stack && (
-        <button
-          className="th-disclosure"
-          title={track.collapsed ? "Show subtracks" : "Hide subtracks"}
-          aria-label={track.collapsed ? "Show subtracks" : "Hide subtracks"}
-          {...onPress((e) => {
-            e.stopPropagation();
-            toggleCollapsed(track);
-          })}
-        >
-          {Icon.disclosure(!track.collapsed)}
-        </button>
+      {lead > 0 && (
+        <div className="th-lead" style={{ width: lead }}>
+          {stack && (
+            <button
+              className="th-disclosure"
+              title={track.collapsed ? "Show subtracks" : "Hide subtracks"}
+              aria-label={track.collapsed ? "Show subtracks" : "Hide subtracks"}
+              {...onPress((e) => {
+                e.stopPropagation();
+                toggleCollapsed(track);
+              })}
+            >
+              {Icon.disclosure(!track.collapsed)}
+            </button>
+          )}
+        </div>
       )}
       {tier !== "tiny" && (
         <button
@@ -314,6 +338,7 @@ export function Header({
               className="th-rename"
               autoFocus
               defaultValue={track.name}
+              onFocus={(e) => e.currentTarget.select()}
               onMouseDown={(e) => e.stopPropagation()}
               onBlur={(e) => {
                 setEditing(false);
@@ -329,7 +354,10 @@ export function Header({
           ) : (
             <LinesText className="th-name" text={track.name} max={lines} title={track.name} onDoubleClick={() => setEditing(true)} />
           )}
-          {/* On the name's line: the button row has no room to spare at the usual widths. */}
+          {/* On the name's line, so the button row is the same on every header: the group badge,
+              the Track Alternatives pop-up and the power button (which has no room in the row). */}
+          {group && <GroupBadge group={group} onClick={() => setState({ groupSheet: group.id })} />}
+          {showsTrackAlts(track) && <TrackAltButton track={track} />}
           {full && btn(power)}
         </div>
         {sliderInRow ? (
@@ -342,7 +370,7 @@ export function Header({
         )}
         {autoRow && <AutomationControls track={track} />}
       </div>
-      {!sliderInRow && volumeCell}
+      {!sliderInRow && volumeW > 0 && volumeCell}
       <div
         className="th-resize"
         title={`Drag to resize · ${fmt("Alt")}-drag resizes all tracks · double-click to reset`}

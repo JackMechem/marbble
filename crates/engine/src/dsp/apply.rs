@@ -293,6 +293,12 @@ impl Engine {
                     self.discard(Garbage::Sink(s));
                 }
             }
+            Cmd::TunerTap { input, sink } => {
+                let old = std::mem::replace(&mut self.tuner_tap, sink.map(|s| (input, s)));
+                if let Some((_, s)) = old {
+                    self.discard(Garbage::Sink(s));
+                }
+            }
             Cmd::InstrumentData { track, uid, data } => self.swap_instrument_data(track, uid, data),
             Cmd::FxParam { track, uid, id, value } => self.set_fx_param(track, uid, id, value),
             Cmd::Sidechain { track, uid, source } => {

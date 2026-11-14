@@ -76,6 +76,8 @@ export const MENU_LABELS = {
   "import-midi": "Import MIDI File…",
   "export-midi": "Export Selection as MIDI File…",
   // View.
+  "tracks-view": "Tracks View",
+  "mixer-view": "Mixer View",
   library: "Library",
   inspector: "Inspector",
   mixer: "Mixer",

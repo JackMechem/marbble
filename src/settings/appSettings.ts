@@ -12,6 +12,7 @@ import type { SurfaceConfig } from "../controllers/surfaces";
 import type { UpdateChannel } from "../app/updates/updateCheck";
 import type { WheelScrolls } from "../ui/wheel";
 import type { MeterPlace } from "../app/cpuMeter/cpuMeterModel";
+import type { LcdMode } from "../app/controlBar/lcdModes";
 
 export type AudioOverlap = "on_top" | "new_track" | "replace" | "take_folders";
 export type MidiOverlap = "new_region" | "merge" | "replace" | "take_folders";
@@ -88,6 +89,8 @@ export interface UiPrefs {
   check_updates?: boolean;
   /** Settings › Appearance: where the CPU meter shows (cpuMeterModel.ts `meterPlace`). */
   cpu_meter?: MeterPlace;
+  /** What the control bar's LCD shows (lcdModes.ts `lcdMode`). */
+  lcd_mode?: LcdMode;
 }
 
 export interface PluginPrefs {
@@ -187,6 +190,11 @@ export async function updateSettings(f: (s: AppSettings) => AppSettings) {
 /** Turns the control bar's Replace mode on or off. */
 export function toggleReplace() {
   return updateSettings((st) => ({ ...st, prefs: { ...st.prefs, recording: { ...st.prefs.recording, replace: !st.prefs.recording.replace } } }));
+}
+
+/** Chooses what the control bar's LCD shows. */
+export function setLcdMode(mode: LcdMode) {
+  return updateSettings((st) => ({ ...st, ui: { ...st.ui, lcd_mode: mode } }));
 }
 
 /** Reloads the plug-ins offered in the Library and slot menus. */

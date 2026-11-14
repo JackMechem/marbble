@@ -34,6 +34,63 @@ All notable changes to Marbble are recorded here. The format follows
   every member at the same level. Members now keep their offsets to the moved track however far
   it goes, until one is moved on its own. And a partner in Touch or Latch now records the move
   when the fader you hold is on a track in Read or Off.
+- **Zoom in to single samples in the Tracks area.** The zoom stopped at 400 px a beat. Ctrl+wheel
+  and View › Zoom In now go on, as Logic does, until samples are 32 px apart; the zoom slider
+  keeps its range and waits at its end. The ruler labels beats and finer steps as you go in
+  (5.2, 5.2.3, 5.2.3.121) and marks each sample, the grid shows the finer steps, and Smart snap
+  follows them down to a tick, then to single samples.
+- **Tuner and Chord modes for the control bar's LCD**, chosen from its chevron menu, which now
+  remembers the mode (Beats & Project, Time, Tuner or Chord) between launches. The Tuner tunes the
+  selected audio track's input: the note, a needle across ±50 cents that turns green in tune, and
+  the frequency. Chord names the chord held on MIDI input as you play it ("Am7", "G/B",
+  "Cmaj7(♯11)"), or the note, or the notes when no chord name fits, with the notes held beside it.
+- **Finer or no snapping while dragging regions.** With Snap on, moving a region a little meant
+  turning Snap off first. As in Logic, hold Ctrl (Control on macOS) once a move, trim or loop
+  drag has started to snap to ticks, or Ctrl+Shift to not snap at all; the region follows as
+  you press and release the keys. The Audio Track editor's drags take the same keys. Smart snap
+  also gets finer zoomed in past divisions, in steps that stay at least 15 px apart.
+- **Moved regions snap to the edges of other regions.** As with Logic's alignment guides, a moved
+  region's start or end that comes within a few pixels of another region's start or end (on any
+  track), the stopped playhead or a cycle locator snaps onto it, ahead of the grid, with a guide
+  line drawn there. An Alt-drag copy snaps to the originals too. Ctrl+Shift turns it off.
+
+- **Track headers line up.** Buttons on a track in a group or a stack were squeezed to about 14 px
+  while other tracks' kept their size, the volume slider's length and start changed from row to
+  row, and a track in a stack didn't line its icon up with one outside it. Every header now has the
+  same buttons, at one size, and the same slider: the group badge and the Track Alternatives
+  pop-up sit by the name, and in a narrow header column the buttons that don't fit move into the
+  **⋯** menu (Freeze first) instead of shrinking. Stack subtracks lost the stray line in their
+  indent.
+- **Tall track headers keep their contents at the top**, beside the regions' names, instead of in
+  the middle of the track; an open take folder no longer pushes a header's name and buttons down
+  into its take rows, or makes a short track's header lay out as a tall one.
+- **The R button reads as a button.** Its red letter on Studio's grey buttons was so dark it looked
+  disabled; it's lighter now, at 3:1 or better in every theme.
+- **The Height slider's low end is the smallest height.** It ran straight from 22 to 260 px, so
+  the default 64 px sat almost at the left end and looked like the minimum; it now steps by a
+  factor, as Taller and Shorter Tracks do, with the default near the middle.
+- **Renaming a track** selects its name, and the field no longer shifts the name or the buttons.
+- **The wheel over the track headers** scrolls by the same distance as over the tracks with a
+  wheel that reports lines, and Alt+wheel there sizes the tracks too.
+
+- **Dragging a region's loop handle loops the whole selection.** With several regions selected,
+  dragging one's loop handle (its top-right corner) looped only that region. As in Logic, every
+  selected region's loop end now moves by the same amount, in one undo step.
+- **A Mixer view.** Besides the Mixer pane under the tracks, the Mixer can now fill the main
+  window in the Tracks area's place, like Logic's Mixer window or Pro Tools' Mix window, with
+  long faders and room for every slot. Switch with the new Tracks / Mixer buttons at the left of
+  the control bar, Ctrl+1 and Ctrl+2 (⌘1 and ⌘2 on macOS) or View › Tracks View and Mixer View.
+  The Inspector and control bar stay; effect panels opened from the Mixer dock under it, and the
+  Editors (E) or the Mixer pane (X) take you back to the Tracks view. Each view keeps its scroll
+  position and each project remembers its view.
+
+- **Zooming the Tracks area with Catch on no longer jumps or fights the zoom.** The zoom and the
+  scroll that keeps its anchor landed a frame apart, so in between Catch saw the playhead out of
+  view and paged to it, and quick wheel turns or trackpad pinches anchored on the wrong spot. The
+  menu, keys and slider kept the scroll in pixels, so the view slid to another time. Now every
+  zoom keeps its anchor in the same frame: the pointer for Ctrl+wheel, the playhead when Catch is
+  on and it's in view, otherwise the middle of the view. While Catch follows the playhead, the
+  playhead stays put and Catch goes on from there.
 
 ## [0.1.0-alpha.17] - 2026-11-14
 

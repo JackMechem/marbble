@@ -180,15 +180,25 @@
   top: 0;
 }
 
+/* A header's contents are centred in a band at its top (TrackHeader.tsx sets the rest of its height
+   as bottom padding: headerBand in headerFit.ts, which restates these sizes). */
 .track-header {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 12px 0 0;
+  gap: 6px;
+  padding: 0 10px 0 9px;
   overflow: hidden;
   border-bottom: 1px solid var(--header-line);
   background: var(--header);
+}
+
+/* The colour bar runs the header's whole height, past the band. */
+.track-header > .th-color {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
 }
 
 .track-header.selected {
@@ -202,6 +212,7 @@
 }
 
 .th-num {
+  flex: none;
   width: 20px;
   text-align: right;
   color: var(--faint);
@@ -250,9 +261,14 @@
   display: block;
 }
 
+/* The name being edited, in the name's place: its text where the name's was, and no taller than the
+   name's line, so nothing around it moves. */
 .th-rename {
   font-size: var(--fs-lg);
   font-weight: 600;
+  line-height: 16px;
+  height: 18px;
+  margin: -1px 0 -1px -4px;
   background: var(--field);
   border: 1px solid var(--accent);
   border-radius: 3px;
@@ -261,14 +277,20 @@
   width: 100%;
 }
 
+/* Every header's buttons are one size; what doesn't fit goes into the "⋯" menu (fitControls in
+   headerFit.ts, which restates these sizes), so a button is never squeezed. */
 .th-buttons {
   display: flex;
-  gap: 4px;
+  gap: 3px;
+}
+
+.th-buttons > * {
+  flex: none;
 }
 
 .th-buttons .tbtn {
-  width: 25px;
-  height: 21px;
+  width: 20px;
+  height: 20px;
   font-size: var(--fs-md);
   border-radius: 4px;
 }
@@ -328,7 +350,8 @@
   background: var(--tbtn-hi);
 }
 
-/* The letters can take a darker shade than the lit button (the Light theme's --mon-text). */
+/* The letters can take another shade than the lit button: lighter on Studio's grey (--rec-text),
+   darker on Light's (--mon-text, --rec-text), to read at 3:1 at least. */
 .tbtn.mon {
   color: var(--mon-text, var(--mon));
 }
