@@ -36,6 +36,13 @@ export interface Drag {
   dTrack: number;
   /** Alt (Option) is held: the move drops copies, as in Logic. */
   copy?: boolean;
+  /** For moves, where the grabbed region goes (snapped), and whether the others keep their
+   *  distance from it in bars and beats (snapping on) rather than in samples. */
+  to?: number;
+  musical?: boolean;
+  /** For moves, the edge (another region's, the playhead or a locator) the selection snapped
+   *  to, where a guide line is drawn. */
+  guide?: number;
   /** For trims, the new start/length of the grabbed region. */
   start?: number;
   length?: number;

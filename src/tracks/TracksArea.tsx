@@ -37,6 +37,7 @@ import { releaseFieldFocus } from "../keyboard/focusRing";
 import { onPress } from "../keyboard/keyNav";
 import { sliderToZoom, zoomToSlider } from "./zoom";
 import { zoomTracksStep } from "./zoomCommands";
+import { paneShown, toggleBottom } from "../app/mainView";
 
 /** Logic's Drag pop-up; only Overlap and X-Fade so far. */
 /** In the order of Logic's Drag pop-up. */
@@ -122,7 +123,7 @@ export function viewMenu(): MenuItem[] {
   return [
     { id: "library", label: L("library"), hint: keyHint("library"), checked: s.showLibrary, onClick: () => setState({ showLibrary: !s.showLibrary }) },
     { id: "inspector", label: L("inspector"), hint: keyHint("inspector"), checked: s.showInspector, onClick: () => setState({ showInspector: !s.showInspector }) },
-    { id: "mixer", label: L("mixer"), hint: keyHint("mixer"), checked: s.bottom === "mixer", onClick: () => setState({ bottom: s.bottom === "mixer" ? "none" : "mixer" }) },
+    { id: "mixer", label: L("mixer"), hint: keyHint("mixer"), checked: paneShown(s, "mixer"), onClick: () => setState(toggleBottom(s, "mixer")) },
     { id: "browser", label: L("browser"), hint: keyHint("browser"), checked: s.showBrowser, onClick: () => setState({ showBrowser: !s.showBrowser }) },
     { id: "automation", label: L("automation"), hint: keyHint("automation"), checked: s.showAutomation, onClick: () => setState({ showAutomation: !s.showAutomation }) },
     { id: "used-automation", label: L("used-automation"), hint: keyHint("used-automation"), onClick: showUsedAutomation },

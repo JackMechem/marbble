@@ -778,7 +778,8 @@ when the macOS folder exists already it takes each entry it doesn't have, overwr
 Marbble Sampler's saved instruments are folders in `~/Music/Marbble Instruments/`.
 
 Interface-only state lives in the webview's `localStorage` under `marbble.*` keys: pane sizes, per
-project track heights, Mixer widths and global tracks (`src/tracks/trackLayout.ts`), dialog
+project track heights, Mixer widths, global tracks and the Tracks or Mixer view
+(`src/tracks/trackLayout.ts`), dialog
 options, detached panels (`src/app/detach/panelMemory.ts`). The theme, size and waveform style are
 kept in `settings.json`; their `localStorage` copies only let the window open right before the
 settings load.

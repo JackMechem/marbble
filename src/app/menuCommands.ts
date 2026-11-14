@@ -15,6 +15,7 @@ import { applyTheme } from "../theme/themes";
 import { applyUiScale, stepUiScale } from "../ui/uiScale";
 import { zoomTracksStep } from "../tracks/zoomCommands";
 import { newAux } from "../mixer/routing";
+import { toggleBottom, toggledView } from "./mainView";
 import { editorMenuCommand } from "../editors/audioEditor/state";
 import { showUsedAutomation } from "../tracks/automation/menus";
 import { pianoRollMenu } from "../editors/pianoRoll/keys";
@@ -290,8 +291,14 @@ export function handleMenu(id: string) {
     case "pack-takes":
       packTakeFolder();
       break;
+    case "tracks-view":
+      setState({ mainView: "tracks" });
+      break;
+    case "mixer-view":
+      setState({ mainView: toggledView(s.mainView) });
+      break;
     case "mixer":
-      setState({ bottom: s.bottom === "mixer" ? "none" : "mixer" });
+      setState(toggleBottom(s, "mixer"));
       break;
     case "inspector":
       setState({ showInspector: !s.showInspector });
@@ -300,10 +307,10 @@ export function handleMenu(id: string) {
       setState({ showLibrary: !s.showLibrary });
       break;
     case "editor":
-      setState({ bottom: s.bottom === "editor" ? "none" : "editor" });
+      setState(toggleBottom(s, "editor"));
       break;
     case "list-editors":
-      setState({ bottom: s.bottom === "list" ? "none" : "list" });
+      setState(toggleBottom(s, "list"));
       break;
     case "browser":
       setState({ showBrowser: !s.showBrowser });

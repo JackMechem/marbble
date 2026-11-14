@@ -21,21 +21,32 @@ test("each snap mode's step, following the signature", () => {
   assert.equal(snapStep("smart", 4, 4, 100), 0.25);
   assert.equal(snapStep("smart", 4, 4, 30), 1);
   assert.equal(snapStep("smart", 4, 4, 5), 4);
-  // Zoomed in further, finer steps 60 px apart or more, down to a single tick.
-  assert.equal(snapStep("smart", 4, 4, 400), 0.25);
-  assert.equal(snapStep("smart", 4, 4, 480), 1 / 8);
-  assert.equal(snapStep("smart", 4, 4, 60 * 960), 1 / 960);
+  // Zoomed in past divisions, halves of a division, while a step is at least 15 px wide.
+  assert.equal(snapStep("smart", 4, 4, 119), 0.25);
+  assert.equal(snapStep("smart", 4, 4, 120), 0.125);
+  assert.equal(snapStep("smart", 4, 4, 400), 0.0625);
+  // From beats in, a Smart step is 15 to 60 px wide.
+  for (let ppb = 15; ppb <= 400; ppb += 0.5) {
+    const px = snapStep("smart", 4, 4, ppb) * ppb;
+    assert.ok(px >= 15 && px <= 60, `${ppb} px per beat: ${px} px`);
+  }
+  // Zoomed in further (past the slider), on down to a single tick, 15 to 75 px wide...
+  assert.equal(snapStep("smart", 4, 4, 15 * 960), 1 / 960);
+  for (let ppb = 400; ppb <= 60 * 960; ppb *= 1.01) {
+    const px = snapStep("smart", 4, 4, ppb) * ppb;
+    assert.ok(px >= 15 && px < 75, `${ppb} px per beat: ${px} px`);
+  }
+  // ...and once a tick is over 60 px wide, single samples.
+  assert.equal(snapStep("smart", 4, 4, 61 * 960), 0);
 });
 
-test("Smart snaps to single samples once they're 4 px apart", () => {
+test("Smart snaps to single samples once a tick is over 60 px wide", () => {
   // 120 BPM at 48 kHz: a tick is 25 samples.
   const p = { sample_rate: 48000, tempo: 120, sig_num: 4, sig_den: 4, tempo_map: [], signatures: [] } as unknown as Project;
-  // 2 px a sample: still ticks, five of them (125 samples, 250 px).
-  assert.equal(snapPos(p, 8070, "smart", 2 * 24_000), 8125);
-  // 3 px a sample: single ticks (75 px).
-  assert.equal(snapPos(p, 8013, "smart", 3 * 24_000), 8025);
-  // 4 px a sample: the sample itself.
-  assert.equal(snapPos(p, 8013.4, "smart", 4 * 24_000), 8013);
+  // 2 px a sample: single ticks (50 px).
+  assert.equal(snapPos(p, 8013, "smart", 2 * 24_000), 8025);
+  // 3 px a sample (a tick 75 px): the sample itself.
+  assert.equal(snapPos(p, 8013.4, "smart", 3 * 24_000), 8013);
 });
 
 test("positions snap to divisions and ticks", () => {
