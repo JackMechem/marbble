@@ -73,8 +73,15 @@ impl CountIn {
         (self.anchor + k as f64 * self.step).round() as i64
     }
 
+    /// The first click that sounds at or after `pos`: clicks sound at whole samples (`pos(k)`),
+    /// so one a fraction of a sample before `pos` still counts.
     pub(super) fn first_at_or_after(&self, pos: i64) -> i64 {
-        ((pos as f64 - self.anchor) / self.step - 1e-9).ceil() as i64
+        let k = ((pos as f64 - 0.5 - self.anchor) / self.step - 1e-9).ceil() as i64;
+        if self.pos(k) < pos {
+            k + 1
+        } else {
+            k
+        }
     }
 
     pub(super) fn downbeat(&self, k: i64) -> bool {

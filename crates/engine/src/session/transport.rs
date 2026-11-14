@@ -352,6 +352,7 @@ impl Session {
             first.num = self.project.sig_num;
             first.den = self.project.sig_den;
         }
+        self.fit_pickup();
         self.dirty = true;
         self.sync_globals();
     }

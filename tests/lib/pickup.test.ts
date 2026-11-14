@@ -3,7 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import * as t from "../../src/lib/tempo.ts";
-import { pickupLength, pickupQuarters } from "../../src/lib/pickup.ts";
+import { pickupLength, pickupQuarters, pickupTickStep } from "../../src/lib/pickup.ts";
 import { bbtToSample, formatPosition, parsePosition } from "../../src/editors/eventList/model.ts";
 
 const SR = 48000;
@@ -27,6 +27,7 @@ test("no pickup and bar 1 change nothing", () => {
     assert.equal(a.barStart(a.barAt(s)), b.barStart(b.barAt(s)));
   }
   assert.deepEqual([...a.bars(0, 900000)], [...b.bars(0, 900000)]);
+  assert.ok([...a.bars(0, 900000)].every((s) => s.len === s.end - s.start));
   assert.deepEqual([...a.grid(0, 900000, 2)], [...b.grid(0, 900000, 2)]);
   // A project from before bar numbering.
   assert.deepEqual(t.barNumbering({}), { pickup: 0, firstBar: 1 });
@@ -49,6 +50,12 @@ test("a pickup is the end of bar 0", () => {
     [2, 5 * Q, 9 * Q],
     [3, 9 * Q, 13 * Q],
   ]);
+  // Labels and lines space the pickup as a whole bar; rulers label it when it's wide enough.
+  const pickupBar = [...m.bars(0, Q)][0];
+  assert.equal(pickupBar.len, 4 * Q);
+  assert.equal(t.labelEvery((pickupBar.len * 22) / Q), 1);
+  assert.ok(t.labelsBar(m, pickupBar, 2, 22 / Q));
+  assert.ok(!t.labelsBar(m, pickupBar, 1, 5 / Q));
   // Ruler labels count from the first full bar.
   assert.ok(m.everyNthBar(1, 2) && m.everyNthBar(3, 2) && !m.everyNthBar(0, 2) && !m.everyNthBar(2, 2));
   // The metronome's grid: the pickup's beat, then bar 1's downbeat.
@@ -105,7 +112,10 @@ test("Project Settings shows the pickup in beats and ticks of the first signatur
   assert.equal(pickupQuarters(1, 480, 4, 4), 1.5);
   assert.equal(pickupQuarters(3, 0, 6, 8), 1.5);
   assert.equal(pickupQuarters(0, 0, 4, 4), 0);
-  // Shorter than a bar, and never negative.
-  assert.equal(pickupQuarters(9, 0, 4, 4), 4 - 1 / 960);
+  // Whole 32nds, shorter than a bar, never negative.
+  assert.equal(pickupQuarters(1, 100, 4, 4), 1.125);
+  assert.equal(pickupQuarters(9, 0, 4, 4), 3.875);
   assert.equal(pickupQuarters(-1, 0, 4, 4), 0);
+  assert.equal(pickupTickStep(4), 120);
+  assert.equal(pickupTickStep(8), 240);
 });

@@ -247,6 +247,8 @@ fn a_pickup_is_the_end_of_bar_0() {
     // The ruler's bars: the pickup from 0, then whole bars.
     let bars: Vec<_> = m.bars(0.0, 9.5 * q).map(|b| (b.bar, b.start.round() as i64, b.end.round() as i64)).collect();
     assert_eq!(bars, vec![(0, 0, 24000), (1, 24000, 120000), (2, 120000, 216000), (3, 216000, 312000)]);
+    // Labels and lines space the pickup as a whole bar.
+    assert!(m.bars(0.0, q).all(|b| close(b.len, 4.0 * q, 1e-9)));
     // The metronome from 0: the pickup's beat, then bar 1's accented downbeat.
     let clicks: Vec<_> = m.grid(0.0, 6.0 * q, 1).map(|g| (g.pos.round() as i64, g.bar, g.downbeat())).collect();
     assert_eq!(clicks[0], (0, 0, false));
@@ -328,4 +330,14 @@ fn count_ins_without_a_pickup_count_back_from_the_punch() {
     let p = numbered(&[], &[], (3, 4), 1.0, 1);
     assert_eq!(p.count_in_start(0, 2), -48_000 - 144_000);
     assert_eq!(p.count_in_start(24_000, 1), 24_000 - 72_000);
+}
+
+#[test]
+fn stored_pickups_are_whole_32nds_under_a_bar() {
+    assert_eq!(clamp_pickup(1.1, (4, 4)), 1.125);
+    assert_eq!(clamp_pickup(4.0, (4, 4)), 3.875);
+    assert_eq!(clamp_pickup(3.0, (2, 4)), 1.875);
+    assert_eq!(clamp_pickup(1.0, (3, 8)), 1.0);
+    assert_eq!(clamp_pickup(-1.0, (4, 4)), 0.0);
+    assert_eq!(clamp_pickup(f64::INFINITY, (4, 4)), 0.0);
 }

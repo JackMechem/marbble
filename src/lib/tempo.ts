@@ -122,6 +122,9 @@ export interface BarSpan {
   bar: number;
   /** Where it starts on the timeline: the pickup bar from 0, where the timeline starts. */
   start: number;
+  /** Its whole length in samples, the pickup's part before 0 included (for spacing labels and
+   *  lines as in the bars after it). */
+  len: number;
   end: number;
   startQ: number;
   num: number;
@@ -436,7 +439,7 @@ export class TempoMap {
       const [num, den] = this.sigAtBar(bar);
       const end = this.barStart(bar + 1);
       // The pickup bar shows from the timeline's start.
-      yield { bar, start: start < 0 && end > 0 ? 0 : start, end, startQ, num, den };
+      yield { bar, start: start < 0 && end > 0 ? 0 : start, end, len: end - start, startQ, num, den };
     }
   }
 
@@ -460,6 +463,20 @@ export class TempoMap {
  *  plain multiples of a bar's length find the bar lines. */
 export function plainBars(map: TempoMap): boolean {
   return map.isConstant && map.pickup === 0;
+}
+
+/** How many bars apart a ruler labels bars `barPx` wide, so the labels don't collide. */
+export function labelEvery(barPx: number): number {
+  return barPx >= 34 ? 1 : barPx >= 16 ? 2 : barPx >= 8 ? 4 : 8;
+}
+
+/** The narrowest pickup (px) a ruler labels, so its number doesn't run into the next bar's. */
+const PICKUP_LABEL_PX = 14;
+
+/** Whether a ruler labels bar `b` when it labels every `every`th one (counted from the first
+ *  full bar), at `pps` pixels a sample: the pickup whenever its label fits. */
+export function labelsBar(map: TempoMap, b: BarSpan, every: number, pps: number): boolean {
+  return b.bar < map.firstBar ? (b.end - b.start) * pps >= PICKUP_LABEL_PX : map.everyNthBar(b.bar, every);
 }
 
 /** Bar lines at and around a time. */
@@ -540,7 +557,7 @@ export function forEachGridLine(
   for (const b of map.bars(from, to)) {
     line(b.start, "bar", b);
     const beatQ = 4 / b.den;
-    const beatPx = ((b.end - b.start) / b.num) * pps;
+    const beatPx = (b.len / b.num) * pps;
     if (beatPx < opts.beatsMinPx) continue;
     const sub = opts.subdiv && beatPx / opts.subdiv >= (opts.subMinPx ?? 0) ? opts.subdiv : 1;
     for (let k = 1; k < b.num * sub; k++) {

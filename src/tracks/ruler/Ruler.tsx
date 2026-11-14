@@ -5,7 +5,7 @@ import type { Project } from "../../engine/project";
 import { getState, setState, useStore } from "../../state/store";
 import { coalesced, framePos, onFrame } from "../../state/frameLoop";
 import { samplesPerBeat, snapPos } from "../../lib/time";
-import { tempoMap } from "../../lib/tempo";
+import { labelEvery, labelsBar, tempoMap } from "../../lib/tempo";
 import { pixelRatio } from "../../ui/uiScale";
 import { mix, theme } from "../../theme/canvasTheme";
 import { onViewport, RULER_H, viewport } from "../viewport";
@@ -95,10 +95,9 @@ export function Ruler() {
     // Bars through the tempo map, so their numbers follow tempo and signature changes.
     for (const b of map.bars(from, to)) {
       const x = Math.round(b.start * pps - vp.left) + 0.5;
-      const barPx = (b.end - b.start) * pps;
+      const barPx = b.len * pps;
       // Skip bar labels when they would collide.
-      const every = barPx >= 34 ? 1 : barPx >= 16 ? 2 : barPx >= 8 ? 4 : 8;
-      if (map.everyNthBar(b.bar, every)) {
+      if (labelsBar(map, b, labelEvery(barPx), pps)) {
         if (x + 3 + ctx.measureText(String(b.bar)).width > 0) labelled = true;
         ctx.fillStyle = theme.rulerTick;
         ctx.fillRect(x, CYCLE_H + 1, 1, BARS_H - CYCLE_H - 2);

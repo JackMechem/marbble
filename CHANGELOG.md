@@ -10,11 +10,12 @@ All notable changes to Marbble are recorded here. The format follows
 
 - **Pickup bar and first bar number.** A song with a pickup used to need a short signature at bar 1,
   which numbered every bar one off. Project Settings › General › Bars now sets a **Pickup** (in
-  beats and ticks) that makes the project start with a partial bar holding the last beats of a
-  bar, and a **First Bar Number** (0 or negative too). The ruler, LCD, grid and Snap, Signature
-  and Tempo tracks, markers, editors, Event List, Bounce ranges, metronome accents, count-in and
-  plug-in transport follow it; MIDI files export the pickup as a short bar and an imported
-  file's short first bar becomes the pickup.
+  beats and ticks, to a 32nd note) that makes the project start with a partial bar holding the
+  last beats of a bar, and a **First Bar Number** (0 or negative too). The ruler, LCD, grid and
+  Snap, Signature and Tempo tracks, markers, editors, Event List, Bounce ranges, metronome
+  accents, count-in and plug-in transport follow it; MIDI files export the pickup as a short bar
+  and an imported file's short first bar becomes the pickup. A project whose first bar is 0 or
+  less and that has signature changes can't be opened by older versions of Marbble.
 - **Zoom in to single samples in the Tracks area.** The zoom stopped at 400 px a beat. Ctrl+wheel
   and View › Zoom In now go on, as Logic does, until samples are 32 px apart; the zoom slider
   keeps its range and waits at its end. The ruler labels beats and finer steps as you go in

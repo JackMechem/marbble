@@ -10,7 +10,7 @@ import { Foot, Row, Section, SheetFrame, TabIcon } from "./parts";
 import { BIT_DEPTHS } from "./RecordingPane";
 import { MetronomeDefaults, MetronomeFields } from "./MetronomePane";
 import { barNumbering, MAX_FIRST_BAR, MIN_FIRST_BAR } from "../../lib/tempo";
-import { pickupLength, pickupQuarters } from "../../lib/pickup";
+import { pickupLength, pickupQuarters, pickupTickStep } from "../../lib/pickup";
 import type { Project } from "../../engine/project";
 
 const KEYS = ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
@@ -115,6 +115,8 @@ function ProjectGeneral() {
 function BarNumberingSection({ p }: { p: Project }) {
   const { pickup, firstBar } = barNumbering(p);
   const { beats, ticks } = pickupLength(pickup, p.sig_den);
+  // Ticks go in 32nd notes.
+  const tickStep = pickupTickStep(p.sig_den);
   const set = (pickup: number, firstBar: number) => act("set_bar_numbering", { pickup, firstBar });
   const setPickup = (b: number, t: number) => set(pickupQuarters(b, t, p.sig_num, p.sig_den), firstBar);
   const beat = p.sig_den === 8 ? "eighth" : p.sig_den === 2 ? "half" : p.sig_den === 16 ? "sixteenth" : "quarter";
@@ -127,7 +129,7 @@ function BarNumberingSection({ p }: { p: Project }) {
         <div className="row-inline">
           <NumberField value={beats} min={0} max={p.sig_num - 1} step={1} onChange={(b) => setPickup(b, ticks)} width={64} title="Beats" />
           <span className="dim">beats</span>
-          <NumberField value={ticks} min={0} max={959} step={240} resolution={1} onChange={(t) => setPickup(beats, t)} width={72} title="Ticks (960 a beat)" />
+          <NumberField value={ticks} min={0} max={960 - tickStep} step={tickStep} onChange={(t) => setPickup(beats, t)} width={72} title={`Ticks (960 a beat), in steps of a 32nd note (${tickStep})`} />
           <span className="dim">ticks</span>
         </div>
       </Row>

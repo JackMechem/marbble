@@ -4,7 +4,7 @@
 //! MIDI. "Move MIDI Regions with Tempo" (`move_midi` below) instead keeps MIDI regions and
 //! their notes on their bars and beats; audio never moves.
 
-use crate::model::tempo::{normalize_sigs, normalize_tempo, SigEvent, TempoEvent, TempoMap, MAX_FIRST_BAR, MIN_FIRST_BAR};
+use crate::model::tempo::{clamp_pickup, normalize_sigs, normalize_tempo, SigEvent, TempoEvent, TempoMap, MAX_FIRST_BAR, MIN_FIRST_BAR};
 use crate::session::*;
 
 impl Session {
@@ -41,6 +41,7 @@ impl Session {
         self.project.sig_num = ev[0].num;
         self.project.sig_den = ev[0].den;
         self.project.signatures = if ev.len() == 1 { Vec::new() } else { ev };
+        self.fit_pickup();
         self.dirty = true;
         self.sync_globals();
     }
@@ -63,20 +64,25 @@ impl Session {
         self.set_signatures(ev);
     }
 
-    /// Sets the pickup (in quarters, at most a bar of the first signature) and the first full
-    /// bar's number (Project Settings). Regions, markers and tempo changes keep their time;
-    /// signature changes keep their bars, renumbered.
+    /// Sets the pickup (in quarters, whole 32nds shorter than a bar of the first signature) and
+    /// the first full bar's number (Project Settings). Regions, markers and tempo changes keep
+    /// their time; signature changes keep their bars, renumbered.
     pub fn set_bar_numbering(&mut self, pickup: f64, first_bar: i64) {
         let first_bar = first_bar.clamp(MIN_FIRST_BAR, MAX_FIRST_BAR);
         let shift = first_bar - self.project.first_bar;
         for s in &mut self.project.signatures {
             s.bar += shift;
         }
-        let bar_q = self.project.sig_num as f64 * 4.0 / self.project.sig_den as f64;
-        self.project.pickup = if pickup.is_finite() { pickup.clamp(0.0, bar_q) } else { 0.0 };
+        self.project.pickup = pickup;
+        self.fit_pickup();
         self.project.first_bar = first_bar;
         self.dirty = true;
         self.sync_globals();
+    }
+
+    /// Keeps the pickup shorter than a bar of the first signature when that changes.
+    pub(crate) fn fit_pickup(&mut self) {
+        self.project.pickup = clamp_pickup(self.project.pickup, (self.project.sig_num, self.project.sig_den));
     }
 
     /// Moves MIDI regions, notes and controllers so that what sat at a bar and beat under
@@ -153,9 +159,18 @@ mod tests {
         let map = s.tempo_map();
         assert_eq!(map.bar_beat_at(0.0).bar, -1);
         assert!((map.bar_start(2) - three - map.samples_per_quarter_at(0.0)).abs() < 1e-6);
-        // A pickup is at most a bar of the first signature.
+        // A pickup is whole 32nds, shorter than a bar of the first signature, which it follows.
         s.set_bar_numbering(9.0, 0);
-        assert_eq!(s.project.pickup, 4.0);
+        assert_eq!(s.project.pickup, 3.875);
+        s.set_bar_numbering(1.1, 0);
+        assert_eq!(s.project.pickup, 1.125);
+        s.set_bar_numbering(3.0, 0);
+        s.set_signature(2, 4);
+        assert_eq!(s.project.pickup, 1.875);
+        s.set_signatures(vec![SigEvent { bar: 0, num: 3, den: 8 }]);
+        assert_eq!(s.project.pickup, 1.375);
+        s.set_bar_numbering(1.0, 0);
+        s.set_signatures(vec![SigEvent { bar: 0, num: 4, den: 4 }, SigEvent { bar: 2, num: 3, den: 4 }]);
         s.set_bar_numbering(0.0, 1);
         assert_eq!(s.tempo_map().bar_start(3), three);
     }

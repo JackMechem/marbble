@@ -5,7 +5,7 @@ import { type Region } from "../../engine/regions";
 import * as ed from "./state";
 import { getState } from "../../state/store";
 import { theme } from "../../theme/canvasTheme";
-import { forEachGridLine, tempoMap } from "../../lib/tempo";
+import { forEachGridLine, labelsBar, tempoMap } from "../../lib/tempo";
 import { pixelRatio } from "../../ui/uiScale";
 import { ensureWave, waveCache, type Wave } from "../../tracks/regions/waveform";
 import { drawRegion } from "../../tracks/regions/regionDraw";
@@ -243,10 +243,10 @@ export function editorDrawer({ canvasRef, scaleRef, scrollRef, playheadRef, drag
     ctx.textBaseline = "alphabetic";
     for (const bar of map.bars(Math.max(0, left / pps), (left + W) / pps)) {
       const x = Math.round(bar.start * pps - left) + 0.5;
-      const barPx = (bar.end - bar.start) * pps;
+      const barPx = bar.len * pps;
       const beatPx = barPx / bar.num;
       const beatX = (k: number) => Math.round(map.sampleAt(bar.startQ + (k * 4) / bar.den) * pps - left + 0.5);
-      if (map.everyNthBar(bar.bar, every)) {
+      if (labelsBar(map, bar, every, pps)) {
         ctx.fillStyle = theme.rulerTick;
         ctx.fillRect(x, CYCLE_STRIP + 1, 1, RULER - CYCLE_STRIP - 2);
         ctx.fillStyle = theme.rulerText;

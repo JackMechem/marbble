@@ -57,6 +57,21 @@ impl Default for BarNumbering {
     }
 }
 
+/// The pickup's grid: a 32nd note, so a MIDI file can give it a signature of its own.
+pub const PICKUP_STEP: f64 = 0.125;
+
+/// A pickup the app stores, in quarters: whole 32nd notes, from none to a 32nd short of a bar
+/// of `sig`.
+pub fn clamp_pickup(pickup: f64, sig: (u32, u32)) -> f64 {
+    let (num, den) = clamp_sig(sig.0, sig.1);
+    let max = num as f64 * 4.0 / den as f64 - PICKUP_STEP;
+    if pickup.is_finite() {
+        ((pickup / PICKUP_STEP).round() * PICKUP_STEP).clamp(0.0, max)
+    } else {
+        0.0
+    }
+}
+
 /// The range of first bar numbers the app supports.
 pub const MIN_FIRST_BAR: i64 = -999;
 pub const MAX_FIRST_BAR: i64 = 9999;
@@ -204,6 +219,9 @@ pub struct BarSpan {
     pub bar: i64,
     /// Where it starts on the timeline: the pickup bar from 0, where the timeline starts.
     pub start: f64,
+    /// Its whole length in samples, the pickup's part before 0 included (for spacing labels and
+    /// lines as in the bars after it).
+    pub len: f64,
     pub end: f64,
     pub start_q: f64,
     pub num: u32,
@@ -591,8 +609,9 @@ impl TempoMap {
             let (num, den) = self.sig_at_bar(bar);
             let end = self.bar_start(bar + 1);
             // The pickup bar shows from the timeline's start.
+            let len = end - start;
             let start = if start < 0.0 && end > 0.0 { 0.0 } else { start };
-            let span = BarSpan { bar, start, end, start_q, num, den };
+            let span = BarSpan { bar, start, end, len, start_q, num, den };
             bar += 1;
             Some(span)
         })
