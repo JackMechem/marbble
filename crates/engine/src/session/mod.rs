@@ -212,6 +212,8 @@ pub struct Session {
     /// The analyzer's insert: (strip, instance id). Off when another project opens, as its ids
     /// are this project's.
     analyzer_target: Option<(Id, Id)>,
+    /// The group volume or pan move in progress (`tracks/groups/linked_move.rs`).
+    linked_move: Option<tracks::groups::linked_move::LinkedMove>,
     rec_midi_track: Option<Id>,
     last_play_from: i64,
     undo_stack: Vec<UndoEntry>,
@@ -435,6 +437,7 @@ impl Session {
             analyzer_rx: an_rx,
             analyzer_buf: vec![0.0; crate::fx::channel_eq::filters::FFT_SIZE],
             analyzer_target: None,
+            linked_move: None,
             rec_midi_track: None,
             last_play_from: 0,
             undo_stack: Vec::new(),

@@ -1522,7 +1522,8 @@ Settings**, which you can reopen by clicking a member's group badge:
 
 - Name, colour, and **Group on** (off makes members act alone without dissolving the group,
   like Logic's group clutch).
-- What the members share: **Volume** and **Pan** (as relative moves), **Mute**, **Solo**,
+- What the members share: **Volume** and **Pan** (as relative moves: each member keeps its
+  offset, even after the move took it to the end of its range and back), **Mute**, **Solo**,
   **Record Enable**, **Track Selection** (clicking one selects all), and **Editing
   (Selection)** (selecting a region selects the regions at the same place on the others, and
   their take folders switch and comp together; see

@@ -1,8 +1,13 @@
 //! Track groups, and changing a track's settings: `update_track` and `update_track_linked`, which
-//! applies an edit to the rest of the group too. Also the analyzer's target and the selected
-//! track.
+//! applies an edit to the rest of the group too (volume and pan as relative moves:
+//! `linked_move.rs`). Also the analyzer's target and the selected track.
+
+pub(crate) mod linked_move;
+#[cfg(test)]
+mod tests;
 
 use crate::session::*;
+use linked_move::{Level, LinkedMove};
 
 impl Session {
     /// A new group holding `ids` (leaving any group they were in). Returns its id.
@@ -70,6 +75,8 @@ impl Session {
     /// members (volume and pan as relative moves, the switches as the same state).
     pub fn update_track_linked(&mut self, id: Id, patch: TrackPatch) {
         let Some(t) = self.project.track(id).cloned() else { return };
+        let volumes = patch.volume_db.map(|v| self.linked_levels(id, Level::Volume, t.volume_db, v)).unwrap_or_default();
+        let pans = patch.pan.map(|v| self.linked_levels(id, Level::Pan, t.pan, v)).unwrap_or_default();
         let mut peers: Vec<(Id, TrackPatch)> = Vec::new();
         let mut add = |ids: Vec<Id>, f: &dyn Fn(&mut TrackPatch, &Track)| {
             for pid in ids {
@@ -84,14 +91,9 @@ impl Session {
                 f(&mut peers[i].1, pt);
             }
         };
-        if let Some(v) = patch.volume_db {
-            let d = v - t.volume_db;
-            add(self.group_peers(id, |g| g.volume), &|p, pt| p.volume_db = Some(pt.volume_db + d));
-        }
-        if let Some(v) = patch.pan {
-            let d = v - t.pan;
-            add(self.group_peers(id, |g| g.pan), &|p, pt| p.pan = Some(pt.pan + d));
-        }
+        let at = |to: &[(Id, f32)], id: Id| to.iter().find(|x| x.0 == id).map(|x| x.1);
+        add(volumes.iter().map(|x| x.0).collect(), &|p, pt| p.volume_db = at(&volumes, pt.id));
+        add(pans.iter().map(|x| x.0).collect(), &|p, pt| p.pan = at(&pans, pt.id));
         if let Some(v) = patch.mute {
             add(self.group_peers(id, |g| g.mute), &|p, _| p.mute = Some(v));
         }
@@ -117,6 +119,20 @@ impl Session {
         for (tid, was) in moved {
             self.auto_moved(tid, was);
         }
+    }
+
+    /// Where the members sharing `level` with `id` go when it moves from `now` to `to`: by the
+    /// same amount, each keeping its offset (see [`LinkedMove`]).
+    fn linked_levels(&mut self, id: Id, level: Level, now: f32, to: f32) -> Vec<(Id, f32)> {
+        let peers: Vec<(Id, f32)> = self
+            .group_peers(id, |g| if level == Level::Volume { g.volume } else { g.pan })
+            .into_iter()
+            .filter_map(|pid| self.project.track(pid).map(|t| (pid, if level == Level::Volume { t.volume_db } else { t.pan })))
+            .collect();
+        if peers.is_empty() {
+            return peers;
+        }
+        LinkedMove::step(&mut self.linked_move, id, level, now, &peers, to)
     }
 
     /// Applies a [`TrackPatch`] to this track alone; [`Session::update_track_linked`] takes its group along.
