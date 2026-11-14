@@ -7,7 +7,6 @@ import { getState, liveTakes } from "../../state/store";
 import { offTracks } from "../trackOff";
 import { drawWave } from "../regions/waveform";
 import { PEAK_BUCKET, toBbt } from "../../lib/time";
-import { snapToTracksGrid } from "../gridSnap";
 import { forEachGridLine, tempoMap } from "../../lib/tempo";
 import { mix, theme } from "../../theme/canvasTheme";
 import { type Layout } from "../trackLayout";
@@ -121,7 +120,7 @@ export function drawTracks({ canvasRef, live, dragRef, swipeRef, marqueeRef, hov
     if (drag && !still && drag.ids.includes(r.id)) {
       if (drag.kind === "move") {
         const from = getGrabbedStart();
-        start = movedStart(tempoMap(project), r.start, from, Math.max(0, snapToTracksGrid(project, from + drag.dx)), getState().snapMode !== "off");
+        start = movedStart(tempoMap(project), r.start, from, drag.to ?? from, !!drag.musical);
         if (loop != null) loop += start - r.start;
         lane = newLaneOf.get(i);
         if (lane === undefined) ti = dragTarget(layout, i, drag.dTrack, project.tracks);

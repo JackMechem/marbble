@@ -11,7 +11,7 @@ status = "done"
 tier = "core"
 beta = true
 logic = "290"
-note = "Smart, Bar, Beat, Division, Ticks and Off."
+note = "Smart, Bar, Beat, Division, Ticks and Off; Ctrl while dragging snaps to ticks, Ctrl+Shift not at all."
 
 [[feature]]
 section = "Arranging in the Tracks area"

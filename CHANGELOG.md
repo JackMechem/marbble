@@ -6,6 +6,15 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Finer or no snapping while dragging regions.** With Snap on, moving a region a little meant
+  turning Snap off first. As in Logic, hold Ctrl (Control on macOS) once a move, trim or loop
+  drag has started to snap to ticks, or Ctrl+Shift to not snap at all; the region follows as
+  you press and release the keys. The Audio Track editor's drags take the same keys. Smart snap
+  also gets finer zoomed all the way in, down to a quarter of a division, instead of stopping
+  at divisions.
+
 ### Changed
 
 - **Selecting a track while playing with Render Ahead on is seamless.** The track had to play

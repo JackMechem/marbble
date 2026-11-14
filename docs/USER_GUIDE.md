@@ -1012,7 +1012,13 @@ The pointer changes over a region's hot zones:
 - Moves, trims and loop ends follow the **Snap** setting (Smart, Bar, Beat, Division, Ticks or
   Off). **Division** is a quarter of a beat, the third number of the position display: a
   sixteenth in 4/4, a thirty-second in 6/8. **Ticks** is 1/240 of a division (960 to a beat).
-  Smart snaps to divisions, beats or bars depending on the zoom. Fades are never snapped.
+  Smart snaps to bars, beats or divisions depending on the zoom, and zoomed in further to
+  halves and quarters of a division. Fades are never snapped.
+- **Finer or no snapping while dragging:** once a move, trim or loop drag has started, hold
+  **Ctrl** (Control on macOS) to snap to ticks instead, or **Ctrl+Shift** to not snap at all,
+  as in Logic. Let go to snap to the grid again; the region follows as you press or release the
+  keys. Press the keys after you start dragging: on Linux and Windows, Ctrl held at the click
+  picks the Command-click tool. Ctrl can be held with Alt for a copy.
 - **Trimming a selection:** with several regions selected, dragging one's start or end trims
   the same edge of each by the same amount, audio and MIDI alike, in one undo step. The region
   you drag snaps; the others follow it by as much, each stopping at its own limits (the start
@@ -2120,7 +2126,8 @@ tools of Logic's Audio File Editor.
 ### Selecting
 
 - Drag across the waveform to select a time range. It follows the Snap setting (Smart snapping
-  stops at sixteenths, and holding **Alt** while dragging is always free).
+  stops at sixteenths). While dragging, hold **Ctrl** (Control on macOS) to snap to ticks, or
+  **Alt** or **Ctrl+Shift** to not snap; the same keys work when moving and trimming regions.
 - Shift+click or Shift+drag extends the selection from its nearer end.
 - Double-click a region to select all of it. A plain click selects the region under it.
 - Esc deselects.

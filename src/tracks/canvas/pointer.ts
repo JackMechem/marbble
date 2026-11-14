@@ -33,7 +33,7 @@ import { regionCrossfades, setCrossfadeDrag } from "../regions/regionDraw";
 import { grabKind as regionGrabKind, type GrabKind, type RegionPress } from "../regions/regionGrab";
 import { editorPaneFor } from "../regions/regionEditor";
 import { trimAll, trimDelta, trimLimits, type TrimEdge } from "../regions/regionTrim";
-import { snapToTracksGrid } from "../gridSnap";
+import { snapToTracksGrid, tracksSnapMode } from "../gridSnap";
 import { dragWith, pastDragThreshold } from "../../ui/pointerDrag";
 import { dragNewLanes, dragTarget, type Drag, type TracksRefs } from "./drag";
 
@@ -226,10 +226,11 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
     const fadeFrom = r.content.type === "audio" ? (kind === "fadeIn" ? r.content.fade_in : r.content.fade_out) : 0;
     // Dragging a crossfade's handle resizes it about its centre.
     const crossfading = kind === "fadeOut" && !!regionCrossfades(r.id)?.out;
-    const snap = (v: number) => snapToTracksGrid(project, v);
     let moved = false;
 
     const move = (ev: MouseEvent) => {
+      // Ctrl snaps finer, Ctrl+Shift not at all (lib/snapKeys.ts).
+      const snap = (v: number) => snapToTracksGrid(project, v, ev);
       const dxPx = ev.clientX - e.clientX;
       const dyPx = ev.clientY - e.clientY;
       if (!moved && !pastDragThreshold(dxPx, dyPx)) return;
@@ -241,7 +242,11 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
       const past = kind === "move" ? lanesPast(y, live.current.layout.total, getState().trackHeight) : 0;
       d.dTrack = visibleSteps(live.current.layout, h.ti, indexAt(live.current.layout, y)) + past;
       d.copy = kind === "move" && ev.altKey;
-      if (kind === "fadeIn" || kind === "fadeOut") {
+      if (kind === "move") {
+        d.to = Math.max(0, snap(r.start + d.dx));
+        // With snapping on, the others keep their bars and beats across tempo changes.
+        d.musical = tracksSnapMode(ev) !== "off";
+      } else if (kind === "fadeIn" || kind === "fadeOut") {
         const other = r.content.type === "audio" ? (kind === "fadeIn" ? r.content.fade_out : r.content.fade_in) : 0;
         const v = fadeFrom + (kind === "fadeIn" ? d.dx : -d.dx);
         d.fade = crossfading ? draggedFadeOut(fadeFrom, d.dx, true, r.length - other) : Math.round(Math.max(0, Math.min(r.length - other, v)));
@@ -268,7 +273,7 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
       clickLocate(e, true);
       requestDraw();
     };
-    dragWith(move, up);
+    dragWith(move, up, { modifiers: true });
   };
 
   /** Sends the edit a region drag made, on release. */
@@ -291,9 +296,7 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
   /** Moves the dragged regions (`r` the one grabbed) where the drag left them, or with Option
    *  copies them there; regions dragged past the last track go onto new tracks, in the same edit. */
   const dropMove = (project: Project, r: Region, d: Drag) => {
-    const newStart = Math.max(0, snapToTracksGrid(project, r.start + d.dx));
-    // With snapping on, the others keep their bars and beats across tempo changes.
-    const musical = getState().snapMode !== "off";
+    const newStart = d.to ?? r.start;
     const tracks = project.tracks;
     const layout = live.current.layout;
     const moves = d.ids.flatMap((id) => {
@@ -301,7 +304,7 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
       if (ti < 0) return [];
       const reg = tracks[ti].regions.find((x) => x.id === id)!;
       const target = tracks[dragTarget(layout, ti, d.dTrack, tracks)];
-      return [{ reg, id, source: ti, start: movedStart(tempoMap(project), reg.start, r.start, newStart, musical), track: target.id }];
+      return [{ reg, id, source: ti, start: movedStart(tempoMap(project), reg.start, r.start, newStart, !!d.musical), track: target.id }];
     });
     const { onTracks, onNew } = splitDrop(moves, dragNewLanes(layout, d, tracks));
     if (d.copy) {
