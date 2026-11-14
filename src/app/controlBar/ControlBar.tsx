@@ -1,4 +1,4 @@
-// The control bar: view buttons, transport, LCD, mode buttons, master volume and, if Settings ›
+// The control bar: the Tracks / Mixer view switch, view buttons, transport, LCD, mode buttons, master volume and, if Settings ›
 // Appearance puts it here, the CPU meter (cpuMeter/).
 // Short of room it gives way around the transport and the LCD (control-bar.css).
 import { useEffect, useRef, useState } from "react";
@@ -17,6 +17,7 @@ import { withKey } from "../../keyboard/keyFormat";
 import { toggleReplace, useSettings } from "../../settings/appSettings";
 import { onPress } from "../../keyboard/keyNav";
 import { dragWith } from "../../ui/pointerDrag";
+import { paneShown, toggleBottom, type MainView } from "../mainView";
 
 const KEYS = ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
 
@@ -25,6 +26,23 @@ function ViewButton({ on, title, onClick, children }: { on: boolean; title: stri
     <button className={"cb-btn" + (on ? " on" : "")} title={title} aria-label={title} aria-pressed={on} onClick={onClick}>
       {children}
     </button>
+  );
+}
+
+/** The main window's view, like the tabs of Logic's main and Mixer windows: the Tracks area, or
+ *  the Mixer filling the window (mainView.ts). */
+function ViewSwitch() {
+  const view = useStore((s) => s.mainView);
+  const option = (v: MainView, label: string, command: string, icon: React.ReactNode) => (
+    <button className={"cb-btn" + (view === v ? " on" : "")} title={tip(label, command)} aria-label={tip(label, command)} aria-pressed={view === v} onClick={() => setState({ mainView: v })}>
+      {icon}
+    </button>
+  );
+  return (
+    <div className="cb-view-switch" role="group" aria-label="Main window view">
+      {option("tracks", "Tracks View", "tracks-view", <Icon.tracksView />)}
+      {option("mixer", "Mixer View", "mixer-view", <Icon.mixerView />)}
+    </div>
   );
 }
 
@@ -229,6 +247,7 @@ export function ControlBar() {
   const showInspector = useStore((s) => s.showInspector);
   const showBrowser = useStore((s) => s.showBrowser);
   const bottom = useStore((s) => s.bottom);
+  const mainView = useStore((s) => s.mainView);
   const cycleOn = useStore((s) => s.snap?.project.cycle.enabled ?? false);
   const punchOn = useStore((s) => s.snap?.project.punch.enabled ?? false);
   const countIn = useStore((s) => s.snap?.project.count_in ?? false);
@@ -237,21 +256,26 @@ export function ControlBar() {
   const showTyping = useStore((s) => s.showTyping);
   const replace = useSettings((s) => s.prefs.recording.replace ?? false);
   const meterPlace = useMeterPlace();
-  const s = { showLibrary, showInspector, showBrowser, bottom };
+  const s = { showLibrary, showInspector, showBrowser, bottom, mainView };
+  // A bottom pane's button is lit while the pane shows; in the Mixer view it brings the Tracks
+  // view back with the pane (mainView.ts).
+  const shows = (pane: typeof bottom) => paneShown(s, pane);
+  const toggle = (pane: typeof bottom) => () => setState(toggleBottom(getState(), pane));
   const p = { cycle: { enabled: cycleOn }, count_in: countIn, metronome, master: { volume_db: masterDb } };
   return (
     <div className="control-bar">
       <div className="cb-group">
+        <ViewSwitch />
         <ViewButton on={s.showLibrary} title={tip("Library", "library")} onClick={() => setState({ showLibrary: !s.showLibrary })}>
           <Icon.library />
         </ViewButton>
         <ViewButton on={s.showInspector} title={tip("Inspector", "inspector")} onClick={() => setState({ showInspector: !s.showInspector })}>
           <Icon.inspector />
         </ViewButton>
-        <ViewButton on={s.bottom === "mixer"} title={tip("Mixer", "mixer")} onClick={() => setState({ bottom: s.bottom === "mixer" ? "none" : "mixer" })}>
+        <ViewButton on={shows("mixer")} title={tip("Mixer", "mixer")} onClick={toggle("mixer")}>
           <Icon.mixer />
         </ViewButton>
-        <ViewButton on={s.bottom === "editor"} title={tip("Editors", "editor")} onClick={() => setState({ bottom: s.bottom === "editor" ? "none" : "editor" })}>
+        <ViewButton on={shows("editor")} title={tip("Editors", "editor")} onClick={toggle("editor")}>
           <Icon.editors />
         </ViewButton>
       </div>
@@ -297,7 +321,7 @@ export function ControlBar() {
             <path d="M4 3v5.5h2V3M8 3v5.5h2V3M12 3v5.5h2V3" fill="currentColor" strokeWidth="0" />
           </svg>
         </ViewButton>
-        <ViewButton on={s.bottom === "list"} title={tip("List Editors", "list-editors")} onClick={() => setState({ bottom: s.bottom === "list" ? "none" : "list" })}>
+        <ViewButton on={shows("list")} title={tip("List Editors", "list-editors")} onClick={toggle("list")}>
           <Icon.lists />
         </ViewButton>
         <ViewButton on={s.showBrowser} title={tip("Browsers", "browser")} onClick={() => setState({ showBrowser: !s.showBrowser })}>
@@ -306,14 +330,14 @@ export function ControlBar() {
         {/* Short of room the three buttons above fold into this one (control-bar.css), lit while
             any of them is on. */}
         <button
-          className={"cb-btn cb-more" + (showTyping || s.bottom === "list" || s.showBrowser ? " on" : "")}
+          className={"cb-btn cb-more" + (showTyping || shows("list") || s.showBrowser ? " on" : "")}
           title="Musical Typing, List Editors, Browsers"
           aria-label="Musical Typing, List Editors, Browsers"
           aria-haspopup="menu"
           {...onPress((e) =>
             openMenuAt(e.currentTarget, [
               { label: "Musical Typing", hint: fmt("Mod+K"), checked: showTyping, onClick: () => setState({ showTyping: !getState().showTyping }) },
-              { label: "List Editors", hint: keyHint("list-editors"), checked: s.bottom === "list", onClick: () => setState({ bottom: getState().bottom === "list" ? "none" : "list" }) },
+              { label: "List Editors", hint: keyHint("list-editors"), checked: shows("list"), onClick: toggle("list") },
               { label: "Browsers", hint: keyHint("browser"), checked: s.showBrowser, onClick: () => setState({ showBrowser: !getState().showBrowser }) },
             ])
           )}
