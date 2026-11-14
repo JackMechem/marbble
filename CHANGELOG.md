@@ -30,6 +30,25 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Fixed
 
+- **Track headers line up.** Buttons on a track in a group or a stack were squeezed to about 14 px
+  while other tracks' kept their size, the volume slider's length and start changed from row to
+  row, and a track in a stack didn't line its icon up with one outside it. Every header now has the
+  same buttons, at one size, and the same slider: the group badge and the Track Alternatives
+  pop-up sit by the name, and in a narrow header column the buttons that don't fit move into the
+  **⋯** menu (Freeze first) instead of shrinking. Stack subtracks lost the stray line in their
+  indent.
+- **Tall track headers keep their contents at the top**, beside the regions' names, instead of in
+  the middle of the track; an open take folder no longer pushes a header's name and buttons down
+  into its take rows, or makes a short track's header lay out as a tall one.
+- **The R button reads as a button.** Its red letter on Studio's grey buttons was so dark it looked
+  disabled; it's lighter now, at 3:1 or better in every theme.
+- **The Height slider's low end is the smallest height.** It ran straight from 22 to 260 px, so
+  the default 64 px sat almost at the left end and looked like the minimum; it now steps by a
+  factor, as Taller and Shorter Tracks do, with the default near the middle.
+- **Renaming a track** selects its name, and the field no longer shifts the name or the buttons.
+- **The wheel over the track headers** scrolls by the same distance as over the tracks with a
+  wheel that reports lines, and Alt+wheel there sizes the tracks too.
+
 - **Dragging a region's loop handle loops the whole selection.** With several regions selected,
   dragging one's loop handle (its top-right corner) looped only that region. As in Logic, every
   selected region's loop end now moves by the same amount, in one undo step.
