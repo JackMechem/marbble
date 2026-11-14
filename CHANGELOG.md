@@ -8,6 +8,25 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Added
 
+- **Zoom in to single samples in the Tracks area.** The zoom stopped at 400 px a beat. Ctrl+wheel
+  and View › Zoom In now go on, as Logic does, until samples are 32 px apart; the zoom slider
+  keeps its range and waits at its end. The ruler labels beats and finer steps as you go in
+  (5.2, 5.2.3, 5.2.3.121) and marks each sample, the grid shows the finer steps, and Smart snap
+  follows them down to a tick, then to single samples.
+- **Tuner and Chord modes for the control bar's LCD**, chosen from its chevron menu, which now
+  remembers the mode (Beats & Project, Time, Tuner or Chord) between launches. The Tuner tunes the
+  selected audio track's input: the note, a needle across ±50 cents that turns green in tune, and
+  the frequency. Chord names the chord held on MIDI input as you play it ("Am7", "G/B",
+  "Cmaj7(♯11)"), or the note, or the notes when no chord name fits, with the notes held beside it.
+- **Finer or no snapping while dragging regions.** With Snap on, moving a region a little meant
+  turning Snap off first. As in Logic, hold Ctrl (Control on macOS) once a move, trim or loop
+  drag has started to snap to ticks, or Ctrl+Shift to not snap at all; the region follows as
+  you press and release the keys. The Audio Track editor's drags take the same keys. Smart snap
+  also gets finer zoomed in past divisions, in steps that stay at least 15 px apart.
+- **Moved regions snap to the edges of other regions.** As with Logic's alignment guides, a moved
+  region's start or end that comes within a few pixels of another region's start or end (on any
+  track), the stopped playhead or a cycle locator snaps onto it, ahead of the grid, with a guide
+  line drawn there. An Alt-drag copy snaps to the originals too. Ctrl+Shift turns it off.
 - **Colour, input monitoring, automation mode and hide links for groups.** Group Settings and the
   Groups window have four more links, as in Logic: a new colour, input monitoring, the automation
   mode or hiding on one member goes to them all. They're off in new groups and older projects.
@@ -29,30 +48,12 @@ All notable changes to Marbble are recorded here. The format follows
   Selection linked, ⌘/Ctrl-clicking a selected member did nothing (the group put it straight
   back); it now deselects the group. With Editing linked, Shift-clicking a selected region took
   out only that region; its linked regions now go with it.
+
 - **Grouped faders keep their offsets.** With Volume or Pan linked, a member that reached the
   end of its range stopped there and lost its offset: pulling a fader to the bottom and back left
   every member at the same level. Members now keep their offsets to the moved track however far
   it goes, until one is moved on its own. And a partner in Touch or Latch now records the move
   when the fader you hold is on a track in Read or Off.
-- **Zoom in to single samples in the Tracks area.** The zoom stopped at 400 px a beat. Ctrl+wheel
-  and View › Zoom In now go on, as Logic does, until samples are 32 px apart; the zoom slider
-  keeps its range and waits at its end. The ruler labels beats and finer steps as you go in
-  (5.2, 5.2.3, 5.2.3.121) and marks each sample, the grid shows the finer steps, and Smart snap
-  follows them down to a tick, then to single samples.
-- **Tuner and Chord modes for the control bar's LCD**, chosen from its chevron menu, which now
-  remembers the mode (Beats & Project, Time, Tuner or Chord) between launches. The Tuner tunes the
-  selected audio track's input: the note, a needle across ±50 cents that turns green in tune, and
-  the frequency. Chord names the chord held on MIDI input as you play it ("Am7", "G/B",
-  "Cmaj7(♯11)"), or the note, or the notes when no chord name fits, with the notes held beside it.
-- **Finer or no snapping while dragging regions.** With Snap on, moving a region a little meant
-  turning Snap off first. As in Logic, hold Ctrl (Control on macOS) once a move, trim or loop
-  drag has started to snap to ticks, or Ctrl+Shift to not snap at all; the region follows as
-  you press and release the keys. The Audio Track editor's drags take the same keys. Smart snap
-  also gets finer zoomed in past divisions, in steps that stay at least 15 px apart.
-- **Moved regions snap to the edges of other regions.** As with Logic's alignment guides, a moved
-  region's start or end that comes within a few pixels of another region's start or end (on any
-  track), the stopped playhead or a cycle locator snaps onto it, ahead of the grid, with a guide
-  line drawn there. An Alt-drag copy snaps to the originals too. Ctrl+Shift turns it off.
 
 - **Track headers line up.** Buttons on a track in a group or a stack were squeezed to about 14 px
   while other tracks' kept their size, the volume slider's length and start changed from row to
