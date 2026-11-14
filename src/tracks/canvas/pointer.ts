@@ -4,17 +4,17 @@
 import { type Id, type Project, type Track } from "../../engine/project";
 import { type Region, type Take, type TakeFolder } from "../../engine/regions";
 import { act, actMade } from "../../engine/commands";
-import { getState, setState } from "../../state/store";
+import { currentTick, getState, setState } from "../../state/store";
 import { waveCache } from "../regions/waveform";
 import { PEAK_BUCKET } from "../../lib/time";
 import { tempoMap } from "../../lib/tempo";
 import { indexAt, visibleSteps } from "../trackLayout";
-import { viewport } from "../viewport";
+import { timelineLeft, viewport } from "../viewport";
 import { openMenu } from "../../ui/Menu";
 import { keepRegionsOn } from "../trackCommands";
 import { linkedRegions, toggleLinkedRegions } from "../regionCommands";
 import { laneMenu, regionMenu, renameRegion } from "../contextMenus";
-import { isLooped, regionEnd } from "../regions/loops";
+import { isLooped, loopsDragged, regionEnd } from "../regions/loops";
 import { automationHover, automationMenu, automationMouseDown } from "../automation/canvas";
 import { refuseFrozen } from "../freeze";
 import { getSettings } from "../../settings/appSettings";
@@ -32,8 +32,9 @@ import { activeTool, notePointer, pressOnMarquee, toolHover, toolMouseDown, type
 import { regionCrossfades, setCrossfadeDrag } from "../regions/regionDraw";
 import { grabKind as regionGrabKind, type GrabKind, type RegionPress } from "../regions/regionGrab";
 import { editorPaneFor } from "../regions/regionEditor";
+import { EDGE_SNAP_PX, edgeSnap, edgeTargets, movingEdges, regionEdges } from "../regions/edgeSnap";
 import { trimAll, trimDelta, trimLimits, type TrimEdge } from "../regions/regionTrim";
-import { snapToTracksGrid } from "../gridSnap";
+import { snapToTracksGrid, tracksSnapMode } from "../gridSnap";
 import { dragWith, pastDragThreshold } from "../../ui/pointerDrag";
 import { dragNewLanes, dragTarget, type Drag, type TracksRefs } from "./drag";
 
@@ -82,16 +83,26 @@ function takeRowAt(track: Track, x: number, localY: number, laneH: number, pps: 
   return row;
 }
 
-/** The regions a trim of `grabbed`'s edge changes: it and the other selected regions, except on
- *  frozen tracks, each with where it is and how far it can go. */
+/** What a move of `sel` (grabbing `grabbed`) snaps: the moved regions' edges from the grabbed
+ *  one's start, and the positions they snap to: the other regions' edges, the playhead when
+ *  stopped and the cycle locators when cycle is on, and for a copy the originals' edges too. */
+function moveSnapEdges(project: Project, grabbed: Region, sel: Id[]) {
+  const own = regionEdges(project.tracks, (id) => sel.includes(id));
+  const tick = currentTick();
+  const marks = [...(tick && !tick.playing ? [tick.pos] : []), ...(project.cycle.enabled ? [project.cycle.start, project.cycle.end] : [])];
+  const others = [...regionEdges(project.tracks, (id) => !sel.includes(id)), ...marks];
+  return { moving: movingEdges(own, grabbed.start), others: edgeTargets(others), withOwn: edgeTargets([...others, ...own]) };
+}
+
+/** The regions a trim or loop drag on `grabbed` changes: it and the other selected regions,
+ *  except on frozen tracks. */
+function editedWith(project: Project, grabbed: Region, sel: Id[]): Region[] {
+  return project.tracks.flatMap((t) => (t.frozen ? [] : t.regions.filter((x) => x.id === grabbed.id || sel.includes(x.id))));
+}
+
+/** The regions a trim of `grabbed`'s edge changes, each with where it is and how far it can go. */
 function trimmedRegions(project: Project, grabbed: Region, sel: Id[]) {
-  return project.tracks.flatMap((t) =>
-    t.frozen
-      ? []
-      : t.regions
-          .filter((x) => x.id === grabbed.id || sel.includes(x.id))
-          .map((x) => ({ id: x.id, span: { start: x.start, length: x.length }, lim: trimLimits(x, x.content.type === "audio" ? waveCache.get(x.content.clip)?.frames : undefined) })),
-  );
+  return editedWith(project, grabbed, sel).map((x) => ({ id: x.id, span: { start: x.start, length: x.length }, lim: trimLimits(x, x.content.type === "audio" ? waveCache.get(x.content.clip)?.frames : undefined) }));
 }
 
 type Refs = TracksRefs & {
@@ -107,7 +118,7 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
   const hit = (e: React.MouseEvent): Hit | null => {
     const el = scrollRef.current!;
     const rect = el.getBoundingClientRect();
-    const x = e.clientX - rect.left + el.scrollLeft;
+    const x = e.clientX - rect.left + timelineLeft(el);
     const y = e.clientY - rect.top + el.scrollTop;
     const { project, pps, layout } = live.current;
     if (!project) return null;
@@ -138,7 +149,7 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
     if (!r || !isFolder(r) || h.inLoop) return null;
     const g = regionBar(h.laneH - 3);
     if (g.barOnly && h.localY > g.bar + 1 && grabKind(h) !== "move") return null;
-    const bx = Math.max(r.start * live.current.pps, scrollRef.current!.scrollLeft);
+    const bx = Math.max(r.start * live.current.pps, timelineLeft(scrollRef.current!));
     return folderBarHit(h.x - bx, h.localY, drawnBar(g, h.laneH - 3));
   };
 
@@ -193,7 +204,7 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
       refuseFrozen([h.track.id]);
       return;
     }
-    if (!h.inLoop && onGainHandle(r, h.x, h.localY, h.laneH, pps, scrollRef.current!.scrollLeft, viewport().width)) return startGainDrag(e, project, r, sel, requestDraw);
+    if (!h.inLoop && onGainHandle(r, h.x, h.localY, h.laneH, pps, timelineLeft(scrollRef.current!), viewport().width)) return startGainDrag(e, project, r, sel, requestDraw);
     startRegionDrag(e, h, project, r, sel);
   };
 
@@ -222,14 +233,20 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
     // A trim moves the same edge of every selected region, as in Logic (frozen tracks' stay).
     const trimEdge: TrimEdge | null = kind === "left" || kind === "right" ? kind : null;
     const trimming = trimEdge ? trimmedRegions(project, r, sel) : [];
-    dragRef.current = { kind, ids: kind === "move" ? sel : trimEdge ? trimming.map((x) => x.id) : [r.id], dx: 0, dTrack: 0, grabbed: r.id };
+    // So does a loop drag, by as much as the grabbed region's loop end moves.
+    const looping = kind === "loop" ? editedWith(project, r, sel) : [];
+    const ids = kind === "move" ? sel : trimEdge ? trimming.map((x) => x.id) : kind === "loop" ? looping.map((x) => x.id) : [r.id];
+    dragRef.current = { kind, ids, dx: 0, dTrack: 0, grabbed: r.id };
     const fadeFrom = r.content.type === "audio" ? (kind === "fadeIn" ? r.content.fade_in : r.content.fade_out) : 0;
     // Dragging a crossfade's handle resizes it about its centre.
     const crossfading = kind === "fadeOut" && !!regionCrossfades(r.id)?.out;
-    const snap = (v: number) => snapToTracksGrid(project, v);
+    // A move snaps the selection's edges to other regions' (and, copying, the originals').
+    const snapEdges = kind === "move" ? moveSnapEdges(project, r, sel) : null;
     let moved = false;
 
     const move = (ev: MouseEvent) => {
+      // Ctrl snaps finer, Ctrl+Shift not at all (lib/snapKeys.ts).
+      const snap = (v: number) => snapToTracksGrid(project, v, ev);
       const dxPx = ev.clientX - e.clientX;
       const dyPx = ev.clientY - e.clientY;
       if (!moved && !pastDragThreshold(dxPx, dyPx)) return;
@@ -241,7 +258,16 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
       const past = kind === "move" ? lanesPast(y, live.current.layout.total, getState().trackHeight) : 0;
       d.dTrack = visibleSteps(live.current.layout, h.ti, indexAt(live.current.layout, y)) + past;
       d.copy = kind === "move" && ev.altKey;
-      if (kind === "fadeIn" || kind === "fadeOut") {
+      if (snapEdges) {
+        const raw = r.start + d.dx;
+        const snapping = tracksSnapMode(ev) !== "off";
+        const edge = snapping ? edgeSnap(raw, snapEdges.moving, d.copy ? snapEdges.withOwn : snapEdges.others, EDGE_SNAP_PX / pps) : null;
+        d.to = edge?.to ?? Math.max(0, snap(raw));
+        d.guide = edge?.at;
+        // Snapped to the grid, the others keep their bars and beats across tempo changes; to an
+        // edge, their distance in time, so the edge lands exactly on it.
+        d.musical = snapping && !edge;
+      } else if (kind === "fadeIn" || kind === "fadeOut") {
         const other = r.content.type === "audio" ? (kind === "fadeIn" ? r.content.fade_out : r.content.fade_in) : 0;
         const v = fadeFrom + (kind === "fadeIn" ? d.dx : -d.dx);
         d.fade = crossfading ? draggedFadeOut(fadeFrom, d.dx, true, r.length - other) : Math.round(Math.max(0, Math.min(r.length - other, v)));
@@ -255,7 +281,7 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
         d.length = own.length;
       } else if (kind === "loop") {
         // Dragging back onto the region's own end turns the loop off.
-        d.loopEnd = Math.max(r.start + r.length, snap(regionEnd(r) + d.dx));
+        d.loops = loopsDragged(looping, snap(regionEnd(r) + d.dx) - regionEnd(r));
       }
       requestDraw();
     };
@@ -268,16 +294,16 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
       clickLocate(e, true);
       requestDraw();
     };
-    dragWith(move, up);
+    dragWith(move, up, { modifiers: true });
   };
 
   /** Sends the edit a region drag made, on release. */
   const dropRegionDrag = (project: Project, r: Region, kind: GrabKind, d: Drag) => {
     if (kind === "move") {
       dropMove(project, r, d);
-    } else if (d.loopEnd !== undefined) {
-      const end = Math.round(d.loopEnd);
-      act("set_region_loop", { id: r.id, loopEnd: end > r.start + r.length ? end : null });
+    } else if (d.loops) {
+      // One undo step for them all; a loop end back on a region's own end turns its loop off.
+      act("set_region_loops", { loops: [...d.loops] });
     } else if (d.fade !== undefined) {
       act("set_region_fades", { ids: [r.id], fadeIn: kind === "fadeIn" ? d.fade : null, fadeOut: kind === "fadeOut" ? d.fade : null });
     } else if (d.spans?.size) {
@@ -291,9 +317,7 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
   /** Moves the dragged regions (`r` the one grabbed) where the drag left them, or with Option
    *  copies them there; regions dragged past the last track go onto new tracks, in the same edit. */
   const dropMove = (project: Project, r: Region, d: Drag) => {
-    const newStart = Math.max(0, snapToTracksGrid(project, r.start + d.dx));
-    // With snapping on, the others keep their bars and beats across tempo changes.
-    const musical = getState().snapMode !== "off";
+    const newStart = d.to ?? r.start;
     const tracks = project.tracks;
     const layout = live.current.layout;
     const moves = d.ids.flatMap((id) => {
@@ -301,7 +325,7 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
       if (ti < 0) return [];
       const reg = tracks[ti].regions.find((x) => x.id === id)!;
       const target = tracks[dragTarget(layout, ti, d.dTrack, tracks)];
-      return [{ reg, id, source: ti, start: movedStart(tempoMap(project), reg.start, r.start, newStart, musical), track: target.id }];
+      return [{ reg, id, source: ti, start: movedStart(tempoMap(project), reg.start, r.start, newStart, !!d.musical), track: target.id }];
     });
     const { onTracks, onNew } = splitDrop(moves, dragNewLanes(layout, d, tracks));
     if (d.copy) {
@@ -332,7 +356,7 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
     const { project, pps } = live.current;
     if (!project) return;
     const el = scrollRef.current!;
-    const x = e.clientX - el.getBoundingClientRect().left + el.scrollLeft;
+    const x = e.clientX - el.getBoundingClientRect().left + timelineLeft(el);
     act("locate", { pos: Math.round(Math.max(0, snapToTracksGrid(project, x / pps))) });
   };
 
@@ -346,7 +370,7 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
       if (!moved && !pastDragThreshold(ev.clientX - e.clientX, ev.clientY - e.clientY)) return;
       moved = true;
       const rect = el.getBoundingClientRect();
-      const x = ev.clientX - rect.left + el.scrollLeft;
+      const x = ev.clientX - rect.left + timelineLeft(el);
       const y = ev.clientY - rect.top + el.scrollTop;
       const box = { left: Math.min(h.x, x), right: Math.max(h.x, x), top: Math.min(h.y, y), bottom: Math.max(h.y, y) };
       marqueeRef.current = box;
@@ -379,7 +403,7 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
     if (!project) return;
     setState({ selectedRegions: [r.id], focus: "regions" });
     const el = scrollRef.current!;
-    const left = el.getBoundingClientRect().left - el.scrollLeft;
+    const left = el.getBoundingClientRect().left - timelineLeft(el);
     const snap = (v: number) => Math.min(r.start + r.length, Math.max(r.start, snapToTracksGrid(project, v)));
     const shift = takeShift(r);
     let moved = false;
@@ -408,7 +432,7 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
     // A MIDI take folder plays whole takes: clicking a take chooses it.
     if (isMidiFolder(r)) return act("select_take", { region: r.id, take });
     const el = scrollRef.current!;
-    const left = el.getBoundingClientRect().left - el.scrollLeft;
+    const left = el.getBoundingClientRect().left - timelineLeft(el);
     const snap = (v: number) => Math.min(r.start + r.length, Math.max(r.start, snapToTracksGrid(project, v)));
     const toSample = (cx: number) => (cx - left) / pps;
     const from = snap(toSample(e.clientX));
@@ -497,7 +521,7 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
       el.style.cursor = "pointer";
       return;
     }
-    if (!h.inLoop && onGainHandle(h.region, h.x, h.localY, h.laneH, pps, el.scrollLeft, viewport().width)) {
+    if (!h.inLoop && onGainHandle(h.region, h.x, h.localY, h.laneH, pps, timelineLeft(el), viewport().width)) {
       el.style.cursor = "ns-resize";
       return;
     }

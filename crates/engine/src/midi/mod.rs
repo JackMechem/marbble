@@ -3,6 +3,7 @@
 //! Files (`smf.rs`). What MIDI controls once it arrives is in `control/`; editing the notes of a
 //! region is in `edit/midi_content.rs`.
 
+pub mod held;
 pub mod input;
 pub mod output;
 pub mod smf;

@@ -82,6 +82,9 @@ pub struct UiPrefs {
     /// Settings › Appearance: where the CPU meter shows: "status_line" (at the bottom, beside the
     /// memory figure) or "control_bar" (at the top, as in Logic Pro).
     pub cpu_meter: String,
+    /// What the control bar's LCD shows, chosen from its menu: "beats" (Beats & Project), "time",
+    /// "tuner" (the selected audio track's input) or "chord" (the keys held on MIDI input).
+    pub lcd_mode: String,
 }
 
 impl Default for UiPrefs {
@@ -101,6 +104,7 @@ impl Default for UiPrefs {
             update_channel: None,
             check_updates: true,
             cpu_meter: "status_line".into(),
+            lcd_mode: "beats".into(),
         }
     }
 }
@@ -191,6 +195,7 @@ mod tests {
         assert_eq!(s.ui.update_channel, None);
         assert!(s.ui.check_updates);
         assert_eq!(s.ui.cpu_meter, "status_line");
+        assert_eq!(s.ui.lcd_mode, "beats");
         assert_eq!(s.audio.sample_rate, AudioConfig::default().sample_rate);
     }
 
@@ -217,6 +222,7 @@ mod tests {
         s.ui.update_channel = Some("stable".into());
         s.ui.check_updates = false;
         s.ui.cpu_meter = "control_bar".into();
+        s.ui.lcd_mode = "tuner".into();
         let back = parse(&serde_json::to_string(&s).unwrap()).unwrap();
         assert_eq!(back.ui, s.ui);
         assert_eq!(back.plugins, s.plugins);

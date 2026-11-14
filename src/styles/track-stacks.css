@@ -5,19 +5,18 @@
   box-shadow: inset 2px 0 0 var(--accent);
 }
 
-.th-indent {
+/* Before the icon: a subtrack's indent, then the stack disclosure triangle's slot, kept on every
+   header while a stack is in view so the icons line up (leadWidth in headerFit.ts). */
+.th-lead {
   flex: none;
-  align-self: stretch;
-  /* A faint guide line shows which stack a subtrack belongs to. */
-  background: linear-gradient(90deg, transparent calc(100% - 7px), var(--header-line) calc(100% - 7px), var(--header-line) calc(100% - 6px), transparent calc(100% - 6px));
-  margin-left: -4px;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .th-disclosure {
   flex: none;
-  width: 14px;
+  width: 12px;
   height: 20px;
-  margin: 0 -6px 0 -4px;
   display: grid;
   place-items: center;
   color: var(--dim);
@@ -33,12 +32,13 @@
   font-weight: 700;
 }
 
+/* On the name's line, as tall as it. */
 .th-group {
-  height: 21px;
-  min-width: 25px;
-  padding: 0 5px;
-  margin-left: 2px;
-  border-radius: 4px;
+  flex: none;
+  height: 16px;
+  min-width: 22px;
+  padding: 0 4px;
+  border-radius: 3px;
   border: 1px solid transparent;
   color: var(--swatch-ink);
   font-size: var(--fs-sm);

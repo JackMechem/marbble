@@ -35,6 +35,8 @@ pub enum Cmd {
     RecordSink { track: Id, sink: Option<rtrb::Producer<f32>> },
     /// Copies an input to a recorder whatever the transport does, for recording into a sampler.
     InputTap { input: InputSel, sink: Option<rtrb::Producer<f32>> },
+    /// Copies an input, summed to mono, to the control bar's tuner (`session/input_tuner.rs`).
+    TunerTap { input: InputSel, sink: Option<rtrb::Producer<f32>> },
     /// Hands a built-in instrument data built off the audio thread (see `Instrument::swap_data`).
     InstrumentData { track: Id, uid: Id, data: crate::instrument::InstrumentData },
     MidiTarget(Option<Id>),

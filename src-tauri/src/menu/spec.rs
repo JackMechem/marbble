@@ -11,7 +11,7 @@ pub(super) enum Spec {
     Item(&'static str, &'static str, Option<&'static str>),
     /// A ticked item: the frontend sends its state.
     Check(&'static str, &'static str, Option<&'static str>),
-    /// A ticked item that is one of several choices (View › Theme): GTK draws it as a radio
+    /// A ticked item that is one of several choices (View › Theme, the views): GTK draws it as a radio
     /// button rather than a box. AppKit and Win32 draw a tick either way.
     Radio(&'static str, &'static str),
     Sep,
@@ -264,6 +264,10 @@ pub(super) fn spec() -> Vec<Spec> {
         Sub(
             "View",
             vec![
+                // The main window's two views (src/app/mainView.ts), Logic's ⌘1 and ⌘2.
+                radio("tracks-view", "Tracks View"),
+                radio("mixer-view", "Mixer View"),
+                Sep,
                 check("library", "Library"),
                 check("inspector", "Inspector"),
                 check("mixer", "Mixer"),

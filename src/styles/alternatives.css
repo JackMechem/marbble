@@ -63,8 +63,11 @@
 }
 
 /* The track header's Track Alternatives pop-up. */
+/* On the name's line, as tall as it; it gives way to the name down to a few letters. */
 .th-alt {
-  height: 17px;
+  flex: 0 1 auto;
+  min-width: 36px;
+  height: 16px;
   max-width: 64px;
   display: inline-flex;
   align-items: center;
