@@ -21,6 +21,15 @@ test("each snap mode's step, following the signature", () => {
   assert.equal(snapStep("smart", 4, 4, 100), 0.25);
   assert.equal(snapStep("smart", 4, 4, 30), 1);
   assert.equal(snapStep("smart", 4, 4, 5), 4);
+  // Zoomed in past divisions, halves of a division, while a step is at least 15 px wide.
+  assert.equal(snapStep("smart", 4, 4, 119), 0.25);
+  assert.equal(snapStep("smart", 4, 4, 120), 0.125);
+  assert.equal(snapStep("smart", 4, 4, 400), 0.0625);
+  // From beats in, a Smart step is 15 to 60 px wide.
+  for (let ppb = 15; ppb <= 400; ppb += 0.5) {
+    const px = snapStep("smart", 4, 4, ppb) * ppb;
+    assert.ok(px >= 15 && px <= 60, `${ppb} px per beat: ${px} px`);
+  }
 });
 
 test("positions snap to divisions and ticks", () => {

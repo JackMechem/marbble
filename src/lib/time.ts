@@ -62,10 +62,17 @@ export function formatTime(p: Project, pos: number): string {
 export const DIVISIONS_PER_BEAT = 4;
 export const TICKS_PER_DIVISION = 240;
 
+/** How far apart (px) Smart's snap points are at least, zoomed in past divisions. */
+const SMART_MIN_PX = 15;
+/** How many times Smart halves a division, zoomed all the way in (to a 256th in 4/4). */
+const SMART_HALVINGS = 4;
+
 /**
  * The snap grid's step in quarter notes in a bar of `num`/`den`: a bar, a beat (the signature's
  * denominator), a division (a quarter of a beat, the LCD's third field: a sixteenth in 4/4, a
- * thirty-second in 6/8), a tick (1/240 of a division), or Smart, which follows the zoom. 0: no
+ * thirty-second in 6/8), a tick (1/240 of a division), or Smart, which follows the zoom
+ * (`pxPerBeat`): bars, beats once they are 15 px apart, divisions once a beat is over 60 px, and
+ * halves of a division zoomed in further, so a step is never much more than 30 px. 0: no
  * snapping.
  */
 export function snapStep(mode: string, num: number, den: number, pxPerBeat: number): number {
@@ -82,9 +89,15 @@ export function snapStep(mode: string, num: number, den: number, pxPerBeat: numb
       return division;
     case "ticks":
       return division / TICKS_PER_DIVISION;
-    default:
+    default: {
       // Smart: follow the visible grid resolution.
-      return pxPerBeat > 60 ? division : pxPerBeat > 14 ? beat : beat * num;
+      if (pxPerBeat <= 14) return beat * num;
+      if (pxPerBeat <= 60) return beat;
+      let step = division;
+      const divPx = pxPerBeat / DIVISIONS_PER_BEAT;
+      for (let k = 1; k <= SMART_HALVINGS && divPx / 2 ** k >= SMART_MIN_PX; k++) step = division / 2 ** k;
+      return step;
+    }
   }
 }
 
