@@ -281,8 +281,21 @@ From left to right:
     Esc cancels).
   - **Time signature:** click for 2/4, 3/4, 4/4, 5/4, 6/8, 7/8, 9/8 and 12/8.
   - **Key:** click for the major and minor keys.
-  - The **chevron** offers "Beats & Project", "Time" (the position as time) and
-    "Project Settings…".
+  - The **chevron** chooses what the LCD shows, and Marbble remembers the choice:
+    - **Beats & Project** (the default): position, tempo, signature and key, as above.
+    - **Time:** the same with the position as time.
+    - **Tuner:** tunes the selected audio track's input, whether or not the track is armed or
+      monitoring: the note (in Logic's octaves, middle C is C3), a needle across ±50 cents that
+      turns green within 2 cents, the cents and the frequency. A4 is 440 Hz. With no audio track
+      with an input selected, it says to select one. Marbble only listens while the Tuner shows.
+      For a reference other than 440 Hz, or a transposing instrument, use the Tuner plug-in.
+    - **Chord:** names the chord held on MIDI input (every MIDI input, Musical Typing and the
+      on-screen keyboards, which all play the selected instrument track): "Am7", "G/B",
+      "Cmaj7(♯11)", "C6/9", a single note as "C3", and the notes themselves when no chord name
+      fits. The notes held are listed beside it. When the keys come up the last chord stays,
+      dimmed. Roots are spelt with sharps or flats to suit the project's key.
+
+    It also offers "Project Settings…".
 - **Mode buttons:** Cycle (C), **Autopunch** (Ctrl+P, Control+⌘P on macOS), **Replace** (red
   when on: recordings replace what they overlap; see [Overlapping recordings](#recording-audio);
   the key command Replace Mode has no key at first), **Count-in** (Shift+K), Metronome (K).

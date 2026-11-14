@@ -136,6 +136,8 @@ pub struct Engine {
     punch_range: Option<(i64, i64)>,
     /// Where the input goes for a recording into a sampler (see `Cmd::InputTap`).
     input_tap: Option<(InputSel, rtrb::Producer<f32>)>,
+    /// Where the input goes for the control bar's tuner (see `Cmd::TunerTap`).
+    tuner_tap: Option<(InputSel, rtrb::Producer<f32>)>,
     capture: Option<(i64, i64)>,
     /// See `Cmd::Chase`: (notes, controllers).
     chase: (bool, bool),
@@ -209,6 +211,7 @@ impl Engine {
             parallel: Default::default(),
             punch_range: None,
             input_tap: None,
+            tuner_tap: None,
             capture: None,
             chase: (true, true),
             draining: false,
