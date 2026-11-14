@@ -10,9 +10,9 @@ export const transport = {
     const p = getState().snap?.project;
     if (!p) return;
     const m = tempoMap(p);
-    const at = m.barPosition(currentTick()?.pos ?? 0);
+    const at = m.barNumberAt(currentTick()?.pos ?? 0);
     const cur = n < 0 ? Math.ceil(at - 0.001) : Math.floor(at + 0.001);
-    act("locate", { pos: Math.max(0, Math.round(m.barStart(cur + n + 1))) });
+    act("locate", { pos: Math.round(m.barStartOnTimeline(cur + n)) });
   },
   toggleCycle() {
     const p = getState().snap?.project;

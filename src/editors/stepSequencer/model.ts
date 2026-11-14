@@ -335,7 +335,8 @@ export function drawPatternMini(
  */
 export function freePatternBar(map: Pick<TempoMap, "barAt" | "barStart">, regions: readonly Pick<Region, "start" | "length" | "loop_end">[], pos: number): [number, number] {
   const span = (bar: number): [number, number] => {
-    const start = Math.round(map.barStart(bar));
+    // The pickup bar from the timeline's start.
+    const start = Math.max(0, Math.round(map.barStart(bar)));
     return [start, Math.round(map.barStart(bar + 1)) - start];
   };
   let bar = map.barAt(Math.max(0, pos));

@@ -682,7 +682,9 @@ the pass ends (`session/automation/write.rs`).
 the timeline), the Autopunch range, and the tempo and signature maps. Tempo events are in samples
 and signature events in bars; empty lists mean the constant `tempo` and `sig_num`/`sig_den`.
 `model/tempo/` converts between samples and beats and bars (closed forms for ramps), and
-`src/lib/tempo.ts` mirrors it. Regions stay in samples, so a tempo change never moves audio; Move
+`src/lib/tempo.ts` mirrors it. Bars there are the numbers the user sees: a `pickup` (quarters
+from timeline 0 to the first full bar) and `first_bar` shift the bar grid, applied only inside the
+map. Regions stay in samples, so a tempo change never moves audio; Move
 MIDI Regions with Tempo rescales MIDI to keep its bars.
 
 **Section edits as time maps.** Moving, copying or deleting an Arrangement section, and the

@@ -9,6 +9,13 @@
 //! out in quarters, independently of the tempo. Beats count in the signature's denominator
 //! (an eighth in 7/8), as in Logic's LCD.
 //!
+//! Bars are numbered as the user sees them ([`BarNumbering`]): the first full bar is
+//! `first_bar` (1 unless set otherwise), and a pickup (anacrusis) before it is a partial bar
+//! numbered `first_bar - 1`, from timeline 0 to `first_bar`'s downbeat. The pickup holds the last
+//! beats of a bar in the first signature, so its bar line lies before 0. Every bar number in
+//! and out of the map is such a number; `index` and `number` below convert, and nothing else
+//! knows about the offset.
+//!
 //! `src/lib/tempo.ts` mirrors this module for the UI; keep the two in step.
 
 use serde::{Deserialize, Serialize};
@@ -29,11 +36,45 @@ pub struct TempoEvent {
 /// One time-signature change of the Signature track.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SigEvent {
-    /// 1-based bar the signature starts at.
-    pub bar: u32,
+    /// The bar the signature starts at, as numbered on the ruler (see [`BarNumbering`]).
+    pub bar: i64,
     pub num: u32,
     pub den: u32,
 }
+
+/// How the bars are numbered: Project Settings › Pickup and First Bar Number.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct BarNumbering {
+    /// The pickup's length in quarter notes; 0 for none. At most a bar of the first signature.
+    pub pickup: f64,
+    /// The number of the first full bar (the pickup is the one before it).
+    pub first_bar: i64,
+}
+
+impl Default for BarNumbering {
+    fn default() -> Self {
+        BarNumbering { pickup: 0.0, first_bar: 1 }
+    }
+}
+
+/// The pickup's grid: a 32nd note, so a MIDI file can give it a signature of its own.
+pub const PICKUP_STEP: f64 = 0.125;
+
+/// A pickup the app stores, in quarters: whole 32nd notes, from none to a 32nd short of a bar
+/// of `sig`.
+pub fn clamp_pickup(pickup: f64, sig: (u32, u32)) -> f64 {
+    let (num, den) = clamp_sig(sig.0, sig.1);
+    let max = num as f64 * 4.0 / den as f64 - PICKUP_STEP;
+    if pickup.is_finite() {
+        ((pickup / PICKUP_STEP).round() * PICKUP_STEP).clamp(0.0, max)
+    } else {
+        0.0
+    }
+}
+
+/// The range of first bar numbers the app supports.
+pub const MIN_FIRST_BAR: i64 = -999;
+pub const MAX_FIRST_BAR: i64 = 9999;
 
 pub const MIN_BPM: f64 = 5.0;
 pub const MAX_BPM: f64 = 990.0;
@@ -77,14 +118,14 @@ pub fn normalize_tempo(events: &[TempoEvent], base: f64) -> Vec<TempoEvent> {
     out
 }
 
-/// Signature changes sorted by bar, one per bar (the later one wins), the first at bar 1.
-/// Without one at bar 1 the list starts with `base` there.
-pub fn normalize_sigs(events: &[SigEvent], base: (u32, u32)) -> Vec<SigEvent> {
+/// Signature changes sorted by bar, one per bar (the later one wins), the first at
+/// `first_bar` (the first full bar). Without one there the list starts with `base` there.
+pub fn normalize_sigs(events: &[SigEvent], base: (u32, u32), first_bar: i64) -> Vec<SigEvent> {
     let mut v: Vec<SigEvent> = events
         .iter()
         .map(|e| {
             let (num, den) = clamp_sig(e.num, e.den);
-            SigEvent { bar: e.bar.max(1), num, den }
+            SigEvent { bar: e.bar.max(first_bar), num, den }
         })
         .collect();
     v.sort_by_key(|e| e.bar);
@@ -95,9 +136,9 @@ pub fn normalize_sigs(events: &[SigEvent], base: (u32, u32)) -> Vec<SigEvent> {
             _ => out.push(e),
         }
     }
-    if out.first().map(|e| e.bar != 1).unwrap_or(true) {
+    if out.first().map(|e| e.bar != first_bar).unwrap_or(true) {
         let (num, den) = clamp_sig(base.0, base.1);
-        out.insert(0, SigEvent { bar: 1, num, den });
+        out.insert(0, SigEvent { bar: first_bar, num, den });
     }
     out
 }
@@ -120,15 +161,15 @@ pub fn events_from_quarters(sample_rate: f64, changes: &[(f64, f64)]) -> Vec<Tem
 }
 
 /// Signature changes given in quarters, as (quarter, numerator, denominator), numbered as bars
-/// from quarter 0. A change off a bar line starts the bar it falls in. Before the first
-/// change, `base` applies.
-pub fn sigs_from_quarters(changes: &[(f64, u32, u32)], base: (u32, u32)) -> Vec<SigEvent> {
+/// from `first`, the bar at quarter 0. A change off a bar line starts the bar it falls in.
+/// Before the first change, `base` applies.
+pub fn sigs_from_quarters(changes: &[(f64, u32, u32)], base: (u32, u32), first: i64) -> Vec<SigEvent> {
     let mut out = Vec::with_capacity(changes.len() + 1);
-    let (mut bar, mut at, mut cur) = (1u32, 0.0, clamp_sig(base.0, base.1));
+    let (mut bar, mut at, mut cur) = (first, 0.0, clamp_sig(base.0, base.1));
     for &(q, num, den) in changes {
         let bar_q = cur.0 as f64 * 4.0 / cur.1 as f64;
         let n = ((q - at) / bar_q + 1e-6).floor().max(0.0);
-        bar += n as u32;
+        bar += n as i64;
         at += n * bar_q;
         cur = clamp_sig(num, den);
         out.push(SigEvent { bar, num: cur.0, den: cur.1 });
@@ -152,7 +193,7 @@ pub struct GridPoint {
     pub pos: f64,
     /// Position in quarters.
     pub q: f64,
-    /// 1-based bar.
+    /// The bar, as numbered on the ruler.
     pub bar: i64,
     /// Index within the bar, in steps of `1 / div` beat; 0 is the bar line.
     pub sub: u32,
@@ -174,9 +215,13 @@ impl GridPoint {
 /// One bar of the grid.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct BarSpan {
-    /// 1-based bar number.
+    /// The bar, as numbered on the ruler.
     pub bar: i64,
+    /// Where it starts on the timeline: the pickup bar from 0, where the timeline starts.
     pub start: f64,
+    /// Its whole length in samples, the pickup's part before 0 included (for spacing labels and
+    /// lines as in the bars after it).
+    pub len: f64,
     pub end: f64,
     pub start_q: f64,
     pub num: u32,
@@ -204,7 +249,7 @@ struct Seg {
 /// A run of bars in one signature.
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct Meter {
-    /// 0-based index of its first bar.
+    /// Index of its first bar, counted from the first full bar (0); the pickup's is -1.
     bar: i64,
     /// Quarters at its first bar line.
     q: f64,
@@ -232,12 +277,21 @@ pub struct TempoMap {
     meters: Vec<Meter>,
     events: Vec<TempoEvent>,
     sigs: Vec<SigEvent>,
+    first_bar: i64,
+    pickup: f64,
 }
 
 impl TempoMap {
-    /// A map from tempo and signature changes. `base_bpm` and `base_sig` apply from the
-    /// start when the lists don't say otherwise (an empty list means a constant tempo).
+    /// A map from tempo and signature changes, bars numbered from 1 without a pickup.
+    /// `base_bpm` and `base_sig` apply from the start when the lists don't say otherwise (an
+    /// empty list means a constant tempo).
     pub fn new(sample_rate: f64, tempo: &[TempoEvent], sigs: &[SigEvent], base_bpm: f64, base_sig: (u32, u32)) -> TempoMap {
+        TempoMap::numbered(sample_rate, tempo, sigs, base_bpm, base_sig, BarNumbering::default())
+    }
+
+    /// A map whose bars are numbered by `bars`: the first full bar starts `bars.pickup`
+    /// quarters into the timeline.
+    pub fn numbered(sample_rate: f64, tempo: &[TempoEvent], sigs: &[SigEvent], base_bpm: f64, base_sig: (u32, u32), bars: BarNumbering) -> TempoMap {
         let sr = sample_rate.max(1.0);
         let events = normalize_tempo(tempo, base_bpm);
         let mut segs = Vec::with_capacity(events.len());
@@ -254,17 +308,21 @@ impl TempoMap {
                 q += (e.bpm * dt + 0.5 * slope * dt * dt) / (60.0 * sr);
             }
         }
-        let sigs = normalize_sigs(sigs, base_sig);
+        let first_bar = bars.first_bar.clamp(MIN_FIRST_BAR, MAX_FIRST_BAR);
+        let sigs = normalize_sigs(sigs, base_sig, first_bar);
+        let first_bar_q = sigs[0].num as f64 * 4.0 / sigs[0].den as f64;
+        let pickup = if bars.pickup.is_finite() { bars.pickup.clamp(0.0, first_bar_q) } else { 0.0 };
         let mut meters: Vec<Meter> = Vec::with_capacity(sigs.len());
         for s in &sigs {
-            let bar = s.bar as i64 - 1;
+            let bar = s.bar - first_bar;
             let q = match meters.last() {
                 Some(m) => m.q + (bar - m.bar) as f64 * m.bar_q(),
-                None => 0.0,
+                // The first full bar starts after the pickup.
+                None => pickup,
             };
             meters.push(Meter { bar, q, num: s.num, den: s.den });
         }
-        TempoMap { sr, segs, meters, events, sigs }
+        TempoMap { sr, segs, meters, events, sigs, first_bar, pickup }
     }
 
     /// One tempo and one signature throughout.
@@ -274,7 +332,7 @@ impl TempoMap {
 
     /// The map a project's tempo and signature tracks describe.
     pub fn from_project(p: &Project) -> TempoMap {
-        TempoMap::new(p.sample_rate as f64, &p.tempo_map, &p.signatures, p.tempo, (p.sig_num, p.sig_den))
+        TempoMap::numbered(p.sample_rate as f64, &p.tempo_map, &p.signatures, p.tempo, (p.sig_num, p.sig_den), p.bar_numbering())
     }
 
     pub fn sample_rate(&self) -> f64 {
@@ -286,9 +344,29 @@ impl TempoMap {
         &self.events
     }
 
-    /// The signature changes, normalized: sorted, the first at bar 1.
+    /// The signature changes, normalized: sorted, the first at the first full bar.
     pub fn signatures(&self) -> &[SigEvent] {
         &self.sigs
+    }
+
+    /// The number of the first full bar.
+    pub fn first_bar(&self) -> i64 {
+        self.first_bar
+    }
+
+    /// The pickup's length in quarters (0 without one).
+    pub fn pickup(&self) -> f64 {
+        self.pickup
+    }
+
+    /// The bar number of bar `index` (counted from the first full bar, 0).
+    fn number(&self, index: i64) -> i64 {
+        index + self.first_bar
+    }
+
+    /// The index (counted from the first full bar, 0) of bar number `bar`.
+    fn index(&self, bar: i64) -> i64 {
+        bar - self.first_bar
     }
 
     /// One tempo and one signature throughout.
@@ -311,8 +389,8 @@ impl TempoMap {
         &self.meters[i.saturating_sub(1)]
     }
 
-    fn meter_at_bar(&self, bar0: i64) -> &Meter {
-        let i = self.meters.partition_point(|m| m.bar <= bar0);
+    fn meter_at_bar(&self, index: i64) -> &Meter {
+        let i = self.meters.partition_point(|m| m.bar <= index);
         &self.meters[i.saturating_sub(1)]
     }
 
@@ -363,9 +441,9 @@ impl TempoMap {
         self.samples_per_quarter_at(s) * num as f64 * 4.0 / den as f64
     }
 
-    /// The signature of 1-based `bar`.
+    /// The signature of `bar`.
     pub fn sig_at_bar(&self, bar: i64) -> (u32, u32) {
-        let m = self.meter_at_bar(bar - 1);
+        let m = self.meter_at_bar(self.index(bar));
         (m.num, m.den)
     }
 
@@ -375,80 +453,84 @@ impl TempoMap {
         (m.num, m.den)
     }
 
-    /// The 0-based bar holding `q` quarters, with its start in quarters and its meter.
+    /// The index of the bar holding `q` quarters, with its start in quarters and its meter.
     fn bar_of_q(&self, q: f64) -> (i64, f64, &Meter) {
         let m = self.meter_at_q(q);
         let n = ((q - m.q) / m.bar_q() + EPS).floor();
         (m.bar + n as i64, m.q + n * m.bar_q(), m)
     }
 
-    /// Quarters at the start of 1-based `bar`.
+    /// Quarters at the bar line of `bar` (before 0 for the pickup: its downbeat).
     pub fn bar_start_q(&self, bar: i64) -> f64 {
-        let m = self.meter_at_bar(bar - 1);
-        m.q + (bar - 1 - m.bar) as f64 * m.bar_q()
+        let i = self.index(bar);
+        let m = self.meter_at_bar(i);
+        m.q + (i - m.bar) as f64 * m.bar_q()
     }
 
-    /// Timeline sample (not rounded) where 1-based `bar` starts.
+    /// Timeline sample (not rounded) of the bar line of `bar` (before 0 for the pickup).
     pub fn bar_start(&self, bar: i64) -> f64 {
         self.sample_at(self.bar_start_q(bar))
     }
 
-    /// The 1-based bar playing at `s`.
+    /// The bar playing at `s`.
     pub fn bar_at(&self, s: f64) -> i64 {
-        self.bar_of_q(self.beats_at(s)).0 + 1
+        self.number(self.bar_of_q(self.beats_at(s)).0)
     }
 
-    /// Bars elapsed at `s`, with the fraction of the current bar (0 at bar 1's start).
-    pub fn bar_position(&self, s: f64) -> f64 {
-        let (bar0, start, m) = self.bar_of_q(self.beats_at(s));
-        bar0 as f64 + ((self.beats_at(s) - start) / m.bar_q()).max(0.0)
+    /// The bar playing at `s` with the fraction of it gone by (the first full bar's downbeat is
+    /// `first_bar`, halfway through it `first_bar + 0.5`).
+    pub fn bar_number_at(&self, s: f64) -> f64 {
+        let (i, start, m) = self.bar_of_q(self.beats_at(s));
+        self.number(i) as f64 + ((self.beats_at(s) - start) / m.bar_q()).max(0.0)
     }
 
     /// Bar, beat, division and tick at `s`, counting signature changes.
     pub fn bar_beat_at(&self, s: f64) -> Bbt {
         let q = self.beats_at(s);
-        let (bar0, start, m) = self.bar_of_q(q);
+        let (i, start, m) = self.bar_of_q(q);
         let beats = ((q - start) / m.beat_q()).max(0.0);
         let beat = beats.floor().min(m.num as f64 - 1.0);
         let frac = (beats - beat).clamp(0.0, 1.0 - 1e-12);
         let div = (frac * 4.0).floor();
         let tick = ((frac * 4.0 - div) * 240.0).floor();
-        Bbt { bar: bar0 + 1, beat: beat as u32 + 1, div: div as u32 + 1, tick: tick as u32 + 1 }
+        Bbt { bar: self.number(i), beat: beat as u32 + 1, div: div as u32 + 1, tick: tick as u32 + 1 }
     }
 
-    fn grid_point(&self, bar0: i64, sub: u32, div: u32) -> GridPoint {
-        let m = self.meter_at_bar(bar0);
-        let start = m.q + (bar0 - m.bar) as f64 * m.bar_q();
+    /// Grid point `sub` (of `div` a beat) of bar `index`.
+    fn grid_point(&self, index: i64, sub: u32, div: u32) -> GridPoint {
+        let m = self.meter_at_bar(index);
+        let start = m.q + (index - m.bar) as f64 * m.bar_q();
         let q = start + sub as f64 * m.beat_q() / div as f64;
-        GridPoint { pos: self.sample_at(q), q, bar: bar0 + 1, sub, div }
+        GridPoint { pos: self.sample_at(q), q, bar: self.number(index), sub, div }
     }
 
     /// The first grid point (bar lines, beats and `div` steps per beat) at or after `q`.
     pub fn grid_at_or_after(&self, q: f64, div: u32) -> GridPoint {
         let div = div.max(1);
-        let (bar0, start, m) = self.bar_of_q(q);
+        let (i, start, m) = self.bar_of_q(q);
         let step = m.beat_q() / div as f64;
         let j = ((q - start) / step - EPS).ceil().max(0.0) as u32;
         if j >= m.num * div {
-            self.grid_point(bar0 + 1, 0, div)
+            self.grid_point(i + 1, 0, div)
         } else {
-            self.grid_point(bar0, j, div)
+            self.grid_point(i, j, div)
         }
     }
 
     /// The grid point after `g` (same `div`).
     pub fn grid_after(&self, g: &GridPoint) -> GridPoint {
-        let bar0 = g.bar - 1;
-        let (num, _) = self.sig_at_bar(g.bar);
+        let i = self.index(g.bar);
+        let num = self.meter_at_bar(i).num;
         if g.sub + 1 >= num * g.div {
-            self.grid_point(bar0 + 1, 0, g.div)
+            self.grid_point(i + 1, 0, g.div)
         } else {
-            self.grid_point(bar0, g.sub + 1, g.div)
+            self.grid_point(i, g.sub + 1, g.div)
         }
     }
 
     /// `q` snapped to the nearest multiple of `step` quarters counted from its bar line, or to
-    /// the next bar line when that is nearer (so odd meters line up, as in Logic).
+    /// the next bar line when that is nearer (so odd meters line up, as in Logic). Never before
+    /// the timeline's start (the pickup's bar line is before it) when `q` isn't.
     #[allow(clippy::neg_cmp_op_on_partial_ord)] // The test below must also catch a NaN step.
     pub fn snap_q(&self, q: f64, step: f64) -> f64 {
         let (_, start, m) = self.bar_of_q(q);
@@ -457,10 +539,11 @@ impl TempoMap {
             return q;
         }
         let at = (start + ((q - start) / step).round() * step).min(end);
-        if end - q < (q - at).abs() {
-            end
+        let snapped = if end - q < (q - at).abs() { end } else { at };
+        if q >= 0.0 {
+            snapped.max(0.0)
         } else {
-            at
+            snapped
         }
     }
 
@@ -477,13 +560,13 @@ impl TempoMap {
     /// The last beat (or bar line) strictly before `s`.
     pub fn prev_beat(&self, s: f64) -> f64 {
         let q = self.beats_at(s);
-        let (bar0, start, m) = self.bar_of_q(q);
+        let (i, start, m) = self.bar_of_q(q);
         let j = ((q - start) / m.beat_q() - EPS).ceil() as i64 - 1;
         if j >= 0 {
-            self.grid_point(bar0, j as u32, 1).pos
+            self.grid_point(i, j as u32, 1).pos
         } else {
-            let (num, _) = self.sig_at_bar(bar0);
-            self.grid_point(bar0 - 1, num - 1, 1).pos
+            let num = self.meter_at_bar(i - 1).num;
+            self.grid_point(i - 1, num - 1, 1).pos
         }
     }
 
@@ -503,6 +586,17 @@ impl TempoMap {
         }
     }
 
+    /// Where a count-in of `bars` bars before `punch` starts: whole bars at the tempo and
+    /// signature in effect at the punch. In the pickup they count back from its bar line
+    /// (before the timeline's start), so the count-in runs on into the pickup as the rest of
+    /// its bar.
+    pub fn count_in_start(&self, punch: i64, bars: u32) -> i64 {
+        let bar = self.samples_per_bar_at(punch as f64);
+        let at = self.bar_at(punch as f64);
+        let from = if punch >= 0 && at < self.first_bar { self.bar_start(at).round() as i64 } else { punch };
+        from - (bar * bars.clamp(1, 4) as f64).round() as i64
+    }
+
     /// The bars that overlap `[from, to)`.
     pub fn bars(&self, from: f64, to: f64) -> impl Iterator<Item = BarSpan> + '_ {
         let mut bar = self.bar_at(from);
@@ -514,7 +608,10 @@ impl TempoMap {
             }
             let (num, den) = self.sig_at_bar(bar);
             let end = self.bar_start(bar + 1);
-            let span = BarSpan { bar, start, end, start_q, num, den };
+            // The pickup bar shows from the timeline's start.
+            let len = end - start;
+            let start = if start < 0.0 && end > 0.0 { 0.0 } else { start };
+            let span = BarSpan { bar, start, end, len, start_q, num, den };
             bar += 1;
             Some(span)
         })

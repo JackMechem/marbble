@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use crate::edit::fades::{DragMode, FadeShape};
 use crate::edit::pattern::Pattern;
 use crate::edit::region_params::RegionParams;
-use crate::model::tempo::{SigEvent, TempoEvent};
+use crate::model::tempo::{BarNumbering, SigEvent, TempoEvent};
 use crate::prefs::{BitDepth, ClickSettings};
 
 mod automation;

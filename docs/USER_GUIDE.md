@@ -1858,7 +1858,7 @@ Each of the three shows or hides on its own, as in Logic's Global Tracks configu
 the global tracks' headers (or the Marker label beside the ruler, which works while they're hidden),
 or use the Tracks area's View › Global Tracks, and tick the ones to show. Picking one there while
 the global tracks are hidden shows them with it. Until you choose, a project shows the ones it uses
-(arrangement sections, a tempo change, a signature change after bar 1), or all three when it uses
+(arrangement sections, a tempo change, a signature change after the first bar), or all three when it uses
 none. The choice and the Tempo track's height are remembered for each project. (The marker lane
 is part of the ruler and always shows.)
 
@@ -1880,6 +1880,32 @@ is part of the ruler and always shows.)
 - Double-click empty space to add a time signature change at that bar, or double-click a label
   such as "7/8" to edit it. Changes always start on a bar line.
 - Right-click a label to delete it.
+
+### Pickup bar and bar numbers
+
+A song that starts with a pickup (an anacrusis: a few notes before the first downbeat) gets a
+partial bar in File › Project Settings › General › **Bars**:
+
+- **Pickup** is its length, in beats of the project's time signature plus ticks (960 a beat),
+  in whole 32nd notes (the ticks field steps by a 32nd) and shorter than a bar. 0 means no pickup.
+  It starts at the beginning of the project and holds the last beats of a bar, so with a
+  one-beat pickup in 4/4 the project starts at 0 4 1 1 and bar 1's downbeat comes one beat in.
+  A time signature change that makes the first bar too short for it shortens it to fit.
+- **First Bar Number** is the number of the first full bar, 1 by default; 0 and negative
+  numbers are fine. The pickup is the bar before it.
+
+The ruler, LCD, grid, Signature and Tempo tracks, markers, Event List, editors' rulers, Bounce
+bar ranges and positions you type all count this way. Bar lines and Snap start after the pickup
+(and never snap before the project's start). The metronome accents the first full bar's
+downbeat, not the pickup's first beat, and a count-in into the pickup counts whole bars before
+its bar's downbeat, so you hear the rest of that bar before the pickup starts. Plug-ins are told
+the pickup's bar started before the project did.
+
+Changing either setting is one undo step. Regions, markers and tempo changes keep their place in
+time; signature changes keep their bars. A MIDI file export writes the pickup as a short bar of
+its own signature (1/4 for a quarter, 3/8 for a dotted quarter) before the project's. Importing
+a MIDI file into an empty project at its start replaces the project's pickup with the file's: a
+first bar shorter than the next becomes the pickup, and a file without one leaves none.
 
 ### What follows the tempo map
 
@@ -3274,7 +3300,7 @@ with the Mackie Control. It has no master section.
 | Cursor keys, Scrub | As on a Mackie Control (the HUI has no Zoom) |
 | F1–F8 | The key commands chosen in Settings |
 | Scribble strips | Each track's name in four characters, its level or V-Pot value while it moves; above the strips, what the V-Pots drive (Pan, Snd1…, Plug) |
-| Time display | Bars, beats and ticks (960 a beat) |
+| Time display | Bars, beats and ticks (960 a beat); bars before 1 (a pickup, or a first bar number of 0 or less) show as 000 |
 | Meters | Each strip's level, on both sides |
 | Not used yet | Auto and Insert on the strips, Trim, Send B–E, the main display, the keypad, the edit and window buttons, the control room section |
 
@@ -3506,12 +3532,12 @@ project:
 
 | Tab | Settings |
 |---|---|
-| General | Tempo (5 to 990 BPM), Time Signature, Key, Sample Rate (with a warning when existing audio would play at the wrong speed). |
+| General | Tempo (5 to 990 BPM), Time Signature, Key, Bars (a [pickup and the first bar's number](#pickup-bar-and-bar-numbers)), Sample Rate (with a warning when existing audio would play at the wrong speed). |
 | Recording | Bit Depth: Use Settings, 24-bit integer or 32-bit float; Count-in on or off. |
 | Metronome | The metronome settings and the defaults for new projects (see [Metronome](#metronome) below). |
 | Notes | Free-form notes (lyrics, session notes, who played what). |
 
-Tempo, time signature, key, bit depth, metronome settings and notes can be undone. The sample
+Tempo, time signature, key, bars, bit depth, metronome settings and notes can be undone. The sample
 rate change is applied to the audio device and is not an undo step.
 
 ### Metronome

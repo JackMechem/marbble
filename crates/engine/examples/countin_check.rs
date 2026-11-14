@@ -30,5 +30,15 @@ fn main() {
         failed |= !ok;
         println!("{} round {round}: recorded with count-in from bar 1 (engine errors: {errors})", if ok { "PASS" } else { "FAIL" });
     }
+    // With a pickup the count-in starts a bar before the pickup's bar line, further back.
+    s.set_bar_numbering(1.0, 1);
+    s.locate(0);
+    s.record().unwrap();
+    std::thread::sleep(Duration::from_millis(400));
+    s.stop();
+    std::thread::sleep(Duration::from_millis(100));
+    let errors = s.status.engine_errors.load(std::sync::atomic::Ordering::Relaxed);
+    failed |= errors != 0;
+    println!("{} recorded with count-in into a pickup (engine errors: {errors})", if errors == 0 { "PASS" } else { "FAIL" });
     std::process::exit(if failed { 1 } else { 0 });
 }

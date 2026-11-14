@@ -315,6 +315,44 @@ fn count_in_uses_the_tempo_at_the_punch() {
 }
 
 #[test]
+fn a_pickup_clicks_unaccented_and_its_count_in_leads_into_it() {
+    use crate::model::tempo::BarNumbering;
+    // 240 BPM (12000 samples a quarter), 4/4, a one-beat pickup: bar 1 starts at 12000.
+    let map = || TempoMap::numbered(48000.0, &[], &[], 240.0, (4, 4), BarNumbering { pickup: 1.0, first_bar: 1 });
+    let clicks = play_clicks(map(), 0, None, 60000);
+    let at: Vec<usize> = clicks.iter().map(|c| c.0).collect();
+    assert_eq!(at, vec![0, 12000, 24000, 36000, 48000]);
+    let loud: Vec<usize> = clicks.iter().filter(|c| c.1 > 0.4).map(|c| c.0).collect();
+    assert_eq!(loud, vec![12000], "only bar 1's downbeat is accented");
+    // Recording from 0 with a one-bar count-in: it starts a bar before bar 0's line (-36000), so
+    // the bar 0 line (accented) comes before the pickup's beat.
+    let from = map().count_in_start(0, 1);
+    assert_eq!(from, -84000);
+    let clicks = play_clicks(map(), from, Some(0), 84000 + 24000);
+    let at: Vec<i64> = clicks.iter().map(|c| c.0 as i64 + from).collect();
+    assert_eq!(at, vec![-84000, -72000, -60000, -48000, -36000, -24000, -12000, 0, 12000]);
+    let loud: Vec<i64> = clicks.iter().filter(|c| c.1 > 0.4).map(|c| c.0 as i64 + from).collect();
+    assert_eq!(loud, vec![-84000, -36000, 12000]);
+}
+
+#[test]
+fn plugins_get_bar_starts_in_a_pickup() {
+    use crate::model::tempo::BarNumbering;
+    let map = TempoMap::numbered(48000.0, &[], &[], 120.0, (4, 4), BarNumbering { pickup: 1.0, first_bar: 1 });
+    let mut r = rig();
+    r.tx.push(Cmd::Tempo(Arc::new(map))).ok().unwrap();
+    r.tx.push(Cmd::Locate(0)).ok().unwrap();
+    r.engine.process(&[], 0, &mut [], 0);
+    let t = r.engine.transport();
+    // The pickup is beat 4 of a bar that started 3 quarters before the timeline.
+    assert!(t.position_quarters.abs() < 1e-9);
+    assert!((t.bar_start_quarters + 3.0).abs() < 1e-9);
+    r.tx.push(Cmd::Locate(48000)).ok().unwrap();
+    r.engine.process(&[], 0, &mut [], 0);
+    assert!((r.engine.transport().bar_start_quarters - 1.0).abs() < 1e-9);
+}
+
+#[test]
 fn plugins_get_the_position_in_the_map() {
     use crate::model::tempo::{SigEvent, TempoEvent};
     let map = TempoMap::new(
