@@ -13,7 +13,7 @@ import { currentTick, getState, setState, showToast } from "../state/store";
 import { transport } from "./controlBar/transport";
 import { applyTheme } from "../theme/themes";
 import { applyUiScale, stepUiScale } from "../ui/uiScale";
-import { stepZoom } from "../tracks/zoom";
+import { zoomTracksStep } from "../tracks/zoomCommands";
 import { newAux } from "../mixer/routing";
 import { toggleBottom, toggledView } from "./mainView";
 import { editorMenuCommand } from "../editors/audioEditor/state";
@@ -340,10 +340,10 @@ export function handleMenu(id: string) {
       applyUiScale(1);
       break;
     case "zoom-in":
-      setState({ pxPerBeat: stepZoom(s.pxPerBeat, 1) });
+      zoomTracksStep(1);
       break;
     case "zoom-out":
-      setState({ pxPerBeat: stepZoom(s.pxPerBeat, -1) });
+      zoomTracksStep(-1);
       break;
     default:
       // Items built from a list carry what they act on after a prefix.

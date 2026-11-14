@@ -131,7 +131,7 @@ export function zoomFromEdge(
   samplesPerBeat: number,
 ): { pxPerBeat: number; start: number } {
   const span = Math.max(1, edge === "left" ? fixed - dragged : dragged - fixed);
-  const pxPerBeat = clampZoom((viewWidth / span) * samplesPerBeat);
+  const pxPerBeat = clampZoom((viewWidth / span) * samplesPerBeat, samplesPerBeat);
   const shown = (viewWidth / pxPerBeat) * samplesPerBeat;
   return { pxPerBeat, start: Math.max(0, edge === "left" ? fixed - shown : fixed) };
 }

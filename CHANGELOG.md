@@ -8,6 +8,11 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Added
 
+- **Zoom in to single samples in the Tracks area.** The zoom stopped at 400 px a beat. Ctrl+wheel
+  and View › Zoom In now go on, as Logic does, until samples are 32 px apart; the zoom slider
+  keeps its range and waits at its end. The ruler labels beats and finer steps as you go in
+  (5.2, 5.2.3, 5.2.3.121) and marks each sample, the grid shows the finer steps, and Smart snap
+  follows them down to a tick, then to single samples.
 - **Tuner and Chord modes for the control bar's LCD**, chosen from its chevron menu, which now
   remembers the mode (Beats & Project, Time, Tuner or Chord) between launches. The Tuner tunes the
   selected audio track's input: the note, a needle across ±50 cents that turns green in tune, and
@@ -17,8 +22,7 @@ All notable changes to Marbble are recorded here. The format follows
   turning Snap off first. As in Logic, hold Ctrl (Control on macOS) once a move, trim or loop
   drag has started to snap to ticks, or Ctrl+Shift to not snap at all; the region follows as
   you press and release the keys. The Audio Track editor's drags take the same keys. Smart snap
-  also gets finer zoomed all the way in, down to a quarter of a division, instead of stopping
-  at divisions.
+  also gets finer zoomed in past divisions, in steps that stay at least 15 px apart.
 - **Moved regions snap to the edges of other regions.** As with Logic's alignment guides, a moved
   region's start or end that comes within a few pixels of another region's start or end (on any
   track), the stopped playhead or a cycle locator snaps onto it, ahead of the grid, with a guide

@@ -313,12 +313,16 @@ From left to right:
   [Tools and the marquee](#tools-and-the-marquee)), the **Snap** pop-up (Smart, Bar, Beat,
   Division, Ticks, Off; Smart follows the zoom), the **Drag** pop-up (see
   [Drag modes](#drag-modes)), the **Height** slider (track height) and the **Zoom** slider.
+  The slider goes up to 400 px a beat; Ctrl+wheel and View › Zoom In go on past it, in to
+  single samples (32 px apart), and the slider then waits at its end.
 - **Ruler**, from the top:
   - the **cycle strip** (yellow): drag to make a cycle range, drag it or its edges to move or
     resize it, click it to switch Cycle on and off;
   - the **bar numbers**: click or drag to move the playhead. Grab the playhead's head (anywhere
     near it) to drag it from where it is, without it jumping to the pointer; a click on the head
-    leaves it in place;
+    leaves it in place. Zoomed in, beats and finer steps get labels too (5.2, 5.2.3, then
+    5.2.3.121 down to single ticks), with a mark at every sample when they're far enough apart;
+    when no label is in view, the position of the left edge shows at the start;
   - the **Autopunch strip** (red): works like the cycle strip, for the punch range;
   - the **marker lane** (see [Markers](#markers)).
 
@@ -1054,8 +1058,9 @@ The pointer changes over a region's hot zones:
 - Moves, trims and loop ends follow the **Snap** setting (Smart, Bar, Beat, Division, Ticks or
   Off). **Division** is a quarter of a beat, the third number of the position display: a
   sixteenth in 4/4, a thirty-second in 6/8. **Ticks** is 1/240 of a division (960 to a beat).
-  Smart snaps to bars, beats or divisions depending on the zoom, and zoomed in further to
-  halves and quarters of a division. Fades are never snapped.
+  Smart snaps to bars, beats or divisions depending on the zoom, and zoomed in further to the
+  finest step at least 15 px apart: halves and quarters of a division and so on down to a single
+  tick, then to single samples once a tick is over 60 px wide. Fades are never snapped.
 - **Finer or no snapping while dragging:** once a move, trim or loop drag has started, hold
   **Ctrl** (Control on macOS) to snap to ticks instead, or **Ctrl+Shift** to not snap at all,
   as in Logic. Let go to snap to the grid again; the region follows as you press or release the

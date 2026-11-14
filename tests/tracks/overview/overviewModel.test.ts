@@ -15,7 +15,7 @@ import {
   zoomFromEdge,
   type StripMap,
 } from "../../../src/tracks/overview/overviewModel.ts";
-import { ZOOM_MAX, ZOOM_MIN } from "../../../src/tracks/zoom.ts";
+import { zoomMax, ZOOM_MIN } from "../../../src/tracks/zoom.ts";
 
 const close = (a: number, b: number, eps = 1e-6) => assert.ok(Math.abs(a - b) < eps, `${a} ≈ ${b}`);
 
@@ -128,8 +128,11 @@ test("dragging an edge zooms so the view spans the two edges", () => {
 
 test("edge zoom keeps the zoom limits and moves the dragged edge to match", () => {
   const spb = 24_000;
-  const inMax = zoomFromEdge("right", 48_000, 48_100, 800, spb);
+  const ZOOM_MAX = zoomMax(spb);
+  // In to samples 32 px apart: 25 samples across 800 px at most.
+  const inMax = zoomFromEdge("right", 48_000, 48_010, 800, spb);
   assert.equal(inMax.pxPerBeat, ZOOM_MAX);
+  close(inMax.pxPerBeat / spb, 32);
   close(inMax.start, 48_000);
   const crossed = zoomFromEdge("left", 48_000, 60_000, 800, spb);
   assert.equal(crossed.pxPerBeat, ZOOM_MAX, "dragging past the other edge zooms all the way in");

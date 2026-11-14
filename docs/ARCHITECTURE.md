@@ -993,7 +993,10 @@ flowchart LR
   in the Mixer and a floating panel's edges, which capture the pointer, and painting steps in the
   Step Sequencer).
 - The tracks' vertical layout is `src/tracks/trackLayout.ts`; the horizontal scroll is shared
-  without React state through `src/tracks/viewport.ts`. Waveforms are fetched once per clip as
+  without React state through `src/tracks/viewport.ts`, in timeline px. Zoomed in to samples the
+  timeline is wider than a browser scrolls, so the scroller shows a window onto it
+  (`src/tracks/canvas/scrollWindow.ts`): read its position with `timelineLeft(el)`, never
+  `el.scrollLeft`, and scroll it with `scrollTo`. Waveforms are fetched once per clip as
   raw min/max bytes and cached (`src/tracks/regions/waveform.ts`).
 
 ### Themes and styles
