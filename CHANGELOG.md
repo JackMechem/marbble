@@ -19,6 +19,12 @@ All notable changes to Marbble are recorded here. The format follows
   track), the stopped playhead or a cycle locator snaps onto it, ahead of the grid, with a guide
   line drawn there. An Alt-drag copy snaps to the originals too. Ctrl+Shift turns it off.
 
+### Fixed
+
+- **Dragging a region's loop handle loops the whole selection.** With several regions selected,
+  dragging one's loop handle (its top-right corner) looped only that region. As in Logic, every
+  selected region's loop end now moves by the same amount, in one undo step.
+
 ## [0.1.0-alpha.17] - 2026-11-14
 
 ### Changed

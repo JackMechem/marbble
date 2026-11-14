@@ -1153,7 +1153,9 @@ As in Logic, a looping region repeats its own content from its end up to its **l
   the next region on the track, or for four times the region's length when nothing follows.
   Press L again to turn it off.
 - Point at the top right corner of the region (the pointer becomes a circular arrow) and drag
-  to set where the loop stops; dragging back to the region's end removes the loop.
+  to set where the loop stops; dragging back to the region's end removes the loop. With several
+  regions selected, every selected region's loop end moves by the same amount (a region that
+  wasn't looping starts at its own end), in one undo step; the loop end you drag snaps.
 - Repetitions are drawn lighter, with a notch at each pass. Click a repetition to select the
   region and drag it to move the region (the loop moves along). Trimming changes what repeats
   and keeps the loop end.

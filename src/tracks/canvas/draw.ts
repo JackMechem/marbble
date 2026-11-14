@@ -126,8 +126,9 @@ export function drawTracks({ canvasRef, live, dragRef, swipeRef, marqueeRef, hov
         if (lane === undefined) ti = dragTarget(layout, i, drag.dTrack, project.tracks);
       } else if (r.id === drag.grabbed && drag.fade !== undefined && r.content.type === "audio") {
         fades = drag.kind === "fadeIn" ? [drag.fade, r.content.fade_out] : [r.content.fade_in, drag.fade];
-      } else if (r.id === drag.grabbed && drag.loopEnd !== undefined) {
-        loop = drag.loopEnd;
+      } else if (drag.loops?.has(r.id)) {
+        // A loop drag: every selected region's loop end moves with the grabbed one's.
+        loop = drag.loops.get(r.id);
       } else if (drag.spans?.has(r.id)) {
         // A trim: every selected region's edge moves with the grabbed one's.
         const s = drag.spans.get(r.id)!;
@@ -181,7 +182,7 @@ export function drawTracks({ canvasRef, live, dragRef, swipeRef, marqueeRef, hov
   const passes = (r: Region) => (drag?.copy && drag.ids.includes(r.id) ? [true, false] : [false]);
   project.tracks.forEach((t, i) => {
     for (const r of t.regions) for (const still of passes(r)) {
-      if (!isLooped(r) && !(drag?.kind === "loop" && drag.grabbed === r.id)) continue;
+      if (!isLooped(r) && !drag?.loops?.has(r.id)) continue;
       const g = place(r, i, still);
       if (g.gone) continue;
       const x0 = (g.start + g.length) * pps - vp.left;
