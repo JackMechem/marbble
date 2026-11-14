@@ -41,6 +41,14 @@ All notable changes to Marbble are recorded here. The format follows
   Editors (E) or the Mixer pane (X) take you back to the Tracks view. Each view keeps its scroll
   position and each project remembers its view.
 
+- **Zooming the Tracks area with Catch on no longer jumps or fights the zoom.** The zoom and the
+  scroll that keeps its anchor landed a frame apart, so in between Catch saw the playhead out of
+  view and paged to it, and quick wheel turns or trackpad pinches anchored on the wrong spot. The
+  menu, keys and slider kept the scroll in pixels, so the view slid to another time. Now every
+  zoom keeps its anchor in the same frame: the pointer for Ctrl+wheel, the playhead when Catch is
+  on and it's in view, otherwise the middle of the view. While Catch follows the playhead, the
+  playhead stays put and Catch goes on from there.
+
 ## [0.1.0-alpha.17] - 2026-11-14
 
 ### Changed

@@ -314,7 +314,10 @@ From left to right:
   Division, Ticks, Off; Smart follows the zoom), the **Drag** pop-up (see
   [Drag modes](#drag-modes)), the **Height** slider (track height) and the **Zoom** slider.
   The slider goes up to 400 px a beat; Ctrl+wheel and View › Zoom In go on past it, in to
-  single samples (32 px apart), and the slider then waits at its end.
+  single samples (32 px apart), and the slider then waits at its end. Zoom In, Zoom Out and the
+  slider keep the playhead where it is when Catch is on and it's in view, otherwise the middle
+  of the view; while Catch follows the playhead, every zoom keeps the playhead in place and Catch
+  goes on from there.
 - **Ruler**, from the top:
   - the **cycle strip** (yellow): drag to make a cycle range, drag it or its edges to move or
     resize it, click it to switch Cycle on and off;
@@ -338,7 +341,8 @@ From left to right:
   is the **Marker** row. A muted track's regions are drawn grey, as a muted region is; a track that
   is off is dimmed.
 - **Tracks:** regions on lanes. Scroll with the wheel (Shift+wheel or a sideways trackpad swipe
-  scrolls through time); Ctrl+wheel zooms horizontally around the pointer, Alt+wheel changes
+  scrolls through time); Ctrl+wheel zooms horizontally around the pointer (around the playhead
+  while Catch follows it), Alt+wheel changes
   track heights. With a mouse that has only a vertical wheel, set Settings › Editing › Mouse
   Wheel Scrolls to **Horizontally (time)**: the wheel then scrolls through time and Shift+wheel
   scrolls the tracks. Over the track headers the wheel always scrolls the tracks, and over the
@@ -356,7 +360,8 @@ From left to right:
   - Drag the box's left or right edge to zoom: the view shows the time between the edges
     (within the usual zoom limits).
   - The wheel scrolls through time (Shift+wheel scrolls the tracks); Ctrl+wheel zooms around
-    the pointer when it's over the box, otherwise around the middle of the view.
+    the pointer when it's over the box, otherwise around the middle of the view (around the
+    playhead while Catch follows it).
   - View › Show Overview (in the main menu bar or the Tracks area's View menu), or right-click
     the strip, hides it and brings back the scroll bar; the same menu item, or a right-click on
     the scroll bar, shows it again. The choice is remembered.

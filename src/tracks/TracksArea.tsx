@@ -36,7 +36,7 @@ import { packTakeFolder } from "./takes/takes";
 import { releaseFieldFocus } from "../keyboard/focusRing";
 import { onPress } from "../keyboard/keyNav";
 import { sliderToZoom, zoomToSlider } from "./zoom";
-import { zoomTracksStep } from "./zoomCommands";
+import { zoomTime, zoomTracksStep } from "./zoomCommands";
 import { paneShown, toggleBottom } from "../app/mainView";
 
 /** Logic's Drag pop-up; only Overlap and X-Fade so far. */
@@ -277,7 +277,7 @@ export function TracksArea() {
                 step={0.001}
                 value={zoomToSlider(s.pxPerBeat)}
                 title={`Horizontal zoom (${keyHint("zoom-out")} / ${keyHint("zoom-in")})`}
-                onChange={(e) => setState({ pxPerBeat: sliderToZoom(parseFloat(e.target.value)) })}
+                onChange={(e) => zoomTime(sliderToZoom(parseFloat(e.target.value)))}
               />
             </>
           )}

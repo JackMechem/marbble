@@ -11,7 +11,7 @@ import { theme } from "../../theme/canvasTheme";
 import { pixelRatio } from "../../ui/uiScale";
 import { playheadStyle } from "../ruler/rulerHead";
 import { useLayout, zoomTracks } from "../trackLayout";
-import { onViewport, registerScroller, setScrollOrigin, setViewport, timelineLeft, viewport } from "../viewport";
+import { onViewport, registerScroller, registerZoomer, setScrollOrigin, setViewport, timelineLeft, viewport } from "../viewport";
 import { regionEnd } from "../regions/loops";
 import { automationLeave } from "../automation/canvas";
 import { getSettings } from "../../settings/appSettings";
@@ -28,6 +28,8 @@ import { adjacentRegion, laneKey } from "../../keyboard/keyNav";
 import { linkedRegions } from "../regionCommands";
 import { editorPaneFor } from "../regions/regionEditor";
 import { wheelZoom } from "../zoom";
+import { zoomTime } from "../zoomCommands";
+import { anchoredZoomLeft } from "../zoomAnchor";
 import { clampLeft, nearWindowEnd, windowAt, type ScrollWindow } from "./scrollWindow";
 
 // ---- peaks ----------------------------------------------------------------------------------
@@ -89,6 +91,8 @@ export function Arrange() {
   live.current = { project, selectedTrack, selectedRegions, pps, layout };
   const contentWRef = useRef(contentW);
   contentWRef.current = contentW;
+  const lengthRef = useRef(lengthSamples);
+  lengthRef.current = lengthSamples;
 
   /** Scrolls to timeline px `left` (and `top`), moving the scroll window to show it. */
   const scrollView = (left: number, top?: number) => {
@@ -105,9 +109,23 @@ export function Arrange() {
     el.scrollTop = top;
     setViewport({ left, top: el.scrollTop });
   };
-  // A new timeline width (zoom, a longer project) keeps the left edge where it was, as a
-  // scroller does.
+  // A new timeline width (a longer project) keeps the left edge where it was, as a scroller does.
   useLayoutEffect(() => scrollView(viewport().left), [contentW]);
+
+  /** Zooms to `pxPerBeat` keeping the time at `x` px into the view (or sample `at`) there. The
+   *  zoom, the timeline's width and the scroll change together, before the next frame draws or
+   *  Catch looks at the playhead; the render that follows finds them already in place. */
+  const zoomView = (pxPerBeat: number, x: number, at?: number) => {
+    const { project, pps } = live.current;
+    if (!project || pps <= 0) return setState({ pxPerBeat });
+    const next = pxPerBeat / samplesPerBeat(project);
+    const left = at === undefined ? anchoredZoomLeft(viewport().left, x, pps, next) : at * next - x;
+    live.current = { ...live.current, pps: next };
+    contentWRef.current = Math.ceil(lengthRef.current * next);
+    setState({ pxPerBeat });
+    scrollView(left);
+    requestDraw();
+  };
 
   const draw = () => drawTracks({ canvasRef, live, dragRef, swipeRef, marqueeRef, hoverRef, positionPlayhead });
   drawRef.current = draw;
@@ -153,6 +171,7 @@ export function Arrange() {
     });
     ro.observe(el);
     registerScroller(scrollView);
+    registerZoomer(zoomView);
     // Back from the Mixer view: scrolled where it was, or where a command asked for meanwhile.
     const was = viewport();
     scrollView(was.left, was.top);
@@ -162,7 +181,7 @@ export function Arrange() {
       measure();
       requestDraw();
     });
-    // Ctrl/Cmd + wheel zooms horizontally around the pointer.
+    // Ctrl/Cmd + wheel zooms horizontally around the pointer (the playhead while Catch follows it).
     const wheel = (e: WheelEvent) => {
       if (e.altKey) {
         e.preventDefault();
@@ -180,16 +199,9 @@ export function Arrange() {
         return;
       }
       e.preventDefault();
-      const { project, pps } = live.current;
+      const { project } = live.current;
       if (!project) return;
-      const cx = e.clientX - el.getBoundingClientRect().left;
-      const sample = (timelineLeft(el) + cx) / pps;
-      const next = wheelZoom(getState().pxPerBeat, e.deltaY, samplesPerBeat(project));
-      setState({ pxPerBeat: next });
-      const nextPps = next / samplesPerBeat(project);
-      requestAnimationFrame(() => {
-        scrollView(sample * nextPps - cx);
-      });
+      zoomTime(wheelZoom(getState().pxPerBeat, e.deltaY, samplesPerBeat(project)), e.clientX - el.getBoundingClientRect().left);
     };
     el.addEventListener("wheel", wheel, { passive: false });
     return () => {
@@ -198,6 +210,16 @@ export function Arrange() {
       el.removeEventListener("wheel", wheel);
       // In the Mixer view: a scroll asked for (a track selected with the arrow keys) waits here.
       registerScroller((left, top) => setViewport(top === undefined ? { left } : { left, top }));
+      // A zoom (Zoom In's key) waits too, its anchor kept in the stored position.
+      registerZoomer((pxPerBeat, x, at) => {
+        const project = getState().snap?.project;
+        if (project) {
+          const pps = getState().pxPerBeat / samplesPerBeat(project);
+          const next = pxPerBeat / samplesPerBeat(project);
+          setViewport({ left: Math.max(0, at === undefined ? anchoredZoomLeft(viewport().left, x, pps, next) : at * next - x) });
+        }
+        setState({ pxPerBeat });
+      });
     };
   }, []);
 

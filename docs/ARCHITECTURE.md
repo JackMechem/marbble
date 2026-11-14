@@ -996,7 +996,10 @@ flowchart LR
   without React state through `src/tracks/viewport.ts`, in timeline px. Zoomed in to samples the
   timeline is wider than a browser scrolls, so the scroller shows a window onto it
   (`src/tracks/canvas/scrollWindow.ts`): read its position with `timelineLeft(el)`, never
-  `el.scrollLeft`, and scroll it with `scrollTo`. Waveforms are fetched once per clip as
+  `el.scrollLeft`, and scroll it with `scrollTo`. Zoom it with `zoomTo` (or `zoomTime` in
+  `src/tracks/zoomCommands.ts`, which picks the anchor), never by setting `pxPerBeat` alone: it
+  changes the zoom, the timeline's width and the scroll in one go, so no frame (nor Catch) sees
+  one without the others. Waveforms are fetched once per clip as
   raw min/max bytes and cached (`src/tracks/regions/waveform.ts`).
 
 ### Themes and styles
