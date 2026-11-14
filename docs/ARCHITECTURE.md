@@ -508,8 +508,18 @@ callback's mix plays the block for its position, so a slow block is absorbed by 
   and none at real-time priority; nice -10 and keeping them to the performance cores didn't help.
   RLIMIT_RTTIME kills a real-time thread awake for 200 ms, so a render thread naps before a block
   once it has been awake 30 ms, and a watchdog thread demotes one awake for 100 ms (in a slow
-  plug-in), which takes its priority back once it's out and has slept. Refused it, and on macOS
-  and Windows, they run at normal priority.
+  plug-in), which takes its priority back once it's out and has slept. On macOS (#511) they get a
+  fixed priority instead, round-robin at 47 through `pthread_setschedparam` (the foreground app's
+  interface level, far below the time-constraint policy of the callback and the workers, 97);
+  not the time-constraint policy or the device's workgroup, which are for threads bound to the
+  callback's deadline. On an M1 beside 16 busy loops, a synthetic project of 64 tracks of effects
+  missed 9,000 to 12,600 blocks in 60 s of playback at normal priority or with QoS
+  user-interactive, and 6 to 13 at a fixed priority; Mach's precedence policy missed as few but
+  overloaded the callback at the start in two runs of three. The kernel's fail-safe takes a
+  fixed-priority thread that runs about a second without blocking down to timesharing for about two
+  seconds and gives it back by itself, so there's no watchdog there;
+  the same nap keeps a render thread that's catching up from tripping it. Refused it, and on
+  Windows, they run at normal priority.
 - Lent strips are a table of pointers; a render thread names the strip it looks at as its hazard,
   and a strip taken out of the table trades back only once none does, so a shell is never traded
   or freed under it. One whose render thread doesn't come out within `RECLAIM_WAIT` (a hung

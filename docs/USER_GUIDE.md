@@ -171,9 +171,9 @@ click outside) drops them. The delay compensation options on the same tab apply 
   at most) and goes on live from exactly there; a key you play on it meanwhile is heard at once.
   An edit to a track rendered ahead (a region, a plug-in, its automation) brings it back live from
   that moment; a reverb or delay on it may jump a little as it does. At 96 kHz and above the lead
-  is at most a quarter of a second. On Linux its threads get real-time priority below the audio
-  thread's where the system allows it, so other busy programs don't hold them up. Off by default
-  for now.
+  is at most a quarter of a second. On Linux and macOS its threads get a raised priority below the
+  audio thread's where the system allows it (real-time priority on Linux, a fixed priority on
+  macOS), so other busy programs don't hold them up. Off by default for now.
 - **Reset Audio Engine** closes and reopens the devices, for example after replugging an
   interface.
 - **When a device changes or goes away**, audio restarts by itself and a message says on which

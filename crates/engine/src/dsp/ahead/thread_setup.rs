@@ -1,5 +1,6 @@
-//! What a render thread asks of the system (#500): real-time priority below the audio threads', on
-//! Linux, and a watchdog so that the kernel's limit on real-time threads can't end the app.
+//! What a render thread asks of the system (#500, #511): a priority above every normal thread and
+//! below the audio threads', on Linux and macOS, and on Linux a watchdog so that the kernel's
+//! limit on real-time threads can't end the app.
 //!
 //! At normal priority render threads starve when the machine is busy. With 16 busy loops beside the
 //! owner's project (12 TONE3000s, 1024 frames), `ahead_probe` counted hundreds of missed blocks
@@ -18,8 +19,24 @@
 //!   once it's out, and sleeps before it renders on, so the kernel counts from zero.
 //!
 //! Only asked of the kernel (RLIMIT_RTPRIO, as `dsp/pool/thread_setup.rs` does), never of rtkit,
-//! whose few real-time threads per user are the pool's. Refused, or on macOS and Windows, render
-//! threads stay at normal priority, as before.
+//! whose few real-time threads per user are the pool's.
+//!
+//! On macOS (#511) they get a fixed priority, round-robin at [`PRIORITY`] 47 (the most
+//! `pthread_setschedparam` gives): the level of the foreground app's own interface threads, above
+//! every default and lower QoS thread, and far below the callback's and the workers'
+//! time-constraint policy (priority 97). They don't join the device's workgroup or take the
+//! time-constraint policy: they aren't bound to the callback's deadline. On an M1 beside 16 busy
+//! loops, a synthetic project of 64 tracks of four built-in effects (about three cores of
+//! rendering, 60 s of playback) missed 9,000 to 12,600 blocks a run at normal priority or with QoS
+//! user-interactive, and 6 to 13 at a fixed priority (see the pull request for the table). Mach's
+//! precedence policy at importance 63 missed as few, but overloaded the callback at the start in two
+//! runs of three. Threads a plug-in starts from a render thread don't inherit it. The kernel's
+//! fail-safe takes a fixed-priority thread that has run about a second without blocking down to
+//! timesharing for about two seconds, then gives it back: that is the watchdog there, and nothing is
+//! killed. The guard's nap keeps a render thread that's catching up from tripping it; one held in a
+//! plug-in that long is demoted by the kernel.
+//!
+//! Refused, and on Windows, render threads stay at normal priority, as before.
 
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
@@ -30,10 +47,15 @@ use std::time::{Duration, Instant};
 /// callback's and the pool's workers' (10, `dsp/pool/thread_setup.rs`).
 #[cfg(target_os = "linux")]
 const PRIORITY: libc::c_int = 1;
+/// The render threads' fixed priority on macOS: `sched_get_priority_max(SCHED_RR)`, the foreground
+/// app's interface threads' level, below the time-constraint audio threads (97).
+#[cfg(target_os = "macos")]
+const PRIORITY: libc::c_int = 47;
 /// The watchdog's, above the render threads it watches.
 #[cfg(target_os = "linux")]
 const WATCHDOG_PRIORITY: libc::c_int = 2;
-/// The longest a real-time render thread starts blocks without having slept.
+/// The longest a real-time render thread starts blocks without having slept: far inside RLIMIT_RTTIME
+/// on Linux and the fail-safe's second on macOS.
 const GUARD: Duration = Duration::from_millis(30);
 const GUARD_NAP: Duration = Duration::from_micros(200);
 /// How long a render thread may be awake before the watchdog demotes it: far enough inside
@@ -78,8 +100,8 @@ impl Watch {
     }
 }
 
-/// The watchdog's thread, stopped and joined when dropped. Linux only: elsewhere render threads
-/// aren't real time.
+/// The watchdog's thread, stopped and joined when dropped. Linux only: on macOS the kernel's
+/// fail-safe demotes a render thread stuck in a plug-in, and on Windows they aren't raised.
 pub(super) struct Watchdog {
     watch: Arc<Watch>,
     handle: Option<JoinHandle<()>>,
@@ -141,6 +163,18 @@ fn set_policy(tid: i32, policy: libc::c_int, priority: libc::c_int) -> std::io::
     }
 }
 
+/// Sets this thread's fixed priority (macOS), round-robin at [`PRIORITY`].
+#[cfg(target_os = "macos")]
+fn set_fixed() -> std::io::Result<()> {
+    // SAFETY: zeroed is a valid `sched_param`; then a plain call about this thread.
+    let mut param: libc::sched_param = unsafe { std::mem::zeroed() };
+    param.sched_priority = PRIORITY;
+    match unsafe { libc::pthread_setschedparam(libc::pthread_self(), libc::SCHED_RR, &param) } {
+        0 => Ok(()),
+        e => Err(std::io::Error::from_raw_os_error(e)),
+    }
+}
+
 /// A render thread's side: made on the thread itself as it starts.
 pub(super) struct RenderPriority<'a> {
     watch: &'a Watch,
@@ -151,7 +185,7 @@ pub(super) struct RenderPriority<'a> {
 }
 
 impl<'a> RenderPriority<'a> {
-    /// Asks for real-time priority for the calling render thread, `k`.
+    /// Asks for real-time (on macOS fixed) priority for the calling render thread, `k`.
     pub(super) fn start(watch: &'a Watch, k: usize) -> RenderPriority<'a> {
         let mut p = RenderPriority { watch, me: &watch.threads[k], realtime: false, slept: Instant::now() };
         p.promote();
@@ -172,10 +206,14 @@ impl<'a> RenderPriority<'a> {
                 self.sleep(GUARD_NAP);
             }
         }
+        #[cfg(target_os = "macos")]
+        {
+            self.realtime = set_fixed().is_ok();
+        }
     }
 
     /// Before a block: sleeps first if it has been awake too long, and takes real-time priority
-    /// back once the watchdog's demotion is over.
+    /// back once the watchdog's demotion is over (Linux; on macOS the kernel gives it back).
     pub(super) fn before_block(&mut self) {
         if self.me.demoted.load(Ordering::SeqCst) {
             self.me.since.store(ASLEEP, Ordering::SeqCst);
@@ -263,5 +301,64 @@ mod tests {
         assert!(napped, "slept before the block");
         assert_eq!(in_plugin, libc::SCHED_OTHER, "demoted");
         assert_eq!(after, libc::SCHED_RR, "promoted again");
+    }
+}
+
+#[cfg(all(test, target_os = "macos"))]
+mod macos_tests {
+    use super::*;
+
+    /// Mach's `POLICY_TIMESHARE` and `POLICY_RR`.
+    const TIMESHARE: libc::c_int = 1;
+    const RR: libc::c_int = 2;
+
+    /// This thread's policy as the scheduler has it now: the fail-safe's demotion shows here, not in
+    /// `pthread_getschedparam`.
+    fn policy() -> libc::c_int {
+        // SAFETY: plain queries about this thread, into a zeroed struct of the size given.
+        unsafe {
+            let mut info: libc::thread_basic_info = std::mem::zeroed();
+            let mut n = libc::THREAD_BASIC_INFO_COUNT;
+            libc::thread_info(
+                libc::pthread_mach_thread_np(libc::pthread_self()),
+                libc::THREAD_BASIC_INFO as u32,
+                &mut info as *mut _ as libc::thread_info_t,
+                &mut n,
+            );
+            info.policy
+        }
+    }
+
+    /// A render thread gets a fixed priority, which a thread it starts (a plug-in's) doesn't
+    /// inherit, and one kept busy past the fail-safe's second, starting a block every few
+    /// milliseconds, naps often enough that the kernel never takes it away.
+    #[test]
+    fn a_render_thread_keeps_its_fixed_priority_while_busy() {
+        let watch = Arc::new(Watch::new(1));
+        let _dog = Watchdog::start(&watch);
+        let w = watch.clone();
+        let (raised, child, busy) = std::thread::spawn(move || {
+            let mut p = RenderPriority::start(&w, 0);
+            let raised = p.realtime.then(policy);
+            let child = std::thread::spawn(policy).join().unwrap();
+            let t = Instant::now();
+            while t.elapsed() < Duration::from_millis(1500) {
+                let block = Instant::now();
+                while block.elapsed() < Duration::from_millis(2) {
+                    std::hint::spin_loop();
+                }
+                p.before_block();
+            }
+            (raised, child, policy())
+        })
+        .join()
+        .unwrap();
+        let Some(raised) = raised else {
+            eprintln!("skipped: this system doesn't grant a fixed priority");
+            return;
+        };
+        assert_eq!(raised, RR);
+        assert_eq!(child, TIMESHARE, "a plug-in's thread stays normal");
+        assert_eq!(busy, RR, "not demoted by the fail-safe");
     }
 }
