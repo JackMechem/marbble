@@ -272,12 +272,16 @@ From left to right:
   [Tools and the marquee](#tools-and-the-marquee)), the **Snap** pop-up (Smart, Bar, Beat,
   Division, Ticks, Off; Smart follows the zoom), the **Drag** pop-up (see
   [Drag modes](#drag-modes)), the **Height** slider (track height) and the **Zoom** slider.
+  The slider goes up to 400 px a beat; Ctrl+wheel and View › Zoom In go on past it, in to
+  single samples (32 px apart), and the slider then waits at its end.
 - **Ruler**, from the top:
   - the **cycle strip** (yellow): drag to make a cycle range, drag it or its edges to move or
     resize it, click it to switch Cycle on and off;
   - the **bar numbers**: click or drag to move the playhead. Grab the playhead's head (anywhere
     near it) to drag it from where it is, without it jumping to the pointer; a click on the head
-    leaves it in place;
+    leaves it in place. Zoomed in, beats and finer steps get labels too (5.2, 5.2.3, then
+    5.2.3.121 down to single ticks), with a mark at every sample when they're far enough apart;
+    when no label is in view, the position of the left edge shows at the start;
   - the **Autopunch strip** (red): works like the cycle strip, for the punch range;
   - the **marker lane** (see [Markers](#markers)).
 
@@ -1012,7 +1016,9 @@ The pointer changes over a region's hot zones:
 - Moves, trims and loop ends follow the **Snap** setting (Smart, Bar, Beat, Division, Ticks or
   Off). **Division** is a quarter of a beat, the third number of the position display: a
   sixteenth in 4/4, a thirty-second in 6/8. **Ticks** is 1/240 of a division (960 to a beat).
-  Smart snaps to divisions, beats or bars depending on the zoom. Fades are never snapped.
+  Smart snaps to divisions, beats or bars depending on the zoom; zoomed in further, to finer
+  steps down to a single tick (the grid shows them), and to single samples once they're 4 px
+  apart. Fades are never snapped.
 - **Trimming a selection:** with several regions selected, dragging one's start or end trims
   the same edge of each by the same amount, audio and MIDI alike, in one undo step. The region
   you drag snaps; the others follow it by as much, each stopping at its own limits (the start

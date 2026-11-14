@@ -6,6 +6,14 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Zoom in to single samples in the Tracks area.** The zoom stopped at 400 px a beat. Ctrl+wheel
+  and View › Zoom In now go on, as Logic does, until samples are 32 px apart; the zoom slider
+  keeps its range and waits at its end. The ruler labels beats and finer steps as you go in
+  (5.2, 5.2.3, 5.2.3.121) and marks each sample, the grid shows the finer steps, and Smart snap
+  follows them down to a tick, then to single samples.
+
 ### Changed
 
 - **Selecting a track while playing with Render Ahead on is seamless.** The track had to play

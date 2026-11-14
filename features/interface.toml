@@ -189,6 +189,7 @@ status = "done"
 tier = "core"
 beta = true
 logic = "47, 132"
+note = "Horizontal zoom goes in to single samples, past the zoom slider's range."
 
 [[feature]]
 section = "Windows, zoom and catch"

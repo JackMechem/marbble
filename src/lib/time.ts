@@ -2,6 +2,7 @@
 // tempo map itself is tempo.ts.
 import type { Project } from "../engine/project";
 import { tempoMap, type Bbt } from "./tempo.ts";
+import { FINE_MIN_PX, fineStep, SAMPLE_SNAP_PX, TICKS_PER_BEAT } from "./fineGrid.ts";
 
 export const PEAK_BUCKET = 256;
 
@@ -65,7 +66,8 @@ export const TICKS_PER_DIVISION = 240;
 /**
  * The snap grid's step in quarter notes in a bar of `num`/`den`: a bar, a beat (the signature's
  * denominator), a division (a quarter of a beat, the LCD's third field: a sixteenth in 4/4, a
- * thirty-second in 6/8), a tick (1/240 of a division), or Smart, which follows the zoom. 0: no
+ * thirty-second in 6/8), a tick (1/240 of a division), or Smart, which follows the zoom: bars,
+ * beats, divisions, and zoomed in further, finer steps down to a tick (fineGrid.ts). 0: no
  * snapping.
  */
 export function snapStep(mode: string, num: number, den: number, pxPerBeat: number): number {
@@ -82,16 +84,21 @@ export function snapStep(mode: string, num: number, den: number, pxPerBeat: numb
       return division;
     case "ticks":
       return division / TICKS_PER_DIVISION;
-    default:
+    default: {
       // Smart: follow the visible grid resolution.
+      const fine = fineStep(pxPerBeat, FINE_MIN_PX);
+      if (fine) return (beat * fine) / TICKS_PER_BEAT;
       return pxPerBeat > 60 ? division : pxPerBeat > 14 ? beat : beat * num;
+    }
   }
 }
 
 /** `pos` snapped to the grid, in whole samples: at most tempos a beat isn't a whole number of
- *  samples, and the engine takes positions as integers. */
+ *  samples, and the engine takes positions as integers. Smart snaps to single samples once the
+ *  zoom shows them SAMPLE_SNAP_PX apart. */
 export function snapPos(p: Project, pos: number, mode: string, pxPerBeat: number): number {
   if (mode === "off") return Math.round(pos);
+  if (mode === "smart" && pxPerBeat / samplesPerBeat(p) >= SAMPLE_SNAP_PX) return Math.round(pos);
   const m = tempoMap(p);
   const [num, den] = m.sigAt(pos);
   const step = snapStep(mode, num, den, pxPerBeat);

@@ -9,7 +9,7 @@ import { waveCache } from "../regions/waveform";
 import { PEAK_BUCKET } from "../../lib/time";
 import { tempoMap } from "../../lib/tempo";
 import { indexAt, visibleSteps } from "../trackLayout";
-import { viewport } from "../viewport";
+import { timelineLeft, viewport } from "../viewport";
 import { openMenu } from "../../ui/Menu";
 import { keepRegionsOn } from "../trackCommands";
 import { linkedRegions } from "../regionCommands";
@@ -107,7 +107,7 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
   const hit = (e: React.MouseEvent): Hit | null => {
     const el = scrollRef.current!;
     const rect = el.getBoundingClientRect();
-    const x = e.clientX - rect.left + el.scrollLeft;
+    const x = e.clientX - rect.left + timelineLeft(el);
     const y = e.clientY - rect.top + el.scrollTop;
     const { project, pps, layout } = live.current;
     if (!project) return null;
@@ -138,7 +138,7 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
     if (!r || !isFolder(r) || h.inLoop) return null;
     const g = regionBar(h.laneH - 3);
     if (g.barOnly && h.localY > g.bar + 1 && grabKind(h) !== "move") return null;
-    const bx = Math.max(r.start * live.current.pps, scrollRef.current!.scrollLeft);
+    const bx = Math.max(r.start * live.current.pps, timelineLeft(scrollRef.current!));
     return folderBarHit(h.x - bx, h.localY, drawnBar(g, h.laneH - 3));
   };
 
@@ -193,7 +193,7 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
       refuseFrozen([h.track.id]);
       return;
     }
-    if (!h.inLoop && onGainHandle(r, h.x, h.localY, h.laneH, pps, scrollRef.current!.scrollLeft, viewport().width)) return startGainDrag(e, project, r, sel, requestDraw);
+    if (!h.inLoop && onGainHandle(r, h.x, h.localY, h.laneH, pps, timelineLeft(scrollRef.current!), viewport().width)) return startGainDrag(e, project, r, sel, requestDraw);
     startRegionDrag(e, h, project, r, sel);
   };
 
@@ -332,7 +332,7 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
     const { project, pps } = live.current;
     if (!project) return;
     const el = scrollRef.current!;
-    const x = e.clientX - el.getBoundingClientRect().left + el.scrollLeft;
+    const x = e.clientX - el.getBoundingClientRect().left + timelineLeft(el);
     act("locate", { pos: Math.round(Math.max(0, snapToTracksGrid(project, x / pps))) });
   };
 
@@ -346,7 +346,7 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
       if (!moved && !pastDragThreshold(ev.clientX - e.clientX, ev.clientY - e.clientY)) return;
       moved = true;
       const rect = el.getBoundingClientRect();
-      const x = ev.clientX - rect.left + el.scrollLeft;
+      const x = ev.clientX - rect.left + timelineLeft(el);
       const y = ev.clientY - rect.top + el.scrollTop;
       const box = { left: Math.min(h.x, x), right: Math.max(h.x, x), top: Math.min(h.y, y), bottom: Math.max(h.y, y) };
       marqueeRef.current = box;
@@ -379,7 +379,7 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
     if (!project) return;
     setState({ selectedRegions: [r.id], focus: "regions" });
     const el = scrollRef.current!;
-    const left = el.getBoundingClientRect().left - el.scrollLeft;
+    const left = el.getBoundingClientRect().left - timelineLeft(el);
     const snap = (v: number) => Math.min(r.start + r.length, Math.max(r.start, snapToTracksGrid(project, v)));
     const shift = takeShift(r);
     let moved = false;
@@ -408,7 +408,7 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
     // A MIDI take folder plays whole takes: clicking a take chooses it.
     if (isMidiFolder(r)) return act("select_take", { region: r.id, take });
     const el = scrollRef.current!;
-    const left = el.getBoundingClientRect().left - el.scrollLeft;
+    const left = el.getBoundingClientRect().left - timelineLeft(el);
     const snap = (v: number) => Math.min(r.start + r.length, Math.max(r.start, snapToTracksGrid(project, v)));
     const toSample = (cx: number) => (cx - left) / pps;
     const from = snap(toSample(e.clientX));
@@ -497,7 +497,7 @@ export function tracksPointer({ scrollRef, live, dragRef, swipeRef, marqueeRef, 
       el.style.cursor = "pointer";
       return;
     }
-    if (!h.inLoop && onGainHandle(h.region, h.x, h.localY, h.laneH, pps, el.scrollLeft, viewport().width)) {
+    if (!h.inLoop && onGainHandle(h.region, h.x, h.localY, h.laneH, pps, timelineLeft(el), viewport().width)) {
       el.style.cursor = "ns-resize";
       return;
     }

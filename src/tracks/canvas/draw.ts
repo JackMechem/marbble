@@ -6,7 +6,8 @@ import { type Region } from "../../engine/regions";
 import { getState, liveTakes } from "../../state/store";
 import { offTracks } from "../trackOff";
 import { drawWave } from "../regions/waveform";
-import { PEAK_BUCKET, toBbt } from "../../lib/time";
+import { PEAK_BUCKET, samplesPerBeat, toBbt } from "../../lib/time";
+import { FINE_MIN_PX, fineStep, TICKS_PER_BEAT } from "../../lib/fineGrid";
 import { snapToTracksGrid } from "../gridSnap";
 import { forEachGridLine, tempoMap } from "../../lib/tempo";
 import { mix, theme } from "../../theme/canvasTheme";
@@ -87,6 +88,14 @@ export function drawTracks({ canvasRef, live, dragRef, swipeRef, marqueeRef, hov
     ctx.fillStyle = kind === "bar" ? theme.barLine : theme.beatLine;
     ctx.fillRect(kind === "bar" ? Math.round(pos * pps - vp.left) + 0.5 : Math.round(pos * pps - vp.left + 0.5), 0, 1, gridBottom);
   });
+  // Zoomed in further, the finer steps Smart snaps to.
+  const fine = fineStep(pps * samplesPerBeat(project), FINE_MIN_PX);
+  if (fine) {
+    ctx.fillStyle = theme.beatLine;
+    for (const g of tempoMap(project).grid(Math.max(0, vp.left / pps), (vp.left + W) / pps, TICKS_PER_BEAT / fine)) {
+      if ((g.sub * fine) % TICKS_PER_BEAT !== 0) ctx.fillRect(Math.round(g.pos * pps - vp.left + 0.5), 0, 1, gridBottom);
+    }
+  }
   // Cycle range tint, as Logic does when cycle is on.
   if (project.cycle.enabled) {
     const cx = project.cycle.start * pps - vp.left;
