@@ -1,6 +1,6 @@
 // The beat grid finer than a beat, for zooming in far: steps counted in ticks (960 a beat, as the
-// LCD counts them), which step Smart snap and the grid lines use at a zoom, and the ruler's labels
-// for them ("5.2.3.121").
+// LCD counts them), the finest one far enough apart at a zoom (for Smart snap and the grid
+// lines), and the ruler's labels for them ("5.2.3.121").
 
 /** Ticks in a beat: 4 divisions of 240. */
 export const TICKS_PER_BEAT = 960;
@@ -9,12 +9,9 @@ export const TICKS_PER_BEAT = 960;
  *  evenly, down to a single tick. */
 export const FINE_STEPS = [240, 120, 60, 30, 15, 5, 1];
 
-/** Smart snap and the Tracks area's grid lines use the finest step at least this far apart. */
+/** The Tracks area's grid lines show the finest step at least this far apart (Smart snaps to
+ *  finer ones, lib/time.ts). */
 export const FINE_MIN_PX = 60;
-
-/** Smart snaps to single samples once they are this many px apart (a tick is then wider than
- *  the edits being made). */
-export const SAMPLE_SNAP_PX = 4;
 
 /** The finest step (ticks) at least `minPx` apart at `pxPerBeat`, or null when even a division
  *  is closer than that. */

@@ -4,18 +4,18 @@ Every feature of Logic Pro, by area, and how far Marbble has it. This page is ge
 `scripts/features.py` from the files in `features/`: change those, in the pull request that
 changes the feature. [ROADMAP.md](../ROADMAP.md) says what beta needs and what's being worked on.
 
-Marbble has **280** of 731 features, and a simpler version of 94 more; 357 are missing. Beta needs 249 of them, and 55 of those are still to do.
+Marbble has **281** of 732 features, and a simpler version of 95 more; 356 are missing. Beta needs 249 of them, and 55 of those are still to do.
 
 ✓ done · ◐ partial: the note says what's missing · ○ missing · **Beta.** needed for beta and not done yet
 
 | Area | Done | Partial | Missing | Share done |
 |---|---:|---:|---:|---:|
-| [Interface and settings](#interface-and-settings) | 26 | 12 | 17 | 47% |
+| [Interface and settings](#interface-and-settings) | 27 | 12 | 17 | 48% |
 | [Projects](#projects) | 19 | 3 | 13 | 54% |
 | [Transport and tempo sync](#transport-and-tempo-sync) | 12 | 1 | 15 | 43% |
 | [Recording](#recording) | 37 | 2 | 8 | 79% |
 | [Tracks](#tracks) | 20 | 3 | 11 | 59% |
-| [Arranging](#arranging) | 61 | 18 | 36 | 53% |
+| [Arranging](#arranging) | 61 | 19 | 35 | 53% |
 | [Editors](#editors) | 32 | 12 | 53 | 33% |
 | [Time and pitch](#time-and-pitch) | 0 | 0 | 38 | 0% |
 | [Mixing and automation](#mixing-and-automation) | 37 | 12 | 40 | 42% |
@@ -26,11 +26,11 @@ Marbble has **280** of 731 features, and a simpler version of 94 more; 357 are m
 
 ## Interface and settings
 
-The main window, zoom, key commands, settings, help and accessibility. 26 of 55 done.
+The main window, zoom, key commands, settings, help and accessibility. 27 of 56 done.
 
 ### Logic Pro basics: the interface
 
-10 of 19 done.
+11 of 20 done.
 
 - ✓ Single main window with Tracks area, control bar, inspector, Library, editors, Mixer and browsers as panes
 - ✓ Show or hide panes with Logic's keys: Inspector (I), Library (Y), Mixer (X), Editors (E), Browsers (F)
@@ -39,6 +39,7 @@ The main window, zoom, key commands, settings, help and accessibility. 26 of 55 
 - ✓ CPU/load meter
 - ✓ Inspector with Region and Track sections and two channel strips
 - ✓ Mixer pane
+- ✓ Mixer window (⌘2) in place of the Tracks area, and back (⌘1) ([#516](https://github.com/JackMechem/marbble/issues/516))
 - ✓ Editors pane: Piano Roll for instrument tracks, Audio Track Editor for audio tracks
 - ✓ All Files Browser
 - ✓ Musical Typing window with on-screen keyboard (⌘K)
@@ -61,7 +62,7 @@ The main window, zoom, key commands, settings, help and accessibility. 26 of 55 
 - ✓ Scale the whole interface (90–200%)
 - ✓ Catch playhead (`)
 - ◐ Zoom to fit selection or all content (Z) ([#326](https://github.com/JackMechem/marbble/issues/326)): In the Piano Roll and Audio Track Editor; not in the Tracks area. **Beta.**
-- ◐ Open, close and focus windows ([#327](https://github.com/JackMechem/marbble/issues/327)): The Window menu brings any open window to the front or minimises it, and the Mixer, Editors, Event List, Step Sequencer and effect panels open in windows of their own; no second main window. **Beta.**
+- ◐ Open, close and focus windows ([#327](https://github.com/JackMechem/marbble/issues/327)): The Window menu brings any open window to the front or minimises it, ⌘1 and ⌘2 switch the main window between the Tracks and Mixer views, and the Mixer, Editors, Event List, Step Sequencer and effect panels open in windows of their own; no second main window. **Beta.**
 
 ### Windows and workspace
 
@@ -412,11 +413,11 @@ Editing regions in the Tracks area, fades, region parameters, tools and the glob
 - ✓ Remove Silence (strip silence)
 - ◐ Marquee selection; marquee ruler: Delete, Cut, Copy, Paste, the Pointer click, the section edits and Crop; no marquee ruler, no playback of the marquee range.
 - ◐ Split at the marquee or locators: At the marquee, by a Pointer click inside it.
+- ◐ Alignment guides ([#518](https://github.com/JackMechem/marbble/issues/518)): Moved regions' starts and ends snap to other regions', the stopped playhead and the cycle locators, with a guide line; not for trims, loops or in the editors.
 - ◐ Full snap modes and relative snap: Division and Ticks besides Bar and Beat; no Frames, Quarter Frames or Samples, and no relative snap.
 - ◐ Waveform vertical zoom: In the Audio Track Editor only.
 - ◐ Nudge value in ticks, frames and samples: Samples (1 to 50), and Nudge Left/Right by Sample; no ticks or frames.
 - ◐ Mixdown options for joined audio, with crossfades: Join mixes through the playback path, so crossfades are kept; no options.
-- ○ Alignment guides
 - ○ Horizontal auto zoom
 - ○ Scrubbing
 - ○ Move to recorded position: Regions don't keep their recorded position yet.

@@ -13,6 +13,22 @@ All notable changes to Marbble are recorded here. The format follows
   keeps its range and waits at its end. The ruler labels beats and finer steps as you go in
   (5.2, 5.2.3, 5.2.3.121) and marks each sample, the grid shows the finer steps, and Smart snap
   follows them down to a tick, then to single samples.
+- **Finer or no snapping while dragging regions.** With Snap on, moving a region a little meant
+  turning Snap off first. As in Logic, hold Ctrl (Control on macOS) once a move, trim or loop
+  drag has started to snap to ticks, or Ctrl+Shift to not snap at all; the region follows as
+  you press and release the keys. The Audio Track editor's drags take the same keys. Smart snap
+  also gets finer zoomed in past divisions, in steps that stay at least 15 px apart.
+- **Moved regions snap to the edges of other regions.** As with Logic's alignment guides, a moved
+  region's start or end that comes within a few pixels of another region's start or end (on any
+  track), the stopped playhead or a cycle locator snaps onto it, ahead of the grid, with a guide
+  line drawn there. An Alt-drag copy snaps to the originals too. Ctrl+Shift turns it off.
+- **A Mixer view.** Besides the Mixer pane under the tracks, the Mixer can now fill the main
+  window in the Tracks area's place, like Logic's Mixer window or Pro Tools' Mix window, with
+  long faders and room for every slot. Switch with the new Tracks / Mixer buttons at the left of
+  the control bar, Ctrl+1 and Ctrl+2 (⌘1 and ⌘2 on macOS) or View › Tracks View and Mixer View.
+  The Inspector and control bar stay; effect panels opened from the Mixer dock under it, and the
+  Editors (E) or the Mixer pane (X) take you back to the Tracks view. Each view keeps its scroll
+  position and each project remembers its view.
 
 ### Fixed
 

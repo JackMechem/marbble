@@ -105,7 +105,8 @@ export function Arrange() {
     windowRef.current = w;
     setScrollOrigin(w.origin);
     el.scrollLeft = left - w.origin;
-    if (top !== undefined) el.scrollTop = top;
+    if (top === undefined) return setViewport({ left });
+    el.scrollTop = top;
     setViewport({ left, top: el.scrollTop });
   };
   // A new timeline width (a longer project) keeps the left edge where it was, as a scroller does.
@@ -171,6 +172,9 @@ export function Arrange() {
     ro.observe(el);
     registerScroller(scrollView);
     registerZoomer(zoomView);
+    // Back from the Mixer view: scrolled where it was, or where a command asked for meanwhile.
+    const was = viewport();
+    scrollView(was.left, was.top);
     const measure = () => (playheadOrigin.current = playheadRef.current?.parentElement?.getBoundingClientRect().left ?? 0);
     measure();
     const off = onViewport(() => {
@@ -204,26 +208,27 @@ export function Arrange() {
       ro.disconnect();
       off();
       el.removeEventListener("wheel", wheel);
+      // In the Mixer view: a scroll asked for (a track selected with the arrow keys) waits here.
+      registerScroller((left, top) => setViewport(top === undefined ? { left } : { left, top }));
+      // A zoom (Zoom In's key) waits too, its anchor kept in the stored position.
+      registerZoomer((pxPerBeat, x, at) => {
+        const project = getState().snap?.project;
+        if (project) {
+          const pps = getState().pxPerBeat / samplesPerBeat(project);
+          const next = pxPerBeat / samplesPerBeat(project);
+          setViewport({ left: Math.max(0, at === undefined ? anchoredZoomLeft(viewport().left, x, pps, next) : at * next - x) });
+        }
+        setState({ pxPerBeat });
+      });
     };
   }, []);
 
-  // Playhead, catch and live recording previews
+  // Live recording previews (the store collects them, in the Mixer view too).
   useEffect(() => {
     let wasRecording = false;
     return onTick((t) => {
       if (!live.current.project) return;
-      for (const p of t.previews) {
-        let take = liveTakes.get(p.track);
-        if (!take || take.start !== p.start) {
-          take = { start: p.start, frames: 0, peaks: [] };
-          liveTakes.set(p.track, take);
-        }
-        take.peaks.length = p.from;
-        take.peaks.push(...p.peaks);
-        take.frames = p.frames;
-      }
       const finished = wasRecording && !t.recording;
-      if (finished) liveTakes.clear();
       wasRecording = t.recording;
       if (finished || t.previews.length || liveTakes.size) requestDraw();
     });
@@ -315,7 +320,7 @@ export function Arrange() {
         onScroll={(e) => {
           const el = e.currentTarget;
           const left = timelineLeft(el);
-          if (nearWindowEnd(windowRef.current, left, el.clientWidth, contentWRef.current)) scrollView(left);
+          if (nearWindowEnd(windowRef.current, left, el.clientWidth, contentWRef.current)) scrollView(left, el.scrollTop);
           else setViewport({ left, top: el.scrollTop });
         }}
         onMouseDown={onMouseDown}
