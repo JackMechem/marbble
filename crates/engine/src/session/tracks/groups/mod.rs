@@ -62,10 +62,16 @@ impl Session {
         self.project.groups.retain(|g| used.contains(&g.id));
     }
 
+    /// Logic's group clutch (⇧G): with it engaged no group links anything, each keeping its own
+    /// on/off for when it's released. Not an edit, and not saved.
+    pub fn set_groups_clutched(&mut self, on: bool) {
+        self.groups_clutched = on;
+    }
+
     /// The other tracks a change to `id` reaches through its group, if `link` is shared.
     pub(crate) fn group_peers(&self, id: Id, link: impl Fn(&Group) -> bool) -> Vec<Id> {
         let Some(g) = self.project.track(id).and_then(|t| t.group).and_then(|g| self.project.group(g)) else { return Vec::new() };
-        if !g.enabled || !link(g) {
+        if self.groups_clutched || !g.enabled || !link(g) {
             return Vec::new();
         }
         self.project.tracks.iter().filter(|t| t.group == Some(g.id) && t.id != id).map(|t| t.id).collect()

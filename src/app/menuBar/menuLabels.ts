@@ -64,6 +64,7 @@ export const MENU_LABELS = {
   "folder-stack": "Create Folder Stack",
   "summing-stack": "Create Summing Stack",
   group: "Group Selected Tracks",
+  "group-clutch": "Group Clutch",
   "output-track": "Show Output Track",
   "hide-tracks": "Hide Track",
   "unhide-all": "Unhide All Tracks",

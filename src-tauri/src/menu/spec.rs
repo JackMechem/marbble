@@ -213,6 +213,7 @@ pub(super) fn spec() -> Vec<Spec> {
                 keyed("folder-stack", "Create Folder Stack", "Shift+CmdOrCtrl+D"),
                 item("summing-stack", "Create Summing Stack"),
                 keyed("group", "Group Selected Tracks", "CmdOrCtrl+G"),
+                check("group-clutch", "Group Clutch"),
                 Sep,
                 check("output-track", "Show Output Track"),
                 item("hide-tracks", "Hide Track"),

@@ -27,7 +27,7 @@ import { getSettings } from "../settings/appSettings";
 import { canHaveAlternatives, trackAltMenu } from "./alternatives/trackAlternatives";
 import { isDefault, paramsOf } from "./regions/regionParams";
 import { selectedRegions, trackOf, cutRegions, copyRegions, pasteRegions, repeatRegions, splitAtPlayhead, joinRegions, toggleLoop, convertLoops, toggleRegionMute, setLocatorsByRegions, selectOnTrack, selectAllRegions, deleteRegions, createPatternRegion, regionById, importMidiAt, importAt, createMidiRegion, selectRegions } from "./regionCommands";
-import { selectedTracks, duplicateTracks, bounceInPlace, createStack, toggleCollapsed, flattenStack, removeFromStack, groupTracks, setGroup, updateGroup, switchAll, setHidden, hideTracks, unhideAllTracks, toggleShowHidden, deleteTracks, deleteUnusedTracks } from "./trackCommands";
+import { selectedTracks, duplicateTracks, bounceInPlace, createStack, toggleCollapsed, flattenStack, removeFromStack, groupTracks, setGroup, toggleGroupClutch, updateGroup, switchAll, setHidden, hideTracks, unhideAllTracks, toggleShowHidden, deleteTracks, deleteUnusedTracks } from "./trackCommands";
 
 const project = () => getState().snap?.project;
 
@@ -278,6 +278,8 @@ export function trackMenu(t: Track, rename: () => void): MenuItem[] {
         { label: "Remove from Group", disabled: !sel.some((x) => x.group !== null), onClick: () => setGroup(ids, null) },
         { label: "Group Settings…", disabled: !group, onClick: () => group && setState({ groupSheet: group.id }) },
         { label: group?.enabled === false ? "Turn Group On" : "Turn Group Off", disabled: !group, onClick: () => group && updateGroup({ ...group, enabled: !group.enabled }) },
+        { separator: true },
+        { label: "Group Clutch", hint: keyHint("group-clutch"), checked: !!getState().snap?.groups_clutched, onClick: toggleGroupClutch },
       ],
     },
     { separator: true },

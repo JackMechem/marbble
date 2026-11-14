@@ -145,6 +145,12 @@ pub fn set_track_group(state: State<AppState>, ids: Vec<Id>, group: Option<Id>) 
     edit(&state, if group.is_some() { "Assign Group" } else { "Remove from Group" }, None, false, |s| s.set_track_group(&ids, group))
 }
 
+/// Logic's group clutch (⇧G): suspends every group, or brings them back. Not an undo step.
+#[tauri::command]
+pub fn set_groups_clutched(state: State<AppState>, on: bool) -> Snapshot {
+    snap(&state, |s| s.set_groups_clutched(on))
+}
+
 #[tauri::command]
 pub fn select_track(state: State<AppState>, id: Option<Id>) -> Snapshot {
     snap(&state, |s| s.select_track(id))

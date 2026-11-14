@@ -30,6 +30,7 @@ impl Session {
         // analyzer's insert its strip and instance (an editor open in this one feeds it again).
         self.section_clip = None;
         self.analyzer_target = None;
+        self.groups_clutched = false;
         self.project = Project::new("Untitled", self.sample_rate() as u32);
         self.project.click = self.prefs.click;
         self.dir = untitled_dir(&self.projects_root());
@@ -154,6 +155,7 @@ impl Session {
         // another version of the same one (a backup, the saved state).
         self.section_clip = None;
         self.analyzer_target = None;
+        self.groups_clutched = false;
         self.forget_unsaved();
         let project_rate = project.sample_rate;
         self.project = project;

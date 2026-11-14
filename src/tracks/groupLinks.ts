@@ -11,6 +11,11 @@ export type GroupLink = "volume" | "pan" | "mute" | "solo" | "record" | "select"
 
 type Members = Pick<Track, "id" | "group">;
 
+/** The groups that link anything now: none while the group clutch (⇧G) is engaged. */
+export function activeGroups(snap: { project: { groups: Group[] }; groups_clutched?: boolean } | null | undefined): Group[] {
+  return snap && !snap.groups_clutched ? snap.project.groups : [];
+}
+
 /** The group `track` is in, when it is on and shares `link`. */
 export function linkingGroup(groups: readonly Group[], track: Members | undefined, link: GroupLink): Group | undefined {
   const g = track?.group != null ? groups.find((x) => x.id === track.group) : undefined;

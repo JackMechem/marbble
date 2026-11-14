@@ -116,6 +116,7 @@ fn main() {
             commands::update_group,
             commands::delete_group,
             commands::set_track_group,
+            commands::set_groups_clutched,
             commands::paste_regions,
             commands::repeat_regions,
             commands::set_region_gain,

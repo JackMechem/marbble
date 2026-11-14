@@ -27,6 +27,10 @@ All notable changes to Marbble are recorded here. The format follows
   region's start or end that comes within a few pixels of another region's start or end (on any
   track), the stopped playhead or a cycle locator snaps onto it, ahead of the grid, with a guide
   line drawn there. An Alt-drag copy snaps to the originals too. Ctrl+Shift turns it off.
+- **Group Clutch (Shift+G).** As in Logic, it suspends every group at once, so one member's
+  fader, buttons or regions can be changed alone, and brings them back when pressed again; each
+  group's own on/off is kept. Also in the Track menu and the track menu's Group submenu; the group
+  badges show the groups as off while it's engaged.
 
 ### Fixed
 

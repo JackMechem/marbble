@@ -1594,8 +1594,12 @@ Select tracks and choose **Create Folder Stack** (Shift+Ctrl+D) or **Create Summ
 **Group Selected Tracks** (Ctrl+G, or the track menu › Group) makes a group and opens **Group
 Settings**, which you can reopen by clicking a member's group badge:
 
-- Name, colour, and **Group on** (off makes members act alone without dissolving the group,
-  like Logic's group clutch).
+- Name, colour, and **Group on** (off makes this group's members act alone without dissolving
+  it).
+- **Group Clutch** (Shift+G, Track › Group Clutch, or the track menu › Group) suspends every
+  group at once, so you can move one member's fader or select one region alone; press it again
+  to bring them back. Each group's own on/off is kept, the badges show the groups as off while
+  the clutch is engaged, and it isn't an undo step or saved with the project.
 - What the members share: **Volume** and **Pan** (as relative moves: each member keeps its
   offset, even after the move took it to the end of its range and back), **Mute**, **Solo**,
   **Record Enable**, **Track Selection** (clicking one selects all; ⌘/Ctrl-clicking one takes them
@@ -3732,6 +3736,7 @@ shown.
 | Ctrl+R (Control+R on macOS) | Record-enable the selected track |
 | Up / Down | Select previous / next track |
 | Ctrl+H (Control+H on macOS) | Hide the current track and select the next |
+| Shift+G | Group Clutch: suspend every group, or bring them back |
 | (none) | Toggle Track On/Off, Reset All Clip Indicators |
 
 ### Editing
