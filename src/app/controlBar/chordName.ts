@@ -10,7 +10,9 @@ interface Reading {
 }
 
 /** What a chord costs beyond its triad: the less, the likelier the name. */
-const COST = { seventh: 1, sixth: 1.1, natural: 1, altered: 1.5, added: 1.2, noFifth: 0.5, slash: 1.2 };
+const COST = { seventh: 1, sixth: 1.1, natural: 1, altered: 1.5, added: 1.2, noFifth: 0.5, slash: 1.2, outsideBass: 0.9, susMaj7: 0.5 };
+/** Above this a name is more puzzle than help, and the notes are listed instead. */
+const MOST = 4;
 
 /** The chord over a root, from the set of intervals above it (bit `i` for `i` semitones; bit 0,
  *  the root, is set). Null when it isn't a chord with a name. */
@@ -63,7 +65,11 @@ function reading(set: number): Reading | null {
     const maj = seventh === 11 ? "maj" : "";
     if (kind === "maj") suffix = maj + ext;
     else if (kind === "min") suffix = seventh === 11 ? `m(maj${ext})` : "m" + ext;
-    else if (kind === "sus") suffix = `${maj}${ext}sus${sus}`;
+    else if (kind === "sus") {
+      // Rare: such a chord is more likely a triad over a bass note outside it (C/F, E/A).
+      if (maj) cost += COST.susMaj7;
+      suffix = `${maj}${ext}sus${sus}`;
+    }
     else if (kind === "aug") suffix = `${maj}${ext}♯5`;
     else if (kind === "flat5") suffix = `${maj}${ext}♭5`;
     else {
@@ -74,8 +80,7 @@ function reading(set: number): Reading | null {
       if (naturals.length) marks.unshift(...naturals.map(String));
     }
   } else {
-    // No seventh: alterations make no common name, and natural extensions are added notes.
-    if (altered.length) return null;
+    // No seventh: extensions, altered or not, are added notes.
     if (sixth && kind !== "maj" && kind !== "min" && kind !== "sus") return null;
     const base = { maj: "", min: "m", dim: "dim", aug: "aug", flat5: "(♭5)", sus: `sus${sus}` }[kind];
     let adds = naturals;
@@ -86,32 +91,44 @@ function reading(set: number): Reading | null {
       suffix = kind === "sus" ? `6${base}` : `${base}6${nine ? "/9" : ""}`;
     } else suffix = base;
     cost += adds.length * (COST.added - COST.natural);
-    if (adds.length === 1 && kind === "maj" && !sixth) suffix += `add${adds[0]}`;
-    else marks.push(...adds.map((n) => `add${n}`));
+    const added = [...altered, ...adds.map(String)];
+    marks.length = 0;
+    if (added.length === 1 && kind === "maj" && !sixth) suffix += `add${added[0]}`;
+    else marks.push(...added.map((n) => `add${n}`));
   }
   return { suffix: marks.length ? `${suffix}(${marks.join(",")})` : suffix, cost };
 }
 
 /** The chord's name for a set of MIDI notes, or null when no chord name fits (fewer than two
- *  pitch classes, a cluster, an interval other than a fifth). */
+ *  pitch classes, a cluster, an interval other than a fifth, a name too unusual to help). */
 export function chordName(notes: number[], sp: Spelling): string | null {
   if (!notes.length) return null;
-  const bass = ((Math.min(...notes) % 12) + 12) % 12;
-  const pcs = [...new Set(notes.map((n) => ((n % 12) + 12) % 12))];
+  const pc = (n: number) => ((n % 12) + 12) % 12;
+  const bass = pc(Math.min(...notes));
+  const pcs = [...new Set(notes.map(pc))];
   if (pcs.length < 2) return null;
+  // A bass note whose pitch is nowhere above it may lie outside the chord, as in F/G or C/F.
+  const loneBass = notes.filter((n) => pc(n) === bass).length === 1;
   let best: { name: string; cost: number } | null = null;
+  const consider = (root: number, r: Reading | null, extra = 0) => {
+    if (!r) return;
+    const slash = root !== bass;
+    // A power chord over another note is just a fourth.
+    if (slash && r.suffix === "5") return;
+    const cost = r.cost + (slash ? COST.slash : 0) + extra;
+    if (!best || cost < best.cost) best = { name: pitchName(root, sp) + r.suffix + (slash ? "/" + pitchName(bass, sp) : ""), cost };
+  };
   // The bass first, so a tie goes to the reading over it.
   for (const root of [bass, ...pcs.filter((p) => p !== bass)]) {
     const set = pcs.reduce((s, p) => s | (1 << ((p - root + 12) % 12)), 0);
-    const r = reading(set);
-    if (!r) continue;
-    const slash = root !== bass;
-    // A power chord over another note is just a fourth.
-    if (slash && r.suffix === "5") continue;
-    const cost = r.cost + (slash ? COST.slash : 0);
-    if (!best || cost < best.cost) best = { name: pitchName(root, sp) + r.suffix + (slash ? "/" + pitchName(bass, sp) : ""), cost };
+    consider(root, reading(set));
+    // The chord without its bass, unless the bass is its third, fifth or seventh (Am7/G
+    // stays Am7/G rather than Am/G).
+    const above = (bass - root + 12) % 12;
+    if (root !== bass && loneBass && ![3, 4, 6, 7, 8, 9, 10, 11].includes(above)) consider(root, reading(set & ~(1 << above)), COST.outsideBass);
   }
-  return best?.name ?? null;
+  const found = best as { name: string; cost: number } | null;
+  return found && found.cost <= MOST ? found.name : null;
 }
 
 /** What the Chord mode shows for the keys held: the chord's name, a single note's name, or (no

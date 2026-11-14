@@ -80,6 +80,27 @@ test("added notes", () => {
   assert.equal(name("C3 D3 E3 G3"), "Cadd9");
   assert.equal(name("C3 Eb3 G3 D4"), "Cm(add9)");
   assert.equal(name("C3 E3 F3 G3"), "Cadd11");
+  // Altered tones without a seventh are added notes too.
+  assert.equal(name("C3 E3 F#3 G3"), "Cadd♯11");
+  assert.equal(name("C3 E3 G3 Db4"), "Cadd♭9");
+  assert.equal(name("C3 Eb3 G3 Db4"), "Cm(add♭9)");
+});
+
+test("a chord over a bass note outside it", () => {
+  assert.equal(name("G2 F3 A3 C4"), "F/G");
+  assert.equal(name("F2 C3 E3 G3"), "C/F");
+  assert.equal(name("E2 D3 F#3 A3"), "D/E");
+  assert.equal(name("A2 E3 G#3 B3"), "E/A");
+  assert.equal(name("G2 F3 A3 C4 E4"), "Fmaj7/G");
+  assert.equal(name("C2 Bb2 D3 F3"), "B♭/C");
+  assert.equal(name("A2 G3 B3 D4"), "G/A");
+  assert.equal(name("Bb2 Ab3 C4 Eb4"), "A♭/B♭");
+  assert.equal(name("D2 C3 E3 G3"), "C/D");
+  // A bass that is the chord's seventh or third stays part of it.
+  assert.equal(name("G2 A2 C3 E3"), "Am7/G");
+  assert.equal(name("E2 C3 G3"), "C/E");
+  // Doubled higher up, the bass is a chord tone: C F G C is Csus4, not C/F.
+  assert.equal(name("C2 F2 G2 C3"), "Csus4");
 });
 
 test("symmetric chords take their bass as the root", () => {
@@ -97,7 +118,8 @@ test("what isn't a chord has no name", () => {
   // A fifth over its upper note is a fourth.
   assert.equal(name("G2 C3"), null);
   assert.equal(name("C3 Db3 D3"), null);
-  assert.equal(name("C3 E3 G3 Db4"), null);
+  // Names too unusual to help.
+  assert.equal(name("C3 E3 Bb3 Db4 Eb4 Ab4"), null);
   assert.equal(chordName([], "mixed"), null);
 });
 

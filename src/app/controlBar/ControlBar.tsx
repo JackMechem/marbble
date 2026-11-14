@@ -2,7 +2,7 @@
 // Appearance puts it here, the CPU meter (cpuMeter/).
 // Short of room it gives way around the transport and the LCD (control-bar.css).
 import { useEffect, useRef, useState } from "react";
-import { act } from "../../engine/commands";
+import { act, call } from "../../engine/commands";
 import { Icon } from "../../ui/icons";
 import { getState, onTick, setState, useStore } from "../../state/store";
 import { CpuMeter, useAudioLoad, useMeterPlace } from "../cpuMeter/CpuMeter";
@@ -61,6 +61,10 @@ function Lcd() {
   const mode = useSettings((s) => lcdMode(s.ui.lcd_mode));
   const modeRef = useRef(mode);
   modeRef.current = mode;
+  // A reload of the page skips the Tuner's cleanup, which would leave the engine listening.
+  useEffect(() => {
+    if (modeRef.current !== "tuner") call("set_input_tuner", { on: false });
+  }, []);
   const [editTempo, setEditTempo] = useState(false);
   const posRef = useRef(0);
   const shown = useRef("");

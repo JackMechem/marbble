@@ -258,7 +258,12 @@ impl MidiIo {
     pub fn refresh(&mut self) {
         let names = Self::port_names();
         let disabled = &self.disabled;
+        let before = self.connections.len();
         self.connections.retain(|(n, _)| names.contains(n) && !disabled.iter().any(|k| k == controllers::port_key(n)));
+        // A port unplugged or switched off with keys down never sends their note-offs.
+        if self.connections.len() < before {
+            self.held.clear();
+        }
         if !super::system_ports() {
             return;
         }
@@ -313,12 +318,20 @@ fn receive(
     for (o, i) in d.iter_mut().zip(msg.iter()) {
         *o = *i;
     }
+    // A key comes up in the chord display even when its note-off is taken (an assignment
+    // learnt while it was down), or it would show held for good.
+    let note_off = d[0] & 0xF0 == 0x80 || (d[0] & 0xF0 == 0x90 && d[2] == 0);
+    if note_off {
+        held.note(d);
+    }
     if !controls.take(key, d) {
         if d[0] & 0xF0 == 0x90 && d[2] > 0 {
             let curve = VelocityCurve::from_u8(filter.curve.load(Ordering::Relaxed));
             d[2] = curve.apply(d[2], filter.fixed.load(Ordering::Relaxed));
         }
-        held.note(d);
+        if !note_off {
+            held.note(d);
+        }
         let _ = sink.lock().push(d);
     }
     let mut l = log.lock();
@@ -350,5 +363,22 @@ mod tests {
         io.set_learning(true);
         io.inject_from("Keys 24:0", &[0xA0, 60, 10]);
         assert!(rx.pop().is_err());
+    }
+
+    #[test]
+    fn a_key_whose_note_off_is_taken_still_comes_up_in_the_chord_display() {
+        let (tx, _rx) = rtrb::RingBuffer::new(16);
+        let io = MidiIo::new(tx);
+        io.inject_from("Keys 24:0", &[0x90, 60, 100]);
+        io.inject_from("Keys 24:0", &[0x90, 64, 100]);
+        assert_eq!(io.held_notes(), vec![60, 64]);
+        // Learn Assignment starts with the keys down: their note-offs go to the session.
+        io.set_learning(true);
+        io.inject_from("Keys 24:0", &[0x80, 60, 0]);
+        io.inject_from("Keys 24:0", &[0x90, 64, 0]);
+        assert_eq!(io.held_notes(), Vec::<u8>::new());
+        // A note-on taken by the learn doesn't show.
+        io.inject_from("Keys 24:0", &[0x90, 67, 100]);
+        assert_eq!(io.held_notes(), Vec::<u8>::new());
     }
 }

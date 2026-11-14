@@ -34,6 +34,13 @@ impl HeldNotes {
         }
     }
 
+    /// Lets every key up: their input went away, so their note-offs never come.
+    pub fn clear(&self) {
+        for w in self.down.iter().chain(&self.struck) {
+            w.store(0, Ordering::Relaxed);
+        }
+    }
+
     /// The notes down now or struck since the last call, lowest first.
     pub fn take(&self) -> Vec<u8> {
         let mut out = Vec::new();
