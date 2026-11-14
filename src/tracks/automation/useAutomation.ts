@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import { type AutoParam, type Track } from "../../engine/project";
 import { act } from "../../engine/commands";
 import { valueAt } from "./autoLanes";
-import { currentTick, onTick } from "../../state/store";
+import { currentTick, getState, onTick } from "../../state/store";
+import { touchWrites } from "../groupLinks";
 import { laneOf } from "./params";
 
 /**
@@ -29,12 +30,18 @@ export function useAutomation(track: Track | null, param: AutoParam, live: numbe
   const tick = currentTick();
   // In Read the lane wins even while the control is held, so it springs back as in Logic.
   const value = follows && !(touching && writing) && tick?.playing ? (valueAt(lane!.points, tick.pos) ?? live) : live;
+  // Only the writing modes care (Read just plays the lane over the control), on this track or a
+  // group partner the control moves too.
+  const reaches = () => {
+    const p = getState().snap?.project;
+    return writing || (!!track && !!p && touchWrites(p.tracks, p.groups, track.id, param));
+  };
   const touch = (on: boolean) => {
     setTouching(on);
-    // Only the writing modes care (Read just plays the lane over the control); a release goes
-    // wherever the grab went.
-    if (track && (on ? writing : sent.current)) act("automation_touch", { track: track.id, param, touching: on });
-    sent.current = on && writing;
+    // A release goes wherever the grab went.
+    const send = on ? reaches() : sent.current;
+    if (track && send) act("automation_touch", { track: track.id, param, touching: on });
+    sent.current = on && send;
   };
   return [value, { onTouchStart: () => touch(true), onTouchEnd: () => touch(false) }];
 }

@@ -30,6 +30,12 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Fixed
 
+- **Grouped faders keep their offsets.** With Volume or Pan linked, a member that reached the
+  end of its range stopped there and lost its offset: pulling a fader to the bottom and back left
+  every member at the same level. Members now keep their offsets to the moved track however far
+  it goes, until one is moved on its own. And a partner in Touch or Latch now records the move
+  when the fader you hold is on a track in Read or Off.
+
 - **Track headers line up.** Buttons on a track in a group or a stack were squeezed to about 14 px
   while other tracks' kept their size, the volume slider's length and start changed from row to
   row, and a track in a stack didn't line its icon up with one outside it. Every header now has the
