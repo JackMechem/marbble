@@ -13,6 +13,11 @@ All notable changes to Marbble are recorded here. The format follows
   keeps its range and waits at its end. The ruler labels beats and finer steps as you go in
   (5.2, 5.2.3, 5.2.3.121) and marks each sample, the grid shows the finer steps, and Smart snap
   follows them down to a tick, then to single samples.
+- **Tuner and Chord modes for the control bar's LCD**, chosen from its chevron menu, which now
+  remembers the mode (Beats & Project, Time, Tuner or Chord) between launches. The Tuner tunes the
+  selected audio track's input: the note, a needle across ±50 cents that turns green in tune, and
+  the frequency. Chord names the chord held on MIDI input as you play it ("Am7", "G/B",
+  "Cmaj7(♯11)"), or the note, or the notes when no chord name fits, with the notes held beside it.
 - **Finer or no snapping while dragging regions.** With Snap on, moving a region a little meant
   turning Snap off first. As in Logic, hold Ctrl (Control on macOS) once a move, trim or loop
   drag has started to snap to ticks, or Ctrl+Shift to not snap at all; the region follows as
