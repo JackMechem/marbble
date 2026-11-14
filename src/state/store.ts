@@ -16,6 +16,7 @@ import type { WaveStyle } from "../tracks/regions/waveform";
 import { DEFAULT_TOOLS, type Tools } from "../tracks/tools/tools";
 import type { Marquee } from "../tracks/tools/marquee";
 import { DEFAULT_MIXER_VIEW, type MixerView } from "../mixer/mixerLayout";
+import type { MainView } from "../app/mainView";
 import { GLOBAL_TRACKS, TEMPO_DEFAULT_H, type GlobalTrackId } from "../tracks/globalTracks/globalTracksModel";
 
 export type Snap = "smart" | "bar" | "beat" | "division" | "ticks" | "off";
@@ -43,6 +44,8 @@ export interface State {
   showLibrary: boolean;
   showInspector: boolean;
   showBrowser: boolean;
+  /** The Tracks area or the Mixer filling the main window (app/mainView.ts), per project. */
+  mainView: MainView;
   bottom: BottomPane;
   /** Horizontal zoom in pixels per beat. */
   pxPerBeat: number;
@@ -151,6 +154,7 @@ let state: State = {
   showLibrary: false,
   showInspector: true,
   showBrowser: false,
+  mainView: "tracks",
   bottom: "none",
   pxPerBeat: 22,
   trackHeight: 64,
@@ -267,6 +271,7 @@ export function pushTick(t: Tick) {
   const key = (id: Id) => (id === MASTER_ID ? STEREO_OUT_METER : id);
   holdMap = new Map((t.peak_holds ?? []).map(([id, v]) => [key(id), v]));
   grMap = new Map((t.gain_reduction ?? []).map(([id, v]) => [key(id), v]));
+  collectPreviews(t);
   tickListeners.forEach((l) => l(t));
 }
 
@@ -306,5 +311,23 @@ export function gainReduction(key: Id): number | undefined {
   return grMap.get(key);
 }
 
-/** Live recording previews, keyed by track. */
+/** Live recording previews, keyed by track. Collected here rather than by the Tracks area, so a
+ *  take recorded in the Mixer view shows whole when the Tracks view comes back. */
 export const liveTakes = new Map<Id, { start: number; frames: number; peaks: number[] }>();
+let wasRecording = false;
+
+/** Adds a tick's new peaks to the takes being recorded; they go once the recording ends. */
+function collectPreviews(t: Tick) {
+  for (const p of t.previews) {
+    let take = liveTakes.get(p.track);
+    if (!take || take.start !== p.start) {
+      take = { start: p.start, frames: 0, peaks: [] };
+      liveTakes.set(p.track, take);
+    }
+    take.peaks.length = p.from;
+    take.peaks.push(...p.peaks);
+    take.frames = p.frames;
+  }
+  if (wasRecording && !t.recording) liveTakes.clear();
+  wasRecording = t.recording;
+}
