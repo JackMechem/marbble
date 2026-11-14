@@ -14,7 +14,8 @@ impl Session {
     pub fn create_group(&mut self, ids: &[Id]) -> Id {
         let id = self.project.alloc_id();
         let n = (1..).find(|n| !self.project.groups.iter().any(|g| g.name == format!("Group {n}"))).unwrap();
-        let colors = ["#e0a030", "#d9534f", "#5cb85c", "#5bc0de", "#b07cd8", "#e0709a"];
+        // From the track colour palette (src/tracks/trackColors.ts), so Group Settings shows it.
+        let colors = ["#f2a63b", "#e5483a", "#4fae4c", "#37a6c9", "#8a54d6", "#d24c9d"];
         self.project.groups.push(Group {
             id,
             name: format!("Group {n}"),

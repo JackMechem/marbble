@@ -69,8 +69,8 @@ export function VcaSlot({ track }: { track: Track }) {
 
 /**
  * A VCA strip: fader, level, mute and name. It passes no audio. Its count sits in the channel
- * strips' Input row and its own VCA slot in their VCA row; blank rows fill the rest, so its fader
- * lines up with theirs (`rows` as for ChannelStrip).
+ * strips' Input row and its own VCA slot in their VCA row; blank rows fill the rest (Output and
+ * Group among them), so its fader lines up with theirs (`rows` as for ChannelStrip).
  */
 export function VcaStrip({ vca, rows }: { vca: Vca; rows: SlotRows }) {
   const faderBox = useRef<HTMLDivElement>(null);
@@ -120,6 +120,8 @@ export function VcaStrip({ vca, rows }: { vca: Vca; rows: SlotRows }) {
       <BlankEq />
       <BlankSlots rows={rows.inserts} />
       <BlankSlots rows={rows.sends} />
+      {/* Output and Group rows. */}
+      <BlankRow />
       <BlankRow />
       <div className="strip-section">
         <Slot label={parent} assigned={!!parent} title={parent ? `Controlled by ${parent}` : "VCA: let another VCA control this one"} onOpen={openParent} />

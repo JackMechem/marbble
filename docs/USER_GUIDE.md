@@ -439,7 +439,7 @@ by the selected track's channel strip and the Stereo Out strip.
   tracks: a pop-up, as on the channel strip) or instrument, **Output** (a pop-up: Stereo Out,
   the stack, or an aux), **Freeze** (as the snowflake button), on an instrument track its
   [MIDI settings](#track-midi-settings) (Transpose, Velocity, Key Limit, Vel Limit and Delay),
-  the region or subtrack count and the group. Choosing a track (its header, its Mixer strip, a right-click on its empty
+  the region or subtrack count and **Group** (a pop-up, as the strip's Group slot). Choosing a track (its header, its Mixer strip, a right-click on its empty
   lane, or Up and Down) deselects the regions on other tracks, so both sections describe the
   same track.
 
@@ -1592,7 +1592,9 @@ Select tracks and choose **Create Folder Stack** (Shift+Ctrl+D) or **Create Summ
 ### Groups
 
 **Group Selected Tracks** (Ctrl+G, or the track menu › Group) makes a group and opens **Group
-Settings**, which you can reopen by clicking a member's group badge:
+Settings**. A Mixer strip's **Group** slot and the Track inspector's **Group** pop-up put tracks in
+a group, take them out, or make a new one. Click a member's group badge (or **Group Settings…** in
+those pop-ups) to reopen a group's settings:
 
 - Name, colour, and **Group on** (off makes this group's members act alone without dissolving
   it).
@@ -1608,6 +1610,10 @@ Settings**, which you can reopen by clicking a member's group badge:
   their take folders switch and comp together; see
   [Take folders and comping](#7-take-folders-and-comping)).
 - **Delete Group** dissolves it. A group nobody is in is removed.
+- **Groups…** (Track › Groups…, the track menu › Group, or a Group slot) lists every group with
+  its on/off, colour, name, member count and links side by side, to compare and change them in
+  one place; click a group's name for its settings. New groups take a colour from the track
+  palette.
 
 ### Hiding tracks
 
@@ -2308,6 +2314,7 @@ From top to bottom:
 | **Audio FX** | Insert slots (8 in all), in the rows the strips share (see above). An empty slot shows a faint **+**; click it to choose a plug-in. A filled slot's power and pop-up buttons show when you point at it. The label shows the strip's plug-in latency. |
 | **Sends** | Send slots (8 in all), in the rows the strips share. Click an empty slot (**+**) to add a send. |
 | **Output** | Stereo Out, the summing stack ("→ Σ Drums"), or an aux. |
+| **Group** | The track's group, marked with its colour (dashed while the group is off): click for No Group, the groups, **New Group…**, **Group Settings…**, **Groups…** and **Group Clutch** (see [Groups](#groups)). Acts on the selected strips when this one is among them. Stereo Out has none. |
 | **VCA** | The VCA fader that controls the strip (see [VCA faders](#vca-faders)). |
 | **Automation mode** | Off, Read, Touch, Latch, Write (see [Automation](#13-automation)). |
 | **Icon** | The track's icon, as in Logic's Mixer; click it to choose another. Stereo Out shows the output's. |

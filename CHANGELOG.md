@@ -27,6 +27,13 @@ All notable changes to Marbble are recorded here. The format follows
   region's start or end that comes within a few pixels of another region's start or end (on any
   track), the stopped playhead or a cycle locator snaps onto it, ahead of the grid, with a guide
   line drawn there. An Alt-drag copy snaps to the originals too. Ctrl+Shift turns it off.
+- **A Group slot on every Mixer strip and in the Track inspector.** As in Logic, it shows the
+  track's group in its colour and opens a pop-up to choose another, take the track out, make a
+  new group or open the settings. Before, groups could only be assigned from the track menu, and
+  the Mixer didn't show them at all.
+- **A Groups window.** Track › Groups… lists every group with its on/off, colour, name, members
+  and links side by side. New groups now take a colour from the track palette, so Group Settings
+  shows which one is theirs.
 - **Group Clutch (Shift+G).** As in Logic, it suspends every group at once, so one member's
   fader, buttons or regions can be changed alone, and brings them back when pressed again; each
   group's own on/off is kept. Also in the Track menu and the track menu's Group submenu; the group
