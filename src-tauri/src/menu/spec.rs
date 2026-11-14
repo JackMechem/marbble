@@ -214,6 +214,7 @@ pub(super) fn spec() -> Vec<Spec> {
                 item("summing-stack", "Create Summing Stack"),
                 keyed("group", "Group Selected Tracks", "CmdOrCtrl+G"),
                 check("group-clutch", "Group Clutch"),
+                item("groups", "Groups…"),
                 Sep,
                 check("output-track", "Show Output Track"),
                 item("hide-tracks", "Hide Track"),

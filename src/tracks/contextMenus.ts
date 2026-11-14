@@ -279,6 +279,7 @@ export function trackMenu(t: Track, rename: () => void): MenuItem[] {
         { label: "Group Settings…", disabled: !group, onClick: () => group && setState({ groupSheet: group.id }) },
         { label: group?.enabled === false ? "Turn Group On" : "Turn Group Off", disabled: !group, onClick: () => group && updateGroup({ ...group, enabled: !group.enabled }) },
         { separator: true },
+        { label: "Groups…", disabled: !p.groups.length, onClick: () => setState({ dialog: "groups" }) },
         { label: "Group Clutch", hint: keyHint("group-clutch"), checked: !!getState().snap?.groups_clutched, onClick: toggleGroupClutch },
       ],
     },

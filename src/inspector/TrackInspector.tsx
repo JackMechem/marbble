@@ -1,7 +1,7 @@
 // The Inspector's Track section, as in Logic's Track inspector, from what a track already has:
 // name, colour, icon, type, input or instrument, output, freeze, an instrument track's MIDI
-// settings (TrackMidiRows.tsx), regions and group. Name, colour, icon, input, output, freeze and
-// the MIDI settings can be changed here; the channel strip below has the rest.
+// settings (TrackMidiRows.tsx), regions and group. Name, colour, icon, input, output, freeze, group
+// and the MIDI settings can be changed here; the channel strip below has the rest.
 import { useEffect, useState } from "react";
 import { isStack, type Project, type Track } from "../engine/project";
 import { api } from "../engine/commands";
@@ -18,6 +18,7 @@ import { iconLabel } from "../tracks/icons/trackIcons";
 import { openTrackIconPicker } from "../tracks/icons/TrackIconPicker";
 import { onPress } from "../keyboard/keyNav";
 import { TrackMidiRows } from "./TrackMidiRows";
+import { groupMenu } from "../tracks/groupMenu";
 import { hasMidiSettings } from "./trackMidiModel";
 
 const KIND_NAMES: Record<Track["kind"], string> = { audio: "Audio", instrument: "Software Instrument", folder: "Folder Stack", summing: "Summing Stack", aux: "Aux" };
@@ -149,7 +150,9 @@ export function TrackRows({ project, track }: { project: Project; track: Track }
       ) : (
         <Row label="Regions">{track.regions.length}</Row>
       )}
-      {track.group !== null && <Row label="Group">{project.groups.find((g) => g.id === track.group)?.name ?? "—"}</Row>}
+      <Row label="Group">
+        <Popup text={project.groups.find((g) => g.id === track.group)?.name ?? "No Group"} items={() => groupMenu(track)} />
+      </Row>
     </>
   );
 }

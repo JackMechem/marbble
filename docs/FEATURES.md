@@ -775,7 +775,7 @@ The Mixer, automation, surround and Dolby Atmos. 38 of 89 done.
 - ✓ Multi-output instruments
 - ✓ Clip indicators with reset
 - ◐ VCA faders and VCA groups: VCA strips with level, mute, names, colours and nesting, a VCA slot on each strip and an offset mark on its fader; no VCA automation, VCA solo, or VCAs made from groups.
-- ◐ Groups: Volume, pan, mute, solo, record, selection and editing links, plus an on/off clutch; missing are several groups per strip, a Groups window, automation, send and colour links, and copy/paste of group settings.
+- ◐ Groups: Volume, pan, mute, solo, record, selection and editing links, per-group on/off and the Group Clutch, a Group slot on strips and in the inspector, and a Groups window; missing are several groups per strip, automation, send and colour links, and copy/paste of group settings.
 - ◐ Narrow and wide strips, long faders, show or hide strip components: Narrow, Normal and Wide strips, and a width of its own for any strip; no long faders, and strip components can't be shown or hidden.
 - ◐ Enter and exit folder stacks in the Mixer: Stacks sit under a bracket and collapse in the Mixer; no entering a folder stack as its own view.
 - ◐ Gain-reduction meter on the strip: For the built-in dynamics effects; VST3s don't report it.

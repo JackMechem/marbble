@@ -128,3 +128,76 @@
   gap: 7px;
 }
 
+
+/* A channel strip's Group slot: the group's name, marked with its colour (dashed while off). */
+.slot.group-slot {
+  cursor: default;
+}
+
+.slot.group-slot:hover {
+  background: var(--slot-empty-hi);
+}
+
+.slot.group-slot.assigned {
+  background: var(--slot-static);
+  color: var(--text);
+  box-shadow: var(--slot-shadow), inset 3px 0 0 var(--group);
+}
+
+.slot.group-slot.assigned:hover {
+  background: var(--slot-static-hi);
+}
+
+.slot.group-slot.off {
+  color: var(--dim);
+  box-shadow: var(--slot-shadow);
+  outline: 1px dashed var(--group);
+  outline-offset: -1px;
+}
+
+/* The Groups sheet: one row per group, its links as columns. */
+.groups-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 4px 0 10px;
+}
+
+.groups-table th {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--dim);
+  padding: 0 4px 6px;
+  text-align: center;
+}
+
+.groups-table td {
+  padding: 3px 4px;
+  text-align: center;
+  border-top: 1px solid var(--header-line);
+}
+
+.groups-table .groups-name {
+  text-align: left;
+  width: 100%;
+}
+
+.groups-table tr.off .groups-open {
+  color: var(--dim);
+}
+
+.groups-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  box-shadow: 0 0 0 0.5px var(--swatch-edge);
+}
+
+.groups-open {
+  font-weight: 600;
+  color: var(--text);
+  text-align: left;
+}
+
+.groups-open:hover {
+  text-decoration: underline;
+}

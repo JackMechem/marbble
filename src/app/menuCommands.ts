@@ -203,6 +203,9 @@ export function handleMenu(id: string) {
     case "group-clutch":
       toggleGroupClutch();
       break;
+    case "groups":
+      setState({ dialog: "groups" });
+      break;
     case "cut":
       if (!marqueeCut()) cutRegions();
       break;

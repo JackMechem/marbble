@@ -20,6 +20,7 @@ import { clipResetTargets, isClip, peakText, reducesGain } from "./stripMeters";
 import { resetClipIndicators, stripSettingMenu } from "./stripSettings";
 import { fmt } from "../keyboard/keymap";
 import { stripLearnMenu } from "../controllers/learn";
+import { GroupSlot } from "./GroupSlot";
 import { canAssignVca, vcaOffset } from "./vcaModel";
 import { isTrackOff, powerTitle } from "../tracks/trackOff";
 import { auxInput, hasExtraOutputs, nextOutput } from "./multiOut";
@@ -262,6 +263,9 @@ export function ChannelStrip({ track, selected, rows }: { track: Track | null; s
           )}
         </div>
       )}
+
+      {/* The Group slot, as in Logic; Stereo Out has none. */}
+      <div className="strip-section">{track ? <GroupSlot track={track} /> : <div className="slot static" />}</div>
 
       {track && canAssignVca(track.kind) ? (
         <div className="strip-section">
