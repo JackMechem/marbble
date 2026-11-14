@@ -1,6 +1,8 @@
 //! Plays a saved project with render ahead on, on a real output (a silent sink on Linux:
 //! `pactl load-module module-null-sink sink_name=marbble_probe`, output `pipewire:marbble_probe`),
-//! prints overloads and render-ahead misses for each step, and dumps the probe trace as CSV.
+//! prints overloads and render-ahead misses for each step, and dumps the probe trace as CSV. On
+//! macOS, an output nothing listens to keeps it silent (a loopback device such as BlackHole's;
+//! `hosts` lists the ids).
 //! usage: ahead_probe <project dir> <out csv> <output id> <scenario> [select id]
 //! scenarios: log, starts, long, twice (FROM=seconds), locates. Environment: HOST (default
 //! PipeWire, or the system's own host where there's none, as on macOS), AHEAD_MS (200), THREADS

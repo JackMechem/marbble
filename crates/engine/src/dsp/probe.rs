@@ -55,7 +55,16 @@ pub fn cpu() -> u64 {
     unsafe { libc::sched_getcpu() as u64 }
 }
 
-#[cfg(not(target_os = "linux"))]
+/// The CPU this thread is on (macOS 11 and later; on Apple silicon the efficiency cores come first).
+#[cfg(target_os = "macos")]
+pub fn cpu() -> u64 {
+    let mut n: libc::size_t = 0;
+    // SAFETY: plain libc call into a local.
+    unsafe { libc::pthread_cpu_number_np(&mut n) };
+    n as u64
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 pub fn cpu() -> u64 {
     0
 }
@@ -82,7 +91,19 @@ pub fn faults() -> (u64, u64) {
     }
 }
 
-#[cfg(not(target_os = "linux"))]
+/// Minor + major page faults so far, of the whole process: macOS counts them per process only, so
+/// a thread's difference includes every other thread's faults meanwhile.
+#[cfg(target_os = "macos")]
+pub fn faults() -> (u64, u64) {
+    // SAFETY: plain libc call into a zeroed struct.
+    unsafe {
+        let mut u: libc::rusage = std::mem::zeroed();
+        libc::getrusage(libc::RUSAGE_SELF, &mut u);
+        (u.ru_minflt as u64, u.ru_majflt as u64)
+    }
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 pub fn faults() -> (u64, u64) {
     (0, 0)
 }
