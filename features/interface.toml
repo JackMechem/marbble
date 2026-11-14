@@ -22,7 +22,7 @@ tier = "core"
 beta = true
 logic = "93"
 issue = 323
-note = "Beats and Time only; no Custom mode or large LCD."
+note = "Beats & Project, Time, Tuner (the selected audio track's input) and Chord (held on MIDI input); no Custom mode or large LCD."
 
 [[feature]]
 section = "Logic Pro basics: the interface"

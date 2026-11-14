@@ -6,6 +6,14 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Tuner and Chord modes for the control bar's LCD**, chosen from its chevron menu, which now
+  remembers the mode (Beats & Project, Time, Tuner or Chord) between launches. The Tuner tunes the
+  selected audio track's input: the note, a needle across ±50 cents that turns green in tune, and
+  the frequency. Chord names the chord held on MIDI input as you play it ("Am7", "G/B",
+  "Cmaj7(♯11)"), or the note, or the notes when no chord name fits, with the notes held beside it.
+
 ## [0.1.0-alpha.17] - 2026-11-14
 
 ### Changed

@@ -12,9 +12,12 @@ import { fmtBpm, tempoMap } from "../../lib/tempo";
 import { HSlider } from "../../ui/Controls";
 import { openMenuAt, type MenuItem } from "../../ui/Menu";
 import { transport } from "./transport";
+import { LCD_MODES, lcdMode } from "./lcdModes";
+import { LcdTuner } from "./LcdTuner";
+import { LcdChord } from "./LcdChord";
 import { fmt, keyHint, tip } from "../../keyboard/keymap";
 import { withKey } from "../../keyboard/keyFormat";
-import { toggleReplace, useSettings } from "../../settings/appSettings";
+import { setLcdMode, toggleReplace, useSettings } from "../../settings/appSettings";
 import { onPress } from "../../keyboard/keyNav";
 import { dragWith } from "../../ui/pointerDrag";
 
@@ -55,7 +58,7 @@ function useScrub(onStep: (steps: number, total: number) => void, px = 6) {
 function Lcd() {
   const project = useStore((s) => s.snap?.project);
   const [pos, setPos] = useState(0);
-  const [mode, setMode] = useState<"beats" | "time">("beats");
+  const mode = useSettings((s) => lcdMode(s.ui.lcd_mode));
   const modeRef = useRef(mode);
   modeRef.current = mode;
   const [editTempo, setEditTempo] = useState(false);
@@ -99,6 +102,30 @@ function Lcd() {
     if (!cancelTempo.current && v > 0 && project && v !== tempoNow(project)) act("set_tempo_at", { pos: Math.round(posRef.current), bpm: v, moveMidi: moveMidi() });
     cancelTempo.current = false;
   };
+  const modeMenu = (
+    <button
+      className="lcd-mode"
+      title="Display mode"
+      aria-label="Display mode"
+      onClick={(e) =>
+        openMenuAt(e.currentTarget, [
+          ...LCD_MODES.map(({ mode: m, label }) => ({ label, checked: mode === m, onClick: () => setLcdMode(m) })),
+          { separator: true },
+          { label: "Project Settings…", hint: keyHint("project-settings"), onClick: () => setState({ dialog: "project-settings" }) },
+        ])
+      }
+    >
+      <Icon.chevron />
+    </button>
+  );
+  if (mode === "tuner" || mode === "chord") {
+    return (
+      <div className="lcd">
+        {mode === "tuner" ? <LcdTuner /> : <LcdChord />}
+        {modeMenu}
+      </div>
+    );
+  }
   if (!project) return <div className="lcd" />;
   const bbt = toBbt(project, pos);
   const map = tempoMap(project);
@@ -182,14 +209,7 @@ function Lcd() {
           {keyMinor ? "min" : "maj"}
         </div>
       </div>
-      <button className="lcd-mode" title="Display mode" aria-label="Display mode" onClick={(e) => openMenuAt(e.currentTarget, [
-        { label: "Beats & Project", checked: mode === "beats", onClick: () => setMode("beats") },
-        { label: "Time", checked: mode === "time", onClick: () => setMode("time") },
-        { separator: true },
-        { label: "Project Settings…", hint: keyHint("project-settings"), onClick: () => setState({ dialog: "project-settings" }) },
-      ])}>
-        <Icon.chevron />
-      </button>
+      {modeMenu}
     </div>
   );
 }

@@ -161,6 +161,13 @@ pub fn set_analyzer(state: State<AppState>, uid: Option<Id>) {
     with(&state, |s| s.set_analyzer(uid))
 }
 
+/// Shows or hides the control bar's tuner: while on, each tick says what the selected audio
+/// track's input is playing.
+#[tauri::command]
+pub fn set_input_tuner(state: State<AppState>, on: bool) {
+    with(&state, |s| s.set_input_tuner(on))
+}
+
 #[tauri::command]
 pub fn set_tracks_hidden(state: State<AppState>, ids: Vec<Id>, hidden: bool) -> Snapshot {
     edit(&state, if hidden { "Hide Tracks" } else { "Show Tracks" }, None, false, |s| s.set_tracks_hidden(&ids, hidden))

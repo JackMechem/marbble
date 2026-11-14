@@ -16,6 +16,7 @@ use midir::{MidiInput, MidiInputConnection};
 use parking_lot::Mutex;
 use serde::Serialize;
 
+use super::held::HeldNotes;
 use crate::control::controllers::{self, CtlKind};
 use crate::prefs::VelocityCurve;
 
@@ -139,6 +140,8 @@ pub struct MidiIo {
     log: Arc<Mutex<VecDeque<MidiLogEntry>>>,
     epoch: Instant,
     controls: Arc<Controls>,
+    /// The keys held, for the control bar's chord display.
+    held: Arc<HeldNotes>,
 }
 
 impl MidiIo {
@@ -151,12 +154,14 @@ impl MidiIo {
             log: Arc::default(),
             epoch: Instant::now(),
             controls: Arc::default(),
+            held: Arc::default(),
         }
     }
 
     /// Feeds a message in as if it came from a hardware port (on-screen keyboard, Musical
     /// Typing). It follows the same routing and recording path.
     pub fn inject(&self, data: [u8; 3]) {
+        self.held.note(data);
         let _ = self.sink.lock().push(data);
     }
 
@@ -165,7 +170,7 @@ impl MidiIo {
     /// For tests, which have no MIDI hardware.
     pub fn inject_from(&self, port: &str, msg: &[u8]) {
         let key: Arc<str> = Arc::from(controllers::port_key(port));
-        receive(&self.sink, &self.filter, &self.log, self.epoch, &self.controls, port, &key, msg);
+        receive(&self.sink, &self.filter, &self.log, self.epoch, &self.controls, &self.held, port, &key, msg);
     }
 
     /// The controllers whose messages go to the session rather than the instrument.
@@ -237,6 +242,12 @@ impl MidiIo {
         self.filter.fixed.store(fixed, Ordering::Relaxed);
     }
 
+    /// The keys held on every input and the on-screen keyboards, or struck since the last call,
+    /// lowest first.
+    pub fn held_notes(&self) -> Vec<u8> {
+        self.held.take()
+    }
+
     /// The most recent messages from hardware inputs, oldest first.
     pub fn recent(&self) -> Vec<MidiLogEntry> {
         self.log.lock().iter().cloned().collect()
@@ -265,9 +276,10 @@ impl MidiIo {
             let log = self.log.clone();
             let epoch = self.epoch;
             let controls = self.controls.clone();
+            let held = self.held.clone();
             let port_name = name.clone();
             let key: Arc<str> = Arc::from(controllers::port_key(&name));
-            match input.connect(&port, "marbble-in", move |_, msg, _| receive(&sink, &filter, &log, epoch, &controls, &port_name, &key, msg), ()) {
+            match input.connect(&port, "marbble-in", move |_, msg, _| receive(&sink, &filter, &log, epoch, &controls, &held, &port_name, &key, msg), ()) {
                 Ok(c) => {
                     log::info!("MIDI input connected: {name}");
                     self.connections.push((name, c));
@@ -289,6 +301,7 @@ fn receive(
     log: &Mutex<VecDeque<MidiLogEntry>>,
     epoch: Instant,
     controls: &Controls,
+    held: &HeldNotes,
     port_name: &str,
     key: &Arc<str>,
     msg: &[u8],
@@ -305,6 +318,7 @@ fn receive(
             let curve = VelocityCurve::from_u8(filter.curve.load(Ordering::Relaxed));
             d[2] = curve.apply(d[2], filter.fixed.load(Ordering::Relaxed));
         }
+        held.note(d);
         let _ = sink.lock().push(d);
     }
     let mut l = log.lock();

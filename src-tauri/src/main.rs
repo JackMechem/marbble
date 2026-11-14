@@ -139,6 +139,7 @@ fn main() {
             commands::input_level,
             commands::reset_input_level,
             commands::set_analyzer,
+            commands::set_input_tuner,
             commands::recent_projects,
             commands::forget_recent,
             commands::path_exists,
