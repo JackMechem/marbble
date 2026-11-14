@@ -16,6 +16,8 @@ All notable changes to Marbble are recorded here. The format follows
   Editors (E) or the Mixer pane (X) take you back to the Tracks view. Each view keeps its scroll
   position and each project remembers its view.
 
+## [0.1.0-alpha.17] - 2026-11-14
+
 ### Changed
 
 - **Selecting a track while playing with Render Ahead on is seamless.** The track had to play
@@ -1538,7 +1540,8 @@ The first prerelease. Everything below is new.
 - The `takes_check` headless check "autopunch trims the take" fails about one run in five,
   from the null audio device's timing.
 
-[Unreleased]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.16...HEAD
+[Unreleased]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.17...HEAD
+[0.1.0-alpha.17]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.16...v0.1.0-alpha.17
 [0.1.0-alpha.16]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.15...v0.1.0-alpha.16
 [0.1.0-alpha.15]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.14...v0.1.0-alpha.15
 [0.1.0-alpha.14]: https://github.com/JackMechem/marbble/compare/v0.1.0-alpha.13...v0.1.0-alpha.14
