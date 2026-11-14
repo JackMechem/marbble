@@ -41,6 +41,24 @@
   color: var(--accent);
 }
 
+/* The Tracks / Mixer view switch: two buttons joined into one control, like tabs, set apart from
+   the pane buttons after it. */
+.cb-view-switch {
+  display: flex;
+  gap: 1px;
+  margin-right: 6px;
+}
+
+.cb-view-switch > .cb-btn:first-child {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.cb-view-switch > .cb-btn:last-child {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
 .cb-center {
   display: flex;
   align-items: center;
@@ -248,19 +266,22 @@
 /* A narrow window (1280 px at 125 % is a 1024 px page). The transport and the LCD keep their size
    longest; the bar gives way around them, a step at a time. The widths are what the bar needs at
    each step with the LCD showing the time, a long key and six mode buttons, plus 15 px, measured
-   while Count-in was a word: as an icon it's some 30 px narrower, which each step now has spare.
+   while Count-in was a word: as an icon it's some 30 px narrower. The Tracks / Mixer switch came
+   later and adds 65 to 77 px (53 at step 6), so the steps start 20 to 30 px sooner than those
+   measures say, each with 10 to 25 px to spare.
    1. 1175 px with everything: tighter gaps, smaller view buttons (then 1117);
    2. the master volume slider shortens (1055);
    3. the three view buttons on the right fold into one menu button and the mode buttons narrow
-      (985), so a 1024 px bar has about 70 px to spare;
+      (985), so a 1024 px bar keeps the slider with about 15 px to spare;
    4. the master volume slider goes (Stereo Out in the Mixer has it) (925);
    5. only then do the transport buttons and the LCD tighten (877);
-   6. and last the gaps and buttons around them (836; 1280 px at 150 % is an 853 px bar). */
+   6. and last the gaps and buttons around them, the view switch's narrowest (836; 1280 px at
+      150 % is an 853 px bar, about 10 px more than it needs). */
 .control-bar {
   container: control-bar / inline-size;
 }
 
-@container control-bar (max-width: 1190px) {
+@container control-bar (max-width: 1220px) {
   .control-bar {
     gap: 8px;
   }
@@ -282,13 +303,13 @@
   }
 }
 
-@container control-bar (max-width: 1135px) {
+@container control-bar (max-width: 1165px) {
   .cb-master {
     --cb-master-w: 52px;
   }
 }
 
-@container control-bar (max-width: 1075px) {
+@container control-bar (max-width: 1105px) {
   .control-bar {
     padding: 0 8px;
   }
@@ -306,13 +327,13 @@
   }
 }
 
-@container control-bar (max-width: 1000px) {
+@container control-bar (max-width: 1020px) {
   .cb-master {
     display: none;
   }
 }
 
-@container control-bar (max-width: 940px) {
+@container control-bar (max-width: 970px) {
   .tp-btn {
     width: 30px;
   }
@@ -326,7 +347,7 @@
   }
 }
 
-@container control-bar (max-width: 890px) {
+@container control-bar (max-width: 920px) {
   .control-bar {
     gap: 6px;
   }
@@ -345,6 +366,15 @@
   .mode-btn {
     min-width: 26px;
     width: 26px;
+  }
+
+  .cb-view-switch {
+    margin-right: 2px;
+  }
+
+  .cb-view-switch > .cb-btn {
+    min-width: 24px;
+    width: 24px;
   }
 }
 

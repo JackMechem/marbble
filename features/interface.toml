@@ -140,6 +140,14 @@ logic = "22"
 
 [[feature]]
 section = "Logic Pro basics: the interface"
+name = "Mixer window (⌘2) in place of the Tracks area, and back (⌘1)"
+status = "done"
+tier = "core"
+logic = "22"
+issue = 516
+
+[[feature]]
+section = "Logic Pro basics: the interface"
 name = "Editors pane: Piano Roll for instrument tracks, Audio Track Editor for audio tracks"
 status = "done"
 tier = "core"
@@ -180,7 +188,7 @@ tier = "core"
 beta = true
 logic = "45"
 issue = 327
-note = "The Window menu brings any open window to the front or minimises it, and the Mixer, Editors, Event List, Step Sequencer and effect panels open in windows of their own; no second main window."
+note = "The Window menu brings any open window to the front or minimises it, ⌘1 and ⌘2 switch the main window between the Tracks and Mixer views, and the Mixer, Editors, Event List, Step Sequencer and effect panels open in windows of their own; no second main window."
 
 [[feature]]
 section = "Windows, zoom and catch"

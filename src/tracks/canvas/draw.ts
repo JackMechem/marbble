@@ -7,7 +7,6 @@ import { getState, liveTakes } from "../../state/store";
 import { offTracks } from "../trackOff";
 import { drawWave } from "../regions/waveform";
 import { PEAK_BUCKET, toBbt } from "../../lib/time";
-import { snapToTracksGrid } from "../gridSnap";
 import { forEachGridLine, tempoMap } from "../../lib/tempo";
 import { mix, theme } from "../../theme/canvasTheme";
 import { type Layout } from "../trackLayout";
@@ -121,7 +120,7 @@ export function drawTracks({ canvasRef, live, dragRef, swipeRef, marqueeRef, hov
     if (drag && !still && drag.ids.includes(r.id)) {
       if (drag.kind === "move") {
         const from = getGrabbedStart();
-        start = movedStart(tempoMap(project), r.start, from, Math.max(0, snapToTracksGrid(project, from + drag.dx)), getState().snapMode !== "off");
+        start = movedStart(tempoMap(project), r.start, from, drag.to ?? from, !!drag.musical);
         if (loop != null) loop += start - r.start;
         lane = newLaneOf.get(i);
         if (lane === undefined) ti = dragTarget(layout, i, drag.dTrack, project.tracks);
@@ -238,6 +237,7 @@ export function drawTracks({ canvasRef, live, dragRef, swipeRef, marqueeRef, hov
   // Where dragged audio files will land: the target lane (or a ghost lane for a new track),
   // a line at the snapped position, and a bar/beat tag.
   drawDropTarget(ctx, project, layout, vp, pps, W);
+  if (drag?.guide !== undefined) drawGuide(ctx, drag.guide * pps - vp.left, H);
   drawToolOverlay(ctx, { project, layout, pps, vp, W, H });
   if (marqueeRef.current) drawMarquee(ctx, marqueeRef.current, vp);
   // A hoisted function so `place` above can use it: the other dragged regions follow the
@@ -277,6 +277,12 @@ function drawStackLanes(ctx: CanvasRenderingContext2D, project: Project, layout:
     });
     ctx.restore();
   });
+}
+
+/** The guide line down the area where a moved region's edge snapped to another's (edgeSnap.ts). */
+function drawGuide(ctx: CanvasRenderingContext2D, x: number, H: number) {
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#4c9eff";
+  ctx.fillRect(Math.round(x), 0, 1, H);
 }
 
 /** Where Drum Replacement will put its notes: a line down the audio track's lane at each hit

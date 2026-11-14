@@ -8,6 +8,7 @@ import * as ed from "./state";
 import { laneMenu, regionMenu, renameRegion } from "../../tracks/contextMenus";
 import { getState, setState } from "../../state/store";
 import { PEAK_BUCKET, samplesPerBeat, snapPos } from "../../lib/time";
+import { snapModeWith, type SnapKeys } from "../../lib/snapKeys";
 import { waveCache } from "../../tracks/regions/waveform";
 import { regionCrossfades, setCrossfadeDrag } from "../../tracks/regions/regionDraw";
 import { draggedFadeOut } from "../../tracks/regions/fades";
@@ -27,13 +28,15 @@ export type PointerRefs = {
 };
 
 export function editorPointer({ scrollRef, dragRef, hoverRef, live, requestDraw }: PointerRefs) {
-  const snapEd = (f: number, free = false) => {
+  /** `f` snapped, with the keys of the event that moved it held: Alt or Ctrl+Shift for no
+   *  snapping, Ctrl for ticks (lib/snapKeys.ts). */
+  const snapEd = (f: number, keys?: SnapKeys & { altKey: boolean }) => {
     const { project, pps } = live.current;
     if (!project) return Math.max(0, Math.round(f));
-    const mode = getState().snapMode;
+    const mode = keys?.altKey ? "off" : snapModeWith(getState().snapMode, keys);
     const pxPerBeat = samplesPerBeat(project) * pps;
     // Smart snap stops at sixteenths; zoomed in further, the waveform is edited freely.
-    if (free || mode === "off" || (mode === "smart" && pxPerBeat / 4 > 80)) return Math.max(0, Math.round(f));
+    if (mode === "off" || (mode === "smart" && pxPerBeat / 4 > 80)) return Math.max(0, Math.round(f));
     return Math.max(0, Math.round(snapPos(project, f, mode, pxPerBeat)));
   };
 
@@ -104,9 +107,9 @@ export function editorPointer({ scrollRef, dragRef, hoverRef, live, requestDraw 
 
   /** Click or scrub the ruler to locate (Option for no snap). */
   const scrubRuler = (e: React.MouseEvent) => {
-    const locate = (cx: number, free: boolean) => act("locate", { pos: snapEd(frameAt(cx), free) });
-    locate(e.clientX, e.altKey);
-    dragWith((ev) => locate(ev.clientX, ev.altKey));
+    const locate = (ev: MouseEvent | React.MouseEvent) => act("locate", { pos: snapEd(frameAt(ev.clientX), ev) });
+    locate(e);
+    dragWith(locate);
   };
 
   const selectWholeRegion = (r: Region) => {
@@ -136,15 +139,15 @@ export function editorPointer({ scrollRef, dragRef, hoverRef, live, requestDraw 
       moved = true;
       const d = dragRef.current!;
       const dx = (ev.clientX - startX) / pps;
-      if (kind === "move") d.start = snapEd(r.start + dx, ev.altKey);
+      if (kind === "move") d.start = snapEd(r.start + dx, ev);
       else if (kind === "fadeIn" || kind === "fadeOut") {
         d.fade = crossfading ? draggedFadeOut(fadeFrom, dx, true, r.length - otherFade) : Math.round(Math.max(0, Math.min(r.length - otherFade, fadeFrom + (kind === "fadeIn" ? dx : -dx))));
         if (crossfading) setCrossfadeDrag({ region: r.id, length: d.fade });
       } else if (kind === "right") {
         d.start = r.start;
-        d.length = Math.min(maxLength, Math.max(PEAK_BUCKET, snapEd(r.start + r.length + dx, ev.altKey) - r.start));
+        d.length = Math.min(maxLength, Math.max(PEAK_BUCKET, snapEd(r.start + r.length + dx, ev) - r.start));
       } else {
-        const ns = Math.min(r.start + r.length - PEAK_BUCKET, Math.max(0, minStart, snapEd(r.start + dx, ev.altKey)));
+        const ns = Math.min(r.start + r.length - PEAK_BUCKET, Math.max(0, minStart, snapEd(r.start + dx, ev)));
         d.start = ns;
         d.length = r.length - (ns - r.start);
       }
@@ -157,7 +160,7 @@ export function editorPointer({ scrollRef, dragRef, hoverRef, live, requestDraw 
       requestDraw();
       if (moved) dropRegionDrag(r, d);
     };
-    dragWith(move, up);
+    dragWith(move, up, { modifiers: true });
   };
 
   /** Sends what a region drag did: the move (with its automation, if asked), the fade or the trim. */
@@ -176,11 +179,11 @@ export function editorPointer({ scrollRef, dragRef, hoverRef, live, requestDraw 
     const { track } = live.current;
     const cur = ed.rangeSel();
     const at = frameAt(e.clientX);
-    let anchor = snapEd(at, e.altKey);
+    let anchor = snapEd(at, e);
     const extending = e.shiftKey && !!cur;
     if (extending) {
       anchor = Math.abs(at - cur.start) > Math.abs(at - cur.end) ? cur.start : cur.end;
-      const s = snapEd(at, e.altKey);
+      const s = snapEd(at, e);
       ed.setEd({ sel: { track: track.id, start: Math.min(anchor, s), end: Math.max(anchor, s) } });
     }
     const startX = e.clientX;
@@ -189,7 +192,7 @@ export function editorPointer({ scrollRef, dragRef, hoverRef, live, requestDraw 
       if (!moved && !pastDragThreshold(ev.clientX - startX)) return;
       moved = true;
       autoScroll(ev.clientX);
-      const s = snapEd(frameAt(ev.clientX), ev.altKey);
+      const s = snapEd(frameAt(ev.clientX), ev);
       ed.setEd({ sel: s === anchor ? null : { track: track.id, start: Math.min(anchor, s), end: Math.max(anchor, s) } });
     };
     const up = () => {

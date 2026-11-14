@@ -1,11 +1,12 @@
 // Track heights and positions: `trackLayout` turns heights, stacks, take rows and automation lanes into
 // each track's top, `indexAt` finds a track from y, and heights are kept per project in localStorage
-// (and so are the Mixer's strip widths, their horizontal twin).
+// (and so are the Mixer's strip widths, their horizontal twin, and whether the Tracks or Mixer view shows).
 import type { Id, Track } from "../engine/project";
 import { getState, setState, useStore } from "../state/store";
 import { takeRowsHeight } from "./takes/takes";
 import { OUTPUT_ID, subLaneHeight } from "./automation/autoLanes";
 import { parseMixerView } from "../mixer/mixerLayout";
+import { parseMainView } from "../app/mainView";
 import { defaultGlobalTracks, parseGlobalView, TEMPO_DEFAULT_H, type GlobalTrackId } from "./globalTracks/globalTracksModel";
 
 /** Smallest track height: one line of text. Headers lay out in tiers by height (see
@@ -204,6 +205,28 @@ export function saveMixerView(path: string) {
     localStorage.setItem(mixerKey(path), JSON.stringify(getState().mixerView));
   } catch {
     // Not critical: the strips fall back to Normal next time.
+  }
+}
+
+// ---- persistence: the main window's view (Tracks or Mixer, app/mainView.ts), per project folder too
+
+const mainViewKey = (path: string) => `marbble.mainView:${path}`;
+
+export function loadMainView(path: string) {
+  let text: string | null = null;
+  try {
+    text = localStorage.getItem(mainViewKey(path));
+  } catch {
+    // The Tracks view is fine.
+  }
+  setState({ mainView: parseMainView(text) });
+}
+
+export function saveMainView(path: string) {
+  try {
+    localStorage.setItem(mainViewKey(path), getState().mainView);
+  } catch {
+    // Not critical: the project opens in the Tracks view next time.
   }
 }
 
