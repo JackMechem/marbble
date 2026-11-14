@@ -43,6 +43,14 @@ export function registerScroller(f: (left: number, top?: number) => void) {
   scrollTo = f;
 }
 
+/** Zooms the Tracks area to `pxPerBeat` with the time at `x` px into the view kept in place (or
+ *  sample `at` brought there), the zoom and the scroll landing together. Set by the arrange view;
+ *  zoomCommands.ts chooses `x`. */
+export let zoomTo: (pxPerBeat: number, x: number, at?: number) => void = () => {};
+export function registerZoomer(f: typeof zoomTo) {
+  zoomTo = f;
+}
+
 /** Cycle strip, bar numbers, Autopunch strip and marker lane (see Ruler.tsx). */
 export const RULER_H = 52;
 

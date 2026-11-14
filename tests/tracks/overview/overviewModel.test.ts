@@ -3,7 +3,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  anchoredLeft,
   centreOn,
   dragScroll,
   hitBox,
@@ -140,12 +139,6 @@ test("edge zoom keeps the zoom limits and moves the dragged edge to match", () =
   const outMax = zoomFromEdge("left", 100_000_000, 0, 800, spb);
   assert.equal(outMax.pxPerBeat, ZOOM_MIN);
   assert.equal(outMax.start, 100_000_000 - (800 / ZOOM_MIN) * spb);
-});
-
-test("a wheel zoom keeps the time under the pointer in place", () => {
-  // Sample 10 000 at 150 px from the left, at 0.05 px/sample → left 350.
-  close(anchoredLeft(10_000, 150, 0.05), 350);
-  assert.equal(anchoredLeft(100, 150, 0.05), 0);
 });
 
 test("presses grab an edge, the box, or the strip outside it", () => {
