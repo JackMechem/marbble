@@ -12,6 +12,7 @@ import { useStore } from "../../state/store";
 import { BounceDialog, BounceInPlaceDialog } from "../../project/bounce/BounceDialogs";
 import { NewTrackDialog } from "../../tracks/NewTrackDialog";
 import { GroupSheet } from "../../tracks/GroupSheet";
+import { GroupsSheet } from "../../tracks/GroupsSheet";
 import { SettingsDialog } from "../../settings/Settings";
 import { MenuHost } from "../../ui/Menu";
 import { NameSheetHost } from "../../ui/NameSheet";
@@ -54,6 +55,7 @@ export function DetachedWindow() {
       {dialog === "bounce" && <BounceDialog />}
       {dialog === "bounce-in-place" && <BounceInPlaceDialog />}
       {dialog === "project-settings" && <ProjectSettingsSheet />}
+      {dialog === "groups" && <GroupsSheet />}
       {groupSheet !== null && <GroupSheet />}
       <MenuHost />
       <NameSheetHost />

@@ -11,7 +11,7 @@ pub fn set_automation_lane(state: State<AppState>, track: Id, param: AutoParam, 
 
 #[tauri::command]
 pub fn set_auto_mode(state: State<AppState>, track: Id, mode: AutoMode) -> Snapshot {
-    edit(&state, "Automation Mode", None, false, |s| s.set_auto_mode(track, mode))
+    edit(&state, "Automation Mode", None, false, |s| s.set_auto_mode_linked(track, mode))
 }
 
 /// Deletes one lane, or all of the track's automation without `param`.

@@ -232,12 +232,12 @@ name = "Groups"
 status = "partial"
 tier = "pro"
 logic = "598–603"
-note = "Volume, pan, mute, solo, record, selection and editing links, plus an on/off clutch; missing are several groups per strip, a Groups window, automation, send and colour links, and copy/paste of group settings."
+note = "Volume, pan, mute, solo, record, selection and editing links, per-group on/off and the Group Clutch, a Group slot on strips and in the inspector, a Groups window, and colour, input monitoring, automation mode and hide links; missing are several groups per strip, group automation, send links, and copy/paste of group settings."
 
 [[feature]]
 section = "Mixing: professional"
 name = "Enable or disable all groups (⇧G)"
-status = "missing"
+status = "done"
 tier = "pro"
 logic = "602"
 

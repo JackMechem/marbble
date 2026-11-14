@@ -339,6 +339,18 @@ pub struct Group {
     pub select: bool,
     /// Selecting a region selects the regions at the same place on the other members.
     pub editing: bool,
+    /// Changing one member's track colour changes the others'.
+    #[serde(default)]
+    pub track_color: bool,
+    /// Input monitoring switches together (on the audio tracks).
+    #[serde(default)]
+    pub monitor: bool,
+    /// Choosing one member's automation mode sets the others'.
+    #[serde(default)]
+    pub auto_mode: bool,
+    /// Hiding or showing one member hides or shows the others.
+    #[serde(default)]
+    pub hide: bool,
 }
 
 /// A VCA fader (Logic's VCA strip). It passes no audio: its level offsets the faders of the

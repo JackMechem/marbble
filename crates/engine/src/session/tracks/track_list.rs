@@ -326,6 +326,8 @@ impl Session {
     /// Hides tracks (or shows them again). A stack takes its subtracks with it. Hidden tracks
     /// keep playing, as in Logic; only the views leave them out.
     pub fn set_tracks_hidden(&mut self, ids: &[Id], hidden: bool) {
+        // Groups that link hiding take their other members along.
+        let ids = &self.with_group_peers(ids, |g| g.hide);
         let mut all = ids.to_vec();
         for &id in ids {
             all.extend(self.project.descendants(id));

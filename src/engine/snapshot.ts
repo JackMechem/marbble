@@ -26,6 +26,8 @@ export interface AudioStatus {
 export interface Snapshot {
   project: Project;
   selected: Id | null;
+  /** The group clutch (⇧G) is engaged: no group links anything. */
+  groups_clutched: boolean;
   path: string;
   saved: boolean;
   dirty: boolean;

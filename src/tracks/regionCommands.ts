@@ -7,7 +7,7 @@ import { type Region } from "../engine/regions";
 import { type Snapshot } from "../engine/snapshot";
 import { act, actMade, call } from "../engine/commands";
 import { isLooped, regionEnd } from "./regions/loops";
-import { linkedRegionIds, toggleRegion } from "./groupLinks";
+import { activeGroups, linkedRegionIds, toggleRegion } from "./groupLinks";
 import { importMidiFiles } from "../project/midiFiles";
 import { currentTick, getState, setState, showToast } from "../state/store";
 import { tempoMap } from "../lib/tempo";
@@ -34,8 +34,7 @@ export const selectedRegions = () => getState().selectedRegions;
 /** A region plus, when its track's group links editing, the regions at the same place on the
  *  group's other tracks. */
 export function linkedRegions(id: Id): Id[] {
-  const p = project();
-  return p ? linkedRegionIds(p.tracks, p.groups, id) : [id];
+  return linkedRegionIds(tracks(), activeGroups(getState().snap), id);
 }
 
 /** Shift-click on a region: adds it and its linked regions, or takes them all out. */

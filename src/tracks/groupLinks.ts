@@ -7,9 +7,14 @@ import type { Region } from "../engine/regions";
 import { regionEnd } from "./regions/loops.ts";
 
 /** What a group can link, as in its settings (Group's boolean fields). */
-export type GroupLink = "volume" | "pan" | "mute" | "solo" | "record" | "select" | "editing";
+export type GroupLink = "volume" | "pan" | "mute" | "solo" | "record" | "select" | "editing" | "track_color" | "monitor" | "auto_mode" | "hide";
 
 type Members = Pick<Track, "id" | "group">;
+
+/** The groups that link anything now: none while the group clutch (⇧G) is engaged. */
+export function activeGroups(snap: { project: { groups: Group[] }; groups_clutched?: boolean } | null | undefined): Group[] {
+  return snap && !snap.groups_clutched ? snap.project.groups : [];
+}
 
 /** The group `track` is in, when it is on and shares `link`. */
 export function linkingGroup(groups: readonly Group[], track: Members | undefined, link: GroupLink): Group | undefined {

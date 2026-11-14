@@ -14,7 +14,8 @@ impl Session {
     pub fn create_group(&mut self, ids: &[Id]) -> Id {
         let id = self.project.alloc_id();
         let n = (1..).find(|n| !self.project.groups.iter().any(|g| g.name == format!("Group {n}"))).unwrap();
-        let colors = ["#e0a030", "#d9534f", "#5cb85c", "#5bc0de", "#b07cd8", "#e0709a"];
+        // From the track colour palette (src/tracks/trackColors.ts), so Group Settings shows it.
+        let colors = ["#f2a63b", "#e5483a", "#4fae4c", "#37a6c9", "#8a54d6", "#d24c9d"];
         self.project.groups.push(Group {
             id,
             name: format!("Group {n}"),
@@ -27,6 +28,10 @@ impl Session {
             record: true,
             select: true,
             editing: true,
+            track_color: false,
+            monitor: false,
+            auto_mode: false,
+            hide: false,
         });
         self.set_track_group(ids, Some(id));
         id
@@ -62,13 +67,32 @@ impl Session {
         self.project.groups.retain(|g| used.contains(&g.id));
     }
 
+    /// Logic's group clutch (⇧G): with it engaged no group links anything, each keeping its own
+    /// on/off for when it's released. Not an edit, and not saved.
+    pub fn set_groups_clutched(&mut self, on: bool) {
+        self.groups_clutched = on;
+    }
+
     /// The other tracks a change to `id` reaches through its group, if `link` is shared.
     pub(crate) fn group_peers(&self, id: Id, link: impl Fn(&Group) -> bool) -> Vec<Id> {
         let Some(g) = self.project.track(id).and_then(|t| t.group).and_then(|g| self.project.group(g)) else { return Vec::new() };
-        if !g.enabled || !link(g) {
+        if self.groups_clutched || !g.enabled || !link(g) {
             return Vec::new();
         }
         self.project.tracks.iter().filter(|t| t.group == Some(g.id) && t.id != id).map(|t| t.id).collect()
+    }
+
+    /// `ids` and the members `link` reaches from them, each once.
+    pub(crate) fn with_group_peers(&self, ids: &[Id], link: impl Fn(&Group) -> bool) -> Vec<Id> {
+        let mut out = ids.to_vec();
+        for &id in ids {
+            for p in self.group_peers(id, &link) {
+                if !out.contains(&p) {
+                    out.push(p);
+                }
+            }
+        }
+        out
     }
 
     /// `update_track` as the user means it: groups pass shared changes on to their other
@@ -102,6 +126,12 @@ impl Session {
         }
         if let Some(v) = patch.armed {
             add(self.group_peers(id, |g| g.record), &|p, pt| p.armed = Some(v && !pt.kind.is_stack()));
+        }
+        if let Some(v) = patch.monitor {
+            add(self.group_peers(id, |g| g.monitor), &|p, pt| p.monitor = (pt.kind == TrackKind::Audio).then_some(v));
+        }
+        if let Some(v) = &patch.color {
+            add(self.group_peers(id, |g| g.track_color), &|p, _| p.color = Some(v.clone()));
         }
         // The values before the move, for automation writing.
         let before = |p: &Project, tid: Id, patch: &TrackPatch| {

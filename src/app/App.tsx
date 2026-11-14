@@ -13,6 +13,7 @@ import { act, call } from "../engine/commands";
 import { ControlBar } from "./controlBar/ControlBar";
 import { NewTrackDialog } from "../tracks/NewTrackDialog";
 import { GroupSheet } from "../tracks/GroupSheet";
+import { GroupsSheet } from "../tracks/GroupsSheet";
 import { SettingsDialog } from "../settings/Settings";
 import { BounceDialog, BounceInPlaceDialog } from "../project/bounce/BounceDialogs";
 import { ProjectChooser } from "../project/ProjectChooser";
@@ -220,6 +221,7 @@ export default function App() {
       {s.dialog === "project-settings" && <ProjectSettingsSheet />}
       {s.dialog === "recovery" && <RecoverySheet />}
       {s.dialog === "alternatives" && <AlternativesSheet />}
+      {s.dialog === "groups" && <GroupsSheet />}
       {groupSheet !== null && <GroupSheet />}
       {showMarkerList && <MarkerList />}
       {showControllerAssignments && <ControllerAssignmentsSheet />}

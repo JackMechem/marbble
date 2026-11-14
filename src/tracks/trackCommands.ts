@@ -8,7 +8,7 @@ import { currentLayout, stepVisible } from "./trackLayout";
 import { openBounceInPlace } from "../project/bounce/bounce";
 import { getState, setState, showToast } from "../state/store";
 import { onTracks } from "./regions/regionSelect";
-import { toggleTrack, withSelectionPeers } from "./groupLinks";
+import { activeGroups, toggleTrack, withSelectionPeers } from "./groupLinks";
 
 const project = () => getState().snap?.project;
 const tracks = (): Track[] => project()?.tracks ?? [];
@@ -27,8 +27,7 @@ export function selectedTracks(): Id[] {
 
 /** Adds the members of groups that link selection. */
 function withGroups(ids: Id[]): Id[] {
-  const p = project();
-  return p ? withSelectionPeers(p.tracks, p.groups, ids) : ids;
+  return withSelectionPeers(tracks(), activeGroups(getState().snap), ids);
 }
 
 /** A click on a track header: plain selects, ⌘/Ctrl toggles, Shift extends. */
@@ -44,7 +43,7 @@ export function clickTrack(id: Id, e: { shiftKey: boolean; ctrlKey: boolean; met
     sel = all.slice(a, b + 1).filter((x, k) => heights[a + k] > 0 || x === id || x === cur);
   } else if (e.ctrlKey || e.metaKey) {
     // Taking a grouped track out takes out the members its group selects with it.
-    sel = toggleTrack(tracks(), project()?.groups ?? [], selectedTracks(), id);
+    sel = toggleTrack(tracks(), activeGroups(getState().snap), selectedTracks(), id);
     if (!sel.length) sel = [id];
   } else {
     sel = selectedTracks().includes(id) && selectedTracks().length > 1 ? selectedTracks() : [id];
@@ -140,6 +139,13 @@ export async function groupTracks(ids = selectedTracks()) {
   if (!ids.length) return;
   const made = await actMade("create_group", { ids });
   if (made?.[0] !== undefined) setState({ groupSheet: made[0] });
+}
+
+/** ⇧G, Logic's group clutch: suspends every group, or brings them back. */
+export async function toggleGroupClutch() {
+  const on = !getState().snap?.groups_clutched;
+  const snap = await act("set_groups_clutched", { on });
+  if (snap?.project.groups.length) showToast(on ? "Groups suspended (Group Clutch)" : "Groups back on", 1500);
 }
 
 export const setGroup = (ids: Id[], group: Id | null) => act("set_track_group", { ids, group });

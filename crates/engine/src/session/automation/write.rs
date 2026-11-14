@@ -574,6 +574,14 @@ impl Session {
         }
     }
 
+    /// [`Session::set_auto_mode`] as the user means it: groups that link the automation mode set
+    /// it on their other members too.
+    pub fn set_auto_mode_linked(&mut self, track: Id, mode: AutoMode) {
+        for id in self.with_group_peers(&[track], |g| g.auto_mode) {
+            self.set_auto_mode(id, mode);
+        }
+    }
+
     pub fn set_auto_mode(&mut self, track: Id, mode: AutoMode) {
         if self.auto_mode_of(track).is_none() {
             return;

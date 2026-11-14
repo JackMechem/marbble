@@ -3,9 +3,26 @@ import { useEffect, useState } from "react";
 import type { Group } from "../engine/project";
 import { act } from "../engine/commands";
 import { updateGroup } from "./trackCommands";
+import type { GroupLink } from "./groupLinks";
 import { TRACK_COLORS } from "./trackColors";
 import { setState, useStore } from "../state/store";
 import { Sheet } from "../ui/Sheet";
+
+/** What a group can link: its field, the name in Group Settings, the Groups window's column
+ *  heading, and what it does. */
+export const GROUP_LINKS: [GroupLink, string, string, string][] = [
+  ["volume", "Volume", "Vol", "Moving one fader moves the others by the same amount"],
+  ["pan", "Pan", "Pan", "Pan moves together, by the same amount"],
+  ["mute", "Mute", "M", "Muting one mutes them all"],
+  ["solo", "Solo", "S", "Soloing one solos them all"],
+  ["record", "Record Enable", "R", "Record-enabling one enables them all"],
+  ["select", "Track Selection", "Sel", "Clicking one track selects them all"],
+  ["editing", "Editing (Selection)", "Edit", "Selecting a region selects the regions at the same place on the other tracks"],
+  ["track_color", "Color", "Col", "Changing one track's colour changes them all"],
+  ["monitor", "Input Monitoring", "Mon", "Input monitoring switches together on the audio tracks"],
+  ["auto_mode", "Automation Mode", "Auto", "Choosing one track's automation mode sets them all"],
+  ["hide", "Hide", "Hide", "Hiding or showing one track hides or shows them all"],
+];
 
 /** Logic's Group Settings: name, colour and what the group's tracks share. */
 export function GroupSheet() {
@@ -17,7 +34,8 @@ export function GroupSheet() {
   const members = (tracks ?? []).filter((t) => t.group === id);
   const close = () => setState({ groupSheet: null });
   const [name, setName] = useState(group?.name ?? "");
-  useEffect(() => setName(group?.name ?? ""), [id]);
+  // Follows a rename made elsewhere (undo) while the sheet is open.
+  useEffect(() => setName(group?.name ?? ""), [id, group?.name]);
   if (!group) return null;
   const set = (patch: Partial<Group>) => updateGroup({ ...group, ...patch });
   const commitName = () => name.trim() && name !== group.name && set({ name: name.trim() });
@@ -27,15 +45,6 @@ export function GroupSheet() {
     commitName();
     close();
   };
-  const links: [keyof Group, string, string][] = [
-    ["volume", "Volume", "Moving one fader moves the others by the same amount"],
-    ["pan", "Pan", "Pan moves together, by the same amount"],
-    ["mute", "Mute", ""],
-    ["solo", "Solo", ""],
-    ["record", "Record Enable", ""],
-    ["select", "Track Selection", "Clicking one track selects them all"],
-    ["editing", "Editing (Selection)", "Selecting a region selects the regions at the same place on the other tracks"],
-  ];
   return (
     <Sheet title="Group Settings" onClose={done} width={460}>
       <div className="group-sheet">
@@ -59,11 +68,11 @@ export function GroupSheet() {
         </div>
         <div className="pref-title">Shared by the group's tracks</div>
         <div className="group-links">
-          {links.map(([k, label, hint]) => (
+          {GROUP_LINKS.map(([k, label, , hint]) => (
             <label key={k} className="check" title={hint}>
-              <input type="checkbox" checked={group[k] as boolean} onChange={(e) => set({ [k]: e.target.checked })} />
+              <input type="checkbox" checked={group[k]} onChange={(e) => set({ [k]: e.target.checked })} />
               {label}
-              {hint && <span className="dim"> — {hint}</span>}
+              <span className="dim"> — {hint}</span>
             </label>
           ))}
         </div>
@@ -76,6 +85,15 @@ export function GroupSheet() {
           Delete Group
         </button>
         <div className="sheet-buttons">
+          <button
+            className="push"
+            onClick={() => {
+              commitName();
+              setState({ groupSheet: null, dialog: "groups" });
+            }}
+          >
+            All Groups…
+          </button>
           <button className="push default" onClick={done}>
             Done
           </button>

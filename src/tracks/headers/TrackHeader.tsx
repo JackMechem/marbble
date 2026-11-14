@@ -59,11 +59,16 @@ interface Switch {
 
 function GroupBadge({ group, onClick }: { group: Group; onClick: () => void }) {
   const short = /(\d+)$/.exec(group.name)?.[1] ?? group.name.slice(0, 2);
+  // The group clutch (⇧G) suspends every group; each keeps its own switch.
+  const clutched = useStore((s) => !!s.snap?.groups_clutched);
+  const on = group.enabled && !clutched;
+  const key = keyHint("group-clutch");
+  const state = clutched ? ` (suspended by the Group Clutch${key ? `, ${key}` : ""})` : group.enabled ? "" : " (off)";
   return (
     <button
-      className={"th-group" + (group.enabled ? "" : " off")}
-      style={{ background: group.enabled ? group.color : undefined, borderColor: group.color }}
-      title={`${group.name}${group.enabled ? "" : " (off)"} — click for settings`}
+      className={"th-group" + (on ? "" : " off")}
+      style={{ background: on ? group.color : undefined, borderColor: group.color }}
+      title={`${group.name}${state} — click for settings`}
       {...onPress((e) => {
         e.stopPropagation();
         onClick();

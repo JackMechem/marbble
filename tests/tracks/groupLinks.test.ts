@@ -1,10 +1,10 @@
 // Unit tests for src/tracks/groupLinks.ts: which tracks a group's links reach.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { linkedPeers, linkedRegionIds, linkingGroup, toggleRegion, toggleTrack, touchWrites, withSelectionPeers } from "../../src/tracks/groupLinks.ts";
+import { activeGroups, linkedPeers, linkedRegionIds, linkingGroup, toggleRegion, toggleTrack, touchWrites, withSelectionPeers } from "../../src/tracks/groupLinks.ts";
 import type { AutoMode, Group } from "../../src/engine/project.ts";
 
-const group = (id: number, patch: Partial<Group> = {}): Group => ({ id, name: `Group ${id}`, color: "#fff", enabled: true, volume: true, pan: false, mute: true, solo: true, record: true, select: true, editing: true, ...patch });
+const group = (id: number, patch: Partial<Group> = {}): Group => ({ id, name: `Group ${id}`, color: "#fff", enabled: true, volume: true, pan: false, mute: true, solo: true, record: true, select: true, editing: true, track_color: false, monitor: false, auto_mode: false, hide: false, ...patch });
 const track = (id: number, g: number | null, auto_mode: AutoMode = "read") => ({ id, group: g, auto_mode });
 
 const tracks = [track(1, 10), track(2, 10, "touch"), track(3, null, "latch"), track(4, 11)];
@@ -51,4 +51,11 @@ test("a region links the regions overlapping it on the members, and Shift-clicks
   assert.deepEqual(toggleRegion([300], 100, linked), [300, 100, 200]);
   assert.deepEqual(toggleRegion([300, 100, 200], 100, linked), [300]);
   assert.deepEqual(toggleRegion([200], 100, linked), [200, 100], "no duplicates");
+});
+
+test("the group clutch leaves no group linking anything", () => {
+  const project = { groups: [group(10)] };
+  assert.equal(activeGroups({ project, groups_clutched: false }).length, 1);
+  assert.deepEqual(activeGroups({ project, groups_clutched: true }), []);
+  assert.deepEqual(activeGroups(null), []);
 });

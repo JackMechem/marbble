@@ -4,7 +4,7 @@ import { type AutoParam, type Track } from "../../engine/project";
 import { act } from "../../engine/commands";
 import { valueAt } from "./autoLanes";
 import { currentTick, getState, onTick } from "../../state/store";
-import { touchWrites } from "../groupLinks";
+import { activeGroups, touchWrites } from "../groupLinks";
 import { laneOf } from "./params";
 
 /**
@@ -33,8 +33,8 @@ export function useAutomation(track: Track | null, param: AutoParam, live: numbe
   // Only the writing modes care (Read just plays the lane over the control), on this track or a
   // group partner the control moves too.
   const reaches = () => {
-    const p = getState().snap?.project;
-    return writing || (!!track && !!p && touchWrites(p.tracks, p.groups, track.id, param));
+    const snap = getState().snap;
+    return writing || (!!track && !!snap && touchWrites(snap.project.tracks, activeGroups(snap), track.id, param));
   };
   const touch = (on: boolean) => {
     setTouching(on);

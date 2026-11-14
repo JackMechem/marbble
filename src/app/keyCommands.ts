@@ -95,6 +95,7 @@ export const KEY_ACTIONS: Record<string, () => void> = {
     if (t) api.updateTrack(t.id, { armed: !t.armed });
   },
   "track-on-off": () => handleMenu("track-on-off"),
+  "group-clutch": () => handleMenu("group-clutch"),
   // With a comp section selected in an open take folder, Up and Down move it between takes.
   "select-previous": () => moveSelectedSection(-1) || moveSelection(-1),
   "select-next": () => moveSelectedSection(1) || moveSelection(1),

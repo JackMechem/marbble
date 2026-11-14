@@ -58,6 +58,8 @@ pub use sampler::*;
 pub struct Snapshot {
     project: Project,
     selected: Option<Id>,
+    /// The group clutch is engaged: no group links anything.
+    groups_clutched: bool,
     path: String,
     saved: bool,
     dirty: bool,
@@ -91,6 +93,7 @@ pub fn snapshot(s: &Session) -> Snapshot {
     Snapshot {
         project: s.project.for_ui(),
         selected: s.selected,
+        groups_clutched: s.groups_clutched,
         path: s.project_path().to_string_lossy().to_string(),
         saved: s.saved,
         dirty: s.dirty,
