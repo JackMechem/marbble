@@ -1,6 +1,7 @@
 //! Exercises the tempo map and signature changes: the click rendered through the engine
 //! across tempo and signature changes, plug-in transport positions, bar numbering, Move MIDI
-//! Regions with Tempo (an inactive track alternative's regions too), quantize, a MIDI file round trip of a tempo map, undo, and that a
+//! Regions with Tempo (an inactive track alternative's regions too), quantize, a MIDI file round trip of a tempo map and of a
+//! pickup, undo, and that a
 //! project without changes keeps the old timing exactly. Runs against a session on the silent
 //! ALSA null output. usage: tempo_check <scratch dir>
 use std::sync::Arc;
@@ -21,7 +22,7 @@ fn ev(pos: i64, bpm: f64, ramp: bool) -> TempoEvent {
     TempoEvent { pos, bpm, ramp }
 }
 
-fn sig(bar: u32, num: u32, den: u32) -> SigEvent {
+fn sig(bar: i64, num: u32, den: u32) -> SigEvent {
     SigEvent { bar, num, den }
 }
 
@@ -280,5 +281,47 @@ fn main() {
     check(
         &format!("into a project at another tempo, notes keep the file's timing ({} vs {late})", start + notes[0].start),
         (start + notes[0].start - late).abs() <= 2 && fresh.project.tempo == 100.0,
+    );
+
+    // ---- a pickup goes out as a short first bar and comes back as the pickup ---------------
+    fresh.new_project();
+    fresh.dir = scratch.join("TempoCheckPickup.marbble");
+    let p = &mut *fresh;
+    p.set_bar_numbering(1.5, 1);
+    let inst = p.add_track(TrackKind::Instrument, InputSel::None, None, None).unwrap();
+    let map = p.tempo_map();
+    let bar2 = map.bar_start(2).round() as i64;
+    let rid = p.create_midi_region(inst, 0, bar2).unwrap();
+    p.set_midi_content(vec![MidiContent {
+        region: rid,
+        notes: vec![
+            Note { start: 0, length: sr / 8, pitch: 60, velocity: 90, muted: false },
+            Note { start: map.bar_start(1).round() as i64, length: sr / 8, pitch: 64, velocity: 90, muted: false },
+        ],
+        cc: vec![],
+        start: None,
+        length: None,
+    }]);
+    let file = scratch.join("tempo_check_pickup.mid");
+    p.export_midi(&[rid], &file).unwrap();
+    let parsed = daw_engine::midi::smf::read(&std::fs::read(&file).unwrap()).unwrap();
+    check(&format!("the pickup is written as a 3/8 bar before 4/4 ({:?})", parsed.signatures), parsed.signatures == vec![(0, 3, 8), (1440, 4, 4)]);
+    p.new_project();
+    p.dir = scratch.join("TempoCheckPickupImport.marbble");
+    let made = p.import_midi(&file, None, 0, None).unwrap();
+    let fm = p.tempo_map();
+    let (start, notes) = midi_notes(p, made[0]);
+    check(
+        &format!("an imported file's short first bar becomes the pickup ({} quarters, signatures {:?})", fm.pickup(), fm.signatures()),
+        fm.pickup() == 1.5 && fm.signatures() == [sig(1, 4, 4)] && start == 0,
+    );
+    check("its downbeat note lands on bar 1", fm.bar_beat_at((start + notes[1].start) as f64) == Bbt { bar: 1, beat: 1, div: 1, tick: 1 });
+    p.checkpoint("Bar Numbering", None, false);
+    p.set_bar_numbering(0.0, 5);
+    let changed = p.tempo_map().bar_beat_at(0.0).bar;
+    p.undo();
+    check(
+        &format!("bar numbering is an undo step (bar {changed} at the start, then the pickup back)"),
+        changed == 5 && p.project.pickup == 1.5 && p.project.first_bar == 1,
     );
 }

@@ -93,7 +93,7 @@ test("4/4 → 7/8 → 3/4 numbers bars across the changes", () => {
   close(m.prevBar(11.5 * Q), 8 * Q);
   close(m.prevBeat(8 * Q), 7 * Q);
   close(m.nextBeat(11 * Q), 11.5 * Q);
-  close(m.barPosition(13.25 * Q), 3 + 1.75 / 3.5, 1e-9);
+  close(m.barNumberAt(13.25 * Q), 4 + 1.75 / 3.5, 1e-9);
   // Snapping counts from the bar line, and the next bar line wins when it is nearer.
   close(m.snapQ(11.3, 1), 11.5, 1e-9);
   close(m.snapQ(11.2, 1), 11, 1e-9);

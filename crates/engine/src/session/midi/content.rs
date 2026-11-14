@@ -35,6 +35,23 @@ fn file_tempo_map(file: &SmfFile, sr: f64) -> Option<TempoMap> {
     Some(TempoMap::new(sr, &events_from_quarters(sr, &changes), &[], 120.0, (4, 4)))
 }
 
+/// A file's pickup, in quarters: a first bar (its signature changing at its end) shorter than the
+/// bar after it. `sigs` are the file's signature changes as (quarter, numerator, denominator).
+fn file_pickup(sigs: &[(f64, u32, u32)]) -> Option<f64> {
+    let [(q0, n0, d0), (q1, n1, d1), ..] = *sigs else { return None };
+    let len = q1 - q0;
+    let one_bar = (len - n0 as f64 * 4.0 / d0 as f64).abs() < 1e-6;
+    (q0 == 0.0 && one_bar && len < n1 as f64 * 4.0 / d1 as f64 - 1e-6).then_some(len)
+}
+
+/// The signature a MIDI file gives a pickup `q` quarters long: whole beats of the finest
+/// denominator needed (to a 32nd), e.g. 1/4 for a quarter, 3/8 for a dotted quarter.
+fn pickup_signature(q: f64) -> (u32, u32) {
+    let beats = |den: u32| q * den as f64 / 4.0;
+    let den = [4, 8, 16, 32].into_iter().find(|&d| (beats(d) - beats(d).round()).abs() < 1e-6).unwrap_or(32);
+    ((beats(den).round() as u32).max(1), den)
+}
+
 /// Where an imported file's ticks land in the project, its tick 0 at `start`.
 struct FileTime {
     /// The project's tempo map, as it is once the file's timing has been adopted.
@@ -197,15 +214,25 @@ impl Session {
             ev.insert(0, TempoEvent { pos: 0, bpm: ev[0].bpm, ramp: false });
             self.set_tempo_map(ev, false);
         }
-        if let Some(&(_, num, den)) = file.signatures.first() {
-            self.set_signatures(vec![SigEvent { bar: 1, num, den }]);
-            // The file's bar 1 is the project bar at `start`.
+        if !file.signatures.is_empty() {
             let ppq = file.ppq.max(1) as f64;
-            let q: Vec<(f64, u32, u32)> = file.signatures.iter().map(|&(t, n, d)| (t as f64 / ppq, n, d)).collect();
-            let first = (self.tempo_map().bar_at(start as f64) - 1).max(0) as u32;
-            let sigs = sigs_from_quarters(&q, (4, 4)).into_iter().map(|s| SigEvent { bar: s.bar + first, ..s });
-            let mut all = vec![SigEvent { bar: 1, num, den }];
-            all.extend(sigs);
+            let mut q: Vec<(f64, u32, u32)> = file.signatures.iter().map(|&(t, n, d)| (t as f64 / ppq, n, d)).collect();
+            // At the timeline's start, a short first bar is the project's pickup.
+            let pickup = if start == 0 { file_pickup(&q) } else { None };
+            if let Some(p) = pickup {
+                q.remove(0);
+                q.iter_mut().for_each(|c| c.0 -= p);
+            }
+            let (_, num, den) = q[0];
+            let first = self.project.first_bar;
+            self.set_signatures(vec![SigEvent { bar: first, num, den }]);
+            if start == 0 {
+                self.set_bar_numbering(pickup.unwrap_or(0.0), first);
+            }
+            // The file's first full bar is the project bar at `start` (or after the pickup).
+            let at = self.tempo_map().bar_at(start as f64).max(first);
+            let mut all = vec![SigEvent { bar: first, num, den }];
+            all.extend(sigs_from_quarters(&q, (4, 4), at));
             self.set_signatures(all);
         }
     }
@@ -263,7 +290,12 @@ impl Session {
                 None => tempos.push(((q0 * ppq).round() as u64, e.bpm)),
             }
         }
-        let signatures = map.signatures().iter().map(|s| ((map.bar_start_q(s.bar as i64) * ppq).round() as u64, s.num, s.den)).collect();
+        // A pickup is a short bar of its own at the start.
+        let pickup = (map.pickup() > 0.0).then(|| {
+            let (num, den) = pickup_signature(map.pickup());
+            (0, num, den)
+        });
+        let signatures = pickup.into_iter().chain(map.signatures().iter().map(|s| ((map.bar_start_q(s.bar) * ppq).round() as u64, s.num, s.den))).collect();
         let file = SmfFile {
             ppq: smf::PPQ,
             tempo: Some(self.project.tempo),
@@ -274,5 +306,32 @@ impl Session {
         };
         std::fs::write(path, smf::write(&file)).with_context(|| format!("writing {}", path.display()))?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_short_first_bar_is_a_pickup() {
+        // 1/4, then 4/4: a quarter pickup.
+        assert_eq!(file_pickup(&[(0.0, 1, 4), (1.0, 4, 4)]), Some(1.0));
+        // 3/8 then 6/8, a dotted-quarter pickup.
+        assert_eq!(file_pickup(&[(0.0, 3, 8), (1.5, 6, 8), (7.5, 4, 4)]), Some(1.5));
+        // A whole bar of its own signature that isn't shorter than the next one's, a change
+        // off the first bar line, or a single signature: no pickup.
+        assert_eq!(file_pickup(&[(0.0, 4, 4), (4.0, 3, 4)]), None);
+        assert_eq!(file_pickup(&[(0.0, 1, 4), (2.0, 4, 4)]), None);
+        assert_eq!(file_pickup(&[(0.0, 4, 4)]), None);
+    }
+
+    #[test]
+    fn a_pickup_writes_as_whole_beats() {
+        assert_eq!(pickup_signature(1.0), (1, 4));
+        assert_eq!(pickup_signature(1.5), (3, 8));
+        assert_eq!(pickup_signature(3.0), (3, 4));
+        assert_eq!(pickup_signature(0.25), (1, 16));
+        assert_eq!(pickup_signature(1.0 / 3.0), (3, 32));
     }
 }

@@ -131,7 +131,7 @@ pub struct Project {
     #[serde(default)]
     pub tempo_map: Vec<TempoEvent>,
     /// The Signature track. Empty: `sig_num/sig_den` throughout. Otherwise the first change
-    /// is at bar 1 and `sig_num/sig_den` mirror it.
+    /// is at `first_bar` and `sig_num/sig_den` mirror it.
     #[serde(default)]
     pub signatures: Vec<SigEvent>,
     /// The Tracks area's drag mode (Logic's Drag pop-up): what edits do to the regions they meet.
@@ -152,6 +152,17 @@ pub struct Project {
     /// nearest zero crossing. See `session/regions/zero_crossings.rs`.
     #[serde(default)]
     pub snap_zero_crossings: bool,
+    /// Project Settings › Pickup: the length in quarter notes of a partial bar before the first
+    /// full bar (0: none). It starts at timeline 0. See `tempo::BarNumbering`.
+    #[serde(default)]
+    pub pickup: f64,
+    /// Project Settings › First Bar Number: the number of the first full bar.
+    #[serde(default = "default_first_bar")]
+    pub first_bar: i64,
+}
+
+fn default_first_bar() -> i64 {
+    1
 }
 
 /// How far the timeline reaches, in frames: no edit may put a region past it. Logic Pro's limit,
@@ -195,6 +206,8 @@ impl Project {
             alternative: String::new(),
             arrangement: Vec::new(),
             snap_zero_crossings: false,
+            pickup: 0.0,
+            first_bar: 1,
         }
     }
 
@@ -507,6 +520,11 @@ impl Project {
     /// positions elsewhere).
     pub fn samples_per_beat(&self) -> f64 {
         self.sample_rate as f64 * 60.0 / self.tempo * (4.0 / self.sig_den as f64)
+    }
+
+    /// How the bars are numbered: the pickup and the first bar's number.
+    pub fn bar_numbering(&self) -> BarNumbering {
+        BarNumbering { pickup: self.pickup, first_bar: self.first_bar }
     }
 
     /// Samples per bar at position 0.

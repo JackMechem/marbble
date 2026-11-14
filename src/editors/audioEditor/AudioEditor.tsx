@@ -121,7 +121,7 @@ export function AudioEditor({ track, region }: { track: Track; region: Region | 
       // First time open: fit the region (or the track's regions, or eight bars).
       const regs = focus ? [focus] : track.regions;
       if (regs.length) zoomTo(Math.min(...regs.map((r) => r.start)), Math.max(...regs.map((r) => r.start + r.length)));
-      else zoomTo(0, tempoMap(project).barStart(9));
+      else zoomTo(0, tempoMap(project).barStart(tempoMap(project).firstBar + 8));
       return;
     }
     if (pendingLeft.current !== null) {

@@ -110,7 +110,9 @@ export function BounceDialog() {
   const [range, setRange] = useState<RangeKind>(hasCycle && cycle.enabled ? "cycle" : "project");
   const map = tempoMap(project);
   const end = projectEnd(project);
-  const [custom, setCustom] = useState({ from: 1, to: Math.max(2, Math.ceil(map.barPosition(end) - 1e-6) + 1) });
+  // The first bar (the pickup, if there is one) to the bar line after the end.
+  const firstBar = map.barAt(0);
+  const [custom, setCustom] = useState({ from: firstBar, to: Math.max(firstBar + 1, Math.ceil(map.barNumberAt(end) - 1e-6)) });
   const [targets, setTargets] = useState<Id[]>([]);
   const { progress, busy, run } = useRender();
   const region = regionId !== null ? project.tracks.flatMap((t) => t.regions).find((r) => r.id === regionId) : undefined;
@@ -125,7 +127,7 @@ export function BounceDialog() {
     : range === "cycle"
       ? [cycle.start, cycle.end]
       : range === "custom"
-        ? [Math.round(map.barStart(custom.from)), Math.round(map.barStart(custom.to))]
+        ? [Math.round(map.barStartOnTimeline(custom.from)), Math.round(map.barStartOnTimeline(custom.to))]
         : [0, end];
   const empty = span[1] <= span[0];
   const set = (p: Partial<BouncePrefs>) => {
@@ -133,7 +135,7 @@ export function BounceDialog() {
     setPrefs(next);
     savePref(BOUNCE_PREFS, next);
   };
-  const barOf = (pos: number) => Math.round(map.barPosition(pos) * 100) / 100 + 1;
+  const barOf = (pos: number) => Math.round(map.barNumberAt(pos) * 100) / 100;
 
   const depth = depthFor(prefs.format, prefs.bit_depth);
 
@@ -197,9 +199,9 @@ export function BounceDialog() {
                 <>
                   <label>Bars:</label>
                   <div className="row-inline">
-                    <NumberField value={custom.from} min={1} max={9999} onChange={(v) => setCustom({ ...custom, from: Math.round(v) })} />
+                    <NumberField value={custom.from} min={firstBar} max={9999} onChange={(v) => setCustom({ ...custom, from: Math.round(v) })} />
                     <span className="dim">to</span>
-                    <NumberField value={custom.to} min={1} max={9999} onChange={(v) => setCustom({ ...custom, to: Math.round(v) })} />
+                    <NumberField value={custom.to} min={firstBar} max={9999} onChange={(v) => setCustom({ ...custom, to: Math.round(v) })} />
                   </div>
                 </>
               )}

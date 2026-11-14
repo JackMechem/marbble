@@ -10,7 +10,7 @@ import * as me from "../midiEdit";
 import { drawGrid, drawKeys, drawLane, drawLaneScale, drawNotes, drawRuler, drawRubber, KEY_W, PR_RULER_H, setupCanvas, velocityColor, xOf, type Grid, type PrView } from "./draw";
 import { getState, setState, showToast, type MidiSelection } from "../../state/store";
 import { lengthBbt, samplesPerBeat, toBbt } from "../../lib/time";
-import { barLines, musicalWarp, tempoMap, type Warp } from "../../lib/tempo";
+import { barLines, musicalWarp, plainBars, tempoMap, type Warp } from "../../lib/tempo";
 import { type CurveShape } from "./ccCurves";
 import { gridFloor, gridSpanAt, inMusicalTime, midiRegions, regionForTime, snapToGrid, timeBase, laneKind } from "./model";
 import type { Prefs } from "./prefs";
@@ -106,13 +106,14 @@ export function editorCore(refs: Refs) {
     const len = me.gridLength(tb, pr.grid);
     return { bar: me.barLength(tb), beat: samplesPerBeat(project), grid: len, map: tempoMap(project), gridQ: len / me.quarterLength(tb) };
   };
-  /** With tempo or signature changes, grid maths runs in musical time (see `musicalWarp`):
-   *  grid lengths above are at the project's starting tempo, and warped positions keep
-   *  their bar and beat. Null when one tempo and signature hold throughout. */
+  /** With tempo or signature changes (or a pickup), grid maths runs in musical time (see
+   *  `musicalWarp`): grid lengths above are at the project's starting tempo, and warped
+   *  positions keep their bar and beat. Null when one tempo and signature hold throughout and
+   *  bars start at 0. */
   const warp = (): Warp | null => {
     const p = live.current.project;
     const m = tempoMap(p);
-    return m.isConstant ? null : musicalWarp(m, me.quarterLength(timeBase(p)));
+    return plainBars(m) ? null : musicalWarp(m, me.quarterLength(timeBase(p)));
   };
   /** Runs `f` on the notes in musical time, so grid-based edits follow the tempo map. */
   const musical = (notes: PNote[], f: (n: PNote[]) => PNote[]): PNote[] => inMusicalTime(warp(), notes, f);
@@ -209,7 +210,7 @@ export function editorCore(refs: Refs) {
   const commit = (notes: PNote[], cc: PCc[], label: string, key?: string) => {
     preview.current = null;
     const m = tempoMap(live.current.project);
-    const { edits, selNotes, selCc } = me.toEdits(notes, cc, work.current.regions, m.isConstant ? grid().bar : barLines(m));
+    const { edits, selNotes, selCc } = me.toEdits(notes, cc, work.current.regions, plainBars(m) ? grid().bar : barLines(m));
     if (!edits.length) {
       setSelection(notes, cc);
       return;
@@ -249,10 +250,9 @@ export function editorCore(refs: Refs) {
   const commitWithRegion = async (notes: PNote[], t: number, label: string) => {
     if (!notes.some((n) => n.region === -1)) return commit(notes, work.current.cc, label);
     const m = tempoMap(live.current.project);
-    const bar = m.barAt(Math.max(0, t));
-    const start = Math.round(m.barStart(bar));
+    const [start, length] = m.barSpanAt(Math.max(0, t));
     const key = `new-region:${Date.now()}`;
-    const ids = await actMade("create_midi_region", { track: live.current.track.id, start, length: Math.round(m.barStart(bar + 1)) - start, key });
+    const ids = await actMade("create_midi_region", { track: live.current.track.id, start, length, key });
     if (!ids?.length) {
       // Nothing was made (a frozen track, say): drop the note drawn in advance.
       preview.current = null;

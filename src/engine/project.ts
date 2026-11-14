@@ -252,7 +252,8 @@ export interface Project {
   punch: { enabled: boolean; start: number; end: number };
   /** The Tempo track; empty means `tempo` throughout (see tempo.ts). */
   tempo_map: TempoEvent[];
-  /** The Signature track; empty means `sig_num/sig_den` throughout. */
+  /** The Signature track; empty means `sig_num/sig_den` throughout. Bars as numbered on the
+   *  ruler (from `first_bar`). */
   signatures: SigEvent[];
   /** The Tracks area's drag mode: "xfade" crossfades audio regions that edits overlap. */
   drag_mode?: DragMode;
@@ -265,6 +266,11 @@ export interface Project {
   arrangement: ArrangementMarker[];
   /** Edit › Snap Edits to Zero Crossings: audio splits and trims land on zero crossings. */
   snap_zero_crossings?: boolean;
+  /** Project Settings › Pickup: a partial bar of this many quarter notes before the first full
+   *  bar, from timeline 0 (0: none). See tempo.ts. */
+  pickup?: number;
+  /** Project Settings › First Bar Number: the number of the first full bar (1 by default). */
+  first_bar?: number;
 }
 
 /** A VCA fader: no audio, but its level offsets its strips' faders and its mute mutes them. */

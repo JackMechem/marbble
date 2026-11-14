@@ -8,7 +8,7 @@ fn ev(pos: i64, bpm: f64, ramp: bool) -> TempoEvent {
     TempoEvent { pos, bpm, ramp }
 }
 
-fn sig(bar: u32, num: u32, den: u32) -> SigEvent {
+fn sig(bar: i64, num: u32, den: u32) -> SigEvent {
     SigEvent { bar, num, den }
 }
 
@@ -146,7 +146,7 @@ fn signature_changes_number_bars() {
     assert!(close(m.next_beat(11.0 * q), 11.5 * q, 1e-6));
     assert!(close(m.prev_beat(11.5 * q), 11.0 * q, 1e-6));
     assert!(close(m.prev_beat(8.0 * q), 7.0 * q, 1e-6));
-    assert!(close(m.bar_position(13.25 * q), 3.0 + 1.75 / 3.5, 1e-9));
+    assert!(close(m.bar_number_at(13.25 * q), 4.0 + 1.75 / 3.5, 1e-9));
     // Snapping counts from the bar line: in 7/8 the quarter grid of bar 3 is 8, 9, 10
     // and 11, then bar 4 starts at 11.5.
     assert!(close(m.snap_q(11.3, 1.0), 11.5, 1e-9));
@@ -175,9 +175,9 @@ fn signatures_and_tempo_changes_together() {
 fn normalizing_sorts_dedupes_and_anchors() {
     let n = normalize_tempo(&[ev(500, 90.0, true), ev(100, 1000.0, false), ev(500, 80.0, true)], 110.0);
     assert_eq!(n, vec![ev(0, 110.0, false), ev(100, 990.0, false), ev(500, 80.0, false)]);
-    let s = normalize_sigs(&[sig(4, 5, 3), sig(0, 3, 4)], (4, 4));
+    let s = normalize_sigs(&[sig(4, 5, 3), sig(0, 3, 4)], (4, 4), 1);
     assert_eq!(s, vec![sig(1, 3, 4), sig(4, 5, 4)]);
-    assert_eq!(normalize_sigs(&[], (6, 8)), vec![sig(1, 6, 8)]);
+    assert_eq!(normalize_sigs(&[], (6, 8), 1), vec![sig(1, 6, 8)]);
 }
 
 #[test]
@@ -195,7 +195,7 @@ fn midi_file_changes_convert() {
     let ev = events_from_quarters(SR, &[(0.0, 120.0), (4.0, 60.0)]);
     assert_eq!(ev, vec![ev_(0, 120.0), ev_(96000, 60.0)]);
     // 4/4 for two bars, then 7/8 for one bar, then 3/4.
-    let s = sigs_from_quarters(&[(0.0, 4, 4), (8.0, 7, 8), (11.5, 3, 4)], (4, 4));
+    let s = sigs_from_quarters(&[(0.0, 4, 4), (8.0, 7, 8), (11.5, 3, 4)], (4, 4), 1);
     assert_eq!(s, vec![sig(1, 4, 4), sig(3, 7, 8), sig(4, 3, 4)]);
 }
 
@@ -210,4 +210,134 @@ fn remap_keeps_bars_and_beats() {
     // Bar 3 at 120 throughout is 4 s; with the tempo halved after bar 2 it is 6 s.
     assert!(close(a.remap(&b, 4.0 * SR), 6.0 * SR, 1e-6));
     assert!(close(a.remap(&b, 1.0 * SR), 1.0 * SR, 1e-6));
+}
+
+// ---- the pickup and the first bar's number ----------------------------------------------------
+
+fn numbered(tempo: &[TempoEvent], sigs: &[SigEvent], base: (u32, u32), pickup: f64, first_bar: i64) -> TempoMap {
+    TempoMap::numbered(SR, tempo, sigs, 120.0, base, BarNumbering { pickup, first_bar })
+}
+
+#[test]
+fn no_pickup_and_bar_1_change_nothing() {
+    let tempo = [ev(0, 120.0, false), ev(96000, 60.0, true), ev(300000, 150.0, false)];
+    let sigs = [sig(3, 7, 8), sig(5, 3, 4)];
+    let a = TempoMap::new(SR, &tempo, &sigs, 120.0, (4, 4));
+    let b = numbered(&tempo, &sigs, (4, 4), 0.0, 1);
+    assert_eq!(a, b);
+    assert_eq!(a.first_bar(), 1);
+    assert_eq!(a.pickup(), 0.0);
+}
+
+#[test]
+fn a_pickup_is_the_end_of_bar_0() {
+    // A quarter before bar 1 in 4/4 at 120 BPM (24000 samples a quarter).
+    let q = 24000.0;
+    let m = numbered(&[], &[], (4, 4), 1.0, 1);
+    assert_eq!(m.bar_beat_at(0.0), Bbt { bar: 0, beat: 4, div: 1, tick: 1 });
+    assert_eq!(m.bar_at(0.0), 0);
+    assert_eq!(m.bar_at(q), 1);
+    assert_eq!(m.bar_beat_at(q), Bbt { bar: 1, beat: 1, div: 1, tick: 1 });
+    assert_eq!(m.bar_beat_at(5.5 * q), Bbt { bar: 2, beat: 1, div: 3, tick: 1 });
+    // Bar 1's downbeat is where the pickup ends; bar 0's line is before the timeline.
+    assert!(close(m.bar_start(1), q, 1e-9));
+    assert!(close(m.bar_start(0), -3.0 * q, 1e-9));
+    assert!(close(m.bar_number_at(q), 1.0, 1e-9));
+    assert!(close(m.bar_number_at(0.0), 0.75, 1e-9));
+    // The ruler's bars: the pickup from 0, then whole bars.
+    let bars: Vec<_> = m.bars(0.0, 9.5 * q).map(|b| (b.bar, b.start.round() as i64, b.end.round() as i64)).collect();
+    assert_eq!(bars, vec![(0, 0, 24000), (1, 24000, 120000), (2, 120000, 216000), (3, 216000, 312000)]);
+    // Labels and lines space the pickup as a whole bar.
+    assert!(m.bars(0.0, q).all(|b| close(b.len, 4.0 * q, 1e-9)));
+    // The metronome from 0: the pickup's beat, then bar 1's accented downbeat.
+    let clicks: Vec<_> = m.grid(0.0, 6.0 * q, 1).map(|g| (g.pos.round() as i64, g.bar, g.downbeat())).collect();
+    assert_eq!(clicks[0], (0, 0, false));
+    assert_eq!(clicks[1], (24000, 1, true));
+    assert_eq!(clicks[5], (120000, 2, true));
+    // Stepping and snapping.
+    assert!(close(m.next_bar(0.0), q, 1e-9));
+    assert!(close(m.prev_beat(q), 0.0, 1e-9));
+    assert!(close(m.snap_q(2.0, 4.0), 1.0, 1e-9), "a bar snap lands on bar 1, not the pickup's bar line");
+    assert!(close(m.snap_q(0.1, 1.0), 0.0, 1e-9));
+    // Snapping in the pickup never lands before the timeline's start.
+    let long = numbered(&[], &[], (4, 4), 3.0, 1);
+    assert!(close(long.snap_q(0.4, 4.0), 0.0, 1e-9));
+}
+
+#[test]
+fn a_part_beat_pickup_keeps_the_grid() {
+    // A dotted quarter in 4/4: the pickup starts on the "and" of beat 3.
+    let m = numbered(&[], &[], (4, 4), 1.5, 1);
+    assert_eq!(m.bar_beat_at(0.0), Bbt { bar: 0, beat: 3, div: 3, tick: 1 });
+    let beats: Vec<f64> = m.grid(0.0, m.bar_start(2), 1).map(|g| g.q).collect();
+    assert_eq!(beats, vec![0.5, 1.5, 2.5, 3.5, 4.5]);
+    assert!(close(m.snap_q(0.2, 1.0), 0.5, 1e-9));
+}
+
+#[test]
+fn the_first_bar_number_offsets_every_bar() {
+    // Bars from 5, no pickup: bar 5 is at 0, a 3/4 change at bar 7.
+    let m = numbered(&[], &[sig(7, 3, 4)], (4, 4), 0.0, 5);
+    assert_eq!(m.signatures(), &[sig(5, 4, 4), sig(7, 3, 4)]);
+    assert_eq!(m.bar_beat_at(0.0), Bbt { bar: 5, beat: 1, div: 1, tick: 1 });
+    assert!(close(m.bar_start(7), 8.0 * 24000.0, 1e-9));
+    assert_eq!(m.sig_at_bar(8), (3, 4));
+    assert_eq!(m.bar_at(-1.0), 4);
+}
+
+#[test]
+fn negative_first_bars_with_a_pickup() {
+    // Bar -2 is the first full bar, the half-note pickup bar -3; 6/8 from bar 0 and the tempo
+    // halves at bar -1.
+    let q = 24000.0;
+    let pre = numbered(&[], &[sig(0, 6, 8)], (4, 4), 2.0, -2);
+    let bar_m1 = pre.bar_start(-1);
+    assert!(close(bar_m1, 6.0 * q, 1e-9));
+    let m = numbered(&[ev(0, 120.0, false), ev(bar_m1 as i64, 60.0, false)], &[sig(0, 6, 8)], (4, 4), 2.0, -2);
+    assert_eq!(m.bar_beat_at(0.0), Bbt { bar: -3, beat: 3, div: 1, tick: 1 });
+    assert_eq!(m.bar_beat_at(2.0 * q), Bbt { bar: -2, beat: 1, div: 1, tick: 1 });
+    // Bar -1 (4 quarters at 60 BPM: 8 quarters' worth of samples at 120), then bar 0 in 6/8.
+    assert!(close(m.bar_start(0), bar_m1 + 8.0 * q, 1e-6));
+    assert_eq!(m.sig_at_bar(0), (6, 8));
+    assert_eq!(m.sig_at_bar(-3), (4, 4));
+    // A quarter at 60 BPM is two eighths.
+    assert_eq!(m.bar_beat_at(m.bar_start(0) + 2.0 * q), Bbt { bar: 0, beat: 3, div: 1, tick: 1 });
+    let bars: Vec<i64> = m.bars(0.0, m.bar_start(2)).map(|b| b.bar).collect();
+    assert_eq!(bars, vec![-3, -2, -1, 0, 1]);
+}
+
+#[test]
+fn a_pickup_is_at_most_a_bar() {
+    let m = numbered(&[], &[], (3, 4), 7.0, 1);
+    assert_eq!(m.pickup(), 3.0);
+    assert!(close(m.bar_start(0), 0.0, 1e-9));
+    assert_eq!(numbered(&[], &[], (3, 4), f64::NAN, 1).pickup(), 0.0);
+    assert_eq!(numbered(&[], &[], (3, 4), -1.0, 1).pickup(), 0.0);
+}
+
+#[test]
+fn midi_file_signatures_number_from_the_first_bar() {
+    let s = sigs_from_quarters(&[(0.0, 4, 4), (8.0, 7, 8)], (4, 4), -1);
+    assert_eq!(s, vec![sig(-1, 4, 4), sig(1, 7, 8)]);
+}
+
+#[test]
+fn count_ins_without_a_pickup_count_back_from_the_punch() {
+    let m = TempoMap::constant(SR, 120.0, 3, 4);
+    // Two bars of 3/4 at 24000 samples a quarter.
+    assert_eq!(m.count_in_start(100_000, 2), 100_000 - 144_000);
+    // In a pickup they count from its bar line, whole bars before it.
+    let p = numbered(&[], &[], (3, 4), 1.0, 1);
+    assert_eq!(p.count_in_start(0, 2), -48_000 - 144_000);
+    assert_eq!(p.count_in_start(24_000, 1), 24_000 - 72_000);
+}
+
+#[test]
+fn stored_pickups_are_whole_32nds_under_a_bar() {
+    assert_eq!(clamp_pickup(1.1, (4, 4)), 1.125);
+    assert_eq!(clamp_pickup(4.0, (4, 4)), 3.875);
+    assert_eq!(clamp_pickup(3.0, (2, 4)), 1.875);
+    assert_eq!(clamp_pickup(1.0, (3, 8)), 1.0);
+    assert_eq!(clamp_pickup(-1.0, (4, 4)), 0.0);
+    assert_eq!(clamp_pickup(f64::INFINITY, (4, 4)), 0.0);
 }

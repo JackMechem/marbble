@@ -43,11 +43,12 @@ issue = 335
 [[feature]]
 section = "Work with projects"
 name = "Project start and end points"
-status = "missing"
+status = "partial"
 tier = "core"
 beta = true
 logic = "104"
 issue = 336
+note = "The project can start before bar 1: Project Settings › Bars sets a pickup and the first bar's number. No end point or ruler markers yet."
 
 [[feature]]
 section = "Work with projects"

@@ -137,8 +137,14 @@ pub fn set_tempo_at(state: State<AppState>, pos: i64, bpm: f64, move_midi: Optio
 
 /// The LCD's signature: the change in effect at `bar`.
 #[tauri::command]
-pub fn set_signature_at(state: State<AppState>, bar: u32, num: u32, den: u32) -> Snapshot {
+pub fn set_signature_at(state: State<AppState>, bar: i64, num: u32, den: u32) -> Snapshot {
     edit(&state, "Time Signature", None, false, |s| s.set_signature_at(bar, num, den))
+}
+
+/// Project Settings › Pickup (in quarter notes) and First Bar Number.
+#[tauri::command]
+pub fn set_bar_numbering(state: State<AppState>, pickup: f64, first_bar: i64) -> Snapshot {
+    edit(&state, "Bar Numbering", None, false, |s| s.set_bar_numbering(pickup, first_bar))
 }
 
 /// Moves MIDI regions to keep their bars and beats from one Tempo track to another.

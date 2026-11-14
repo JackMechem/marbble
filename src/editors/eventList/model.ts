@@ -37,9 +37,9 @@ export function positionBbt(map: TempoMap, s: number): Bbt {
 }
 
 /** The timeline sample at a position. Parts past their range carry over (beat 5 in 4/4 is the
- *  next bar's first beat); nothing lands before bar 1. */
+ *  next bar's first beat); nothing lands before the timeline's start. */
 export function bbtToSample(map: TempoMap, b: Bbt): number {
-  const bar = Math.max(1, Math.round(b.bar));
+  const bar = Math.max(map.barAt(0), Math.round(b.bar));
   const beatQ = 4 / map.sigAtBar(bar)[1];
   const beats = b.beat - 1 + (b.div - 1) / 4 + (b.tick - 1) / TICKS_PER_BEAT;
   const q = map.barStartQ(bar) + beats * beatQ;

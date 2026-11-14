@@ -174,12 +174,13 @@ export function snapToGrid(g: GridLengths, w: Warp | null, snap: boolean, t: num
   return w ? Math.round(w.fromV(snapTime(w.toV(t), g.grid, w.bars))) : snapTime(t, g.grid, g.bar);
 }
 
-/** The grid line at or before `t`, where the pencil puts a note. */
+/** The grid line at or before `t`, where the pencil puts a note (the timeline's start before
+ *  a pickup's first grid line). */
 export function gridFloor(g: GridLengths, w: Warp | null, snap: boolean, t: number, free = false) {
   if (!snap || free) return Math.round(t);
   const v = w ? w.toV(t) : t;
   const b = barFloor(v, w?.bars ?? g.bar);
-  const at = b + Math.floor((v - b) / g.grid + 1e-6) * g.grid;
+  const at = Math.max(Math.min(0, v), b + Math.floor((v - b) / g.grid + 1e-6) * g.grid);
   return w ? Math.round(w.fromV(at)) : at;
 }
 
