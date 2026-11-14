@@ -146,7 +146,7 @@ fn main() {
             commands::default_project_dir,
             commands::old_projects_folder,
             commands::rename_old_projects_folder,
-            commands::set_region_loop,
+            commands::set_region_loops,
             commands::set_regions_looped,
             commands::convert_loops,
             commands::set_tracks_hidden,

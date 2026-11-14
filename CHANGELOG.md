@@ -27,6 +27,12 @@ All notable changes to Marbble are recorded here. The format follows
   region's start or end that comes within a few pixels of another region's start or end (on any
   track), the stopped playhead or a cycle locator snaps onto it, ahead of the grid, with a guide
   line drawn there. An Alt-drag copy snaps to the originals too. Ctrl+Shift turns it off.
+
+### Fixed
+
+- **Dragging a region's loop handle loops the whole selection.** With several regions selected,
+  dragging one's loop handle (its top-right corner) looped only that region. As in Logic, every
+  selected region's loop end now moves by the same amount, in one undo step.
 - **A Mixer view.** Besides the Mixer pane under the tracks, the Mixer can now fill the main
   window in the Tracks area's place, like Logic's Mixer window or Pro Tools' Mix window, with
   long faders and room for every slot. Switch with the new Tracks / Mixer buttons at the left of

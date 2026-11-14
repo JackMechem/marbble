@@ -50,8 +50,8 @@ export interface Drag {
   spans?: Map<Id, Span>;
   /** For fade drags, the new fade length. */
   fade?: number;
-  /** For loop drags, the new loop end. */
-  loopEnd?: number;
+  /** For loop drags, the new loop end of each region the drag loops, the grabbed one too. */
+  loops?: Map<Id, number>;
   grabbed: Id;
 }
 
