@@ -19,7 +19,7 @@
 /* The user's categories beside the plug-in table. */
 .pm-main {
   display: grid;
-  grid-template-columns: 150px minmax(0, 1fr);
+  grid-template-columns: 130px minmax(0, 1fr);
   gap: 8px;
 }
 
@@ -94,10 +94,10 @@
 
 .pm-row {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.1fr) 56px;
+  grid-template-columns: 28px minmax(0, 1.8fr) minmax(0, 1.1fr) minmax(0, 0.8fr) minmax(0, 1fr) 46px;
   align-items: center;
-  gap: 8px;
-  padding: 3px 10px;
+  gap: 6px;
+  padding: 3px 8px;
 }
 
 .pm-row > span {

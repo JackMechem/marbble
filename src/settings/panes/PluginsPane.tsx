@@ -211,7 +211,7 @@ export function PluginsPane({ close }: { close: () => void }) {
                   </span>
                   <span>{p.vendor || "Unknown"}</span>
                   <span>
-                    <button className="pm-cat" title="Categories" aria-haspopup="menu" {...onPress((e) => openMenuAt(e.currentTarget, categoryItems(p)))}>
+                    <button className="pm-cat" title={mine.length ? `Categories: ${mine.join(", ")}` : "Categories"} aria-haspopup="menu" {...onPress((e) => openMenuAt(e.currentTarget, categoryItems(p)))}>
                       <span>{mine.length ? mine.join(", ") : "—"}</span>
                       <Icon.chevron />
                     </button>
