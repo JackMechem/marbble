@@ -267,11 +267,18 @@ pub fn set_builtin_params(state: State<AppState>, track: Id, slot: i64, values: 
     try_edit(&state, "Plug-in Parameter", key, false, set_all)
 }
 
-/// Gives a built-in plug-in the settings of a copy of the same plug-in (`copy_plugin`), as one
-/// undo step: the panel's Paste Settings, or with `compare` its Compare button swapping between
-/// the saved and the edited settings.
+/// Gives a plug-in the settings of a copy of the same plug-in (`copy_plugin`), as one undo step:
+/// Paste Settings, or with `compare` a built-in panel's Compare button swapping between the saved
+/// and the edited settings. A VST3 keeps running and loads the copy's state.
 #[tauri::command]
 pub fn paste_plugin_settings(state: State<AppState>, track: Id, slot: i64, plugin: daw_engine::model::PluginSlot, compare: bool) -> R<Snapshot> {
     let label = if compare { "Compare" } else { "Paste Settings" };
     try_edit(&state, label, None, false, |s| s.paste_plugin_settings(track, slot_index(slot), &plugin))
+}
+
+/// Compare in a VST3 slot's menu: plays the settings as last saved in place of the edited ones,
+/// or goes back to them, as one undo step.
+#[tauri::command]
+pub fn compare_vst(state: State<AppState>, uid: Id) -> R<Snapshot> {
+    try_edit(&state, "Compare", None, false, |s| s.toggle_vst_compare(uid))
 }

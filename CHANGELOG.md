@@ -8,6 +8,13 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Added
 
+- **Compare, Copy Settings and Paste Settings for VST3 plug-ins**, in the slot's right-click menu
+  (their editors are windows of their own, with no Marbble header). Paste Settings loads the
+  copied state into the running plug-in, keeping the instance, as one undo step; settings copied
+  on another computer paste into the same plug-in installed elsewhere. Compare lights once you
+  change something in the plug-in's window and swaps between your edits and the settings as they
+  were when the window first opened in the project, each swap one undo step, as for built-in
+  plug-ins.
 - **Search in the plug-in slot menus.** As in Logic, an Audio FX or instrument slot's menu opens
   with a search field at the top: type part of a plug-in's name, category or manufacturer and it
   lists the matching built-in plug-ins and VST3s, best matches first. Down and Up move through

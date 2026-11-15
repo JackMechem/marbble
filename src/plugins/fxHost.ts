@@ -8,6 +8,8 @@ import { getState, setState } from "../state/store";
 import { fxKey, openPanel, togglePanel } from "./panels/fxDockState";
 import { sideChainMenu } from "./sideChain";
 import { refuseFrozen } from "../tracks/freeze";
+import { vstSettingsItems } from "./panels/settings/settingsMenuModel";
+import { compareVst, copySettings, pasteSettings } from "./panels/settings/pluginSettings";
 
 /** The Channel EQ's plug-in id (crates/engine/src/fx/channel_eq/). */
 export const CHANNEL_EQ = "builtin:channel-eq";
@@ -121,6 +123,18 @@ export function slotSideChainItems(track: Id, slot: number, plugin: PluginSlot |
   return [sideChainMenu(snap.project.tracks, track, plugin, set, setPre), { separator: true }];
 }
 
+/**
+ * A loaded VST3's Compare, Copy Settings and Paste Settings, then a separator: its editor is a native
+ * window with no Marbble header for them. Nothing for other slots.
+ */
+function slotSettingsItems(plugin: PluginSlot | null): MenuItem[] {
+  const { snap, settingsClip } = getState();
+  if (!plugin || plugin.plugin_id.startsWith("builtin:") || snap?.missing?.includes(plugin.uid)) return [];
+  const uid = plugin.uid;
+  const act = { compare: () => compareVst(uid), copy: () => copySettings(uid), paste: () => pasteSettings(uid) };
+  return [...vstSettingsItems(uid, plugin.plugin_id, settingsClip, snap?.vst_compare, act), { separator: true }];
+}
+
 /** The right-click menu of an insert or instrument slot. */
 export function slotMenu(track: Id, slot: number, plugin: PluginSlot | null): MenuItem[] {
   const instrument = slot === INSTRUMENT_SLOT;
@@ -138,6 +152,7 @@ export function slotMenu(track: Id, slot: number, plugin: PluginSlot | null): Me
   const targets = pasteTargets(track);
   const items: MenuItem[] = [
     ...slotSideChainItems(track, slot, plugin),
+    ...slotSettingsItems(plugin),
     { label: "Copy Plug-in", disabled: !plugin, onClick: () => copyPlugin(track, slot) },
     { label: clip ? `Paste ${clip.name}` : "Paste Plug-in", disabled: !fits, onClick: () => pastePlugin([track], slot) },
   ];

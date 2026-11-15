@@ -179,7 +179,7 @@ editors/            the bottom section's editors, and the MIDI edits they share
 mixer/              the Mixer and the channel strip: slots, sends, VCAs, meters, routing, widths
 plugins/            plug-ins on the UI side: built-in registry, hosting, value formats, slot menus
   panels/             plug-in panels: dock, floating windows, header, presets, shared controls
-    settings/           Compare, and Copy and Paste Settings, in the header
+    settings/           Compare, and Copy and Paste Settings, in the header (a VST3's in its slot menu)
   effects/            each built-in effect's panel (dynamics/ and eq/ in their own folders)
   instruments/        built-in instrument panels (sampler/ in its own folder)
 controllers/        MIDI controllers: assignments, MIDI Learn, control surfaces
@@ -379,7 +379,7 @@ changed rather than every note in the project.
   parameters and globals. Plug-ins that didn't change keep running with their state.
 - Clips are never unloaded by undo, so redo can bring their regions back.
 - Edits in a VST3's own editor become steps of their own, carrying the plug-in state to load
-  (`session/plugins/editor_undo/`).
+  (`session/plugins/editor_undo/`), as do Paste Settings and Compare on a VST3.
 - `edit_guard`, after every checkpointed edit, runs `frozen_guard`, which puts back anything that
   changed a frozen track's regions or plug-ins and drops the step if nothing else changed, and
   `timeline_guard`, which puts back an edit that took a region past the end of the timeline
@@ -855,9 +855,12 @@ Bypass, Low Latency Mode, containment, reordering, copying and Freeze treat all 
 
 The plug-in, channel strip and region clipboards live in the frontend's store, so they survive
 opening another project. `copy_plugin` captures a slot with its VST3 state; pasting makes new
-instances. A built-in panel's Copy and Paste Settings and its Compare move settings as the same
-copies but keep the instance (`session/plugins/settings.rs`); Compare's memory of the saved
-settings is in the store too (`src/plugins/panels/settings/`). Reordering inserts moves the running instances in the engine without reloading them
+instances. Copy and Paste Settings (a built-in panel's header, a VST3 slot's right-click menu) and
+a built-in panel's Compare move settings as the same copies but keep the instance
+(`session/plugins/settings.rs`); a VST3's state is loaded into the running plug-in as one undo
+step. A built-in's Compare remembers the saved settings in the store
+(`src/plugins/panels/settings/`); a VST3's is kept by the engine, which tells edited settings from
+saved ones by the edits it sees rather than by comparing state blobs (`session/plugins/compare.rs`). Reordering inserts moves the running instances in the engine without reloading them
 (`session/plugins/insert_order.rs`). A channel strip setting (`library/strip_settings.rs`) is a
 strip's instrument and inserts; pasting one is one undo step. Marbble Sampler's files travel with
 copies, strip settings and templates.

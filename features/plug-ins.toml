@@ -63,7 +63,7 @@ name = "Plug-in window header"
 status = "partial"
 tier = "pro"
 logic = "568"
-note = "Built-in effect and instrument panels have bypass, presets, Compare, Copy and Paste Settings and the side-chain pop-up; VST3 editor windows have no header."
+note = "Built-in effect and instrument panels have bypass, presets, Compare, Copy and Paste Settings and the side-chain pop-up; VST3 editor windows have no header, so their Compare, Copy and Paste Settings and Side Chain are in the slot's right-click menu."
 
 [[feature]]
 section = "Plug-in windows and settings"
@@ -79,8 +79,8 @@ name = "Compare edits with the saved setting"
 status = "done"
 tier = "pro"
 logic = "571"
-issue = 80
-note = "Built-in effects' and instruments' panels have Compare, Copy Settings and Paste Settings; VST3 plug-ins don't yet (#292)."
+issue = 292
+note = "Built-in effects' and instruments' panels have Compare, Copy Settings and Paste Settings in their header; VST3 plug-ins in their slot's right-click menu, telling edits by what Marbble sees happen in their window."
 
 [[feature]]
 section = "Plug-in windows and settings"
@@ -88,7 +88,7 @@ name = "Copy and paste plug-in settings; reset; default setting"
 status = "partial"
 tier = "pro"
 logic = "572"
-note = "Copy and paste for every plug-in (VST3 state included), Copy and Paste Settings between built-in panels, and Reset to Default for built-in plug-ins; no user default setting."
+note = "Copy and paste for every plug-in (VST3 state included), Copy and Paste Settings between instances of a plug-in (built-in or VST3), and Reset to Default for built-in plug-ins; no user default setting."
 
 [[feature]]
 section = "Plug-in windows and settings"
