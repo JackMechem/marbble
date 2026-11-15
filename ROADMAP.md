@@ -141,11 +141,12 @@ labelled [`in progress`][in progress]. The rounds planned towards beta, in order
    ([`flaky test`][flaky test]), and any bug that crashes Marbble or loses work.
    macOS is now level with Linux (0.1.0-alpha.15: real-time processing threads in the audio
    device's workgroup, Automatic above one thread, audio that follows a changed or unplugged
-   device). The round under way ([#416]) takes on the flaky checks, follow-ups to the automatic
-   device restarts, and longer soak runs looking for bugs that break undo, saving or renders.
-2. **Plug-in hosting.** Keys from VST3 editors on Linux ([#88]), editors following a display scale
-   change ([#94]), the Plug-in Manager, plug-in search and plug-in windows in the Mixer, Compare
-   for VST3 plug-ins ([#292]); then CLAP hosting ([#105]).
+   device). The stability round ([#416]) is done: the flaky checks, follow-ups to the automatic
+   device restarts, longer soak runs, and render-ahead for tracks that aren't live (0.1.0-alpha.16).
+2. **Plug-in hosting**, under way ([#551]). Keys from VST3 editors on Linux ([#88]), editors
+   following a display scale change ([#94]), custom categories and names in the Plug-in Manager
+   ([#366]), search in the plug-in slot menus ([#364]), VST3 editor windows on Windows ([#99]),
+   Compare for VST3 plug-ins ([#292]); then CLAP hosting ([#105]).
 3. **Transport and navigation.** Pause, fast forward and rewind, Play from Selection, Go to
    Position, locators typed into the LCD, the cycle and transient key commands.
 4. **Projects, tracks and delivery.** Save a copy with its assets, Close Project, project start and
@@ -214,3 +215,7 @@ Besides each stage's milestone, a few labels gather the open work that doesn't b
 [#88]: https://github.com/JackMechem/marbble/issues/88
 [#94]: https://github.com/JackMechem/marbble/issues/94
 [#292]: https://github.com/JackMechem/marbble/issues/292
+[#99]: https://github.com/JackMechem/marbble/issues/99
+[#364]: https://github.com/JackMechem/marbble/issues/364
+[#366]: https://github.com/JackMechem/marbble/issues/366
+[#551]: https://github.com/JackMechem/marbble/issues/551
