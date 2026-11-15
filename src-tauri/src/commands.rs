@@ -83,6 +83,8 @@ pub struct Snapshot {
     missing: Vec<Id>,
     /// Instance ids of loaded VST3 inserts with a side-chain input.
     key_inputs: Vec<Id>,
+    /// The VST3s whose Compare is lit or pressed (their slot menus).
+    vst_compare: daw_engine::session::CompareStates,
     /// The notes of MIDI regions with playback parameters as they play, for drawing.
     played: Vec<PlayedNotes>,
     /// Loaded instruments with extra output buses.
@@ -109,6 +111,7 @@ pub fn snapshot(s: &Session) -> Snapshot {
         crossfades: s.crossfades(),
         missing: s.missing_plugins().iter().map(|p| p.uid).collect(),
         key_inputs: s.vst_key_inputs(),
+        vst_compare: s.compare_states(),
         played: s.played_notes(),
         instrument_outputs: s.instrument_outputs(),
     }

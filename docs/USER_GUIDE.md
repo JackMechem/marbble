@@ -2439,6 +2439,8 @@ that holds a sampler's samples.
   tracks selected, **Paste to Selected Tracks** does them all. Each paste is one undo step, and
   the copy survives opening another project. Instruments paste only into instrument slots,
   effects only into Audio FX slots.
+- **Settings:** a VST3's right-click menu also has **Compare**, **Copy Settings** and **Paste
+  Settings**, which keep the instance (see [Presets](#presets)).
 - **Side chain:** a VST3 with a side-chain input (LSP's Sidechain Compressor and Gate, say) has
   a **Side Chain** item at the top of its slot's menus, the arrow and the right-click, since its
   editor is a window of its own. Pick a track and it keys the plug-in as a [built-in
@@ -2799,8 +2801,13 @@ to the previous and next preset. Loading a preset is one undo step.
   Plug-in**, the instance stays where it is. Paste Settings is greyed out until settings of the
   same plug-in are copied.
 - VST3 plug-ins use their own preset browsers; Marbble saves their state with the project and
-  copies it with Copy Plug-in, but has no preset files for them. Their windows are their own, so
-  Compare and Copy and Paste Settings are for built-in plug-ins only.
+  copies it with Copy Plug-in, but has no preset files for them. Their windows are their own, with
+  no Marbble header, so their **Compare**, **Copy Settings** and **Paste Settings** are in the
+  slot's right-click menu, in the Mixer or the inspector. Paste Settings loads the copied state into
+  the plug-in that is running, as one undo step. Compare is greyed out until you change something
+  in the plug-in's window (or paste settings into it), and ticked while the settings as they were
+  when its window first opened in this project play in place of your edits. Changes that aren't
+  edits, like automation playing, don't count, and undoing your edits greys it out again.
 
 ### Sends and aux buses
 

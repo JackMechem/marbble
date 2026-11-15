@@ -6,6 +6,16 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Compare, Copy Settings and Paste Settings for VST3 plug-ins**, in the slot's right-click menu
+  (their editors are windows of their own, with no Marbble header). Paste Settings loads the
+  copied state into the running plug-in, keeping the instance, as one undo step; settings copied
+  on another computer paste into the same plug-in installed elsewhere. Compare lights once you
+  change something in the plug-in's window and swaps between your edits and the settings as they
+  were when the window first opened in the project, each swap one undo step, as for built-in
+  plug-ins.
+
 ## [0.1.0-alpha.18] - 2026-11-14
 
 ### Added

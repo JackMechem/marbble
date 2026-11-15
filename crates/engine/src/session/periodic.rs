@@ -41,6 +41,7 @@ impl Session {
         }
         let written = self.auto_idle();
         let stepped = self.vst_undo_idle();
+        self.compare_idle();
         self.state_copies_idle();
         let controlled = self.controller_idle();
         let fresh = self.midi_out.take_connected();

@@ -270,6 +270,8 @@ impl Session {
         let watch =
             Watch { known: known.clone(), seen_host: c.host_changes(), stale: None, read_at: Instant::now(), read_took, names, headless, reads: 1, tracker };
         self.vst_watches.insert(uid, watch);
+        // The settings as the editor first finds them are Compare's saved ones (`compare.rs`).
+        self.compare_watch(uid, &known);
         // Each state read here is the project's copy too (`session/plugins/states/`).
         self.keep_state(uid, &known);
     }
@@ -422,6 +424,7 @@ impl Session {
         };
         let key = one.filter(|_| !p.bracketed).map(|id| format!("vst-edit:{uid}:{id}"));
         let pushed = self.push_checkpoint(&label, key, false);
+        self.compare_edited(uid);
         if pushed {
             if let Some(top) = self.undo_stack.last_mut() {
                 top.plugin = Some((uid, before));
@@ -480,6 +483,7 @@ impl Session {
     /// a processing thread is left in (`session/engine/left_out.rs`), gets the state when it next loads:
     /// a new instance when its track comes back.
     pub(crate) fn restore_vst_state(&mut self, uid: Id, st: Arc<PluginState>) {
+        self.compare_restored(uid, &st);
         let Some(c) = self.controllers.get_mut(&uid).filter(|c| c.responsive()) else {
             let encoded = encode_state(&st);
             let tracks = self.project.tracks.iter_mut().flat_map(|t| t.instrument.iter_mut().chain(t.inserts.iter_mut().flatten()));

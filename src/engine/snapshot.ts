@@ -36,6 +36,8 @@ export interface Snapshot {
   open_editors: Id[];
   /** Instance ids of loaded VST3 inserts with a side-chain input. */
   key_inputs?: Id[];
+  /** The VST3s whose Compare (in their slot menu) is lit or pressed. */
+  vst_compare?: CompareStates;
   /** Track that live MIDI (hardware or Musical Typing) plays. */
   midi_target: string | null;
   /** Labels of the next undo / redo steps. */
@@ -55,6 +57,13 @@ export interface Snapshot {
   played?: { region: Id; notes: Note[] }[];
   /** Loaded instruments with extra output buses. */
   instrument_outputs?: InstrumentOutputs[];
+}
+
+/** VST3 instances whose settings differ from the saved ones (`edited`), or whose saved settings
+ *  play in place of the edited ones (`comparing`): crates/engine/src/session/plugins/compare.rs. */
+export interface CompareStates {
+  edited: Id[];
+  comparing: Id[];
 }
 
 /** An output bus of an instrument; 0 is the main output, which plays through its strip. */
