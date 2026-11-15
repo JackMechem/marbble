@@ -1,8 +1,9 @@
-// A built-in plug-in's settings from its panel header: Copy and Paste Settings, and Compare. The
-// settings clipboard and Compare's records are in the store, so every window shares them
-// (detachModel.ts SYNCED_FIELDS), and outside the project, as the plug-in clipboard is. Settings
-// travel as `copy_plugin` copies and go back in with `paste_plugin_settings`, one undo step each.
-// The decisions are in compareModel.ts and settingsMenuModel.ts.
+// A plug-in's settings: Copy and Paste Settings, from a built-in panel's header or a VST3 slot's
+// right-click menu, and Compare. The settings clipboard and the built-ins' Compare records are in
+// the store, so every window shares them (detachModel.ts SYNCED_FIELDS), and outside the project,
+// as the plug-in clipboard is. Settings travel as `copy_plugin` copies and go back in with
+// `paste_plugin_settings`, one undo step each. A VST3's Compare is kept by the engine, which sees
+// its edits (`compare_vst`). The decisions are in compareModel.ts and settingsMenuModel.ts.
 import type { Id, PluginSlot } from "../../../engine/project";
 import { act, call } from "../../../engine/commands";
 import { getState, setState } from "../../../state/store";
@@ -25,16 +26,19 @@ function setRecord(uid: Id, rec: CompareRecord) {
 }
 
 export async function copySettings(uid: Id) {
-  const at = instance(uid);
+  const at = findFxSlot(getState().snap?.project, uid);
   const copy = at && (await copyOf(at.track, at.slot));
   if (copy) setState({ settingsClip: copy });
 }
 
 export async function pasteSettings(uid: Id) {
-  const at = instance(uid);
+  const at = findFxSlot(getState().snap?.project, uid);
   const clip = getState().settingsClip;
   if (at && clip) await paste(at.track, at.slot, clip, false);
 }
+
+/** A VST3's Compare: the engine swaps between the saved and the edited settings. */
+export const compareVst = (uid: Id) => act("compare_vst", { uid });
 
 /** Takes the instance's settings now as Compare's saved ones: when its panel first shows them, and
  *  after a preset is loaded or saved. */

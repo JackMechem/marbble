@@ -874,11 +874,11 @@ Hosting plug-ins, their windows and settings, formats and platforms, Smart Contr
 
 2 of 11 done.
 
-- ✓ Compare edits with the saved setting ([#80](https://github.com/JackMechem/marbble/issues/80))
+- ✓ Compare edits with the saved setting ([#292](https://github.com/JackMechem/marbble/issues/292))
 - ✓ Plug-in Manager categories and custom names ([#366](https://github.com/JackMechem/marbble/issues/366))
-- ◐ Plug-in window header: Built-in effect and instrument panels have bypass, presets, Compare, Copy and Paste Settings and the side-chain pop-up; VST3 editor windows have no header.
+- ◐ Plug-in window header: Built-in effect and instrument panels have bypass, presets, Compare, Copy and Paste Settings and the side-chain pop-up; VST3 editor windows have no header, so their Compare, Copy and Paste Settings and Side Chain are in the slot's right-click menu.
 - ◐ Load, save, step through and delete plug-in settings (presets): Factory and user presets for the built-in effects and instruments (the Channel EQ among them), shared by every project; none for VST3s.
-- ◐ Copy and paste plug-in settings; reset; default setting: Copy and paste for every plug-in (VST3 state included), Copy and Paste Settings between built-in panels, and Reset to Default for built-in plug-ins; no user default setting.
+- ◐ Copy and paste plug-in settings; reset; default setting: Copy and paste for every plug-in (VST3 state included), Copy and Paste Settings between instances of a plug-in (built-in or VST3), and Reset to Default for built-in plug-ins; no user default setting.
 - ◐ Plug-in undo and redo: In the project's undo history; plug-in windows have no undo and redo of their own.
 - ◐ Channel strip settings: save, load, step through, paste only plug-ins or sends: Save, load, copy, paste and reset (instrument, Audio FX, Channel EQ); no stepping, no partial paste, saved settings aren't sorted into folders.
 - ◐ Copy and paste a whole channel strip (key commands): From the Setting menu; no key commands.

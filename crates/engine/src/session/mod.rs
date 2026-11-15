@@ -75,6 +75,7 @@ pub use mixer::meters::PeakHolds;
 pub use mixer::multi_out::{InstrumentOutputs, OutputInfo};
 pub use mixer::vca::VcaPatch;
 pub use plugins::builtin::{builtin_effects, builtin_instruments, BuiltinInfo, BuiltinInstrument, FxTick};
+pub use plugins::compare::CompareStates;
 pub use project::autosave::{discard_autosave, recovery_info, AutosaveJob, Recovery};
 pub use project::backups::BackupInfo;
 pub use project::bounce::{AudioFormat, BipOptions, BipSource, BitDepth, BounceResult, InPlaceRender, RenderOptions};
@@ -311,6 +312,8 @@ pub struct Session {
     section_clip: Option<SectionClip>,
     /// Plug-ins whose editor is open, watched for undo steps (see `session/plugins/editor_undo/`).
     vst_watches: HashMap<Id, plugins::editor_undo::Watch>,
+    /// Compare's record of each VST3 it knows (see `session/plugins/compare.rs`).
+    vst_compare: HashMap<Id, plugins::compare::VstCompare>,
     /// How current the project's copy of each running VST3's state is (see
     /// `session/plugins/states/`).
     state_copies: HashMap<Id, plugins::states::StateCopy>,
@@ -496,6 +499,7 @@ impl Session {
             midi_seen: 0,
             section_clip: None,
             vst_watches: HashMap::new(),
+            vst_compare: HashMap::new(),
             state_copies: HashMap::new(),
             threads: engine::threads::ThreadState { topology: crate::audio_io::threads::Topology::detect(), ..Default::default() },
             graph_dirty: true,

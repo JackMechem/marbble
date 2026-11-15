@@ -351,6 +351,7 @@ fn main() {
             commands::app_version,
             commands::open_release_page,
             commands::paste_plugin_settings,
+            commands::compare_vst,
             commands::set_track_midi,
             diagnostics::window::open_diagnostics_window,
             diagnostics::diagnostics,

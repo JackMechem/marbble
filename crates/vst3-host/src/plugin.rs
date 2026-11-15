@@ -91,7 +91,7 @@ pub struct ParamInfo {
 }
 
 /// A plug-in's saved state, from `getState`: the component's and the controller's own blobs.
-#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct PluginState {
     pub component: Vec<u8>,
     pub controller: Vec<u8>,

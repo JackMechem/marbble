@@ -68,6 +68,7 @@ CHECKS=(
   "multiout_freeze_check dir"
   "vst_tails_check dir"
   "vst_undo_check tone dir"
+  "vst_settings_check tone dir"
   "memlock_check dir"
   # Only that the stress check runs: a small project, briefly, on the null device.
   "stress_check --null --tracks 8 --audio 2 --buffers 256 --threads 1,2 --seconds 2 --warmup 1 dir"

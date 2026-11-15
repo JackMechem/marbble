@@ -23,6 +23,7 @@ impl Session {
         self.mark_unresponsive();
         self.controllers.clear();
         self.vst_watches.clear();
+        self.vst_compare.clear();
         self.undo_stack.clear();
         self.redo_stack.clear();
         self.auto = Default::default();
@@ -148,6 +149,7 @@ impl Session {
         self.mark_unresponsive();
         self.controllers.clear();
         self.vst_watches.clear();
+        self.vst_compare.clear();
         self.undo_stack.clear();
         self.redo_stack.clear();
         self.auto = Default::default();
