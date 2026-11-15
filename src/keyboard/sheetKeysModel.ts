@@ -45,3 +45,12 @@ export function outsideKey(modes: SheetMode[], key: string, cmd: string | null):
   if (key === "Enter") return "default";
   return heldBack(modes, cmd) ? "block" : "pass";
 }
+
+/**
+ * Whether Return pressed in `el`, inside a sheet, has its default action stopped: in a one-line
+ * field, where it has none to keep. A field's Return often closes the sheet (the name sheet's
+ * OK), and the focus then goes back to what opened it; the key's default would go there too and
+ * press that button, opening the sheet again. A textarea keeps its new line and a button its
+ * press.
+ */
+export const stopsReturn = (el: unknown): boolean => (el as { tagName?: unknown } | null)?.tagName === "INPUT";

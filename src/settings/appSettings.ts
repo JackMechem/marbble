@@ -13,6 +13,7 @@ import type { UpdateChannel } from "../app/updates/updateCheck";
 import type { WheelScrolls } from "../ui/wheel";
 import type { MeterPlace } from "../app/cpuMeter/cpuMeterModel";
 import type { LcdMode } from "../app/controlBar/lcdModes";
+import type { PluginCustom } from "../plugins/pluginCustom";
 
 export type AudioOverlap = "on_top" | "new_track" | "replace" | "take_folders";
 export type MidiOverlap = "new_region" | "merge" | "replace" | "take_folders";
@@ -93,7 +94,7 @@ export interface UiPrefs {
   lcd_mode?: LcdMode;
 }
 
-export interface PluginPrefs {
+export interface PluginPrefs extends PluginCustom {
   disabled: string[];
   folders: string[];
 }
@@ -137,7 +138,7 @@ const DEFAULTS: AppSettings = {
     latency: { compensation: "all", low_latency: false, low_latency_limit_ms: 5 },
   },
   ui: { startup: "chooser", confirm_unsaved: true, snap: "smart", nudge: "16", keymap: {} },
-  plugins: { disabled: [], folders: [] },
+  plugins: { disabled: [], folders: [], categories: [], names: {} },
 };
 
 let settings: AppSettings = DEFAULTS;

@@ -14,6 +14,12 @@ All notable changes to Marbble are recorded here. The format follows
   them, Return loads one, Esc clears the search and then closes the menu, and typed letters never
   reach the key commands. The Library's search now matches the same way, word by word in any
   order ("lsp comp").
+- **Your own plug-in categories and names in the Plug-in Manager.** As in Logic, Settings ›
+  Plug-ins now has a Categories list: make, rename and delete categories, put plug-ins in them
+  from each plug-in's Category pop-up (one can be in several), and click one to see its
+  plug-ins. A VST3 can also be renamed. The slot menus and the Library list your categories
+  first and use your names, and the plug-in search finds a plug-in by your name or its own.
+  Both follow the plug-in's VST3 class id, so a rescan keeps them.
 
 ## [0.1.0-alpha.18] - 2026-11-14
 

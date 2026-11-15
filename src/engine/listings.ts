@@ -7,6 +7,8 @@ export interface PluginDesc {
   name: string;
   vendor: string;
   version: string;
+  /** The VST3 class id, which the Plug-in Manager's categories and names go by. */
+  cid: string;
   subcategories: string;
   is_instrument: boolean;
 }

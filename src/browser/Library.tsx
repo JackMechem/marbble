@@ -1,5 +1,6 @@
 // The Library side pane: Logic's lists patches for the selected track; this one lists the plug-ins
-// to load onto it (built-in instruments or effects, then VST3s by vendor), with a search field.
+// to load onto it (built-in instruments or effects, then VST3s in the user's categories and by
+// vendor, under the names the user gave them), with a search field.
 import { useState } from "react";
 import { BUILTIN_SYNTH, INSTRUMENT_SLOT, type Track } from "../engine/project";
 import { call } from "../engine/commands";
@@ -8,11 +9,14 @@ import { useSelectedTrack } from "../tracks/headers/TrackHeaders";
 import { useListKeys } from "../keyboard/listKeys";
 import { loadPlugin } from "../plugins/fxHost";
 import { matchesQuery } from "../plugins/pluginSearch";
+import { customGroups, withNames } from "../plugins/pluginCustom";
+import { useSettings } from "../settings/appSettings";
 
 /** Logic's Library lists patches for the selected track; here it lists plug-ins to load. */
 export function Library() {
   const track = useSelectedTrack();
   const plugins = useStore((s) => s.plugins);
+  const { names, categories } = useSettings((s) => s.plugins);
   const [q, setQ] = useState("");
   const [rescanning, setRescanning] = useState(false);
   const isInst = track?.kind === "instrument";
@@ -30,9 +34,11 @@ export function Library() {
     if (!fxGroups.has(f.category)) fxGroups.set(f.category, []);
     fxGroups.get(f.category)!.push(f);
   }
-  const list = plugins
-    .filter((p) => p.is_instrument === isInst)
-    .filter((p) => matchesQuery(q, p.name, p.vendor, p.subcategories));
+  const mine = (cid: string) => categories.filter((c) => c.plugins.includes(cid)).map((c) => c.name);
+  const list = withNames(
+    plugins.filter((p) => p.is_instrument === isInst),
+    names,
+  ).filter((p) => matchesQuery(q, p.name, p.original, p.vendor, p.subcategories, ...mine(p.cid)));
   const groups = new Map<string, typeof list>();
   for (const p of list) {
     const g = p.vendor || "Unknown";
@@ -58,11 +64,21 @@ export function Library() {
       sections.push({ key: `inst:${group}`, title: group, items: is.map((i) => ({ id: i.id, name: i.name, tip: i.about })) });
   for (const [cat, fs] of [...fxGroups.entries()].sort((a, b) => a[0].localeCompare(b[0])))
     sections.push({ key: `fx:${cat}`, title: cat, items: fs.map((f) => ({ id: f.id, name: f.name, tip: `Marbble ${f.category}` })) });
-  for (const [vendor, ps] of groups.entries()) sections.push({ key: `vendor:${vendor}`, title: vendor, items: ps.map((p) => ({ id: p.id, name: p.name, tip: p.subcategories })) });
-  const items = sections.flatMap((g) => g.items);
+  const vst3 = (p: (typeof list)[number]) => ({ id: p.id, name: p.name, tip: p.original ? `${p.original} · ${p.subcategories}` : p.subcategories });
+  // The user's categories first, as in the slot menus; their plug-ins are under their vendor too.
+  for (const g of customGroups(list, categories)) sections.push({ key: `custom:${g.name}`, title: g.name, items: g.plugins.map(vst3) });
+  for (const [vendor, ps] of groups.entries()) sections.push({ key: `vendor:${vendor}`, title: vendor, items: ps.map(vst3) });
+  // A plug-in can be listed more than once, so a row's key is its section's and its own.
+  const rowKey = (section: string, id: string) => `${section}\n${id}`;
+  const rows = sections.flatMap((g) => g.items.map((i) => ({ key: rowKey(g.key, i.id), ...i })));
   const on = current(track);
   // One Tab stop (listKeys.ts): Up and Down move, letters type ahead, Return loads, as a click does.
-  const { listProps, rowProps } = useListKeys({ keys: items.map((i) => i.id), labels: items.map((i) => i.name), start: on, open: load });
+  const { listProps, rowProps } = useListKeys({
+    keys: rows.map((r) => r.key),
+    labels: rows.map((r) => r.name),
+    start: rows.find((r) => r.id === on)?.key,
+    open: (k) => load(rows.find((r) => r.key === k)!.id),
+  });
   return (
     <div className="library">
       <div className="pane-title">Library</div>
@@ -85,7 +101,7 @@ export function Library() {
                 </div>
               )}
               {g.items.map((i) => (
-                <div key={i.id} className={"lib-item" + (on === i.id ? " on" : "")} role="option" aria-selected={on === i.id} onClick={() => load(i.id)} title={i.tip} {...rowProps(i.id)}>
+                <div key={i.id} className={"lib-item" + (on === i.id ? " on" : "")} role="option" aria-selected={on === i.id} onClick={() => load(i.id)} title={i.tip} {...rowProps(rowKey(g.key, i.id))}>
                   {i.name}
                 </div>
               ))}
