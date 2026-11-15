@@ -6,6 +6,14 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **Plug-in windows follow a change of the display's scale on Linux.** An editor kept the size it
+  opened at until it was closed and reopened. Now changing the desktop's scale (XSETTINGS
+  `Gdk/WindowScalingFactor` or `Xft/DPI`) or `Xft.dpi` with `xrdb` rescales open editors: the
+  plug-in is told the new scale and its window takes the new size, and plug-ins that only take a
+  scale as they open (DPF ones, such as Zam's and Dragonfly's) are reopened where they were.
+
 ## [0.1.0-alpha.18] - 2026-11-14
 
 ### Added

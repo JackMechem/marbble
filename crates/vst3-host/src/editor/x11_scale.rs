@@ -5,7 +5,8 @@
 //! the same places GTK reads Marbble's own scale: `GDK_SCALE`, then the XSETTINGS
 //! `Gdk/WindowScalingFactor`. Desktops that set neither but set `Xft.dpi` (a common setup on
 //! Hyprland, sway and i3 with `xwayland force_zero_scaling`) get `Xft.dpi / 96`, rounded to a
-//! quarter. Everything else is 1.
+//! quarter. Everything else is 1. An open editor follows a change of these settings
+//! (`scale_watch.rs`).
 
 use x11rb::connection::Connection;
 use x11rb::protocol::xproto::{AtomEnum, ConnectionExt as _};
@@ -41,6 +42,19 @@ pub(crate) fn choose(s: &ScaleSources) -> (f64, &'static str) {
         return (clamp((dpi / 96.0 * 4.0).round() / 4.0), "Xft.dpi");
     }
     (1.0, "default")
+}
+
+/// What to tell an open editor drawn at scale `was` now that the display's is `now`: nothing when
+/// it is the same, otherwise `now`. Unlike at opening, that includes 1: it takes back a larger
+/// scale the view was told before.
+pub(crate) fn change(was: f64, now: f64) -> Option<f64> {
+    (was != now).then_some(now)
+}
+
+/// Whether an open view followed a new scale: it was told, and asked for a size (`asked`) other than
+/// the window's before (`before`). One that didn't takes it only when opened again.
+pub(crate) fn followed(before: (u32, u32), asked: Option<(u32, u32)>) -> bool {
+    asked.is_some_and(|size| size != before)
 }
 
 fn clamp(s: f64) -> f64 {
@@ -188,6 +202,26 @@ mod tests {
         assert_eq!(xft_dpi("Xft.dpi: 0\n"), None);
         assert_eq!(xft_dpi("xft.dpi: 192\nXft.dpiX: 192\nXft.antialias: 1"), None);
         assert_eq!(xft_dpi(""), None);
+    }
+
+    #[test]
+    fn an_open_editor_hears_only_a_new_scale() {
+        assert_eq!(change(1.0, 1.0), None);
+        assert_eq!(change(1.0, 2.0), Some(2.0));
+        assert_eq!(change(2.0, 1.5), Some(1.5));
+        assert_eq!(change(2.0, 1.0), Some(1.0), "back to 1 is told too");
+        // What `xrdb` setting Xft.dpi from 96 to 192 and back comes to.
+        let at = |dpi: &str| choose(&ScaleSources { resources: Some(format!("Xft.dpi:\t{dpi}")), ..Default::default() }).0;
+        assert_eq!(change(at("96"), at("192")), Some(2.0));
+        assert_eq!(change(at("192"), at("96")), Some(1.0));
+        assert_eq!(change(at("96"), at("100")), None, "rounds to the same quarter");
+    }
+
+    #[test]
+    fn a_view_that_keeps_its_size_is_reopened() {
+        assert!(followed((920, 345), Some((1840, 690))));
+        assert!(!followed((920, 345), Some((920, 345))), "said yes, drew the same (DPF)");
+        assert!(!followed((920, 345), None), "can't be told");
     }
 
     #[test]

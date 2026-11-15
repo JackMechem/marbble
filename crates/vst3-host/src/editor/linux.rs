@@ -16,6 +16,9 @@ use x11rb::protocol::Event as XEvent;
 use x11rb::rust_connection::RustConnection;
 use x11rb::wrapper::ConnectionExt as _;
 
+use super::scale_watch::ScaleWatch;
+use super::x11_scale;
+
 /// Integration point with the application's main loop (GTK/glib in the Tauri app). All methods
 /// are called on the main thread, and callbacks must be invoked on the main thread.
 pub trait EventLoop: Send + Sync {
@@ -131,6 +134,15 @@ struct Window {
     resizable: bool,
     /// The plug-in mustn't be called for now (`Editor::set_quiet`).
     quiet: AtomicBool,
+    screen: usize,
+    /// The display's scale the editor is drawn at (`x11_scale`), followed while it is open.
+    scale: Mutex<f64>,
+    /// Tells a change of the display's scale settings; None if the server wouldn't say.
+    watch: Option<ScaleWatch>,
+    /// The display's scale settings changed, and the view hasn't heard yet.
+    scale_due: AtomicBool,
+    /// The view didn't take a new scale while open: reopening it applies it (`Editor::wants_reopen`).
+    reopen: AtomicBool,
 }
 
 impl Window {
@@ -143,6 +155,19 @@ impl Window {
         };
         let hints: [u32; 18] = [pos | 16 | 32, x, y, w, h, w, h, w, h, 0, 0, 0, 0, 0, 0, 0, 0, 0];
         let _ = self.conn.change_property32(PropMode::REPLACE, self.id, AtomEnum::WM_NORMAL_HINTS, AtomEnum::WM_SIZE_HINTS, &hints);
+    }
+
+    /// Sizes the window to `w` x `h` for the view, which then needs telling (`onSize`).
+    fn fit(&self, w: u32, h: u32) {
+        *self.size.lock() = (w, h);
+        *self.heard.lock() = (w, h);
+        // A fixed-size editor's hints hold it at its old size; move them along, or the WM
+        // refuses the new one.
+        if !self.resizable {
+            self.pin_size(w, h, None);
+        }
+        let _ = self.conn.configure_window(self.id, &ConfigureWindowAux::new().width(w).height(h));
+        let _ = self.conn.flush();
     }
 }
 
@@ -179,16 +204,7 @@ impl IPlugFrameTrait for PlugFrame {
             return kInvalidArgument;
         }
         let r = *new_size;
-        let (w, h) = ((r.right - r.left).max(1) as u32, (r.bottom - r.top).max(1) as u32);
-        *self.window.size.lock() = (w, h);
-        *self.window.heard.lock() = (w, h);
-        // A fixed-size editor's hints hold it at its old size; move them along, or the WM
-        // refuses the new one.
-        if !self.window.resizable {
-            self.window.pin_size(w, h, None);
-        }
-        let _ = self.window.conn.configure_window(self.window.id, &ConfigureWindowAux::new().width(w).height(h));
-        let _ = self.window.conn.flush();
+        self.window.fit((r.right - r.left).max(1) as u32, (r.bottom - r.top).max(1) as u32);
         if let Some(v) = ComRef::from_raw(view) {
             let mut r = r;
             v.onSize(&mut r);
@@ -294,24 +310,66 @@ fn install_x_error_handlers() {
 /// scale (see `x11_scale`), before its size is asked for: the view answers `getSize` in pixels
 /// at that scale, which is what the window is sized from. Nothing is called at a scale of 1, so
 /// plug-ins that read the display's scale themselves (JUCE, DPF) still do. X11 has one scale
-/// for the whole display, so it doesn't change with the monitor; a changed setting applies to
-/// editors opened after it.
-fn set_content_scale(view: &ComPtr<IPlugView>, conn: &RustConnection, screen_num: usize) {
-    let (scale, source) = super::x11_scale::choose(&super::x11_scale::read(conn, screen_num));
-    if scale == 1.0 {
-        return;
+/// for the whole display, so it doesn't change with the monitor; a change of the setting while
+/// the editor is open is followed (`rescale`). Returns the scale.
+fn set_content_scale(view: &ComPtr<IPlugView>, conn: &RustConnection, screen_num: usize) -> f64 {
+    let (scale, source) = x11_scale::choose(&x11_scale::read(conn, screen_num));
+    if scale != 1.0 {
+        tell_scale(view, scale, source);
     }
+    scale
+}
+
+/// Tells the view `scale`, if it can be told. Returns whether it could.
+fn tell_scale(view: &ComPtr<IPlugView>, scale: f64, source: &str) -> bool {
     match view.cast::<IPlugViewContentScaleSupport>() {
         Some(s) => {
             let r = unsafe { s.setContentScaleFactor(scale as f32) };
             log::info!("plug-in editor scale {scale} (from {source}); the plug-in answered {r}");
+            true
         }
-        None => log::info!("plug-in editor scale {scale} (from {source}); the plug-in can't be told, it may scale itself"),
+        None => {
+            log::info!("plug-in editor scale {scale} (from {source}); the plug-in can't be told, it may scale itself");
+            false
+        }
+    }
+}
+
+/// Follows a change of the display's scale settings in an open editor, as reopening it would
+/// apply it: the view hears the new scale, and the window takes the size it then asks for (a view
+/// may already have asked, with `resizeView`). A view that can't be told, or that says yes but
+/// keeps its size (DPF's take the scale only as they open), is opened again instead. On the main
+/// thread, not while quiet.
+fn rescale(win: &Window, view: &ComPtr<IPlugView>) {
+    let (now, source) = x11_scale::choose(&x11_scale::read(&win.conn, win.screen));
+    let Some(scale) = x11_scale::change(*win.scale.lock(), now) else { return };
+    *win.scale.lock() = scale;
+    let before = *win.size.lock();
+    let asked = gl_isolated(|| unsafe {
+        if !tell_scale(view, scale, source) {
+            return None;
+        }
+        let mut rect: ViewRect = std::mem::zeroed();
+        if view.getSize(&mut rect) != kResultOk {
+            return None;
+        }
+        let size = ((rect.right - rect.left).max(64) as u32, (rect.bottom - rect.top).max(64) as u32);
+        if size != *win.size.lock() {
+            win.fit(size.0, size.1);
+            let mut r = ViewRect { left: 0, top: 0, right: size.0 as i32, bottom: size.1 as i32 };
+            view.onSize(&mut r);
+        }
+        Some(size)
+    });
+    if !x11_scale::followed(before, asked) {
+        log::info!("plug-in editor kept its size at scale {scale}; opening it again");
+        win.reopen.store(true, Ordering::Relaxed);
     }
 }
 
 /// An open plug-in editor in an X11 window of its own.
 pub struct Editor {
+    title: String,
     view: ComPtr<IPlugView>,
     frame: ComWrapper<PlugFrame>,
     window: Arc<Window>,
@@ -323,10 +381,15 @@ pub struct Editor {
 
 impl Editor {
     pub fn open(view: ComPtr<IPlugView>, title: &str) -> Result<Editor, String> {
-        gl_isolated(|| Self::open_isolated(view, title))
+        Self::open_at(view, title, None)
     }
 
-    fn open_isolated(view: ComPtr<IPlugView>, title: &str) -> Result<Editor, String> {
+    /// Opens with the window's top-left corner at `at` on the screen; near the middle when None.
+    pub fn open_at(view: ComPtr<IPlugView>, title: &str, at: Option<(i16, i16)>) -> Result<Editor, String> {
+        gl_isolated(|| Self::open_isolated(view, title, at))
+    }
+
+    fn open_isolated(view: ComPtr<IPlugView>, title: &str, at: Option<(i16, i16)>) -> Result<Editor, String> {
         if GL_RELEASE.get().is_some() {
             // After the plug-in is loaded, which brings in its GL library.
             find_glx();
@@ -336,7 +399,9 @@ impl Editor {
                 return Err("plugin editor does not support X11 embedding".into());
             }
             let (conn, screen_num) = RustConnection::connect(None).map_err(|e| format!("X11: {e}"))?;
-            set_content_scale(&view, &conn, screen_num);
+            // Before the scale is read, so a change straight after is heard.
+            let watch = ScaleWatch::start(&conn, screen_num);
+            let scale = set_content_scale(&view, &conn, screen_num);
             let mut rect: ViewRect = std::mem::zeroed();
             view.getSize(&mut rect);
             let w = ((rect.right - rect.left).max(64)) as u16;
@@ -346,8 +411,7 @@ impl Editor {
             let screen = conn.setup().roots[screen_num].clone();
             let id = conn.generate_id().map_err(|e| e.to_string())?;
             // Open near the middle of the screen rather than under panels in the corner.
-            let x = (screen.width_in_pixels.saturating_sub(w) / 2) as i16;
-            let y = (screen.height_in_pixels.saturating_sub(h) / 3) as i16;
+            let (x, y) = at.unwrap_or(((screen.width_in_pixels.saturating_sub(w) / 2) as i16, (screen.height_in_pixels.saturating_sub(h) / 3) as i16));
             conn.create_window(
                 x11rb::COPY_DEPTH_FROM_PARENT,
                 id,
@@ -373,7 +437,19 @@ impl Editor {
             let _ = conn.change_property8(PropMode::REPLACE, id, net_wm_name, utf8, title.as_bytes());
             let _ = conn.change_property8(PropMode::REPLACE, id, AtomEnum::WM_CLASS, AtomEnum::STRING, b"marbble-plugin\0Marbble\0");
             let size = (w as u32, h as u32);
-            let window = Arc::new(Window { conn, id, size: Mutex::new(size), heard: Mutex::new(size), resizable, quiet: AtomicBool::new(false) });
+            let window = Arc::new(Window {
+                conn,
+                id,
+                size: Mutex::new(size),
+                heard: Mutex::new(size),
+                resizable,
+                quiet: AtomicBool::new(false),
+                screen: screen_num,
+                scale: Mutex::new(scale),
+                watch,
+                scale_due: AtomicBool::new(false),
+                reopen: AtomicBool::new(false),
+            });
             if resizable {
                 // WM_NORMAL_HINTS: just PPosition.
                 let hints: [u32; 18] = [4, x as u32, y as u32, w as u32, h as u32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -398,40 +474,55 @@ impl Editor {
             let closed = Arc::new(AtomicBool::new(false));
             let x_source = event_loop().map(|l| {
                 let (win, closed) = (window.clone(), closed.clone());
-                // A resizable view hears about the user's resizes from here too (onSize). It
-                // stays alive with this source, which `close` removes before the window goes;
-                // the callback can't run in between, as both are on the main thread.
-                let sized = resizable.then(|| view.clone());
+                // A resizable view hears about the user's resizes from here (onSize), and every
+                // view about the display's scale. It stays alive with this source, which `close`
+                // removes before the window goes; the callback can't run in between, as both are
+                // on the main thread.
+                let view = view.clone();
                 let fd = window.conn.stream().as_raw_fd();
-                l.add_fd(
-                    fd,
-                    Box::new(move || {
-                        let quiet = win.quiet.load(Ordering::Relaxed);
-                        drain_events(&win, wm_delete, &closed, sized.as_ref().filter(|_| !quiet));
-                    }),
-                )
+                l.add_fd(fd, Box::new(move || drain_events(&win, wm_delete, &closed, &view, resizable)))
             });
 
-            Ok(Editor { view, frame, window, wm_delete, closed, x_source, resizable })
+            Ok(Editor { title: title.to_string(), view, frame, window, wm_delete, closed, x_source, resizable })
         }
     }
 
     /// Processes pending window events. Returns true once the user closed the window.
     pub fn pump(&mut self) -> bool {
-        let view = if self.resizable && !self.window.quiet.load(Ordering::Relaxed) { Some(&self.view) } else { None };
-        drain_events(&self.window, self.wm_delete, &self.closed, view);
+        drain_events(&self.window, self.wm_delete, &self.closed, &self.view, self.resizable);
         self.closed.load(Ordering::Relaxed)
     }
 
-    /// While `on`, nothing of the host's calls into the plug-in: a resize isn't passed on, and its
-    /// timers don't fire. Its own event handlers still do, as their sockets must be read. When
-    /// quiet ends, a resizable view hears the size the window took meanwhile. On the main thread.
+    /// While `on`, nothing of the host's calls into the plug-in: a resize or a change of the
+    /// display's scale isn't passed on, and its timers don't fire. Its own event handlers still do,
+    /// as their sockets must be read. When quiet ends, a resizable view hears the size the window
+    /// took meanwhile, and the view a scale that changed. On the main thread.
     pub fn set_quiet(&self, on: bool) {
         let was = self.window.quiet.swap(on, Ordering::Relaxed);
         if was && !on && self.resizable {
             let now = *self.window.size.lock();
             tell_size(&self.window, &self.view, now);
         }
+        if was && !on && self.window.scale_due.load(Ordering::Relaxed) {
+            drain_events(&self.window, self.wm_delete, &self.closed, &self.view, self.resizable);
+        }
+    }
+
+    /// The view didn't take a change of the display's scale while open, and opening it again
+    /// would apply it.
+    pub fn wants_reopen(&self) -> bool {
+        self.window.reopen.load(Ordering::Relaxed)
+    }
+
+    pub fn title(&self) -> &str {
+        &self.title
+    }
+
+    /// Where the window is on the screen: its top-left corner, under the window manager's frame.
+    pub fn position(&self) -> Option<(i16, i16)> {
+        let root = self.window.conn.setup().roots[self.window.screen].root;
+        let r = self.window.conn.translate_coordinates(self.window.id, root, 0, 0).ok()?.reply().ok()?;
+        Some((r.dst_x, r.dst_y))
     }
 
     /// Takes the window off the screen, without a word to the plug-in.
@@ -463,25 +554,40 @@ impl Editor {
     }
 }
 
-fn drain_events(win: &Window, wm_delete: u32, closed: &AtomicBool, view: Option<&ComPtr<IPlugView>>) {
-    while let Ok(Some(ev)) = win.conn.poll_for_event() {
-        match ev {
-            XEvent::ClientMessage(e) if e.data.as_data32()[0] == wm_delete => {
-                closed.store(true, Ordering::Relaxed);
+/// Handles the editor connection's events: the window closed or resized (passed on to a
+/// `resizable` view), and the display's scale settings changed. A quiet editor's view hears
+/// nothing; a scale change waits for quiet to end.
+fn drain_events(win: &Window, wm_delete: u32, closed: &AtomicBool, view: &ComPtr<IPlugView>, resizable: bool) {
+    loop {
+        while let Ok(Some(ev)) = win.conn.poll_for_event() {
+            if win.watch.as_ref().is_some_and(|w| w.note(&win.conn, &ev)) {
+                win.scale_due.store(true, Ordering::Relaxed);
+                continue;
             }
-            XEvent::ConfigureNotify(e) if e.window == win.id => {
-                let now = (e.width as u32, e.height as u32);
-                let mut size = win.size.lock();
-                if *size != now {
-                    *size = now;
-                    drop(size);
-                    if let Some(v) = view {
-                        tell_size(win, v, now);
+            match ev {
+                XEvent::ClientMessage(e) if e.window == win.id && e.data.as_data32()[0] == wm_delete => {
+                    closed.store(true, Ordering::Relaxed);
+                }
+                XEvent::ConfigureNotify(e) if e.window == win.id => {
+                    let now = (e.width as u32, e.height as u32);
+                    let mut size = win.size.lock();
+                    if *size != now {
+                        *size = now;
+                        drop(size);
+                        if resizable && !win.quiet.load(Ordering::Relaxed) {
+                            tell_size(win, view, now);
+                        }
                     }
                 }
+                _ => {}
             }
-            _ => {}
         }
+        if win.quiet.load(Ordering::Relaxed) || !win.scale_due.swap(false, Ordering::Relaxed) {
+            return;
+        }
+        // Reading the settings waits for the server's replies, behind which more events may
+        // have come in: the loop takes those too.
+        rescale(win, view);
     }
 }
 
