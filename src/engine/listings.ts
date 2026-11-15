@@ -2,15 +2,20 @@
 // and a project's alternatives and backups.
 import type { TrackKind } from "./project";
 
+/** The plug-in formats Marbble hosts. */
+export type PluginFormat = "vst3" | "clap";
+
 export interface PluginDesc {
   id: string;
   name: string;
   vendor: string;
   version: string;
-  /** The VST3 class id, which the Plug-in Manager's categories and names go by. */
+  /** The plug-in's id in its file (a VST3 class id, a CLAP id), which the Plug-in Manager's
+   *  categories and names go by. */
   cid: string;
   subcategories: string;
   is_instrument: boolean;
+  format: PluginFormat;
 }
 
 /** File › Project Alternatives and File › Revert to (`project_files`). */

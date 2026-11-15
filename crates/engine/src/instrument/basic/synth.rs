@@ -1,7 +1,7 @@
 //! A small built-in polyphonic synth so software-instrument tracks make sound without any
 //! third-party instrument installed.
 
-use vst3_host::MidiEvent;
+use plugin_api::MidiEvent;
 
 const VOICES: usize = 16;
 

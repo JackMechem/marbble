@@ -21,7 +21,7 @@
 
 use std::collections::{HashSet, VecDeque};
 
-use vst3_host::Gesture;
+use plugin_api::Gesture;
 
 use crate::session::*;
 
@@ -231,7 +231,7 @@ impl Tracker {
 pub(crate) struct Watch {
     /// Its last known state: what a step takes back to.
     known: Arc<PluginState>,
-    /// `PluginController::host_changes` as of `known`.
+    /// `Controller::host_changes` as of `known`.
     seen_host: u64,
     /// When the host (or the plug-in, unasked) last changed it after `known` was read.
     stale: Option<Instant>,
@@ -419,8 +419,8 @@ impl Session {
         w.stale = None;
         let one = p.params.first().filter(|_| p.params.len() == 1 && !p.restarted);
         let label = match one.and_then(|id| w.names.get(id)) {
-            Some(name) => format!("{}: {name}", c.desc.name),
-            None => format!("{}: Parameters", c.desc.name),
+            Some(name) => format!("{}: {name}", c.desc().name),
+            None => format!("{}: Parameters", c.desc().name),
         };
         let key = one.filter(|_| !p.bracketed).map(|id| format!("vst-edit:{uid}:{id}"));
         let pushed = self.push_checkpoint(&label, key, false);

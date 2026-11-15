@@ -172,7 +172,7 @@ pub struct HeldStrip {
     pub track: Id,
     /// The plug-in's uid (0: unknown, any of the track's).
     pub plugin: Id,
-    /// `vst3_host::instances_made()` when it was held: only an instance numbered up to this can be
+    /// `plugin_api::instances_made()` when it was held: only an instance numbered up to this can be
     /// the one held. A track's plug-ins made since (an undo bringing it back) are others.
     pub before: u64,
     /// The stand-in that took its place in the engine has gone: the track was deleted since, and
@@ -230,7 +230,7 @@ impl EngineStatus {
         let token = self.held_tokens.fetch_add(1, Ordering::Relaxed) + 1;
         h.track.store(track, Ordering::Relaxed);
         h.plugin.store(plugin, Ordering::Relaxed);
-        h.before.store(vst3_host::instances_made(), Ordering::Relaxed);
+        h.before.store(plugin_api::instances_made(), Ordering::Relaxed);
         h.stand_in_gone.store(false, Ordering::Relaxed);
         h.back.store(false, Ordering::Relaxed);
         h.token.store(token, Ordering::Release);

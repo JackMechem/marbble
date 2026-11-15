@@ -26,16 +26,7 @@ const FREE: u8 = 0;
 const BUSY: u8 = 1;
 const PARKED: u8 = 2;
 
-/// An audio output bus of a plug-in.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct OutputBus {
-    /// The bus's index in the plug-in; 0 is the main output, which plays through its strip.
-    pub index: u32,
-    pub name: String,
-    pub channels: u32,
-    /// The plug-in plays this bus now.
-    pub active: bool,
-}
+pub use plugin_api::OutputBus;
 
 /// What the audio thread and the controller share to change the active buses.
 #[derive(Default)]

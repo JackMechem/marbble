@@ -10,7 +10,7 @@
 
 use std::collections::HashMap;
 
-use vst3_host::Gesture;
+use plugin_api::Gesture;
 
 use crate::dsp::Cmd;
 use crate::edit::automation::{lanes_dsp, splice, thin, tolerance, value_at, AutoTarget};

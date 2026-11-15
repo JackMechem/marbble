@@ -1,7 +1,7 @@
 //! Automation edited by hand: replacing a lane's points (the lane editor's drags share an undo
 //! step), clearing lanes, and the plug-in parameters a lane can take.
 
-use vst3_host::ParamInfo;
+use plugin_api::ParamInfo;
 
 use crate::session::*;
 

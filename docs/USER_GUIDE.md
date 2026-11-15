@@ -126,7 +126,7 @@ Contents:
 
 ### First launch
 
-1. On first launch Marbble scans your VST3 plug-ins. Each bundle is loaded in a separate
+1. On first launch Marbble scans your VST3 and CLAP plug-ins. Each file is loaded in a separate
    process, so a plug-in that crashes can't take Marbble down. The result is cached; rescan
    from Settings › Plug-ins or the Library.
 2. The **Project Chooser** opens (unless Settings › General › At Launch says otherwise). Pick a
@@ -764,14 +764,16 @@ adjust Recording Delay.
   holds Marbble Synth by default, a built-in polyphonic synthesizer that responds to pitch bend,
   sustain, modulation (vibrato) and expression. Choose another built-in instrument (see
   [Marbble Sampler](#marbble-sampler), [Marbble Tre](#marbble-tre) and
-  [the other synth models](#the-other-synth-models)) or a VST3 instrument in the New Tracks
+  [the other synth models](#the-other-synth-models)) or a VST3 or CLAP instrument in the New Tracks
   dialog, the Library, or the strip's Instrument slot.
 - **MIDI input:** every connected MIDI input is routed to the selected instrument track (if
   the selected track isn't an instrument track, to the first armed one). Devices plugged in
   later are picked up within a few seconds. Settings › MIDI switches individual inputs off,
   turns MIDI Thru off (MIDI is then recorded but not played, for keyboards with their own
   sound) and sets a velocity curve.
-- **VST3 instruments** receive controllers and pitch bend through their MIDI mapping.
+- **VST3 instruments** receive controllers and pitch bend through their MIDI mapping; **CLAP
+  instruments** get notes as CLAP note events and controllers, pitch bend and aftertouch as
+  MIDI, where they take MIDI.
 
 ### Marbble Sampler
 
@@ -2339,7 +2341,7 @@ From top to bottom:
 | Part | What it does |
 |---|---|
 | **Setting** | The channel strip settings menu (see [Channel strip settings](#channel-strip-settings)). |
-| **Input** | Audio tracks: the mono/stereo button and the input ("No Input", "Input 1"..., "Input 1–2"...). Instrument tracks: the **instrument slot** (No Plug-in, Marbble Synth, other built-in instruments by group, or a VST3 instrument by category or vendor). A built-in instrument shows its model ("Tre", "Sampler"); the tooltip has the full name. Auxes show their bus ("Bus 1"), or the instrument output they're on ("Drums: Direct out 0", see [Multi-output instruments](#multi-output-instruments)); summing stacks show "Σ Subtracks". |
+| **Input** | Audio tracks: the mono/stereo button and the input ("No Input", "Input 1"..., "Input 1–2"...). Instrument tracks: the **instrument slot** (No Plug-in, Marbble Synth, other built-in instruments by group, or a VST3 or CLAP instrument by category or vendor). A built-in instrument shows its model ("Tre", "Sampler"); the tooltip has the full name. Auxes show their bus ("Bus 1"), or the instrument output they're on ("Drums: Direct out 0", see [Multi-output instruments](#multi-output-instruments)); summing stacks show "Σ Subtracks". |
 | **EQ thumbnail** | The curve of the strip's first [Channel EQ](#channel-eq); click to open it (or to insert one). |
 | **Audio FX** | Insert slots (8 in all), in the rows the strips share (see above). An empty slot shows a faint **+**; click it to choose a plug-in. A filled slot's power and pop-up buttons show when you point at it. The label shows the strip's plug-in latency. |
 | **Sends** | Send slots (8 in all), in the rows the strips share. Click an empty slot (**+**) to add a send. |
@@ -2423,12 +2425,13 @@ that holds a sampler's samples.
 ### Plug-ins
 
 - **Loading:** click an empty Audio FX slot, or the arrow on a filled one, for a menu of plug-ins:
-  the built-in effects under **Marbble**, by category, then the VST3s under **VST3**, by category
-  and **By Manufacturer**; or click a plug-in in the Library. The instrument slot works the same
+  the built-in effects under **Marbble**, by category, then the VST3s and CLAPs under **VST3**
+  (**VST3 & CLAP** once you have CLAP plug-ins), by category and **By Manufacturer**, each CLAP
+  plug-in tagged **CLAP**; or click a plug-in in the Library, which tags them the same way. The instrument slot works the same
   way.
 - **Searching:** the slot menu opens with a search field at the top, ready to type in. Typing
-  lists the built-in plug-ins and VST3s whose name, category or manufacturer holds every word
-  typed, best matches first, with the category or manufacturer beside each. Down moves into the
+  lists the built-in plug-ins, VST3s and CLAPs whose name, category, manufacturer or format
+  holds every word typed ("clap comp"), best matches first, with the category or manufacturer beside each. Down moves into the
   list (Up from its first item goes back to the field), Return loads the first match or the
   item you're on, and typing on an item carries on the search. Esc clears the search, and a
   second Esc closes the menu. Names you gave plug-ins and your own categories (see below) are
@@ -2462,26 +2465,39 @@ that holds a sampler's samples.
   a VST3's own window (see [Undo](#undo)).
 - Settings › Plug-ins (the Plug-in Manager) lists every scanned plug-in and lets you switch
   some off, so they don't appear in the Library and slot menus (projects that use them still
-  load them). It also takes extra VST3 folders and shows the last scan's report, including each
-  bundle that failed and why.
+  load them), with each one's format, VST3 or CLAP. It also takes extra plug-in folders and
+  shows the last scan's report, including each file that failed and why.
 - **Your own categories:** the Plug-in Manager's **Categories** list, beside the plug-ins, shows
   All Plug-ins and the categories you make with **+** (rename one with the pencil or a
   double-click, delete it with **−**; deleting a category doesn't remove its plug-ins). Click a
   category to see what's in it. Put a plug-in in categories from its **Category** pop-up, which
   can also make a new one; a plug-in can be in several. The slot menus list your categories
-  first under **VST3**, above a line and the plug-ins' own categories, and the Library lists
+  first under **VST3** (or **VST3 & CLAP**), above a line and the plug-ins' own categories, and the Library lists
   them before the manufacturers.
-- **Your own names:** rename a VST3 with the pencil beside its name in the Plug-in Manager (or
+- **Your own names:** rename a VST3 or CLAP plug-in with the pencil beside its name in the Plug-in Manager (or
   double-click the name, or right-click the row for **Rename…** and **Reset Name**). The slot
   menus, their search and the Library use the new name; its own name still finds it and shows
   beside it in the manager. An empty name goes back to the plug-in's own. A plug-in already in
   a slot keeps the name it was inserted with.
-- Categories and names follow the plug-in's VST3 class id, so they survive a rescan, and the
-  bundle being moved to another folder.
+- Categories and names follow the plug-in's id in its file (a VST3 class id, a CLAP id), so they
+  survive a rescan, and the file being moved to another folder.
 
-Marbble hosts **VST3** plug-ins only. Plug-in editor windows are available on Linux (X11;
+Marbble hosts **VST3** and **CLAP** plug-ins. VST3 editor windows are available on Linux (X11;
 see [Troubleshooting](#plug-in-windows-and-wayland)) and macOS, where they float
 above Marbble's windows like Logic's and hide while another app is in front.
+
+**CLAP plug-ins** load, play, save their state with the project and can be automated like VST3s,
+but their own windows don't open yet: clicking one's name says so, and inserting one doesn't try.
+Their parameters are in the track's automation lanes, where you can draw or record them, and a
+control surface or MIDI Learn can move them. Edits a CLAP plug-in reports itself are undo steps
+and automation writes, as a VST3's are. Not yet for CLAP plug-ins: side-chain inputs, extra
+outputs of multi-output instruments, and a plug-in changing its latency while loaded (it's read
+when the plug-in loads). Marbble looks for `.clap` files in `$CLAP_PATH` and the standard
+folders: `~/.clap` and `/usr/lib/clap` on Linux (and NixOS's `/run/current-system/sw/lib/clap`,
+`~/.nix-profile/lib/clap` and the per-user profile), `~/Library/Audio/Plug-Ins/CLAP` and
+`/Library/Audio/Plug-Ins/CLAP` on macOS, and `Common Files\CLAP` on Windows, as well as in the
+standard VST3 folders and those you add. A project with a CLAP plug-in that isn't installed opens
+with the slot kept, as for a missing VST3.
 
 ### Built-in effects
 
@@ -3696,10 +3712,11 @@ The velocity curve applies to MIDI inputs, not to Musical Typing.
 
 ### Plug-ins
 
-The Plug-in Manager: every scanned plug-in with its manufacturer, type and version; untick
+The Plug-in Manager: every scanned plug-in with its manufacturer, type, format and version; untick
 **Use** to hide one from the Library and slot menus (Use All / Use None act on the filtered
-list); **VST3 Folders** (the standard locations are always searched; Add Folder… adds more);
-**Last Scan** (bundles, plug-ins and failures, with the reason for each failure: crashed, timed
+list), and its format (VST3 or CLAP); **Plug-in Folders** (the standard VST3 and CLAP locations
+are always searched; Add Folder… adds more, searched for both formats); **Last Scan** (files,
+plug-ins and failures, with the reason for each failure: crashed, timed
 out, no plug-ins); **Rescan Plug-ins**.
 
 ### Key Commands
@@ -4249,7 +4266,7 @@ until the render finishes.
 ### Plug-ins are missing
 
 Check Settings › Plug-ins: the plug-in may be switched off, its folder may not be searched (add
-it under VST3 Folders), or it may have failed in the last scan (expand the report). Rescan
+it under Plug-in Folders), or it may have failed in the last scan (expand the report). Rescan
 after installing plug-ins.
 
 - On a Mac with Apple Silicon, a plug-in built only for Intel can't load; the report says so.
@@ -4290,7 +4307,8 @@ its package rather than a copied binary.
   own fields stays there; Esc doesn't close the window. On Linux only menu shortcuts work while
   a plug-in's window is in front. The input level check works on Linux and macOS, not Windows. On Windows and macOS only
   the system's default audio driver is available (no ASIO).
-- **Plug-in formats:** VST3 only; no CLAP, AU or VST2.
+- **Plug-in formats:** VST3 and CLAP; no AU or VST2. CLAP plug-ins have no windows yet, no
+  side-chain inputs or extra outputs, and a latency change while loaded isn't followed.
 - **Tempo:** a region's length stays in samples when it is moved across a tempo change (only
   its start follows the bars and beats). Move MIDI Regions with Tempo doesn't move automation
   or markers, isn't applied to base-tempo edits in Project Settings, and isn't remembered

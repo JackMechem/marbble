@@ -35,7 +35,7 @@ const SHARE: u32 = 100;
 /// How current the project's copy of a running VST3's state is.
 #[derive(Debug, Clone)]
 pub(crate) struct StateCopy {
-    /// `PluginController::host_changes` as of the copy.
+    /// `Controller::host_changes` as of the copy.
     seen_host: u64,
     /// When the copy is to be read again, the plug-in having changed since (or it having none).
     due: Option<Instant>,
@@ -80,7 +80,7 @@ impl StateCopy {
 
 impl Session {
     /// Starts keeping the copy of an instance's state, just loaded with `slot`'s.
-    pub(crate) fn track_state_copy(&mut self, slot: &PluginSlot, c: &PluginController) {
+    pub(crate) fn track_state_copy(&mut self, slot: &PluginSlot, c: &dyn Controller) {
         let now = slot.state.is_none().then(Instant::now);
         self.state_copies.insert(slot.uid, StateCopy::new(c.host_changes(), now));
     }

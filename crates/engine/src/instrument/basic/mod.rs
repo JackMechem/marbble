@@ -1,7 +1,7 @@
 //! Marbble Synth (`crate::instrument::basic::synth::BasicSynth`, untouched) in the instrument registry: no parameters,
 //! no panel. Its id and sound are what every existing project holds, so it stays as it always was.
 
-use vst3_host::MidiEvent;
+use plugin_api::MidiEvent;
 
 pub mod synth;
 

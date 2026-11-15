@@ -29,8 +29,8 @@ use std::time::{Duration, Instant};
 use anyhow::{anyhow, Context, Result};
 use base64::Engine as _;
 use parking_lot::Mutex;
+use plugin_api::{Controller, PluginDescriptor, PluginState};
 use serde::{Deserialize, Serialize};
-use vst3_host::{PluginController, PluginDescriptor, PluginState};
 
 use crate::audio_file::clip::Clip;
 use crate::audio_io::recorder::{FinishedTake, Recorder, TakePreview};
@@ -76,6 +76,7 @@ pub use mixer::multi_out::{InstrumentOutputs, OutputInfo};
 pub use mixer::vca::VcaPatch;
 pub use plugins::builtin::{builtin_effects, builtin_instruments, BuiltinInfo, BuiltinInstrument, FxTick};
 pub use plugins::compare::CompareStates;
+pub use plugins::hosted::instantiate as instantiate_plugin;
 pub use project::autosave::{discard_autosave, recovery_info, AutosaveJob, Recovery};
 pub use project::backups::BackupInfo;
 pub use project::bounce::{AudioFormat, BipOptions, BipSource, BitDepth, BounceResult, InPlaceRender, RenderOptions};
@@ -205,7 +206,7 @@ pub struct Session {
     /// The MIDI the recording in progress has captured (see `session/takes/midi_capture.rs`).
     rec_midi: takes::midi_capture::RecordedMidi,
     recorder: Recorder,
-    controllers: HashMap<Id, PluginController>,
+    controllers: HashMap<Id, Box<dyn Controller>>,
     /// Render ahead's threads, while it's on (`set_render_ahead`), with how many there are and the
     /// lead, and the tracks last kept live (`sync_ahead`).
     ahead: Option<crate::dsp::ahead::AheadThreads>,

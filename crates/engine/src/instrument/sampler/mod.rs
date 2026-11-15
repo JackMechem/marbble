@@ -27,7 +27,7 @@
 
 use std::sync::Arc;
 
-use vst3_host::MidiEvent;
+use plugin_api::MidiEvent;
 
 use super::{FxContext, Instrument, InstrumentData, InstrumentInfo, Midi, MAX_METERS};
 use crate::synth_dsp::alloc::{Priority, VoiceAction, VoiceAllocator, VoiceMode};

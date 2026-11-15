@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/vst3-host", "crates/engine", "src-tauri"]
+members = ["crates/plugin-api", "crates/vst3-host", "crates/clap-host", "crates/engine", "src-tauri"]
 
 [workspace.package]
 version = "0.1.0-alpha.18"
@@ -19,4 +19,7 @@ opt-level = 2
 opt-level = 3
 
 [profile.dev.package.vst3-host]
+opt-level = 3
+
+[profile.dev.package.clap-host]
 opt-level = 3

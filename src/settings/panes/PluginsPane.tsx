@@ -8,6 +8,7 @@ import { updateSettings, useSettings } from "../appSettings";
 import { setState } from "../../state/store";
 import { Foot, Row, Section } from "./parts";
 import { pluginType } from "../settingsText";
+import { formatName } from "../../plugins/pluginFormat";
 import { matchesQuery } from "../../plugins/pluginSearch";
 import { addCategory, categoryNameProblem, deleteCategory, renameCategory, setInCategory, setName, type PluginCustom } from "../../plugins/pluginCustom";
 import { askName } from "../../ui/NameSheet";
@@ -60,7 +61,7 @@ export function PluginsPane({ close }: { close: () => void }) {
   const { categories, names } = pp;
   const all = data?.plugins ?? [];
   const members = categories.find((c) => c.name === cat)?.plugins;
-  const list = all.filter((p) => (!members || members.includes(p.cid)) && matchesQuery(q, names[p.cid], p.name, p.vendor, p.subcategories));
+  const list = all.filter((p) => (!members || members.includes(p.cid)) && matchesQuery(q, names[p.cid], p.name, p.vendor, p.subcategories, formatName(p)));
   const inCategories = (p: PluginDesc) => categories.filter((c) => c.plugins.includes(p.cid)).map((c) => c.name);
   // A plug-in's categories, to tick: each of the user's, then one to make and put it in.
   const categoryItems = (p: PluginDesc): MenuItem[] => [
@@ -191,6 +192,7 @@ export function PluginsPane({ close }: { close: () => void }) {
             <span>Manufacturer</span>
             <span>Category</span>
             <span>Type</span>
+            <span>Format</span>
             <span>Version</span>
           </div>
           <div className="pm-body">
@@ -217,13 +219,14 @@ export function PluginsPane({ close }: { close: () => void }) {
                     </button>
                   </span>
                   <span className="pm-type">{pluginType(p)}</span>
+                  <span className="dim">{formatName(p)}</span>
                   <span className="dim">{p.version}</span>
                 </div>
               );
             })}
             {data && list.length === 0 && (
               <div className="pm-empty">
-                {!data.plugins.length ? "No VST3 plug-ins found. Add a folder below and rescan." : members && !q ? "No plug-ins in this category yet: add them from the Category column." : "No matching plug-ins"}
+                {!data.plugins.length ? "No VST3 or CLAP plug-ins found. Add a folder below and rescan." : members && !q ? "No plug-ins in this category yet: add them from the Category column." : "No matching plug-ins"}
               </div>
             )}
           </div>
@@ -234,7 +237,7 @@ export function PluginsPane({ close }: { close: () => void }) {
       </div>
 
       <Section title="Folders">
-        <Row label="VST3 Folders:" note="The standard locations are always searched. Rescan after adding a folder.">
+        <Row label="Plug-in Folders:" note="The standard VST3 and CLAP locations are always searched, each for both formats. Rescan after adding a folder.">
           <div className="pm-folders">
             {(data?.folders ?? []).map((f) => (
               <div key={f} className={"pm-folder" + (extra.has(f) ? "" : " std")}>
@@ -250,7 +253,7 @@ export function PluginsPane({ close }: { close: () => void }) {
               <button
                 className="push"
                 onClick={async () => {
-                  const dir = await open({ directory: true, title: "Add a VST3 folder" });
+                  const dir = await open({ directory: true, title: "Add a plug-in folder" });
                   if (typeof dir === "string" && !pp.folders.includes(dir)) await setFolders([...pp.folders, dir]).then(load);
                 }}
               >

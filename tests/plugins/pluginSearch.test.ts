@@ -36,6 +36,20 @@ test("the menu lists matching built-ins and VST3s under their headings, with the
   assert.deepEqual(shape(searchMenuItems(builtins, vst3, "verb", () => {})), ["# Marbble", "Reverb (Reverb)"], "no heading for a set with no matches");
 });
 
+test("CLAP plug-ins come under the heading given, tagged", () => {
+  const hosted = [
+    { id: "vst:a", name: "Compressor Stereo", hint: "LSP VST3", keywords: "VST3" },
+    { id: "clap:a", name: "Compressor Stereo", hint: "LSP CLAP", tag: "CLAP", keywords: "CLAP" },
+  ];
+  const items = searchMenuItems([], hosted, "compressor", () => {}, undefined, "VST3 & CLAP");
+  assert.deepEqual(shape(items), ["# VST3 & CLAP", "Compressor Stereo (LSP VST3)", "Compressor Stereo (LSP CLAP)"]);
+  assert.deepEqual(
+    items.map((i) => i.tag),
+    [undefined, undefined, "CLAP"],
+  );
+  assert.deepEqual(shape(searchMenuItems([], hosted, "clap", () => {})).slice(1), ["Compressor Stereo (LSP CLAP)"], "the format is searched");
+});
+
 test("nothing matching: a note that can't be chosen", () => {
   const items = searchMenuItems([fx("Gain", "Utility")], [], "zzz", () => {});
   assert.deepEqual(shape(items), ["No matching plug-ins"]);

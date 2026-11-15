@@ -170,8 +170,11 @@ it too.
   `onoff_vst_check` (ZaMaximX2, TONE3000), and the plug-in parts of `fx_check`,
   `automation_check` and `bounce_check`, which print `SKIP` without them.
   `vst_sidechain_check`, `multiout_check`, `multiout_freeze_check`, `vst_tails_check`,
-  `vst_undo_check` and `vst_settings_check` find LSP's plug-ins themselves, so they're in the script and `SKIP` where they
-  aren't installed.
+  `vst_undo_check`, `vst_settings_check` and `clap_check` find LSP's plug-ins themselves, so
+  they're in the script and `SKIP` where they aren't installed. `vst_undo_check` runs its undo
+  checks on the CLAP versions of LSP's Compressor and ZamCompX2 too; `clap_check` compares CLAP
+  plug-ins with their VST3s (the same render to the bit), scans out of process with itself as the
+  scanner, and counts allocations with CLAP plug-ins playing.
 - **Needs a real output device, so run by hand on macOS:** `workgroup_check` plays silence to the
   default output (never an input) on three real-time workers and checks they joined the device's IO
   workgroup, before and after reopening it. It prints `SKIP` without an output device or elsewhere
@@ -219,6 +222,8 @@ it too.
   `lsp_sampler_loads` counts the samples LSP's Multi-Sampler loses. `scripts/editor-scale-check.sh` checks on a private Xvfb display that editors
   double at `GDK_SCALE=2`, and that an open one doubles and comes back when `xrdb` sets `Xft.dpi`
   to 192 and back to 96.
+- `crates/clap-host/examples/`: `probe` scans and runs installed CLAP plug-ins, as `vst3-host`'s
+  does for VST3s.
 
 A new check follows `stack_check.rs`: a `Session` on `alsa:null`, its folder set to the scratch
 folder, the cycle on, and playing and reading meters through `examples/common/transport.rs`
@@ -259,8 +264,8 @@ report races inside their own loading and teardown.
   latencies; `cargo run -p daw-engine --example hosts` what cpal sees. "System overload" means the
   callbacks ran late for 60 ms in a row; the CPU meter's peak and late-block count show how close
   you are.
-- **Plug-ins:** `cargo run -p vst3-host --example probe -- <name>` loads and runs plug-ins outside
-  the app. Settings › Plug-ins shows the last scan's report. Delete `plugins.json` in the config
+- **Plug-ins:** `cargo run -p vst3-host --example probe -- <name>` (or `-p clap-host` for CLAP
+  plug-ins, `-- <file> <name>`) loads and runs plug-ins outside the app. Settings › Plug-ins shows the last scan's report. Delete `plugins.json` in the config
   folder (or Rescan) to scan again.
 - **The update check** in a debug build compares against `MARBBLE_FAKE_VERSION` when set.
 - **Projects** are plain JSON in `project.json`, safe to read, and editable by hand while the app is

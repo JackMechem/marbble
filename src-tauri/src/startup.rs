@@ -1,4 +1,4 @@
-//! Before the window opens: the `--scan-vst3` child mode, the display backend and logging, and
+//! Before the window opens: the `--scan-plugin` child mode, the display backend and logging, and
 //! the session, with its plug-ins, settings and the project named on the command line.
 
 use std::sync::Arc;
@@ -9,8 +9,8 @@ use parking_lot::Mutex;
 
 use crate::{crash, recent, schemas, settings};
 
-/// In a child process the plug-in scanner starts (`marbble --scan-vst3 <bundle>`): scans the bundle
-/// and exits.
+/// In a child process the plug-in scanner starts (`marbble --scan-plugin <file>`): scans the VST3
+/// bundle or CLAP file and exits.
 pub fn scan_child_if_asked(args: &[String]) {
     if let Some(i) = args.iter().position(|a| a == plugin_db::SCAN_ARG) {
         let code = args.get(i + 1).map(|p| plugin_db::scan_child_main(p.as_ref())).unwrap_or(2);

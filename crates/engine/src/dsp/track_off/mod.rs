@@ -38,10 +38,10 @@ pub(super) fn fade_in(left: &mut u32, len: u32, l: &mut [f32], r: &mut [f32]) {
 
 impl Plugin {
     /// Stops the plug-in and clears its state, for a track going off. A VST3 stays active
-    /// (`setActive` belongs to the main thread): see `PluginProcessor::suspend`.
+    /// (`setActive` belongs to the main thread): see `Processor::suspend`.
     fn sleep(&mut self) {
         match self {
-            Plugin::Vst(p) => p.suspend(),
+            Plugin::Hosted(p) => p.suspend(),
             Plugin::Instrument(i) => i.sleep(),
             Plugin::Builtin(b) => b.sleep(),
         }
@@ -51,7 +51,7 @@ impl Plugin {
     /// on an Off track, so while the user moves something there the edits go through, in a block
     /// of silence nobody hears: its saved state and what it plays when back on must have them.
     fn pass_edits(&mut self, l: &mut [f32], r: &mut [f32], t: &TransportInfo) {
-        if let Plugin::Vst(p) = self {
+        if let Plugin::Hosted(p) = self {
             if p.has_edits() {
                 l.fill(0.0);
                 r.fill(0.0);
@@ -66,7 +66,7 @@ impl Plugin {
     /// `pass_edits` for a plug-in the engine skips on a track that's playing (bypassed, or left
     /// out by Low Latency Mode): the track's buffers are in use, so it brings its own.
     pub(super) fn pass_edits_aside(&mut self, t: &TransportInfo) {
-        if let Plugin::Vst(p) = self {
+        if let Plugin::Hosted(p) = self {
             p.pass_edits(t);
         }
     }

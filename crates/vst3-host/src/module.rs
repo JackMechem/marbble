@@ -5,7 +5,6 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
 
 use parking_lot::Mutex;
-use serde::{Deserialize, Serialize};
 use vst3::Steinberg::*;
 use vst3::{ComPtr, Interface};
 
@@ -22,28 +21,8 @@ pub struct Module {
 unsafe impl Send for Module {}
 unsafe impl Sync for Module {}
 
-/// One class exported by a module's factory.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PluginDescriptor {
-    /// Stable identifier: `<bundle path>|<class id hex>`.
-    pub id: String,
-    pub name: String,
-    pub vendor: String,
-    pub version: String,
-    pub path: PathBuf,
-    pub cid: String,
-    /// e.g. "Fx|Reverb" or "Instrument|Synth".
-    pub subcategories: String,
-    pub is_instrument: bool,
-}
-
-impl PluginDescriptor {
-    /// Top-level grouping used by the plug-in menus, mirroring Logic's category submenus.
-    pub fn category(&self) -> String {
-        let mut parts = self.subcategories.split('|').filter(|s| !s.is_empty() && *s != "Fx");
-        parts.next().unwrap_or("Effect").to_string()
-    }
-}
+pub use plugin_api::PluginDescriptor;
+use plugin_api::PluginFormat;
 
 static MODULES: OnceLock<Mutex<HashMap<PathBuf, Arc<Module>>>> = OnceLock::new();
 
@@ -214,6 +193,7 @@ impl Module {
                     cid: hex(&cid),
                     is_instrument: subcategories.contains("Instrument"),
                     subcategories,
+                    format: PluginFormat::Vst3,
                 });
             }
         }

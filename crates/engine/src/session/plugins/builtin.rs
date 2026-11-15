@@ -21,7 +21,7 @@
 
 use std::collections::HashSet;
 
-use vst3_host::ParamInfo;
+use plugin_api::ParamInfo;
 
 use crate::fx::{self, EffectInfo, ParamKind, ParamSpec, Unit};
 use crate::instrument::{self, InstrumentInfo};

@@ -249,8 +249,7 @@ impl PluginController {
         if self.unresponsive {
             return;
         }
-        self.host_changes.fetch_add(1, Ordering::Relaxed);
-        self.host_set.lock().insert(id, (value.clamp(0.0, 1.0), Instant::now()));
+        self.host_set.param(id, value.clamp(0.0, 1.0));
         if let Some(c) = &self.shared.controller {
             unsafe {
                 c.setParamNormalized(id, value.clamp(0.0, 1.0));
@@ -272,18 +271,13 @@ impl PluginController {
     /// How many times the host has set a parameter or loaded a state: when it changes, the
     /// plug-in's state has changed by something other than its editor.
     pub fn host_changes(&self) -> u64 {
-        self.host_changes.load(Ordering::Relaxed)
+        self.host_set.changes()
     }
 
     /// Whether an edit from the plug-in only repeats what the host set a moment ago: an editor
     /// answering `setParamNormalized` with `performEdit`, as some do.
     pub fn host_echo(&self, id: u32, value: f64) -> bool {
-        let mut set = self.host_set.lock();
-        let echo = set.get(&id).is_some_and(|(v, at)| (v - value).abs() < 1e-6 && at.elapsed() < HOST_ECHO);
-        if !echo {
-            set.remove(&id);
-        }
-        echo
+        self.host_set.echo(id, value)
     }
 
     /// Whether edits from the editor are still on their way to the processor.
@@ -409,7 +403,7 @@ impl PluginController {
         if self.unresponsive {
             return;
         }
-        self.host_changes.fetch_add(1, Ordering::Relaxed);
+        self.host_set.other();
         unsafe {
             if !st.component.is_empty() {
                 let s = MemoryStream::new(st.component.clone());

@@ -1,4 +1,6 @@
 //! Minimal VST3 hosting: module loading, scanning, instantiation, processing and editor windows.
+//! The two halves it makes are the engine's `plugin_api::Processor` and `Controller`
+//! (`plugin/api.rs`), and the types they share with it are `plugin_api`'s, re-exported here.
 
 pub mod host;
 pub mod keys;

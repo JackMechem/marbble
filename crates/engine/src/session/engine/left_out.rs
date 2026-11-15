@@ -22,7 +22,7 @@ impl Session {
     }
 
     /// Marks the controller of each plug-in a thread is left in as not to be called from here, and
-    /// those of plug-ins that came back as callable again (`PluginController::set_unresponsive`):
+    /// those of plug-ins that came back as callable again (`Controller::set_unresponsive`):
     /// its editor, parameters, latency and state go untouched meanwhile, and an editor closed
     /// then is only hidden until the instance is gone. Before anything else in `idle`, and before
     /// dropping controllers wholesale.

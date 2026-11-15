@@ -11,7 +11,7 @@
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Arc;
 
-use vst3_host::MidiEvent;
+use plugin_api::MidiEvent;
 
 use crate::fx::{Effect, EffectInfo, FxContext, Key, ParamKind, ParamSpec, MAX_METERS};
 use crate::instrument::{Instrument, InstrumentInfo};

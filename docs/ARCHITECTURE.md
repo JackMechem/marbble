@@ -25,12 +25,14 @@ Contents:
 
 ## 1. The parts
 
-Marbble is a Cargo workspace of three crates and a React frontend:
+Marbble is a Cargo workspace of five crates and a React frontend:
 
 | Part | Path | What it is |
 |---|---|---|
 | `daw-engine` | `crates/engine` | The audio engine: the project model, the real-time graph, the session that edits the project, devices, recording, MIDI, built-in effects and instruments. No UI code. |
+| `plugin-api` | `crates/plugin-api` | What the engine asks of a hosted plug-in, whatever its format: the `Processor` (audio thread) and `Controller` (main thread) traits, descriptors, MIDI, transport, parameters, state. |
 | `vst3-host` | `crates/vst3-host` | VST3 hosting on the `vst3` bindings: loading and scanning bundles, the host's COM objects, the real-time processing wrapper, editor windows. |
+| `clap-host` | `crates/clap-host` | CLAP hosting on the `clap-sys` bindings: loading and scanning `.clap` files, the host's side of the API, the two halves. No editor windows yet. |
 | `daw` | `src-tauri` | The Tauri 2 app: the commands the frontend calls, the native menu bar, settings and recent files, and the timers that drive the session. The binary is `daw`; packages also install it as `marbble`. |
 | frontend | `src` | React 19 and TypeScript, built with Vite. The Tracks area, rulers, editors and meters are drawn on canvases. |
 
@@ -74,7 +76,7 @@ session/            the non-real-time half: Session, one `impl Session` per feat
   project/            files, autosave, recovery, settings, alternatives, backups, templates, bounces
   tracks/             the track list, groups, track alternatives, icons, Track On/Off, Freeze
   mixer/              sends and outputs, VCAs, multi-output auxes, meters, channel strip settings
-  plugins/            insert and instrument slots, built-ins, presets, side-chains, VST3 state and undo
+  plugins/            insert and instrument slots, built-ins, presets, side-chains, loading VST3 or CLAP (hosted.rs), their state and undo
     sampler/            Marbble Sampler's zones, files, recording and saved instruments
   regions/            region edits, import, moves and drag modes, gain, fades, range edits, arranging
   midi/               Piano Roll content, MIDI file import and export, Step Sequencer patterns
@@ -110,7 +112,8 @@ lib.rs              the public surface: instantiate, scan, editors
 module.rs           loading a bundle and its plug-in factory
 scan.rs             finding bundles on disk
 plugin.rs           the two halves' types; plugin/ makes and runs them
-plugin/             instantiate.rs, processor.rs (audio thread), controller.rs (main thread), multi_out.rs
+plugin/             instantiate.rs, processor.rs (audio thread), controller.rs (main thread), multi_out.rs,
+                    api.rs (the two halves behind plugin_api's traits)
 process.rs          preallocated parameter queues and event lists
 host.rs             the host's COM objects (IHostApplication, IComponentHandler…)
 stream.rs           an in-memory IBStream for state
@@ -119,11 +122,33 @@ keys.rs             keys an editor didn't use, passed on to the app
 macos_bundle.rs     CFBundle loading and dyld's messages on macOS
 ```
 
+### The plug-in interface and the CLAP host: `crates/plugin-api/src`, `crates/clap-host/src`
+
+```text
+plugin-api/
+  traits.rs         Processor and Controller, the two halves the engine holds
+  types.rs          MIDI events, the transport, parameters, states, gestures, buses
+  descriptor.rs     a scanned plug-in and its format (VST3 or CLAP)
+  instances.rs      instance numbers, shared by the formats
+  host_set.rs       what the host itself set, to tell it from a plug-in's own edits
+  files.rs          finding plug-in files on disk
+clap-host/
+  entry.rs          loading a .clap file, its entry and factory
+  scan.rs           the CLAP folders
+  features.rs       CLAP features as VST3-style subcategories
+  host.rs           the clap_host, its extensions, and which thread is which
+  plugin.rs         the two halves' types; plugin/ makes and runs them
+  plugin/           instantiate.rs, processor.rs (audio thread), controller.rs (main thread), ports.rs
+  events.rs         preallocated input events, output events as gestures
+  params.rs         CLAP's plain parameter values and the engine's normalized ones
+  stream.rs         in-memory streams for state
+```
+
 ### The app: `src-tauri/src`
 
 ```text
 main.rs             modules, AppState, the window's setup, the list of commands
-startup.rs          the --scan-vst3 child mode, display backend and logging, the session at launch
+startup.rs          the --scan-plugin child mode, display backend and logging, the session at launch
 timers.rs           the tick thread, the idle timer with autosave, MIDI device refresh
 commands.rs         Snapshot and the wrappers every command shares (edit, try_edit, edit_made…)
 commands/           the commands, one file per area (tracks, regions, plugins, project…)
@@ -207,7 +232,7 @@ CI, releases and the website's deploy.
 
 | Thread | Started by | What it does | What it may not do |
 |---|---|---|---|
-| **Main** | Tauri | Synchronous Tauri commands (most edits), the native menu, the GTK main loop, and the 30 ms idle timer (`Session::idle`: plug-in controller idle, latency changes, dropping `Garbage`, taking recorded MIDI off its ring, automation, controller assignments and feedback, control surfaces, taking autosaves). Every VST3 controller and editor lives here. | Block for long. Renders are async commands for that reason. |
+| **Main** | Tauri | Synchronous Tauri commands (most edits), the native menu, the GTK main loop, and the 30 ms idle timer (`Session::idle`: plug-in controller idle, latency changes, dropping `Garbage`, taking recorded MIDI off its ring, automation, controller assignments and feedback, control surfaces, taking autosaves). Every VST3 and CLAP controller and every editor lives here. | Block for long. Renders are async commands for that reason. |
 | **Audio callback** | cpal | Calls `Engine::process_io` once per device buffer, inside `catch_unwind`. Real-time priority (rtkit on Linux, Core Audio's own on macOS), on the performance cores where a CPU has two kinds (`audio_io::threads::keep_to`). The input stream's callback only fills the input ring. | Allocate, lock, block, do I/O ([Real-time rules](#4-real-time-rules)). |
 | **`marbble-dsp-N`** | `Session::sync_parallel` | Plays strips beside the callback when Processing Threads allows and the project is heavy enough ([Multi-core](#multi-core-processing)). | The same as the callback. |
 | **`audio-io`** | `audio_io::start` | Builds and owns the cpal streams until the device closes. | |
@@ -219,7 +244,7 @@ CI, releases and the website's deploy.
 | **Async commands** | Tauri's runtime | Renders (bounce, export, Bounce in Place, Freeze), plug-in rescans, waveforms, device lists, folder listings, the Diagnostics window's snapshots (which wait at most 5 ms for the session and skip a refresh rather than wait longer). Renders hold the session and engine locks throughout; edits they make go back to the main thread with `run_on_main_thread`. | Touch plug-in controllers. |
 | **Autosave writer** | `src-tauri/src/timers.rs` | Writes a job serialized on the main thread to disk, atomically. | |
 | **`activity-log`, `activity-watch`** | `src-tauri/src/diagnostics/activity.rs` | The watch, from launch, looks at the session four times a second (`Session::watch`) and notes what changed in the Diagnostics window's log; while Record Everything is on, the other writes the activity log's lines to its file. | Wait for the session more than 10 ms. |
-| **Scan child process** | `library/plugin_db.rs` | `marbble --scan-vst3 <bundle>` loads one bundle in a child process, so a crashing plug-in can't take the app down. | |
+| **Scan child process** | `library/plugin_db.rs` | `marbble --scan-plugin <file>` loads one VST3 bundle or CLAP file in a child process, so a crashing plug-in can't take the app down. | |
 
 On macOS the idle timer is a `CFRunLoopTimer` on the main run loop in its common modes, so it
 also fires while a menu is open or a window is being resized; a busy main thread only makes it
@@ -245,7 +270,7 @@ same rules. They must not:
   can spin while a preempted sender finishes, and at real-time priority that starved the sender
   until the kernel killed the app with SIGXCPU.
 - **do I/O or call a plug-in's controller.** Only the processor half of a plug-in
-  (`PluginProcessor`) moves into the engine.
+  (`plugin_api::Processor`) moves into the engine.
 
 **Cmd in, Garbage out.** The session builds whatever the engine needs (a `TrackDsp`, a playback
 list, an insert, a delay line) on its own thread and sends it in a `Cmd` (`dsp/cmd.rs`). At the
@@ -789,8 +814,21 @@ settings load.
 
 ## 9. Plug-ins
 
-A slot holds a `Plugin` (`dsp/track.rs`): a VST3, a built-in effect or a built-in instrument.
-Bypass, Low Latency Mode, containment, reordering, copying and Freeze treat all three alike.
+A slot holds a `Plugin` (`dsp/track.rs`): a hosted plug-in (VST3 or CLAP), a built-in effect or a
+built-in instrument. Bypass, Low Latency Mode, containment, reordering, copying and Freeze treat
+them all alike.
+
+### The plug-in interface
+
+`crates/plugin-api` is what the engine asks of a plug-in from another maker, in either format:
+`Processor`, the audio-thread half that `Plugin::Hosted` holds as a `Box<dyn Processor>`, and
+`Controller`, the main-thread half the session keeps in `controllers`, keyed by the slot's
+instance id. `vst3-host` and `clap-host` each implement both; `session/plugins/hosted.rs` picks
+the host from the descriptor's `format` (VST3 for scan caches from before it). Past loading, the
+session and the engine treat the formats alike: automation in normalized values, gestures for
+undo and automation writes, a state as `PluginState`, the unresponsive handling, instance
+numbers from one counter. A slot's `plugin_id` is `<file path>|<cid>` for both, and its state the
+same `"<base64>:<base64>"` string (a CLAP plug-in's one blob, then nothing).
 
 ### Built-in effects and instruments
 
@@ -825,8 +863,8 @@ Bypass, Low Latency Mode, containment, reordering, copying and Freeze treat all 
   whose path isn't there falls back to the same class at another path. Modules are cached and
   never unloaded.
 - **Scanning out of process** (`library/plugin_db.rs`): the app runs itself as
-  `marbble --scan-vst3 <bundle>` for each bundle, four at a time, with a 20 s timeout. The result
-  is cached; a scan runs at startup only without a cache.
+  `marbble --scan-plugin <file>` for each VST3 bundle and CLAP file, four at a time, with a 20 s
+  timeout. The result is cached; a scan runs at startup only without a cache.
 - **Two halves** (`plugin/instantiate.rs`): the component and controller are created, connected
   and synced. `PluginProcessor` moves into the engine; `PluginController` stays in the session,
   keyed by the slot's instance id, and is used only on the main thread. They share an `Arc` whose
@@ -850,6 +888,39 @@ Bypass, Low Latency Mode, containment, reordering, copying and Freeze treat all 
   as it opens is opened again; an NSWindow on macOS, which passes keys the plug-in doesn't use back to
   the app; none yet on Windows. On native Wayland, the main thread's calls into editors go through
   `gl_isolated`, which keeps GTK's and the plug-in's OpenGL contexts apart.
+
+### CLAP hosting
+
+`crates/clap-host` sits on the `clap-sys` bindings. Its surface is
+`instantiate(desc, sample_rate, max_block) -> (ClapProcessor, ClapController)`, the two halves
+of `plugin_api`.
+
+- **Finding and loading** (`scan.rs`, `entry.rs`): `.clap` files (bundles on macOS) in
+  `$CLAP_PATH` and the CLAP standard's folders, plus every folder searched for VST3s; the scan
+  searches each folder for both formats. A plug-in's id is `<file path>|<CLAP id>`. A file's entry
+  is initialized once and never deinitialized, and the file never unloaded, as VST3 modules aren't.
+  Its features become VST3-style subcategories (`features.rs`), so the menus group both alike.
+- **Threads** (`host.rs`): the thread that instantiates is the main thread, and every controller
+  call comes from it: `init`, `activate`, parameter infos and values, state, `on_main_thread`.
+  Every processor call into the plug-in (`start_processing`, `process`, `flush`,
+  `stop_processing`, `reset`) holds an `AudioRole`, a thread-local flag that the host's thread
+  check answers from, wherever it runs: the device's callback, a pool worker, a render, or the
+  main thread stopping a processor it's about to drop. The plug-in's thread-safe requests
+  (`request_callback`, `request_restart`, `request_process`, `params.request_flush`,
+  `params.rescan`, `state.mark_dirty`, `latency.changed`) only set atomics, which the
+  controller's `idle` answers on the main thread; a log message from the audio thread is dropped.
+- **Processing** (`plugin/processor.rs`, `events.rs`): every buffer and event list is
+  allocated at instantiation. A block's input events (edits, automation, notes as CLAP note events
+  or MIDI as the note port prefers, CCs as MIDI) go into a fixed list, kept in time order by an
+  in-place insertion sort, with a `clap_event_transport` from the tempo map. Parameter values are
+  normalized in the engine and plain in CLAP; `params.rs` maps them through each parameter's range,
+  found by binary search in a table built at load. The plug-in's output events become `Gesture`s
+  on a ring for the controller: what an editor's edits are for undo and automation writes.
+  `process` starts processing on the first block; `suspend` stops and resets it; a plug-in the
+  engine isn't running gets its waiting edits through `params.flush`.
+- **What isn't there yet**: editor windows (#559), side-chain inputs and extra output ports, and
+  restarts for a latency change (#560). Its latency and tail are read when it loads, so delay
+  compensation and renders' tails hold for a plug-in that doesn't change them.
 
 ### Moving plug-ins and strip settings
 

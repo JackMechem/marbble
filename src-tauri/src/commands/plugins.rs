@@ -23,8 +23,9 @@ pub fn set_plugin(state: State<AppState>, track: Id, slot: i64, plugin_id: Strin
     let mut warning = None;
     let snap = try_edit(&state, "Insert Plug-in", None, true, |s| {
         let uid = s.set_plugin(track, slot_index(slot), &plugin_id)?;
-        // Built-in effects open their panel in the UI instead.
-        if open && !plugin_id.starts_with("builtin:") {
+        // Built-in effects open their panel in the UI instead; a plug-in without a window of its
+        // own (a CLAP one, for now) just goes in.
+        if open && !plugin_id.starts_with("builtin:") && s.has_editor(uid) {
             let title = s.project.track(track).map(|t| t.name.clone()).unwrap_or_else(|| "Stereo Out".into());
             // The plug-in stays inserted; the user hears why its window didn't open.
             if let Err(e) = s.open_editor(uid, &title) {

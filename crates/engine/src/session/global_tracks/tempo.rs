@@ -15,7 +15,7 @@ impl Session {
 
     /// What plug-ins are told about the transport at the playhead, from the engine itself
     /// (for checks: it shows which tempo map the engine has).
-    pub fn transport_info(&self) -> vst3_host::TransportInfo {
+    pub fn transport_info(&self) -> plugin_api::TransportInfo {
         self.engine.lock().transport()
     }
 

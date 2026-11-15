@@ -70,14 +70,14 @@ impl InsertDsp {
 impl Plugin {
     /// Edits, automation or a fade wait for its next block.
     fn wants_to_run(&self) -> bool {
-        matches!(self, Plugin::Vst(p) if p.wants_to_run())
+        matches!(self, Plugin::Hosted(p) if p.wants_to_run())
     }
 
     /// How long its output may go on after its input stops, in frames, or None if it may never
     /// stop (it doesn't sleep).
     fn ring_out(&self, sr: f64) -> Option<u64> {
         match self {
-            Plugin::Vst(p) => (p.ring_out() != u32::MAX).then(|| p.ring_out() as u64),
+            Plugin::Hosted(p) => (p.ring_out() != u32::MAX).then(|| p.ring_out() as u64),
             Plugin::Builtin(b) => Some(b.ring_out(sr)),
             Plugin::Instrument(_) => None,
         }

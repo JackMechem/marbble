@@ -34,7 +34,7 @@
 
 use std::sync::OnceLock;
 
-use vst3_host::MidiEvent;
+use plugin_api::MidiEvent;
 
 use super::common::{dc_pole, OutStage, Rest};
 use super::{FxContext, Instrument, InstrumentInfo, Midi};

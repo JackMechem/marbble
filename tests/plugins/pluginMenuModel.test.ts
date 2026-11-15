@@ -1,4 +1,4 @@
-// Unit tests for src/plugins/pluginMenuModel.ts: the VST3 part of the plug-in slot menus.
+// Unit tests for src/plugins/pluginMenuModel.ts: the VST3 and CLAP part of the plug-in slot menus.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { vst3Items } from "../../src/plugins/pluginMenuModel.ts";
@@ -16,8 +16,8 @@ test("the VST3s come under their own heading, so categories the built-ins share 
 });
 
 test("no VST3s: a note and no heading", () => {
-  assert.deepEqual(shape(vst3Items([], false, () => {})), ["No VST3 effects found"]);
-  assert.deepEqual(shape(vst3Items([], true, () => {})), ["No VST3 instruments found"]);
+  assert.deepEqual(shape(vst3Items([], false, () => {})), ["No VST3 or CLAP effects found"]);
+  assert.deepEqual(shape(vst3Items([], true, () => {})), ["No VST3 or CLAP instruments found"]);
 });
 
 test("the user's categories come first under the VST3 heading, then a line, then the plug-ins' own", () => {
@@ -26,4 +26,19 @@ test("the user's categories come first under the VST3 heading, then a line, then
   const items = vst3Items([comp, echo], false, () => {}, undefined, [{ name: "Favourites", plugins: [echo, comp] }]);
   assert.deepEqual(shape(items), ["# VST3", "Favourites ›", "-", "Delay ›", "Dynamics ›", "By Manufacturer ›"]);
   assert.deepEqual(shape(items[1].children!), ["Comp", "Echo"], "by name, as in the other categories");
+});
+
+test("CLAP plug-ins sit with the VST3s, tagged, under a heading naming both formats", () => {
+  const clap = { ...vst("Comp", "Dynamics", "LSP CLAP"), id: "clap:Comp", format: "clap" } as PluginDesc;
+  const items = vst3Items([vst("Comp", "Dynamics"), clap], false, () => {});
+  assert.deepEqual(shape(items), ["# VST3 & CLAP", "Dynamics ›", "By Manufacturer ›"]);
+  assert.deepEqual(
+    items[1].children!.map((i) => [i.label, i.hint, i.tag]),
+    [
+      ["Comp", "LSP", undefined],
+      ["Comp", "LSP CLAP", "CLAP"],
+    ],
+  );
+  assert.deepEqual(shape(vst3Items([clap], false, () => {}))[0], "# CLAP");
+  assert.equal(items[2].children![1].children![0].tag, "CLAP", "tagged by manufacturer too");
 });

@@ -41,7 +41,7 @@
 //! note-off, a steal or parameters stepping every block is more than 1.4 times the steady note's. A
 //! saw at note 96 with the filter open aliases at -61 dB through the saturators.
 
-use vst3_host::MidiEvent;
+use plugin_api::MidiEvent;
 
 use super::{FxContext, Instrument, InstrumentInfo, Midi};
 use crate::synth_dsp::alloc::{Priority, VoiceAction, VoiceAllocator, VoiceMode};

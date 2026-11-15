@@ -31,7 +31,7 @@
 //! oscillators are 5.6 % of a core, 16 voices with 7 copies each 30 % (`instrument_bench`,
 //! i7-13700KF).
 
-use vst3_host::MidiEvent;
+use plugin_api::MidiEvent;
 
 use super::common::{dc_pole, hz_to_note, OutStage, Rest};
 use super::{FxContext, Instrument, InstrumentInfo, Midi};

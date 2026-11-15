@@ -1,0 +1,13 @@
+[package]
+name = "clap-host"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+plugin-api = { path = "../plugin-api" }
+clap-sys = "0.5"
+libloading = "0.9"
+log = "0.4"
+parking_lot = "0.12"
+rtrb = "0.3"
