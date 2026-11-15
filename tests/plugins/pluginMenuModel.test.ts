@@ -19,3 +19,11 @@ test("no VST3s: a note and no heading", () => {
   assert.deepEqual(shape(vst3Items([], false, () => {})), ["No VST3 effects found"]);
   assert.deepEqual(shape(vst3Items([], true, () => {})), ["No VST3 instruments found"]);
 });
+
+test("the user's categories come first under the VST3 heading, then a line, then the plug-ins' own", () => {
+  const comp = vst("Comp", "Dynamics", "Zam");
+  const echo = vst("Echo", "Delay");
+  const items = vst3Items([comp, echo], false, () => {}, undefined, [{ name: "Favourites", plugins: [echo, comp] }]);
+  assert.deepEqual(shape(items), ["# VST3", "Favourites ›", "-", "Delay ›", "Dynamics ›", "By Manufacturer ›"]);
+  assert.deepEqual(shape(items[1].children!), ["Comp", "Echo"], "by name, as in the other categories");
+});

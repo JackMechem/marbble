@@ -1,10 +1,13 @@
 // Plug-in slot menus: built-in effects and instruments and VST3s, grouped by category.
 import { BUILTIN_SYNTH } from "../engine/project";
 import { type PluginDesc } from "../engine/listings";
-import type { MenuItem } from "../ui/Menu";
+import type { MenuItem, MenuSearch } from "../ui/Menu";
 import type { FxInfo, InstInfo } from "./builtinEffects";
 import { getState } from "../state/store";
 import { vst3Items } from "./pluginMenuModel";
+import { searchMenuItems, type Findable } from "./pluginSearch";
+import { customGroups, withNames } from "./pluginCustom";
+import { getSettings } from "../settings/appSettings";
 
 /** The built-in effects as menu items, one submenu per category (Dynamics, Reverb, ...). */
 function builtinFxItems(list: FxInfo[], pick: (id: string) => void, current?: string): MenuItem[] {
@@ -36,8 +39,9 @@ function builtinInstrumentItems(list: InstInfo[], pick: (id: string) => void, cu
 
 /**
  * Builds the slot pop-up menu: "No Plug-in", the built-in plug-ins (effects under a "Marbble"
- * heading, by category), then the VST3s under a "VST3" heading: by category, and "By
- * Manufacturer". The headings keep the two sets of categories (Delay, EQ… in both) apart.
+ * heading, by category), then the VST3s under a "VST3" heading: the user's categories, by
+ * category, and "By Manufacturer", under the names the user gave them. The headings keep the two
+ * sets of categories (Delay, EQ… in both) apart.
  */
 export function pluginMenu(
   plugins: PluginDesc[],
@@ -54,6 +58,27 @@ export function pluginMenu(
   } else if (getState().fxList.length) {
     items.push({ label: "Marbble", header: true }, ...builtinFxItems(getState().fxList, opts.pick, opts.current), { separator: true });
   }
-  items.push(...vst3Items(pool, opts.instrument, opts.pick, opts.current));
+  const { names, categories } = getSettings().plugins;
+  const named = withNames(pool, names);
+  items.push(...vst3Items(named, opts.instrument, opts.pick, opts.current, customGroups(named, categories)));
   return items;
+}
+
+/** The slot menu's search field: typing lists the matching built-in plug-ins and VST3s. */
+export function pluginSearch(plugins: PluginDesc[], opts: { instrument: boolean; current?: string; pick: (id: string) => void }): MenuSearch {
+  const { fxList, instList } = getState();
+  const builtins: Findable[] = opts.instrument
+    ? instList.length
+      ? instList.map((i) => ({ id: i.id, name: i.name, hint: i.category, keywords: i.about }))
+      : [{ id: BUILTIN_SYNTH, name: "Marbble Synth", hint: "Marbble" }]
+    : fxList.map((f) => ({ id: f.id, name: f.name, hint: f.category }));
+  const { names, categories } = getSettings().plugins;
+  const pool = withNames(
+    plugins.filter((p) => p.is_instrument === opts.instrument),
+    names,
+  );
+  // A renamed plug-in is found by its own name too, and any plug-in by the user's categories it's in.
+  const mine = (cid: string) => categories.filter((c) => c.plugins.includes(cid)).map((c) => c.name);
+  const vst3: Findable[] = pool.map((p) => ({ id: p.id, name: p.name, hint: p.vendor, keywords: [p.original, p.subcategories, ...mine(p.cid)].join(" ") }));
+  return { placeholder: opts.instrument ? "Search instruments" : "Search plug-ins", results: (q) => searchMenuItems(builtins, vst3, q, opts.pick, opts.current) };
 }

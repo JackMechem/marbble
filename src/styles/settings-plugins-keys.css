@@ -16,6 +16,14 @@
   margin: 0;
 }
 
+/* The user's categories beside the plug-in table. */
+.pm-main {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.pm-cats,
 .pm-table {
   border-radius: 6px;
   background: var(--sheet-inner);
@@ -23,12 +31,73 @@
   overflow: hidden;
 }
 
+.pm-cats {
+  display: flex;
+  flex-direction: column;
+}
+
+.pm-cats-head {
+  padding: 3px 10px;
+}
+
+.pm-cats-list {
+  flex: 1;
+  height: 220px;
+  overflow-y: auto;
+  padding: 3px;
+}
+
+.pm-cat-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 4px;
+  color: var(--text);
+  text-align: left;
+}
+
+.pm-cat-row > span:first-child {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pm-cat-row:hover {
+  background: var(--btn-hi);
+}
+
+.pm-cat-row.on {
+  background: var(--select);
+  color: var(--accent-ink);
+}
+
+.pm-count {
+  color: var(--faint);
+  font-size: var(--fs-sm);
+}
+
+.pm-cat-row.on .pm-count {
+  color: var(--select-dim);
+}
+
+.pm-cats-foot {
+  display: flex;
+  gap: 4px;
+  padding: 5px;
+  border-top: 1px solid var(--edge);
+}
+
 .pm-row {
   display: grid;
-  grid-template-columns: 40px minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.3fr) 70px;
+  grid-template-columns: 28px minmax(0, 1.8fr) minmax(0, 1.1fr) minmax(0, 0.8fr) minmax(0, 1fr) 46px;
   align-items: center;
-  gap: 8px;
-  padding: 3px 10px;
+  gap: 6px;
+  padding: 3px 8px;
 }
 
 .pm-row > span {
@@ -61,6 +130,71 @@
 
 .pm-name {
   font-weight: 500;
+}
+
+/* The name cell: the user's name for the plug-in, its own after it, and Rename on hover. */
+.pm-row > .pm-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pm-name-cell > .pm-name,
+.pm-orig {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pm-orig {
+  flex: 1;
+  color: var(--faint);
+  font-size: var(--fs-sm);
+}
+
+.pm-rename {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 18px;
+  margin-left: auto;
+  border-radius: 4px;
+  color: var(--faint);
+  opacity: 0;
+}
+
+.pm-row:hover .pm-rename,
+.pm-rename:focus-visible {
+  opacity: 1;
+}
+
+.pm-rename:hover {
+  background: var(--btn-hi);
+  color: var(--text);
+}
+
+/* A plug-in's categories: a quiet pop-up. */
+.pm-cat {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: var(--dim);
+}
+
+.pm-cat > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pm-cat:hover {
+  background: var(--btn-hi);
+  color: var(--text);
 }
 
 .pm-type {

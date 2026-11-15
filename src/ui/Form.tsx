@@ -4,15 +4,18 @@ import { useEffect, useState } from "react";
 import { Icon } from "./icons";
 import { openMenuAt } from "./Menu";
 import { defaultButton } from "../keyboard/sheetKeys";
+import { stopsReturn } from "../keyboard/sheetKeysModel";
 
 /**
  * onKeyDown for a sheet: keys typed in it stay there, so the main window's shortcuts don't
  * fire (sheetKeys.ts handles the keys pressed outside it). Esc closes it (an open menu takes
  * Esc first, in the capture phase), and Return presses its default button unless a field or
- * another button has the focus.
+ * another button has the focus. Return in a field does what the field says and nothing more
+ * (`stopsReturn`).
  */
 export function sheetKey(e: React.KeyboardEvent, onClose: () => void) {
   e.stopPropagation();
+  if (e.key === "Enter" && stopsReturn(e.target)) e.preventDefault();
   if (e.key === "Escape") onClose();
   else if (e.key === "Enter" && !(e.target as HTMLElement).closest("input, textarea, select, button")) {
     const b = defaultButton(e.currentTarget as HTMLElement);

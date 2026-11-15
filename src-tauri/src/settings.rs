@@ -131,6 +131,20 @@ pub struct PluginPrefs {
     pub disabled: Vec<String>,
     /// Folders scanned in addition to the standard VST3 locations.
     pub folders: Vec<String>,
+    /// The user's own categories, in the order they were made. The slot menus and the Library
+    /// list them before the plug-ins' own categories.
+    pub categories: Vec<PluginCategory>,
+    /// Names the user gave plug-ins, by VST3 class id, which a rescan or a moved bundle keeps.
+    pub names: BTreeMap<String, String>,
+}
+
+/// A category made in the Plug-in Manager.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct PluginCategory {
+    pub name: String,
+    /// The VST3 class ids of the plug-ins in it (a plug-in can be in several categories).
+    pub plugins: Vec<String>,
 }
 
 /// The extra VST3 folders from Settings › Plug-ins.
@@ -214,10 +228,21 @@ mod tests {
     }
 
     #[test]
+    fn plugin_settings_from_before_categories_load() {
+        let s = parse(r#"{"plugins":{"disabled":["/x.vst3|abc"],"folders":["/opt/vst3"]}}"#).unwrap();
+        assert_eq!(s.plugins.disabled, ["/x.vst3|abc"]);
+        assert_eq!(s.plugins.folders, ["/opt/vst3"]);
+        assert!(s.plugins.categories.is_empty());
+        assert!(s.plugins.names.is_empty());
+    }
+
+    #[test]
     fn round_trip() {
         let mut s = Settings::default();
         s.ui.keymap.insert("play".into(), vec!["Shift+Space".into()]);
         s.plugins.disabled.push("/x.vst3|abc".into());
+        s.plugins.categories.push(PluginCategory { name: "Favourites".into(), plugins: vec!["abc".into()] });
+        s.plugins.names.insert("abc".into(), "My Comp".into());
         s.prefs.general.autosave_minutes = 7;
         s.ui.update_channel = Some("stable".into());
         s.ui.check_updates = false;

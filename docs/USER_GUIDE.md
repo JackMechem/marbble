@@ -552,7 +552,9 @@ A plug-in slot's power button and a send's level knob come next in the Tab order
 **Menus** work from the keyboard: Up and Down move through the items (Home and End to the ends),
 typing a name's first letters goes to it, Right opens a submenu and Left or Esc closes it,
 Return or Space chooses, and Esc or Tab closes the menu. Opened from the keyboard, a menu starts
-on its checked item or its first; opened with the mouse, the arrows step into it. Closed from
+on its checked item or its first; opened with the mouse, the arrows step into it. A menu with a
+search field (a plug-in slot's) starts in the field instead, and letters typed in it search
+rather than jump to an item (see [Plug-ins](#plug-ins)). Closed from
 the keyboard, the focus goes back to what opened it.
 
 **The Tracks area** (where the regions are) is a Tab stop too. While it has the focus, Left and
@@ -2424,6 +2426,13 @@ that holds a sampler's samples.
   the built-in effects under **Marbble**, by category, then the VST3s under **VST3**, by category
   and **By Manufacturer**; or click a plug-in in the Library. The instrument slot works the same
   way.
+- **Searching:** the slot menu opens with a search field at the top, ready to type in. Typing
+  lists the built-in plug-ins and VST3s whose name, category or manufacturer holds every word
+  typed, best matches first, with the category or manufacturer beside each. Down moves into the
+  list (Up from its first item goes back to the field), Return loads the first match or the
+  item you're on, and typing on an item carries on the search. Esc clears the search, and a
+  second Esc closes the menu. Names you gave plug-ins and your own categories (see below) are
+  searched too. The Library's search field finds plug-ins the same way.
 - **Editing:** click the plug-in's name in its slot to open its editor window.
 - **Bypass:** the power button on the slot.
 - **Reordering:** drag a plug-in's name onto another Audio FX slot. On the same strip it moves
@@ -2453,6 +2462,20 @@ that holds a sampler's samples.
   some off, so they don't appear in the Library and slot menus (projects that use them still
   load them). It also takes extra VST3 folders and shows the last scan's report, including each
   bundle that failed and why.
+- **Your own categories:** the Plug-in Manager's **Categories** list, beside the plug-ins, shows
+  All Plug-ins and the categories you make with **+** (rename one with the pencil or a
+  double-click, delete it with **−**; deleting a category doesn't remove its plug-ins). Click a
+  category to see what's in it. Put a plug-in in categories from its **Category** pop-up, which
+  can also make a new one; a plug-in can be in several. The slot menus list your categories
+  first under **VST3**, above a line and the plug-ins' own categories, and the Library lists
+  them before the manufacturers.
+- **Your own names:** rename a VST3 with the pencil beside its name in the Plug-in Manager (or
+  double-click the name, or right-click the row for **Rename…** and **Reset Name**). The slot
+  menus, their search and the Library use the new name; its own name still finds it and shows
+  beside it in the manager. An empty name goes back to the plug-in's own. A plug-in already in
+  a slot keeps the name it was inserted with.
+- Categories and names follow the plug-in's VST3 class id, so they survive a rescan, and the
+  bundle being moved to another folder.
 
 Marbble hosts **VST3** plug-ins only. Plug-in editor windows are available on Linux (X11;
 see [Troubleshooting](#plug-in-windows-and-wayland)) and macOS, where they float

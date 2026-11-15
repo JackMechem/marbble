@@ -4,7 +4,7 @@ Every feature of Logic Pro, by area, and how far Marbble has it. This page is ge
 `scripts/features.py` from the files in `features/`: change those, in the pull request that
 changes the feature. [ROADMAP.md](../ROADMAP.md) says what beta needs and what's being worked on.
 
-Marbble has **283** of 732 features, and a simpler version of 96 more; 353 are missing. Beta needs 249 of them, and 55 of those are still to do.
+Marbble has **286** of 732 features, and a simpler version of 94 more; 352 are missing. Beta needs 249 of them, and 53 of those are still to do.
 
 ✓ done · ◐ partial: the note says what's missing · ○ missing · **Beta.** needed for beta and not done yet
 
@@ -18,8 +18,8 @@ Marbble has **283** of 732 features, and a simpler version of 96 more; 353 are m
 | [Arranging](#arranging) | 61 | 19 | 35 | 53% |
 | [Editors](#editors) | 32 | 12 | 53 | 33% |
 | [Time and pitch](#time-and-pitch) | 0 | 0 | 38 | 0% |
-| [Mixing and automation](#mixing-and-automation) | 38 | 12 | 39 | 43% |
-| [Plug-ins](#plug-ins) | 8 | 10 | 25 | 19% |
+| [Mixing and automation](#mixing-and-automation) | 39 | 11 | 39 | 44% |
+| [Plug-ins](#plug-ins) | 10 | 9 | 24 | 23% |
 | [Instruments and content](#instruments-and-content) | 3 | 12 | 56 | 4% |
 | [MIDI and hardware](#midi-and-hardware) | 9 | 4 | 26 | 23% |
 | [Import, export and media](#import-export-and-media) | 16 | 5 | 19 | 40% |
@@ -733,12 +733,13 @@ Flex Time and Flex Pitch, Smart Tempo, groove, transposition, tuning and chords.
 
 ## Mixing and automation
 
-The Mixer, automation, surround and Dolby Atmos. 38 of 89 done.
+The Mixer, automation, surround and Dolby Atmos. 39 of 89 done.
 
 ### Mixer
 
-19 of 25 done.
+20 of 25 done.
 
+- ✓ Search for plug-ins ([#364](https://github.com/JackMechem/marbble/issues/364))
 - ✓ A channel strip for every track plus Stereo Out
 - ✓ Filter strips by type (Audio, Inst, Aux)
 - ✓ Volume fader with Logic's taper
@@ -760,7 +761,6 @@ The Mixer, automation, surround and Dolby Atmos. 38 of 89 done.
 - ✓ Move or copy plug-ins by dragging between slots
 - ◐ Channel strip types ([#362](https://github.com/JackMechem/marbble/issues/362)): Audio, instrument, aux, summing stack, VCA and Stereo Out; no MIDI, output or master strips. **Beta.**
 - ◐ Reorder strips ([#363](https://github.com/JackMechem/marbble/issues/363)): Follows the track order. **Beta.**
-- ◐ Search for plug-ins ([#364](https://github.com/JackMechem/marbble/issues/364)): The Library has search; slot menus are grouped by vendor and category, without search. **Beta.**
 - ◐ Plug-in windows ([#99](https://github.com/JackMechem/marbble/issues/99)): Built-in effect panels everywhere; a VST3's own editor on Linux/X11 and macOS so far. **Beta.**
 - ○ Mixer modes: Single, Tracks, All
 - ○ Select several strips, or strips by type ([#365](https://github.com/JackMechem/marbble/issues/365)) **Beta.**
@@ -856,25 +856,26 @@ The Mixer, automation, surround and Dolby Atmos. 38 of 89 done.
 
 ## Plug-ins
 
-Hosting plug-ins, their windows and settings, formats and platforms, Smart Controls, patches and MIDI effects. 8 of 43 done.
+Hosting plug-ins, their windows and settings, formats and platforms, Smart Controls, patches and MIDI effects. 10 of 43 done.
 
 ### Plug-in hosting
 
-6 of 7 done.
+7 of 7 done.
 
+- ✓ Plug-in Manager ([#366](https://github.com/JackMechem/marbble/issues/366))
 - ✓ Third-party plug-ins: Audio Units in Logic, VST3 in Marbble
 - ✓ Scan in a separate process so a crashing plug-in can't take the app down; results cached
 - ✓ Instrument and effect plug-ins; separate component/controller plug-ins
 - ✓ Plug-in state saved in the project
 - ✓ Tempo and position passed to plug-ins
 - ✓ MIDI CC and pitch bend to instruments through the plug-in's MIDI mapping
-- ◐ Plug-in Manager ([#366](https://github.com/JackMechem/marbble/issues/366)): Hide plug-ins, add VST3 folders, rescan, view the scan report; no categories or custom names. **Beta.**
 
 ### Plug-in windows and settings
 
-1 of 11 done.
+2 of 11 done.
 
 - ✓ Compare edits with the saved setting ([#80](https://github.com/JackMechem/marbble/issues/80))
+- ✓ Plug-in Manager categories and custom names ([#366](https://github.com/JackMechem/marbble/issues/366))
 - ◐ Plug-in window header: Built-in effect and instrument panels have bypass, presets, Compare, Copy and Paste Settings and the side-chain pop-up; VST3 editor windows have no header.
 - ◐ Load, save, step through and delete plug-in settings (presets): Factory and user presets for the built-in effects and instruments (the Channel EQ among them), shared by every project; none for VST3s.
 - ◐ Copy and paste plug-in settings; reset; default setting: Copy and paste for every plug-in (VST3 state included), Copy and Paste Settings between built-in panels, and Reset to Default for built-in plug-ins; no user default setting.
@@ -884,7 +885,6 @@ Hosting plug-ins, their windows and settings, formats and platforms, Smart Contr
 - ◐ Remove all plug-ins, empty slots, bypassed plug-ins or sends: Reset Channel Strip removes every plug-in from the selected strips (and resets fader and pan); no removing only empty slots, bypassed plug-ins or sends.
 - ○ Link or unlink plug-in windows
 - ○ Controls view: a generic parameter view
-- ○ Plug-in Manager categories and custom names
 
 ### Operating systems and plug-in formats
 
