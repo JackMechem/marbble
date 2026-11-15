@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { heldBack, NON_MODAL_COMMANDS, outsideKey } from "../../src/keyboard/sheetKeysModel.ts";
+import { heldBack, NON_MODAL_COMMANDS, outsideKey, stopsReturn } from "../../src/keyboard/sheetKeysModel.ts";
 
 const read = (path: string) => readFileSync(fileURLToPath(new URL(`../../${path}`, import.meta.url)), "utf8");
 
@@ -73,4 +73,14 @@ test("every sheet registers its keys", () => {
     if (/className="(sheet|chooser)"/.test(src)) assert.ok(src.includes("useSheetKeys("), `${f} draws a sheet without useSheetKeys`);
   }
   assert.match(read("src/main.tsx"), /installSheetKeys\(\);/);
+});
+
+test("Return in a sheet's one-line field goes no further, so it can't press the button that opened the sheet", () => {
+  // The name sheet's OK closes it on Return and gives the focus back to its opener (the Plug-in
+  // Manager's + or a rename pencil): the key's default would press that again and reopen it.
+  assert.equal(stopsReturn({ tagName: "INPUT" }), true);
+  // A textarea keeps its new line, a focused button its press.
+  assert.equal(stopsReturn({ tagName: "TEXTAREA" }), false);
+  assert.equal(stopsReturn({ tagName: "BUTTON" }), false);
+  assert.equal(stopsReturn(null), false);
 });

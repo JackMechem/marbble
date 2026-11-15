@@ -7,12 +7,12 @@ order = 10
 [[feature]]
 section = "Plug-in hosting"
 name = "Plug-in Manager"
-status = "partial"
+status = "done"
 tier = "core"
 beta = true
 logic = "578–580"
 issue = 366
-note = "Hide plug-ins, add VST3 folders, rescan, view the scan report; no categories or custom names."
+note = "Hide plug-ins, make your own categories and names (kept across rescans), add VST3 folders, rescan, view the scan report."
 
 [[feature]]
 section = "Plug-in hosting"
@@ -138,9 +138,11 @@ note = "Reset Channel Strip removes every plug-in from the selected strips (and 
 [[feature]]
 section = "Plug-in windows and settings"
 name = "Plug-in Manager categories and custom names"
-status = "missing"
+status = "done"
 tier = "pro"
 logic = "579–580"
+issue = 366
+note = "For VST3s; the slot menus and the Library list your categories first, under the names you gave."
 
 [[feature]]
 section = "Operating systems and plug-in formats"

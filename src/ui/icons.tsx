@@ -135,6 +135,17 @@ export const Icon = {
       <path d="M6 2v8M2 6h8" />
     </S>
   ),
+  minus: () => (
+    <S size={12} vb="0 0 12 12">
+      <path d="M2 6h8" />
+    </S>
+  ),
+  /** Rename. */
+  pencil: () => (
+    <S size={12} vb="0 0 12 12">
+      <path d="M8 2.2 9.8 4 4.2 9.6 1.8 10.2 2.4 7.8z" />
+    </S>
+  ),
   power: () => (
     <S size={10} vb="0 0 10 10">
       <path d="M5 1.2v3.3M2.6 2.7a3.2 3.2 0 1 0 4.8 0" strokeWidth={1.3} />
