@@ -85,6 +85,10 @@ impl PluginController {
         if closed {
             self.close_editor();
         }
+        #[cfg(target_os = "linux")]
+        if self.editor.as_ref().is_some_and(|e| e.wants_reopen()) {
+            self.reopen_editor();
+        }
         let flags = self.shared._handler.restart_flags.swap(0, Ordering::Relaxed);
         if flags != 0 {
             log::debug!("{}: restartComponent({flags:#x})", self.desc.name);
@@ -342,13 +346,29 @@ impl PluginController {
             }
             return Ok(());
         }
-        let c = self.shared.controller.as_ref().ok_or("plugin has no editor")?;
-        let view = unsafe {
-            let v = c.createView(ViewType::kEditor);
-            ComPtr::<IPlugView>::from_raw(v).ok_or("plugin did not create an editor view")?
-        };
-        self.editor = Some(crate::editor::Editor::open(view, title)?);
+        self.editor = Some(crate::editor::Editor::open(self.create_view()?, title)?);
         Ok(())
+    }
+
+    fn create_view(&self) -> Result<ComPtr<IPlugView>, String> {
+        let c = self.shared.controller.as_ref().ok_or("plugin has no editor")?;
+        unsafe {
+            let v = c.createView(ViewType::kEditor);
+            ComPtr::<IPlugView>::from_raw(v).ok_or_else(|| "plugin did not create an editor view".into())
+        }
+    }
+
+    /// Opens the editor again where it is, for a view that takes a new display scale only when it
+    /// opens (`Editor::wants_reopen`).
+    #[cfg(target_os = "linux")]
+    fn reopen_editor(&mut self) {
+        let Some(e) = self.editor.take() else { return };
+        let (title, at) = (e.title().to_string(), e.position());
+        e.close(self.shared.clone());
+        match self.create_view().and_then(|view| crate::editor::Editor::open_at(view, &title, at)) {
+            Ok(e) => self.editor = Some(e),
+            Err(err) => log::warn!("{}: couldn't reopen its window at the new scale: {err}", self.desc.name),
+        }
     }
 
     pub fn close_editor(&mut self) {

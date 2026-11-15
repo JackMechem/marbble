@@ -4076,8 +4076,10 @@ same effect.
 On Linux, Marbble tells each plug-in editor the display's scale as it opens, and plug-ins that
 support it draw at that size. The scale is the one your desktop gives X11 programs:
 `GDK_SCALE`, then the desktop's GTK scale setting, then `Xft.dpi` divided by 96 (so
-`Xft.dpi: 192` in `~/.Xresources` is 2x). A plug-in window opened before you changed it keeps
-its size until you close and reopen it.
+`Xft.dpi: 192` in `~/.Xresources` is 2x). Open plug-in windows follow a change of it (your
+desktop's scale setting, or `xrdb -merge` with a new `Xft.dpi`): they redraw at the new size, and
+the few plug-ins that only take a scale as they open (Zam's and Dragonfly's) close and reopen in
+the same place.
 
 - **Small:** your desktop runs X11 programs at their own resolution without telling them a
   scale (Hyprland with `xwayland:force_zero_scaling`, for example). Set `Xft.dpi` (and

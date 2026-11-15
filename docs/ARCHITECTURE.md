@@ -114,7 +114,7 @@ plugin/             instantiate.rs, processor.rs (audio thread), controller.rs (
 process.rs          preallocated parameter queues and event lists
 host.rs             the host's COM objects (IHostApplication, IComponentHandler…)
 stream.rs           an in-memory IBStream for state
-editor/             editor windows: linux.rs (X11, with x11_scale.rs), macos.rs, other.rs
+editor/             editor windows: linux.rs (X11, with x11_scale.rs and scale_watch.rs), macos.rs, other.rs
 keys.rs             keys an editor didn't use, passed on to the app
 macos_bundle.rs     CFBundle loading and dyld's messages on macOS
 ```
@@ -845,7 +845,9 @@ Bypass, Low Latency Mode, containment, reordering, copying and Freeze treat all 
   and undo steps.
 - **Editor windows** (`editor/`): an X11 window the plug-in embeds into on Linux, with its run loop
   on GTK's main loop (`src-tauri/src/glib_loop.rs`) and the display's scale passed on
-  (`editor/x11_scale.rs`); an NSWindow on macOS, which passes keys the plug-in doesn't use back to
+  (`editor/x11_scale.rs`), followed while it is open: each editor's X connection hears when
+  `Xft.dpi` or the XSETTINGS change (`editor/scale_watch.rs`), and a view that only takes a scale
+  as it opens is opened again; an NSWindow on macOS, which passes keys the plug-in doesn't use back to
   the app; none yet on Windows. On native Wayland, the main thread's calls into editors go through
   `gl_isolated`, which keeps GTK's and the plug-in's OpenGL contexts apart.
 
