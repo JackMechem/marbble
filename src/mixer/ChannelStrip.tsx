@@ -142,7 +142,7 @@ export function ChannelStrip({ track, selected, rows }: { track: Track | null; s
   const plate = isMaster ? MASTER_PLATE : track.color;
   const settingMenu = async (x: number, y: number, minWidth?: number) => {
     if (folder) return;
-    openMenu(x, y, await stripSettingMenu(id, name), minWidth);
+    openMenu(x, y, await stripSettingMenu(id, name), { minWidth });
   };
   // The Setting slot's menu, under it.
   const settingUnder = (el: HTMLElement) => {

@@ -3,7 +3,7 @@
 import type { Id, PluginSlot } from "../engine/project";
 import { api } from "../engine/commands";
 import { Icon } from "../ui/icons";
-import { pluginMenu } from "../plugins/pluginMenu";
+import { pluginMenu, pluginSearch } from "../plugins/pluginMenu";
 import { getState, useStore } from "../state/store";
 import { openMenu, type MenuItem } from "../ui/Menu";
 import { useSlotLatency } from "./Latency";
@@ -86,14 +86,10 @@ export function PluginSlotView({
   // The plug-in menu, beside the slot `el` is in.
   const menuBy = (el: Element) => {
     if (refuseFrozen([trackId])) return;
-    const items = pluginMenu(plugins, {
-      instrument: !!instrument,
-      current: plugin?.plugin_id,
-      pick: (id) => loadPlugin(trackId, slot, id),
-      remove,
-    });
+    const opts = { instrument: !!instrument, current: plugin?.plugin_id, pick: (id: string) => loadPlugin(trackId, slot, id) };
+    const items = pluginMenu(plugins, { ...opts, remove });
     const r = el.closest(".slot")!.getBoundingClientRect();
-    openMenu(r.right - 4, r.top, [...slotSideChainItems(trackId, slot, plugin), ...items]);
+    openMenu(r.right - 4, r.top, [...slotSideChainItems(trackId, slot, plugin), ...items], { search: pluginSearch(plugins, opts) });
   };
   const menu = (e: React.MouseEvent) => {
     e.stopPropagation();

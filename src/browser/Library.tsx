@@ -7,6 +7,7 @@ import { setState, showToast, useStore } from "../state/store";
 import { useSelectedTrack } from "../tracks/headers/TrackHeaders";
 import { useListKeys } from "../keyboard/listKeys";
 import { loadPlugin } from "../plugins/fxHost";
+import { matchesQuery } from "../plugins/pluginSearch";
 
 /** Logic's Library lists patches for the selected track; here it lists plug-ins to load. */
 export function Library() {
@@ -18,12 +19,12 @@ export function Library() {
   const fxList = useStore((s) => s.fxList);
   const instList = useStore((s) => s.instList);
   const instGroups = new Map<string, typeof instList>();
-  for (const i of instList.filter((i) => !q || `${i.name} ${i.category} ${i.about}`.toLowerCase().includes(q.toLowerCase()))) {
+  for (const i of instList.filter((i) => matchesQuery(q, i.name, i.category, i.about))) {
     if (!instGroups.has(i.category)) instGroups.set(i.category, []);
     instGroups.get(i.category)!.push(i);
   }
   // Built-in effects first, by category, as in Logic's Library.
-  const builtins = isInst ? [] : fxList.filter((f) => !q || `${f.name} ${f.category}`.toLowerCase().includes(q.toLowerCase()));
+  const builtins = isInst ? [] : fxList.filter((f) => matchesQuery(q, f.name, f.category));
   const fxGroups = new Map<string, typeof builtins>();
   for (const f of builtins) {
     if (!fxGroups.has(f.category)) fxGroups.set(f.category, []);
@@ -31,7 +32,7 @@ export function Library() {
   }
   const list = plugins
     .filter((p) => p.is_instrument === isInst)
-    .filter((p) => !q || `${p.name} ${p.vendor} ${p.subcategories}`.toLowerCase().includes(q.toLowerCase()));
+    .filter((p) => matchesQuery(q, p.name, p.vendor, p.subcategories));
   const groups = new Map<string, typeof list>();
   for (const p of list) {
     const g = p.vendor || "Unknown";

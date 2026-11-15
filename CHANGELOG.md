@@ -6,6 +6,15 @@ All notable changes to Marbble are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Search in the plug-in slot menus.** As in Logic, an Audio FX or instrument slot's menu opens
+  with a search field at the top: type part of a plug-in's name, category or manufacturer and it
+  lists the matching built-in plug-ins and VST3s, best matches first. Down and Up move through
+  them, Return loads one, Esc clears the search and then closes the menu, and typed letters never
+  reach the key commands. The Library's search now matches the same way, word by word in any
+  order ("lsp comp").
+
 ## [0.1.0-alpha.18] - 2026-11-14
 
 ### Added

@@ -4,7 +4,7 @@ Every feature of Logic Pro, by area, and how far Marbble has it. This page is ge
 `scripts/features.py` from the files in `features/`: change those, in the pull request that
 changes the feature. [ROADMAP.md](../ROADMAP.md) says what beta needs and what's being worked on.
 
-Marbble has **283** of 732 features, and a simpler version of 96 more; 353 are missing. Beta needs 249 of them, and 55 of those are still to do.
+Marbble has **284** of 732 features, and a simpler version of 95 more; 353 are missing. Beta needs 249 of them, and 54 of those are still to do.
 
 ✓ done · ◐ partial: the note says what's missing · ○ missing · **Beta.** needed for beta and not done yet
 
@@ -18,7 +18,7 @@ Marbble has **283** of 732 features, and a simpler version of 96 more; 353 are m
 | [Arranging](#arranging) | 61 | 19 | 35 | 53% |
 | [Editors](#editors) | 32 | 12 | 53 | 33% |
 | [Time and pitch](#time-and-pitch) | 0 | 0 | 38 | 0% |
-| [Mixing and automation](#mixing-and-automation) | 38 | 12 | 39 | 43% |
+| [Mixing and automation](#mixing-and-automation) | 39 | 11 | 39 | 44% |
 | [Plug-ins](#plug-ins) | 8 | 10 | 25 | 19% |
 | [Instruments and content](#instruments-and-content) | 3 | 12 | 56 | 4% |
 | [MIDI and hardware](#midi-and-hardware) | 9 | 4 | 26 | 23% |
@@ -733,12 +733,13 @@ Flex Time and Flex Pitch, Smart Tempo, groove, transposition, tuning and chords.
 
 ## Mixing and automation
 
-The Mixer, automation, surround and Dolby Atmos. 38 of 89 done.
+The Mixer, automation, surround and Dolby Atmos. 39 of 89 done.
 
 ### Mixer
 
-19 of 25 done.
+20 of 25 done.
 
+- ✓ Search for plug-ins ([#364](https://github.com/JackMechem/marbble/issues/364))
 - ✓ A channel strip for every track plus Stereo Out
 - ✓ Filter strips by type (Audio, Inst, Aux)
 - ✓ Volume fader with Logic's taper
@@ -760,7 +761,6 @@ The Mixer, automation, surround and Dolby Atmos. 38 of 89 done.
 - ✓ Move or copy plug-ins by dragging between slots
 - ◐ Channel strip types ([#362](https://github.com/JackMechem/marbble/issues/362)): Audio, instrument, aux, summing stack, VCA and Stereo Out; no MIDI, output or master strips. **Beta.**
 - ◐ Reorder strips ([#363](https://github.com/JackMechem/marbble/issues/363)): Follows the track order. **Beta.**
-- ◐ Search for plug-ins ([#364](https://github.com/JackMechem/marbble/issues/364)): The Library has search; slot menus are grouped by vendor and category, without search. **Beta.**
 - ◐ Plug-in windows ([#99](https://github.com/JackMechem/marbble/issues/99)): Built-in effect panels everywhere; a VST3's own editor on Linux/X11 and macOS so far. **Beta.**
 - ○ Mixer modes: Single, Tracks, All
 - ○ Select several strips, or strips by type ([#365](https://github.com/JackMechem/marbble/issues/365)) **Beta.**
