@@ -1,10 +1,11 @@
 // Plug-in slot menus: built-in effects and instruments and VST3s, grouped by category.
 import { BUILTIN_SYNTH } from "../engine/project";
 import { type PluginDesc } from "../engine/listings";
-import type { MenuItem } from "../ui/Menu";
+import type { MenuItem, MenuSearch } from "../ui/Menu";
 import type { FxInfo, InstInfo } from "./builtinEffects";
 import { getState } from "../state/store";
 import { vst3Items } from "./pluginMenuModel";
+import { searchMenuItems, type Findable } from "./pluginSearch";
 
 /** The built-in effects as menu items, one submenu per category (Dynamics, Reverb, ...). */
 function builtinFxItems(list: FxInfo[], pick: (id: string) => void, current?: string): MenuItem[] {
@@ -56,4 +57,16 @@ export function pluginMenu(
   }
   items.push(...vst3Items(pool, opts.instrument, opts.pick, opts.current));
   return items;
+}
+
+/** The slot menu's search field: typing lists the matching built-in plug-ins and VST3s. */
+export function pluginSearch(plugins: PluginDesc[], opts: { instrument: boolean; current?: string; pick: (id: string) => void }): MenuSearch {
+  const { fxList, instList } = getState();
+  const builtins: Findable[] = opts.instrument
+    ? instList.length
+      ? instList.map((i) => ({ id: i.id, name: i.name, hint: i.category, keywords: i.about }))
+      : [{ id: BUILTIN_SYNTH, name: "Marbble Synth", hint: "Marbble" }]
+    : fxList.map((f) => ({ id: f.id, name: f.name, hint: f.category }));
+  const vst3: Findable[] = plugins.filter((p) => p.is_instrument === opts.instrument).map((p) => ({ id: p.id, name: p.name, hint: p.vendor, keywords: p.subcategories }));
+  return { placeholder: opts.instrument ? "Search instruments" : "Search plug-ins", results: (q) => searchMenuItems(builtins, vst3, q, opts.pick, opts.current) };
 }

@@ -1,6 +1,6 @@
 // In-window menus (right-click, local and slot menus): `openMenu`, `openMenuAt` and the `MenuHost` that
 // draws whichever is open. contextMenus.ts and the editors build the items.
-import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Icon } from "./icons";
 import { keyboardFocus } from "../keyboard/focusRing";
 import { menuEdge, menuKey, menuStep, typeAheadText, TYPE_AHEAD_ATTR, type NavItem, type Typed } from "../keyboard/keyNav";
@@ -22,6 +22,13 @@ export interface MenuItem {
   swatches?: Swatch[];
   /** Renders this instead of a row: a picker of its own, which closes the menu when it's done. */
   content?: ReactNode;
+}
+
+/** A search field at the top of a menu: while it holds text, the menu lists `results` for it
+ *  instead of its items. */
+export interface MenuSearch {
+  placeholder: string;
+  results: (query: string) => MenuItem[];
 }
 
 /** One colour of a swatch grid. */
@@ -60,27 +67,32 @@ interface Open {
   y: number;
   items: MenuItem[];
   minWidth?: number;
+  search?: MenuSearch;
   /** Opened from the keyboard (Return on a focused slot or pop-up): its first item takes the focus. */
   keyboard: boolean;
+  /** Counts the menus opened, so one opened in place of another starts afresh (its search too). */
+  n: number;
 }
 
 let current: Open | null = null;
+let opened = 0;
 /** What had the focus when the menu opened: it gets it back when the menu closes from the keyboard
  *  or after a choice made with it. */
 let opener: HTMLElement | null = null;
 const subs = new Set<() => void>();
 const emit = () => subs.forEach((s) => s());
 
-export function openMenu(x: number, y: number, items: MenuItem[], minWidth?: number) {
+/** Opens a menu at a point, at least `minWidth` wide, with a search field at the top when `search` is given. */
+export function openMenu(x: number, y: number, items: MenuItem[], { minWidth, search }: { minWidth?: number; search?: MenuSearch } = {}) {
   if (!current) opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-  current = { x, y, items, minWidth, keyboard: keyboardFocus() };
+  current = { x, y, items, minWidth, search, keyboard: keyboardFocus(), n: ++opened };
   emit();
 }
 
 /** Opens a menu below an element, like a pop-up button. */
 export function openMenuAt(el: HTMLElement, items: MenuItem[]) {
   const r = el.getBoundingClientRect();
-  openMenu(r.left, r.bottom + 2, items, r.width);
+  openMenu(r.left, r.bottom + 2, items, { minWidth: r.width });
 }
 
 /** Whether a menu is open (key handlers leave Esc and arrows to it). */
@@ -128,11 +140,42 @@ function focusedRow(menu: HTMLElement): number {
   return el && menu.contains(el) ? Number(el.getAttribute("data-i")) : -1;
 }
 
-function List({ items, x, y, minWidth, depth, autoFocus, onBack }: { items: MenuItem[]; x: number; y: number; minWidth?: number; depth: number; autoFocus?: boolean; onBack?: () => void }) {
+/** Whether a key on a row of a menu with a search field goes to the field instead: a letter
+ *  (type-ahead's job in other menus) or Backspace. */
+const searchKey = (e: React.KeyboardEvent) => !e.altKey && !e.ctrlKey && !e.metaKey && ((e.key.length === 1 && e.key !== " ") || e.key === "Backspace");
+
+function List({
+  items,
+  x,
+  y,
+  minWidth,
+  depth,
+  autoFocus,
+  onBack,
+  search,
+}: {
+  items: MenuItem[];
+  x: number;
+  y: number;
+  minWidth?: number;
+  depth: number;
+  autoFocus?: boolean;
+  onBack?: () => void;
+  search?: MenuSearch;
+}) {
   const ref = useRef<HTMLDivElement>(null);
+  const field = useRef<HTMLInputElement>(null);
   const [pos, setPos] = useState({ x, y });
   const [sub, setSub] = useState<{ i: number; x: number; y: number; focus: boolean } | null>(null);
   const timer = useRef<number>(0);
+  const [query, setQuery] = useState("");
+  // With a search field, the menu keeps the width it opened with as the results come and go.
+  const [openWidth, setOpenWidth] = useState(0);
+  const shown = useMemo(() => (search && query.trim() ? search.results(query) : items), [search, query, items]);
+  const setSearch = (q: string) => {
+    setQuery(q);
+    setSub(null);
+  };
 
   useLayoutEffect(() => {
     const el = ref.current;
@@ -143,11 +186,21 @@ function List({ items, x, y, minWidth, depth, autoFocus, onBack }: { items: Menu
     if (nx + r.width > window.innerWidth - 4) nx = depth > 0 ? x - r.width - (minWidth ?? 0) : window.innerWidth - r.width - 4;
     if (ny + r.height > window.innerHeight - 4) ny = Math.max(4, window.innerHeight - r.height - 4);
     setPos({ x: nx, y: ny });
-  }, [x, y, depth, minWidth]);
+    if (search) setOpenWidth(r.width);
+  }, [x, y, depth, minWidth]); // eslint-disable-line react-hooks/exhaustive-deps -- the search's width only when it opens
+
+  // A search field takes the focus however the menu opened. Again once the mouse press that
+  // opened it is over, as that moves the focus to what was pressed.
+  useEffect(() => {
+    if (!search) return;
+    field.current?.focus();
+    const t = window.setTimeout(() => field.current?.focus(), 0);
+    return () => window.clearTimeout(t);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- only when it opens
 
   // Opened from the keyboard: the checked item takes the focus (a pop-up's current choice), or the first.
   useEffect(() => {
-    if (!autoFocus) return;
+    if (!autoFocus || search) return;
     const nav = navItems(items);
     const checked = items.findIndex((it, i) => it.checked && menuStep(nav, i - 1, 1) === i);
     focusRow(ref.current, checked >= 0 ? checked : menuEdge(nav, "first"));
@@ -161,9 +214,22 @@ function List({ items, x, y, minWidth, depth, autoFocus, onBack }: { items: Menu
     };
   }, [depth, onBack]);
 
+  // Esc clears the search before it closes the menu.
+  useEffect(() => {
+    if (!search || !query) return;
+    const clear = () => {
+      setSearch("");
+      field.current?.focus();
+    };
+    backs.set(depth, clear);
+    return () => {
+      if (backs.get(depth) === clear) backs.delete(depth);
+    };
+  }, [search, query, depth]); // eslint-disable-line react-hooks/exhaustive-deps -- setSearch only sets state
+
   const openSub = (i: number, focus: boolean) => {
     const row = ref.current?.querySelector(`[data-i="${i}"]`);
-    if (!row || !items[i]?.children) return;
+    if (!row || !shown[i]?.children) return;
     const r = row.getBoundingClientRect();
     setSub({ i, x: r.right - 2, y: r.top - 5, focus });
   };
@@ -182,12 +248,22 @@ function List({ items, x, y, minWidth, depth, autoFocus, onBack }: { items: Menu
     // Keys pressed in a submenu are its own, and a picker's (a swatch, an icon grid) are the picker's.
     if (!menu || target.closest(".menu") !== menu || (target !== menu && !target.closest("[data-i]"))) return;
     const from = focusedRow(menu);
-    const k = menuKey(navItems(items), from, e, typedSoFar(e.key));
+    const nav = navItems(shown);
+    // With a search field, letters and Backspace edit the search, and Up from the first row goes back to it.
+    if (search && (searchKey(e) || (e.key === "ArrowUp" && from === menuEdge(nav, "first")))) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.key === "Backspace") setSearch(query.slice(0, -1));
+      else if (e.key !== "ArrowUp") setSearch(query + e.key);
+      field.current?.focus();
+      return;
+    }
+    const k = menuKey(nav, from, e, search ? "" : typedSoFar(e.key));
     if (!k) return;
     e.preventDefault();
     e.stopPropagation();
     if ("move" in k) focusRow(menu, k.move);
-    else if ("choose" in k) choose(items[from], from, true);
+    else if ("choose" in k) choose(shown[from], from, true);
     else if ("open" in k) openSub(from, true);
     else if ("back" in k) onBack?.();
   };
@@ -195,6 +271,21 @@ function List({ items, x, y, minWidth, depth, autoFocus, onBack }: { items: Menu
   const back = (i: number) => () => {
     setSub(null);
     focusRow(ref.current, i);
+  };
+  // In the search field: Down and Up go to the first or last row, Return chooses the first match.
+  // Other keys are the field's (the key commands leave a focused field alone).
+  const onFieldKey = (e: React.KeyboardEvent) => {
+    e.stopPropagation();
+    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    const nav = navItems(shown);
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      focusRow(ref.current, menuEdge(nav, e.key === "ArrowDown" ? "first" : "last"));
+    } else if (e.key === "Enter" && query.trim()) {
+      e.preventDefault();
+      const i = menuEdge(nav, "first");
+      if (i >= 0) choose(shown[i], i, true);
+    }
   };
 
   return (
@@ -205,11 +296,28 @@ function List({ items, x, y, minWidth, depth, autoFocus, onBack }: { items: Menu
         role="menu"
         tabIndex={-1}
         data-depth={depth}
-        style={{ left: pos.x, top: pos.y, minWidth: depth === 0 ? minWidth : undefined }}
+        style={{ left: pos.x, top: pos.y, minWidth: depth === 0 ? Math.max(minWidth ?? 0, openWidth) || undefined : undefined }}
         onMouseDown={(e) => e.stopPropagation()}
         onKeyDown={onKeyDown}
       >
-        {items.map((it, i) =>
+        {search && (
+          <div className="menu-search">
+            <input
+              ref={field}
+              className="menu-search-field"
+              type="text"
+              role="searchbox"
+              placeholder={search.placeholder}
+              aria-label={search.placeholder}
+              spellCheck={false}
+              autoComplete="off"
+              value={query}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={onFieldKey}
+            />
+          </div>
+        )}
+        {shown.map((it, i) =>
           it.separator ? (
             <div key={i} className="menu-sep" role="separator" />
           ) : it.swatches ? (
@@ -234,8 +342,9 @@ function List({ items, x, y, minWidth, depth, autoFocus, onBack }: { items: Menu
               className={"menu-item" + (it.disabled ? " disabled" : "") + (sub?.i === i ? " open" : "")}
               onMouseEnter={(e) => {
                 window.clearTimeout(timer.current);
-                // While the keyboard is in the menu, the pointer takes the focus along with it.
-                if (ref.current?.contains(document.activeElement) && !it.disabled) e.currentTarget.focus();
+                // While the keyboard is in the menu, the pointer takes the focus along with it (not
+                // from the search field, which keeps it while typing).
+                if (ref.current?.contains(document.activeElement) && document.activeElement !== field.current && !it.disabled) e.currentTarget.focus();
                 if (it.children) {
                   timer.current = window.setTimeout(() => openSub(i, false), 90);
                 } else {
@@ -260,8 +369,8 @@ function List({ items, x, y, minWidth, depth, autoFocus, onBack }: { items: Menu
           ),
         )}
       </div>
-      {sub && items[sub.i]?.children && (
-        <List key={sub.i} items={items[sub.i].children!} x={sub.x} y={sub.y} depth={depth + 1} minWidth={ref.current?.offsetWidth} autoFocus={sub.focus} onBack={back(sub.i)} />
+      {sub && shown[sub.i]?.children && (
+        <List key={sub.i} items={shown[sub.i].children!} x={sub.x} y={sub.y} depth={depth + 1} minWidth={ref.current?.offsetWidth} autoFocus={sub.focus} onBack={back(sub.i)} />
       )}
     </>
   );
@@ -315,7 +424,7 @@ export function MenuHost() {
   if (!open) return null;
   return (
     <div className="menu-layer">
-      <List key={`${open.x},${open.y}`} items={open.items} x={open.x} y={open.y} minWidth={open.minWidth} depth={0} autoFocus={open.keyboard} />
+      <List key={open.n} items={open.items} x={open.x} y={open.y} minWidth={open.minWidth} depth={0} autoFocus={open.keyboard} search={open.search} />
     </div>
   );
 }

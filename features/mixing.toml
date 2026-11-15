@@ -27,12 +27,12 @@ note = "Follows the track order."
 [[feature]]
 section = "Mixer"
 name = "Search for plug-ins"
-status = "partial"
+status = "done"
 tier = "core"
 beta = true
 logic = "563"
 issue = 364
-note = "The Library has search; slot menus are grouped by vendor and category, without search."
+note = "A search field at the top of every slot menu lists matching built-in and VST3 plug-ins; the Library searches the same way."
 
 [[feature]]
 section = "Mixer"

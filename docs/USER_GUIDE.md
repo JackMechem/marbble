@@ -552,7 +552,9 @@ A plug-in slot's power button and a send's level knob come next in the Tab order
 **Menus** work from the keyboard: Up and Down move through the items (Home and End to the ends),
 typing a name's first letters goes to it, Right opens a submenu and Left or Esc closes it,
 Return or Space chooses, and Esc or Tab closes the menu. Opened from the keyboard, a menu starts
-on its checked item or its first; opened with the mouse, the arrows step into it. Closed from
+on its checked item or its first; opened with the mouse, the arrows step into it. A menu with a
+search field (a plug-in slot's) starts in the field instead, and letters typed in it search
+rather than jump to an item (see [Plug-ins](#plug-ins)). Closed from
 the keyboard, the focus goes back to what opened it.
 
 **The Tracks area** (where the regions are) is a Tab stop too. While it has the focus, Left and
@@ -2424,6 +2426,12 @@ that holds a sampler's samples.
   the built-in effects under **Marbble**, by category, then the VST3s under **VST3**, by category
   and **By Manufacturer**; or click a plug-in in the Library. The instrument slot works the same
   way.
+- **Searching:** the slot menu opens with a search field at the top, ready to type in. Typing
+  lists the built-in plug-ins and VST3s whose name, category or manufacturer holds every word
+  typed, best matches first, with the category or manufacturer beside each. Down moves into the
+  list (Up from its first item goes back to the field), Return loads the first match or the
+  item you're on, and typing on an item carries on the search. Esc clears the search, and a
+  second Esc closes the menu. The Library's search field finds plug-ins the same way.
 - **Editing:** click the plug-in's name in its slot to open its editor window.
 - **Bypass:** the power button on the slot.
 - **Reordering:** drag a plug-in's name onto another Audio FX slot. On the same strip it moves
