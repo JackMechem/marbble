@@ -956,18 +956,30 @@ of `plugin_api`.
   or ports, which CLAP allows only while it's deactivated, on the main thread. Each block takes a
   `Park` with one compare-and-swap; the controller's `idle` asks for it, the processor fades to its
   dry input over 5 ms, stops processing and parks, and the next `idle` deactivates and activates
-  the plug-in, reads its latency and gives it back, to fade in once that latency has passed. A
-  processor nobody runs is taken at once, one that doesn't park within 250 ms whenever no block
-  is under way; nothing waits, so a thread stuck in the plug-in leaves the restart for later, and
-  none is tried while the plug-in is marked unresponsive. While parked, the input passes and the
-  extra outputs are silent; the other strips play on. Before a render `settle` answers
-  `on_main_thread` and does a waiting restart at once (main thread only; the app's renders run on
-  another and rely on `idle`), and `edits_pending` holds until the block that took the edits is
-  over, so the render plays with the new latency. One that won't activate again stays parked.
-- **Render mode** (`clap.render`): `Session::render` and, in the app, the render commands on the
-  main thread around it (`src-tauri/src/commands/bounce.rs`, `offline`) set every plug-in to
-  offline mode for a bounce, export, Bounce in Place or Freeze, and back after; one with a hard
-  real-time requirement stays real-time.
+  the plug-in, reads its latency and gives it back, to fade in once the longer of its old and new
+  latencies has passed (LSP's Limiter plays out its old delay for that long after a restart to a
+  shorter one). A processor nobody runs is taken at once, one that doesn't park within 250 ms
+  whenever no block is under way; nothing waits, so a thread stuck in the plug-in leaves the
+  restart for later, and none is tried while the plug-in is marked unresponsive. While parked, the
+  input passes and the extra outputs are silent; the other strips play on. A fade (`Fade`, the
+  side-chain gate's too) turned round partway goes on from where it is, so a knob dragged through
+  restarts doesn't click. During a render the processor doesn't park (`Processor::set_offline`):
+  no controller call could come to give it back, so the restart waits, and one parked already
+  plays in the render. Before a render `settle` answers `on_main_thread` and does a waiting restart
+  at once, and `edits_pending` holds until the block that took the edits is over, so the render
+  plays with the new latency; that's a main-thread call, so in the app `Session::begin_renders`
+  makes it (below). One that won't activate again stays parked, passing its input through with no
+  latency, and asks for nothing more.
+- **Render mode** (`clap.render`): every plug-in is put in offline mode for a bounce, export,
+  Bounce in Place or Freeze, and back after, unless it has a hard real-time requirement. On the
+  main thread, `Session::render` does it itself. The app's render commands render on their own
+  thread, so `offline` (`src-tauri/src/commands/bounce.rs`) calls `Session::begin_renders` on the
+  main thread before the command and `end_renders` after it, from a guard that a panic drops too.
+  `begin_renders` settles what the renders play with (restarts, latencies), sets
+  `EngineStatus::renders` so that the device plays silence for the whole command (between its
+  renders too, as during one: no plug-in plays live in its offline mode), and switches the mode.
+  Switching it around each render instead would need the main thread mid-command, where it may be
+  waiting for the session the command holds. A second render command while one runs is refused.
 - **`clap.thread-pool`**: the plug-in's tasks run one after another on the thread that asked,
   inside its `process`, and are refused elsewhere. The processing threads take strips, one task
   each, with no waiting (`dsp/pool/`), so that a thread preempted or stuck in a plug-in costs only

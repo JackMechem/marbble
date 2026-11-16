@@ -27,10 +27,12 @@ impl Callback {
 
     /// One device buffer of `out_ch` interleaved channels, any length. `engine` is `None` when
     /// it's busy (an offline render holds it): the input is still taken and the device gets silence.
+    /// So it does all the while the app renders (`EngineStatus::renders`).
     pub fn play<T>(&mut self, engine: Option<&mut Engine>, data: &mut [T], out_ch: usize)
     where
         T: Sample + FromSample<f32>,
     {
+        let engine = engine.filter(|_| !self.status.renders.load(Ordering::Relaxed));
         let frames = data.len().checked_div(out_ch).unwrap_or(0);
         let in_ch = self.in_ch;
         if let Some(rx) = &mut self.in_rx {

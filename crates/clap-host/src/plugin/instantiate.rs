@@ -87,6 +87,7 @@ pub(super) unsafe fn start(
             keyed: AtomicBool::new(keyed && key.first.is_some()),
             edits_in_block: AtomicBool::new(false),
             latency_now: AtomicU32::new(lat),
+            dead: AtomicBool::new(false),
             inst: ManuallyDrop::new(Instance { plugin, host, active: AtomicBool::new(true), _lib: lib }),
         });
         let (edits_tx, edits_rx) = rtrb::RingBuffer::new(RING);
@@ -116,6 +117,7 @@ pub(super) unsafe fn start(
             dry_l: vec![0.0; max_block],
             dry_r: vec![0.0; max_block],
             wet: vec![0.0; max_block],
+            offline: false,
             steady: 0,
             max_block,
             tail: tail_now,
@@ -136,6 +138,7 @@ pub(super) unsafe fn start(
             key_active: keyed && key.first.is_some(),
             unresponsive: false,
             latency: lat,
+            activated_latency: lat,
             sample_rate,
             max_block,
             restart: None,

@@ -80,6 +80,19 @@ impl Park {
         take && self.state.compare_exchange(FREE, PARKED, Ordering::Acquire, Ordering::Relaxed).is_ok()
     }
 
+    /// The processor takes back a plug-in it parked itself, which the controller hasn't taken up
+    /// (for a render, during which no controller call can come). Whether it did.
+    pub fn unpark(&self) -> bool {
+        self.want.store(false, Ordering::Relaxed);
+        self.state.compare_exchange(PARKED, FREE, Ordering::Acquire, Ordering::Relaxed).is_ok()
+    }
+
+    /// The controller won't take the plug-in after all (it won't start again): it stays parked,
+    /// and no more is asked of the processor.
+    pub fn give_up(&self) {
+        self.want.store(false, Ordering::Relaxed);
+    }
+
     /// The controller gives the plug-in back, to fade in after `settle` frames.
     pub fn give_back(&self, settle: u32) {
         self.want.store(false, Ordering::Relaxed);
@@ -136,18 +149,26 @@ impl Fade {
         matches!(self, Fade::Falling(_) | Fade::Rising { .. })
     }
 
-    /// Starts fading out, unless it is out or on its way already.
+    /// Starts fading out from where it is: from wet, the whole way; partway up, back down from
+    /// there; still waiting to rise (dry), it's out at once. Out or on its way already, it goes on.
     pub fn fall(&mut self, len: u32) {
-        if matches!(self, Fade::Wet | Fade::Rising { .. }) {
-            *self = Fade::Falling(len);
-        }
+        *self = match *self {
+            Fade::Wet => Fade::Falling(len),
+            Fade::Rising { settle, .. } if settle > 0 => Fade::Dry,
+            Fade::Rising { left, .. } => Fade::Falling(len.saturating_sub(left)),
+            other => other,
+        };
     }
 
-    /// Starts fading back in after `settle` frames, unless it is in or on its way already.
+    /// Starts fading back in: from dry, after `settle` frames; partway down, back up from there
+    /// at once (the plug-in played on, so its output is there already). In or on its way
+    /// already, it goes on.
     pub fn rise(&mut self, settle: u32, len: u32) {
-        if matches!(self, Fade::Dry | Fade::Falling(_)) {
-            *self = Fade::Rising { settle, left: len };
-        }
+        *self = match *self {
+            Fade::Dry => Fade::Rising { settle, left: len },
+            Fade::Falling(left) => Fade::Rising { settle: 0, left: len.saturating_sub(left) },
+            other => other,
+        };
     }
 }
 
@@ -170,6 +191,56 @@ mod tests {
         assert_eq!(f, Fade::Wet, "in already");
     }
 
+    /// The largest step from one frame's gain to the next over `frames` of `f`.
+    fn largest_step(f: &mut Fade, len: u32, frames: usize, mut at: impl FnMut(usize, &mut Fade)) -> f32 {
+        let mut last = None::<f32>;
+        let mut step = 0.0f32;
+        for i in 0..frames {
+            at(i, f);
+            let g = f.step(len);
+            if let Some(l) = last {
+                step = step.max((g - l).abs());
+            }
+            last = Some(g);
+        }
+        step
+    }
+
+    #[test]
+    fn a_fall_during_a_rise_and_a_rise_during_a_fall_go_on_from_where_they_are() {
+        let len = 100;
+        let bound = 1.5 / len as f32;
+        for turn in [10, 50, 90] {
+            let mut f = Fade::Dry;
+            f.rise(0, len);
+            let step = largest_step(&mut f, len, 300, |i, f| {
+                if i == turn {
+                    f.fall(len)
+                }
+            });
+            assert!(step <= bound, "a fall {turn} frames into a rise: step {step}");
+            assert_eq!(f, Fade::Dry);
+            let mut f = Fade::Wet;
+            f.fall(len);
+            let step = largest_step(&mut f, len, 300, |i, f| {
+                if i == turn {
+                    f.rise(20, len)
+                }
+            });
+            assert!(step <= bound, "a rise {turn} frames into a fall: step {step}");
+            assert_eq!(f, Fade::Wet);
+        }
+        // Still waiting to rise, it is dry: falling then is out at once, with no step.
+        let mut f = Fade::Dry;
+        f.rise(50, len);
+        let step = largest_step(&mut f, len, 300, |i, f| {
+            if i == 20 {
+                f.fall(len)
+            }
+        });
+        assert_eq!((step, f), (0.0, Fade::Dry));
+    }
+
     #[test]
     fn the_controller_has_the_plug_in_only_when_no_block_does() {
         let p = Park::default();
@@ -188,5 +259,10 @@ mod tests {
         assert!(!p.take(false), "asked: it waits for the processor");
         assert!(p.take(true), "or takes it, with no block under way");
         assert!(!p.enter());
+        p.give_back(0);
+        p.take(false);
+        assert!(p.enter());
+        p.park_here();
+        assert!(p.unpark() && !p.wanted() && p.enter(), "a render takes back a plug-in it parked");
     }
 }

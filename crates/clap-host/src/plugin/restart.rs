@@ -61,7 +61,7 @@ impl ClapController {
 
     /// Deactivates and activates the plug-in, which the controller has (`Park::take`), and gives
     /// it back to fade in after its new latency. One that won't activate again stays parked, its
-    /// input passing through.
+    /// input passing through with no latency, and asks for nothing more (`Shared::dead`).
     fn reactivate(&mut self) {
         let s = self.shared.clone();
         let p = self.plugin();
@@ -78,17 +78,23 @@ impl ClapController {
             }
             s.inst.active.store(false, Ordering::Release);
             if !p.activate.is_some_and(|f| f(s.plugin, self.sample_rate, 1, self.max_block as u32)) {
-                log::warn!("{} wouldn't start again after asking to be restarted: it stays silent until it's loaded again", self.desc.name);
+                log::warn!("{} wouldn't start again after asking to be restarted: it passes its input through until it's loaded again", self.desc.name);
                 self.dead = true;
+                s.dead.store(true, Ordering::Relaxed);
+                s.park.give_up();
+                self.note_latency(0);
                 return;
             }
         }
         s.inst.active.store(true, Ordering::Release);
-        let latency = self.read_latency();
+        let (before, latency) = (self.activated_latency, self.read_latency());
+        self.activated_latency = latency;
         self.note_latency(latency);
         s.requests().tail.store(true, Ordering::Release);
-        log::debug!("{} restarted, latency {latency}", self.desc.name);
-        s.park.give_back(latency.min((self.sample_rate * MAX_SETTLE_SECS) as u32));
+        log::debug!("{} restarted, latency {before} -> {latency}", self.desc.name);
+        // It fades in once the longer of its two latencies has passed: for that long after a
+        // restart to a shorter one, LSP's Limiter still plays out what its old delay held.
+        s.park.give_back(latency.max(before).min((self.sample_rate * MAX_SETTLE_SECS) as u32));
     }
 
     /// `settle`: answers what the plug-in asked, as `idle` does, until no restart waits, waiting

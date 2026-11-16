@@ -49,6 +49,8 @@ struct Counts {
     stops: AtomicU32,
     while_inactive: AtomicU32,
     active: AtomicBool,
+    /// `activate` fails from now on.
+    refuse_activate: AtomicBool,
     /// The render mode it was set to last (-1: never).
     render_mode: std::sync::atomic::AtomicI32,
     tail: AtomicU32,
@@ -89,8 +91,9 @@ unsafe extern "C" fn activate(p: *const clap_plugin, _rate: f64, _min: u32, _max
     main_only(p);
     let c = &fake(p).counts;
     c.activations.fetch_add(1, Ordering::Relaxed);
-    c.active.store(true, Ordering::Relaxed);
-    true
+    let ok = !c.refuse_activate.load(Ordering::Relaxed);
+    c.active.store(ok, Ordering::Relaxed);
+    ok
 }
 unsafe extern "C" fn deactivate(p: *const clap_plugin) {
     main_only(p);
@@ -659,4 +662,116 @@ fn thread_pool_tasks_run_on_the_asking_thread_inside_process_only() {
         assert!(!(*ext).request_exec.unwrap()(f.host, 4), "refused outside process");
     }
     assert_eq!(f.counts.tasks_run.load(Ordering::Relaxed), 4);
+}
+
+/// Runs `blocks` blocks of 1.0 with no key, as `keyed_block` does, keeping every frame of the main
+/// output; between them, `between(block)`.
+fn run_blocks(p: &mut ClapProcessor, blocks: usize, mut between: impl FnMut(usize, &mut ClapProcessor)) -> Vec<f32> {
+    let mut out = Vec::new();
+    for b in 0..blocks {
+        between(b, p);
+        let (mut l, mut r) = ([1.0f32; 64], [1.0f32; 64]);
+        let k = [0.0f32; 64];
+        p.process_keyed(&mut l, &mut r, Some((&k, &k)), &[], &T);
+        out.extend_from_slice(&l);
+    }
+    out
+}
+
+fn largest_step(x: &[f32]) -> f32 {
+    x.windows(2).map(|w| (w[1] - w[0]).abs()).fold(0.0, f32::max)
+}
+
+/// Dragging a knob that changes the latency asks for a restart in every step, often while the
+/// last one is still fading back in: each must go on from where the fade is.
+#[test]
+fn restarts_asked_for_while_fading_back_in_dont_click() {
+    let (mut p, mut c, counts) = halves(64);
+    let mut restarts = 0;
+    let out = run_blocks(&mut p, 200, |b, _| {
+        if b > 10 && b % 3 == 0 {
+            counts.latency.store(64 + (b as u32 % 5) * 16, Ordering::Relaxed);
+            c.shared.requests().restart.store(true, Ordering::Release);
+        }
+        let before = counts.activations.load(Ordering::Relaxed);
+        c.idle();
+        restarts += (counts.activations.load(Ordering::Relaxed) - before) as usize;
+    });
+    // Wet is 0.5, dry 1.0: a fade moves 0.5 over 240 frames.
+    let step = largest_step(&out);
+    assert!(restarts >= 5, "{restarts} restarts");
+    assert!(step < 0.5 / 240.0 * 1.5, "largest step {step}");
+    assert_eq!(counts.while_inactive.load(Ordering::Relaxed), 0);
+}
+
+#[test]
+fn a_side_chain_switched_again_while_fading_in_doesnt_click() {
+    let (mut p, mut c, _counts) = halves(0);
+    keyed_block(&mut p, 1.0, 0.0);
+    let out = run_blocks(&mut p, 40, |b, p| match b {
+        2 => p.close_gate(),
+        8 => {
+            c.set_key_active(true).unwrap();
+            p.open_gate(0);
+        }
+        10 => p.close_gate(),
+        12 => p.open_gate(0),
+        _ => {}
+    });
+    let step = largest_step(&out);
+    assert!(step < 0.5 / 240.0 * 1.5, "largest step {step}");
+}
+
+#[test]
+fn a_render_plays_a_plug_in_that_was_asked_to_park() {
+    let (mut p, mut c, counts) = halves(0);
+    keyed_block(&mut p, 1.0, 0.0);
+    c.shared.requests().restart.store(true, Ordering::Release);
+    c.idle();
+    assert!(c.shared.park.wanted() && counts.activations.load(Ordering::Relaxed) == 1, "asked, not yet parked");
+    // A render starts before the next idle: no controller call can come until it's over.
+    p.set_offline(true);
+    let out = run_blocks(&mut p, 20, |_, _| {});
+    assert!(out.iter().all(|&x| x == 0.5), "it plays throughout, wet");
+    p.set_offline(false);
+    // Afterwards the restart goes ahead.
+    for _ in 0..10 {
+        keyed_block(&mut p, 1.0, 0.0);
+        c.idle();
+    }
+    assert_eq!(counts.activations.load(Ordering::Relaxed), 2);
+
+    // One parked already, which the controller hasn't taken up, plays in the render too.
+    c.shared.requests().restart.store(true, Ordering::Release);
+    c.idle();
+    for _ in 0..6 {
+        keyed_block(&mut p, 1.0, 0.0);
+    }
+    assert!(c.shared.park.take(false), "parked");
+    c.shared.park.give_up();
+    p.set_offline(true);
+    let out = run_blocks(&mut p, 4, |_, _| {});
+    assert!(out.iter().all(|&x| x == 0.5), "back in the render");
+    assert_eq!(counts.while_inactive.load(Ordering::Relaxed), 0);
+}
+
+#[test]
+fn a_plug_in_that_wont_start_again_passes_its_input_and_wants_nothing() {
+    let (mut p, mut c, counts) = halves(128);
+    keyed_block(&mut p, 1.0, 0.0);
+    counts.refuse_activate.store(true, Ordering::Relaxed);
+    c.shared.requests().restart.store(true, Ordering::Release);
+    for _ in 0..10 {
+        keyed_block(&mut p, 1.0, 0.0);
+        c.idle();
+    }
+    assert_eq!(counts.activations.load(Ordering::Relaxed), 2, "it tried");
+    assert!(c.take_latency_changed() && c.latency() == 0, "no latency: its input passes straight through");
+    assert_eq!(p.ring_out(), 0);
+    c.edit_param(7, 0.3);
+    assert!(!p.wants_to_run() && !p.has_edits() && !c.edits_pending(), "nothing keeps its strip awake or a render waiting");
+    assert_eq!(keyed_block(&mut p, 1.0, 0.0).0, 1.0, "dry");
+    p.set_offline(true);
+    assert_eq!(keyed_block(&mut p, 1.0, 0.0).0, 1.0, "a render doesn't take it back");
+    assert_eq!(counts.while_inactive.load(Ordering::Relaxed), 0, "never processed inactive");
 }

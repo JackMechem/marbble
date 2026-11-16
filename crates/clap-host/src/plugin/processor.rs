@@ -142,23 +142,34 @@ impl ClapProcessor {
     }
 
     /// The end of a block, inside the park: the gate shuts once faded out, and the plug-in parks
-    /// when the controller wants it, once faded out or at once if it isn't playing; otherwise the
-    /// park is left.
+    /// when the controller wants it (never during a render), once faded out or at once if it
+    /// isn't playing; otherwise the park is left.
     fn after_block(&mut self) {
         if self.gate == park::Fade::Dry && !self.shared.parked.load(Ordering::Relaxed) {
             self.stop(false);
             self.shared.parked.store(true, Ordering::Release);
         }
-        if self.shared.park.wanted() {
+        if self.park_wanted() {
+            self.park_fade.fall(self.fade_len);
             let out = self.park_fade == park::Fade::Dry || self.gate == park::Fade::Dry || !self.shared.processing.load(Ordering::Relaxed);
             if out {
                 self.stop(false);
                 self.shared.park.park_here();
                 return;
             }
-            self.park_fade.fall(self.fade_len);
         }
         self.shared.park.leave();
+    }
+
+    /// The controller wants the plug-in, and the engine isn't rendering, which no controller
+    /// call could come during to give it back.
+    fn park_wanted(&self) -> bool {
+        !self.offline && self.shared.park.wanted()
+    }
+
+    /// It won't start again after a restart (`restart.rs`): parked for good, it wants nothing.
+    fn dead(&self) -> bool {
+        self.shared.dead.load(Ordering::Relaxed)
     }
 
     /// The tail, read again where it said it changed: an audio-thread call, inside the park.
@@ -262,7 +273,7 @@ impl Processor for ClapProcessor {
             self.after_block();
             return;
         }
-        let fading = self.gate != park::Fade::Wet || self.park_fade != park::Fade::Wet || self.shared.park.wanted();
+        let fading = self.gate != park::Fade::Wet || self.park_fade != park::Fade::Wet || self.park_wanted();
         if fading {
             self.dry_l[..n].copy_from_slice(&left[..n]);
             self.dry_r[..n].copy_from_slice(&right[..n]);
@@ -313,12 +324,12 @@ impl Processor for ClapProcessor {
         }
     }
 
-    /// Fades to dry, then stops running the plug-in; one not running now stops at once.
+    /// Fades to dry from where the gate is, then stops running the plug-in; one not running now
+    /// (or not yet faded in) stops at once.
     fn close_gate(&mut self) {
         if matches!(self.gate, park::Fade::Wet | park::Fade::Rising { .. }) {
-            if self.shared.processing.load(Ordering::Relaxed) {
-                self.gate.fall(self.fade_len);
-            } else {
+            self.gate.fall(self.fade_len);
+            if self.gate == park::Fade::Dry || !self.shared.processing.load(Ordering::Relaxed) {
                 self.shut_gate();
             }
         }
@@ -341,15 +352,17 @@ impl Processor for ClapProcessor {
         }
     }
 
-    /// Edits wait, or the plug-in asked to flush its parameters.
+    /// Edits wait, or the plug-in asked to flush its parameters. Nothing reaches one that won't
+    /// start again.
     fn has_edits(&self) -> bool {
-        !self.edits_rx.is_empty() || self.shared.requests().process.load(Ordering::Acquire)
+        !self.dead() && (!self.edits_rx.is_empty() || self.shared.requests().process.load(Ordering::Acquire))
     }
 
     /// Edits, automation, a fade, or the controller waiting for it to park or fade back in.
     fn wants_to_run(&self) -> bool {
         let park = &self.shared.park;
-        self.has_edits() || !self.queued.is_empty() || self.gate.moving() || self.park_fade.moving() || park.wanted() || park.resuming()
+        let waits = self.gate.moving() || self.park_fade.moving() || self.park_wanted() || park.resuming();
+        !self.dead() && (self.has_edits() || !self.queued.is_empty() || waits)
     }
 
     /// Its tail and its latency: the tail read when it loaded or after the block where it said it
@@ -380,6 +393,17 @@ impl Processor for ClapProcessor {
     /// Bus 0 is the main output, the others the rest of its output ports in order.
     fn output_bus(&self, bus: usize, n: usize) -> Option<(&[f32], &[f32])> {
         self.outputs.get(*self.bus_ports.get(bus)?)?.stereo(n)
+    }
+
+    /// A restart waits until the render is over; a plug-in parked for one that the controller
+    /// hasn't taken up yet plays in it (the controller can't, while the render runs). It starts
+    /// from silence then, as a render does.
+    fn set_offline(&mut self, offline: bool) {
+        self.offline = offline;
+        if offline && !self.dead() {
+            self.shared.park.unpark();
+            self.park_fade = park::Fade::Wet;
+        }
     }
 }
 

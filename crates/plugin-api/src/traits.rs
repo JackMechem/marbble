@@ -58,6 +58,11 @@ pub trait Processor: Send {
     /// The block just processed on output bus `bus` (mono on both sides), or None if the plug-in
     /// has no such bus.
     fn output_bus(&self, bus: usize, n: usize) -> Option<(&[f32], &[f32])>;
+
+    /// The engine starts (true) or ends an offline render. A plug-in mustn't stop for its
+    /// controller in between (a CLAP plug-in's restart waits), since none of the controller's
+    /// calls can come until the render is over.
+    fn set_offline(&mut self, _offline: bool) {}
 }
 
 /// The main-thread half: parameters, state, the editor window, and what the plug-in reports.

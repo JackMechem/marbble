@@ -114,6 +114,8 @@ struct Shared {
     edits_in_block: AtomicBool,
     /// Its latency, as the controller read it last, for the processor's `ring_out`.
     latency_now: AtomicU32,
+    /// It wouldn't start again after a restart: it stays parked, passing its input through.
+    dead: AtomicBool,
     inst: ManuallyDrop<Instance>,
 }
 
@@ -173,6 +175,8 @@ pub struct ClapProcessor {
     dry_r: Vec<f32>,
     /// The wet share of each frame of a fade.
     wet: Vec<f32>,
+    /// The engine is rendering offline (`Processor::set_offline`): no restart starts.
+    offline: bool,
     /// Frames processed so far, for `steady_time`.
     steady: i64,
     max_block: usize,
@@ -208,6 +212,9 @@ pub struct ClapController {
     /// Its latency, read when it loads and in `idle`: `latency.get` is the main thread's, and
     /// renders ask for the latency from theirs.
     latency: u32,
+    /// Its latency when it was last activated, which it may go on playing out for a while after
+    /// a restart (`restart.rs`).
+    activated_latency: u32,
     /// What it was activated with, to activate it again.
     sample_rate: f64,
     max_block: usize,

@@ -274,12 +274,22 @@ impl Engine {
         }
     }
 
-    /// Tells every built-in effect whether a render is running (see `Effect::set_offline`).
+    /// Tells every built-in effect and hosted plug-in whether a render is running (see
+    /// `Effect::set_offline`, `Processor::set_offline`).
     fn set_effects_offline(&mut self, on: bool) {
+        // Strips rendering ahead come home first, so that none is missed.
+        self.reclaim_all();
+        for t in &mut self.tracks {
+            if let Some(Plugin::Hosted(p)) = t.instrument.as_mut().map(|i| &mut i.plugin) {
+                p.set_offline(on);
+            }
+        }
         let slots = self.tracks.iter_mut().flat_map(|t| t.inserts.iter_mut()).chain(self.master_inserts.iter_mut());
         for ins in slots.flatten() {
-            if let Plugin::Builtin(b) = &mut ins.plugin {
-                b.set_offline(on);
+            match &mut ins.plugin {
+                Plugin::Builtin(b) => b.set_offline(on),
+                Plugin::Hosted(p) => p.set_offline(on),
+                _ => {}
             }
         }
     }

@@ -202,10 +202,11 @@ impl Controller for ClapController {
         self.host_set.echo(id, value)
     }
 
-    /// Edits wait on the ring, or the block that took them isn't over.
+    /// Edits wait on the ring, or the block that took them isn't over. None reach a plug-in that
+    /// won't start again.
     fn edits_pending(&self) -> bool {
         let tx = self.edits_tx.lock();
-        tx.slots() < tx.buffer().capacity() || self.shared.edits_in_block.load(Ordering::Acquire)
+        !self.dead && (tx.slots() < tx.buffer().capacity() || self.shared.edits_in_block.load(Ordering::Acquire))
     }
 
     fn take_params_restarted(&mut self) -> bool {

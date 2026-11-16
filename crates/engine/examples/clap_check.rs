@@ -366,8 +366,9 @@ fn largest_step(a: &[f32]) -> f32 {
 /// be restarted when its lookahead changes. The engine plays on a thread of its own, as the device
 /// would, the limiter's track panned left and a steady sine on another track panned right, while
 /// the main thread idles as the app does: the restart happens there, delay compensation follows,
-/// the other track plays on untouched and the limiter's own fades out and back in. Then the same
-/// change right before a render, which must already play with it.
+/// the other track plays on untouched and the limiter's own fades out and back in. Then the knob
+/// dragged, a restart asked for while the last is still fading in, which mustn't click either.
+/// Then the same change right before a render, which must already play with it.
 fn restart(limiter: &PluginDescriptor, scratch: &Path) {
     let mut s = session(std::slice::from_ref(limiter), scratch.join("Restart.marbble"));
     let rate = s.project.sample_rate;
@@ -396,8 +397,9 @@ fn restart(limiter: &PluginDescriptor, scratch: &Path) {
     s.play();
     let engine = s.engine_for_checks();
     let stop = Arc::new(AtomicBool::new(false));
+    let played = Arc::new(AtomicUsize::new(0));
     let worker = {
-        let (engine, stop) = (engine.clone(), stop.clone());
+        let (engine, stop, played) = (engine.clone(), stop.clone(), played.clone());
         std::thread::spawn(move || {
             let mut guard = engine.lock();
             let mut buf = vec![0.0f32; BLOCK * 2];
@@ -413,6 +415,7 @@ fn restart(limiter: &PluginDescriptor, scratch: &Path) {
                     longest = longest.max(t.elapsed());
                 }
                 out.extend_from_slice(&buf);
+                played.store(out.len() / 2, Ordering::Relaxed);
                 // About real time, so a block is under way when the main thread restarts it.
                 std::thread::sleep(Duration::from_micros(4000));
             }
@@ -429,6 +432,18 @@ fn restart(limiter: &PluginDescriptor, scratch: &Path) {
     }
     let took = t.elapsed();
     pump(&mut s, 400);
+    // Dragged: a new lookahead every 15 ms, each restart asked for while the last fades in.
+    let drag_from = played.load(Ordering::Relaxed);
+    let mut seen = std::collections::BTreeSet::new();
+    for v in [0.6, 0.9, 0.4, 0.8, 0.5, 0.7, 1.0] {
+        s.edit_vst_param(uid, look, v);
+        for _ in 0..3 {
+            s.idle();
+            seen.insert(s.pdc_total());
+            std::thread::sleep(Duration::from_millis(5));
+        }
+    }
+    pump(&mut s, 400);
     stop.store(true, Ordering::Relaxed);
     let (out, longest) = worker.join().unwrap();
     s.stop();
@@ -439,8 +454,9 @@ fn restart(limiter: &PluginDescriptor, scratch: &Path) {
         after > before,
     );
     let (left, right): (Vec<f32>, Vec<f32>) = out.as_chunks::<2>().0.iter().map(|f| (f[0], f[1])).unzip();
-    // From when the engine was warm until the end; the sine's own largest step.
-    let (left, right) = (&left[4800..], &right[4800..]);
+    // From when the engine was warm until the drag; the sine's own largest step.
+    let (dragged_l, dragged_r) = (&left[drag_from..], &right[drag_from..]);
+    let (left, right) = (&left[4800..drag_from], &right[4800..drag_from]);
     let own = 0.2 * std::f32::consts::TAU * 400.0 / rate as f32;
     let quietest = |x: &[f32]| x.chunks(480).filter(|c| c.len() == 480).map(|c| c.iter().fold(0.0f32, |m, v| m.max(v.abs()))).fold(1.0f32, f32::min);
     println!(
@@ -454,6 +470,16 @@ fn restart(limiter: &PluginDescriptor, scratch: &Path) {
     check("the limiter's track fades out and back in rather than clicking", largest_step(left) < 1.5 * own);
     let end = &left[left.len() - 4800..];
     check(&format!("and plays again (peak {:.3} at the end)", end.iter().fold(0.0f32, |m, v| m.max(v.abs()))), end.iter().any(|v| v.abs() > 0.15));
+    let end = &dragged_l[dragged_l.len() - 4800..];
+    println!(
+        "     dragged: delay compensation went through {seen:?}; the limiter's track's largest step {:.4}, the other's {:.4}",
+        largest_step(dragged_l),
+        largest_step(dragged_r)
+    );
+    check(
+        "dragging the lookahead, restarts asked for while the last fades in don't click either",
+        seen.len() > 2 && largest_step(dragged_l) < 1.5 * own && largest_step(dragged_r) < 1.5 * own && end.iter().any(|v| v.abs() > 0.15),
+    );
     check(&format!("the engine's thread allocated nothing meanwhile ({allocs} allocations or frees)"), allocs == 0);
 
     // Right before a render: it plays with the lookahead it was just given.
@@ -464,6 +490,58 @@ fn restart(limiter: &PluginDescriptor, scratch: &Path) {
         &format!("changed just before a render, the render has it ({after} -> {back} frames)"),
         back < after && peak(&r, (rate as i64 / 2, rate as i64)) > 0.1,
     );
+}
+
+/// The app renders on a thread of its own, where no restart can be done, and the main thread
+/// can't answer the plug-in while the render holds the session. A restart asked for just before
+/// (the processor parked for it, waiting for the main thread) mustn't leave the plug-in out of
+/// the render; and with `begin_renders` on the main thread first, as the app does, the restart
+/// is done and its latency is in the render's delay compensation. At its lowest threshold the
+/// limiter brings the sine up (0.2 to about 0.4), so whether it's in the render shows in the
+/// level.
+fn render_elsewhere(limiter: &PluginDescriptor, scratch: &Path) {
+    let mut s = session(std::slice::from_ref(limiter), scratch.join("Elsewhere.marbble"));
+    let rate = s.project.sample_rate;
+    let steady_path = scratch.join("steady.wav");
+    let a = s.add_track(TrackKind::Audio, InputSel::None, None, None).unwrap();
+    s.import_audio(&steady_path, a, 0).unwrap();
+    let uid = s.set_plugin(a, 0, &limiter.id).unwrap();
+    let id = |s: &Session, name: &str| s.plugin_params(uid).iter().find(|p| p.name.to_lowercase().contains(name)).map(|p| p.id).unwrap();
+    let (look, threshold) = (id(&s, "lookahead"), id(&s, "threshold"));
+    s.edit_vst_param(uid, threshold, 0.0);
+    pump(&mut s, 200);
+    let len = rate as i64;
+    let level = |r: &[Vec<f32>]| peak(r, (len / 2, len));
+    let limited = level(&render_track(&mut s, a, len));
+    let elsewhere = |s: &mut Session| std::thread::scope(|sc| sc.spawn(|| render_track(s, a, len)).join().unwrap());
+
+    for (v, begun) in [(0.8, false), (0.3, true)] {
+        let before = s.pdc_total();
+        s.edit_vst_param(uid, look, v);
+        // The device's blocks take the edit; the plug-in asks for a restart from
+        // `on_main_thread`, which this idle answers: the restart is asked for, not yet done.
+        std::thread::sleep(Duration::from_millis(40));
+        s.idle();
+        std::thread::sleep(Duration::from_millis(40));
+        if begun {
+            s.begin_renders();
+        }
+        let r = elsewhere(&mut s);
+        let lagged = s.pdc_total();
+        if begun {
+            s.end_renders();
+        }
+        let what = if begun { "after begin_renders on the main thread" } else { "with nothing done on the main thread" };
+        check(
+            &format!(
+                "a render on another thread right after a restart was asked for, {what}, has the plug-in in it (peak {:.3}, through the limiter {limited:.3}, dry 0.200; delay compensation {before} -> {lagged})",
+                level(&r)
+            ),
+            (level(&r) - limited).abs() < 0.02 && (limited - 0.2).abs() > 0.05 && (!begun || lagged != before),
+        );
+        pump(&mut s, 200);
+    }
+    check(&format!("and the restart left waiting is done at the next idle ({} frames)", s.pdc_total()), s.pdc_total() > 0 && s.tick().warning.is_none());
 }
 
 fn main() {
@@ -507,7 +585,10 @@ fn main() {
         None => println!("SKIP LSP's CLAP {SAMPLER} isn't installed"),
     }
     match find(&list, LIMITER, PluginFormat::Clap) {
-        Some(d) => restart(&d, &scratch),
+        Some(d) => {
+            restart(&d, &scratch);
+            render_elsewhere(&d, &scratch);
+        }
         None => println!("SKIP LSP's CLAP {LIMITER} isn't installed"),
     }
     std::process::exit(FAILED.load(Ordering::Relaxed) as i32);

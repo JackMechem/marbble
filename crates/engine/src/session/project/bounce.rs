@@ -120,20 +120,44 @@ impl Session {
         if let Some(why) = self.left_out_refusal() {
             return Err(anyhow!(why));
         }
-        self.set_plugins_offline(true);
+        let alone = !self.renders_begun;
+        if alone {
+            self.set_plugins_offline(true);
+        }
         let audio = guard.render(from, to, tail, isolate, progress);
-        self.set_plugins_offline(false);
+        if alone {
+            self.set_plugins_offline(false);
+        }
         Ok(audio)
     }
 
     /// Tells every hosted plug-in a render is starting (true) or over (false), for a CLAP plug-in
     /// with `clap.render` to switch to its offline quality. A main-thread call to the plug-ins, so
-    /// it does nothing on another: the app makes it on the main thread around a render, which runs
-    /// on another (`src-tauri/src/commands/bounce.rs`).
+    /// it does nothing on another: the app's renders run on another, and it calls `begin_renders`
+    /// on the main thread instead (`src-tauri/src/commands/bounce.rs`).
     pub fn set_plugins_offline(&mut self, on: bool) {
         for c in self.controllers.values_mut() {
             c.set_offline(on);
         }
+    }
+
+    /// Before renders made on another thread (the app's render commands), on the main thread:
+    /// what a render must play with is settled now, as `render` can't from there (a CLAP plug-in's
+    /// restart, its new latency in the delay compensation), the device plays silence until
+    /// `end_renders`, and plug-ins go into their offline mode, which may ask for a restart too.
+    pub fn begin_renders(&mut self) {
+        self.settle_latency();
+        self.status.renders.store(true, Ordering::Relaxed);
+        self.set_plugins_offline(true);
+        self.settle_latency();
+        self.renders_begun = true;
+    }
+
+    /// After them: plug-ins back in real time, then the device plays again.
+    pub fn end_renders(&mut self) {
+        self.renders_begun = false;
+        self.set_plugins_offline(false);
+        self.status.renders.store(false, Ordering::Relaxed);
     }
 
     /// Renders `[from, to)` of the full mix like [`Session::render`], making `edit` once `at`

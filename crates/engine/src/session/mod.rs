@@ -278,6 +278,9 @@ pub struct Session {
     left_events_seen: u32,
     left_token_seen: u64,
     /// Some plug-in controller is marked as not to be called (see `session/engine/left_out.rs`).
+    /// `begin_renders` was called and `end_renders` not since: `render` leaves the plug-ins'
+    /// render mode alone.
+    renders_begun: bool,
     marked_unresponsive: bool,
     /// Strips left in plug-ins that `EngineStatus::held` couldn't list, already logged.
     held_unlisted_seen: u32,
@@ -482,6 +485,7 @@ impl Session {
             device_events_seen: (0, 0),
             left_events_seen: 0,
             left_token_seen: 0,
+            renders_begun: false,
             marked_unresponsive: false,
             held_unlisted_seen: 0,
             bad_audio_at: Instant::now() - Duration::from_secs(60),
