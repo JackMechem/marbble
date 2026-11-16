@@ -111,6 +111,21 @@ impl Session {
         self.controllers.get(&uid).is_some_and(|c| c.has_editor())
     }
 
+    /// The title of plug-in `uid`'s window on `track`: "<track> — <plug-in>", as its slot gives it
+    /// however the window opens, so that several open windows can be told apart.
+    pub fn editor_title(&self, track: Id, uid: Id) -> String {
+        let p = &self.project;
+        let this = |s: &Option<PluginSlot>| s.as_ref().filter(|s| s.uid == uid).map(|s| s.name.clone());
+        let (name, plugin) = match p.track(track) {
+            Some(t) => (t.name.as_str(), t.inserts.iter().chain(std::iter::once(&t.instrument)).find_map(this)),
+            None => ("Stereo Out", p.master.inserts.iter().find_map(this)),
+        };
+        match plugin {
+            Some(plugin) => format!("{name} — {plugin}"),
+            None => name.to_string(),
+        }
+    }
+
     /// Opens a VST3's or CLAP plug-in's own editor, and starts watching it for edits to undo (see
     /// `editor_undo/`).
     pub fn open_editor(&mut self, uid: Id, title: &str) -> Result<()> {
@@ -149,5 +164,26 @@ impl Session {
             .chain(p.master.inserts.iter().flatten())
             .filter(|s| !crate::session::plugins::builtin::is_builtin(&s.plugin_id) && !self.controllers.contains_key(&s.uid))
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::session::tests::scratch_session;
+    use crate::session::*;
+
+    #[test]
+    fn a_plug_in_window_is_titled_with_its_track_and_its_plug_in() {
+        let (mut s, _) = scratch_session("editor-title");
+        let t = s.add_track(TrackKind::Audio, InputSel::None, None, None).unwrap();
+        let uid = s.set_plugin(t, 0, "builtin:reverb").unwrap();
+        let (track, plugin) = {
+            let tr = s.project.track(t).unwrap();
+            (tr.name.clone(), tr.inserts[0].as_ref().unwrap().name.clone())
+        };
+        assert_eq!(s.editor_title(t, uid), format!("{track} — {plugin}"));
+        let m = s.set_plugin(MASTER_ID, 0, "builtin:reverb").unwrap();
+        assert_eq!(s.editor_title(MASTER_ID, m), format!("Stereo Out — {plugin}"));
+        assert_eq!(s.editor_title(t, 999_999), track, "an unknown plug-in leaves the track's name");
     }
 }

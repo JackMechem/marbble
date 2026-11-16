@@ -40,6 +40,9 @@ All notable changes to Marbble are recorded here. The format follows
 
 ### Fixed
 
+- **A plug-in window opened by inserting the plug-in is titled with the plug-in too.** It was
+  titled with the track's name only ("Stereo Out"); now it's "<track> — <plug-in>", as when it's
+  opened from its slot, so several open windows can be told apart.
 - **Plug-in windows follow a change of the display's scale on Linux.** An editor kept the size it
   opened at until it was closed and reopened. Now changing the desktop's scale (XSETTINGS
   `Gdk/WindowScalingFactor` or `Xft/DPI`) or `Xft.dpi` with `xrdb` rescales open editors: the
