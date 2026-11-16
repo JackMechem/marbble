@@ -3,7 +3,7 @@ resolver = "2"
 members = ["crates/plugin-api", "crates/plugin-editor", "crates/vst3-host", "crates/clap-host", "crates/engine", "src-tauri"]
 
 [workspace.package]
-version = "0.1.0-alpha.18"
+version = "0.1.0-alpha.19"
 edition = "2021"
 license = "MIT"
 
