@@ -16,7 +16,7 @@ pub fn instantiate(desc: &PluginDescriptor, sample_rate: f64, max_block: usize, 
             Ok((Box::new(p), Box::new(c)))
         }
         PluginFormat::Clap => {
-            let (p, c) = clap_host::instantiate(desc, sample_rate, max_block)?;
+            let (p, c) = clap_host::instantiate(desc, sample_rate, max_block, keyed)?;
             Ok((Box::new(p), Box::new(c)))
         }
     }

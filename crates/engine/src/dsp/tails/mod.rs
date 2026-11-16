@@ -9,6 +9,7 @@
 //! or its output has stopped falling below −30 dB (a noise floor: tape hiss, an amp model's hum,
 //! a limiter's dither). A plug-in that's quiet already costs a few blocks, and the whole
 //! ring-out has a time limit. Renders hold the engine lock, so this runs off the audio thread.
+//! CLAP plug-ins are played out the same way, so both formats sound alike around a render.
 
 use std::time::Duration;
 

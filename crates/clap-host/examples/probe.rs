@@ -24,7 +24,7 @@ fn main() {
             None => descs.iter().take(3).collect(),
         };
         for d in shown {
-            let (mut p, mut c) = match instantiate(d, 48000.0, 512) {
+            let (mut p, mut c) = match instantiate(d, 48000.0, 512, false) {
                 Ok(x) => x,
                 Err(e) => {
                     println!("  FAIL {} : {e}", d.name);

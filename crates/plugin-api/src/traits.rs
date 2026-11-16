@@ -58,6 +58,11 @@ pub trait Processor: Send {
     /// The block just processed on output bus `bus` (mono on both sides), or None if the plug-in
     /// has no such bus.
     fn output_bus(&self, bus: usize, n: usize) -> Option<(&[f32], &[f32])>;
+
+    /// The engine starts (true) or ends an offline render. A plug-in mustn't stop for its
+    /// controller in between (a CLAP plug-in's restart waits), since none of the controller's
+    /// calls can come until the render is over.
+    fn set_offline(&mut self, _offline: bool) {}
 }
 
 /// The main-thread half: parameters, state, the editor window, and what the plug-in reports.
@@ -84,6 +89,16 @@ pub trait Controller: Send {
 
     /// Call periodically on the main thread.
     fn idle(&mut self);
+
+    /// Before a render: finishes, waiting briefly if need be, what the plug-in asked for that the
+    /// render's sound depends on (a CLAP plug-in's restart for a new latency). Main thread; does
+    /// nothing elsewhere, or for a plug-in with nothing waiting.
+    fn settle(&mut self) {}
+
+    /// Tells the plug-in whether the engine is rendering offline (bounces, Freeze, exports), so
+    /// that it may take longer per block for better quality, or plays in real time. Main thread;
+    /// does nothing elsewhere, or in a format without the notion.
+    fn set_offline(&mut self, _offline: bool) {}
 
     /// The processing latency the plug-in reports, in samples.
     fn latency(&self) -> u32;

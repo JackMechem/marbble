@@ -16,18 +16,19 @@ impl ClapProcessor {
         unsafe { &*self.shared.plugin }
     }
 
-    /// Starts processing if it isn't yet. Whether it runs now.
+    /// Starts processing if it isn't yet. Whether it runs now. Inside the park.
     fn start(&mut self) -> bool {
-        if !self.processing {
-            let p = self.plugin();
-            self.processing = p.start_processing.is_some_and(|f| unsafe { f(self.shared.plugin) });
+        let s = &self.shared;
+        if !s.processing.load(Ordering::Relaxed) {
+            let started = self.plugin().start_processing.is_some_and(|f| unsafe { f(s.plugin) });
+            s.processing.store(started, Ordering::Relaxed);
         }
-        self.processing
+        s.processing.load(Ordering::Relaxed)
     }
 
-    /// Stops processing, and with `reset` clears its buffers and voices too.
+    /// Stops processing, and with `reset` clears its buffers and voices too. Inside the park.
     fn stop(&mut self, reset: bool) {
-        if !std::mem::take(&mut self.processing) {
+        if !self.shared.processing.swap(false, Ordering::Relaxed) {
             return;
         }
         let _role = AudioRole::enter();
@@ -46,6 +47,9 @@ impl ClapProcessor {
     /// time order. Values go in the parameters' own units.
     fn gather(&mut self, n: usize, midi: &[MidiEvent]) {
         self.events_in.clear();
+        if !self.edits_rx.is_empty() {
+            self.shared.edits_in_block.store(true, Ordering::Release);
+        }
         let ranges = &self.events_out.ranges;
         while let Ok((id, v)) = self.edits_rx.pop() {
             if let Some(r) = ranges.get(id) {
@@ -66,9 +70,9 @@ impl ClapProcessor {
         self.events_in.sort();
     }
 
-    /// The main input gets the block, the others silence; the outputs are cleared; the buffer
-    /// descriptions point at them all.
-    fn fill_ports(&mut self, left: &[f32], right: &[f32], n: usize) {
+    /// The main input gets the block, the side-chain input the key when it's keyed, the others
+    /// silence (marked constant); the outputs are cleared; the buffer descriptions point at them all.
+    fn fill_ports(&mut self, left: &[f32], right: &[f32], key: KeyInput, n: usize) {
         for (i, port) in self.inputs.iter_mut().enumerate() {
             if Some(i) == self.main_in {
                 port.put_stereo(left, right, n);
@@ -76,10 +80,26 @@ impl ClapProcessor {
                 port.silence(n);
             }
         }
+        let key = key.filter(|_| self.shared.keyed.load(Ordering::Relaxed));
+        if let (Some((kl, kr)), Some(first)) = (key, self.key.first) {
+            match self.key.right {
+                Some(right) => {
+                    self.inputs[first].put_mono(kl, n);
+                    self.inputs[right].put_mono(kr, n);
+                }
+                None => self.inputs[first].put_stereo(kl, kr, n),
+            }
+        }
         for port in self.outputs.iter_mut() {
             port.silence(n);
         }
-        for (buf, port) in self.in_bufs.iter_mut().zip(self.inputs.iter_mut()).chain(self.out_bufs.iter_mut().zip(self.outputs.iter_mut())) {
+        let heard = |i: usize| Some(i) == self.main_in || (key.is_some() && (Some(i) == self.key.first || Some(i) == self.key.right));
+        for (i, (buf, port)) in self.in_bufs.iter_mut().zip(self.inputs.iter_mut()).enumerate() {
+            buf.data32 = port.ptrs.as_mut_ptr();
+            buf.channel_count = port.channels as u32;
+            buf.constant_mask = if heard(i) { 0 } else { (1u64 << port.channels.min(63)) - 1 };
+        }
+        for (buf, port) in self.out_bufs.iter_mut().zip(self.outputs.iter_mut()) {
             buf.data32 = port.ptrs.as_mut_ptr();
             buf.channel_count = port.channels as u32;
             buf.constant_mask = 0;
@@ -90,6 +110,74 @@ impl ClapProcessor {
         if let Some((l, r)) = self.main_out.and_then(|i| self.outputs[i].stereo(n)) {
             left[..n].copy_from_slice(l);
             right[..n].copy_from_slice(r);
+        }
+    }
+
+    /// Crossfades the block with its dry input (`dry_l`, `dry_r`) as the gate and the park fade
+    /// move; the extra outputs fade to silence with it.
+    fn fade(&mut self, left: &mut [f32], right: &mut [f32], n: usize) {
+        let len = self.fade_len;
+        for i in 0..n {
+            let wet = self.gate.step(len) * self.park_fade.step(len);
+            self.wet[i] = wet;
+            left[i] = self.dry_l[i] + (left[i] - self.dry_l[i]) * wet;
+            right[i] = self.dry_r[i] + (right[i] - self.dry_r[i]) * wet;
+        }
+        let main = self.main_out;
+        for (_, port) in self.outputs.iter_mut().enumerate().filter(|(p, _)| Some(*p) != main) {
+            for b in port.buffers.iter_mut() {
+                for (x, g) in b[..n].iter_mut().zip(&self.wet[..n]) {
+                    *x *= g;
+                }
+            }
+        }
+    }
+
+    /// A block while the controller has the plug-in: the input passes, the extra outputs are
+    /// silent.
+    fn parked_block(&mut self, n: usize) {
+        for (_, port) in self.outputs.iter_mut().enumerate().filter(|(p, _)| Some(*p) != self.main_out) {
+            port.silence(n);
+        }
+    }
+
+    /// The end of a block, inside the park: the gate shuts once faded out, and the plug-in parks
+    /// when the controller wants it (never during a render), once faded out or at once if it
+    /// isn't playing; otherwise the park is left.
+    fn after_block(&mut self) {
+        if self.gate == park::Fade::Dry && !self.shared.parked.load(Ordering::Relaxed) {
+            self.stop(false);
+            self.shared.parked.store(true, Ordering::Release);
+        }
+        if self.park_wanted() {
+            self.park_fade.fall(self.fade_len);
+            let out = self.park_fade == park::Fade::Dry || self.gate == park::Fade::Dry || !self.shared.processing.load(Ordering::Relaxed);
+            if out {
+                self.stop(false);
+                self.shared.park.park_here();
+                return;
+            }
+        }
+        self.shared.park.leave();
+    }
+
+    /// The controller wants the plug-in, and the engine isn't rendering, which no controller
+    /// call could come during to give it back.
+    fn park_wanted(&self) -> bool {
+        !self.offline && self.shared.park.wanted()
+    }
+
+    /// It won't start again after a restart (`restart.rs`): parked for good, it wants nothing.
+    fn dead(&self) -> bool {
+        self.shared.dead.load(Ordering::Relaxed)
+    }
+
+    /// The tail, read again where it said it changed: an audio-thread call, inside the park.
+    fn reread_tail(&mut self) {
+        if self.shared.take(|r| &r.tail) {
+            if let Some(get) = unsafe { self.shared.tail.as_ref() }.and_then(|t| t.get) {
+                self.tail = unsafe { get(self.shared.plugin) };
+            }
         }
     }
 }
@@ -165,20 +253,33 @@ impl Processor for ClapProcessor {
         self.max_block
     }
 
-    /// The side-chain key isn't passed on yet (#560): `has_key_input` says there's none.
-    fn process_keyed(&mut self, left: &mut [f32], right: &mut [f32], _key: KeyInput, midi: &[MidiEvent], t: &TransportInfo) {
+    fn process_keyed(&mut self, left: &mut [f32], right: &mut [f32], key: KeyInput, midi: &[MidiEvent], t: &TransportInfo) {
         let n = left.len().min(right.len()).min(self.max_block);
-        if n == 0 || self.shut {
+        if n == 0 || self.gate == park::Fade::Dry {
             return;
+        }
+        if !self.shared.park.enter() {
+            self.parked_block(n);
+            return;
+        }
+        if let Some(settle) = self.shared.park.take_resume() {
+            self.park_fade = park::Fade::Dry;
+            self.park_fade.rise(settle, self.fade_len);
         }
         // Whatever it asked to be run or flushed for, this block does.
         self.shared.take(|r| &r.process);
         let _role = AudioRole::enter();
-        if !self.start() {
+        if self.park_fade == park::Fade::Dry || !self.start() {
+            self.after_block();
             return;
         }
+        let fading = self.gate != park::Fade::Wet || self.park_fade != park::Fade::Wet || self.park_wanted();
+        if fading {
+            self.dry_l[..n].copy_from_slice(&left[..n]);
+            self.dry_r[..n].copy_from_slice(&right[..n]);
+        }
         self.gather(n, midi);
-        self.fill_ports(left, right, n);
+        self.fill_ports(left, right, key, n);
         self.transport = transport(t);
         let process = clap_process {
             steady_time: self.steady,
@@ -192,10 +293,19 @@ impl Processor for ClapProcessor {
             out_events: self.events_out.raw(),
         };
         if let Some(f) = self.plugin().process {
+            let host = &self.shared.inst.host;
+            host.in_process.store(true, Ordering::Relaxed);
             unsafe { f(self.shared.plugin, &process) };
+            host.in_process.store(false, Ordering::Relaxed);
         }
         self.steady += n as i64;
+        self.shared.edits_in_block.store(false, Ordering::Release);
+        self.reread_tail();
         self.read_main_output(left, right, n);
+        if fading {
+            self.fade(left, right, n);
+        }
+        self.after_block();
     }
 
     fn queue_param(&mut self, id: u32, offset: i32, value: f64) {
@@ -205,46 +315,66 @@ impl Processor for ClapProcessor {
     }
 
     /// Stops processing and resets the plug-in (its delay lines and voices); the next block
-    /// starts it again.
+    /// starts it again. A plug-in the controller has is stopped already.
     fn suspend(&mut self) {
         self.queued.clear();
-        self.stop(true);
+        if self.shared.park.enter() {
+            self.stop(true);
+            self.shared.park.leave();
+        }
     }
 
-    /// CLAP needn't stop a plug-in to switch its ports, so nothing asks this of one yet; it stops
-    /// at once.
+    /// Fades to dry from where the gate is, then stops running the plug-in; one not running now
+    /// (or not yet faded in) stops at once.
     fn close_gate(&mut self) {
-        self.shut_gate();
+        if matches!(self.gate, park::Fade::Wet | park::Fade::Rising { .. }) {
+            self.gate.fall(self.fade_len);
+            if self.gate == park::Fade::Dry || !self.shared.processing.load(Ordering::Relaxed) {
+                self.shut_gate();
+            }
+        }
     }
 
+    /// A plug-in the controller has is stopped already.
     fn shut_gate(&mut self) {
-        self.stop(false);
-        self.shut = true;
+        if self.shared.park.enter() {
+            self.stop(false);
+            self.shared.park.leave();
+        }
+        self.gate = park::Fade::Dry;
         self.shared.parked.store(true, Ordering::Release);
     }
 
-    fn open_gate(&mut self, _settle: u32) {
-        self.shut = false;
-        self.shared.parked.store(false, Ordering::Release);
+    fn open_gate(&mut self, settle: u32) {
+        if matches!(self.gate, park::Fade::Dry | park::Fade::Falling(_)) {
+            self.shared.parked.store(false, Ordering::Release);
+            self.gate.rise(settle, self.fade_len);
+        }
     }
 
-    /// Edits wait, or the plug-in asked to flush its parameters.
+    /// Edits wait, or the plug-in asked to flush its parameters. Nothing reaches one that won't
+    /// start again.
     fn has_edits(&self) -> bool {
-        !self.edits_rx.is_empty() || self.shared.requests().process.load(Ordering::Acquire)
+        !self.dead() && (!self.edits_rx.is_empty() || self.shared.requests().process.load(Ordering::Acquire))
     }
 
+    /// Edits, automation, a fade, or the controller waiting for it to park or fade back in.
     fn wants_to_run(&self) -> bool {
-        self.has_edits() || !self.queued.is_empty()
+        let park = &self.shared.park;
+        let waits = self.gate.moving() || self.park_fade.moving() || self.park_wanted() || park.resuming();
+        !self.dead() && (self.has_edits() || !self.queued.is_empty() || waits)
     }
 
+    /// Its tail and its latency: the tail read when it loaded or after the block where it said it
+    /// changed, the latency the controller read last.
     fn ring_out(&self) -> u32 {
-        self.ring_out
+        instantiate::ring_out(self.tail, self.shared.latency_now.load(Ordering::Relaxed))
     }
 
     /// Hands the waiting edits to the plug-in with `params.flush`, which CLAP has for a plug-in
-    /// that isn't being processed.
+    /// that isn't being processed. Not while the controller has it: they wait.
     fn pass_edits(&mut self, _t: &TransportInfo) {
-        if !self.has_edits() {
+        if !self.has_edits() || !self.shared.park.enter() {
             return;
         }
         self.shared.take(|r| &r.process);
@@ -255,23 +385,37 @@ impl Processor for ClapProcessor {
             let (input, output) = (self.events_in.raw(), self.events_out.raw());
             unsafe { f(self.shared.plugin, input, output) };
         }
+        self.shared.edits_in_block.store(false, Ordering::Release);
         self.events_in.clear();
+        self.shared.park.leave();
     }
 
-    /// The main output only, as bus 0: extra output ports come with #560.
+    /// Bus 0 is the main output, the others the rest of its output ports in order.
     fn output_bus(&self, bus: usize, n: usize) -> Option<(&[f32], &[f32])> {
-        if bus != 0 {
-            return None;
+        self.outputs.get(*self.bus_ports.get(bus)?)?.stereo(n)
+    }
+
+    /// A restart waits until the render is over; a plug-in parked for one that the controller
+    /// hasn't taken up yet plays in it (the controller can't, while the render runs). It starts
+    /// from silence then, as a render does.
+    fn set_offline(&mut self, offline: bool) {
+        self.offline = offline;
+        if offline && !self.dead() {
+            self.shared.park.unpark();
+            self.park_fade = park::Fade::Wet;
         }
-        self.outputs.get(self.main_out?)?.stereo(n)
     }
 }
 
 impl Drop for ClapProcessor {
     /// Dropped on the main thread (as the engine's garbage), but stopping is the audio thread's:
-    /// the processor is out of the engine by now, so the main thread takes that role for it.
+    /// the processor is out of the engine by now, so the main thread takes that role for it. A
+    /// plug-in the controller has, it stops itself.
     fn drop(&mut self) {
-        self.stop(false);
+        if self.shared.park.enter() {
+            self.stop(false);
+            self.shared.park.leave();
+        }
     }
 }
 

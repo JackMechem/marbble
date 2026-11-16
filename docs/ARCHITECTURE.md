@@ -136,11 +136,12 @@ clap-host/
   entry.rs          loading a .clap file, its entry and factory
   scan.rs           the CLAP folders
   features.rs       CLAP features as VST3-style subcategories
-  host.rs           the clap_host, its extensions, and which thread is which; host/gui.rs (what the
+  host.rs           the clap_host, its extensions (thread-pool tasks too), and which thread is which; host/gui.rs (what the
                     plug-in asks of its window), host/run_loop.rs (timers and file descriptors, Linux)
   gui.rs            clap.gui as a plugin_editor::View
   plugin.rs         the two halves' types; plugin/ makes and runs them
-  plugin/           instantiate.rs, processor.rs (audio thread), controller.rs (main thread), editor.rs, ports.rs
+  plugin/           instantiate.rs, processor.rs (audio thread), controller.rs (main thread), editor.rs, ports.rs,
+                    restart.rs (restarts, render mode), park.rs (the halves taking turns for a restart)
   events.rs         preallocated input events, output events as gestures
   params.rs         CLAP's plain parameter values and the engine's normalized ones
   stream.rs         in-memory streams for state
@@ -586,7 +587,8 @@ The solver is `session/engine/pdc.rs`, the delay lines `dsp/pdc.rs`.
   performer heard the song that late.
 - **Stop** lets what is still in the lines play out.
 - A plug-in's latency is reread after a restart flag and polled from `idle`; before a render the
-  session waits briefly for VST3 edits to settle.
+  session waits briefly for plug-in edits to settle, and a CLAP plug-in they made ask for a
+  restart is restarted first ([CLAP hosting](#clap-hosting)).
 
 ### Multi-core processing
 
@@ -655,14 +657,15 @@ Latency Mode, clears the delay lines, starts like playback (automation sent, not
 chased), plays the range, then the compensation still in the lines, then the tail with the
 transport stopped, drops the leading latency and restores everything. It starts and ends with
 nothing ringing: built-in instruments and effects are reset, the delay lines cleared at the end
-too, and each VST3 it plays (`dsp/tails/`) is fed silence, its notes ended, until its outputs
-have been quiet for its reported tail and latency (kept between 0.1 and 2 s; most report none),
+too, and each VST3 or CLAP plug-in it plays (`dsp/tails/`) is fed silence, its notes ended, until
+its outputs have been quiet for its reported tail and latency (kept between 0.1 and 2 s; most report none),
 or have stopped falling below −30 dB (a noise floor such as tape hiss), for 10 s at most. All the
 plug-ins together get 1 s, before the render and again after it; past that the rest are left
 ringing, with a warning in the log. `setProcessing` and `setActive` don't reliably clear a plug-in's voices or tail
 (LSP's Multi-Sampler, Dragonfly's reverbs), and reloading costs time and, in LSP's sampler,
 sometimes samples (#37). Built-in effects are told they're offline, so background work (the
-Linear Phase EQ's filter design) lands at the same point every time.
+Linear Phase EQ's filter design) lands at the same point every time, and CLAP plug-ins with
+`clap.render` are put in offline mode (`Controller::set_offline`, a main-thread call).
 
 `Isolate` renders one track (with what feeds it) before Stereo Out instead of the whole mix, for
 Export All Tracks, Export Region, Bounce in Place and Freeze; tracks keying it play but aren't
@@ -936,7 +939,53 @@ of `plugin_api`.
   found by binary search in a table built at load. The plug-in's output events become `Gesture`s
   on a ring for the controller: what an editor's edits are for undo and automation writes.
   `process` starts processing on the first block; `suspend` stops and resets it; a plug-in the
-  engine isn't running gets its waiting edits through `params.flush`.
+  engine isn't running gets its waiting edits through `params.flush`. `tail.changed` is answered
+  after the next block, which reads the tail again (an audio-thread call); `ring_out` is that tail
+  and the latency the controller read last, so a render plays it out as a VST3's
+  ([Offline renders](#offline-renders)).
+- **Ports** (`plugin/ports.rs`): every audio port is played, as CLAP has it without
+  `audio-ports-activation` (which Marbble doesn't use). The first input port past the main one
+  takes a side-chain key, or a pair of mono ones its left and right (LSP's "sc_l" and "sc_r");
+  silent inputs are marked constant. The output ports are the engine's buses, the main one first
+  and the rest in the plug-in's order, so auxes, Freeze and Bounce in Place use them as a VST3's.
+  Switching the key or an output needs no call into the plug-in: `set_key_active` and
+  `set_active_outputs` only note it, and the key still goes through the same gate's crossfade
+  (`Processor::close_gate`) as a VST3's. An output nobody listens to still costs its work.
+- **Restarts** (`plugin/restart.rs`, `plugin/park.rs`): a plug-in asks for one
+  (`request_restart`, LSP's from `on_main_thread` when a lookahead changes) to change its latency
+  or ports, which CLAP allows only while it's deactivated, on the main thread. Each block takes a
+  `Park` with one compare-and-swap; the controller's `idle` asks for it, the processor fades to its
+  dry input over 5 ms, stops processing and parks, and the next `idle` deactivates and activates
+  the plug-in, reads its latency and gives it back, to fade in once the longer of its old and new
+  latencies has passed (LSP's Limiter plays out its old delay for that long after a restart to a
+  shorter one). A processor nobody runs is taken at once, one that doesn't park within 250 ms
+  whenever no block is under way; nothing waits, so a thread stuck in the plug-in leaves the
+  restart for later, and none is tried while the plug-in is marked unresponsive. While parked, the
+  input passes and the extra outputs are silent; the other strips play on. A fade (`Fade`, the
+  side-chain gate's too) turned round partway goes on from where it is, so a knob dragged through
+  restarts doesn't click. During a render the processor doesn't park (`Processor::set_offline`):
+  no controller call could come to give it back, so the restart waits, and one parked already
+  plays in the render. Before a render `settle` answers `on_main_thread` and does a waiting restart
+  at once, and `edits_pending` holds until the block that took the edits is over, so the render
+  plays with the new latency; that's a main-thread call, so in the app `Session::begin_renders`
+  makes it (below). One that won't activate again stays parked, passing its input through with no
+  latency, and asks for nothing more.
+- **Render mode** (`clap.render`): every plug-in is put in offline mode for a bounce, export,
+  Bounce in Place or Freeze, and back after, unless it has a hard real-time requirement. On the
+  main thread, `Session::render` does it itself. The app's render commands render on their own
+  thread, so `offline` (`src-tauri/src/commands/bounce.rs`) calls `Session::begin_renders` on the
+  main thread before the command and `end_renders` after it, from a guard that a panic drops too.
+  `begin_renders` settles what the renders play with (restarts, latencies), sets
+  `EngineStatus::renders` so that the device plays silence for the whole command (between its
+  renders too, as during one: no plug-in plays live in its offline mode), and switches the mode.
+  Switching it around each render instead would need the main thread mid-command, where it may be
+  waiting for the session the command holds. A second render command while one runs is refused.
+- **`clap.thread-pool`**: the plug-in's tasks run one after another on the thread that asked,
+  inside its `process`, and are refused elsewhere. The processing threads take strips, one task
+  each, with no waiting (`dsp/pool/`), so that a thread preempted or stuck in a plug-in costs only
+  its own strip; a plug-in's tasks would have its strip wait for the threads that took them, and
+  one stuck there would hold the strip that asked out of reach of the stuck-plug-in handling.
+  While a project is heavy enough to use the pool, its threads have strips to play anyway.
 - **Editors** (`gui.rs`, `plugin/editor.rs`, `host/gui.rs`): a plug-in whose `clap.gui` can be
   embedded (`CLAP_WINDOW_API_X11` on Linux, `CLAP_WINDOW_API_COCOA` on macOS) gets a window of
   `crates/plugin-editor`, as a VST3 does: `create`, `set_scale` (Linux), `get_size`,
@@ -950,10 +999,8 @@ of `plugin_api`.
   (`glib_loop.rs`), a file descriptor that hangs up or fails is passed on once and dropped, rather
   than reported on every pass; a removal from another thread is handed to the main thread, where
   the callback belongs.
-- **What isn't there yet**: floating editor windows, side-chain inputs and extra output ports, and
-  restarts for a latency change (#560). Its tail is read when it loads and its latency in each
-  `idle`, so delay compensation follows a new latency only as far as the plug-in reports it
-  without a restart.
+- **What isn't there yet** (#564): floating editor windows, `audio-ports-activation`, note names
+  and voice info.
 
 ### Editor windows
 

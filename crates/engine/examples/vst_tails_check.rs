@@ -3,21 +3,23 @@
 //! here a 5 s one under a 20 ms note (`common/multi_sampler.rs`). Neither what played live before
 //! a render, nor what a render played, may ring into what comes next; delay compensation (a
 //! compressor's lookahead on another track) mustn't carry it either. Prints what playing the
-//! tails out costs. Prints SKIP when the plug-in isn't installed.
+//! tails out costs. Runs with its VST3, then its CLAP plug-in,
+//! printing SKIP for a format it isn't installed in.
 //! usage: vst_tails_check <scratch dir>
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
 
 use daw_engine::audio_io::AudioConfig;
 use daw_engine::dsp::Engine;
 use daw_engine::model::{Id, InputSel, Note, TrackKind};
+use daw_engine::plugin_api::PluginFormat;
 use daw_engine::session::MidiContent;
 use daw_engine::Session;
 
 #[path = "common/multi_sampler.rs"]
 mod multi_sampler;
-use multi_sampler::{find_plugin, load_samples, peak, wait_for_samples, NOTE_ONE, PLUGIN};
+use multi_sampler::{find_plugin, load_samples, peak, wait_for_samples, FORMATS, NOTE_ONE, PLUGIN};
 
 /// The note, and the range a render plays it in.
 const NOTE: i64 = 960;
@@ -50,8 +52,20 @@ fn all(r: &[Vec<f32>]) -> f32 {
 
 fn main() {
     let scratch = PathBuf::from(std::env::args().nth(1).expect("scratch dir"));
-    let Some(desc) = find_plugin() else {
-        println!("SKIP {PLUGIN} (lsp-plugins) isn't installed: nothing measured");
+    for (format, name) in FORMATS {
+        println!("== {}", name.to_uppercase());
+        let dir = scratch.join(name);
+        std::fs::create_dir_all(&dir).unwrap();
+        run(format, &dir);
+    }
+    if FAILED.load(Ordering::Relaxed) {
+        std::process::exit(1);
+    }
+}
+
+fn run(format: PluginFormat, scratch: &Path) {
+    let Some(desc) = find_plugin(format) else {
+        println!("SKIP {PLUGIN} (lsp-plugins) isn't installed in this format: nothing measured");
         return;
     };
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
@@ -84,7 +98,7 @@ fn main() {
     }
     check("the sampler loads its sample", loaded);
     if !loaded {
-        std::process::exit(1);
+        return;
     }
     s.engine_for_checks().lock().process(&[], 0, &mut [], 0);
     s.idle();
@@ -129,8 +143,4 @@ fn main() {
         t.elapsed()
     );
     drop(e);
-
-    if FAILED.load(Ordering::Relaxed) {
-        std::process::exit(1);
-    }
 }

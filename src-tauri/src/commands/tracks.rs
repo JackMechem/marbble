@@ -226,7 +226,7 @@ pub fn set_output(state: State<AppState>, track: Id, output: Option<Id>) -> R<Sn
 #[tauri::command(async)]
 pub fn freeze_tracks(app: tauri::AppHandle, state: State<AppState>, ids: Vec<Id>) -> R<Snapshot> {
     let mut p = progress(&app);
-    let renders = with(&state, |s| s.render_freeze(&ids, &mut p)).map_err(|e| e.to_string())?;
+    let renders = super::bounce::offline(&app, &state, || with(&state, |s| s.render_freeze(&ids, &mut p)))?;
     let session = state.session.clone();
     let (tx, rx) = std::sync::mpsc::channel();
     app.run_on_main_thread(move || {

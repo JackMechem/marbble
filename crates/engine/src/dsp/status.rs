@@ -99,6 +99,9 @@ pub struct EngineStatus {
     /// Callbacks in which the strips played. When it stops counting (the device stopped, or the
     /// engine is skipping blocks), the session shows the effects' meters at rest.
     pub blocks: AtomicU64,
+    /// The app is rendering (`Session::begin_renders`): between its renders too, the device plays
+    /// silence, as it does during one, since plug-ins are in their offline mode.
+    pub renders: AtomicBool,
 }
 
 impl Default for EngineStatus {
@@ -138,6 +141,7 @@ impl Default for EngineStatus {
             held: std::array::from_fn(|_| Held::default()),
             held_tokens: AtomicU64::new(0),
             held_unlisted: AtomicU32::new(0),
+            renders: AtomicBool::new(false),
             threads: AtomicU32::new(1),
             parallel_blocks: AtomicU64::new(0),
             blocks: AtomicU64::new(0),

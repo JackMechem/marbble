@@ -1,13 +1,20 @@
 //! The two halves around a fake plug-in that counts what it's asked, for what needs no real one:
-//! the plug-in's requests, the values the controller keeps, and which thread tears it down.
+//! the plug-in's requests, the values the controller keeps, which thread tears it down, restarts,
+//! the side-chain input and extra output, its render mode, tail and thread-pool tasks. Its
+//! `process` puts half its main input plus its side-chain input on its main output, and 1.0 on
+//! its extra output.
 
 use std::sync::atomic::{AtomicBool, AtomicU32};
 
+use clap_sys::ext::audio_ports::*;
 use clap_sys::ext::gui::*;
 use clap_sys::ext::latency::CLAP_EXT_LATENCY;
 use clap_sys::ext::params::*;
 use clap_sys::ext::posix_fd_support::*;
+use clap_sys::ext::render::*;
+use clap_sys::ext::tail::{clap_plugin_tail, CLAP_EXT_TAIL};
 use clap_sys::ext::thread_check::{clap_host_thread_check, CLAP_EXT_THREAD_CHECK};
+use clap_sys::ext::thread_pool::*;
 use clap_sys::ext::timer_support::*;
 use clap_sys::host::clap_host;
 use clap_sys::process::{clap_process, clap_process_status, CLAP_PROCESS_CONTINUE};
@@ -36,6 +43,22 @@ struct Counts {
     /// `gui.hide` and `gui.destroy` calls.
     gui_hides: AtomicU32,
     gui_destroys: AtomicU32,
+    activations: AtomicU32,
+    deactivations: AtomicU32,
+    /// `stop_processing` calls, and calls into it while it was inactive.
+    stops: AtomicU32,
+    while_inactive: AtomicU32,
+    active: AtomicBool,
+    /// `activate` fails from now on.
+    refuse_activate: AtomicBool,
+    /// The render mode it was set to last (-1: never).
+    render_mode: std::sync::atomic::AtomicI32,
+    tail: AtomicU32,
+    /// Thread-pool tasks to ask for in each `process`, and those run.
+    tasks: AtomicU32,
+    tasks_run: AtomicU32,
+    /// Whether the host ran them.
+    pool_ran: AtomicBool,
 }
 
 struct Fake {
@@ -64,8 +87,23 @@ unsafe fn main_only(p: *const clap_plugin) {
 unsafe extern "C" fn yes(_p: *const clap_plugin) -> bool {
     true
 }
-unsafe extern "C" fn activate(_p: *const clap_plugin, _rate: f64, _min: u32, _max: u32) -> bool {
-    true
+unsafe extern "C" fn activate(p: *const clap_plugin, _rate: f64, _min: u32, _max: u32) -> bool {
+    main_only(p);
+    let c = &fake(p).counts;
+    c.activations.fetch_add(1, Ordering::Relaxed);
+    let ok = !c.refuse_activate.load(Ordering::Relaxed);
+    c.active.store(ok, Ordering::Relaxed);
+    ok
+}
+unsafe extern "C" fn deactivate(p: *const clap_plugin) {
+    main_only(p);
+    let c = &fake(p).counts;
+    c.deactivations.fetch_add(1, Ordering::Relaxed);
+    c.active.store(false, Ordering::Relaxed);
+}
+unsafe extern "C" fn stop_processing(p: *const clap_plugin) {
+    let c = &fake(p).counts;
+    c.stops.fetch_add(1, Ordering::Relaxed);
 }
 unsafe extern "C" fn nothing(_p: *const clap_plugin) {}
 unsafe extern "C" fn destroy(p: *const clap_plugin) {
@@ -73,8 +111,32 @@ unsafe extern "C" fn destroy(p: *const clap_plugin) {
     f.counts.destroyed_on_main.store(on_main(f), Ordering::Relaxed);
     f.counts.destroyed.store(true, Ordering::Relaxed);
 }
-unsafe extern "C" fn process(p: *const clap_plugin, _process: *const clap_process) -> clap_process_status {
-    fake(p).counts.processed.fetch_add(1, Ordering::Relaxed);
+unsafe extern "C" fn process(p: *const clap_plugin, process: *const clap_process) -> clap_process_status {
+    let f = fake(p);
+    let c = &f.counts;
+    c.processed.fetch_add(1, Ordering::Relaxed);
+    if !c.active.load(Ordering::Relaxed) {
+        c.while_inactive.fetch_add(1, Ordering::Relaxed);
+    }
+    let pr = &*process;
+    let n = pr.frames_count as usize;
+    if pr.audio_inputs_count == 2 && pr.audio_outputs_count == 2 {
+        let (ins, outs) = (std::slice::from_raw_parts(pr.audio_inputs, 2), std::slice::from_raw_parts(pr.audio_outputs, 2));
+        for ch in 0..2 {
+            let (main, key) = (*ins[0].data32.add(ch), *ins[1].data32.add(ch));
+            let (out, extra) = (*outs[0].data32.add(ch), *outs[1].data32.add(ch));
+            for i in 0..n {
+                *out.add(i) = 0.5 * *main.add(i) + *key.add(i);
+                *extra.add(i) = 1.0;
+            }
+        }
+    }
+    let tasks = c.tasks.load(Ordering::Relaxed);
+    if tasks > 0 {
+        let ext = (*f.host).get_extension.unwrap()(f.host, CLAP_EXT_THREAD_POOL.as_ptr()) as *const clap_host_thread_pool;
+        let ran = (*ext).request_exec.unwrap()(f.host, tasks);
+        c.pool_ran.store(ran, Ordering::Relaxed);
+    }
     CLAP_PROCESS_CONTINUE
 }
 unsafe extern "C" fn get_extension(_p: *const clap_plugin, id: *const std::ffi::c_char) -> *const std::ffi::c_void {
@@ -89,6 +151,14 @@ unsafe extern "C" fn get_extension(_p: *const clap_plugin, id: *const std::ffi::
         &TIMER as *const _ as _
     } else if id == CLAP_EXT_POSIX_FD_SUPPORT {
         &FD as *const _ as _
+    } else if id == CLAP_EXT_AUDIO_PORTS {
+        &PORTS as *const _ as _
+    } else if id == CLAP_EXT_RENDER {
+        &RENDER as *const _ as _
+    } else if id == CLAP_EXT_TAIL {
+        &TAIL as *const _ as _
+    } else if id == CLAP_EXT_THREAD_POOL {
+        &POOL as *const _ as _
     } else {
         std::ptr::null()
     }
@@ -132,6 +202,40 @@ static LATENCY: clap_sys::ext::latency::clap_plugin_latency = clap_sys::ext::lat
 unsafe extern "C" fn latency(p: *const clap_plugin) -> u32 {
     main_only(p);
     fake(p).counts.latency.load(Ordering::Relaxed)
+}
+
+/// Two stereo ports each way: the main ones, a side-chain input and an extra output.
+static PORTS: clap_plugin_audio_ports = clap_plugin_audio_ports { count: Some(port_count), get: Some(port_info) };
+
+unsafe extern "C" fn port_count(_p: *const clap_plugin, _input: bool) -> u32 {
+    2
+}
+unsafe extern "C" fn port_info(_p: *const clap_plugin, index: u32, _input: bool, info: *mut clap_audio_port_info) -> bool {
+    let i = &mut *info;
+    i.id = index;
+    i.channel_count = 2;
+    i.flags = if index == 0 { CLAP_AUDIO_PORT_IS_MAIN } else { 0 };
+    true
+}
+
+static RENDER: clap_plugin_render = clap_plugin_render { has_hard_realtime_requirement: None, set: Some(set_render) };
+
+unsafe extern "C" fn set_render(p: *const clap_plugin, mode: clap_plugin_render_mode) -> bool {
+    main_only(p);
+    fake(p).counts.render_mode.store(mode, Ordering::Relaxed);
+    true
+}
+
+static TAIL: clap_plugin_tail = clap_plugin_tail { get: Some(tail) };
+
+unsafe extern "C" fn tail(p: *const clap_plugin) -> u32 {
+    fake(p).counts.tail.load(Ordering::Relaxed)
+}
+
+static POOL: clap_plugin_thread_pool = clap_plugin_thread_pool { exec: Some(exec) };
+
+unsafe extern "C" fn exec(p: *const clap_plugin, _task: u32) {
+    fake(p).counts.tasks_run.fetch_add(1, Ordering::Relaxed);
 }
 
 static TIMER: clap_plugin_timer_support = clap_plugin_timer_support { on_timer: Some(on_timer) };
@@ -201,9 +305,9 @@ fn fake_halves(latency: u32) -> (ClapProcessor, ClapController, &'static Fake) {
             init: Some(yes),
             destroy: Some(destroy),
             activate: Some(activate),
-            deactivate: Some(nothing),
+            deactivate: Some(deactivate),
             start_processing: Some(yes),
-            stop_processing: Some(nothing),
+            stop_processing: Some(stop_processing),
             reset: Some(nothing),
             process: Some(process),
             get_extension: Some(get_extension),
@@ -214,6 +318,7 @@ fn fake_halves(latency: u32) -> (ClapProcessor, ClapController, &'static Fake) {
     }));
     f.plugin.plugin_data = f as *mut Fake as *mut std::ffi::c_void;
     f.counts.latency.store(latency, Ordering::Relaxed);
+    f.counts.render_mode.store(-1, Ordering::Relaxed);
     let desc = PluginDescriptor {
         id: "/fake.clap|fake".into(),
         name: "Fake".into(),
@@ -225,8 +330,32 @@ fn fake_halves(latency: u32) -> (ClapProcessor, ClapController, &'static Fake) {
         is_instrument: false,
         format: PluginFormat::Clap,
     };
-    let (p, c) = unsafe { instantiate::start(&desc, &f.plugin, host, None, 48_000.0, 64) }.unwrap();
+    // The host calls `activate` itself, which the fake counts.
+    let (p, c) = unsafe { instantiate::start(&desc, &f.plugin, host, None, 48_000.0, 64, false) }.unwrap();
+    f.counts.active.store(true, Ordering::Relaxed);
     (p, c, f)
+}
+
+const T: TransportInfo = TransportInfo {
+    playing: false,
+    recording: false,
+    sample_rate: 48_000.0,
+    tempo: 120.0,
+    sig_num: 4,
+    sig_den: 4,
+    position_samples: 0,
+    position_quarters: 0.0,
+    bar_start_quarters: 0.0,
+    cycle: None,
+};
+
+/// A block of `x` on the main input and `key` on the side-chain, giving the main output's first
+/// frame and the extra output's.
+fn keyed_block(p: &mut ClapProcessor, x: f32, key: f32) -> (f32, f32) {
+    let (mut l, mut r) = ([x; 64], [x; 64]);
+    let k = [key; 64];
+    p.process_keyed(&mut l, &mut r, Some((&k, &k)), &[], &T);
+    (l[0], p.output_bus(1, 64).map_or(f32::NAN, |b| b.0[0]))
 }
 
 fn block(p: &mut ClapProcessor) {
@@ -377,4 +506,272 @@ fn a_gui_the_plug_in_destroyed_itself_is_only_destroyed() {
     }
     gui.detach();
     assert_eq!((f.counts.gui_hides.load(Ordering::Relaxed), f.counts.gui_destroys.load(Ordering::Relaxed)), (1, 2), "destroyed, not hidden");
+}
+
+#[test]
+fn a_side_chain_reaches_the_plug_in_once_keyed_and_extra_outputs_are_buses() {
+    let (mut p, mut c, _counts) = halves(0);
+    assert!(c.has_key_input() && !c.key_active());
+    assert_eq!(c.output_buses().len(), 2);
+    assert_eq!(keyed_block(&mut p, 1.0, 0.25), (0.5, 1.0), "not keyed: the key's input is silent");
+    p.shut_gate();
+    assert!(c.parked());
+    c.set_key_active(true).unwrap();
+    p.open_gate(0);
+    // The fade (240 frames), then wet: half the input plus the key.
+    for _ in 0..4 {
+        keyed_block(&mut p, 1.0, 0.25);
+    }
+    assert_eq!(keyed_block(&mut p, 1.0, 0.25), (0.75, 1.0));
+    c.set_active_outputs(&[1]);
+    assert!(c.output_buses()[1].active);
+    c.set_active_outputs(&[]);
+    assert!(!c.output_buses()[1].active);
+}
+
+#[test]
+fn the_side_chain_gate_fades_to_dry_and_back() {
+    let (mut p, _c, _counts) = halves(0);
+    assert_eq!(keyed_block(&mut p, 1.0, 0.0).0, 0.5);
+    p.close_gate();
+    let mut l = [1.0f32; 64];
+    let mut r = l;
+    // 5 ms at 48 kHz is 240 frames: four blocks of 64 frames.
+    let mut firsts = Vec::new();
+    for _ in 0..5 {
+        (l, r) = ([1.0; 64], [1.0; 64]);
+        p.process(&mut l, &mut r, &[], &T);
+        firsts.push(l[0]);
+    }
+    assert!(firsts.windows(2).all(|w| w[1] >= w[0]) && firsts[0] > 0.5, "it rises towards dry: {firsts:?}");
+    assert_eq!(*firsts.last().unwrap(), 1.0, "shut: the input passes");
+    assert!(p.shared.parked.load(Ordering::Acquire));
+    let steps = l.windows(2).map(|w| (w[1] - w[0]).abs()).fold(0.0, f32::max);
+    assert!(steps < 0.01, "no step within the fade");
+    p.open_gate(0);
+    for _ in 0..5 {
+        p.process(&mut l, &mut r, &[], &T);
+        (l, r) = ([1.0; 64], [1.0; 64]);
+    }
+    assert_eq!(keyed_block(&mut p, 1.0, 0.0).0, 0.5, "wet again");
+}
+
+#[test]
+fn a_restart_waits_for_the_processor_to_fade_out_then_reactivates_on_the_main_thread() {
+    let (mut p, mut c, counts) = halves(64);
+    keyed_block(&mut p, 1.0, 0.0);
+    counts.latency.store(256, Ordering::Relaxed);
+    c.shared.requests().restart.store(true, Ordering::Release);
+    c.idle();
+    assert_eq!(counts.deactivations.load(Ordering::Relaxed), 0, "it plays: the controller waits for it to fade out");
+    assert!(p.wants_to_run(), "a sleeping strip wakes for it");
+    let mut parked_after = 0;
+    for b in 1..10 {
+        keyed_block(&mut p, 1.0, 0.0);
+        c.idle();
+        if counts.deactivations.load(Ordering::Relaxed) > 0 {
+            parked_after = b;
+            break;
+        }
+    }
+    assert!(parked_after >= 4, "after the fade ({parked_after} blocks)");
+    assert_eq!((counts.activations.load(Ordering::Relaxed), counts.stops.load(Ordering::Relaxed)), (2, 1), "stopped, deactivated, activated");
+    assert_eq!(counts.off_main.load(Ordering::Relaxed), 0);
+    assert!(c.take_latency_changed() && c.latency() == 256, "with its new latency");
+    assert_eq!(p.ring_out(), 256);
+    // Dry until its latency has passed (four blocks), then back to wet.
+    let outs: Vec<f32> = (0..12).map(|_| keyed_block(&mut p, 1.0, 0.0).0).collect();
+    assert_eq!(outs[..4], [1.0; 4], "{outs:?}");
+    assert_eq!(*outs.last().unwrap(), 0.5);
+    assert_eq!(counts.while_inactive.load(Ordering::Relaxed), 0, "never processed while inactive");
+}
+
+#[test]
+fn a_plug_in_nothing_plays_is_restarted_at_once_and_a_stuck_one_not_at_all() {
+    let (mut p, mut c, counts) = halves(0);
+    c.shared.requests().restart.store(true, Ordering::Release);
+    c.idle();
+    assert_eq!(counts.activations.load(Ordering::Relaxed), 2, "not processing: no fade to wait for");
+    keyed_block(&mut p, 1.0, 0.0);
+    c.set_unresponsive(true);
+    c.shared.requests().restart.store(true, Ordering::Release);
+    c.idle();
+    c.settle();
+    assert_eq!(counts.activations.load(Ordering::Relaxed), 2, "not while a thread may be in it");
+    assert!(!p.shared.park.wanted(), "nor is it asked to park");
+    c.set_unresponsive(false);
+    // `settle` waits for the processor as a render would, so blocks run beside it.
+    let blocks = std::thread::spawn(move || {
+        for _ in 0..40 {
+            keyed_block(&mut p, 1.0, 0.0);
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+        p
+    });
+    c.settle();
+    assert_eq!(counts.activations.load(Ordering::Relaxed), 3, "settle restarts it");
+    drop(blocks.join().unwrap());
+}
+
+#[test]
+fn renders_switch_the_render_mode_on_the_main_thread_only() {
+    let (_p, mut c, counts) = halves(0);
+    c.set_offline(true);
+    assert_eq!(counts.render_mode.load(Ordering::Relaxed), CLAP_RENDER_OFFLINE);
+    c.set_offline(false);
+    assert_eq!(counts.render_mode.load(Ordering::Relaxed), CLAP_RENDER_REALTIME);
+    let c = std::thread::spawn(move || {
+        c.set_offline(true);
+        c
+    })
+    .join()
+    .unwrap();
+    assert_eq!(counts.render_mode.load(Ordering::Relaxed), CLAP_RENDER_REALTIME, "not from a render's thread");
+    assert_eq!(counts.off_main.load(Ordering::Relaxed), 0);
+    drop(c);
+}
+
+#[test]
+fn a_new_tail_is_read_after_the_next_block() {
+    let (mut p, _c, counts) = halves(100);
+    assert_eq!(p.ring_out(), 100);
+    counts.tail.store(4800, Ordering::Relaxed);
+    assert_eq!(p.ring_out(), 100, "until it says so");
+    unsafe {
+        let ext = (*(*p.shared.inst.host).raw()).get_extension.unwrap()(p.shared.inst.host.raw(), CLAP_EXT_TAIL.as_ptr())
+            as *const clap_sys::ext::tail::clap_host_tail;
+        (*ext).changed.unwrap()(p.shared.inst.host.raw());
+    }
+    keyed_block(&mut p, 0.0, 0.0);
+    assert_eq!(p.ring_out(), 4900);
+    counts.tail.store(u32::MAX, Ordering::Relaxed);
+    p.shared.requests().tail.store(true, Ordering::Release);
+    keyed_block(&mut p, 0.0, 0.0);
+    assert_eq!(p.ring_out(), u32::MAX, "endless");
+}
+
+#[test]
+fn thread_pool_tasks_run_on_the_asking_thread_inside_process_only() {
+    let (mut p, _c, f) = fake_halves(0);
+    f.counts.tasks.store(4, Ordering::Relaxed);
+    keyed_block(&mut p, 0.0, 0.0);
+    assert!(f.counts.pool_ran.load(Ordering::Relaxed));
+    assert_eq!(f.counts.tasks_run.load(Ordering::Relaxed), 4);
+    unsafe {
+        let ext = (*f.host).get_extension.unwrap()(f.host, CLAP_EXT_THREAD_POOL.as_ptr()) as *const clap_host_thread_pool;
+        assert!(!(*ext).request_exec.unwrap()(f.host, 4), "refused outside process");
+    }
+    assert_eq!(f.counts.tasks_run.load(Ordering::Relaxed), 4);
+}
+
+/// Runs `blocks` blocks of 1.0 with no key, as `keyed_block` does, keeping every frame of the main
+/// output; between them, `between(block)`.
+fn run_blocks(p: &mut ClapProcessor, blocks: usize, mut between: impl FnMut(usize, &mut ClapProcessor)) -> Vec<f32> {
+    let mut out = Vec::new();
+    for b in 0..blocks {
+        between(b, p);
+        let (mut l, mut r) = ([1.0f32; 64], [1.0f32; 64]);
+        let k = [0.0f32; 64];
+        p.process_keyed(&mut l, &mut r, Some((&k, &k)), &[], &T);
+        out.extend_from_slice(&l);
+    }
+    out
+}
+
+fn largest_step(x: &[f32]) -> f32 {
+    x.windows(2).map(|w| (w[1] - w[0]).abs()).fold(0.0, f32::max)
+}
+
+/// Dragging a knob that changes the latency asks for a restart in every step, often while the
+/// last one is still fading back in: each must go on from where the fade is.
+#[test]
+fn restarts_asked_for_while_fading_back_in_dont_click() {
+    let (mut p, mut c, counts) = halves(64);
+    let mut restarts = 0;
+    let out = run_blocks(&mut p, 200, |b, _| {
+        if b > 10 && b % 3 == 0 {
+            counts.latency.store(64 + (b as u32 % 5) * 16, Ordering::Relaxed);
+            c.shared.requests().restart.store(true, Ordering::Release);
+        }
+        let before = counts.activations.load(Ordering::Relaxed);
+        c.idle();
+        restarts += (counts.activations.load(Ordering::Relaxed) - before) as usize;
+    });
+    // Wet is 0.5, dry 1.0: a fade moves 0.5 over 240 frames.
+    let step = largest_step(&out);
+    assert!(restarts >= 5, "{restarts} restarts");
+    assert!(step < 0.5 / 240.0 * 1.5, "largest step {step}");
+    assert_eq!(counts.while_inactive.load(Ordering::Relaxed), 0);
+}
+
+#[test]
+fn a_side_chain_switched_again_while_fading_in_doesnt_click() {
+    let (mut p, mut c, _counts) = halves(0);
+    keyed_block(&mut p, 1.0, 0.0);
+    let out = run_blocks(&mut p, 40, |b, p| match b {
+        2 => p.close_gate(),
+        8 => {
+            c.set_key_active(true).unwrap();
+            p.open_gate(0);
+        }
+        10 => p.close_gate(),
+        12 => p.open_gate(0),
+        _ => {}
+    });
+    let step = largest_step(&out);
+    assert!(step < 0.5 / 240.0 * 1.5, "largest step {step}");
+}
+
+#[test]
+fn a_render_plays_a_plug_in_that_was_asked_to_park() {
+    let (mut p, mut c, counts) = halves(0);
+    keyed_block(&mut p, 1.0, 0.0);
+    c.shared.requests().restart.store(true, Ordering::Release);
+    c.idle();
+    assert!(c.shared.park.wanted() && counts.activations.load(Ordering::Relaxed) == 1, "asked, not yet parked");
+    // A render starts before the next idle: no controller call can come until it's over.
+    p.set_offline(true);
+    let out = run_blocks(&mut p, 20, |_, _| {});
+    assert!(out.iter().all(|&x| x == 0.5), "it plays throughout, wet");
+    p.set_offline(false);
+    // Afterwards the restart goes ahead.
+    for _ in 0..10 {
+        keyed_block(&mut p, 1.0, 0.0);
+        c.idle();
+    }
+    assert_eq!(counts.activations.load(Ordering::Relaxed), 2);
+
+    // One parked already, which the controller hasn't taken up, plays in the render too.
+    c.shared.requests().restart.store(true, Ordering::Release);
+    c.idle();
+    for _ in 0..6 {
+        keyed_block(&mut p, 1.0, 0.0);
+    }
+    assert!(c.shared.park.take(false), "parked");
+    c.shared.park.give_up();
+    p.set_offline(true);
+    let out = run_blocks(&mut p, 4, |_, _| {});
+    assert!(out.iter().all(|&x| x == 0.5), "back in the render");
+    assert_eq!(counts.while_inactive.load(Ordering::Relaxed), 0);
+}
+
+#[test]
+fn a_plug_in_that_wont_start_again_passes_its_input_and_wants_nothing() {
+    let (mut p, mut c, counts) = halves(128);
+    keyed_block(&mut p, 1.0, 0.0);
+    counts.refuse_activate.store(true, Ordering::Relaxed);
+    c.shared.requests().restart.store(true, Ordering::Release);
+    for _ in 0..10 {
+        keyed_block(&mut p, 1.0, 0.0);
+        c.idle();
+    }
+    assert_eq!(counts.activations.load(Ordering::Relaxed), 2, "it tried");
+    assert!(c.take_latency_changed() && c.latency() == 0, "no latency: its input passes straight through");
+    assert_eq!(p.ring_out(), 0);
+    c.edit_param(7, 0.3);
+    assert!(!p.wants_to_run() && !p.has_edits() && !c.edits_pending(), "nothing keeps its strip awake or a render waiting");
+    assert_eq!(keyed_block(&mut p, 1.0, 0.0).0, 1.0, "dry");
+    p.set_offline(true);
+    assert_eq!(keyed_block(&mut p, 1.0, 0.0).0, 1.0, "a render doesn't take it back");
+    assert_eq!(counts.while_inactive.load(Ordering::Relaxed), 0, "never processed inactive");
 }

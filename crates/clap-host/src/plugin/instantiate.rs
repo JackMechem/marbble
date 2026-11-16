@@ -6,16 +6,19 @@ use std::ffi::CString;
 use clap_sys::ext::gui::CLAP_EXT_GUI;
 use clap_sys::ext::latency::CLAP_EXT_LATENCY;
 use clap_sys::ext::params::CLAP_EXT_PARAMS;
+use clap_sys::ext::render::CLAP_EXT_RENDER;
 use clap_sys::ext::state::CLAP_EXT_STATE;
-use clap_sys::ext::tail::{clap_plugin_tail, CLAP_EXT_TAIL};
+use clap_sys::ext::tail::CLAP_EXT_TAIL;
+use clap_sys::ext::thread_pool::{clap_plugin_thread_pool, CLAP_EXT_THREAD_POOL};
 
 use super::*;
 use crate::host::mark_main_thread;
 use crate::params;
 
-/// Loads a plug-in, ready to process at `sample_rate` in blocks of up to `max_block` frames.
-/// Call on the main thread, which every controller call must then come from.
-pub fn instantiate(desc: &PluginDescriptor, sample_rate: f64, max_block: usize) -> Result<(ClapProcessor, ClapController), String> {
+/// Loads a plug-in, ready to process at `sample_rate` in blocks of up to `max_block` frames, with
+/// a side-chain key reaching its input (`keyed`) where it has one. Call on the main thread, which
+/// every controller call must then come from.
+pub fn instantiate(desc: &PluginDescriptor, sample_rate: f64, max_block: usize, keyed: bool) -> Result<(ClapProcessor, ClapController), String> {
     let lib = crate::entry::load(&desc.path)?;
     mark_main_thread();
     let host = Host::new(&desc.name);
@@ -25,7 +28,7 @@ pub fn instantiate(desc: &PluginDescriptor, sample_rate: f64, max_block: usize) 
         if plugin.is_null() {
             return Err("its factory couldn't create it".into());
         }
-        start(desc, plugin, host, Some(lib), sample_rate, max_block)
+        start(desc, plugin, host, Some(lib), sample_rate, max_block, keyed)
     }
 }
 
@@ -37,6 +40,7 @@ pub(super) unsafe fn start(
     lib: Option<Arc<Library>>,
     sample_rate: f64,
     max_block: usize,
+    keyed: bool,
 ) -> Result<(ClapProcessor, ClapController), String> {
     {
         let p = &*plugin;
@@ -52,6 +56,8 @@ pub(super) unsafe fn start(
         let state = ext(CLAP_EXT_STATE) as *const clap_plugin_state;
         let latency = ext(CLAP_EXT_LATENCY) as *const clap_plugin_latency;
         let tail = ext(CLAP_EXT_TAIL) as *const clap_plugin_tail;
+        let render = ext(CLAP_EXT_RENDER) as *const clap_plugin_render;
+        host.set_thread_pool(ext(CLAP_EXT_THREAD_POOL) as *const clap_plugin_thread_pool);
         let gui = ext(CLAP_EXT_GUI) as *const clap_plugin_gui;
         let gui = if crate::gui::embeds(plugin, gui) { gui } else { std::ptr::null() };
         let in_ports = ports::audio_ports(plugin, true);
@@ -64,16 +70,25 @@ pub(super) unsafe fn start(
 
         let infos = params::infos(plugin, params_ext);
         let lat = latency.as_ref().and_then(|l| l.get).map_or(0, |g| g(plugin));
-        let tail = tail.as_ref().and_then(|t| t.get).map_or(0, |g| g(plugin));
+        let tail_now = tail.as_ref().and_then(|t| t.get).map_or(0, |g| g(plugin));
+        let key = ports::key_ports(&in_ports);
         let shared = Arc::new(Shared {
             instance: plugin_api::next_instance(),
             plugin,
             params: params_ext,
             state,
             latency,
+            tail,
+            render,
             gui,
             parked: AtomicBool::new(false),
-            inst: ManuallyDrop::new(Instance { plugin, host, _lib: lib }),
+            park: Default::default(),
+            processing: AtomicBool::new(false),
+            keyed: AtomicBool::new(keyed && key.first.is_some()),
+            edits_in_block: AtomicBool::new(false),
+            latency_now: AtomicU32::new(lat),
+            dead: AtomicBool::new(false),
+            inst: ManuallyDrop::new(Instance { plugin, host, active: AtomicBool::new(true), _lib: lib }),
         });
         let (edits_tx, edits_rx) = rtrb::RingBuffer::new(RING);
         let (gestures_tx, gestures_rx) = rtrb::RingBuffer::new(RING);
@@ -88,17 +103,24 @@ pub(super) unsafe fn start(
             outputs,
             main_in: ports::main_port(&in_ports),
             main_out: ports::main_port(&out_ports),
+            key,
+            bus_ports: ports::bus_order(&out_ports),
             events_in: InputEvents::new(MAX_EVENTS),
             events_out: OutputEvents::new(gestures_tx, params::ranges(&infos)),
             transport: std::mem::zeroed(),
             edits_rx,
             queued: Vec::with_capacity(MAX_QUEUED),
             notes,
-            processing: false,
-            shut: false,
+            gate: park::Fade::Wet,
+            park_fade: park::Fade::Wet,
+            fade_len: ((park::FADE_SECS * sample_rate) as u32).max(1),
+            dry_l: vec![0.0; max_block],
+            dry_r: vec![0.0; max_block],
+            wet: vec![0.0; max_block],
+            offline: false,
             steady: 0,
             max_block,
-            ring_out: ring_out(tail, lat),
+            tail: tail_now,
             name: desc.name.clone(),
         };
         let ctrl_half = ClapController {
@@ -113,9 +135,15 @@ pub(super) unsafe fn start(
             ranges: params::ranges(&infos),
             latency_changed: false,
             params_restarted: false,
+            key_active: keyed && key.first.is_some(),
             unresponsive: false,
             latency: lat,
-            restart_noted: false,
+            activated_latency: lat,
+            sample_rate,
+            max_block,
+            restart: None,
+            dead: false,
+            offline: false,
             editor: None,
         };
         Ok((proc_half, ctrl_half))
@@ -124,7 +152,7 @@ pub(super) unsafe fn start(
 
 /// How long its output may outlast its input: the tail and the latency, or `u32::MAX` for a tail
 /// that never ends (CLAP's is `INT32_MAX` or more then).
-fn ring_out(tail: u32, latency: u32) -> u32 {
+pub(super) fn ring_out(tail: u32, latency: u32) -> u32 {
     if tail >= i32::MAX as u32 {
         u32::MAX
     } else {

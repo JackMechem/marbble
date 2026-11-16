@@ -1,6 +1,8 @@
-//! Side-chain inputs of VST3 plug-ins. A VST3 insert with an aux input bus is keyed like a
-//! built-in effect (`PluginSlot::sidechain`, `set_sidechain`, the same routing, loop refusal and
-//! renders; see `builtin.rs`); the difference is the bus.
+//! Side-chain inputs of VST3 and CLAP plug-ins. An insert with an aux input bus (a CLAP plug-in's
+//! input port past the main one) is keyed like a built-in effect (`PluginSlot::sidechain`,
+//! `set_sidechain`, the same routing, loop refusal and renders; see `builtin.rs`); the difference
+//! is the bus. A CLAP plug-in plays every port, so its `set_key_active` only says whether the key
+//! or silence goes there, but it takes the same steps below, for the same crossfade.
 //!
 //! With no key source the aux bus stays inactive and the plug-in uses its internal key. Which
 //! bus is active is set when the instance loads (`instantiate_slot`) and changes here, for every

@@ -1,5 +1,6 @@
 //! LSP's Multi-Sampler x12 DirectOut, the multi-output instrument the checks measure with
-//! (`multiout_check`, `multiout_freeze_check`): finding it, giving its first two instruments a
+//! (`multiout_check`, `multiout_freeze_check`, `vst_tails_check`, `clap_check`), as a VST3 or a
+//! CLAP plug-in: finding it, giving its first two instruments a
 //! 1 kHz and a 2 kHz sine through its state (it has no parameter for a sample's file), and waiting
 //! until it has loaded them, which it does on a thread of its own and now and then fails to do
 //! (issue #37).
@@ -11,23 +12,30 @@ use std::time::{Duration, Instant};
 
 use base64::Engine as _;
 use daw_engine::model::Id;
+use daw_engine::plugin_api::{PluginDescriptor, PluginFormat};
 use daw_engine::Session;
-use vst3_host::PluginDescriptor;
 
 pub const PLUGIN: &str = "Multi-Sampler x12 DirectOut";
 /// The first instrument's default note in the plug-in: octave 4, A, which it counts as 57. The
 /// second plays two semitones up.
 pub const NOTE_ONE: u8 = 57;
 
-pub fn find_plugin() -> Option<PluginDescriptor> {
-    for b in vst3_host::scan::find_bundles(&vst3_host::scan::default_search_paths()) {
-        if b.to_string_lossy().contains("lsp-plugins") {
-            if let Some(d) = vst3_host::scan::scan_bundle(&b).ok()?.into_iter().find(|d| d.name == PLUGIN) {
-                return Some(d);
-            }
+/// The formats the checks run in, each with the name of its scratch folder.
+pub const FORMATS: [(PluginFormat, &str); 2] = [(PluginFormat::Vst3, "vst3"), (PluginFormat::Clap, "clap")];
+
+pub fn find_plugin(format: PluginFormat) -> Option<PluginDescriptor> {
+    let lsp = |f: &std::path::PathBuf| f.to_string_lossy().contains("lsp-plugins");
+    let scanned: Vec<PluginDescriptor> = match format {
+        PluginFormat::Vst3 => {
+            let bundles = vst3_host::scan::find_bundles(&vst3_host::scan::default_search_paths());
+            bundles.into_iter().filter(lsp).flat_map(|b| vst3_host::scan::scan_bundle(&b).unwrap_or_default()).collect()
         }
-    }
-    None
+        PluginFormat::Clap => {
+            let files = clap_host::scan::find_files(&clap_host::scan::default_search_paths());
+            files.into_iter().filter(lsp).flat_map(|f| clap_host::scan::scan_file(&f).unwrap_or_default()).collect()
+        }
+    };
+    scanned.into_iter().find(|d| d.name == PLUGIN)
 }
 
 /// The loudest sample of `a` over `range`.

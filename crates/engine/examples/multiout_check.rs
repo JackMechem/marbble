@@ -1,8 +1,8 @@
 //! Multi-output instruments, measured with a real plug-in: LSP's Multi-Sampler x12 DirectOut, its
 //! first two instruments loaded with a 1 kHz and a 2 kHz sine (`common/multi_sampler.rs`). A note
 //! on each goes out through the main output and that instrument's direct output. Freezing and
-//! bouncing such an instrument in place are `multiout_freeze_check`'s. Prints SKIP when the
-//! plug-in isn't installed.
+//! bouncing such an instrument in place are `multiout_freeze_check`'s. Runs with its VST3, then its CLAP
+//! plug-in, printing SKIP for a format it isn't installed in.
 //! usage: multiout_check <scratch dir>
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::Cell;
@@ -13,12 +13,13 @@ use std::time::{Duration, Instant};
 
 use daw_engine::audio_io::AudioConfig;
 use daw_engine::model::{Id, InputSel, InstrumentOutput, Note, TrackKind, TrackSend};
+use daw_engine::plugin_api::PluginFormat;
 use daw_engine::session::{MidiContent, RenderOptions, TrackPatch};
 use daw_engine::Session;
 
 #[path = "common/multi_sampler.rs"]
 mod multi_sampler;
-use multi_sampler::{find_plugin, load_samples, peak, sine, wait_for_samples, NOTE_ONE, PLUGIN};
+use multi_sampler::{find_plugin, load_samples, peak, sine, wait_for_samples, FORMATS, NOTE_ONE, PLUGIN};
 
 const SYNTH: &str = "builtin:synth";
 /// When the two instruments play (each has its sample's 0.2 s at 48 kHz in here).
@@ -110,8 +111,20 @@ fn set_db(s: &mut Session, id: Id, db: f32) {
 
 fn main() {
     let scratch = PathBuf::from(std::env::args().nth(1).expect("scratch dir"));
-    let Some(desc) = find_plugin() else {
-        println!("SKIP {PLUGIN} (lsp-plugins) isn't installed: nothing measured");
+    for (format, name) in FORMATS {
+        println!("== {}", name.to_uppercase());
+        let dir = scratch.join(name);
+        std::fs::create_dir_all(&dir).unwrap();
+        run(format, &dir);
+    }
+    if FAILED.load(Ordering::Relaxed) {
+        std::process::exit(1);
+    }
+}
+
+fn run(format: PluginFormat, scratch: &Path) {
+    let Some(desc) = find_plugin(format) else {
+        println!("SKIP {PLUGIN} (lsp-plugins) isn't installed in this format: nothing measured");
         return;
     };
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
@@ -455,8 +468,4 @@ fn main() {
     check(&format!("live: the other track plays through it (quietest 10 ms has peak {quietest:.3})"), quietest > 0.15);
     let allocs = ALLOCS.load(Ordering::Relaxed);
     check(&format!("live: the engine's thread allocates nothing ({allocs} allocations or frees)"), allocs == 0);
-
-    if FAILED.load(Ordering::Relaxed) {
-        std::process::exit(1);
-    }
 }
