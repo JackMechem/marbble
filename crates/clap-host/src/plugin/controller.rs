@@ -1,12 +1,13 @@
 //! The main-thread half: [`ClapController`] reads and sets the plug-in's parameters, saves and
-//! loads its state, and answers what it asked of the host. Everything here runs on the main
-//! thread.
+//! loads its state, and answers what it asked of the host. Its calls into the plug-in are the
+//! main thread's: reached from another (a render asking for the latency), they're answered from
+//! what was read last, as for a plug-in that isn't responding.
 
 use plugin_api::{Controller, ParamInfo, PluginState};
 
 use super::*;
 use crate::entry::buf_text;
-use crate::params::{self, Range};
+use crate::params;
 use crate::stream::{InStream, OutStream};
 
 impl ClapController {
@@ -14,19 +15,25 @@ impl ClapController {
         unsafe { &*self.shared.plugin }
     }
 
+    /// Whether the plug-in may be called now: it's responding, and this is the main thread.
+    fn callable(&self) -> bool {
+        !self.unresponsive && crate::host::is_main()
+    }
+
     fn params(&self) -> Option<&clap_plugin_params> {
-        unsafe { self.shared.params.as_ref() }.filter(|_| !self.unresponsive)
+        unsafe { self.shared.params.as_ref() }.filter(|_| self.callable())
     }
 
     fn infos(&self) -> Vec<clap_sys::ext::params::clap_param_info> {
-        if self.unresponsive {
+        if !self.callable() {
             return Vec::new();
         }
         unsafe { params::infos(self.shared.plugin, self.shared.params) }
     }
 
-    fn range(&self, id: u32) -> Option<Range> {
-        params::ranges(&self.infos()).get(id)
+    /// `latency.get`, on the main thread.
+    fn read_latency(&self) -> u32 {
+        unsafe { self.shared.latency.as_ref() }.and_then(|l| l.get).map_or(0, |g| unsafe { g(self.shared.plugin) })
     }
 }
 
@@ -65,7 +72,7 @@ impl Controller for ClapController {
     /// Answers the plug-in's requests: `on_main_thread` when it asked for a callback, and notes
     /// what it said changed.
     fn idle(&mut self) {
-        if self.unresponsive {
+        if !self.callable() {
             return;
         }
         let s = &self.shared;
@@ -74,20 +81,22 @@ impl Controller for ClapController {
                 unsafe { f(s.plugin) };
             }
         }
-        self.params_restarted |= s.take(|r| &r.changed);
-        self.latency_changed |= s.take(|r| &r.latency);
+        if s.take(|r| &r.changed) {
+            self.params_restarted = true;
+            self.ranges = params::ranges(&self.infos());
+        }
+        // Read each time: a plug-in may change it without saying so, as a VST3 may.
+        let latency = self.read_latency();
+        self.latency_changed |= s.take(|r| &r.latency) || latency != self.latency;
+        self.latency = latency;
         if s.take(|r| &r.restart) && !std::mem::replace(&mut self.restart_noted, true) {
             log::info!("{} asked to be restarted, which Marbble doesn't do for CLAP plug-ins yet", self.desc.name);
         }
     }
 
+    /// The latency read when it loaded or at the last `idle`, which any thread may ask for.
     fn latency(&self) -> u32 {
-        if self.unresponsive {
-            return self.last_latency.load(Ordering::Relaxed);
-        }
-        let l = unsafe { self.shared.latency.as_ref() }.and_then(|l| l.get).map_or(0, |g| unsafe { g(self.shared.plugin) });
-        self.last_latency.store(l, Ordering::Relaxed);
-        l
+        self.latency
     }
 
     fn take_latency_changed(&mut self) -> bool {
@@ -112,7 +121,7 @@ impl Controller for ClapController {
     }
 
     fn audio_buses(&self) -> Vec<BusLayout> {
-        if self.unresponsive {
+        if !self.callable() {
             return Vec::new();
         }
         self.buses.clone()
@@ -135,7 +144,7 @@ impl Controller for ClapController {
 
     fn param_value(&self, id: u32) -> Option<f64> {
         let get = self.params()?.get_value?;
-        let r = self.range(id)?;
+        let r = self.ranges.get(id)?;
         let mut v = 0.0;
         unsafe { get(self.shared.plugin, id, &mut v) }.then(|| r.to_normalized(v))
     }
@@ -195,12 +204,12 @@ impl Controller for ClapController {
     }
 
     fn drive_params_restarted(&self) {
-        self.shared.host.requests.changed.store(true, Ordering::Release);
+        self.shared.requests().changed.store(true, Ordering::Release);
     }
 
     /// The plug-in's one state blob, in `component`.
     fn save_state(&self) -> Option<PluginState> {
-        if self.unresponsive {
+        if !self.callable() {
             return None;
         }
         let save = unsafe { self.shared.state.as_ref() }.and_then(|s| s.save);
@@ -209,7 +218,7 @@ impl Controller for ClapController {
     }
 
     fn load_state(&self, st: &PluginState) {
-        if self.unresponsive || st.component.is_empty() {
+        if !self.callable() || st.component.is_empty() {
             return;
         }
         self.host_set.other();

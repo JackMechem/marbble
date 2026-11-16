@@ -354,8 +354,8 @@ fn no_allocations(mut s: Session, comp: &PluginDescriptor, tone: &Path) {
 fn main() {
     // The scanner's child processes run this binary too.
     let args: Vec<String> = std::env::args().collect();
-    if let Some(i) = args.iter().position(|a| a == plugin_db::SCAN_ARG) {
-        std::process::exit(args.get(i + 1).map(|p| plugin_db::scan_child_main(p.as_ref())).unwrap_or(2));
+    if let Some(path) = plugin_db::scan_child_path(&args) {
+        std::process::exit(path.map(|p| plugin_db::scan_child_main(p.as_ref())).unwrap_or(2));
     }
     let tone = PathBuf::from(args.get(1).expect("audio file"));
     let scratch = PathBuf::from(args.get(2).expect("scratch dir"));

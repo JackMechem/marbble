@@ -909,6 +909,12 @@ of `plugin_api`.
   (`request_callback`, `request_restart`, `request_process`, `params.request_flush`,
   `params.rescan`, `state.mark_dirty`, `latency.changed`) only set atomics, which the
   controller's `idle` answers on the main thread; a log message from the audio thread is dropped.
+  A controller call reached from another thread (a render asks for the latency) doesn't call the
+  plug-in: the latency is the one read at load or in the last `idle`, parameter values use the
+  ranges read at load (and again when it says they changed), and the rest answer as for a
+  plug-in that isn't responding. When both halves are gone the plug-in is deactivated and
+  destroyed on the main thread: halves dropped on another thread (a render's garbage) leave it
+  for `destroy_deferred`, which `idle` calls.
 - **Processing** (`plugin/processor.rs`, `events.rs`): every buffer and event list is
   allocated at instantiation. A block's input events (edits, automation, notes as CLAP note events
   or MIDI as the note port prefers, CCs as MIDI) go into a fixed list, kept in time order by an
@@ -919,8 +925,9 @@ of `plugin_api`.
   `process` starts processing on the first block; `suspend` stops and resets it; a plug-in the
   engine isn't running gets its waiting edits through `params.flush`.
 - **What isn't there yet**: editor windows (#559), side-chain inputs and extra output ports, and
-  restarts for a latency change (#560). Its latency and tail are read when it loads, so delay
-  compensation and renders' tails hold for a plug-in that doesn't change them.
+  restarts for a latency change (#560). Its tail is read when it loads and its latency in each
+  `idle`, so delay compensation follows a new latency only as far as the plug-in reports it
+  without a restart.
 
 ### Moving plug-ins and strip settings
 

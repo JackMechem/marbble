@@ -2491,9 +2491,8 @@ but their own windows don't open yet: clicking one's name says so, and inserting
 Their parameters are in the track's automation lanes, where you can draw or record them, and a
 control surface or MIDI Learn can move them. Edits a CLAP plug-in reports itself are undo steps
 and automation writes, as a VST3's are. Not yet for CLAP plug-ins: side-chain inputs, extra
-outputs of multi-output instruments, and a plug-in changing its latency while loaded (it's read
-when the plug-in loads). Marbble looks for `.clap` files in `$CLAP_PATH` and the standard
-folders: `~/.clap` and `/usr/lib/clap` on Linux (and NixOS's `/run/current-system/sw/lib/clap`,
+outputs of multi-output instruments, and a latency change that needs the plug-in restarted.
+Marbble looks for `.clap` files in `$CLAP_PATH` and the standard folders: `~/.clap` and `/usr/lib/clap` on Linux (and NixOS's `/run/current-system/sw/lib/clap`,
 `~/.nix-profile/lib/clap` and the per-user profile), `~/Library/Audio/Plug-Ins/CLAP` and
 `/Library/Audio/Plug-Ins/CLAP` on macOS, and `Common Files\CLAP` on Windows, as well as in the
 standard VST3 folders and those you add. A project with a CLAP plug-in that isn't installed opens
@@ -4308,7 +4307,7 @@ its package rather than a copied binary.
   a plug-in's window is in front. The input level check works on Linux and macOS, not Windows. On Windows and macOS only
   the system's default audio driver is available (no ASIO).
 - **Plug-in formats:** VST3 and CLAP; no AU or VST2. CLAP plug-ins have no windows yet, no
-  side-chain inputs or extra outputs, and a latency change while loaded isn't followed.
+  side-chain inputs or extra outputs, and a latency change that needs a restart isn't followed.
 - **Tempo:** a region's length stays in samples when it is moved across a tempo change (only
   its start follows the bars and beats). Move MIDI Regions with Tempo doesn't move automation
   or markers, isn't applied to base-tempo edits in Project Settings, and isn't remembered

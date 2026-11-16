@@ -53,6 +53,12 @@ fn in_audio() -> bool {
     AUDIO.with(|a| a.get())
 }
 
+/// Whether this is the main thread, outside a processor call: where the plug-in's main-thread
+/// calls may be made.
+pub(crate) fn is_main() -> bool {
+    !in_audio() && MAIN.with(|m| m.get())
+}
+
 /// What the plug-in asked of the host, for the controller's `idle` to answer.
 #[derive(Default)]
 pub(crate) struct Requests {
@@ -165,7 +171,7 @@ unsafe extern "C" fn get_extension(_h: *const clap_host, id: *const c_char) -> *
 static THREAD_CHECK: clap_host_thread_check = clap_host_thread_check { is_main_thread: Some(is_main_thread), is_audio_thread: Some(is_audio_thread) };
 
 unsafe extern "C" fn is_main_thread(_h: *const clap_host) -> bool {
-    !in_audio() && MAIN.with(|m| m.get())
+    is_main()
 }
 
 unsafe extern "C" fn is_audio_thread(_h: *const clap_host) -> bool {

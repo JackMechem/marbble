@@ -11,6 +11,16 @@ use plugin_api::{PluginDescriptor, PluginFormat};
 use serde::{Deserialize, Serialize};
 
 pub const SCAN_ARG: &str = "--scan-plugin";
+/// The flag before CLAP hosting: a running older version whose executable has been replaced by
+/// this one still starts its scanners with it.
+const OLD_SCAN_ARG: &str = "--scan-vst3";
+
+/// Whether this process is a scanner child, and then the file to scan after the flag (None when
+/// it's missing).
+pub fn scan_child_path(args: &[String]) -> Option<Option<&str>> {
+    let i = args.iter().position(|a| a == SCAN_ARG || a == OLD_SCAN_ARG)?;
+    Some(args.get(i + 1).map(|s| s.as_str()))
+}
 
 pub use crate::library::config_dir::config_dir;
 
@@ -185,4 +195,18 @@ pub fn scan_with(exe: &Path, extra: &[PathBuf]) -> Vec<PluginDescriptor> {
         let _ = std::fs::write(report_path(), text);
     }
     list
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn either_scan_flag_makes_a_scanner() {
+        let args = |a: &[&str]| a.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        assert_eq!(scan_child_path(&args(&["marbble", "--scan-plugin", "/a/B.clap"])), Some(Some("/a/B.clap")));
+        assert_eq!(scan_child_path(&args(&["marbble", "--scan-vst3", "/a/B.vst3"])), Some(Some("/a/B.vst3")));
+        assert_eq!(scan_child_path(&args(&["marbble", "--scan-plugin"])), Some(None));
+        assert_eq!(scan_child_path(&args(&["marbble"])), None);
+    }
 }

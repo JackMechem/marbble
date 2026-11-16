@@ -9,12 +9,11 @@ use parking_lot::Mutex;
 
 use crate::{crash, recent, schemas, settings};
 
-/// In a child process the plug-in scanner starts (`marbble --scan-plugin <file>`): scans the VST3
-/// bundle or CLAP file and exits.
+/// In a child process the plug-in scanner starts (`marbble --scan-plugin <file>`, or an older
+/// version's `--scan-vst3 <file>`): scans the VST3 bundle or CLAP file and exits.
 pub fn scan_child_if_asked(args: &[String]) {
-    if let Some(i) = args.iter().position(|a| a == plugin_db::SCAN_ARG) {
-        let code = args.get(i + 1).map(|p| plugin_db::scan_child_main(p.as_ref())).unwrap_or(2);
-        std::process::exit(code);
+    if let Some(path) = plugin_db::scan_child_path(args) {
+        std::process::exit(path.map(|p| plugin_db::scan_child_main(p.as_ref())).unwrap_or(2));
     }
 }
 

@@ -3,10 +3,12 @@
 //!
 //! This file holds the types. `instantiate.rs` makes the two halves, `processor.rs` and
 //! `controller.rs` are their code. CLAP has one plug-in object where VST3 has two: the halves
-//! share it through `Shared`, whose drop deactivates and destroys it.
+//! share it through `Shared`, and when both are gone it is deactivated and destroyed on the main
+//! thread (`Instance`).
 
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
-use std::sync::Arc;
+use std::mem::ManuallyDrop;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 
 use clap_sys::audio_buffer::clap_audio_buffer;
 use clap_sys::events::clap_event_transport;
@@ -18,12 +20,15 @@ use plugin_api::{BusLayout, Gesture, HostSet, OutputBus, PluginDescriptor};
 
 use crate::entry::Library;
 use crate::events::{InputEvents, OutputEvents};
-use crate::host::Host;
+use crate::host::{Host, Requests};
+use crate::params::ParamRanges;
 
 mod controller;
 mod instantiate;
 mod ports;
 mod processor;
+#[cfg(test)]
+mod tests;
 pub use instantiate::instantiate;
 
 /// Parameter changes the host can queue for one block (automation).
@@ -33,25 +38,18 @@ const MAX_EVENTS: usize = 2048;
 /// Room in each ring between the halves: edits in, gestures out.
 const RING: usize = 4096;
 
-/// What both halves share. Torn down when both are gone, on the main thread.
-struct Shared {
-    instance: u64,
+/// The plug-in with the `clap_host` it was made with, which must outlive it. Dropping it
+/// deactivates and destroys the plug-in, which CLAP keeps to the main thread.
+struct Instance {
     plugin: *const clap_plugin,
-    /// The `clap_host` the plug-in was made with, which must outlive it.
     host: Box<Host>,
-    params: *const clap_plugin_params,
-    state: *const clap_plugin_state,
-    latency: *const clap_plugin_latency,
-    /// The audio thread has stopped running the plug-in (`shut_gate`).
-    parked: AtomicBool,
-    /// Keeps the file loaded, though it's never unloaded anyway.
-    _lib: Arc<Library>,
+    /// Keeps the file loaded, though it's never unloaded anyway (None for the tests' plug-in).
+    _lib: Option<Arc<Library>>,
 }
 
-unsafe impl Send for Shared {}
-unsafe impl Sync for Shared {}
+unsafe impl Send for Instance {}
 
-impl Drop for Shared {
+impl Drop for Instance {
     fn drop(&mut self) {
         // The processor stopped processing when it was dropped.
         unsafe {
@@ -62,6 +60,48 @@ impl Drop for Shared {
             if let Some(f) = p.destroy {
                 f(self.plugin);
             }
+        }
+    }
+}
+
+/// Instances whose last half went on another thread (a render's garbage, say), waiting for the
+/// main thread to tear them down (`destroy_deferred`).
+static DEFERRED: Mutex<Vec<Instance>> = Mutex::new(Vec::new());
+
+/// Deactivates and destroys the plug-ins whose halves were both dropped off the main thread. Call
+/// periodically on the main thread; elsewhere it does nothing.
+pub fn destroy_deferred() {
+    if crate::host::is_main() {
+        let done = std::mem::take(&mut *DEFERRED.lock().unwrap_or_else(|e| e.into_inner()));
+        drop(done);
+    }
+}
+
+/// What both halves share. When both are gone, the plug-in goes with it on the main thread, or is
+/// handed to it (`DEFERRED`).
+struct Shared {
+    instance: u64,
+    /// The plug-in, as `inst` has it.
+    plugin: *const clap_plugin,
+    params: *const clap_plugin_params,
+    state: *const clap_plugin_state,
+    latency: *const clap_plugin_latency,
+    /// The audio thread has stopped running the plug-in (`shut_gate`).
+    parked: AtomicBool,
+    inst: ManuallyDrop<Instance>,
+}
+
+unsafe impl Send for Shared {}
+unsafe impl Sync for Shared {}
+
+impl Drop for Shared {
+    fn drop(&mut self) {
+        // Taken once, here, and never used again.
+        let inst = unsafe { ManuallyDrop::take(&mut self.inst) };
+        if crate::host::is_main() {
+            drop(inst);
+        } else {
+            DEFERRED.lock().unwrap_or_else(|e| e.into_inner()).push(inst);
         }
     }
 }
@@ -117,11 +157,16 @@ pub struct ClapController {
     /// The audio ports as the plug-in reported them when activated.
     buses: Vec<BusLayout>,
     outputs: Vec<OutputBus>,
+    /// Every parameter's range, for normalizing values: built when it loads, and again when it
+    /// says its parameters changed.
+    ranges: ParamRanges,
     latency_changed: bool,
     params_restarted: bool,
     /// The host says a thread is stuck in the processor: nothing here calls into the plug-in.
     unresponsive: bool,
-    last_latency: AtomicU32,
+    /// Its latency, read when it loads and in `idle`: `latency.get` is the main thread's, and
+    /// renders ask for the latency from theirs.
+    latency: u32,
     /// It asked for a restart, which isn't done yet (#560): said once in the log.
     restart_noted: bool,
 }
@@ -129,7 +174,11 @@ pub struct ClapController {
 unsafe impl Send for ClapController {}
 
 impl Shared {
-    fn take(&self, pick: impl Fn(&crate::host::Requests) -> &AtomicBool) -> bool {
-        pick(&self.host.requests).swap(false, Ordering::AcqRel)
+    fn requests(&self) -> &Requests {
+        &self.inst.host.requests
+    }
+
+    fn take(&self, pick: impl Fn(&Requests) -> &AtomicBool) -> bool {
+        pick(self.requests()).swap(false, Ordering::AcqRel)
     }
 }

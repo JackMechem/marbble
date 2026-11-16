@@ -21,7 +21,24 @@ pub fn instantiate(desc: &PluginDescriptor, sample_rate: f64, max_block: usize) 
     let id = CString::new(desc.cid.as_bytes()).map_err(|_| "a NUL in its id")?;
     unsafe {
         let plugin = lib.create(host.raw(), &id);
-        let p = plugin.as_ref().ok_or("its factory couldn't create it")?;
+        if plugin.is_null() {
+            return Err("its factory couldn't create it".into());
+        }
+        start(desc, plugin, host, Some(lib), sample_rate, max_block)
+    }
+}
+
+/// Initializes and activates a plug-in just created with `host`, and makes its two halves.
+pub(super) unsafe fn start(
+    desc: &PluginDescriptor,
+    plugin: *const clap_plugin,
+    host: Box<Host>,
+    lib: Option<Arc<Library>>,
+    sample_rate: f64,
+    max_block: usize,
+) -> Result<(ClapProcessor, ClapController), String> {
+    {
+        let p = &*plugin;
         // Until it's activated, an early return destroys it.
         let unwind = Unwind(plugin);
         if !p.init.is_some_and(|f| f(plugin)) {
@@ -46,12 +63,11 @@ pub fn instantiate(desc: &PluginDescriptor, sample_rate: f64, max_block: usize) 
         let shared = Arc::new(Shared {
             instance: plugin_api::next_instance(),
             plugin,
-            host,
             params: params_ext,
             state,
             latency,
             parked: AtomicBool::new(false),
-            _lib: lib,
+            inst: ManuallyDrop::new(Instance { plugin, host, _lib: lib }),
         });
         let (edits_tx, edits_rx) = rtrb::RingBuffer::new(RING);
         let (gestures_tx, gestures_rx) = rtrb::RingBuffer::new(RING);
@@ -88,10 +104,11 @@ pub fn instantiate(desc: &PluginDescriptor, sample_rate: f64, max_block: usize) 
             host_set: HostSet::default(),
             buses: ports::bus_layouts(&in_ports, &out_ports),
             outputs: ports::output_buses(&out_ports),
+            ranges: params::ranges(&infos),
             latency_changed: false,
             params_restarted: false,
             unresponsive: false,
-            last_latency: AtomicU32::new(lat),
+            latency: lat,
             restart_noted: false,
         };
         Ok((proc_half, ctrl_half))

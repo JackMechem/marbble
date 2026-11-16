@@ -171,6 +171,8 @@ impl Processor for ClapProcessor {
         if n == 0 || self.shut {
             return;
         }
+        // Whatever it asked to be run or flushed for, this block does.
+        self.shared.take(|r| &r.process);
         let _role = AudioRole::enter();
         if !self.start() {
             return;
@@ -228,7 +230,7 @@ impl Processor for ClapProcessor {
 
     /// Edits wait, or the plug-in asked to flush its parameters.
     fn has_edits(&self) -> bool {
-        !self.edits_rx.is_empty() || self.shared.host.requests.process.load(Ordering::Acquire)
+        !self.edits_rx.is_empty() || self.shared.requests().process.load(Ordering::Acquire)
     }
 
     fn wants_to_run(&self) -> bool {

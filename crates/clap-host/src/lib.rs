@@ -18,4 +18,4 @@ mod plugin;
 pub mod scan;
 mod stream;
 
-pub use plugin::{instantiate, ClapController, ClapProcessor};
+pub use plugin::{destroy_deferred, instantiate, ClapController, ClapProcessor};
