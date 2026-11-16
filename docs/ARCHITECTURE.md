@@ -944,8 +944,12 @@ of `plugin_api`.
   One whose GUI only floats has no editor. What it asks of its window (`request_resize`,
   `request_show`, `request_hide`, `closed`) may come from any thread and only sets flags, which
   `idle` answers. On Linux the host has `timer-support` and `posix-fd-support`: the plug-in's timers
-  and file descriptors run on the app's main loop (`host/run_loop.rs`), its timers wait while it
-  isn't responding, and whatever it left registered goes when it's destroyed.
+  and file descriptors run on the app's main loop (`host/run_loop.rs`); while it isn't responding
+  its timers wait and its file descriptors are off the loop, and whatever it left registered goes
+  when it's destroyed. Registering and unregistering work on the main thread only. On the loop
+  (`glib_loop.rs`), a file descriptor that hangs up or fails is passed on once and dropped, rather
+  than reported on every pass; a removal from another thread is handed to the main thread, where
+  the callback belongs.
 - **What isn't there yet**: floating editor windows, side-chain inputs and extra output ports, and
   restarts for a latency change (#560). Its tail is read when it loads and its latency in each
   `idle`, so delay compensation follows a new latency only as far as the plug-in reports it

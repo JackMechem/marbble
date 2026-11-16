@@ -44,7 +44,7 @@ impl Controller for ClapController {
 
     fn set_unresponsive(&mut self, on: bool) {
         self.unresponsive = on;
-        self.shared.inst.host.quiet.store(on, Ordering::Relaxed);
+        self.shared.inst.host.set_quiet(on);
         if let Some(e) = &self.editor {
             e.set_quiet(on);
         }

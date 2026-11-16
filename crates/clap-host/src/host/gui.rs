@@ -17,13 +17,21 @@ pub(crate) struct GuiRequests {
     pub hide: AtomicBool,
     /// `closed`: its GUI went (a floating window it closed, or a GUI it lost), and must be destroyed.
     pub closed: AtomicBool,
+    /// `closed` said the GUI was destroyed already: it's only destroyed, not hidden first.
+    pub destroyed: AtomicBool,
 }
 
 const NO_SIZE: u64 = u64::MAX;
 
 impl Default for GuiRequests {
     fn default() -> Self {
-        GuiRequests { resize: AtomicU64::new(NO_SIZE), show: AtomicBool::new(false), hide: AtomicBool::new(false), closed: AtomicBool::new(false) }
+        GuiRequests {
+            resize: AtomicU64::new(NO_SIZE),
+            show: AtomicBool::new(false),
+            hide: AtomicBool::new(false),
+            closed: AtomicBool::new(false),
+            destroyed: AtomicBool::new(false),
+        }
     }
 }
 
@@ -34,10 +42,10 @@ impl GuiRequests {
         (v != NO_SIZE).then_some(((v >> 32) as u32, v as u32))
     }
 
-    /// Forgets what was asked of an editor that is gone.
+    /// Forgets what was asked of an editor that is gone, before a new one opens.
     pub fn clear(&self) {
         self.take_resize();
-        for f in [&self.show, &self.hide, &self.closed] {
+        for f in [&self.show, &self.hide, &self.closed, &self.destroyed] {
             f.store(false, Ordering::Release);
         }
     }
@@ -68,8 +76,9 @@ unsafe extern "C" fn request_hide(h: *const clap_host) -> bool {
     host(h).inspect(|h| h.requests.gui.hide.store(true, Ordering::Release)).is_some()
 }
 
-unsafe extern "C" fn closed(h: *const clap_host, _was_destroyed: bool) {
+unsafe extern "C" fn closed(h: *const clap_host, was_destroyed: bool) {
     if let Some(h) = host(h) {
+        h.requests.gui.destroyed.fetch_or(was_destroyed, Ordering::AcqRel);
         h.requests.gui.closed.store(true, Ordering::Release);
     }
 }
@@ -91,7 +100,9 @@ mod tests {
         assert_eq!(gui.take_resize(), Some((900, 600)), "the last size asked for");
         assert_eq!(gui.take_resize(), None);
         assert!(gui.show.load(Ordering::Acquire));
+        unsafe { closed(h.raw(), true) };
+        assert!(gui.closed.load(Ordering::Acquire) && gui.destroyed.load(Ordering::Acquire));
         gui.clear();
-        assert!(!gui.show.load(Ordering::Acquire));
+        assert!(!gui.show.load(Ordering::Acquire) && !gui.closed.load(Ordering::Acquire) && !gui.destroyed.load(Ordering::Acquire));
     }
 }

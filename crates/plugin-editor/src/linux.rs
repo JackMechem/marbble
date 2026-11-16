@@ -11,6 +11,7 @@ mod x11_scale;
 
 pub use event_loop::{event_loop, set_event_loop, EventLoop, FdEvents};
 pub use gl::{gl_isolated, set_gl_isolation};
+pub use libs::install_x_error_handlers;
 
 use std::os::fd::AsRawFd;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -258,7 +259,7 @@ impl Editor {
         window.conn.flush().map_err(|e| e.to_string())?;
         // Before `attach`: Xlib's default handler would exit on an X error made while the
         // plug-in builds its GUI.
-        libs::install_x_error_handlers();
+        install_x_error_handlers();
         if let Err(e) = view.attach(Parent::X11(id), Frame(Arc::downgrade(&window))) {
             window.view.lock().take();
             let _ = window.conn.destroy_window(id);
@@ -273,7 +274,17 @@ impl Editor {
             // can't run in between, as both are on the main thread.
             let (win, closed) = (window.clone(), closed.clone());
             let fd = window.conn.stream().as_raw_fd();
-            l.add_fd(fd, FdEvents::READ, Box::new(move |_| drain_events(&win, wm_delete, &closed)))
+            l.add_fd(
+                fd,
+                FdEvents::READ,
+                Box::new(move |ready| {
+                    // The X server went away: the window with it.
+                    if ready.error {
+                        closed.store(true, Ordering::Relaxed);
+                    }
+                    drain_events(&win, wm_delete, &closed)
+                }),
+            )
         });
 
         Ok(Editor { title: title.to_string(), window, wm_delete, closed, x_source })

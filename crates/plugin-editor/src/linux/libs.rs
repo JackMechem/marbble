@@ -27,9 +27,9 @@ pub(super) fn loaded_libraries(names: &[&[u8]]) -> Vec<CString> {
 }
 
 /// Xlib's default error handler calls exit(), so a single bad request from a plugin GUI would
-/// take the whole host down. Install a logging handler in every libX11 instance loaded into the
-/// process.
-pub(super) fn install_x_error_handlers() {
+/// take the whole host down. Installs a logging handler in every libX11 instance loaded into the
+/// process so far: call it before calling into plug-in GUI code, once its library is loaded.
+pub fn install_x_error_handlers() {
     type Handler = unsafe extern "C" fn(*mut c_void, *mut c_void) -> c_int;
     unsafe extern "C" fn on_error(_dpy: *mut c_void, ev: *mut c_void) -> c_int {
         // XErrorEvent: type, display*, resourceid, serial, error_code(u8), request_code(u8), ...

@@ -20,9 +20,11 @@ impl FdEvents {
 /// Integration point with the application's main loop, whose thread runs the callbacks. Adding a
 /// source on another thread (a plug-in loaded for a render, registering a timer) gives None.
 pub trait EventLoop: Send + Sync {
-    /// Calls `cb` with what `fd` is ready for, whenever it is ready for something in `watch`.
+    /// Calls `cb` with what `fd` is ready for, whenever it is ready for something in `watch`. One
+    /// that hangs up, fails or is closed is passed on once (`error`) and then dropped from the loop.
     fn add_fd(&self, fd: i32, watch: FdEvents, cb: Box<dyn FnMut(FdEvents)>) -> Option<u64>;
     fn add_timer(&self, interval_ms: u64, cb: Box<dyn FnMut()>) -> Option<u64>;
+    /// Takes a source off the loop. From another thread, it may run once more before it goes.
     fn remove(&self, id: u64);
 }
 

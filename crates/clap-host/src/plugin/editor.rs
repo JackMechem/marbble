@@ -20,13 +20,19 @@ impl ClapController {
         if !crate::host::is_main() {
             return Err("plug-in windows open on the main thread".into());
         }
-        self.shared.requests().gui.clear();
         self.editor = Some(self.make_editor(title, None)?);
         Ok(())
     }
 
+    /// A new editor. What the last one's GUI asked of its window, even as it was destroyed, is
+    /// forgotten first.
     fn make_editor(&self, title: &str, at: Option<(i16, i16)>) -> Result<Editor, String> {
-        let gui = plugin_editor::gl_isolated(|| unsafe { ClapGui::create(self.shared.plugin, self.shared.gui, &self.desc.name) })?;
+        let requests = &self.shared.requests().gui;
+        requests.clear();
+        // Its GUI code runs from `create` on.
+        #[cfg(target_os = "linux")]
+        plugin_editor::install_x_error_handlers();
+        let gui = plugin_editor::gl_isolated(|| unsafe { ClapGui::create(self.shared.plugin, self.shared.gui, requests, &self.desc.name) })?;
         Editor::open_at(gui, title, at)
     }
 

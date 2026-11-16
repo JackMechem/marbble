@@ -6,9 +6,13 @@
 use std::cell::Cell;
 use std::ffi::CStr;
 
+use std::sync::atomic::Ordering;
+
 use clap_sys::ext::gui::*;
 use clap_sys::plugin::clap_plugin;
 use plugin_editor::{Frame, Parent, View};
+
+use crate::host::GuiRequests;
 
 #[cfg(target_os = "linux")]
 const API: &CStr = CLAP_WINDOW_API_X11;
@@ -23,22 +27,24 @@ pub(crate) unsafe fn embeds(plugin: *const clap_plugin, gui: *const clap_plugin_
 }
 
 /// A plug-in's GUI, created for embedding and destroyed when it leaves its window (or, if it never
-/// got there, when it's dropped). The plug-in must outlive it.
+/// got there, when it's dropped). The plug-in and its host must outlive it.
 pub(crate) struct ClapGui {
     plugin: *const clap_plugin,
     gui: &'static clap_plugin_gui,
+    /// What the plug-in asked of its window, in its host.
+    requests: *const GuiRequests,
     name: String,
     destroyed: Cell<bool>,
 }
 
 impl ClapGui {
     /// Creates the plug-in's GUI (`gui.create`), which `embeds` said it can make here.
-    pub unsafe fn create(plugin: *const clap_plugin, gui: *const clap_plugin_gui, name: &str) -> Result<ClapGui, String> {
+    pub unsafe fn create(plugin: *const clap_plugin, gui: *const clap_plugin_gui, requests: &GuiRequests, name: &str) -> Result<ClapGui, String> {
         let gui = gui.as_ref().ok_or_else(|| format!("{name} has no window of its own"))?;
         if !gui.create.is_some_and(|f| f(plugin, API.as_ptr(), false)) {
             return Err(format!("{name} couldn't make its window"));
         }
-        Ok(ClapGui { plugin, gui, name: name.to_string(), destroyed: Cell::new(false) })
+        Ok(ClapGui { plugin, gui, requests, name: name.to_string(), destroyed: Cell::new(false) })
     }
 
     fn destroy(&self) {
@@ -101,8 +107,11 @@ impl View for ClapGui {
         Ok(())
     }
 
+    /// `hide`, then `destroy`; only `destroy` for a GUI the plug-in said it destroyed already
+    /// (`closed`), which it must still be told.
     fn detach(&self) {
-        if let Some(f) = self.gui.hide {
+        let gone = unsafe { (*self.requests).destroyed.swap(false, Ordering::AcqRel) };
+        if let Some(f) = self.gui.hide.filter(|_| !gone) {
             unsafe { f(self.plugin) };
         }
         self.destroy();

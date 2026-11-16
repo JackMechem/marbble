@@ -3,6 +3,7 @@
 
 use std::sync::atomic::{AtomicBool, AtomicU32};
 
+use clap_sys::ext::gui::*;
 use clap_sys::ext::latency::CLAP_EXT_LATENCY;
 use clap_sys::ext::params::*;
 use clap_sys::ext::posix_fd_support::*;
@@ -30,6 +31,11 @@ struct Counts {
     /// `timer-support.on_timer` and `posix-fd-support.on_fd` calls.
     timer_fires: AtomicU32,
     fd_fires: AtomicU32,
+    /// `on_fd` calls saying the fd hung up or failed.
+    fd_errors: AtomicU32,
+    /// `gui.hide` and `gui.destroy` calls.
+    gui_hides: AtomicU32,
+    gui_destroys: AtomicU32,
 }
 
 struct Fake {
@@ -77,6 +83,8 @@ unsafe extern "C" fn get_extension(_p: *const clap_plugin, id: *const std::ffi::
         &PARAMS as *const _ as _
     } else if id == CLAP_EXT_LATENCY {
         &LATENCY as *const _ as _
+    } else if id == CLAP_EXT_GUI {
+        &GUI as *const _ as _
     } else if id == CLAP_EXT_TIMER_SUPPORT {
         &TIMER as *const _ as _
     } else if id == CLAP_EXT_POSIX_FD_SUPPORT {
@@ -140,6 +148,39 @@ unsafe extern "C" fn on_fd(p: *const clap_plugin, _fd: i32, flags: clap_posix_fd
     if flags & CLAP_POSIX_FD_READ != 0 {
         fake(p).counts.fd_fires.fetch_add(1, Ordering::Relaxed);
     }
+    if flags & CLAP_POSIX_FD_ERROR != 0 {
+        fake(p).counts.fd_errors.fetch_add(1, Ordering::Relaxed);
+    }
+}
+
+/// A GUI that embeds anywhere and counts how it's taken down.
+static GUI: clap_plugin_gui = clap_plugin_gui {
+    is_api_supported: Some(gui_api),
+    get_preferred_api: None,
+    create: Some(gui_api),
+    destroy: Some(gui_destroy),
+    set_scale: None,
+    get_size: None,
+    can_resize: None,
+    get_resize_hints: None,
+    adjust_size: None,
+    set_size: None,
+    set_parent: None,
+    set_transient: None,
+    suggest_title: None,
+    show: None,
+    hide: Some(gui_hide),
+};
+
+unsafe extern "C" fn gui_api(_p: *const clap_plugin, _api: *const std::ffi::c_char, floating: bool) -> bool {
+    !floating
+}
+unsafe extern "C" fn gui_hide(p: *const clap_plugin) -> bool {
+    fake(p).counts.gui_hides.fetch_add(1, Ordering::Relaxed);
+    true
+}
+unsafe extern "C" fn gui_destroy(p: *const clap_plugin) {
+    fake(p).counts.gui_destroys.fetch_add(1, Ordering::Relaxed);
 }
 
 /// The fake plug-in's halves, made on this thread, and what it counts. The fake itself is leaked:
@@ -272,26 +313,42 @@ fn timers_and_file_descriptors_run_on_the_main_loop() {
         let d = &*(ext(CLAP_EXT_POSIX_FD_SUPPORT) as *const clap_host_posix_fd_support);
         assert!(t.register_timer.unwrap()(f.host, 1, &mut timer));
         assert_eq!(libc::pipe(fds.as_mut_ptr()), 0);
-        assert!(d.register_fd.unwrap()(f.host, fds[0], CLAP_POSIX_FD_READ));
-        assert!(!d.register_fd.unwrap()(f.host, fds[0], CLAP_POSIX_FD_READ), "once");
+        let (register, unregister) = (d.register_fd.unwrap(), d.unregister_fd.unwrap());
+        assert!(register(f.host, fds[0], CLAP_POSIX_FD_READ));
+        assert!(!register(f.host, fds[0], CLAP_POSIX_FD_READ), "once");
         run();
-        assert!(f.counts.timer_fires.load(Ordering::Relaxed) > 0);
-        assert_eq!(f.counts.fd_fires.load(Ordering::Relaxed), 0, "nothing to read yet");
+        let count = |n: &AtomicU32| n.load(Ordering::Relaxed);
+        assert!(count(&f.counts.timer_fires) > 0);
+        assert_eq!(count(&f.counts.fd_fires), 0, "nothing to read yet");
         libc::write(fds[1], b"x".as_ptr() as *const _, 1);
         run();
-        assert!(f.counts.fd_fires.load(Ordering::Relaxed) > 0);
-        assert!(d.unregister_fd.unwrap()(f.host, fds[0]));
-        let fired = f.counts.fd_fires.load(Ordering::Relaxed);
-        run();
-        assert_eq!(f.counts.fd_fires.load(Ordering::Relaxed), fired, "unregistered");
+        assert!(count(&f.counts.fd_fires) > 0);
 
+        // Stuck: neither its timers nor its fd (readable, unread) reach it, until it's back.
         c.set_unresponsive(true);
-        let fired = f.counts.timer_fires.load(Ordering::Relaxed);
+        let fired = (count(&f.counts.timer_fires), count(&f.counts.fd_fires));
         run();
-        assert_eq!(f.counts.timer_fires.load(Ordering::Relaxed), fired, "timers wait while it's stuck");
+        assert_eq!((count(&f.counts.timer_fires), count(&f.counts.fd_fires)), fired, "nothing while it's stuck");
         c.set_unresponsive(false);
         run();
-        assert!(f.counts.timer_fires.load(Ordering::Relaxed) > fired);
+        assert!(count(&f.counts.timer_fires) > fired.0 && count(&f.counts.fd_fires) > fired.1, "both again once it's back");
+
+        let host = f.host as usize;
+        let elsewhere = std::thread::spawn(move || unregister(host as *const clap_host, fds[0])).join().unwrap();
+        assert!(!elsewhere, "unregistering is a main-thread call");
+        assert!(unregister(f.host, fds[0]));
+        let fired = count(&f.counts.fd_fires);
+        run();
+        assert_eq!(count(&f.counts.fd_fires), fired, "unregistered");
+
+        // Hung up: told once, then off the loop, and it may register the fd again.
+        assert!(register(f.host, fds[0], CLAP_POSIX_FD_READ));
+        libc::close(fds[1]);
+        run();
+        run();
+        assert_eq!(count(&f.counts.fd_errors), 1);
+        assert!(register(f.host, fds[0], CLAP_POSIX_FD_READ), "dropped, so it can come back");
+        assert!(unregister(f.host, fds[0]));
     }
     drop((p, c));
     assert!(f.counts.destroyed.load(Ordering::Relaxed));
@@ -300,6 +357,24 @@ fn timers_and_file_descriptors_run_on_the_main_loop() {
     assert_eq!(f.counts.timer_fires.load(Ordering::Relaxed), fired, "the timer it left went with it");
     unsafe {
         libc::close(fds[0]);
-        libc::close(fds[1]);
     }
+}
+
+#[test]
+fn a_gui_the_plug_in_destroyed_itself_is_only_destroyed() {
+    use crate::gui::ClapGui;
+    use plugin_editor::View;
+    let (_p, c, f) = fake_halves(0);
+    assert!(c.has_editor());
+    let requests = &c.shared.requests().gui;
+    let open = || unsafe { ClapGui::create(&f.plugin, c.shared.gui, requests, "Fake") }.unwrap();
+    open().detach();
+    assert_eq!((f.counts.gui_hides.load(Ordering::Relaxed), f.counts.gui_destroys.load(Ordering::Relaxed)), (1, 1));
+    let gui = open();
+    unsafe {
+        let ext = (*f.host).get_extension.unwrap()(f.host, CLAP_EXT_GUI.as_ptr()) as *const clap_host_gui;
+        (*ext).closed.unwrap()(f.host, true);
+    }
+    gui.detach();
+    assert_eq!((f.counts.gui_hides.load(Ordering::Relaxed), f.counts.gui_destroys.load(Ordering::Relaxed)), (1, 2), "destroyed, not hidden");
 }

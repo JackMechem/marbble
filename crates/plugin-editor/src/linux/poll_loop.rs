@@ -46,10 +46,12 @@ pub fn run_once() {
     for id in ids {
         let src = SOURCES.with(|s| s.borrow_mut().iter_mut().find(|(i, _)| *i == id).and_then(|(_, x)| x.take()));
         let Some(mut src) = src else { continue };
+        let mut ended = false;
         match &mut src {
             Src::Fd(fd, watch, cb) => {
                 if let Some(ready) = ready(*fd, *watch) {
                     cb(ready);
+                    ended = ready.error;
                 }
             }
             Src::Timer(d, next, cb) => {
@@ -60,7 +62,11 @@ pub fn run_once() {
             }
         }
         SOURCES.with(|s| {
-            if let Some((_, slot)) = s.borrow_mut().iter_mut().find(|(i, _)| *i == id) {
+            let mut s = s.borrow_mut();
+            if ended {
+                // As GTK's loop does: an fd that hung up or failed is told once, then dropped.
+                s.retain(|(i, _)| *i != id);
+            } else if let Some((_, slot)) = s.iter_mut().find(|(i, _)| *i == id) {
                 *slot = Some(src);
             }
         });

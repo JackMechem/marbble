@@ -96,7 +96,7 @@ pub(crate) struct Host {
     /// The plug-in, once created (`set_plugin`), for its timers and file descriptors.
     #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
     plugin: AtomicPtr<clap_plugin>,
-    /// The plug-in isn't responding: its timers wait.
+    /// The plug-in isn't responding: its timers wait (`set_quiet`).
     pub quiet: AtomicBool,
     /// Its timers and file descriptors on the main loop.
     #[cfg(target_os = "linux")]
@@ -144,6 +144,16 @@ impl Host {
     /// The plug-in made with this host, before it's initialized.
     pub fn set_plugin(&self, plugin: *const clap_plugin) {
         self.plugin.store(plugin as *mut clap_plugin, Ordering::Release);
+    }
+
+    /// Says whether the plug-in is responding: while it isn't, its timers wait and its file
+    /// descriptors are off the main loop. On the main thread.
+    pub fn set_quiet(&self, on: bool) {
+        self.quiet.store(on, Ordering::Relaxed);
+        #[cfg(target_os = "linux")]
+        if is_main() {
+            self.sources.pause(self, on);
+        }
     }
 
     /// Takes the timers and file descriptors the plug-in left registered off the main loop, once
