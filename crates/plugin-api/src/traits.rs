@@ -85,6 +85,16 @@ pub trait Controller: Send {
     /// Call periodically on the main thread.
     fn idle(&mut self);
 
+    /// Before a render: finishes, waiting briefly if need be, what the plug-in asked for that the
+    /// render's sound depends on (a CLAP plug-in's restart for a new latency). Main thread; does
+    /// nothing elsewhere, or for a plug-in with nothing waiting.
+    fn settle(&mut self) {}
+
+    /// Tells the plug-in whether the engine is rendering offline (bounces, Freeze, exports), so
+    /// that it may take longer per block for better quality, or plays in real time. Main thread;
+    /// does nothing elsewhere, or in a format without the notion.
+    fn set_offline(&mut self, _offline: bool) {}
+
     /// The processing latency the plug-in reports, in samples.
     fn latency(&self) -> u32;
 

@@ -281,14 +281,18 @@ impl Session {
         tracks.chain(p.master.inserts.iter()).flatten().any(|s| self.slot_latency(s) != used(s.uid))
     }
 
-    /// Before a render: the engine takes the edits on their way (a VST3 takes them in the next
-    /// block the device plays), and a latency they changed, such as a lookahead, is in the
-    /// delay compensation the render plays with.
+    /// Before a render: the engine takes the edits on their way (a plug-in takes them in the next
+    /// block the device plays), a CLAP plug-in they made ask for a restart is restarted (on the
+    /// main thread: a render from another relies on `idle` having done it), and a latency they
+    /// changed, such as a lookahead, is in the delay compensation the render plays with.
     pub(crate) fn settle_latency(&mut self) {
         self.engine.lock().apply_queued();
         let deadline = Instant::now() + Duration::from_millis(50);
         while self.audio.is_some() && Instant::now() < deadline && self.controllers.values().any(|c| c.edits_pending()) {
             std::thread::sleep(Duration::from_millis(1));
+        }
+        for c in self.controllers.values_mut() {
+            c.settle();
         }
         if self.latency_changed() {
             self.update_pdc();

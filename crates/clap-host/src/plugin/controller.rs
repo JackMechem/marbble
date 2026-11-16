@@ -11,12 +11,12 @@ use crate::params;
 use crate::stream::{InStream, OutStream};
 
 impl ClapController {
-    fn plugin(&self) -> &clap_plugin {
+    pub(super) fn plugin(&self) -> &clap_plugin {
         unsafe { &*self.shared.plugin }
     }
 
     /// Whether the plug-in may be called now: it's responding, and this is the main thread.
-    fn callable(&self) -> bool {
+    pub(super) fn callable(&self) -> bool {
         !self.unresponsive && crate::host::is_main()
     }
 
@@ -29,11 +29,6 @@ impl ClapController {
             return Vec::new();
         }
         unsafe { params::infos(self.shared.plugin, self.shared.params) }
-    }
-
-    /// `latency.get`, on the main thread.
-    fn read_latency(&self) -> u32 {
-        unsafe { self.shared.latency.as_ref() }.and_then(|l| l.get).map_or(0, |g| unsafe { g(self.shared.plugin) })
     }
 }
 
@@ -76,7 +71,7 @@ impl Controller for ClapController {
     }
 
     /// Answers the plug-in's requests: `on_main_thread` when it asked for a callback, what it asked
-    /// of its editor window, and notes what it said changed.
+    /// of its editor window, a restart (`restart.rs`), and notes what it said changed.
     fn idle(&mut self) {
         if crate::host::is_main() {
             self.window_idle();
@@ -95,12 +90,18 @@ impl Controller for ClapController {
             self.ranges = params::ranges(&self.infos());
         }
         // Read each time: a plug-in may change it without saying so, as a VST3 may.
+        self.latency_changed |= s.take(|r| &r.latency);
         let latency = self.read_latency();
-        self.latency_changed |= s.take(|r| &r.latency) || latency != self.latency;
-        self.latency = latency;
-        if s.take(|r| &r.restart) && !std::mem::replace(&mut self.restart_noted, true) {
-            log::info!("{} asked to be restarted, which Marbble doesn't do for CLAP plug-ins yet", self.desc.name);
-        }
+        self.note_latency(latency);
+        self.restart_idle();
+    }
+
+    fn settle(&mut self) {
+        self.settle_restart();
+    }
+
+    fn set_offline(&mut self, offline: bool) {
+        self.render_mode(offline);
     }
 
     /// The latency read when it loaded or at the last `idle`, which any thread may ask for.
@@ -112,20 +113,31 @@ impl Controller for ClapController {
         std::mem::take(&mut self.latency_changed)
     }
 
-    /// Side-chain inputs come with #560.
+    /// An input port past the main one (`ports::key_ports`).
     fn has_key_input(&self) -> bool {
-        false
+        self.buses.iter().any(|b| b.input && b.aux && b.channels > 0)
     }
 
     fn key_active(&self) -> bool {
-        false
+        self.key_active
     }
 
     fn parked(&self) -> bool {
         self.shared.parked.load(Ordering::Acquire)
     }
 
-    fn set_key_active(&mut self, _on: bool) -> Result<(), String> {
+    /// CLAP plays every port, so the plug-in itself isn't called: the processor puts the key on
+    /// its input, or silence. (Switching while it plays still goes through the gate's crossfade,
+    /// as for a VST3.)
+    fn set_key_active(&mut self, on: bool) -> Result<(), String> {
+        if !self.has_key_input() || on == self.key_active {
+            return Ok(());
+        }
+        if self.unresponsive {
+            return Err(format!("{} isn't responding", self.desc.name));
+        }
+        self.key_active = on;
+        self.shared.keyed.store(on, Ordering::Relaxed);
         Ok(())
     }
 
@@ -140,7 +152,14 @@ impl Controller for ClapController {
         &self.outputs
     }
 
-    fn set_active_outputs(&mut self, _want: &[u32]) {}
+    /// Notes which extra outputs auxes use. A CLAP plug-in plays every port unless the host
+    /// switches some off with `audio-ports-activation`, which Marbble doesn't use: nothing is
+    /// switched in the plug-in, so unused outputs still cost it their work.
+    fn set_active_outputs(&mut self, want: &[u32]) {
+        for b in self.outputs.iter_mut().skip(1) {
+            b.active = want.contains(&b.index);
+        }
+    }
 
     fn parameters(&self) -> Vec<ParamInfo> {
         params::automatable(&self.infos())
@@ -183,9 +202,10 @@ impl Controller for ClapController {
         self.host_set.echo(id, value)
     }
 
+    /// Edits wait on the ring, or the block that took them isn't over.
     fn edits_pending(&self) -> bool {
         let tx = self.edits_tx.lock();
-        tx.slots() < tx.buffer().capacity()
+        tx.slots() < tx.buffer().capacity() || self.shared.edits_in_block.load(Ordering::Acquire)
     }
 
     fn take_params_restarted(&mut self) -> bool {

@@ -120,8 +120,20 @@ impl Session {
         if let Some(why) = self.left_out_refusal() {
             return Err(anyhow!(why));
         }
+        self.set_plugins_offline(true);
         let audio = guard.render(from, to, tail, isolate, progress);
+        self.set_plugins_offline(false);
         Ok(audio)
+    }
+
+    /// Tells every hosted plug-in a render is starting (true) or over (false), for a CLAP plug-in
+    /// with `clap.render` to switch to its offline quality. A main-thread call to the plug-ins, so
+    /// it does nothing on another: the app makes it on the main thread around a render, which runs
+    /// on another (`src-tauri/src/commands/bounce.rs`).
+    pub fn set_plugins_offline(&mut self, on: bool) {
+        for c in self.controllers.values_mut() {
+            c.set_offline(on);
+        }
     }
 
     /// Renders `[from, to)` of the full mix like [`Session::render`], making `edit` once `at`

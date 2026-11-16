@@ -86,7 +86,7 @@ mod linux {
         let all: Vec<_> = find_files(&default_search_paths()).iter().flat_map(|f| scan_file(f).unwrap_or_default()).collect();
         let desc = all.iter().find(|d| d.name == name).or_else(|| all.iter().find(|d| d.name.contains(&name))).expect("plugin not found").clone();
         println!("opening {} ({})", desc.name, desc.id);
-        let (_p, mut c) = clap_host::instantiate(&desc, 48000.0, 512).unwrap();
+        let (_p, mut c) = clap_host::instantiate(&desc, 48000.0, 512, false).unwrap();
         if !c.has_editor() {
             println!("{} has no window that embeds", desc.name);
             return;

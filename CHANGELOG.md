@@ -15,9 +15,13 @@ All notable changes to Marbble are recorded here. The format follows
   the edits they report. Their own windows open as VST3s' do, on Linux and macOS: they follow the
   display's scale, resize either way, and edits in them are undo steps (a plug-in whose window can
   only float on its own has none yet). The slot menus and the Library tag them **CLAP**, and the
-  Plug-in Manager has a Format column. Side-chain inputs and extra outputs don't work for them
-  yet; a project using a CLAP plug-in that isn't installed keeps its slot, as for a missing
-  VST3.
+  Plug-in Manager has a Format column. Side-chain inputs and multi-output instruments work as for
+  VST3s (auxes on extra outputs, Freeze and Bounce in Place of them included). A plug-in that
+  changes its latency (a limiter's lookahead) is restarted on the spot: its track fades to the dry
+  signal and back for a moment while the rest plays on, and delay compensation follows.
+  Bounces, exports, Bounce in Place and Freeze put CLAP plug-ins in their offline render mode,
+  and play their tails out as a VST3's. A project using a CLAP plug-in that isn't installed keeps
+  its slot, as for a missing VST3.
 - **Compare, Copy Settings and Paste Settings for VST3 and CLAP plug-ins**, in the slot's right-click menu
   (their editors are windows of their own, with no Marbble header). Paste Settings loads the
   copied state into the running plug-in, keeping the instance, as one undo step; settings copied

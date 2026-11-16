@@ -2,6 +2,14 @@
 //! which. The plug-in may call the thread-safe requests from any thread, the audio thread too, so
 //! they only set flags (`Requests`) for the controller's `idle`; those about its editor window are
 //! in `gui.rs`. Its timers and file descriptors go on the app's main loop on Linux (`run_loop.rs`).
+//!
+//! `clap.thread-pool`'s tasks run one after another on the thread that asked, inside its
+//! `process`. Marbble's processing threads play strips, one task each, taken from atomics with no
+//! waiting, so that a thread preempted or stuck in a plug-in costs only its own strip
+//! (`dsp/pool/`, `left_out.rs`). A plug-in's tasks would have the asking thread wait for the
+//! threads that took them, and one stuck there would hold up the strip that asked as well, out of
+//! reach of that handling; and while a project is heavy enough to use the pool, its threads have
+//! strips to play anyway.
 
 mod gui;
 #[cfg(target_os = "linux")]
@@ -24,6 +32,7 @@ use clap_sys::ext::params::{
 use clap_sys::ext::state::{clap_host_state, CLAP_EXT_STATE};
 use clap_sys::ext::tail::{clap_host_tail, CLAP_EXT_TAIL};
 use clap_sys::ext::thread_check::{clap_host_thread_check, CLAP_EXT_THREAD_CHECK};
+use clap_sys::ext::thread_pool::{clap_host_thread_pool, clap_plugin_thread_pool, CLAP_EXT_THREAD_POOL};
 use clap_sys::host::clap_host;
 use clap_sys::id::clap_id;
 use clap_sys::plugin::clap_plugin;
@@ -82,6 +91,8 @@ pub(crate) struct Requests {
     pub changed: AtomicBool,
     /// `latency.changed`.
     pub latency: AtomicBool,
+    /// `tail.changed`: the processor reads the tail again after its next block.
+    pub tail: AtomicBool,
     /// What it asked of its editor window.
     pub gui: GuiRequests,
 }
@@ -93,9 +104,14 @@ pub(crate) struct Host {
     /// The plug-in's name, for its log messages.
     name: String,
     pub requests: Requests,
-    /// The plug-in, once created (`set_plugin`), for its timers and file descriptors.
-    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+    /// The plug-in, once created (`set_plugin`), for its timers, file descriptors and thread-pool
+    /// tasks.
     plugin: AtomicPtr<clap_plugin>,
+    /// Its `clap.thread-pool`, if it has one, read once it's initialized.
+    thread_pool: AtomicPtr<clap_plugin_thread_pool>,
+    /// The processor is in the plug-in's `process`, the only place its thread-pool tasks may be
+    /// asked for.
+    pub in_process: AtomicBool,
     /// The plug-in isn't responding: its timers wait (`set_quiet`).
     pub quiet: AtomicBool,
     /// Its timers and file descriptors on the main loop.
@@ -129,6 +145,8 @@ impl Host {
             name: name.to_string(),
             requests: Requests::default(),
             plugin: AtomicPtr::new(std::ptr::null_mut()),
+            thread_pool: AtomicPtr::new(std::ptr::null_mut()),
+            in_process: AtomicBool::new(false),
             quiet: AtomicBool::new(false),
             #[cfg(target_os = "linux")]
             sources: Default::default(),
@@ -144,6 +162,11 @@ impl Host {
     /// The plug-in made with this host, before it's initialized.
     pub fn set_plugin(&self, plugin: *const clap_plugin) {
         self.plugin.store(plugin as *mut clap_plugin, Ordering::Release);
+    }
+
+    /// The plug-in's `clap.thread-pool`, once it's initialized.
+    pub fn set_thread_pool(&self, ext: *const clap_plugin_thread_pool) {
+        self.thread_pool.store(ext as *mut _, Ordering::Release);
     }
 
     /// Says whether the plug-in is responding: while it isn't, its timers wait and its file
@@ -209,6 +232,8 @@ unsafe extern "C" fn get_extension(_h: *const clap_host, id: *const c_char) -> *
         &NOTE_PORTS as *const _ as _
     } else if id == CLAP_EXT_GUI {
         &gui::GUI as *const _ as _
+    } else if id == CLAP_EXT_THREAD_POOL {
+        &THREAD_POOL as *const _ as _
     } else {
         run_loop_extension(id)
     };
@@ -286,9 +311,29 @@ unsafe extern "C" fn latency_changed(h: *const clap_host) {
     flag(h, |r| &r.latency);
 }
 
-static TAIL: clap_host_tail = clap_host_tail { changed: Some(nothing) };
+static TAIL: clap_host_tail = clap_host_tail { changed: Some(tail_changed) };
 
-unsafe extern "C" fn nothing(_h: *const clap_host) {}
+unsafe extern "C" fn tail_changed(h: *const clap_host) {
+    flag(h, |r| &r.tail);
+}
+
+static THREAD_POOL: clap_host_thread_pool = clap_host_thread_pool { request_exec: Some(request_exec) };
+
+/// Runs the plug-in's `num_tasks` tasks on this thread, one after another (see the top of this
+/// file), when asked from inside its `process`; refuses elsewhere, as CLAP says to, and the
+/// plug-in then does the work itself.
+unsafe extern "C" fn request_exec(h: *const clap_host, num_tasks: u32) -> bool {
+    let Some(h) = host(h) else { return false };
+    if !in_audio() || !h.in_process.load(Ordering::Relaxed) {
+        return false;
+    }
+    let plugin = h.plugin.load(Ordering::Acquire);
+    let Some(exec) = h.thread_pool.load(Ordering::Acquire).as_ref().and_then(|t| t.exec) else { return false };
+    for task in 0..num_tasks {
+        exec(plugin, task);
+    }
+    true
+}
 
 static AUDIO_PORTS: clap_host_audio_ports = clap_host_audio_ports { is_rescan_flag_supported: Some(no_rescan_flags), rescan: Some(ignore_rescan) };
 

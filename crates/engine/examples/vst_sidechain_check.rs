@@ -1,7 +1,8 @@
-//! Side-chain inputs of real VST3 plug-ins (LSP's Sidechain Compressor and Gate), on the silent
-//! ALSA null device, measured from offline renders: a loud key changes the output and a silent
-//! one doesn't, with no key source the key track makes no difference. Then what has to keep
-//! working around it. Skips when LSP isn't installed.
+//! Side-chain inputs of real plug-ins (LSP's Sidechain Compressor and Gate), as VST3s and then as
+//! CLAP plug-ins, on the silent ALSA null device, measured from offline renders: a loud key
+//! changes the output and a silent one doesn't, with no key source the key track makes no
+//! difference. Then what has to keep working around it. Skips a format whose LSP plug-ins aren't
+//! installed.
 //! usage: vst_sidechain_check <audio file> <scratch dir>
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -12,9 +13,9 @@ use daw_engine::audio_io::AudioConfig;
 use daw_engine::dsp::parallel::tar_for_checks;
 use daw_engine::dsp::ParallelTest;
 use daw_engine::model::{Id, InputSel, TrackKind, MASTER_ID};
-use daw_engine::session::{BipOptions, TrackPatch};
+use daw_engine::plugin_api::{PluginDescriptor, PluginFormat, Processor};
+use daw_engine::session::{instantiate_plugin, BipOptions, TrackPatch};
 use daw_engine::Session;
-use vst3_host::PluginDescriptor;
 
 /// Set by any failed check: the example then exits with status 1, so scripts notice.
 static FAILED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
@@ -61,28 +62,42 @@ fn set_param(s: &mut Session, uid: Id, name: &str, value: f64) {
     s.edit_vst_param(uid, p.id, value);
 }
 
-fn lsp_plugins() -> Vec<PluginDescriptor> {
-    let bundles = vst3_host::scan::find_bundles(&vst3_host::scan::default_search_paths());
-    bundles
-        .iter()
-        .filter(|b| b.to_string_lossy().contains("lsp-plugins"))
-        .flat_map(|b| vst3_host::scan::scan_bundle(b).unwrap_or_default())
-        .filter(|d| d.name.contains("Compressor") || d.name.contains("Gate"))
-        .collect()
+fn lsp_plugins(format: PluginFormat) -> Vec<PluginDescriptor> {
+    let scanned: Vec<PluginDescriptor> = match format {
+        PluginFormat::Vst3 => {
+            let bundles = vst3_host::scan::find_bundles(&vst3_host::scan::default_search_paths());
+            bundles.iter().filter(|b| b.to_string_lossy().contains("lsp-plugins")).flat_map(|b| vst3_host::scan::scan_bundle(b).unwrap_or_default()).collect()
+        }
+        PluginFormat::Clap => {
+            let files = clap_host::scan::find_files(&clap_host::scan::default_search_paths());
+            files.iter().filter(|f| f.to_string_lossy().contains("lsp-plugins")).flat_map(|f| clap_host::scan::scan_file(f).unwrap_or_default()).collect()
+        }
+    };
+    scanned.into_iter().filter(|d| d.name.contains("Compressor") || d.name.contains("Gate")).collect()
 }
 
 fn main() {
     let mut args = std::env::args().skip(1);
     let tone = PathBuf::from(args.next().expect("audio file"));
     let scratch = PathBuf::from(args.next().expect("scratch dir"));
-    let plugins = lsp_plugins();
+    for (format, name) in [(PluginFormat::Vst3, "vst3"), (PluginFormat::Clap, "clap")] {
+        println!("== {}", name.to_uppercase());
+        let dir = scratch.join(name);
+        std::fs::create_dir_all(&dir).unwrap();
+        run(format, &tone, &dir);
+    }
+    std::process::exit(FAILED.load(std::sync::atomic::Ordering::Relaxed) as i32);
+}
+
+fn run(format: PluginFormat, tone: &Path, scratch: &Path) {
+    let plugins = lsp_plugins(format);
     let find = |name: &str| plugins.iter().find(|d| d.name == name).cloned();
     let (Some(comp), Some(gate), Some(mono)) = (find("Sidechain Compressor Stereo"), find("Sidechain Gate Stereo"), find("Sidechain Compressor Mono")) else {
-        println!("SKIP LSP's Sidechain Compressor and Gate aren't installed");
+        println!("SKIP LSP's Sidechain Compressor and Gate aren't installed in this format");
         return;
     };
     for d in [&comp, &gate, &mono] {
-        let (_, c) = vst3_host::instantiate(d, 48000.0, 1024).unwrap();
+        let (_, c) = instantiate_plugin(d, 48000.0, 1024, false).unwrap();
         for b in c.audio_buses() {
             println!("{}: {} \"{}\": {} ch{}", d.name, if b.input { "in " } else { "out" }, b.name, b.channels, if b.aux { ", aux" } else { "" });
         }
@@ -95,8 +110,8 @@ fn main() {
     std::fs::create_dir_all(&s.dir).unwrap();
     // The source comes after the plug-in's track, so the key has to reorder them. It's heard only
     // through the key: taken before its fader, which is all the way down.
-    let main = tone_track(&mut s, &tone);
-    let key = tone_track(&mut s, &tone);
+    let main = tone_track(&mut s, tone);
+    let key = tone_track(&mut s, tone);
     s.update_track(key, TrackPatch { volume_db: Some(-96.0), ..Default::default() });
     let dry = level_of(&mut s);
 
@@ -278,7 +293,7 @@ fn main() {
     s.delete_track(copy);
     mute(&mut s, main, false);
     let strip = s.copy_strip(main).unwrap();
-    let other = tone_track(&mut s, &tone);
+    let other = tone_track(&mut s, tone);
     mute(&mut s, main, true);
     s.paste_strip(&[other], &strip).unwrap();
     let pasted = s.project.track(other).unwrap().inserts[0].clone().unwrap();
@@ -410,24 +425,22 @@ fn main() {
         &format!("a project from before side-chains loads with the aux input inactive ({old:.2} dB)"),
         slot.sidechain.is_none() && s.vst_key_active(slot.uid) == Some(false) && (old - dry).abs() < 0.5,
     );
-
-    std::process::exit(FAILED.load(std::sync::atomic::Ordering::Relaxed) as i32);
 }
 
 /// Switching the aux input while a steady signal plays, on the processor directly: no click, no
 /// change to the plug-in's settings.
 fn gate_click_and_state(comp: &PluginDescriptor) {
     const BLOCK: usize = 256;
-    let (mut p, mut c) = vst3_host::instantiate(comp, 48000.0, BLOCK).unwrap();
+    let (mut p, mut c) = instantiate_plugin(comp, 48000.0, BLOCK, false).unwrap();
     let id = |name: &str| c.parameters().iter().find(|x| x.name == name).map(|x| x.id).unwrap();
     let (ty, th, ra) = (id("Sidechain type"), id("Attack threshold"), id("Ratio"));
     c.edit_param(ty, 2.0 / 3.0);
     c.edit_param(th, 0.1);
     c.edit_param(ra, 1.0);
-    let t = plugin_api::TransportInfo { sample_rate: 48000.0, tempo: 120.0, sig_num: 4, sig_den: 4, ..Default::default() };
+    let t = daw_engine::plugin_api::TransportInfo { sample_rate: 48000.0, tempo: 120.0, sig_num: 4, sig_den: 4, ..Default::default() };
     let mut phase = 0.0f32;
     let mut last = 0.0f32;
-    let mut run = |p: &mut vst3_host::PluginProcessor, key: bool| {
+    let mut run = |p: &mut Box<dyn Processor>, key: bool| {
         let mut l = [0.0f32; BLOCK];
         for x in l.iter_mut() {
             *x = 0.3 * phase.sin();

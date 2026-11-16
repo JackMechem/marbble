@@ -172,7 +172,7 @@ name = "CLAP plug-in hosting"
 status = "partial"
 tier = "platform"
 issue = 105
-note = "Scanned, loaded, played, automated and saved like VST3s, tagged CLAP in the lists, with their own windows on Linux and macOS (embedded, not floating); no side-chains, extra outputs or latency changes yet (#560)."
+note = "Scanned, loaded, played, automated and saved like VST3s, tagged CLAP in the lists, with their own windows on Linux and macOS, side-chain inputs, multi-output instruments, restarts for latency changes, offline render mode and thread-pool tasks; a plug-in whose window only floats has none, and unused ports aren't switched off."
 
 [[feature]]
 section = "Operating systems and plug-in formats"

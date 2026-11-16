@@ -216,7 +216,7 @@ name = "Side-chain inputs for plug-ins"
 status = "done"
 tier = "pro"
 logic = "570"
-note = "The built-in Compressor, Noise Gate and De-Esser and any VST3 with a side-chain input, keyed pre- or post-fader from any track or aux."
+note = "The built-in Compressor, Noise Gate and De-Esser and any VST3 or CLAP plug-in with a side-chain input, keyed pre- or post-fader from any track or aux."
 
 [[feature]]
 section = "Mixing: professional"

@@ -4,20 +4,21 @@
 //! freeze file, each aux its output's render, through the aux's own (latent) plug-in and fader.
 //! Undo, redo, unfreezing and reopening bring the right state back. Bounce in Place keeps the
 //! auxes playing live, or with Instrument Multi-Output takes them into the bounce and mutes them;
-//! either way the mix sounds the same. Export Region takes the main output. Prints SKIP when the
-//! plug-in isn't installed.
+//! either way the mix sounds the same. Export Region takes the main output. Runs with its VST3, then its CLAP
+//! plug-in, printing SKIP for a format it isn't installed in.
 //! usage: multiout_freeze_check <scratch dir>
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use daw_engine::audio_io::AudioConfig;
 use daw_engine::model::{Id, InputSel, Note, TrackKind};
+use daw_engine::plugin_api::PluginFormat;
 use daw_engine::session::{BipOptions, BipSource, BitDepth, MidiContent, RenderOptions, TrackPatch};
 use daw_engine::Session;
 
 #[path = "common/multi_sampler.rs"]
 mod multi_sampler;
-use multi_sampler::{find_plugin, load_samples, peak, sine, wait_for_samples, NOTE_ONE, PLUGIN};
+use multi_sampler::{find_plugin, load_samples, peak, sine, wait_for_samples, FORMATS, NOTE_ONE, PLUGIN};
 
 /// When the two instruments play (each has its sample's 0.2 s at 48 kHz in here).
 const A: (i64, i64) = (0, 12_000);
@@ -80,8 +81,20 @@ fn plays_again(s: &mut Session, inst: Id, again: &mut dyn FnMut(&mut Session)) -
 
 fn main() {
     let scratch = PathBuf::from(std::env::args().nth(1).expect("scratch dir"));
-    let Some(desc) = find_plugin() else {
-        println!("SKIP {PLUGIN} (lsp-plugins) isn't installed: nothing measured");
+    for (format, name) in FORMATS {
+        println!("== {}", name.to_uppercase());
+        let dir = scratch.join(name);
+        std::fs::create_dir_all(&dir).unwrap();
+        run(format, &dir);
+    }
+    if FAILED.load(Ordering::Relaxed) {
+        std::process::exit(1);
+    }
+}
+
+fn run(format: PluginFormat, scratch: &Path) {
+    let Some(desc) = find_plugin(format) else {
+        println!("SKIP {PLUGIN} (lsp-plugins) isn't installed in this format: nothing measured");
         return;
     };
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
@@ -113,7 +126,7 @@ fn main() {
     });
     check("the sampler loads its samples", loaded);
     if !loaded {
-        std::process::exit(1);
+        return;
     }
     let live = mix(&mut s);
     let live_auxes = [strip(&mut s, auxes[0]), strip(&mut s, auxes[1])];
@@ -233,8 +246,4 @@ fn main() {
     let file = exported.ok().and_then(|_| daw_engine::audio_file::decode::decode(&path).ok());
     let d = file.map(|f| diff(&main, &f.channels)).unwrap_or(f32::INFINITY);
     check(&format!("Export Region writes the main output (max diff {d:.2e})"), d < SAME);
-
-    if FAILED.load(Ordering::Relaxed) {
-        std::process::exit(1);
-    }
 }

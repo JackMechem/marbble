@@ -893,7 +893,7 @@ Hosting plug-ins, their windows and settings, formats and platforms, Smart Contr
 - ✓ Linux build with desktop entry and icons (Nix flake and other distributions)
 - ◐ Windows and macOS builds: Released as an NSIS installer and .dmg bundles, but early and less tested; plug-in editor windows are not on Windows yet.
 - ◐ Plug-in editor windows on Windows (HWND) and macOS (NSView) ([#99](https://github.com/JackMechem/marbble/issues/99)): macOS done.
-- ◐ CLAP plug-in hosting ([#105](https://github.com/JackMechem/marbble/issues/105)): Scanned, loaded, played, automated and saved like VST3s, tagged CLAP in the lists, with their own windows on Linux and macOS (embedded, not floating); no side-chains, extra outputs or latency changes yet (#560).
+- ◐ CLAP plug-in hosting ([#105](https://github.com/JackMechem/marbble/issues/105)): Scanned, loaded, played, automated and saved like VST3s, tagged CLAP in the lists, with their own windows on Linux and macOS, side-chain inputs, multi-output instruments, restarts for latency changes, offline render mode and thread-pool tasks; a plug-in whose window only floats has none, and unused ports aren't switched off.
 - ○ Plug-in editors under native Wayland (they currently run through XWayland) ([#93](https://github.com/JackMechem/marbble/issues/93))
 - ○ Audio Units hosting on macOS ([#106](https://github.com/JackMechem/marbble/issues/106))
 - ○ VST2 hosting

@@ -171,10 +171,13 @@ it too.
   `automation_check` and `bounce_check`, which print `SKIP` without them.
   `vst_sidechain_check`, `multiout_check`, `multiout_freeze_check`, `vst_tails_check`,
   `vst_undo_check`, `vst_settings_check` and `clap_check` find LSP's plug-ins themselves, so
-  they're in the script and `SKIP` where they aren't installed. `vst_undo_check` runs its undo
-  checks on the CLAP versions of LSP's Compressor and ZamCompX2 too; `clap_check` compares CLAP
-  plug-ins with their VST3s (the same render to the bit), scans out of process with itself as the
-  scanner, and counts allocations with CLAP plug-ins playing.
+  they're in the script and `SKIP` where they aren't installed. `vst_sidechain_check`,
+  `multiout_check`, `multiout_freeze_check` and `vst_tails_check` run once with LSP's VST3s and
+  once with its CLAP plug-ins; `vst_undo_check` runs its undo checks on the CLAP versions of LSP's
+  Compressor and ZamCompX2 too; `clap_check` compares CLAP plug-ins with their VST3s (the same
+  render to the bit), scans out of process with itself as the scanner, counts allocations with CLAP
+  plug-ins playing, and restarts LSP's CLAP Limiter for a new lookahead while the engine plays on a
+  thread of its own.
 - **Needs a real output device, so run by hand on macOS:** `workgroup_check` plays silence to the
   default output (never an input) on three real-time workers and checks they joined the device's IO
   workgroup, before and after reopening it. It prints `SKIP` without an output device or elsewhere

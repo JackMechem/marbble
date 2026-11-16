@@ -1,7 +1,8 @@
 //! Bounce and export.
 //!
 //! Renders run as async commands, off the main thread, so the window stays responsive. They hold
-//! the session for the whole render; the UI keeps a busy sheet up meanwhile.
+//! the session for the whole render; the UI keeps a busy sheet up meanwhile. Around each, the
+//! plug-ins are told on the main thread that a render is under way (`offline`).
 
 use super::*;
 
@@ -14,6 +15,28 @@ pub(super) fn progress(app: &tauri::AppHandle) -> impl FnMut(f64) {
             last = f;
             let _ = app.emit("bounce-progress", f);
         }
+    }
+}
+
+/// Runs `render` (on this command's thread) with the plug-ins told a render is under way: a CLAP
+/// plug-in's render mode is set on the main thread, which the render isn't on
+/// (`Session::set_plugins_offline`).
+pub(super) fn offline<T>(app: &tauri::AppHandle, state: &State<AppState>, render: impl FnOnce() -> T) -> T {
+    plugins_offline(app, state, true);
+    let out = render();
+    plugins_offline(app, state, false);
+    out
+}
+
+fn plugins_offline(app: &tauri::AppHandle, state: &State<AppState>, on: bool) {
+    let session = state.session.clone();
+    let (tx, rx) = std::sync::mpsc::channel();
+    let sent = app.run_on_main_thread(move || {
+        session.lock().set_plugins_offline(on);
+        let _ = tx.send(());
+    });
+    if sent.is_ok() {
+        let _ = rx.recv();
     }
 }
 
@@ -30,7 +53,7 @@ pub fn export_targets(state: State<AppState>, ids: Option<Vec<Id>>) -> Vec<Id> {
 #[tauri::command(async)]
 pub fn bounce_project(app: tauri::AppHandle, state: State<AppState>, path: String, options: RenderOptions) -> R<BounceResult> {
     let mut p = progress(&app);
-    with(&state, |s| s.bounce_project(&PathBuf::from(path), &options, &mut p)).map_err(|e| e.to_string())
+    offline(&app, &state, || with(&state, |s| s.bounce_project(&PathBuf::from(path), &options, &mut p))).map_err(|e| e.to_string())
 }
 
 /// Export All Tracks, or with `ids` Export Selected Tracks.
@@ -38,9 +61,11 @@ pub fn bounce_project(app: tauri::AppHandle, state: State<AppState>, path: Strin
 pub fn export_tracks(app: tauri::AppHandle, state: State<AppState>, dir: String, options: RenderOptions, ids: Option<Vec<Id>>) -> R<BounceResult> {
     let mut p = progress(&app);
     let dir = PathBuf::from(dir);
-    with(&state, |s| match ids {
-        Some(ids) => s.export_selected_tracks(&dir, &ids, &options, &mut p),
-        None => s.export_tracks(&dir, &options, &mut p),
+    offline(&app, &state, || {
+        with(&state, |s| match ids {
+            Some(ids) => s.export_selected_tracks(&dir, &ids, &options, &mut p),
+            None => s.export_tracks(&dir, &options, &mut p),
+        })
     })
     .map_err(|e| e.to_string())
 }
@@ -48,7 +73,7 @@ pub fn export_tracks(app: tauri::AppHandle, state: State<AppState>, dir: String,
 #[tauri::command(async)]
 pub fn export_region(app: tauri::AppHandle, state: State<AppState>, id: Id, path: String, options: RenderOptions) -> R<BounceResult> {
     let mut p = progress(&app);
-    with(&state, |s| s.export_region(id, &PathBuf::from(path), &options, &mut p)).map_err(|e| e.to_string())
+    offline(&app, &state, || with(&state, |s| s.export_region(id, &PathBuf::from(path), &options, &mut p))).map_err(|e| e.to_string())
 }
 
 /// Bounce in Place for `ids` (tracks), or for `regions` when that isn't empty. The render runs
@@ -57,7 +82,7 @@ pub fn export_region(app: tauri::AppHandle, state: State<AppState>, id: Id, path
 #[tauri::command(async)]
 pub fn bounce_in_place(app: tauri::AppHandle, state: State<AppState>, ids: Vec<Id>, regions: Vec<Id>, options: BipOptions) -> R<Made> {
     let mut p = progress(&app);
-    let renders = with(&state, |s| s.render_in_place(&ids, &regions, &options, &mut p)).map_err(|e| e.to_string())?;
+    let renders = offline(&app, &state, || with(&state, |s| s.render_in_place(&ids, &regions, &options, &mut p))).map_err(|e| e.to_string())?;
     let session = state.session.clone();
     let (tx, rx) = std::sync::mpsc::channel();
     app.run_on_main_thread(move || {

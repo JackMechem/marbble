@@ -1678,7 +1678,7 @@ aren't listening to (spare takes, say) cost nothing.
   keeps its own switch, which counts again when the stack is back on.
 - **Auxes:** an Off aux passes nothing. Tracks sending to it play on and just lose that send.
   Stereo Out has no power button.
-- **Side-chains:** an effect or VST3 keyed from an Off track hears silence.
+- **Side-chains:** an effect or plug-in keyed from an Off track hears silence.
 - **Mute and Solo** work independently: an Off track that is unmuted stays silent, and comes back
   with whatever Mute and Solo are set to.
 - **Recording:** an Off track can't record or monitor its input. It keeps its R button, and
@@ -2453,8 +2453,8 @@ that holds a sampler's samples.
   effects only into Audio FX slots.
 - **Settings:** a VST3's or CLAP plug-in's right-click menu also has **Compare**, **Copy Settings** and **Paste
   Settings**, which keep the instance (see [Presets](#presets)).
-- **Side chain:** a VST3 with a side-chain input (LSP's Sidechain Compressor and Gate, say) has
-  a **Side Chain** item at the top of its slot's menus, the arrow and the right-click, since its
+- **Side chain:** a VST3 or CLAP plug-in with a side-chain input (LSP's Sidechain Compressor
+  and Gate, say) has a **Side Chain** item at the top of its slot's menus, the arrow and the right-click, since its
   editor is a window of its own. Pick a track and it keys the plug-in as a [built-in
   effect's](#built-in-effects) Side Chain does, Pre / Post Fader included; **None** turns it off.
   The slot shows **SC**, and its tooltip the source. Choosing a source or None makes the plug-in
@@ -2491,9 +2491,14 @@ own windows like VST3s: inserting one opens its window, clicking its name opens 
 window follows the display's scale and resizes either way. Edits in its window are undo steps and
 automation writes, as a VST3's are. A CLAP plug-in whose window can only float on its own (rare)
 has none in Marbble yet; its parameters are still in the track's automation lanes, where you can
-draw or record them, and a control surface or MIDI Learn can move them. Not yet for CLAP plug-ins:
-side-chain inputs, extra outputs of multi-output instruments, and a latency change that needs the
-plug-in restarted.
+draw or record them, and a control surface or MIDI Learn can move them. A CLAP plug-in's
+side-chain input and a multi-output CLAP instrument's extra outputs work as a VST3's do (see Side
+chain above and [Multi-output instruments](#multi-output-instruments)). When a CLAP plug-in
+changes its latency (a limiter's lookahead, say) it asks to be restarted: its track fades to the
+dry signal for a moment while it restarts, then back in, and delay compensation follows; the
+other tracks play on. Bounces, exports, Bounce in Place and Freeze tell CLAP plug-ins that
+support it that they're rendering offline, so they may use a higher quality there, and play their
+tails out as a VST3's are.
 Marbble looks for `.clap` files in `$CLAP_PATH` and the standard folders: `~/.clap` and `/usr/lib/clap` on Linux (and NixOS's `/run/current-system/sw/lib/clap`,
 `~/.nix-profile/lib/clap` and the per-user profile), `~/Library/Audio/Plug-Ins/CLAP` and
 `/Library/Audio/Plug-Ins/CLAP` on macOS, and `Common Files\CLAP` on Windows, as well as in the
@@ -2872,14 +2877,16 @@ mute/solo and an output. It plays whatever its bus receives.
 
 ### Multi-output instruments
 
-A drum sampler or similar VST3 instrument can have outputs besides its main one, each drum on its
+A drum sampler or similar VST3 or CLAP instrument can have outputs besides its main one, each drum on its
 own. As in Logic, each can get a strip of its own:
 
 - An instrument strip whose plug-in has extra outputs shows a **+** next to its R button. Each
   click makes a new aux for the next output with no aux on it, named after the track and the
   output ("Drums Direct out 0"), with its own fader, pan, plug-ins and sends. One undo removes it.
-  The + greys out when every output has an aux. An output runs only while it has an aux; adding
-  or removing one fades the instrument out and back in for a few milliseconds.
+  The + greys out when every output has an aux. A VST3's output runs only while it has an aux;
+  adding or removing one fades the instrument out and back in for a few milliseconds. A CLAP
+  instrument plays all its outputs all the time, so adding or removing an aux doesn't interrupt
+  it.
 - The aux's **Input** slot shows where its audio comes from ("Drums: Direct out 0"). Sends and
   outputs set to its bus still reach it too.
 - The main output plays through the instrument's strip as before. Whether a sound also leaves
@@ -4308,9 +4315,9 @@ its package rather than a copied binary.
   own fields stays there; Esc doesn't close the window. On Linux only menu shortcuts work while
   a plug-in's window is in front. The input level check works on Linux and macOS, not Windows. On Windows and macOS only
   the system's default audio driver is available (no ASIO).
-- **Plug-in formats:** VST3 and CLAP; no AU or VST2. CLAP plug-ins have no side-chain inputs or
-  extra outputs, a latency change that needs a restart isn't followed, and one whose window can
-  only float has no window.
+- **Plug-in formats:** VST3 and CLAP; no AU or VST2. A CLAP plug-in whose window can only float
+  has no window, and a CLAP plug-in's new latency counts once it has restarted, about 30 ms after
+  the change.
 - **Tempo:** a region's length stays in samples when it is moved across a tempo change (only
   its start follows the bars and beats). Move MIDI Regions with Tempo doesn't move automation
   or markers, isn't applied to base-tempo edits in Project Settings, and isn't remembered

@@ -81,6 +81,16 @@ impl Port {
         Port { channels, buffers, ptrs }
     }
 
+    /// Puts `n` frames of one channel on the first, silence on the rest.
+    pub(super) fn put_mono(&mut self, x: &[f32], n: usize) {
+        if let Some((first, rest)) = self.buffers.split_first_mut() {
+            first[..n].copy_from_slice(&x[..n]);
+            for b in rest {
+                b[..n].fill(0.0);
+            }
+        }
+    }
+
     /// Puts `n` frames of a stereo pair on the first two channels (mixed to one on a mono port),
     /// silence on the rest.
     pub(super) fn put_stereo(&mut self, l: &[f32], r: &[f32], n: usize) {
@@ -130,13 +140,42 @@ pub(super) fn bus_layouts(inputs: &[PortInfo], outputs: &[PortInfo]) -> Vec<BusL
     side(inputs, true).into_iter().chain(side(outputs, false)).collect()
 }
 
-/// The output buses the engine can route. Only the main one for now: extra output ports come with
-/// multi-output support (#560).
+/// The output ports in the engine's bus order: the main one first, then the rest as the plug-in
+/// lists them. Bus `i` is port `order[i]`.
+pub(super) fn bus_order(outputs: &[PortInfo]) -> Vec<usize> {
+    let main = main_port(outputs);
+    main.into_iter().chain((0..outputs.len()).filter(|&i| Some(i) != main)).collect()
+}
+
+/// The output buses the engine can route, in `bus_order`. Only the main one starts in use: the
+/// session says which others auxes take (`set_active_outputs`).
 pub(super) fn output_buses(outputs: &[PortInfo]) -> Vec<OutputBus> {
-    let Some(main) = main_port(outputs) else { return Vec::new() };
-    let p = &outputs[main];
-    let name = if p.name.trim().is_empty() { "Output 1".to_string() } else { p.name.clone() };
-    vec![OutputBus { index: 0, name, channels: p.channels as u32, active: true }]
+    bus_order(outputs)
+        .into_iter()
+        .enumerate()
+        .map(|(bus, port)| {
+            let p = &outputs[port];
+            let name = if p.name.trim().is_empty() { format!("Output {}", bus + 1) } else { p.name.clone() };
+            OutputBus { index: bus as u32, name, channels: p.channels as u32, active: bus == 0 }
+        })
+        .collect()
+}
+
+/// Where a side-chain key goes: the first input port past the main one, or, where that's mono and
+/// so is the next (LSP's "sc_l" and "sc_r"), the key's left channel on one and its right on the
+/// other.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub(super) struct KeyPorts {
+    pub first: Option<usize>,
+    pub right: Option<usize>,
+}
+
+pub(super) fn key_ports(inputs: &[PortInfo]) -> KeyPorts {
+    let main = main_port(inputs);
+    let aux = |i: &usize| Some(*i) != main && inputs[*i].channels > 0;
+    let Some(first) = (0..inputs.len()).find(aux) else { return KeyPorts::default() };
+    let right = Some(first + 1).filter(|i| *i < inputs.len() && aux(i) && inputs[first].channels == 1 && inputs[*i].channels == 1);
+    KeyPorts { first: Some(first), right }
 }
 
 #[cfg(test)]
@@ -172,6 +211,24 @@ mod tests {
     fn ports_past_the_main_ones_are_aux() {
         let buses = bus_layouts(&[port(2, true), port(2, false)], &[port(2, true)]);
         assert_eq!(buses.iter().map(|b| (b.input, b.aux)).collect::<Vec<_>>(), vec![(true, false), (true, true), (false, false)]);
-        assert_eq!(output_buses(&[port(2, false), port(2, true)]).len(), 1);
+    }
+
+    #[test]
+    fn the_main_output_is_bus_0_and_the_rest_follow_in_order() {
+        let outs = [port(2, false), port(2, true), port(1, false)];
+        assert_eq!(bus_order(&outs), [1, 0, 2]);
+        let buses = output_buses(&outs);
+        assert_eq!(buses.iter().map(|b| (b.index, b.channels, b.active)).collect::<Vec<_>>(), [(0, 2, true), (1, 2, false), (2, 1, false)]);
+        assert_eq!(buses[2].name, "Output 3");
+        assert!(output_buses(&[]).is_empty());
+    }
+
+    #[test]
+    fn a_key_goes_to_the_first_aux_input_or_a_mono_pair() {
+        assert_eq!(key_ports(&[port(2, true)]), KeyPorts::default());
+        assert_eq!(key_ports(&[port(2, true), port(2, false)]), KeyPorts { first: Some(1), right: None });
+        assert_eq!(key_ports(&[port(2, true), port(1, false), port(1, false)]), KeyPorts { first: Some(1), right: Some(2) });
+        assert_eq!(key_ports(&[port(2, true), port(1, false), port(2, false)]), KeyPorts { first: Some(1), right: None });
+        assert_eq!(key_ports(&[port(2, false), port(2, true)]), KeyPorts { first: Some(0), right: None }, "the main port may come second");
     }
 }
