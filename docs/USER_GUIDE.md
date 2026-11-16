@@ -1557,7 +1557,7 @@ pan, EQ, plug-in slots and settings, sends, automation, recordings, imports, mar
 folders and Project Settings. The Edit menus show what will be undone, and a toast confirms it. A
 run of drags on one control counts as one step.
 
-That includes a parameter moved in a VST3's own window, with its name in the step ("TONE3000:
+That includes a parameter moved in a plug-in's own window (VST3 or CLAP), with its name in the step ("TONE3000:
 Gain"). Each drag there is one step, and Undo and Redo put the plug-in and its window back. Moves of
 a parameter while automation is being written belong to that pass's **Write Automation** step
 instead; a controller assignment moving a VST3's parameter, and automation playing it, make no step.
@@ -2451,7 +2451,7 @@ that holds a sampler's samples.
   tracks selected, **Paste to Selected Tracks** does them all. Each paste is one undo step, and
   the copy survives opening another project. Instruments paste only into instrument slots,
   effects only into Audio FX slots.
-- **Settings:** a VST3's right-click menu also has **Compare**, **Copy Settings** and **Paste
+- **Settings:** a VST3's or CLAP plug-in's right-click menu also has **Compare**, **Copy Settings** and **Paste
   Settings**, which keep the instance (see [Presets](#presets)).
 - **Side chain:** a VST3 with a side-chain input (LSP's Sidechain Compressor and Gate, say) has
   a **Side Chain** item at the top of its slot's menus, the arrow and the right-click, since its
@@ -2462,7 +2462,7 @@ that holds a sampler's samples.
   Set the plug-in's own key setting to external (LSP's "Sidechain type": External) to hear this
   input. Instruments can't be keyed.
 - Plug-in settings are saved in the project and restored on undo, including what you change in
-  a VST3's own window (see [Undo](#undo)).
+  a plug-in's own window (see [Undo](#undo)).
 - Settings › Plug-ins (the Plug-in Manager) lists every scanned plug-in and lets you switch
   some off, so they don't appear in the Library and slot menus (projects that use them still
   load them), with each one's format, VST3 or CLAP. It also takes extra plug-in folders and
@@ -2482,16 +2482,18 @@ that holds a sampler's samples.
 - Categories and names follow the plug-in's id in its file (a VST3 class id, a CLAP id), so they
   survive a rescan, and the file being moved to another folder.
 
-Marbble hosts **VST3** and **CLAP** plug-ins. VST3 editor windows are available on Linux (X11;
+Marbble hosts **VST3** and **CLAP** plug-ins. Their editor windows are available on Linux (X11;
 see [Troubleshooting](#plug-in-windows-and-wayland)) and macOS, where they float
 above Marbble's windows like Logic's and hide while another app is in front.
 
-**CLAP plug-ins** load, play, save their state with the project and can be automated like VST3s,
-but their own windows don't open yet: clicking one's name says so, and inserting one doesn't try.
-Their parameters are in the track's automation lanes, where you can draw or record them, and a
-control surface or MIDI Learn can move them. Edits a CLAP plug-in reports itself are undo steps
-and automation writes, as a VST3's are. Not yet for CLAP plug-ins: side-chain inputs, extra
-outputs of multi-output instruments, and a latency change that needs the plug-in restarted.
+**CLAP plug-ins** load, play, save their state with the project, can be automated, and open their
+own windows like VST3s: inserting one opens its window, clicking its name opens it again, and the
+window follows the display's scale and resizes either way. Edits in its window are undo steps and
+automation writes, as a VST3's are. A CLAP plug-in whose window can only float on its own (rare)
+has none in Marbble yet; its parameters are still in the track's automation lanes, where you can
+draw or record them, and a control surface or MIDI Learn can move them. Not yet for CLAP plug-ins:
+side-chain inputs, extra outputs of multi-output instruments, and a latency change that needs the
+plug-in restarted.
 Marbble looks for `.clap` files in `$CLAP_PATH` and the standard folders: `~/.clap` and `/usr/lib/clap` on Linux (and NixOS's `/run/current-system/sw/lib/clap`,
 `~/.nix-profile/lib/clap` and the per-user profile), `~/Library/Audio/Plug-Ins/CLAP` and
 `/Library/Audio/Plug-Ins/CLAP` on macOS, and `Common Files\CLAP` on Windows, as well as in the
@@ -2838,7 +2840,7 @@ to the previous and next preset. Loading a preset is one undo step.
   same plug-in, in this project or another, as one undo step. Unlike the slot's **Copy
   Plug-in**, the instance stays where it is. Paste Settings is greyed out until settings of the
   same plug-in are copied.
-- VST3 plug-ins use their own preset browsers; Marbble saves their state with the project and
+- VST3 and CLAP plug-ins use their own preset browsers; Marbble saves their state with the project and
   copies it with Copy Plug-in, but has no preset files for them. Their windows are their own, with
   no Marbble header, so their **Compare**, **Copy Settings** and **Paste Settings** are in the
   slot's right-click menu, in the Mixer or the inspector. Paste Settings loads the copied state into
@@ -3629,7 +3631,7 @@ per project, in [Project Settings › Metronome](#metronome).
 | Backups | Versions of each project alternative that saves keep, 0 to 100 (0 keeps one, as `project.json.bak`) | 10 |
 | Undo Steps | 10 to 1000 | 100 |
 | Unsaved Changes | Ask before quitting or closing a project with unsaved changes | On |
-| Open Effect Panels | Floating; Docked in the bottom section; Separate windows (VST3 editors always open in their own window) | Floating |
+| Open Effect Panels | Floating; Docked in the bottom section; Separate windows (VST3 and CLAP editors always open in their own window) | Floating |
 | Update Channel | Stable (final releases); Unstable (alphas, betas and release candidates too) | Follows the version you run: Unstable for a prerelease, Stable for a final release |
 | Automatic Check | Check for updates at launch | On |
 
@@ -4306,8 +4308,9 @@ its package rather than a copied binary.
   own fields stays there; Esc doesn't close the window. On Linux only menu shortcuts work while
   a plug-in's window is in front. The input level check works on Linux and macOS, not Windows. On Windows and macOS only
   the system's default audio driver is available (no ASIO).
-- **Plug-in formats:** VST3 and CLAP; no AU or VST2. CLAP plug-ins have no windows yet, no
-  side-chain inputs or extra outputs, and a latency change that needs a restart isn't followed.
+- **Plug-in formats:** VST3 and CLAP; no AU or VST2. CLAP plug-ins have no side-chain inputs or
+  extra outputs, a latency change that needs a restart isn't followed, and one whose window can
+  only float has no window.
 - **Tempo:** a region's length stays in samples when it is moved across a tempo change (only
   its start follows the bars and beats). Move MIDI Regions with Tempo doesn't move automation
   or markers, isn't applied to base-tempo edits in Project Settings, and isn't remembered

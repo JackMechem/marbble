@@ -63,7 +63,7 @@ name = "Plug-in window header"
 status = "partial"
 tier = "pro"
 logic = "568"
-note = "Built-in effect and instrument panels have bypass, presets, Compare, Copy and Paste Settings and the side-chain pop-up; VST3 editor windows have no header, so their Compare, Copy and Paste Settings and Side Chain are in the slot's right-click menu."
+note = "Built-in effect and instrument panels have bypass, presets, Compare, Copy and Paste Settings and the side-chain pop-up; VST3 and CLAP editor windows have no header, so their Compare, Copy and Paste Settings and Side Chain are in the slot's right-click menu."
 
 [[feature]]
 section = "Plug-in windows and settings"
@@ -172,7 +172,7 @@ name = "CLAP plug-in hosting"
 status = "partial"
 tier = "platform"
 issue = 105
-note = "Scanned, loaded, played, automated and saved like VST3s, tagged CLAP in the lists; no windows yet (#559), nor side-chains, extra outputs or latency changes (#560)."
+note = "Scanned, loaded, played, automated and saved like VST3s, tagged CLAP in the lists, with their own windows on Linux and macOS (embedded, not floating); no side-chains, extra outputs or latency changes yet (#560)."
 
 [[feature]]
 section = "Operating systems and plug-in formats"

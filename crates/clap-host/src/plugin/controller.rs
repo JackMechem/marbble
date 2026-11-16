@@ -44,6 +44,10 @@ impl Controller for ClapController {
 
     fn set_unresponsive(&mut self, on: bool) {
         self.unresponsive = on;
+        self.shared.inst.host.quiet.store(on, Ordering::Relaxed);
+        if let Some(e) = &self.editor {
+            e.set_quiet(on);
+        }
     }
 
     fn instance(&self) -> u64 {
@@ -54,24 +58,29 @@ impl Controller for ClapController {
         !self.unresponsive
     }
 
-    /// Editor windows come with #559.
+    /// Whether its GUI can be embedded in a window here (floating-only ones can't).
     fn has_editor(&self) -> bool {
-        false
+        !self.shared.gui.is_null()
     }
 
     fn editor_open(&self) -> bool {
-        false
+        self.editor.is_some()
     }
 
-    fn open_editor(&mut self, _title: &str) -> Result<(), String> {
-        Err(format!("Marbble can't open CLAP plug-in windows yet: {}'s parameters are in its track's automation lanes", self.desc.name))
+    fn open_editor(&mut self, title: &str) -> Result<(), String> {
+        self.open_window(title)
     }
 
-    fn close_editor(&mut self) {}
+    fn close_editor(&mut self) {
+        self.close_window();
+    }
 
-    /// Answers the plug-in's requests: `on_main_thread` when it asked for a callback, and notes
-    /// what it said changed.
+    /// Answers the plug-in's requests: `on_main_thread` when it asked for a callback, what it asked
+    /// of its editor window, and notes what it said changed.
     fn idle(&mut self) {
+        if crate::host::is_main() {
+            self.window_idle();
+        }
         if !self.callable() {
             return;
         }

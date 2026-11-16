@@ -25,7 +25,6 @@ use plugin_api::HostSet;
 pub use plugin_api::{instances_made, BusLayout, Gesture, KeyInput, MidiEvent, ParamInfo, PluginState, TransportInfo};
 
 mod controller;
-pub use controller::close_stranded_editors;
 mod instantiate;
 pub use instantiate::*;
 mod api;
@@ -189,7 +188,7 @@ pub struct PluginController {
     pub desc: PluginDescriptor,
     shared: Arc<Shared>,
     out_rx: rtrb::Consumer<(u32, f64)>,
-    editor: Option<crate::editor::Editor>,
+    editor: Option<plugin_editor::Editor>,
     gestures_rx: rtrb::Consumer<Gesture>,
     /// The plug-in said its latency changed (`restartComponent(kLatencyChanged)`) since the
     /// last `take_latency_changed`.

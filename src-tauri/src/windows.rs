@@ -154,7 +154,7 @@ const PLUGIN_KEY_EVENT: &str = "plugin-key";
 /// Logic's do (macOS; elsewhere editors don't report keys).
 pub fn forward_plugin_keys<R: Runtime>(app: &AppHandle<R>) {
     let app = app.clone();
-    vst3_host::keys::set_key_forwarder(Box::new(move |k| {
+    plugin_editor::keys::set_key_forwarder(Box::new(move |k| {
         let _ = app.emit_to(EventTarget::webview_window("main"), PLUGIN_KEY_EVENT, k);
     }));
 }

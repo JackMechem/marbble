@@ -32,7 +32,8 @@ Marbble is a Cargo workspace of five crates and a React frontend:
 | `daw-engine` | `crates/engine` | The audio engine: the project model, the real-time graph, the session that edits the project, devices, recording, MIDI, built-in effects and instruments. No UI code. |
 | `plugin-api` | `crates/plugin-api` | What the engine asks of a hosted plug-in, whatever its format: the `Processor` (audio thread) and `Controller` (main thread) traits, descriptors, MIDI, transport, parameters, state. |
 | `vst3-host` | `crates/vst3-host` | VST3 hosting on the `vst3` bindings: loading and scanning bundles, the host's COM objects, the real-time processing wrapper, editor windows. |
-| `clap-host` | `crates/clap-host` | CLAP hosting on the `clap-sys` bindings: loading and scanning `.clap` files, the host's side of the API, the two halves. No editor windows yet. |
+| `clap-host` | `crates/clap-host` | CLAP hosting on the `clap-sys` bindings: loading and scanning `.clap` files, the host's side of the API, the two halves, editors. |
+| `plugin-editor` | `crates/plugin-editor` | Plug-in editor windows for both formats: the window a plug-in's GUI is embedded in on Linux (X11) and macOS, the display's scale, resizes, the main loop plug-ins' timers and file descriptors run on, keys an editor doesn't use. |
 | `daw` | `src-tauri` | The Tauri 2 app: the commands the frontend calls, the native menu bar, settings and recent files, and the timers that drive the session. The binary is `daw`; packages also install it as `marbble`. |
 | frontend | `src` | React 19 and TypeScript, built with Vite. The Tracks area, rulers, editors and meters are drawn on canvases. |
 
@@ -108,7 +109,7 @@ helpers and the all-features project.
 ### The VST3 host: `crates/vst3-host/src`
 
 ```text
-lib.rs              the public surface: instantiate, scan, editors
+lib.rs              the public surface: instantiate, scan
 module.rs           loading a bundle and its plug-in factory
 scan.rs             finding bundles on disk
 plugin.rs           the two halves' types; plugin/ makes and runs them
@@ -117,8 +118,7 @@ plugin/             instantiate.rs, processor.rs (audio thread), controller.rs (
 process.rs          preallocated parameter queues and event lists
 host.rs             the host's COM objects (IHostApplication, IComponentHandler…)
 stream.rs           an in-memory IBStream for state
-editor/             editor windows: linux.rs (X11, with x11_scale.rs and scale_watch.rs), macos.rs, other.rs
-keys.rs             keys an editor didn't use, passed on to the app
+editor/             the IPlugView as a plugin_editor::View, IPlugFrame, and run_loop.rs (IRunLoop on Linux)
 macos_bundle.rs     CFBundle loading and dyld's messages on macOS
 ```
 
@@ -136,12 +136,28 @@ clap-host/
   entry.rs          loading a .clap file, its entry and factory
   scan.rs           the CLAP folders
   features.rs       CLAP features as VST3-style subcategories
-  host.rs           the clap_host, its extensions, and which thread is which
+  host.rs           the clap_host, its extensions, and which thread is which; host/gui.rs (what the
+                    plug-in asks of its window), host/run_loop.rs (timers and file descriptors, Linux)
+  gui.rs            clap.gui as a plugin_editor::View
   plugin.rs         the two halves' types; plugin/ makes and runs them
-  plugin/           instantiate.rs, processor.rs (audio thread), controller.rs (main thread), ports.rs
+  plugin/           instantiate.rs, processor.rs (audio thread), controller.rs (main thread), editor.rs, ports.rs
   events.rs         preallocated input events, output events as gestures
   params.rs         CLAP's plain parameter values and the engine's normalized ones
   stream.rs         in-memory streams for state
+```
+
+### Plug-in editor windows: `crates/plugin-editor/src`
+
+```text
+lib.rs              the surface: Editor, and gl_isolated
+view.rs             View, what a window asks of a plug-in's GUI (a VST3 IPlugView, a CLAP clap.gui)
+linux.rs            the X11 window and Frame; linux/: event_loop.rs (the app's main loop), x11_scale.rs
+                    and scale_watch.rs (the display's scale), gl.rs (OpenGL isolation), libs.rs (Xlib's
+                    error handlers), poll_loop.rs (a main loop for the examples)
+macos.rs            the NSWindow, passing on keys the plug-in doesn't use
+other.rs            a placeholder elsewhere
+stranded.rs         editors closed while their plug-in was stuck, closed for real once it's gone
+keys.rs             keys an editor didn't use, passed on to the app
 ```
 
 ### The app: `src-tauri/src`
@@ -881,13 +897,10 @@ same `"<base64>:<base64>"` string (a CLAP plug-in's one blob, then nothing).
 - **Parameters and gestures.** The editor's `performEdit` reaches the processor through a ring.
   Its begin, perform and end gestures also go into a ring that `idle` turns into automation writes
   and undo steps.
-- **Editor windows** (`editor/`): an X11 window the plug-in embeds into on Linux, with its run loop
-  on GTK's main loop (`src-tauri/src/glib_loop.rs`) and the display's scale passed on
-  (`editor/x11_scale.rs`), followed while it is open: each editor's X connection hears when
-  `Xft.dpi` or the XSETTINGS change (`editor/scale_watch.rs`), and a view that only takes a scale
-  as it opens is opened again; an NSWindow on macOS, which passes keys the plug-in doesn't use back to
-  the app; none yet on Windows. On native Wayland, the main thread's calls into editors go through
-  `gl_isolated`, which keeps GTK's and the plug-in's OpenGL contexts apart.
+- **Editors** (`editor/`): the plug-in's `IPlugView` is a `plugin_editor::View` in a window of
+  `crates/plugin-editor` (see [Editor windows](#editor-windows)). Its `IPlugFrame::resizeView`
+  resizes the window and tells the view; on Linux its `IRunLoop` puts its file descriptors and
+  timers on the app's main loop.
 
 ### CLAP hosting
 
@@ -924,10 +937,41 @@ of `plugin_api`.
   on a ring for the controller: what an editor's edits are for undo and automation writes.
   `process` starts processing on the first block; `suspend` stops and resets it; a plug-in the
   engine isn't running gets its waiting edits through `params.flush`.
-- **What isn't there yet**: editor windows (#559), side-chain inputs and extra output ports, and
+- **Editors** (`gui.rs`, `plugin/editor.rs`, `host/gui.rs`): a plug-in whose `clap.gui` can be
+  embedded (`CLAP_WINDOW_API_X11` on Linux, `CLAP_WINDOW_API_COCOA` on macOS) gets a window of
+  `crates/plugin-editor`, as a VST3 does: `create`, `set_scale` (Linux), `get_size`,
+  `set_parent` and `show`, then `get_size` again, as DPF's GUIs take the scale only once shown.
+  One whose GUI only floats has no editor. What it asks of its window (`request_resize`,
+  `request_show`, `request_hide`, `closed`) may come from any thread and only sets flags, which
+  `idle` answers. On Linux the host has `timer-support` and `posix-fd-support`: the plug-in's timers
+  and file descriptors run on the app's main loop (`host/run_loop.rs`), its timers wait while it
+  isn't responding, and whatever it left registered goes when it's destroyed.
+- **What isn't there yet**: floating editor windows, side-chain inputs and extra output ports, and
   restarts for a latency change (#560). Its tail is read when it loads and its latency in each
   `idle`, so delay compensation follows a new latency only as far as the plug-in reports it
   without a restart.
+
+### Editor windows
+
+`crates/plugin-editor` makes the window a plug-in's own GUI is embedded in, whatever its format:
+each host crate gives the GUI as a `View` (size, scale, resize constraints, attach and detach), and
+the window does the rest the same way for both.
+
+- **Linux**: an X11 window of its own (XWayland under a Wayland session), the plug-in's GUI
+  embedded in it. The display's scale is read as GTK reads Marbble's (`linux/x11_scale.rs`) and
+  passed on before the size is asked for; while the editor is open its X connection hears when
+  `Xft.dpi` or the XSETTINGS change (`linux/scale_watch.rs`), and a GUI that only takes a scale
+  as it opens is opened again where it was. Resizes go both ways: the user's are passed on within
+  the GUI's constraints, the GUI's own move the window. Each window's X connection, a VST3's
+  `IRunLoop` and a CLAP plug-in's timers and file descriptors run on GTK's main loop
+  (`src-tauri/src/glib_loop.rs`, through `EventLoop`). On native Wayland, the main thread's calls
+  into editors go through `gl_isolated`, which keeps GTK's and the plug-in's OpenGL contexts apart.
+- **macOS**: an NSWindow floating over the project window, the GUI's NSView in it, sizes in
+  points; keys the plug-in doesn't use go back to the app (`keys.rs`).
+- **Windows**: none yet.
+- **A stuck plug-in**: `Editor::set_quiet` holds back every call the host makes into it (see
+  above); closing its window only hides it, and `strand` keeps it until the instance is gone
+  (`close_stranded`, from `idle`).
 
 ### Moving plug-ins and strip settings
 

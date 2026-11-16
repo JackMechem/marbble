@@ -3,6 +3,7 @@
 
 use std::ffi::CString;
 
+use clap_sys::ext::gui::CLAP_EXT_GUI;
 use clap_sys::ext::latency::CLAP_EXT_LATENCY;
 use clap_sys::ext::params::CLAP_EXT_PARAMS;
 use clap_sys::ext::state::CLAP_EXT_STATE;
@@ -39,8 +40,10 @@ pub(super) unsafe fn start(
 ) -> Result<(ClapProcessor, ClapController), String> {
     {
         let p = &*plugin;
+        // Before `init`, from which it may register timers and file descriptors.
+        host.set_plugin(plugin);
         // Until it's activated, an early return destroys it.
-        let unwind = Unwind(plugin);
+        let unwind = Unwind(plugin, &host);
         if !p.init.is_some_and(|f| f(plugin)) {
             return Err("it failed to initialize".into());
         }
@@ -49,6 +52,8 @@ pub(super) unsafe fn start(
         let state = ext(CLAP_EXT_STATE) as *const clap_plugin_state;
         let latency = ext(CLAP_EXT_LATENCY) as *const clap_plugin_latency;
         let tail = ext(CLAP_EXT_TAIL) as *const clap_plugin_tail;
+        let gui = ext(CLAP_EXT_GUI) as *const clap_plugin_gui;
+        let gui = if crate::gui::embeds(plugin, gui) { gui } else { std::ptr::null() };
         let in_ports = ports::audio_ports(plugin, true);
         let out_ports = ports::audio_ports(plugin, false);
         let notes = ports::notes(plugin);
@@ -66,6 +71,7 @@ pub(super) unsafe fn start(
             params: params_ext,
             state,
             latency,
+            gui,
             parked: AtomicBool::new(false),
             inst: ManuallyDrop::new(Instance { plugin, host, _lib: lib }),
         });
@@ -110,6 +116,7 @@ pub(super) unsafe fn start(
             unresponsive: false,
             latency: lat,
             restart_noted: false,
+            editor: None,
         };
         Ok((proc_half, ctrl_half))
     }
@@ -126,15 +133,16 @@ fn ring_out(tail: u32, latency: u32) -> u32 {
 }
 
 /// Destroys a plug-in that `instantiate` gives up on before it's active.
-struct Unwind(*const clap_plugin);
+struct Unwind<'a>(*const clap_plugin, &'a Host);
 
-impl Drop for Unwind {
+impl Drop for Unwind<'_> {
     fn drop(&mut self) {
         unsafe {
             if let Some(f) = (*self.0).destroy {
                 f(self.0);
             }
         }
+        self.1.forget_sources();
     }
 }
 

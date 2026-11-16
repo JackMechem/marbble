@@ -1,5 +1,5 @@
-//! The scale plug-in editors are drawn at on Linux, passed to views that implement
-//! `IPlugViewContentScaleSupport`.
+//! The scale plug-in editors are drawn at on Linux, passed to views that can be told (a VST3
+//! `IPlugViewContentScaleSupport`, a CLAP `gui.set_scale`).
 //!
 //! X11 (and XWayland) has one scale for the whole display, so this is read once per editor from
 //! the same places GTK reads Marbble's own scale: `GDK_SCALE`, then the XSETTINGS

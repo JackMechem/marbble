@@ -761,7 +761,7 @@ The Mixer, automation, surround and Dolby Atmos. 39 of 89 done.
 - ✓ Move or copy plug-ins by dragging between slots
 - ◐ Channel strip types ([#362](https://github.com/JackMechem/marbble/issues/362)): Audio, instrument, aux, summing stack, VCA and Stereo Out; no MIDI, output or master strips. **Beta.**
 - ◐ Reorder strips ([#363](https://github.com/JackMechem/marbble/issues/363)): Follows the track order. **Beta.**
-- ◐ Plug-in windows ([#99](https://github.com/JackMechem/marbble/issues/99)): Built-in effect panels everywhere; a VST3's own editor on Linux/X11 and macOS so far. **Beta.**
+- ◐ Plug-in windows ([#99](https://github.com/JackMechem/marbble/issues/99)): Built-in effect panels everywhere; a VST3's or CLAP plug-in's own editor on Linux/X11 and macOS so far. **Beta.**
 - ○ Mixer modes: Single, Tracks, All
 - ○ Select several strips, or strips by type ([#365](https://github.com/JackMechem/marbble/issues/365)) **Beta.**
 
@@ -876,7 +876,7 @@ Hosting plug-ins, their windows and settings, formats and platforms, Smart Contr
 
 - ✓ Compare edits with the saved setting ([#292](https://github.com/JackMechem/marbble/issues/292))
 - ✓ Plug-in Manager categories and custom names ([#366](https://github.com/JackMechem/marbble/issues/366))
-- ◐ Plug-in window header: Built-in effect and instrument panels have bypass, presets, Compare, Copy and Paste Settings and the side-chain pop-up; VST3 editor windows have no header, so their Compare, Copy and Paste Settings and Side Chain are in the slot's right-click menu.
+- ◐ Plug-in window header: Built-in effect and instrument panels have bypass, presets, Compare, Copy and Paste Settings and the side-chain pop-up; VST3 and CLAP editor windows have no header, so their Compare, Copy and Paste Settings and Side Chain are in the slot's right-click menu.
 - ◐ Load, save, step through and delete plug-in settings (presets): Factory and user presets for the built-in effects and instruments (the Channel EQ among them), shared by every project; none for VST3s.
 - ◐ Copy and paste plug-in settings; reset; default setting: Copy and paste for every plug-in (VST3 state included), Copy and Paste Settings between instances of a plug-in (built-in or VST3), and Reset to Default for built-in plug-ins; no user default setting.
 - ◐ Plug-in undo and redo: In the project's undo history; plug-in windows have no undo and redo of their own.
@@ -893,7 +893,7 @@ Hosting plug-ins, their windows and settings, formats and platforms, Smart Contr
 - ✓ Linux build with desktop entry and icons (Nix flake and other distributions)
 - ◐ Windows and macOS builds: Released as an NSIS installer and .dmg bundles, but early and less tested; plug-in editor windows are not on Windows yet.
 - ◐ Plug-in editor windows on Windows (HWND) and macOS (NSView) ([#99](https://github.com/JackMechem/marbble/issues/99)): macOS done.
-- ◐ CLAP plug-in hosting ([#105](https://github.com/JackMechem/marbble/issues/105)): Scanned, loaded, played, automated and saved like VST3s, tagged CLAP in the lists; no windows yet (#559), nor side-chains, extra outputs or latency changes (#560).
+- ◐ CLAP plug-in hosting ([#105](https://github.com/JackMechem/marbble/issues/105)): Scanned, loaded, played, automated and saved like VST3s, tagged CLAP in the lists, with their own windows on Linux and macOS (embedded, not floating); no side-chains, extra outputs or latency changes yet (#560).
 - ○ Plug-in editors under native Wayland (they currently run through XWayland) ([#93](https://github.com/JackMechem/marbble/issues/93))
 - ○ Audio Units hosting on macOS ([#106](https://github.com/JackMechem/marbble/issues/106))
 - ○ VST2 hosting
