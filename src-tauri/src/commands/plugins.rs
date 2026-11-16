@@ -26,7 +26,7 @@ pub fn set_plugin(state: State<AppState>, track: Id, slot: i64, plugin_id: Strin
         // Built-in effects open their panel in the UI instead; a plug-in without a window of its
         // own (a CLAP one whose window only floats) just goes in.
         if open && !plugin_id.starts_with("builtin:") && s.has_editor(uid) {
-            let title = s.project.track(track).map(|t| t.name.clone()).unwrap_or_else(|| "Stereo Out".into());
+            let title = s.editor_title(track, uid);
             // The plug-in stays inserted; the user hears why its window didn't open.
             if let Err(e) = s.open_editor(uid, &title) {
                 log::warn!("{e}");
