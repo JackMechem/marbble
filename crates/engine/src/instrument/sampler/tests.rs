@@ -3,7 +3,7 @@
 
 use std::sync::Arc;
 
-use vst3_host::MidiEvent;
+use plugin_api::MidiEvent;
 
 use super::map::{LoopBuf, SamplerMap};
 use super::sample::{SampleBuf, SamplePool};

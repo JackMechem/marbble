@@ -12,7 +12,7 @@ use daw_engine::instrument::sampler::sample::SamplePool;
 use daw_engine::instrument::sampler::state::{SamplerState, Zone};
 use daw_engine::instrument::sampler::Sampler;
 use daw_engine::instrument::Instrument;
-use vst3_host::MidiEvent;
+use plugin_api::MidiEvent;
 
 const SR: f32 = 48000.0;
 

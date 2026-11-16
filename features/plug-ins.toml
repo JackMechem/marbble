@@ -12,7 +12,7 @@ tier = "core"
 beta = true
 logic = "578–580"
 issue = 366
-note = "Hide plug-ins, make your own categories and names (kept across rescans), add VST3 folders, rescan, view the scan report."
+note = "Hide plug-ins, make your own categories and names (kept across rescans), add plug-in folders, rescan, view the scan report; each plug-in's format."
 
 [[feature]]
 section = "Plug-in hosting"
@@ -142,7 +142,7 @@ status = "done"
 tier = "pro"
 logic = "579–580"
 issue = 366
-note = "For VST3s; the slot menus and the Library list your categories first, under the names you gave."
+note = "For VST3 and CLAP plug-ins; the slot menus and the Library list your categories first, under the names you gave."
 
 [[feature]]
 section = "Operating systems and plug-in formats"
@@ -169,9 +169,10 @@ issue = 93
 [[feature]]
 section = "Operating systems and plug-in formats"
 name = "CLAP plug-in hosting"
-status = "missing"
+status = "partial"
 tier = "platform"
 issue = 105
+note = "Scanned, loaded, played, automated and saved like VST3s, tagged CLAP in the lists; no windows yet (#559), nor side-chains, extra outputs or latency changes (#560)."
 
 [[feature]]
 section = "Operating systems and plug-in formats"

@@ -1,5 +1,6 @@
 //! Undo for edits in a VST3's own editor, through the `IComponentHandler` the editor would call
-//! (no editor can open here), with real plug-ins: LSP's Compressor, ZamCompX2 and TONE3000. Each
+//! (no editor can open here), with real plug-ins: LSP's Compressor, ZamCompX2 and TONE3000, and
+//! the CLAP versions of the first two, whose editor's edits come as gestures from `process`. Each
 //! edit is read back from the controller and the saved state and measured in a render; prints
 //! SKIP for a plug-in that isn't installed. Also prints what `getState` costs, and checks that a
 //! controller marked unresponsive (a processing thread is stuck in its plug-in) calls nothing, and
@@ -11,9 +12,9 @@ use std::time::{Duration, Instant};
 
 use daw_engine::audio_io::AudioConfig;
 use daw_engine::model::{AutoMode, AutoParam, AutoPoint, Id, InputSel, TrackKind};
+use daw_engine::plugin_api::{Gesture, PluginDescriptor, PluginFormat};
 use daw_engine::session::TrackPatch;
 use daw_engine::Session;
-use vst3_host::{Gesture, PluginDescriptor};
 
 static FAILED: AtomicBool = AtomicBool::new(false);
 
@@ -67,12 +68,27 @@ struct Rig {
     len: i64,
     /// Whether a render hears it: TONE3000 without a model passes silence.
     audible: bool,
+    /// The plug-in's name, which labels its undo steps.
+    plugin: String,
+}
+
+/// The name a plug-in's checks go by: CLAP plug-ins are tagged, beside their VST3s.
+fn label(d: &PluginDescriptor) -> String {
+    match d.format {
+        PluginFormat::Vst3 => d.name.clone(),
+        PluginFormat::Clap => format!("{} (CLAP)", d.name),
+    }
+}
+
+/// A project folder for the plug-in.
+fn folder(scratch: &Path, d: &PluginDescriptor, suffix: &str) -> PathBuf {
+    scratch.join(format!("{}{suffix}.marbble", label(d).replace([' ', '(', ')'], "_")))
 }
 
 fn rig(desc: &PluginDescriptor, param: &str, v1: f64, tone: &Path, scratch: &Path, audible: bool) -> Rig {
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg, vec![desc.clone()]);
-    s.dir = scratch.join(format!("{}.marbble", desc.name.replace(' ', "_")));
+    s.dir = folder(scratch, desc, "");
     std::fs::create_dir_all(&s.dir).unwrap();
     let track = s.add_track(TrackKind::Audio, InputSel::None, None, None).unwrap();
     s.import_audio(tone, track, 0).unwrap();
@@ -82,7 +98,7 @@ fn rig(desc: &PluginDescriptor, param: &str, v1: f64, tone: &Path, scratch: &Pat
     let len = daw_engine::audio_file::decode::decode(tone).unwrap().channels[0].len() as i64;
     s.set_cycle(true, 0, len);
     s.watch_vst_edits_headless(uid);
-    Rig { s, track, uid, param: id, v0, v1, len, audible }
+    Rig { s, track, uid, param: id, v0, v1, len, audible, plugin: desc.name.clone() }
 }
 
 /// What every plug-in has to do.
@@ -109,7 +125,7 @@ fn the_basics(r: &mut Rig, name: &str, param: &str) {
     check(&format!("{name}: a drag of 100 values makes no step and no getState while it lasts"), s.vst_state_reads(uid) == reads && s.undo_depths().0 == steps);
     s.drive_vst_handler(uid, Gesture::End(id));
     pump(s, 200);
-    let want = format!("{name}: {param}");
+    let want = format!("{}: {param}", r.plugin);
     check(
         &format!("{name}: it's one step, labelled {:?}, read once, project dirty", s.undo_label().unwrap_or_default()),
         s.undo_depths().0 == steps + 1 && s.undo_label().as_deref() == Some(want.as_str()) && s.vst_state_reads(uid) == reads + 1 && s.dirty,
@@ -513,10 +529,10 @@ fn stuck(r: &mut Rig, name: &str) {
 /// back with its change rather than at its defaults. An undo keeps the copy of a plug-in that stays
 /// loaded, and with its editor open, the undo watch's reads are the copy.
 fn fallback(desc: &PluginDescriptor, param: &str, tone: &Path, scratch: &Path) {
-    let name = desc.name.as_str();
+    let name = &label(desc);
     let cfg = AudioConfig { host: Some("ALSA".into()), output: Some("alsa:null".into()), input_enabled: false, ..Default::default() };
     let mut s = Session::new(cfg, vec![desc.clone()]);
-    s.dir = scratch.join(format!("{}-copy.marbble", name.replace(' ', "_")));
+    s.dir = folder(scratch, desc, "-copy");
     std::fs::create_dir_all(&s.dir).unwrap();
     let track = s.add_track(TrackKind::Audio, InputSel::None, None, None).unwrap();
     s.import_audio(tone, track, 0).unwrap();
@@ -599,7 +615,7 @@ fn fallback(desc: &PluginDescriptor, param: &str, tone: &Path, scratch: &Path) {
 /// its values read as unknown, edits and states go nowhere, the editor doesn't open, and the
 /// latency is the last one it reported. Marked responsive again, it's as before.
 fn unresponsive(d: &PluginDescriptor, param: &str) {
-    let (_p, mut c) = vst3_host::instantiate(d, 48000.0, 512).unwrap();
+    let (_p, mut c) = daw_engine::session::instantiate_plugin(d, 48000.0, 512, false).unwrap();
     let id = c.parameters().iter().find(|x| x.name == param).map(|x| x.id).unwrap();
     let (latency, value, changes) = (c.latency(), c.param_value(id).unwrap(), c.host_changes());
     let state = c.save_state().unwrap();
@@ -616,10 +632,10 @@ fn unresponsive(d: &PluginDescriptor, param: &str) {
         && c.latency() == latency
         && c.open_editor("unresponsive").is_err()
         && !c.editor_open();
-    check(&format!("{}: a controller marked unresponsive calls nothing", d.name), quiet);
+    check(&format!("{}: a controller marked unresponsive calls nothing", label(d)), quiet);
     c.set_unresponsive(false);
     let back = c.param_value(id).is_some_and(|v| (v - value).abs() < 1e-9) && c.save_state().is_some() && !c.parameters().is_empty();
-    check(&format!("{}: and marked responsive again, it's as before", d.name), back);
+    check(&format!("{}: and marked responsive again, it's as before", label(d)), back);
 }
 
 /// A multi-output instrument a processing thread is stuck in: switching its extra outputs, which
@@ -646,6 +662,36 @@ fn unresponsive_outputs(d: &PluginDescriptor) {
     check(&format!("{}: and responsive again, they do", d.name), active(&c).contains(&extra) && !c.audio_buses().is_empty());
 }
 
+fn compressor(d: &PluginDescriptor, tone: &Path, scratch: &Path) {
+    let name = &label(d);
+    let mut r = rig(d, "Output gain", 0.0, tone, scratch, true);
+    r.v1 = r.v0 * 0.5;
+    the_basics(&mut r, name, "Output gain");
+    no_gestures(&mut r, name);
+    states(&mut r, name);
+    automation(&mut r, name);
+    live(&mut r, name);
+    unresponsive(d, "Output gain");
+    stuck(&mut r, name);
+    fallback(d, "Output gain", tone, scratch);
+}
+
+fn zam_comp(d: &PluginDescriptor, tone: &Path, scratch: &Path) {
+    let name = &label(d);
+    let mut r = rig(d, "Makeup", 0.8, tone, scratch, true);
+    the_basics(&mut r, name, "Makeup");
+    states(&mut r, name);
+    live(&mut r, name);
+    let names: Vec<(u32, String, bool)> = {
+        let (_p, c) = daw_engine::session::instantiate_plugin(d, 48000.0, 512, false).unwrap();
+        c.param_names()
+    };
+    let id = |n: &str| names.iter().find(|p| p.1 == n).map(|p| p.0).unwrap();
+    let (uid, ro, own) = (r.uid, id("Gain Reduction"), id("Slew"));
+    meters(&mut r.s, name, uid, ro, own);
+    fallback(d, "Makeup", tone, scratch);
+}
+
 fn main() {
     let mut args = std::env::args().skip(1);
     let tone = PathBuf::from(args.next().expect("audio file"));
@@ -662,35 +708,11 @@ fn main() {
     }
 
     match find("Compressor Stereo") {
-        Some(d) => {
-            let mut r = rig(&d, "Output gain", 0.0, &tone, &scratch, true);
-            r.v1 = r.v0 * 0.5;
-            the_basics(&mut r, &d.name, "Output gain");
-            no_gestures(&mut r, &d.name);
-            states(&mut r, &d.name);
-            automation(&mut r, &d.name);
-            live(&mut r, &d.name);
-            unresponsive(&d, "Output gain");
-            stuck(&mut r, &d.name);
-            fallback(&d, "Output gain", &tone, &scratch);
-        }
+        Some(d) => compressor(&d, &tone, &scratch),
         None => println!("SKIP LSP's Compressor Stereo isn't installed"),
     }
     match find("ZamCompX2") {
-        Some(d) => {
-            let mut r = rig(&d, "Makeup", 0.8, &tone, &scratch, true);
-            the_basics(&mut r, &d.name, "Makeup");
-            states(&mut r, &d.name);
-            live(&mut r, &d.name);
-            let names: Vec<(u32, String, bool)> = {
-                let (_p, c) = vst3_host::instantiate(&d, 48000.0, 512).unwrap();
-                c.param_names()
-            };
-            let id = |n: &str| names.iter().find(|p| p.1 == n).map(|p| p.0).unwrap();
-            let (uid, ro, own) = (r.uid, id("Gain Reduction"), id("Slew"));
-            meters(&mut r.s, &d.name, uid, ro, own);
-            fallback(&d, "Makeup", &tone, &scratch);
-        }
+        Some(d) => zam_comp(&d, &tone, &scratch),
         None => println!("SKIP ZamCompX2 isn't installed"),
     }
     match find("TONE3000") {
@@ -700,6 +722,18 @@ fn main() {
             the_basics(&mut r, &d.name, "outputLevel");
         }
         None => println!("SKIP TONE3000 isn't installed"),
+    }
+    // The CLAP versions, where they're installed.
+    let claps: Vec<PluginDescriptor> =
+        clap_host::scan::find_files(&clap_host::scan::default_search_paths()).iter().flat_map(|f| clap_host::scan::scan_file(f).unwrap_or_default()).collect();
+    let find_clap = |n: &str| claps.iter().find(|d| d.name == n).cloned();
+    match find_clap("Compressor Stereo") {
+        Some(d) => compressor(&d, &tone, &scratch),
+        None => println!("SKIP LSP's CLAP Compressor Stereo isn't installed"),
+    }
+    match find_clap("ZamCompX2") {
+        Some(d) => zam_comp(&d, &tone, &scratch),
+        None => println!("SKIP the CLAP ZamCompX2 isn't installed"),
     }
     std::process::exit(FAILED.load(Ordering::Relaxed) as i32);
 }

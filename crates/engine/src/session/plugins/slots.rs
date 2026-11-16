@@ -105,6 +105,12 @@ impl Session {
         self.update_pdc();
     }
 
+    /// Whether the loaded plug-in in a slot has a window of its own to open (CLAP plug-ins don't
+    /// yet).
+    pub fn has_editor(&self, uid: Id) -> bool {
+        self.controllers.get(&uid).is_some_and(|c| c.has_editor())
+    }
+
     /// Opens a VST3's own editor, and starts watching it for edits to undo (see `editor_undo/`).
     pub fn open_editor(&mut self, uid: Id, title: &str) -> Result<()> {
         let c = self.controllers.get_mut(&uid).ok_or_else(|| anyhow!("this plug-in has no editor"))?;

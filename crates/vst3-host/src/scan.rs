@@ -45,33 +45,7 @@ pub fn default_search_paths() -> Vec<PathBuf> {
 
 /// Recursively finds `*.vst3` bundles (directories or single files) without descending into them.
 pub fn find_bundles(paths: &[PathBuf]) -> Vec<PathBuf> {
-    let mut out = Vec::new();
-    for p in paths {
-        walk(p, &mut out, 0);
-    }
-    // The same bundle can be reachable via several profile symlinks on NixOS.
-    let mut seen = std::collections::HashSet::new();
-    out.retain(|p| {
-        let key = p.file_name().map(|n| n.to_os_string());
-        seen.insert(key)
-    });
-    out.sort_by_key(|p| p.file_name().map(|n| n.to_string_lossy().to_lowercase()));
-    out
-}
-
-fn walk(dir: &Path, out: &mut Vec<PathBuf>, depth: usize) {
-    if depth > 6 {
-        return;
-    }
-    let Ok(rd) = std::fs::read_dir(dir) else { return };
-    for e in rd.flatten() {
-        let p = e.path();
-        if p.extension().map(|x| x.eq_ignore_ascii_case("vst3")).unwrap_or(false) {
-            out.push(p);
-        } else if p.is_dir() {
-            walk(&p, out, depth + 1);
-        }
-    }
+    plugin_api::find_files(paths, "vst3")
 }
 
 /// Loads a bundle in-process and lists its classes. Prefer running this in a child process so a

@@ -1,6 +1,7 @@
-// The VST3 part of the plug-in slot menus (pluginMenu.ts): pure, so the tests can run it.
+// The VST3 and CLAP part of the plug-in slot menus (pluginMenu.ts): pure, so the tests can run it.
 import type { PluginDesc } from "../engine/listings";
 import type { MenuItem } from "../ui/Menu";
+import { formatsHeading, formatTag } from "./pluginFormat.ts";
 
 function category(p: PluginDesc): string {
   const parts = p.subcategories.split("|").filter((s) => s && s !== "Fx" && s !== "Instrument" && s !== "Mono" && s !== "Stereo");
@@ -22,31 +23,32 @@ function vendorTree(list: PluginDesc[], pick: (id: string) => void, current?: st
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([vendor, ps]) => ({
       label: vendor,
-      children: ps.sort(byName).map((p) => ({ label: p.name, checked: p.id === current, onClick: () => pick(p.id) })),
+      children: ps.sort(byName).map((p) => ({ label: p.name, tag: formatTag(p), checked: p.id === current, onClick: () => pick(p.id) })),
     }));
 }
 
 /** A category's plug-ins as menu rows: by name with the manufacturer beside each, or by manufacturer when there are more than 30. */
 function categoryRows(ps: PluginDesc[], pick: (id: string) => void, current?: string): MenuItem[] {
-  return ps.length > 30 ? vendorTree(ps, pick, current) : ps.sort(byName).map((p) => ({ label: p.name, hint: p.vendor, checked: p.id === current, onClick: () => pick(p.id) }));
+  return ps.length > 30 ? vendorTree(ps, pick, current) : ps.sort(byName).map((p) => ({ label: p.name, tag: formatTag(p), hint: p.vendor, checked: p.id === current, onClick: () => pick(p.id) }));
 }
 
 /**
- * The VST3s for a slot menu, under a "VST3" heading: the user's own categories from the Plug-in
+ * The VST3 and CLAP plug-ins for a slot menu, under a heading naming the formats there ("VST3",
+ * "VST3 & CLAP"), CLAP ones tagged: the user's own categories from the Plug-in
  * Manager (`custom`, in their order) and a line, then one submenu per category (by manufacturer
  * within a category of more than 30), then "By Manufacturer". The heading keeps these categories
  * apart from the built-in effects' (Delay, EQ… in both). A note when there are none. `pool` has
  * the plug-ins under the names the user gave them (pluginCustom.ts).
  */
 export function vst3Items(pool: PluginDesc[], instrument: boolean, pick: (id: string) => void, current?: string, custom: { name: string; plugins: PluginDesc[] }[] = []): MenuItem[] {
-  if (!pool.length) return [{ label: instrument ? "No VST3 instruments found" : "No VST3 effects found", disabled: true }];
+  if (!pool.length) return [{ label: instrument ? "No VST3 or CLAP instruments found" : "No VST3 or CLAP effects found", disabled: true }];
   const cats = new Map<string, PluginDesc[]>();
   for (const p of pool) {
     const c = category(p);
     if (!cats.has(c)) cats.set(c, []);
     cats.get(c)!.push(p);
   }
-  const items: MenuItem[] = [{ label: "VST3", header: true }];
+  const items: MenuItem[] = [{ label: formatsHeading(pool), header: true }];
   for (const g of custom) items.push({ label: g.name, children: categoryRows([...g.plugins], pick, current) });
   if (custom.length) items.push({ separator: true });
   for (const [cat, ps] of [...cats.entries()].sort((a, b) => a[0].localeCompare(b[0]))) items.push({ label: cat, children: categoryRows(ps, pick, current) });

@@ -106,7 +106,7 @@ fn lsp_compressor() -> Option<vst3_host::PluginDescriptor> {
 /// `Cmd::VstGate`s arrive on the audio thread, the `setActive` in between runs off it.
 fn vst_gate(d: &vst3_host::PluginDescriptor) {
     let (mut p, mut c) = vst3_host::instantiate_keyed(d, 48000.0, BLOCK, false).unwrap();
-    let t = vst3_host::TransportInfo { sample_rate: 48000.0, tempo: 120.0, sig_num: 4, sig_den: 4, ..Default::default() };
+    let t = plugin_api::TransportInfo { sample_rate: 48000.0, tempo: 120.0, sig_num: 4, sig_den: 4, ..Default::default() };
     let (mut l, mut r) = (vec![0.1f32; BLOCK], vec![0.1f32; BLOCK]);
     let key = vec![0.5f32; BLOCK];
     let mut run = |p: &mut vst3_host::PluginProcessor, keyed: bool, blocks: usize| {

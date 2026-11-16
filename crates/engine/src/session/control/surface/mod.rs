@@ -24,7 +24,7 @@ mod input;
 
 use std::cell::RefCell;
 
-use vst3_host::ParamInfo;
+use plugin_api::ParamInfo;
 
 use crate::control::controllers::{self as ctl, port_key, ButtonAct, CtlTarget, SelectedParam, TransportAction};
 use crate::control::feedback::{Msgs, Shown, Throttle};

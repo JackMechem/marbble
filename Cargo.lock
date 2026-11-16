@@ -495,6 +495,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "clap-host"
+version = "0.1.0-alpha.18"
+dependencies = [
+ "clap-sys",
+ "libloading 0.9.0",
+ "log",
+ "parking_lot",
+ "plugin-api",
+ "rtrb",
+]
+
+[[package]]
+name = "clap-sys"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a76abbdb2907f6fd97fb6bc0b7be96b77d328f2dd9669d1075cc03369ed22154"
+
+[[package]]
 name = "colorchoice"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -810,6 +828,7 @@ dependencies = [
  "anyhow",
  "audio_thread_priority",
  "base64 0.22.1",
+ "clap-host",
  "cpal",
  "flacenc",
  "hound",
@@ -821,6 +840,7 @@ dependencies = [
  "objc2-core-audio",
  "objc2-core-foundation",
  "parking_lot",
+ "plugin-api",
  "realfft",
  "rtrb",
  "rubato",
@@ -3064,6 +3084,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "plugin-api"
+version = "0.1.0-alpha.18"
+dependencies = [
+ "parking_lot",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "png"
 version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4915,6 +4944,7 @@ dependencies = [
  "objc2-app-kit",
  "objc2-foundation",
  "parking_lot",
+ "plugin-api",
  "rtrb",
  "serde",
  "serde_json",

@@ -25,5 +25,7 @@ pub mod control; // Controller assignments, controller feedback and control surf
 pub mod library; // What is kept outside any project: presets, strip settings, the plug-in database.
 pub mod midi; // MIDI ports in and out, and Standard MIDI Files.
 
+pub use clap_host;
+pub use plugin_api;
 pub use session::Session;
 pub use vst3_host;

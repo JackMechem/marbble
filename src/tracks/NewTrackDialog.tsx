@@ -25,7 +25,7 @@ export function NewTrackDialog() {
   for (let c = 0; c + 1 < ch; c += 2) inputs.push([`stereo:${c}`, inputLabel({ type: "stereo", ch: c })]);
   const instList = useStore((s) => s.instList);
   const builtIn: [string, string][] = instList.length ? instList.map((i) => [i.id, i.category === "Marbble" ? i.name : `${i.category}: ${i.name}`]) : [[BUILTIN_SYNTH, "Marbble Synth"]];
-  const instruments: [string, string][] = [...builtIn, ...plugins.filter((p) => p.is_instrument).map((p) => [p.id, `${p.name} — ${p.vendor}`] as [string, string])];
+  const instruments: [string, string][] = [...builtIn, ...plugins.filter((p) => p.is_instrument).map((p) => [p.id, `${p.name} — ${p.vendor}${p.format === "clap" ? " (CLAP)" : ""}`] as [string, string])];
 
   const create = async () => {
     const [t, c] = inputKey.split(":");
@@ -48,7 +48,7 @@ export function NewTrackDialog() {
         <button className={"track-type" + (kind === "instrument" ? " on" : "")} aria-pressed={kind === "instrument"} onClick={() => setKind("instrument")} onDoubleClick={create}>
           <Icon.piano />
           <span className="tt-title">Software Instrument</span>
-          <span className="tt-sub">Play and record using a VST3 instrument or the built-in synth.</span>
+          <span className="tt-sub">Play and record using a VST3 or CLAP instrument or the built-in synth.</span>
         </button>
         <button className={"track-type" + (kind === "audio" ? " on" : "")} aria-pressed={kind === "audio"} onClick={() => setKind("audio")} onDoubleClick={create}>
           <Icon.mic />

@@ -424,7 +424,7 @@ fn gate_click_and_state(comp: &PluginDescriptor) {
     c.edit_param(ty, 2.0 / 3.0);
     c.edit_param(th, 0.1);
     c.edit_param(ra, 1.0);
-    let t = vst3_host::TransportInfo { sample_rate: 48000.0, tempo: 120.0, sig_num: 4, sig_den: 4, ..Default::default() };
+    let t = plugin_api::TransportInfo { sample_rate: 48000.0, tempo: 120.0, sig_num: 4, sig_den: 4, ..Default::default() };
     let mut phase = 0.0f32;
     let mut last = 0.0f32;
     let mut run = |p: &mut vst3_host::PluginProcessor, key: bool| {

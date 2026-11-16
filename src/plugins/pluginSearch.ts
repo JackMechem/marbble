@@ -8,6 +8,8 @@ export interface Findable {
   name: string;
   /** Shown beside the name: a built-in's category, a VST3's manufacturer. */
   hint?: string;
+  /** A tag after the name: a CLAP plug-in's format. */
+  tag?: string;
   /** Searched as well as the name (manufacturer, categories, a built-in instrument's blurb). */
   keywords?: string;
 }
@@ -38,15 +40,15 @@ export function findPlugins<T extends Findable>(list: readonly T[], q: string): 
 
 /**
  * A slot menu's rows while its search field holds `q`: the matching built-in plug-ins under a
- * "Marbble" heading, then the matching VST3s under "VST3", each with its hint; a note when
- * nothing matches.
+ * "Marbble" heading, then the matching VST3 and CLAP plug-ins under `heading` ("VST3" unless
+ * given), each with its hint and tag; a note when nothing matches.
  */
-export function searchMenuItems(builtins: readonly Findable[], vst3: readonly Findable[], q: string, pick: (id: string) => void, current?: string): MenuItem[] {
-  const row = (p: Findable): MenuItem => ({ label: p.name, hint: p.hint, checked: p.id === current, onClick: () => pick(p.id) });
+export function searchMenuItems(builtins: readonly Findable[], hosted: readonly Findable[], q: string, pick: (id: string) => void, current?: string, heading = "VST3"): MenuItem[] {
+  const row = (p: Findable): MenuItem => ({ label: p.name, tag: p.tag, hint: p.hint, checked: p.id === current, onClick: () => pick(p.id) });
   const items: MenuItem[] = [];
   for (const [title, list] of [
     ["Marbble", findPlugins(builtins, q)],
-    ["VST3", findPlugins(vst3, q)],
+    [heading, findPlugins(hosted, q)],
   ] as const) {
     if (list.length) items.push({ label: title, header: true }, ...list.map(row));
   }

@@ -16,6 +16,8 @@ export interface MenuItem {
   separator?: boolean;
   header?: boolean;
   hint?: string;
+  /** A small tag after the label, such as a plug-in's format. */
+  tag?: string;
   /** Renders a colour swatch instead of the label text. */
   color?: string;
   /** Renders a grid of colour swatches (named in their tooltips) instead of a row. */
@@ -357,7 +359,10 @@ function List({
               {it.color ? (
                 <span className="menu-swatch" style={{ background: it.color }} />
               ) : (
-                <span className="menu-label">{it.label}</span>
+                <span className="menu-label">
+                  {it.label}
+                  {it.tag && <span className="format-tag">{it.tag}</span>}
+                </span>
               )}
               {it.hint && <span className="menu-hint">{it.hint}</span>}
               {it.children && (

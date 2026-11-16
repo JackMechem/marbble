@@ -1,6 +1,6 @@
 // The Library side pane: Logic's lists patches for the selected track; this one lists the plug-ins
-// to load onto it (built-in instruments or effects, then VST3s in the user's categories and by
-// vendor, under the names the user gave them), with a search field.
+// to load onto it (built-in instruments or effects, then VST3s and CLAPs in the user's categories
+// and by vendor, under the names the user gave them, CLAPs tagged), with a search field.
 import { useState } from "react";
 import { BUILTIN_SYNTH, INSTRUMENT_SLOT, type Track } from "../engine/project";
 import { call } from "../engine/commands";
@@ -10,6 +10,7 @@ import { useListKeys } from "../keyboard/listKeys";
 import { loadPlugin } from "../plugins/fxHost";
 import { matchesQuery } from "../plugins/pluginSearch";
 import { customGroups, withNames } from "../plugins/pluginCustom";
+import { formatName, formatTag } from "../plugins/pluginFormat";
 import { useSettings } from "../settings/appSettings";
 
 /** Logic's Library lists patches for the selected track; here it lists plug-ins to load. */
@@ -38,7 +39,7 @@ export function Library() {
   const list = withNames(
     plugins.filter((p) => p.is_instrument === isInst),
     names,
-  ).filter((p) => matchesQuery(q, p.name, p.original, p.vendor, p.subcategories, ...mine(p.cid)));
+  ).filter((p) => matchesQuery(q, p.name, p.original, p.vendor, p.subcategories, formatName(p), ...mine(p.cid)));
   const groups = new Map<string, typeof list>();
   for (const p of list) {
     const g = p.vendor || "Unknown";
@@ -57,17 +58,22 @@ export function Library() {
   const current = (t: Track | null) => (t?.kind === "instrument" ? t.instrument?.plugin_id : undefined);
   // The items in the order shown, under their headings: the built-in instruments (Marbble's
   // first) or effects (by category), then the plug-ins by vendor.
-  const sections: { key: string; title?: string; items: { id: string; name: string; tip?: string }[] }[] = [];
+  const sections: { key: string; title?: string; items: { id: string; name: string; tip?: string; tag?: string }[] }[] = [];
   if (isInst && !instList.length) sections.push({ key: "builtin", items: [{ id: BUILTIN_SYNTH, name: "Marbble Synth" }] });
   if (isInst)
     for (const [group, is] of [...instGroups.entries()].sort((a, b) => (a[0] === "Marbble" ? -1 : b[0] === "Marbble" ? 1 : a[0].localeCompare(b[0]))))
       sections.push({ key: `inst:${group}`, title: group, items: is.map((i) => ({ id: i.id, name: i.name, tip: i.about })) });
   for (const [cat, fs] of [...fxGroups.entries()].sort((a, b) => a[0].localeCompare(b[0])))
     sections.push({ key: `fx:${cat}`, title: cat, items: fs.map((f) => ({ id: f.id, name: f.name, tip: `Marbble ${f.category}` })) });
-  const vst3 = (p: (typeof list)[number]) => ({ id: p.id, name: p.name, tip: p.original ? `${p.original} · ${p.subcategories}` : p.subcategories });
+  const hosted = (p: (typeof list)[number]) => ({
+    id: p.id,
+    name: p.name,
+    tag: formatTag(p),
+    tip: [p.original, p.subcategories, formatName(p)].filter(Boolean).join(" · "),
+  });
   // The user's categories first, as in the slot menus; their plug-ins are under their vendor too.
-  for (const g of customGroups(list, categories)) sections.push({ key: `custom:${g.name}`, title: g.name, items: g.plugins.map(vst3) });
-  for (const [vendor, ps] of groups.entries()) sections.push({ key: `vendor:${vendor}`, title: vendor, items: ps.map(vst3) });
+  for (const g of customGroups(list, categories)) sections.push({ key: `custom:${g.name}`, title: g.name, items: g.plugins.map(hosted) });
+  for (const [vendor, ps] of groups.entries()) sections.push({ key: `vendor:${vendor}`, title: vendor, items: ps.map(hosted) });
   // A plug-in can be listed more than once, so a row's key is its section's and its own.
   const rowKey = (section: string, id: string) => `${section}\n${id}`;
   const rows = sections.flatMap((g) => g.items.map((i) => ({ key: rowKey(g.key, i.id), ...i })));
@@ -103,6 +109,7 @@ export function Library() {
               {g.items.map((i) => (
                 <div key={i.id} className={"lib-item" + (on === i.id ? " on" : "")} role="option" aria-selected={on === i.id} onClick={() => load(i.id)} title={i.tip} {...rowProps(rowKey(g.key, i.id))}>
                   {i.name}
+                  {i.tag && <span className="format-tag">{i.tag}</span>}
                 </div>
               ))}
             </div>

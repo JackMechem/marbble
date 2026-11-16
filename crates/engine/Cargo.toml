@@ -5,7 +5,9 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+plugin-api = { path = "../plugin-api" }
 vst3-host = { path = "../vst3-host" }
+clap-host = { path = "../clap-host" }
 cpal = "0.18"
 midir = "0.11"
 hound = "3.5"

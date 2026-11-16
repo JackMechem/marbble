@@ -1,6 +1,7 @@
 // The Plug-in Manager's own categories and names (`PluginPrefs` in src-tauri/src/settings.rs):
-// applying them to the plug-in list, and the edits the manager makes. Both are keyed by the VST3
-// class id, which a rescan, or a bundle moved to another folder, keeps. Pure, so the tests can run it.
+// applying them to the plug-in list, and the edits the manager makes. Both are keyed by the
+// plug-in's id in its file (a VST3 class id, a CLAP id), which a rescan, or a file moved to another
+// folder, keeps. Pure, so the tests can run it.
 import type { PluginDesc } from "../engine/listings";
 
 /** A category made in the Plug-in Manager: its name and its plug-ins' class ids. */

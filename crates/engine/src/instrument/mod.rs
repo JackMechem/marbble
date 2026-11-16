@@ -21,7 +21,7 @@
 //! automation, MIDI learn, freezing and saving all work from the registry entry. See `tre/` for a
 //! complete one.
 
-use vst3_host::MidiEvent;
+use plugin_api::MidiEvent;
 
 pub use crate::fx::{FactoryPreset, FxContext, ParamKind, ParamSpec, Unit, MAX_BLOCK, MAX_METERS};
 

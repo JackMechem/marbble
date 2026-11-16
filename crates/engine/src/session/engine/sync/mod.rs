@@ -158,7 +158,7 @@ impl Session {
     pub(crate) fn capture_plugin_states(&self) -> Project {
         let mut p = self.project.clone();
         let held = self.held();
-        let fill = |track: Id, s: &mut Option<PluginSlot>, ctrls: &HashMap<Id, PluginController>| {
+        let fill = |track: Id, s: &mut Option<PluginSlot>, ctrls: &HashMap<Id, Box<dyn Controller>>| {
             if let Some(slot) = s {
                 let c = ctrls.get(&slot.uid).filter(|c| !Self::left_in(&held, track, slot.uid, c.instance()));
                 if let Some(st) = c.and_then(|c| c.save_state()) {

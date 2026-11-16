@@ -1,0 +1,12 @@
+[package]
+name = "plugin-api"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+parking_lot = "0.12"
+
+[dev-dependencies]
+serde_json = "1"

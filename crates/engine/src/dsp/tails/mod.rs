@@ -61,7 +61,7 @@ impl Engine {
         let out_of_time = || started.elapsed() >= BUDGET;
         // The plug-ins cut short, and how many more weren't played out at all.
         let (mut cut, mut skipped) = (Vec::new(), 0);
-        let mut run = |p: &mut PluginProcessor, midi: &[MidiEvent], l: &mut [f32], r: &mut [f32]| {
+        let mut run = |p: &mut dyn Processor, midi: &[MidiEvent], l: &mut [f32], r: &mut [f32]| {
             let n = p.max_block().min(l.len());
             if !cut.is_empty() {
                 // Out of time: only the notes' end, so none hangs.
@@ -124,10 +124,10 @@ impl Engine {
 
 /// The slot's VST3, if it runs: not bypassed, and (unless `instrument`, which never sleeps) not
 /// asleep.
-fn awake_vst(slot: &mut Option<InsertDsp>, instrument: bool) -> Option<&mut PluginProcessor> {
+fn awake_vst(slot: &mut Option<InsertDsp>, instrument: bool) -> Option<&mut dyn Processor> {
     match slot {
         Some(ins) if !ins.bypass && (instrument || !ins.asleep()) => match &mut ins.plugin {
-            Plugin::Vst(p) => Some(p),
+            Plugin::Hosted(p) => Some(p.as_mut()),
             _ => None,
         },
         _ => None,

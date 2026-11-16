@@ -9,25 +9,26 @@
 // platform is a no-op on the other.
 #![cfg_attr(target_env = "msvc", allow(clippy::unnecessary_cast))]
 
-use std::collections::HashMap;
-use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Arc;
-use std::time::{Duration, Instant};
 
 use vst3::Steinberg::Vst::*;
 use vst3::Steinberg::*;
 use vst3::{ComPtr, ComWrapper};
 
-use crate::host::{host_context, ComponentHandler, Gesture};
+use crate::host::{host_context, ComponentHandler};
 use crate::module::{load_module, PluginDescriptor};
 use crate::process::{EventList, ParameterChanges};
 use crate::stream::{as_stream, MemoryStream};
 use crate::util::{unhex, utf16};
+use plugin_api::HostSet;
+pub use plugin_api::{instances_made, BusLayout, Gesture, KeyInput, MidiEvent, ParamInfo, PluginState, TransportInfo};
 
 mod controller;
 pub use controller::close_stranded_editors;
 mod instantiate;
 pub use instantiate::*;
+mod api;
 mod multi_out;
 mod processor;
 use multi_out::OutGate;
@@ -37,74 +38,9 @@ pub use multi_out::OutputBus;
 const MAX_QUEUED: usize = 512;
 /// The longest the silent block of `pass_edits` needs to be.
 const EDIT_BLOCK: usize = 64;
-/// How long after the host set a parameter the same value from the plug-in counts as its answer.
-const HOST_ECHO: Duration = Duration::from_millis(200);
 
 /// How long a plug-in crossfades with its dry signal around a side-chain change.
 const GATE_FADE_SECS: f64 = 0.005;
-
-/// A side-chain signal for one block: left and right.
-pub type KeyInput<'a> = Option<(&'a [f32], &'a [f32])>;
-
-/// One of a plug-in's audio buses, as it reports it.
-#[derive(Debug, Clone)]
-pub struct BusLayout {
-    pub name: String,
-    pub input: bool,
-    pub aux: bool,
-    pub default_active: bool,
-    pub channels: usize,
-}
-
-/// A three-byte MIDI message and the sample it lands on in the block (`offset`).
-#[derive(Debug, Clone, Copy)]
-pub struct MidiEvent {
-    pub offset: u32,
-    pub data: [u8; 3],
-}
-
-/// The transport as a plug-in sees it for one block, filled into its `ProcessContext`.
-#[derive(Debug, Clone, Copy, Default)]
-pub struct TransportInfo {
-    pub playing: bool,
-    pub recording: bool,
-    pub sample_rate: f64,
-    pub tempo: f64,
-    pub sig_num: i32,
-    pub sig_den: i32,
-    pub position_samples: i64,
-    pub position_quarters: f64,
-    pub bar_start_quarters: f64,
-    pub cycle: Option<(f64, f64)>,
-}
-
-/// A parameter as the plug-in's controller describes it.
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct ParamInfo {
-    pub id: u32,
-    pub name: String,
-    pub units: String,
-    /// Normalized 0..1.
-    pub default: f64,
-    /// 0 = continuous, 1 = on/off, n = n+1 discrete values.
-    pub steps: i32,
-}
-
-/// A plug-in's saved state, from `getState`: the component's and the controller's own blobs.
-#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct PluginState {
-    pub component: Vec<u8>,
-    pub controller: Vec<u8>,
-}
-
-/// Instances made so far in this process, which numbers each (`PluginController::instance`).
-static INSTANCES: AtomicU64 = AtomicU64::new(0);
-
-/// How many plug-in instances have been made so far: every instance made from now on has a higher
-/// number (`PluginController::instance`). Allocates nothing and takes no lock.
-pub fn instances_made() -> u64 {
-    INSTANCES.load(Ordering::Acquire)
-}
 
 /// The component's and a separate controller's connection points, connected to each other.
 type Connections = (ComPtr<IConnectionPoint>, ComPtr<IConnectionPoint>);
@@ -267,10 +203,9 @@ pub struct PluginController {
     /// The plug-in said its parameters all changed (`restartComponent(kParamValuesChanged)`)
     /// since the last `take_params_restarted`.
     params_restarted: bool,
-    /// Counts what the host itself did to the parameters, and the values it set a moment ago,
-    /// so that undo can tell those from edits in the editor (see `host_echo`).
-    host_changes: AtomicU64,
-    host_set: parking_lot::Mutex<HashMap<u32, (f64, Instant)>>,
+    /// What the host itself did to the parameters, so that undo can tell those from edits in the
+    /// editor (see `host_echo`).
+    host_set: HostSet,
     /// The host says a thread is stuck in the processor (`set_unresponsive`): nothing here calls
     /// into the plug-in meanwhile. The latency it reported last, for `latency` to give then.
     unresponsive: bool,

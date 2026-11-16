@@ -34,7 +34,7 @@
 //! with resonance -65; the largest step at a note-off 0.94, a new step 1.26 and a slide 0.79 times
 //! the steady note's; 0.74 % of a core (`instrument_bench`, i7-13700KF).
 
-use vst3_host::MidiEvent;
+use plugin_api::MidiEvent;
 
 use super::common::{dc_pole, hz_to_note, OutStage, Rest};
 use super::{FxContext, Instrument, InstrumentInfo, Midi};

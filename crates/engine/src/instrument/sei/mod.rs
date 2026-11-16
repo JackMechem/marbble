@@ -33,7 +33,7 @@
 //! -90 dB, a pulse -85; the largest step at a note-off 1.00 and at a steal 0.59 times the steady
 //! note's; six voices with the chorus 4.1 % of a core (`instrument_bench`, i7-13700KF).
 
-use vst3_host::MidiEvent;
+use plugin_api::MidiEvent;
 
 use super::common::{dc_pole, hz_to_note, OutStage, Rest};
 use super::{FxContext, Instrument, InstrumentInfo, Midi};

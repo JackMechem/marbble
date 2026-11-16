@@ -79,7 +79,7 @@ impl OutputFeed {
         // A plug-in that didn't run this block (off, bypassed, skipped) has last block's audio
         // there, and one with fewer outputs has no such bus.
         let bus = src.filter(|s| s.instrument_ran).and_then(|s| s.instrument.as_ref()).and_then(|i| match &i.plugin {
-            Plugin::Vst(v) => v.output_bus(p.bus, l.len()),
+            Plugin::Hosted(v) => v.output_bus(p.bus, l.len()),
             _ => None,
         });
         match (frozen, bus) {

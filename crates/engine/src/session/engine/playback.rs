@@ -264,13 +264,13 @@ impl Session {
             self.instantiate_instrument(&info, slot)
         } else {
             let desc = self.find_plugin(&slot.plugin_id).ok_or_else(|| anyhow!("plug-in not found: {}", slot.name))?.clone();
-            let (proc, ctrl) = vst3_host::instantiate_keyed(&desc, sr, MAX_BLOCK, slot.sidechain.is_some()).map_err(|e| anyhow!(e))?;
+            let (proc, ctrl) = crate::session::plugins::hosted::instantiate(&desc, sr, MAX_BLOCK, slot.sidechain.is_some()).map_err(|e| anyhow!(e))?;
             if let Some(st) = &slot.state {
                 ctrl.load_state(&decode_state(st));
             }
-            self.track_state_copy(slot, &ctrl);
+            self.track_state_copy(slot, ctrl.as_ref());
             self.controllers.insert(slot.uid, ctrl);
-            Plugin::Vst(Box::new(proc))
+            Plugin::Hosted(proc)
         };
         Ok(InsertDsp::new(slot.uid, slot.bypass, plugin, KeyRoute::new(slot.sidechain, slot.sidechain_pre)))
     }

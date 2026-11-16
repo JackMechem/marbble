@@ -555,7 +555,7 @@ impl Engine {
 
     fn set_vst_gate(&mut self, track: Id, uid: Id, gate: VstGate) {
         let sits_out = self.track_mut(track).is_some_and(|t| t.left_out);
-        if let Some(InsertDsp { plugin: Plugin::Vst(p), bypass, .. }) = self.insert_mut(track, uid) {
+        if let Some(InsertDsp { plugin: Plugin::Hosted(p), bypass, .. }) = self.insert_mut(track, uid) {
             match gate {
                 // A bypassed plug-in isn't running, and neither is one on a strip sitting
                 // out, so nothing would finish the fade.

@@ -84,14 +84,7 @@ pub fn host_context() -> ComPtr<FUnknown> {
 
 // ---------------------------------------------------------------------------------------------
 
-/// One step of a parameter gesture in the plug-in's own editor, as the host sees it through
-/// `beginEdit` / `performEdit` / `endEdit`. The session uses these to write automation.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Gesture {
-    Begin(u32),
-    Perform(u32, f64),
-    End(u32),
-}
+pub use plugin_api::Gesture;
 
 /// Receives parameter edits made in the plugin's own editor (UI thread) and queues them for the
 /// audio thread, which forwards them to the processor.

@@ -6,7 +6,7 @@ use std::time::Instant;
 use daw_engine::fx::FxContext;
 use daw_engine::instrument::tre::params::param;
 use daw_engine::instrument::{self, InstrumentInfo};
-use vst3_host::MidiEvent;
+use plugin_api::MidiEvent;
 
 const SR: f32 = 48000.0;
 

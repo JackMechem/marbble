@@ -82,7 +82,7 @@ pub fn instantiate_keyed(desc: &PluginDescriptor, sample_rate: f64, max_block: u
         let midi_map = midi_mapping(controller.as_ref());
 
         let shared = Arc::new(Shared {
-            instance: INSTANCES.fetch_add(1, Ordering::AcqRel) + 1,
+            instance: plugin_api::next_instance(),
             component,
             processor: Some(processor.clone()),
             controller,
@@ -133,7 +133,6 @@ pub fn instantiate_keyed(desc: &PluginDescriptor, sample_rate: f64, max_block: u
             key_active: keyed && key_bus.is_some(),
             outputs: output_buses,
             params_restarted: false,
-            host_changes: Default::default(),
             host_set: Default::default(),
             unresponsive: false,
             last_latency: Default::default(),

@@ -16,13 +16,13 @@ use daw_engine::edit::fades::{Crossfade, DragMode, FadeInType, FadeOutType};
 use daw_engine::instrument::sampler::state::Zone;
 use daw_engine::model::tempo::{SigEvent, TempoEvent};
 use daw_engine::model::{AutoMode, AutoParam, AutoPoint, Group, Id, InputSel, Project, Region, TakeRating, TrackKind, TrackSend, MASTER_ID};
+use daw_engine::plugin_api::{ParamInfo, PluginDescriptor};
 use daw_engine::prefs::{BitDepth, ClickSettings, Prefs};
 use daw_engine::session::{AssignmentPatch, AssignmentRow};
 use daw_engine::session::{
     BipOptions, BipSource, BounceResult, ClipInfo, InstrumentOutputs, MidiContent, PdcReport, PlayedNotes, RangeEdit, RegionParamsPatch, RenderOptions,
     TrackMidiPatch, TrackPatch,
 };
-use daw_engine::vst3_host::{ParamInfo, PluginDescriptor};
 use daw_engine::{edit::transients, library::plugin_db, Session};
 use serde::Serialize;
 use tauri::{Emitter, State};

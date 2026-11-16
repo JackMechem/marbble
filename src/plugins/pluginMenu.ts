@@ -1,10 +1,11 @@
-// Plug-in slot menus: built-in effects and instruments and VST3s, grouped by category.
+// Plug-in slot menus: built-in effects and instruments, VST3s and CLAPs, grouped by category.
 import { BUILTIN_SYNTH } from "../engine/project";
 import { type PluginDesc } from "../engine/listings";
 import type { MenuItem, MenuSearch } from "../ui/Menu";
 import type { FxInfo, InstInfo } from "./builtinEffects";
 import { getState } from "../state/store";
 import { vst3Items } from "./pluginMenuModel";
+import { formatName, formatsHeading, formatTag } from "./pluginFormat";
 import { searchMenuItems, type Findable } from "./pluginSearch";
 import { customGroups, withNames } from "./pluginCustom";
 import { getSettings } from "../settings/appSettings";
@@ -39,9 +40,9 @@ function builtinInstrumentItems(list: InstInfo[], pick: (id: string) => void, cu
 
 /**
  * Builds the slot pop-up menu: "No Plug-in", the built-in plug-ins (effects under a "Marbble"
- * heading, by category), then the VST3s under a "VST3" heading: the user's categories, by
- * category, and "By Manufacturer", under the names the user gave them. The headings keep the two
- * sets of categories (Delay, EQ… in both) apart.
+ * heading, by category), then the VST3s and CLAPs under a heading naming those formats: the
+ * user's categories, by category, and "By Manufacturer", under the names the user gave them. The
+ * headings keep the two sets of categories (Delay, EQ… in both) apart.
  */
 export function pluginMenu(
   plugins: PluginDesc[],
@@ -64,7 +65,8 @@ export function pluginMenu(
   return items;
 }
 
-/** The slot menu's search field: typing lists the matching built-in plug-ins and VST3s. */
+/** The slot menu's search field: typing lists the matching built-in plug-ins, VST3s and CLAPs;
+ *  "clap" finds the CLAP ones. */
 export function pluginSearch(plugins: PluginDesc[], opts: { instrument: boolean; current?: string; pick: (id: string) => void }): MenuSearch {
   const { fxList, instList } = getState();
   const builtins: Findable[] = opts.instrument
@@ -79,6 +81,6 @@ export function pluginSearch(plugins: PluginDesc[], opts: { instrument: boolean;
   );
   // A renamed plug-in is found by its own name too, and any plug-in by the user's categories it's in.
   const mine = (cid: string) => categories.filter((c) => c.plugins.includes(cid)).map((c) => c.name);
-  const vst3: Findable[] = pool.map((p) => ({ id: p.id, name: p.name, hint: p.vendor, keywords: [p.original, p.subcategories, ...mine(p.cid)].join(" ") }));
-  return { placeholder: opts.instrument ? "Search instruments" : "Search plug-ins", results: (q) => searchMenuItems(builtins, vst3, q, opts.pick, opts.current) };
+  const hosted: Findable[] = pool.map((p) => ({ id: p.id, name: p.name, hint: p.vendor, tag: formatTag(p), keywords: [p.original, p.subcategories, formatName(p), ...mine(p.cid)].join(" ") }));
+  return { placeholder: opts.instrument ? "Search instruments" : "Search plug-ins", results: (q) => searchMenuItems(builtins, hosted, q, opts.pick, opts.current, formatsHeading(pool)) };
 }

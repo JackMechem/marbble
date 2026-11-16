@@ -1,4 +1,4 @@
-//! The application: what runs before the window opens (`startup.rs`, the `--scan-vst3` child mode
+//! The application: what runs before the window opens (`startup.rs`, the `--scan-plugin` child mode
 //! among it), the window's setup with the timers that drive the session (`timers.rs`), and the
 //! list of commands registered with Tauri, each passing the activity log on its way in. The
 //! commands themselves are in `commands/` (the Diagnostics window's in `diagnostics/`), and

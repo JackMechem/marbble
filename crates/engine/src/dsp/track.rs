@@ -7,9 +7,10 @@
 
 use super::*;
 
-/// What an insert or instrument slot runs: a VST3's processor, or a built-in.
+/// What an insert or instrument slot runs: a hosted plug-in's processor (VST3 or CLAP), or a
+/// built-in.
 pub enum Plugin {
-    Vst(Box<PluginProcessor>),
+    Hosted(Box<dyn Processor>),
     /// A built-in instrument (see `crate::instrument`).
     Instrument(Box<InstrumentDsp>),
     /// A built-in effect (see `crate::fx`).
@@ -44,7 +45,7 @@ pub(super) fn check_output(status: &EngineStatus, ins: &mut InsertDsp, l: &mut [
         match &mut ins.plugin {
             Plugin::Builtin(b) => b.reset(),
             Plugin::Instrument(i) => i.reset(),
-            Plugin::Vst(_) => {}
+            Plugin::Hosted(_) => {}
         }
     }
 }
@@ -57,7 +58,7 @@ pub(super) fn fx_context(t: &TransportInfo) -> crate::fx::FxContext {
 impl Plugin {
     pub(super) fn process(&mut self, l: &mut [f32], r: &mut [f32], midi: &[MidiEvent], t: &TransportInfo) {
         match self {
-            Plugin::Vst(p) => p.process(l, r, midi, t),
+            Plugin::Hosted(p) => p.process(l, r, midi, t),
             Plugin::Instrument(i) => i.process(l, r, midi, &fx_context(t)),
             Plugin::Builtin(b) => b.process(l, r, None, &fx_context(t)),
         }
@@ -67,7 +68,7 @@ impl Plugin {
     pub(super) fn process_insert(&mut self, l: &mut [f32], r: &mut [f32], key: crate::fx::Key, t: &TransportInfo) {
         match self {
             Plugin::Builtin(b) => b.process(l, r, key, &fx_context(t)),
-            Plugin::Vst(p) => p.process_keyed(l, r, key, &[], t),
+            Plugin::Hosted(p) => p.process_keyed(l, r, key, &[], t),
             p => p.process(l, r, &[], t),
         }
     }
@@ -76,7 +77,7 @@ impl Plugin {
     /// instrument takes the block's first value and glides on its own.
     pub(super) fn set_param(&mut self, id: u32, offset: i32, value: f64) {
         match self {
-            Plugin::Vst(p) => p.queue_param(id, offset, value),
+            Plugin::Hosted(p) => p.queue_param(id, offset, value),
             Plugin::Builtin(b) if offset == 0 => b.set_normalized(id, value as f32),
             Plugin::Instrument(i) if offset == 0 => i.set_normalized(id, value as f32),
             _ => {}

@@ -94,7 +94,7 @@
 
 .pm-row {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1.8fr) minmax(0, 1.1fr) minmax(0, 0.8fr) minmax(0, 1fr) 46px;
+  grid-template-columns: 28px minmax(0, 1.8fr) minmax(0, 1.1fr) minmax(0, 0.8fr) minmax(0, 1fr) 44px 46px;
   align-items: center;
   gap: 6px;
   padding: 3px 8px;

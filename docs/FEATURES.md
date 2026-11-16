@@ -4,7 +4,7 @@ Every feature of Logic Pro, by area, and how far Marbble has it. This page is ge
 `scripts/features.py` from the files in `features/`: change those, in the pull request that
 changes the feature. [ROADMAP.md](../ROADMAP.md) says what beta needs and what's being worked on.
 
-Marbble has **286** of 732 features, and a simpler version of 94 more; 352 are missing. Beta needs 249 of them, and 53 of those are still to do.
+Marbble has **286** of 732 features, and a simpler version of 95 more; 351 are missing. Beta needs 249 of them, and 53 of those are still to do.
 
 ✓ done · ◐ partial: the note says what's missing · ○ missing · **Beta.** needed for beta and not done yet
 
@@ -19,7 +19,7 @@ Marbble has **286** of 732 features, and a simpler version of 94 more; 352 are m
 | [Editors](#editors) | 32 | 12 | 53 | 33% |
 | [Time and pitch](#time-and-pitch) | 0 | 0 | 38 | 0% |
 | [Mixing and automation](#mixing-and-automation) | 39 | 11 | 39 | 44% |
-| [Plug-ins](#plug-ins) | 10 | 9 | 24 | 23% |
+| [Plug-ins](#plug-ins) | 10 | 10 | 23 | 23% |
 | [Instruments and content](#instruments-and-content) | 3 | 12 | 56 | 4% |
 | [MIDI and hardware](#midi-and-hardware) | 9 | 4 | 26 | 23% |
 | [Import, export and media](#import-export-and-media) | 16 | 5 | 19 | 40% |
@@ -893,8 +893,8 @@ Hosting plug-ins, their windows and settings, formats and platforms, Smart Contr
 - ✓ Linux build with desktop entry and icons (Nix flake and other distributions)
 - ◐ Windows and macOS builds: Released as an NSIS installer and .dmg bundles, but early and less tested; plug-in editor windows are not on Windows yet.
 - ◐ Plug-in editor windows on Windows (HWND) and macOS (NSView) ([#99](https://github.com/JackMechem/marbble/issues/99)): macOS done.
+- ◐ CLAP plug-in hosting ([#105](https://github.com/JackMechem/marbble/issues/105)): Scanned, loaded, played, automated and saved like VST3s, tagged CLAP in the lists; no windows yet (#559), nor side-chains, extra outputs or latency changes (#560).
 - ○ Plug-in editors under native Wayland (they currently run through XWayland) ([#93](https://github.com/JackMechem/marbble/issues/93))
-- ○ CLAP plug-in hosting ([#105](https://github.com/JackMechem/marbble/issues/105))
 - ○ Audio Units hosting on macOS ([#106](https://github.com/JackMechem/marbble/issues/106))
 - ○ VST2 hosting
 

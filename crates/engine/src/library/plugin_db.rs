@@ -1,16 +1,26 @@
-//! The plug-in database. Bundles are scanned in child processes (`<exe> --scan-vst3 <bundle>`)
-//! so a crashing plugin cannot take the application down, and results are cached on disk.
+//! The plug-in database: VST3 bundles and CLAP files, each scanned in a child process
+//! (`<exe> --scan-plugin <file>`) so a crashing plug-in cannot take the application down, with the
+//! results cached on disk.
 
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
+use plugin_api::{PluginDescriptor, PluginFormat};
 use serde::{Deserialize, Serialize};
-use vst3_host::scan::{default_search_paths, find_bundles};
-use vst3_host::PluginDescriptor;
 
-pub const SCAN_ARG: &str = "--scan-vst3";
+pub const SCAN_ARG: &str = "--scan-plugin";
+/// The flag before CLAP hosting: a running older version whose executable has been replaced by
+/// this one still starts its scanners with it.
+const OLD_SCAN_ARG: &str = "--scan-vst3";
+
+/// Whether this process is a scanner child, and then the file to scan after the flag (None when
+/// it's missing).
+pub fn scan_child_path(args: &[String]) -> Option<Option<&str>> {
+    let i = args.iter().position(|a| a == SCAN_ARG || a == OLD_SCAN_ARG)?;
+    Some(args.get(i + 1).map(|s| s.as_str()))
+}
 
 pub use crate::library::config_dir::config_dir;
 
@@ -31,9 +41,18 @@ fn save_cache(list: &[PluginDescriptor]) {
     }
 }
 
-/// Entry point for the child process: prints the bundle's descriptors as JSON.
+/// Lists the plug-ins in a VST3 bundle or a CLAP file, loading it in this process.
+fn scan_file(path: &Path) -> Result<Vec<PluginDescriptor>, String> {
+    match PluginFormat::of(path) {
+        Some(PluginFormat::Vst3) => vst3_host::scan::scan_bundle(path),
+        Some(PluginFormat::Clap) => clap_host::scan::scan_file(path),
+        None => Err("not a VST3 or CLAP plug-in".into()),
+    }
+}
+
+/// Entry point for the child process: prints the file's descriptors as JSON.
 pub fn scan_child_main(bundle: &Path) -> i32 {
-    match vst3_host::scan::scan_bundle(bundle) {
+    match scan_file(bundle) {
         Ok(list) => {
             println!("{}", serde_json::to_string(&list).unwrap_or_else(|_| "[]".into()));
             0
@@ -122,9 +141,15 @@ pub fn load_report() -> Option<ScanReport> {
     serde_json::from_str(&std::fs::read_to_string(report_path()).ok()?).ok()
 }
 
-/// The standard VST3 folders, followed by the user's own (missing ones are skipped).
+/// The standard VST3 and CLAP folders, followed by the user's own (missing ones are skipped).
+/// Each is searched for both formats.
 pub fn search_paths(extra: &[PathBuf]) -> Vec<PathBuf> {
-    let mut paths = default_search_paths();
+    let mut paths = vst3_host::scan::default_search_paths();
+    for p in clap_host::scan::default_search_paths() {
+        if !paths.contains(&p) {
+            paths.push(p);
+        }
+    }
     for p in extra {
         if !paths.contains(p) {
             paths.push(p.clone());
@@ -136,7 +161,8 @@ pub fn search_paths(extra: &[PathBuf]) -> Vec<PathBuf> {
 /// Scans the standard folders plus `extra`, caching the result and writing a scan report.
 pub fn scan_with(exe: &Path, extra: &[PathBuf]) -> Vec<PluginDescriptor> {
     let folders = search_paths(extra);
-    let bundles = find_bundles(&folders);
+    let mut bundles = vst3_host::scan::find_bundles(&folders);
+    bundles.extend(clap_host::scan::find_files(&folders));
     let count = bundles.len();
     let results = std::sync::Mutex::new(Vec::new());
     let failed = std::sync::Mutex::new(Vec::new());
@@ -169,4 +195,18 @@ pub fn scan_with(exe: &Path, extra: &[PathBuf]) -> Vec<PluginDescriptor> {
         let _ = std::fs::write(report_path(), text);
     }
     list
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn either_scan_flag_makes_a_scanner() {
+        let args = |a: &[&str]| a.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        assert_eq!(scan_child_path(&args(&["marbble", "--scan-plugin", "/a/B.clap"])), Some(Some("/a/B.clap")));
+        assert_eq!(scan_child_path(&args(&["marbble", "--scan-vst3", "/a/B.vst3"])), Some(Some("/a/B.vst3")));
+        assert_eq!(scan_child_path(&args(&["marbble", "--scan-plugin"])), Some(None));
+        assert_eq!(scan_child_path(&args(&["marbble"])), None);
+    }
 }
