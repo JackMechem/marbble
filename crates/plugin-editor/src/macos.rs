@@ -1,11 +1,13 @@
-//! Plugin editor windows on macOS: an NSWindow whose content view the plugin's NSView is added
+//! Plug-in editor windows on macOS: an NSWindow whose content view the plug-in's NSView is added
 //! to. Plug-ins drive their own timers through the main run loop, so unlike Linux there is no
-//! IRunLoop. AppKit may only be touched on the main thread; `close` and `raise` hop there when
-//! called from elsewhere. Keys the plug-in doesn't use go to the host (`keys::set_key_forwarder`).
+//! event loop to give them. AppKit may only be touched on the main thread; `close`, `raise` and
+//! the rest hop there when called from elsewhere. Keys the plug-in doesn't use go to the host
+//! (`keys::set_key_forwarder`).
 
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::ffi::c_void;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use dispatch2::DispatchQueue;
 use objc2::rc::Retained;
@@ -16,8 +18,8 @@ use objc2_app_kit::{
     NSWindowStyleMask,
 };
 use objc2_foundation::{NSNotification, NSPoint, NSRect, NSSize, NSString};
-use vst3::Steinberg::*;
-use vst3::{Class, ComPtr, ComRef, ComWrapper};
+
+use crate::{Parent, View};
 
 /// Moves a main-thread-only value through `exec_async` to the main thread, where it is used
 /// and dropped.
@@ -54,36 +56,39 @@ thread_local! {
 }
 
 struct DelegateIvars {
-    view: ComPtr<IPlugView>,
+    /// The plug-in's GUI, until `close` takes it out; late window callbacks then leave it alone.
+    view: RefCell<Option<Arc<dyn View>>>,
     resizable: bool,
-    /// The content size (points) the view last heard about, from `resizeView` or a user resize.
+    /// The content size (points) the view last heard about, from a resize it asked for or a user
+    /// resize.
     size: Cell<(f64, f64)>,
     /// The user closed the window (the red button only orders it out: not released on close).
     closed: Cell<bool>,
-    /// `close` has started; late window callbacks leave the view alone.
-    detached: Cell<bool>,
     /// The plug-in mustn't be called for now (`Editor::set_quiet`): the window still resizes,
     /// but the view isn't asked about it or told, and `size` stays what it last heard.
     quiet: AtomicBool,
 }
 
 impl DelegateIvars {
-    /// Whether a window callback may call into the view.
-    fn may_call(&self) -> bool {
-        !self.detached.get() && !self.quiet.load(Ordering::Relaxed)
+    /// The view, if a window callback may call into it now: a clone, so no borrow of the cell is
+    /// held while the plug-in may call back.
+    fn callable(&self) -> Option<Arc<dyn View>> {
+        if self.quiet.load(Ordering::Relaxed) {
+            return None;
+        }
+        self.view.borrow().clone()
     }
-}
-
-/// The rect to pass to `onSize` when the window's content is `now` (points, rounded) and the view
-/// last heard `seen`; None if it already knows.
-fn size_change(seen: (f64, f64), now: (f64, f64)) -> Option<ViewRect> {
-    (seen != now).then_some(ViewRect { left: 0, top: 0, right: now.0 as i32, bottom: now.1 as i32 })
 }
 
 /// The window's content size, in whole points.
 fn content_size(window: &NSWindow) -> (f64, f64) {
     let s = window.contentRectForFrameRect(window.frame()).size;
     (s.width.round(), s.height.round())
+}
+
+/// A size in whole points, as views take it.
+fn points((w, h): (f64, f64)) -> (u32, u32) {
+    (w.max(1.0) as u32, h.max(1.0) as u32)
 }
 
 define_class!(
@@ -104,37 +109,30 @@ define_class!(
             self.ivars().closed.set(true);
         }
 
-        /// Lets the plug-in constrain a user resize while it happens (`checkSizeConstraint`).
+        /// Lets the plug-in constrain a user resize while it happens (`View::constrain`).
         #[unsafe(method(windowWillResize:toSize:))]
         fn window_will_resize(&self, sender: &NSWindow, frame_size: NSSize) -> NSSize {
             let iv = self.ivars();
-            if !iv.may_call() || !iv.resizable {
-                return frame_size;
-            }
+            let Some(view) = iv.callable().filter(|_| iv.resizable) else { return frame_size };
             let content = sender.contentRectForFrameRect(NSRect::new(NSPoint::new(0.0, 0.0), frame_size)).size;
-            let mut r = ViewRect { left: 0, top: 0, right: content.width.round() as i32, bottom: content.height.round() as i32 };
-            if unsafe { iv.view.checkSizeConstraint(&mut r) } != kResultOk {
-                return frame_size;
-            }
-            let c = NSSize::new((r.right - r.left).max(1) as f64, (r.bottom - r.top).max(1) as f64);
+            let Some((w, h)) = view.constrain(points((content.width.round(), content.height.round()))) else { return frame_size };
+            let c = NSSize::new(w.max(1) as f64, h.max(1) as f64);
             sender.frameRectForContentRect(NSRect::new(NSPoint::new(0.0, 0.0), c)).size
         }
 
-        /// Tells the view about user resizes. `resizeView` records its own size first, so the
-        /// resize it causes isn't passed back.
+        /// Tells the view about user resizes. A resize the view asked for records its own size
+        /// first, so it isn't passed back.
         #[unsafe(method(windowDidResize:))]
         fn window_did_resize(&self, n: &NSNotification) {
             let iv = self.ivars();
-            if !iv.may_call() || !iv.resizable {
-                return;
-            }
+            let Some(view) = iv.callable().filter(|_| iv.resizable) else { return };
             let Some(window) = n.object().and_then(|o| o.downcast::<NSWindow>().ok()) else { return };
             let size = content_size(&window);
-            let Some(mut r) = size_change(iv.size.get(), size) else { return };
-            iv.size.set(size);
-            unsafe {
-                iv.view.onSize(&mut r);
+            if iv.size.get() == size {
+                return;
             }
+            iv.size.set(size);
+            view.set_size(points(size));
         }
     }
 );
@@ -146,16 +144,15 @@ impl WindowDelegate {
     }
 }
 
-/// Resizes the window's content to `r`, keeping its top-left corner where it is (Cocoa frames
-/// grow from the bottom-left), then calls `onSize`. While quiet the window still resizes, and the
-/// view hears about it when quiet ends (`catch_up`).
-fn apply_resize(window: &NSWindow, delegate: &WindowDelegate, view: &ComPtr<IPlugView>, mut r: ViewRect) {
+/// Resizes the window's content to `size`, keeping its top-left corner where it is (Cocoa frames
+/// grow from the bottom-left), then tells the view if `tell` (it asked for the size, and expects
+/// to hear it) or notes that it knows. While quiet the window still resizes, and the view hears
+/// about it when quiet ends (`catch_up`).
+fn apply_resize(window: &NSWindow, delegate: &WindowDelegate, size: (u32, u32), tell: bool) {
     let iv = delegate.ivars();
-    if iv.detached.get() {
-        return;
-    }
+    let Some(view) = iv.view.borrow().clone() else { return };
     let quiet = iv.quiet.load(Ordering::Relaxed);
-    let (w, h) = ((r.right - r.left).max(1) as f64, (r.bottom - r.top).max(1) as f64);
+    let (w, h) = (size.0.max(1) as f64, size.1.max(1) as f64);
     if !quiet {
         iv.size.set((w, h));
     }
@@ -163,86 +160,87 @@ fn apply_resize(window: &NSWindow, delegate: &WindowDelegate, view: &ComPtr<IPlu
     let mut frame = window.frameRectForContentRect(NSRect::new(old.origin, NSSize::new(w, h)));
     frame.origin.y = old.origin.y + old.size.height - frame.size.height;
     window.setFrame_display(frame, true);
-    if !quiet {
-        unsafe {
-            view.onSize(&mut r);
-        }
+    if !quiet && tell {
+        view.set_size(points((w, h)));
     }
 }
 
 /// Once quiet ends, tells the view the size the window took meanwhile (by the user, or by a
-/// `resizeView` while quiet), within its constraints for a user-resizable one.
+/// resize the view asked for while quiet), within its constraints for a user-resizable one.
 fn catch_up(window: &NSWindow, delegate: &WindowDelegate) {
     let iv = delegate.ivars();
-    if !iv.may_call() {
+    let Some(view) = iv.callable() else { return };
+    let now = content_size(window);
+    if iv.size.get() == now {
         return;
     }
-    let Some(mut r) = size_change(iv.size.get(), content_size(window)) else { return };
-    unsafe {
-        if iv.resizable && iv.view.checkSizeConstraint(&mut r) == kResultOk {
-            let c = ((r.right - r.left).max(1) as f64, (r.bottom - r.top).max(1) as f64);
-            if c != content_size(window) {
-                // `apply_resize` records the size and calls `onSize`; the window callbacks it
+    if iv.resizable {
+        if let Some(c) = view.constrain(points(now)) {
+            if (c.0.max(1) as f64, c.1.max(1) as f64) != now {
+                // `apply_resize` records the size and tells the view; the window callbacks it
                 // causes see the size already known.
-                apply_resize(window, delegate, &iv.view, r);
+                apply_resize(window, delegate, c, true);
                 return;
             }
         }
-        iv.size.set(content_size(window));
-        iv.view.onSize(&mut r);
     }
+    iv.size.set(now);
+    view.set_size(points(now));
 }
 
-pub struct PlugFrame {
+/// What a view holds on to its window by: how it asks for a new size.
+#[derive(Clone)]
+pub struct Frame {
     window: Retained<NSWindow>,
     delegate: Retained<WindowDelegate>,
 }
 
-impl Class for PlugFrame {
-    type Interfaces = (IPlugFrame,);
-}
+// Retaining and releasing are thread-safe; AppKit is only touched on the main thread (`on_main`).
+unsafe impl Send for Frame {}
+unsafe impl Sync for Frame {}
 
-impl IPlugFrameTrait for PlugFrame {
-    unsafe fn resizeView(&self, view: *mut IPlugView, new_size: *mut ViewRect) -> tresult {
-        if new_size.is_null() {
-            return kInvalidArgument;
-        }
-        let Some(v) = ComRef::from_raw(view) else { return kInvalidArgument };
-        let (r, v) = (*new_size, v.to_com_ptr());
+impl Frame {
+    /// The view asks for `size` (VST3's `resizeView`): the window takes it, and the view is told
+    /// (`View::set_size`). From any thread: elsewhere than the main one, it happens there later.
+    pub fn resize(&self, size: (u32, u32)) {
         if MainThreadMarker::new().is_some() {
-            apply_resize(&self.window, &self.delegate, &v, r);
+            apply_resize(&self.window, &self.delegate, size, true);
         } else {
             let (w, d) = (self.window.clone(), self.delegate.clone());
-            on_main(move || apply_resize(&w, &d, &v, r));
+            on_main(move || apply_resize(&w, &d, size, true));
         }
-        kResultOk
+    }
+
+    /// Sizes the window to `size` for a view that has taken that size already. From any thread.
+    pub fn fit(&self, size: (u32, u32)) {
+        let (w, d) = (self.window.clone(), self.delegate.clone());
+        on_main(move || apply_resize(&w, &d, size, false));
     }
 }
 
 pub struct Editor {
-    view: ComPtr<IPlugView>,
-    frame: ComWrapper<PlugFrame>,
     window: Retained<NSWindow>,
     delegate: Retained<WindowDelegate>,
 }
 
 impl Editor {
+    /// Opens where macOS places it (`at` is for Linux, where the window manager may not).
+    pub fn open_at(view: impl View + 'static, title: &str, _at: Option<(i16, i16)>) -> Result<Editor, String> {
+        Self::open(view, title)
+    }
+
     /// Must be called on the main thread; elsewhere it fails rather than blocking on it.
-    pub fn open(view: ComPtr<IPlugView>, title: &str) -> Result<Editor, String> {
+    pub fn open(view: impl View + 'static, title: &str) -> Result<Editor, String> {
         let mtm = MainThreadMarker::new().ok_or("plug-in editors can only be opened on the main thread")?;
+        // Some of the AppKit calls here are unsafe in the bindings.
         unsafe {
-            if view.isPlatformTypeSupported(kPlatformTypeNSView) != kResultOk {
-                return Err("this plug-in's editor does not support macOS (NSView) embedding".into());
-            }
-            // VST3 sizes on macOS are in points, the same units as AppKit's. HiDPI is the
-            // view's own business here: it reads its window's backingScaleFactor, and the SDK
-            // says `IPlugViewContentScaleSupport` is for platforms without one (Windows, Linux),
-            // so the host never calls setContentScaleFactor on macOS.
-            let mut rect: ViewRect = std::mem::zeroed();
-            view.getSize(&mut rect);
-            let w = (rect.right - rect.left).max(64) as f64;
-            let h = (rect.bottom - rect.top).max(64) as f64;
-            let resizable = view.canResize() == kResultTrue;
+            let view: Arc<dyn View> = Arc::new(view);
+            // Sizes on macOS are in points, the same units as AppKit's. HiDPI is the view's own
+            // business here: it reads its window's backingScaleFactor, so the host never tells it a
+            // scale (VST3's `IPlugViewContentScaleSupport` is for platforms without one, and CLAP's
+            // `set_scale` isn't for Cocoa).
+            let (w, h) = view.size().map_or((64.0, 64.0), |(w, h)| (w.max(64) as f64, h.max(64) as f64));
+            let resizable = view.can_resize();
 
             let mut style = NSWindowStyleMask::Titled | NSWindowStyleMask::Closable | NSWindowStyleMask::Miniaturizable;
             if resizable {
@@ -269,27 +267,25 @@ impl Editor {
             let delegate = WindowDelegate::new(
                 mtm,
                 DelegateIvars {
-                    view: view.clone(),
+                    view: RefCell::new(Some(view.clone())),
                     resizable,
                     size: Cell::new((w, h)),
                     closed: Cell::new(false),
-                    detached: Cell::new(false),
                     quiet: AtomicBool::new(false),
                 },
             );
             window.setDelegate(Some(ProtocolObject::from_ref(&*delegate)));
-            let frame = ComWrapper::new(PlugFrame { window: window.clone(), delegate: delegate.clone() });
-            view.setFrame(frame.to_com_ptr::<IPlugFrame>().unwrap().as_ptr());
-            if view.attached(Retained::as_ptr(&content) as *mut c_void, kPlatformTypeNSView) != kResultOk {
-                view.setFrame(std::ptr::null_mut());
-                delegate.ivars().detached.set(true);
+            let frame = Frame { window: window.clone(), delegate: delegate.clone() };
+            if let Err(e) = view.attach(Parent::NsView(Retained::as_ptr(&content) as *mut c_void), frame) {
+                let view = delegate.ivars().view.borrow_mut().take();
                 window.setDelegate(None);
                 window.close();
-                return Err("plugin refused to attach its editor".into());
+                drop(view);
+                return Err(e);
             }
             window.makeKeyAndOrderFront(None);
             OPEN.set(OPEN.get() + 1);
-            Ok(Editor { view, frame, window, delegate })
+            Ok(Editor { window, delegate })
         }
     }
 
@@ -299,10 +295,9 @@ impl Editor {
     }
 
     /// While `on`, nothing of the host's calls into the plug-in: the window can still be resized
-    /// (by the user, or by the plug-in's `resizeView`), but the view isn't asked about it
-    /// (`checkSizeConstraint`) or told (`onSize`) until quiet ends, when it hears the size the
-    /// window has then. Its own timers and its view's events are AppKit's, not the host's, and
-    /// still reach it.
+    /// (by the user, or by the plug-in asking), but the view isn't asked about it (`constrain`) or
+    /// told (`set_size`) until quiet ends, when it hears the size the window has then. Its own
+    /// timers and its view's events are AppKit's, not the host's, and still reach it.
     pub fn set_quiet(&self, on: bool) {
         self.delegate.ivars().quiet.store(on, Ordering::Relaxed);
         if !on {
@@ -315,6 +310,16 @@ impl Editor {
                 }
             });
         }
+    }
+
+    /// Sizes the window to `size` for a view that has taken that size already (a CLAP plug-in's
+    /// `request_resize`).
+    pub fn fit(&self, size: (u32, u32)) {
+        let (w, d) = (MainOnly(self.window.clone()), MainOnly(self.delegate.clone()));
+        on_main(move || {
+            let (w, d) = (w, d);
+            apply_resize(&w.0, &d.0, size, false);
+        });
     }
 
     /// Takes the window off the screen, without a word to the plug-in.
@@ -349,15 +354,14 @@ impl Editor {
     }
 
     fn close_now(self) {
-        self.delegate.ivars().detached.set(true);
-        unsafe {
-            self.view.removed();
-            self.view.setFrame(std::ptr::null_mut());
+        let view = self.delegate.ivars().view.borrow_mut().take();
+        if let Some(v) = &view {
+            v.detach();
         }
         self.window.setDelegate(None);
         self.window.close();
         OPEN.set(OPEN.get().saturating_sub(1));
-        drop(self.frame);
+        drop(view);
     }
 }
 
@@ -423,16 +427,4 @@ fn forward_key(event: &NSEvent, up: bool) -> bool {
         meta_key: flags.contains(NSEventModifierFlags::Command),
         repeat: !up && event.isARepeat(),
     })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn size_change_only_for_a_new_size() {
-        assert!(size_change((300.0, 200.0), (300.0, 200.0)).is_none());
-        let r = size_change((300.0, 200.0), (420.0, 260.0)).unwrap();
-        assert_eq!((r.left, r.top, r.right, r.bottom), (0, 0, 420, 260));
-    }
 }

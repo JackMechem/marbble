@@ -499,10 +499,12 @@ name = "clap-host"
 version = "0.1.0-alpha.18"
 dependencies = [
  "clap-sys",
+ "libc",
  "libloading 0.9.0",
  "log",
  "parking_lot",
  "plugin-api",
+ "plugin-editor",
  "rtrb",
 ]
 
@@ -813,12 +815,12 @@ dependencies = [
  "objc2-app-kit",
  "objc2-foundation",
  "parking_lot",
+ "plugin-editor",
  "serde",
  "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",
- "vst3-host",
 ]
 
 [[package]]
@@ -841,6 +843,7 @@ dependencies = [
  "objc2-core-foundation",
  "parking_lot",
  "plugin-api",
+ "plugin-editor",
  "realfft",
  "rtrb",
  "rubato",
@@ -3093,6 +3096,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "plugin-editor"
+version = "0.1.0-alpha.18"
+dependencies = [
+ "dispatch2",
+ "libc",
+ "log",
+ "objc2",
+ "objc2-app-kit",
+ "objc2-foundation",
+ "parking_lot",
+ "serde",
+ "x11rb",
+]
+
+[[package]]
 name = "png"
 version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4936,7 +4954,6 @@ name = "vst3-host"
 version = "0.1.0-alpha.18"
 dependencies = [
  "core-foundation",
- "dispatch2",
  "libc",
  "libloading 0.9.0",
  "log",
@@ -4945,11 +4962,10 @@ dependencies = [
  "objc2-foundation",
  "parking_lot",
  "plugin-api",
+ "plugin-editor",
  "rtrb",
- "serde",
  "serde_json",
  "vst3",
- "x11rb",
 ]
 
 [[package]]

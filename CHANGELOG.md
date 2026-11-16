@@ -12,11 +12,13 @@ All notable changes to Marbble are recorded here. The format follows
   `$CLAP_PATH` and the standard CLAP folders (and any you add in Settings › Plug-ins), load in
   Audio FX and instrument slots, play notes and audio, save their state with the project, and
   their parameters can be automated, recorded and moved from a control surface, with undo for
-  the edits they report. The slot menus and the Library tag them **CLAP**, and the Plug-in
-  Manager has a Format column. Their own windows don't open yet, nor do side-chain inputs or
-  extra outputs work for them; a project using a CLAP plug-in that isn't installed keeps its
-  slot, as for a missing VST3.
-- **Compare, Copy Settings and Paste Settings for VST3 plug-ins**, in the slot's right-click menu
+  the edits they report. Their own windows open as VST3s' do, on Linux and macOS: they follow the
+  display's scale, resize either way, and edits in them are undo steps (a plug-in whose window can
+  only float on its own has none yet). The slot menus and the Library tag them **CLAP**, and the
+  Plug-in Manager has a Format column. Side-chain inputs and extra outputs don't work for them
+  yet; a project using a CLAP plug-in that isn't installed keeps its slot, as for a missing
+  VST3.
+- **Compare, Copy Settings and Paste Settings for VST3 and CLAP plug-ins**, in the slot's right-click menu
   (their editors are windows of their own, with no Marbble header). Paste Settings loads the
   copied state into the running plug-in, keeping the instance, as one undo step; settings copied
   on another computer paste into the same plug-in installed elsewhere. Compare lights once you

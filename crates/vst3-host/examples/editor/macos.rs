@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 use objc2::MainThreadMarker;
 use objc2_app_kit::{NSApplication, NSApplicationActivationPolicy, NSEventMask};
 use objc2_foundation::{NSDate, NSDefaultRunLoopMode};
-use vst3_host::editor::set_hide_on_deactivate;
+use plugin_editor::set_hide_on_deactivate;
 use vst3_host::scan::{default_search_paths, find_bundles, scan_bundle};
 
 pub fn main() {

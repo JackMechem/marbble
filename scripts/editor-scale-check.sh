@@ -1,26 +1,32 @@
 #!/usr/bin/env bash
-# Opens VST3 editors on a private Xvfb display, at scale 1 and again with GDK_SCALE=2, and checks
-# that each editor's window doubles: the host passed the scale (IPlugViewContentScaleSupport)
-# and sized the window from the plug-in's answer. Then opens each at scale 1 and sets Xft.dpi to
-# 192 with xrdb while it is open, and back to 96: the open window must double and come back.
-# Uses vst3-host's `editor` example, not the app.
+# Opens VST3 editors (or with --clap, CLAP editors) on a private Xvfb display, at scale 1 and again
+# with GDK_SCALE=2, and checks that each editor's window doubles: the host passed the scale (VST3's
+# IPlugViewContentScaleSupport, CLAP's gui.set_scale) and sized the window from the plug-in's
+# answer, or the plug-in read the scale itself. Then opens each at scale 1 and sets Xft.dpi to 192
+# with xrdb while it is open, and back to 96: the open window must double and come back. Uses
+# vst3-host's `editor` example (clap-host's `clap_editor`), not the app.
 #
-# usage: scripts/editor-scale-check.sh [plug-in name ...]
-#   default: LSP Compressor Mono, Dragonfly Hall Reverb, CHOWTapeModel and TONE3000; each one
-#   that isn't installed is skipped.
+# usage: scripts/editor-scale-check.sh [--clap] [plug-in name ...]
+#   default: LSP Compressor Mono, Dragonfly Hall Reverb, CHOWTapeModel and TONE3000, in that
+#   format; each one that isn't installed is skipped.
 # Needs Xvfb, xwininfo and xrdb, e.g.
 # `nix shell nixpkgs#xorg.xorgserver nixpkgs#xorg.xwininfo nixpkgs#xorg.xrdb`.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+PACKAGE=vst3-host EXAMPLE_NAME=editor
+if [ "${1:-}" = --clap ]; then
+  PACKAGE=clap-host EXAMPLE_NAME=clap_editor
+  shift
+fi
 PLUGINS=("$@")
 [ ${#PLUGINS[@]} -gt 0 ] || PLUGINS=("Compressor Mono" "Dragonfly Hall Reverb" "CHOWTapeModel" "TONE3000")
 for tool in Xvfb xwininfo xrdb; do
   command -v "$tool" >/dev/null || { echo "needs $tool (see the comment at the top)" >&2; exit 2; }
 done
 
-cargo build -q -p vst3-host --example editor
-EXAMPLE="${CARGO_TARGET_DIR:-target}/debug/examples/editor"
+cargo build -q -p "$PACKAGE" --example "$EXAMPLE_NAME"
+EXAMPLE="${CARGO_TARGET_DIR:-target}/debug/examples/$EXAMPLE_NAME"
 SCRATCH=$(mktemp -d)
 # A display number nobody uses; -noreset keeps it up between clients.
 NUM=$((90 + RANDOM % 400))

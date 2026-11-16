@@ -42,7 +42,7 @@ tier = "core"
 beta = true
 logic = "567"
 issue = 99
-note = "Built-in effect panels everywhere; a VST3's own editor on Linux/X11 and macOS so far."
+note = "Built-in effect panels everywhere; a VST3's or CLAP plug-in's own editor on Linux/X11 and macOS so far."
 
 [[feature]]
 section = "Mixer"

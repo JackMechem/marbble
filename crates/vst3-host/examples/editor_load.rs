@@ -11,10 +11,6 @@
 //! usage: editor_load <plug-in name> [instances (1)] [state file, or - for none] [cpu]
 
 #[cfg(target_os = "linux")]
-#[path = "editor/poll_loop.rs"]
-mod poll_loop;
-
-#[cfg(target_os = "linux")]
 fn main() {
     linux::main();
 }
@@ -30,7 +26,7 @@ mod linux {
     use std::sync::Arc;
     use std::time::{Duration, Instant};
 
-    use crate::poll_loop::{run_once, PollLoop};
+    use plugin_editor::poll_loop::{run_once, PollLoop};
     use vst3_host::scan::{default_search_paths, find_bundles, scan_bundle};
     use vst3_host::{PluginController, PluginState, TransportInfo};
 
@@ -66,7 +62,7 @@ mod linux {
         let count: usize = args.next().and_then(|s| s.parse().ok()).unwrap_or(1).max(1);
         let state = args.next().filter(|f| f != "-").map(|f| PluginState { component: std::fs::read(&f).expect("state file"), controller: Vec::new() });
         let cpu: Option<usize> = args.next().and_then(|s| s.parse().ok());
-        vst3_host::editor::set_event_loop(Box::new(PollLoop));
+        plugin_editor::set_event_loop(Box::new(PollLoop));
         let all: Vec<_> = find_bundles(&default_search_paths()).iter().flat_map(|b| scan_bundle(b).unwrap_or_default()).collect();
         let desc = all.iter().find(|d| d.name == name).or_else(|| all.iter().find(|d| d.name.contains(&name))).expect("plug-in not found").clone();
         println!(

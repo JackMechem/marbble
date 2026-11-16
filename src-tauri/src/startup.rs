@@ -35,7 +35,7 @@ pub fn prepare_environment() {
     schemas::ensure_file_chooser_schema();
 
     #[cfg(target_os = "linux")]
-    vst3_host::editor::set_event_loop(Box::new(crate::glib_loop::GlibLoop));
+    plugin_editor::set_event_loop(Box::new(crate::glib_loop::GlibLoop::on_this_thread()));
 }
 
 /// The session: plug-ins (scanned the first time), settings, controller assignments, and the

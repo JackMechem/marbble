@@ -51,7 +51,7 @@ fn main() {
             #[cfg(target_os = "linux")]
             if gdk::Display::default().is_some_and(|d| glib::prelude::ObjectExt::type_(&d).name() == "GdkWaylandDisplay") {
                 log::info!("running natively on Wayland; plug-in editors open through XWayland");
-                vst3_host::editor::set_gl_isolation(gdk::GLContext::clear_current);
+                plugin_editor::set_gl_isolation(gdk::GLContext::clear_current);
             }
             menu::install(app)?;
             let handle = app.handle().clone();

@@ -219,11 +219,14 @@ it too.
   and misses for each step and writes a trace from `dsp/probe.rs`; usage at the top of the file).
 - `crates/vst3-host/examples/`: `probe` scans and runs installed plug-ins; `editor` opens one
   plug-in's editor; `editor_load` measures what opening one costs the thread playing it;
-  `lsp_sampler_loads` counts the samples LSP's Multi-Sampler loses. `scripts/editor-scale-check.sh` checks on a private Xvfb display that editors
-  double at `GDK_SCALE=2`, and that an open one doubles and comes back when `xrdb` sets `Xft.dpi`
-  to 192 and back to 96.
+  `lsp_sampler_loads` counts the samples LSP's Multi-Sampler loses. `scripts/editor-scale-check.sh`
+  (`--clap` for CLAP editors) checks on a private Xvfb display that editors double at
+  `GDK_SCALE=2`, and that an open one doubles and comes back when `xrdb` sets `Xft.dpi` to 192 and
+  back to 96.
 - `crates/clap-host/examples/`: `probe` scans and runs installed CLAP plug-ins, as `vst3-host`'s
-  does for VST3s.
+  does for VST3s; `clap_editor` opens one CLAP plug-in's editor (`reopen` closes and opens it
+  again, `quiet` treats the plug-in as stuck for a while) and counts the timers and file
+  descriptors on the loop and how often they fired.
 
 A new check follows `stack_check.rs`: a `Session` on `alsa:null`, its folder set to the scratch
 folder, the cycle on, and playing and reading meters through `examples/common/transport.rs`

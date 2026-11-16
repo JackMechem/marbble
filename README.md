@@ -25,7 +25,7 @@ VST3 host in Rust and its interface in Tauri 2, React and TypeScript.
 - A Mixer with eight insert and eight send slots per strip, aux buses, VCA faders, plug-in delay
   compensation, and automation in Logic's Read, Touch, Latch and Write modes.
 - VST3 instruments and effects, with side-chains and multi-output instruments; CLAP instruments
-  and effects (without their own windows yet).
+  and effects with their own windows.
 - Six built-in synth models, a sampler and seventeen built-in effects.
 - MIDI Learn, and Mackie Control and HUI surfaces (so far tested only with simulated ones).
 - Offline bounce and export as WAV, AIFF or FLAC; templates, backups, autosave and crash recovery.
@@ -71,7 +71,8 @@ On NixOS or with Nix, use the flake instead (below).
 | MIDI input | Yes | Yes | Yes |
 | VST3 instruments and effects | Yes | Yes | Yes |
 | VST3 editor windows | Yes (X11; through XWayland on Wayland) | Not yet | Yes |
-| CLAP instruments and effects | Yes (no windows yet) | Yes, untried (no windows yet) | Yes, untried (no windows yet) |
+| CLAP instruments and effects | Yes | Yes, untried (no windows yet) | Yes, untried |
+| CLAP editor windows | Yes (X11; through XWayland on Wayland) | Not yet | Yes, untried |
 | Built-in effects and instruments | Yes | Yes | Yes |
 | Multi-core processing | Yes | One thread for now | Yes |
 | Input level check | Yes (PipeWire, PulseAudio) | No | Yes |
@@ -144,7 +145,8 @@ main limitations:
 - Plug-in editor windows open on Linux (X11) and macOS, not yet on Windows. On Linux the
   interface runs through XWayland by default; running it natively on Wayland
   (`MARBBLE_WAYLAND=1`) is newer and less tried.
-- VST3 and CLAP (no AU or VST2); CLAP plug-ins have no windows, side-chains or extra outputs yet.
+- VST3 and CLAP (no AU or VST2); CLAP plug-ins have no side-chains or extra outputs yet, and
+  windows only where they embed (not floating ones).
   On Windows and macOS only the system's default audio driver is available (no ASIO).
 - The release builds are unsigned (see [Install](#install)). The Windows build hasn't been run
   on real hardware, and the macOS build has had little hands-on testing.

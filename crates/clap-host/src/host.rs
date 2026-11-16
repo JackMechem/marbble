@@ -1,12 +1,20 @@
 //! The host's side of the API: one `clap_host` per instance, its extensions, and which thread is
 //! which. The plug-in may call the thread-safe requests from any thread, the audio thread too, so
-//! they only set flags (`Requests`) for the controller's `idle`.
+//! they only set flags (`Requests`) for the controller's `idle`; those about its editor window are
+//! in `gui.rs`. Its timers and file descriptors go on the app's main loop on Linux (`run_loop.rs`).
+
+mod gui;
+#[cfg(target_os = "linux")]
+mod run_loop;
+
+pub(crate) use gui::GuiRequests;
 
 use std::cell::Cell;
 use std::ffi::{c_char, c_void, CStr};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicPtr, Ordering};
 
 use clap_sys::ext::audio_ports::{clap_host_audio_ports, CLAP_EXT_AUDIO_PORTS};
+use clap_sys::ext::gui::CLAP_EXT_GUI;
 use clap_sys::ext::latency::{clap_host_latency, CLAP_EXT_LATENCY};
 use clap_sys::ext::log::*;
 use clap_sys::ext::note_ports::{clap_host_note_ports, clap_note_dialect, CLAP_EXT_NOTE_PORTS, CLAP_NOTE_DIALECT_CLAP, CLAP_NOTE_DIALECT_MIDI};
@@ -18,6 +26,7 @@ use clap_sys::ext::tail::{clap_host_tail, CLAP_EXT_TAIL};
 use clap_sys::ext::thread_check::{clap_host_thread_check, CLAP_EXT_THREAD_CHECK};
 use clap_sys::host::clap_host;
 use clap_sys::id::clap_id;
+use clap_sys::plugin::clap_plugin;
 use clap_sys::version::CLAP_VERSION;
 
 thread_local! {
@@ -73,6 +82,8 @@ pub(crate) struct Requests {
     pub changed: AtomicBool,
     /// `latency.changed`.
     pub latency: AtomicBool,
+    /// What it asked of its editor window.
+    pub gui: GuiRequests,
 }
 
 /// One instance's `clap_host`. Boxed, so the address the plug-in keeps stays valid; `host_data`
@@ -82,6 +93,14 @@ pub(crate) struct Host {
     /// The plug-in's name, for its log messages.
     name: String,
     pub requests: Requests,
+    /// The plug-in, once created (`set_plugin`), for its timers and file descriptors.
+    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+    plugin: AtomicPtr<clap_plugin>,
+    /// The plug-in isn't responding: its timers wait (`set_quiet`).
+    pub quiet: AtomicBool,
+    /// Its timers and file descriptors on the main loop.
+    #[cfg(target_os = "linux")]
+    pub sources: run_loop::Sources,
 }
 
 unsafe impl Send for Host {}
@@ -109,6 +128,10 @@ impl Host {
             },
             name: name.to_string(),
             requests: Requests::default(),
+            plugin: AtomicPtr::new(std::ptr::null_mut()),
+            quiet: AtomicBool::new(false),
+            #[cfg(target_os = "linux")]
+            sources: Default::default(),
         });
         h.raw.host_data = &*h as *const Host as *mut c_void;
         h
@@ -116,6 +139,28 @@ impl Host {
 
     pub fn raw(&self) -> *const clap_host {
         &self.raw
+    }
+
+    /// The plug-in made with this host, before it's initialized.
+    pub fn set_plugin(&self, plugin: *const clap_plugin) {
+        self.plugin.store(plugin as *mut clap_plugin, Ordering::Release);
+    }
+
+    /// Says whether the plug-in is responding: while it isn't, its timers wait and its file
+    /// descriptors are off the main loop. On the main thread.
+    pub fn set_quiet(&self, on: bool) {
+        self.quiet.store(on, Ordering::Relaxed);
+        #[cfg(target_os = "linux")]
+        if is_main() {
+            self.sources.pause(self, on);
+        }
+    }
+
+    /// Takes the timers and file descriptors the plug-in left registered off the main loop, once
+    /// it's destroyed.
+    pub fn forget_sources(&self) {
+        #[cfg(target_os = "linux")]
+        self.sources.forget();
     }
 }
 
@@ -162,10 +207,31 @@ unsafe extern "C" fn get_extension(_h: *const clap_host, id: *const c_char) -> *
         &AUDIO_PORTS as *const _ as _
     } else if id == CLAP_EXT_NOTE_PORTS {
         &NOTE_PORTS as *const _ as _
+    } else if id == CLAP_EXT_GUI {
+        &gui::GUI as *const _ as _
     } else {
-        std::ptr::null()
+        run_loop_extension(id)
     };
     ext
+}
+
+/// `timer-support` and `posix-fd-support`, which only Linux has the main loop for.
+#[cfg(target_os = "linux")]
+fn run_loop_extension(id: &CStr) -> *const c_void {
+    use clap_sys::ext::posix_fd_support::CLAP_EXT_POSIX_FD_SUPPORT;
+    use clap_sys::ext::timer_support::CLAP_EXT_TIMER_SUPPORT;
+    if id == CLAP_EXT_TIMER_SUPPORT {
+        &run_loop::TIMER_SUPPORT as *const _ as _
+    } else if id == CLAP_EXT_POSIX_FD_SUPPORT {
+        &run_loop::POSIX_FD_SUPPORT as *const _ as _
+    } else {
+        std::ptr::null()
+    }
+}
+
+#[cfg(not(target_os = "linux"))]
+fn run_loop_extension(_id: &CStr) -> *const c_void {
+    std::ptr::null()
 }
 
 static THREAD_CHECK: clap_host_thread_check = clap_host_thread_check { is_main_thread: Some(is_main_thread), is_audio_thread: Some(is_audio_thread) };

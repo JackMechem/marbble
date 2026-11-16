@@ -2,7 +2,7 @@
 //! ([`ClapController`]), as `vst3-host` splits a VST3.
 //!
 //! This file holds the types. `instantiate.rs` makes the two halves, `processor.rs` and
-//! `controller.rs` are their code. CLAP has one plug-in object where VST3 has two: the halves
+//! `controller.rs` are their code, `editor.rs` the controller's editor window. CLAP has one plug-in object where VST3 has two: the halves
 //! share it through `Shared`, and when both are gone it is deactivated and destroyed on the main
 //! thread (`Instance`).
 
@@ -12,6 +12,7 @@ use std::sync::{Arc, Mutex};
 
 use clap_sys::audio_buffer::clap_audio_buffer;
 use clap_sys::events::clap_event_transport;
+use clap_sys::ext::gui::clap_plugin_gui;
 use clap_sys::ext::latency::clap_plugin_latency;
 use clap_sys::ext::params::clap_plugin_params;
 use clap_sys::ext::state::clap_plugin_state;
@@ -24,6 +25,7 @@ use crate::host::{Host, Requests};
 use crate::params::ParamRanges;
 
 mod controller;
+mod editor;
 mod instantiate;
 mod ports;
 mod processor;
@@ -61,6 +63,7 @@ impl Drop for Instance {
                 f(self.plugin);
             }
         }
+        self.host.forget_sources();
     }
 }
 
@@ -86,6 +89,8 @@ struct Shared {
     params: *const clap_plugin_params,
     state: *const clap_plugin_state,
     latency: *const clap_plugin_latency,
+    /// Its GUI, if it can be embedded in a window of the host's on this platform; null otherwise.
+    gui: *const clap_plugin_gui,
     /// The audio thread has stopped running the plug-in (`shut_gate`).
     parked: AtomicBool,
     inst: ManuallyDrop<Instance>,
@@ -145,7 +150,8 @@ pub struct ClapProcessor {
 
 unsafe impl Send for ClapProcessor {}
 
-/// The main-thread half: parameters, state, and what the plug-in asks of the host.
+/// The main-thread half: parameters, state, the editor window, and what the plug-in asks of the
+/// host.
 pub struct ClapController {
     desc: PluginDescriptor,
     shared: Arc<Shared>,
@@ -169,6 +175,7 @@ pub struct ClapController {
     latency: u32,
     /// It asked for a restart, which isn't done yet (#560): said once in the log.
     restart_noted: bool,
+    editor: Option<plugin_editor::Editor>,
 }
 
 unsafe impl Send for ClapController {}

@@ -29,7 +29,7 @@ pub fn start(handle: &AppHandle, session: &Arc<Mutex<Session>>) -> std::io::Resu
         let h = handle.clone();
         glib::timeout_add_local(Duration::from_millis(30), move || {
             if let Some(mut g) = s.try_lock() {
-                if vst3_host::editor::gl_isolated(|| g.idle()) {
+                if plugin_editor::gl_isolated(|| g.idle()) {
                     let _ = h.emit("project", commands::snapshot(&g));
                 }
                 autosave(&mut g);

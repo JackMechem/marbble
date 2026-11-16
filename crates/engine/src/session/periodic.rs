@@ -33,7 +33,7 @@ impl Session {
             self.sampler_garbage(g);
         }
         // Editors hidden while their plug-in wasn't responding, whose instance is gone now.
-        vst3_host::close_stranded_editors();
+        plugin_editor::close_stranded();
         // CLAP plug-ins whose last half was dropped on another thread (a render's garbage).
         clap_host::destroy_deferred();
         self.sampler_idle();

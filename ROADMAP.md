@@ -106,7 +106,7 @@ What's left for beta, by area (◐ partial, ○ missing):
 
 - ◐ Channel strip types ([#362](https://github.com/JackMechem/marbble/issues/362)): Audio, instrument, aux, summing stack, VCA and Stereo Out; no MIDI, output or master strips.
 - ◐ Reorder strips ([#363](https://github.com/JackMechem/marbble/issues/363)): Follows the track order.
-- ◐ Plug-in windows ([#99](https://github.com/JackMechem/marbble/issues/99)): Built-in effect panels everywhere; a VST3's own editor on Linux/X11 and macOS so far.
+- ◐ Plug-in windows ([#99](https://github.com/JackMechem/marbble/issues/99)): Built-in effect panels everywhere; a VST3's or CLAP plug-in's own editor on Linux/X11 and macOS so far.
 - ○ Select several strips, or strips by type ([#365](https://github.com/JackMechem/marbble/issues/365))
 
 **MIDI and hardware**

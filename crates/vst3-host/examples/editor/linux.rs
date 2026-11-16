@@ -1,8 +1,8 @@
 //! The Linux implementation of the editor example (X11 embedding).
 use std::time::{Duration, Instant};
 
-use crate::poll_loop::{run_once, PollLoop};
-use vst3_host::editor::set_event_loop;
+use plugin_editor::poll_loop::{run_once, PollLoop};
+use plugin_editor::set_event_loop;
 use vst3_host::scan::{default_search_paths, find_bundles, scan_bundle};
 
 pub fn main() {

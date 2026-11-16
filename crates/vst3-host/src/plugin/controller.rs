@@ -6,37 +6,12 @@
 
 use super::*;
 
-use std::cell::RefCell;
-
-thread_local! {
-    /// Editors closed while a thread was stuck in their plug-in (`set_unresponsive`), hidden but not
-    /// told, each with the plug-in's COM objects: closed for real once both halves are gone
-    /// (`close_stranded_editors`).
-    static STRANDED: RefCell<Vec<(crate::editor::Editor, Arc<Shared>)>> = const { RefCell::new(Vec::new()) };
-}
-
-/// Closes the editors of plug-ins that stopped responding (`PluginController::set_unresponsive`)
-/// whose instance is gone since: its processor came back from the thread stuck in it and was
-/// dropped, and its controller was too. Call periodically on the thread that closed them (the UI
-/// thread).
-pub fn close_stranded_editors() {
-    let done: Vec<_> = STRANDED.with(|s| {
-        let mut s = s.borrow_mut();
-        let (done, keep) = std::mem::take(&mut *s).into_iter().partition(|(_, shared)| Arc::strong_count(shared) == 1);
-        *s = keep;
-        done
-    });
-    for (e, shared) in done {
-        e.close(shared);
-    }
-}
-
 impl PluginController {
     /// Says whether a thread is stuck in the processor's `process` (the host left it there). While
     /// it is, nothing here calls into the plug-in, which may be holding a lock its controller and
     /// editor need: `idle` only handles the editor window's own events, parameter values read as
     /// unknown and edits go nowhere, the editor doesn't open, closing it only hides it until the
-    /// instance is gone (`close_stranded_editors`), `latency` is the last one reported, `save_state`
+    /// instance is gone (`plugin_editor::strand`), `latency` is the last one reported, `save_state`
     /// gives None, and output buses and the side-chain input don't switch.
     pub fn set_unresponsive(&mut self, on: bool) {
         self.unresponsive = on;
@@ -340,7 +315,7 @@ impl PluginController {
             }
             return Ok(());
         }
-        self.editor = Some(crate::editor::Editor::open(self.create_view()?, title)?);
+        self.editor = Some(crate::editor::open(self.create_view()?, title, None)?);
         Ok(())
     }
 
@@ -359,7 +334,7 @@ impl PluginController {
         let Some(e) = self.editor.take() else { return };
         let (title, at) = (e.title().to_string(), e.position());
         e.close(self.shared.clone());
-        match self.create_view().and_then(|view| crate::editor::Editor::open_at(view, &title, at)) {
+        match self.create_view().and_then(|view| crate::editor::open(view, &title, at)) {
             Ok(e) => self.editor = Some(e),
             Err(err) => log::warn!("{}: couldn't reopen its window at the new scale: {err}", self.desc.name),
         }
@@ -369,8 +344,7 @@ impl PluginController {
         let Some(e) = self.editor.take() else { return };
         if self.unresponsive {
             // Telling the view it's removed would wait on the plug-in.
-            e.hide();
-            STRANDED.with(|s| s.borrow_mut().push((e, self.shared.clone())));
+            plugin_editor::strand(e, self.shared.clone());
             return;
         }
         e.close(self.shared.clone());
